@@ -56,6 +56,8 @@ class CallbackRequest : public fbl::DoublyLinkedListable<std::unique_ptr<Callbac
     callback_(std::move(callback_request), status);
   }
 
+  void SetCallbackReason(fdf_status_t callback_reason) { reason_ = callback_reason; }
+
   // Returns whether a callback has been set via |SetCallback| and not yet been called.
   bool IsPending() { return !!callback_; }
 

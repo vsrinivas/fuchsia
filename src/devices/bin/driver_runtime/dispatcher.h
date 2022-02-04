@@ -81,6 +81,11 @@ class Dispatcher : public async_dispatcher_t, public fbl::RefCounted<Dispatcher>
   // May return nullptr if no such callback is found.
   std::unique_ptr<CallbackRequest> CancelCallback(CallbackRequest& callback_request);
 
+  // Sets the callback reason for a currently queued callback request.
+  // This may fail if the callback is already running or scheduled to run.
+  // Returns true if a callback matching |callback_request| was found, false otherwise.
+  bool SetCallbackReason(CallbackRequest* callback_request, fdf_status_t callback_reason);
+
   // Returns the dispatcher options specified by the user.
   uint32_t options() const { return options_; }
   bool unsynchronized() const { return unsynchronized_; }

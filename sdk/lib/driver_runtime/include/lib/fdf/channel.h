@@ -139,7 +139,14 @@ fdf_status_t fdf_channel_wait_async(struct fdf_dispatcher* dispatcher,
 // If the dispatcher is synchronized, this must only be called from a dispatcher
 // thread, and any pending callback will be canceled synchronously.
 // If the dispatcher is unsynchronized, the callback will be scheduled to be called.
-void fdf_channel_cancel_wait(fdf_handle_t handle);
+//
+// Returns |ZX_OK| if the wait was pending and it has been successfully
+// canceled; if the dispatcher is unsynchronized, its handler will run with
+// status ZX_ERR_CANCELED.
+// Returns |ZX_ERR_NOT_FOUND| if there was no pending wait either because it
+// is currently running (perhaps in a different thread), already scheduled to be run,
+// already completed, or had not been started.
+fdf_status_t fdf_channel_cancel_wait(fdf_handle_t handle);
 
 // fdf_channel_call() is like a combined fdf_channel_write(), fdf_channel_wait_async(),
 // and fdf_channel_read(), with the addition of a feature where a transaction id at

@@ -267,6 +267,18 @@ std::unique_ptr<CallbackRequest> Dispatcher::CancelCallback(CallbackRequest& cal
   return callback_queue_.erase(callback_request);
 }
 
+bool Dispatcher::SetCallbackReason(CallbackRequest* callback_to_update,
+                                   fdf_status_t callback_reason) {
+  fbl::AutoLock lock(&callback_lock_);
+  auto iter = callback_queue_.find_if(
+      [callback_to_update](auto& callback) -> bool { return &callback == callback_to_update; });
+  if (iter == callback_queue_.end()) {
+    return false;
+  }
+  callback_to_update->SetCallbackReason(callback_reason);
+  return true;
+}
+
 void Dispatcher::DispatchCallback(
     std::unique_ptr<driver_runtime::CallbackRequest> callback_request) {
   driver_context::PushDriver(owner_, this);

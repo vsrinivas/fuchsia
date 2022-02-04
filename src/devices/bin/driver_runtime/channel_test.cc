@@ -9,6 +9,7 @@
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/zx/event.h>
 
 #include <set>
@@ -367,7 +368,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelUnqueuedRead) {
       });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(sync_dispatcher)));
 
-  channel_read->Cancel();
+  ASSERT_OK(channel_read->Cancel());  // Cancellation should always succeed for sync dispatchers.
 
   fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(sync_dispatcher));
 }
@@ -399,7 +400,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelQueuedRead) {
     ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, nullptr, 0));
     ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 1);
     // This should synchronously cancel the callback.
-    channel_read->Cancel();
+    ASSERT_OK(channel_read->Cancel());  // Cancellation should always succeed for sync dispatchers.
     ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 0);
     sync_completion_signal(&task_completion);
   }));
@@ -445,7 +446,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelUnqueuedRead) {
       });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(unsync_dispatcher)));
 
-  channel_read->Cancel();
+  ASSERT_OK(channel_read->Cancel());
   ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));
 
   loop_.Quit();
@@ -472,7 +473,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedRead) {
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
-        ASSERT_OK(status);
+        ASSERT_EQ(status, ZX_ERR_CANCELED);
         sync_completion_signal(&read_completion);
       });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(unsync_dispatcher)));
@@ -481,7 +482,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedRead) {
     // This should queue the callback on the async loop.
     ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, nullptr, 0));
     ASSERT_EQ(unsync_dispatcher->callback_queue_size_slow(), 1);
-    channel_read->Cancel();
+    ASSERT_OK(channel_read->Cancel());  // We should be able to find and cancel the channel read.
     // The channel read is still expecting a callback.
     ASSERT_NOT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(unsync_dispatcher)));
   }));
@@ -499,6 +500,66 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedRead) {
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(unsync_dispatcher)));
 
   ASSERT_OK(sync_completion_wait(&read_completion, ZX_TIME_INFINITE));
+
+  loop_.Quit();
+  loop_.JoinThreads();
+
+  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(unsync_dispatcher));
+}
+
+// Tests cancelling a channel read that has been queued with the unsynchronized dispatcher,
+// and is about to be dispatched.
+TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedReadFails) {
+  const void* driver = CreateFakeDriver();
+  driver_runtime::Dispatcher* unsync_dispatcher;
+  ASSERT_EQ(ZX_OK,
+            driver_runtime::Dispatcher::CreateWithLoop(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "", 0,
+                                                       driver, &loop_, &unsync_dispatcher));
+
+  // Make calls reentrant so that any callback will be queued on the async loop.
+  driver_context::PushDriver(driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  // We will queue 2 channel reads, the first will block so we can test what happens
+  // when we try to cancel in-flight callbacks.
+  sync::Completion read_entered;
+  sync::Completion read_block;
+  auto channel_read = std::make_unique<fdf::ChannelRead>(
+      remote_.get(), 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        read_entered.Signal();
+        ASSERT_OK(read_block.Wait(zx::time::infinite()));
+        ASSERT_EQ(status, ZX_OK);
+      });
+  ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(unsync_dispatcher)));
+
+  auto channels = fdf::ChannelPair::Create(0);
+  ASSERT_OK(channels.status_value());
+  auto local2 = std::move(channels->end0);
+  auto remote2 = std::move(channels->end1);
+
+  sync::Completion read_complete;
+  auto channel_read2 = std::make_unique<fdf::ChannelRead>(
+      remote2.get(), 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        ASSERT_OK(status);  // We could not cancel this in time.
+        read_complete.Signal();
+      });
+  ASSERT_OK(channel_read2->Begin(static_cast<fdf_dispatcher_t*>(unsync_dispatcher)));
+
+  ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, nullptr, 0));
+  ASSERT_EQ(ZX_OK, fdf_channel_write(local2.get(), 0, arena_.get(), nullptr, 0, nullptr, 0));
+
+  // Start dispatching the read callbacks. The first callback should block.
+  loop_.StartThread();
+
+  ASSERT_OK(read_entered.Wait(zx::time::infinite()));
+  ASSERT_EQ(channel_read->Cancel(), ZX_ERR_NOT_FOUND);
+  ASSERT_EQ(channel_read2->Cancel(), ZX_ERR_NOT_FOUND);
+
+  read_block.Signal();
+
+  ASSERT_OK(read_complete.Wait(zx::time::infinite()));
 
   loop_.Quit();
   loop_.JoinThreads();

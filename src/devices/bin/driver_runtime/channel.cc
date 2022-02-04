@@ -331,21 +331,24 @@ fdf_status_t Channel::Call(uint32_t options, zx_time_t deadline,
   }
 }
 
-void Channel::CancelWait() {
+fdf_status_t Channel::CancelWait() {
   std::unique_ptr<driver_runtime::CallbackRequest> callback_request;
   {
     fbl::AutoLock lock(get_lock());
 
     // Check if the client has registered a callback via |WaitAsync|.
     if (!IsWaitAsyncRegisteredLocked()) {
-      return;
+      return ZX_ERR_NOT_FOUND;
     }
     if (dispatcher_->unsynchronized()) {
-      // If the callback has already been scheduled, we don't need to do anything.
+      // If the callback has already been queued, try to update the callback status to
+      // ZX_ERR_CANCELED. This may fail if the callback is running, or already scheduled to run.
       if (IsCallbackRequestQueuedLocked()) {
-        return;
+        bool updated = dispatcher_->SetCallbackReason(unowned_callback_request_, ZX_ERR_CANCELED);
+        return updated ? ZX_OK : ZX_ERR_NOT_FOUND;
       }
       // If there were no pending messages we would not yet have queued it to the dispatcher.
+      // Take the callback request so we can queue it outside the lock.
       callback_request = TakeCallbackRequestLocked(ZX_ERR_CANCELED);
 
     } else {
@@ -362,11 +365,12 @@ void Channel::CancelWait() {
       }
       dispatcher_ = nullptr;
       channel_read_ = nullptr;
+      return ZX_OK;
     }
   }
-  if (callback_request) {
-    CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
-  }
+  ZX_ASSERT(callback_request != nullptr);
+  CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
+  return ZX_OK;
 }
 
 // We disable lock analysis here as it doesn't realize the lock is shared
