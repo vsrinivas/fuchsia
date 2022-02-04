@@ -14,7 +14,6 @@ enum NetstackMethod<'a> {
     EnableInterface,
     GetIpv6Addresses,
     GetLinkLocalIpv6Addresses,
-    InitNetstack,
     ListInterfaces,
     Undefined(&'a str),
 }
@@ -27,7 +26,6 @@ impl NetstackMethod<'_> {
             "GetIpv6Addresses" => NetstackMethod::GetIpv6Addresses,
             "GetLinkLocalIpv6Addresses" => NetstackMethod::GetLinkLocalIpv6Addresses,
             "ListInterfaces" => NetstackMethod::ListInterfaces,
-            "InitNetstack" => NetstackMethod::InitNetstack,
             method => NetstackMethod::Undefined(method),
         }
     }
@@ -37,7 +35,6 @@ impl NetstackMethod<'_> {
 impl Facade for NetstackFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match NetstackMethod::from_str(&method) {
-            NetstackMethod::InitNetstack => to_value(()).map_err(Into::into),
             NetstackMethod::ListInterfaces => {
                 let result = self.list_interfaces().await?;
                 to_value(result).map_err(Into::into)
