@@ -784,6 +784,9 @@ class VmCowPages final
   // count reach zero.
   void UnpinPageLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
 
+  // Moves an existing page to the wired queue, retaining backlink information if applicable.
+  void MoveToWiredLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
+
   // Updates the page queue of an existing page, moving it to whichever non wired queue
   // is appropriate.
   void MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);

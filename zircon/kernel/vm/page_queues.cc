@@ -769,6 +769,12 @@ void PageQueues::MoveToWired(vm_page_t* page) {
   MoveToQueueLocked(page, PageQueueWired);
 }
 
+void PageQueues::MoveToWired(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
+  Guard<CriticalMutex> guard{&lock_};
+  DEBUG_ASSERT(object);
+  MoveToQueueBacklinkLocked(page, object, page_offset, PageQueueWired);
+}
+
 void PageQueues::SetUnswappable(vm_page_t* page) {
   Guard<CriticalMutex> guard{&lock_};
   SetQueueLocked(page, PageQueueUnswappable);

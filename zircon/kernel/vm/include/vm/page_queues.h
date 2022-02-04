@@ -104,6 +104,9 @@ class PageQueues {
   void SetWired(vm_page_t* page);
   // Moves page from whichever queue it is currently in, to the wired queue.
   void MoveToWired(vm_page_t* page);
+  // Moves page from whichever queue it is currently in, to the wired queue, and also sets the
+  // backlink information.
+  void MoveToWired(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
   // Place page in the unswappable queue. Must not already be in a page queue.
   void SetUnswappable(vm_page_t* page);
   // Moves page from whichever queue it is currently in, to the unswappable queue.

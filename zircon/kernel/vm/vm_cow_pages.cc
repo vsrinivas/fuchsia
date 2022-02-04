@@ -2421,7 +2421,7 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
 
         page->object.pin_count++;
         if (page->object.pin_count == 1) {
-          pmm_page_queues()->MoveToWired(page);
+          MoveToWiredLocked(page, page_offset);
         }
 
         // Pinning every page in the largest vmo possible as many times as possible can't overflow
@@ -2796,6 +2796,17 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
   VMO_FRUGAL_VALIDATION_ASSERT(DebugValidateVmoPageBorrowingLocked());
   return ZX_OK;
+}
+
+void VmCowPages::MoveToWiredLocked(vm_page_t* page, uint64_t offset) {
+  // If pager backlinks are supported, retain the backlink information when moving to the wired
+  // queue. The backlink information should be valid as long as the page is owned by this object,
+  // irrespective of the page queue the page gets moved to.
+  if (has_pager_backlinks_locked()) {
+    pmm_page_queues()->MoveToWired(page, this, offset);
+  } else {
+    pmm_page_queues()->MoveToWired(page);
+  }
 }
 
 void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {

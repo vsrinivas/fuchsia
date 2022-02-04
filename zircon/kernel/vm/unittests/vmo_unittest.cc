@@ -3214,6 +3214,67 @@ static bool vmo_dirty_pages_with_hints_test() {
   END_TEST;
 }
 
+// Tests that pinning pager-backed pages retains backlink information.
+static bool vmo_pinning_backlink_test() {
+  BEGIN_TEST;
+  // Disable the page scanner as this test would be flaky if our pages get evicted by someone else.
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a pager-backed VMO with two pages, so we can verify a non-zero offset value.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  vm_page_t* pages[2];
+  zx_status_t status = make_committed_pager_vmo(2, /*trap_dirty=*/false, pages, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Pages should be in the pager queue.
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[1]));
+
+  // Verify backlink information.
+  auto cow = vmo->DebugGetCowPages().get();
+  EXPECT_EQ(cow, pages[0]->object.get_object());
+  EXPECT_EQ(0u, pages[0]->object.get_page_offset());
+  EXPECT_EQ(cow, pages[1]->object.get_object());
+  EXPECT_EQ(static_cast<uint64_t>(PAGE_SIZE), pages[1]->object.get_page_offset());
+
+  // Pin the pages.
+  status = vmo->CommitRangePinned(0, 2 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Pages might get swapped out on pinning if they were loaned. Look them up again.
+  pages[0] = vmo->DebugGetPage(0);
+  pages[1] = vmo->DebugGetPage(PAGE_SIZE);
+
+  // Pages should be in the wired queue.
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsWired(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsWired(pages[1]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(pages[1]));
+
+  // Moving to the wired queue should retain backlink information.
+  EXPECT_EQ(cow, pages[0]->object.get_object());
+  EXPECT_EQ(0u, pages[0]->object.get_page_offset());
+  EXPECT_EQ(cow, pages[1]->object.get_object());
+  EXPECT_EQ(static_cast<uint64_t>(PAGE_SIZE), pages[1]->object.get_page_offset());
+
+  // Unpin the pages.
+  vmo->Unpin(0, 2 * PAGE_SIZE);
+
+  // Pages should be back in the pager queue.
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsWired(pages[0]));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsWired(pages[1]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0]));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[1]));
+
+  // Verify backlink information again.
+  EXPECT_EQ(cow, pages[0]->object.get_object());
+  EXPECT_EQ(0u, pages[0]->object.get_page_offset());
+  EXPECT_EQ(cow, pages[1]->object.get_object());
+  EXPECT_EQ(static_cast<uint64_t>(PAGE_SIZE), pages[1]->object.get_page_offset());
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(vmo_tests)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
@@ -3264,6 +3325,7 @@ VM_UNITTEST(vmo_stack_owned_loaned_pages_interval_test)
 VM_UNITTEST(vmo_dirty_pages_test)
 VM_UNITTEST(vmo_dirty_pages_writeback_test)
 VM_UNITTEST(vmo_dirty_pages_with_hints_test)
+VM_UNITTEST(vmo_pinning_backlink_test)
 UNITTEST_END_TESTCASE(vmo_tests, "vmo", "VmObject tests")
 
 }  // namespace vm_unittest
