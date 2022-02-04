@@ -257,4 +257,47 @@ zx_status_t DdkVolume::Write() {
   return SyncIO(dev_, BLOCK_OP_WRITE, block_.get(), offset_, block_.len());
 }
 
+zx_status_t DdkVolume::Flush() {
+  zx_status_t rc;
+
+  block_impl_protocol_t proto;
+  if ((rc = device_get_protocol(dev_, ZX_PROTOCOL_BLOCK, &proto)) != ZX_OK) {
+    xprintf("block protocol not support\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  block_info_t info;
+  size_t op_size;
+  block_impl_query(&proto, &info, &op_size);
+
+  fbl::AllocChecker ac;
+  std::unique_ptr<char[]> raw;
+  if constexpr (alignof(block_op_t) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
+    raw = std::unique_ptr<char[]>(
+        new (static_cast<std::align_val_t>(alignof(block_op_t)), &ac) char[op_size]);
+  } else {
+    raw = std::unique_ptr<char[]>(new (&ac) char[op_size]);
+  }
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  block_op_t* block = reinterpret_cast<block_op_t*>(raw.get());
+
+  sync_completion_t completion;
+  sync_completion_reset(&completion);
+
+  block->command = BLOCK_OP_FLUSH;
+
+  block_impl_queue(&proto, block, SyncComplete, &completion);
+  sync_completion_wait(&completion, ZX_TIME_INFINITE);
+
+  rc = block->command;
+  if (rc != ZX_OK) {
+    xprintf("Block I/O (BLOCK_OP_FLUSH) failed: %s\n", zx_status_get_string(rc));
+    return rc;
+  }
+
+  return ZX_OK;
+}
+
 }  // namespace zxcrypt
