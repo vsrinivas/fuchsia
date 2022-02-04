@@ -436,7 +436,7 @@ const IPV6_LOOPBACK: fidl_fuchsia_net::Subnet = fidl_subnet!("::1/128");
 
 fn extract_v4_and_v6(
     addrs: impl IntoIterator<Item = fidl_fuchsia_net::Subnet>,
-) -> (fidl_fuchsia_net::Subnet, fidl_fuchsia_net::Subnet) {
+) -> (Option<fidl_fuchsia_net::Subnet>, Option<fidl_fuchsia_net::Subnet>) {
     let (v4, v6) = addrs.into_iter().fold((None, None), |(v4, v6), subnet| {
         let fidl_fuchsia_net::Subnet { addr, prefix_len: _ } = subnet;
 
@@ -458,7 +458,7 @@ fn extract_v4_and_v6(
         }
     });
 
-    (v4.expect("expected v4 addr"), v6.expect("expected v6 addr"))
+    (v4, v6)
 }
 
 #[variants_test]
@@ -492,7 +492,7 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
         addresses.into_iter().map(|fidl_fuchsia_net_interfaces::Address { addr, .. }| {
             addr.expect("expected address to be set")
         });
-    assert_eq!(extract_v4_and_v6(addresses), (IPV4_LOOPBACK, IPV6_LOOPBACK));
+    assert_eq!(extract_v4_and_v6(addresses), (Some(IPV4_LOOPBACK), Some(IPV6_LOOPBACK)));
 
     let stack = realm
         .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
@@ -521,34 +521,53 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
     add_addr(NEW_IPV4_ADDRESS).await;
     add_addr(NEW_IPV6_ADDRESS).await;
 
+    // Wait for the addresses to be set.
+    //
+    // On Netstack2, the DAD resolution event (which the interface watcher
+    // depends on to update its view of interface properties) is handled
+    // asynchronously w.r.t. the add address operation so the new IPv6 address
+    // may not be observed in the initial "Existing" event; it may be observed
+    // in a "Changed" event.
+    //
+    // This is not an issue on Netstack3 as we will observe the address in an
+    // "Existing" event right away as we do not perform DAD and Netstack3 is
+    // queried for all interface states on watcher creation (no events happen
+    // asynchronously).
+    //
     // TODO(https://fxbug.dev/75553): Wait for changed event instead of creating
     // a new watcher.
-    let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-        .expect("get interface event stream");
-    pin_utils::pin_mut!(stream);
-    let (new_loopback_id, addresses) = assert_matches::assert_matches!(
-        stream.try_next().await,
-        Ok(Some(fidl_fuchsia_net_interfaces::Event::Existing(
-            fidl_fuchsia_net_interfaces::Properties {
-                id: Some(id),
-                device_class:
-                    Some(fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
-                        fidl_fuchsia_net_interfaces::Empty {},
-                    )),
-                online: Some(true),
-                addresses: Some(addresses),
-                has_default_ipv4_route: Some(false),
-                has_default_ipv6_route: Some(false),
-                ..
-            },
-        ))) => (id, addresses)
-    );
-    assert_eq!(loopback_id, new_loopback_id);
-    let addresses =
-        addresses.into_iter().map(|fidl_fuchsia_net_interfaces::Address { addr, .. }| {
-            addr.expect("expected address to be set")
-        });
-    assert_eq!(extract_v4_and_v6(addresses), (NEW_IPV4_ADDRESS, NEW_IPV6_ADDRESS));
+    let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(loopback_id);
+    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+            .expect("get interface event stream"),
+        &mut state,
+        |fidl_fuchsia_net_interfaces_ext::Properties {
+             id,
+             name: _,
+             device_class: _,
+             online: _,
+             addresses,
+             has_default_ipv4_route: _,
+             has_default_ipv6_route: _,
+         }| {
+            assert_eq!(loopback_id, *id, "Don't expect to see other interfaces");
+            let addresses = addresses.into_iter().map(
+                |fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                    addr
+                },
+            ).cloned();
+            match extract_v4_and_v6(addresses) {
+                (Some(v4), Some(v6)) => {
+                    assert_eq!((v4, v6), (NEW_IPV4_ADDRESS, NEW_IPV6_ADDRESS));
+                    Some(())
+                }
+                (v4, v6) => {
+                    println!("waiting for both IPv4 and IPv6 addresses to be set; got (v4, v6) = ({:?}, {:?})", v4, v6);
+                    None
+                }
+            }
+        },
+    ).await.expect("new addresses should be observed");
 }
 
 #[variants_test]
