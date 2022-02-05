@@ -42,7 +42,7 @@ fidl::InterfaceHandle<fuchsia::io::Directory> CreatePkgDirHandle() {
   int fd;
   ZX_COMPONENT_ASSERT_STATUS_OK(
       "fdio_open_fd",
-      fdio_open_fd("/pkg", fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+      fdio_open_fd("/pkg", fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE,
                    &fd));
   zx_handle_t handle;
   ZX_COMPONENT_ASSERT_STATUS_OK("fdio_fd_transfer", fdio_fd_transfer(fd, &handle));
