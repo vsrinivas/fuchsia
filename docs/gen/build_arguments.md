@@ -2264,24 +2264,6 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 From //zircon/kernel/params.gni:73
 
-### kernel_version_git_dirty_check
-If this is true, then the generated kernel version string also adds a
-"-dirty" suffix if any files in the checkout are modified from what's
-committed in git.
-
-**Current value (from the default):** `true`
-
-From //zircon/kernel/lib/version/BUILD.gn:20
-
-### kernel_version_string
-Version string embedded in the kernel for `zx_system_get_version_string`.
-If set to the default "", a string is generated based on the
-commit hash of git HEAD and the value of `kernel_version_git_dirty_check`.
-
-**Current value (from the default):** `""`
-
-From //zircon/kernel/lib/version/BUILD.gn:15
-
 ### known_variants
 List of variants that will form the basis for variant toolchains.
 To make use of a variant, set [`select_variant`](#select_variant).
@@ -3938,7 +3920,7 @@ This feature is still WIP but you can turn it on at your own risk.
 
 **Current value (from the default):** `false`
 
-From //src/experiences/session_shells/ermine/login/BUILD.gn:14
+From //src/experiences/session_shells/ermine/login/BUILD.gn:13
 
 ### sysmgr_golden_warn_override
 Used by config_package().
