@@ -55,6 +55,7 @@
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.intl.TimeZones",
                 "fuchsia.logger.LogSink",
+                "fuchsia.media.Audio",
                 "fuchsia.media.AudioCore",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.ProfileProvider",

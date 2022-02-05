@@ -864,7 +864,10 @@
         {
             protocol: [ "fuchsia.media.Audio" ],
             from: "self",
-            to: "#soundplayer",
+            to: [
+                "#session-manager",
+                "#soundplayer",
+            ],
             dependency: "weak_for_migration",
         },
         {
