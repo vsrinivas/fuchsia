@@ -69,6 +69,11 @@ import("//build/toolchain/rbe.gni")
 #     and should only be changed when absolutely necessary
 #     (such as in the case of generated code).
 #
+#   features (optional)
+#     A list of conditional compilation flags to enable. This can be used to set features for crates
+#     built in-tree which are also published to crates.io. This would be passed to rustc as
+#     '--cfg feature=XXX'
+#
 #   output_dir (optional)
 #     Directory that the resulting library should be placed in.
 #     See: `gn help output_dir`
@@ -138,6 +143,13 @@ template("rustc_staticlib") {
     source_root = invoker.source_root
   }
 
+  features = []
+  if (defined(invoker.features)) {
+    foreach(i, invoker.features) {
+      features += [ "--cfg=feature=\"${i}\"" ]
+    }
+  }
+
   _sources = []
   _deps = []
 
@@ -173,6 +185,8 @@ template("rustc_staticlib") {
     if (defined(invoker.non_rust_deps)) {
       deps += invoker.non_rust_deps
     }
+
+    rustflags = features
 
     configs = []
     configs = invoker.configs
