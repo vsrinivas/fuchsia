@@ -97,6 +97,10 @@ fuchsia_test_package("touch-input-test") {
     "//src/ui/tests/integration_input_tests:scenic-test-realm",
   ]
   test_specs = {
+    log_settings = {
+      # TODO(fxbug.dev/93081): Investigate flakes and remove allowing ERROR severity.
+      max_severity = "ERROR"
+    }
     environments = [
       {
         dimensions = {
@@ -191,6 +195,10 @@ fuchsia_test_package("touch-input-test-ip") {
     "//src/ui/tests/integration_input_tests:scenic-test-realm",
   ]
   test_specs = {
+    log_settings = {
+      # TODO(fxbug.dev/93081): Investigate flakes and remove allowing ERROR severity.
+      max_severity = "ERROR"
+    }
     environments = [
       {
         dimensions = {
