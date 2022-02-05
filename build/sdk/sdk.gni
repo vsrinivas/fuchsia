@@ -264,57 +264,49 @@ template("sdk") {
     public_deps = [ ":$verify_meta_target_name" ]
   }
 
-  if (build_sdk_archives) {
-    # Generates the final archive.
-    local_archive = "$target_gen_dir/$target_name.tar.gz"
-    output_archive = "${root_out_dir}/sdk/archive/${sdk_name}.tar.gz"
-    archive_generate_target_name = "${archive_target_name}_generate"
+  # Generates the final archive.
+  local_archive = "$target_gen_dir/$target_name.tar.gz"
+  output_archive = "${root_out_dir}/sdk/archive/${sdk_name}.tar.gz"
+  archive_generate_target_name = "${archive_target_name}_generate"
 
-    compiled_action(archive_generate_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
+  compiled_action(archive_generate_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
 
-      tool = "//build/tools/tarmaker"
+    tool = "//build/tools/tarmaker"
 
-      inputs = [ archive_manifest_file ]
+    inputs = [ archive_manifest_file ]
 
-      outputs = [ local_archive ]
+    outputs = [ local_archive ]
 
-      args = [
-        "-manifest",
-        rebase_path(archive_manifest_file),
-        "-output",
-        rebase_path(local_archive),
+    args = [
+      "-manifest",
+      rebase_path(archive_manifest_file),
+      "-output",
+      rebase_path(local_archive),
+    ]
+
+    deps = [ ":$archive_manifest_target_name" ]
+  }
+
+  copy(archive_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    sources = [ local_archive ]
+
+    outputs = [ output_archive ]
+
+    public_deps = [ ":$archive_generate_target_name" ]
+
+    metadata = {
+      sdk_archives = [
+        {
+          name = sdk_name
+          os = current_os
+          cpu = current_cpu
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          path = rebase_path(output_archive, root_build_dir)
+        },
       ]
-
-      deps = [ ":$archive_manifest_target_name" ]
-    }
-
-    copy(archive_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
-
-      sources = [ local_archive ]
-
-      outputs = [ output_archive ]
-
-      public_deps = [ ":$archive_generate_target_name" ]
-
-      metadata = {
-        sdk_archives = [
-          {
-            name = sdk_name
-            os = current_os
-            cpu = current_cpu
-            label = get_label_info(":$target_name", "label_with_toolchain")
-            path = rebase_path(output_archive, root_build_dir)
-          },
-        ]
-      }
-    }
-  } else {
-    group(archive_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
-
-      deps = [ ":$archive_manifest_target_name" ]
     }
   }
 
@@ -357,9 +349,9 @@ template("sdk") {
   group(main_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
-    public_deps = [
-      ":$archive_target_name",
-      ":$export_target_name",
-    ]
+    public_deps = [ ":$export_target_name" ]
+    if (build_sdk_archives) {
+      public_deps += [ ":$archive_target_name" ]
+    }
   }
 }
