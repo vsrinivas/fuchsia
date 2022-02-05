@@ -13,8 +13,12 @@ import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
 import 'package:zircon/zircon.dart';
 
-const kAccountName = 'created_by_user';
+const kDeprecatedAccountName = 'created_by_user';
+const kSystemPickedAccountName = 'picked_by_system';
+const kUserPickedAccountName = 'picked_by_user';
 const kAccountDirectory = 'account_data';
+
+enum AuthMode { automatic, manual }
 
 /// Defines a service that performs authentication tasks like:
 /// - create an account with password
@@ -35,20 +39,63 @@ class AuthService {
   final _ready = false.asObservable();
 
   AuthService() {
-    // Connect to AccountManager and get list of all account ids.
     Incoming.fromSvcPath().connectToService(_accountManager);
-    _accountManager.getAccountIds().then((ids) {
+  }
+
+  void dispose() {
+    _accountManager.ctrl.close();
+  }
+
+  /// Load existing accounts from [AccountManager].
+  void loadAccounts(AuthMode currentAuthMode) async {
+    try {
+      final ids = (await _accountManager.getAccountIds()).toList();
+
+      // TODO(http://fxb/85576): Remove once login and OOBE are mandatory.
+      // Remove any accounts created with a deprecated name or from an auth
+      // mode that does not match the current build configuration.
+      final tempIds = <int>[]..addAll(ids);
+      for (var id in tempIds) {
+        final metadata = await _accountManager.getAccountMetadata(id);
+
+        if (metadata.name != null &&
+            _shouldRemoveAccountWithName(metadata.name!, currentAuthMode)) {
+          try {
+            await _accountManager.removeAccount(id, true);
+            ids.remove(id);
+            log.info('Removed account: $id with name: ${metadata.name}');
+            // ignore: avoid_catches_without_on_clauses
+          } catch (e) {
+            // We can only log and continue.
+            log.shout('Failed during deprecated account removal: $e');
+          }
+        }
+      }
+      _accountIds.addAll(ids);
       runInAction(() => _ready.value = true);
       _accountIds.addAll(ids);
       if (ids.length > 1) {
         log.shout(
             'Multiple (${ids.length}) accounts found, will use the first.');
       }
-    });
+      runInAction(() => _ready.value = true);
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e) {
+      log.shout('Failed during deprecated account removal: $e');
+    }
   }
 
-  void dispose() {
-    _accountManager.ctrl.close();
+  bool _shouldRemoveAccountWithName(String name, AuthMode currentAuthMode) {
+    if (name == kDeprecatedAccountName) {
+      return true;
+    }
+    if (currentAuthMode == AuthMode.automatic) {
+      // Current auth is automatic, remove account with user picked name.
+      return name == kUserPickedAccountName;
+    } else {
+      // Current auth is manual, remove account with system picked name.
+      return name == kSystemPickedAccountName;
+    }
   }
 
   /// Calls [FactoryReset] service to factory data reset the device.
@@ -91,7 +138,10 @@ class AuthService {
       _account!.ctrl.close();
     }
 
-    final metadata = AccountMetadata(name: kAccountName);
+    final metadata = AccountMetadata(
+        name: password.isEmpty
+            ? kSystemPickedAccountName
+            : kUserPickedAccountName);
     _account = AccountProxy();
     await _accountManager.deprecatedProvisionNewAccount(
       password,

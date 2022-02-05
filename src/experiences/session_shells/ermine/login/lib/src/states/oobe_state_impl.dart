@@ -56,7 +56,9 @@ class OobeStateImpl with Disposable implements OobeState {
         .rootDir()
         .addNode(kHostedDirectories, hostedDirectories);
 
-    authService.hostedDirectories = hostedDirectories;
+    authService
+      ..hostedDirectories = hostedDirectories
+      ..loadAccounts(launchOobe ? AuthMode.manual : AuthMode.automatic);
     componentContext.outgoing.serveFromStartupInfo();
 
     channelService.onConnected = (connected) => runInAction(() async {
@@ -80,6 +82,16 @@ class OobeStateImpl with Disposable implements OobeState {
         }())
         ..load();
     }
+
+    // TODO(http://fxb/85576): Remove once login and OOBE are mandatory.
+    // If we are skipping OOBE, authenticate using empty password.
+    reactions.add(reaction((_) => ready, (ready) {
+      if (!launchOobe) {
+        _performNullLogin().then((_) {
+          runInAction(() => _loginDone.value = true);
+        });
+      }
+    }));
   }
 
   @override
@@ -94,31 +106,15 @@ class OobeStateImpl with Disposable implements OobeState {
 
   @override
   bool get launchOobe => _launchOobe.value;
-  late final Observable<bool> _launchOobe = Observable<bool>(() {
-    // This should be called only after startup services are ready.
-    assert(ready, 'Startup services are not initialized.');
-
-    // Check if the build allows OOBE.
-    final startOOBE = () {
-      File config = File(kDefaultConfigJson);
-      // If default config is missing, log error and return defaults.
-      if (!config.existsSync()) {
-        log.severe('Missing startup and default configs. Skipping OOBE.');
-        return false;
-      }
-      final data = json.decode(config.readAsStringSync()) ?? {};
-      return data['launch_oobe'] == true;
-    }();
-
-    // TODO(http://fxb/85576): Remove once login and OOBE are mandatory.
-    // If we are skipping OOBE, authenticate using empty password.
-    if (!startOOBE) {
-      _performNullLogin().then((_) {
-        runInAction(() => _loginDone.value = true);
-      });
+  late final _launchOobe = Observable<bool>(() {
+    File config = File(kDefaultConfigJson);
+    // If default config is missing, log error and return defaults.
+    if (!config.existsSync()) {
+      log.severe('Missing startup and default configs. Skipping OOBE.');
+      return false;
     }
-
-    return startOOBE;
+    final data = json.decode(config.readAsStringSync()) ?? {};
+    return data['launch_oobe'] == true;
   }());
 
   @override
