@@ -86,59 +86,31 @@ sanitizer_default_options("lsan_default_options") {
 # ```
 # to the target that builds the leaky code.  When all leaky tests have been
 # marked that way, the asan_default_options default above will be removed.
+#
+# To trim this allowlist:
+# scripts/gn/trim_visibility.py --target="//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS"
 sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
   visibility = [
-    "//garnet/bin/cpuperf/tests/*",
     "//garnet/bin/setui/*",
-    "//garnet/bin/trace/*",
-    "//garnet/bin/trace/tests/*",
-    "//sdk/lib/fit-promise/*",
-    "//sdk/lib/fit/test/*",
     "//src/cobalt/bin/system-metrics/*",
     "//src/connectivity/bluetooth/hci/lib/*",
-    "//src/connectivity/bluetooth/lib/bt-a2dp/*",
-    "//src/connectivity/bluetooth/profiles/bt-a2dp-sink/*",
-    "//src/connectivity/bluetooth/profiles/bt-a2dp/*",
-    "//src/connectivity/weave/*",
     "//src/connectivity/wlan/lib/common/rust/*",
-    "//src/developer/debug/debug_agent/*",
-    "//src/developer/forensics/feedback_data/tests/*",
     "//src/developer/shell/josh/*",
-    "//src/developer/shell/mirror/*",
-    "//src/devices/sysmem/tests/sysmem/fuzz/*",
     "//src/devices/usb/drivers/xhci/*",
-    "//src/diagnostics/archivist/tests/logs/cpp/*",
-    "//src/fonts/font_info/*",
     "//src/graphics/drivers/msd-intel-gen/tests/unit_tests/*",
     "//src/graphics/lib/compute/*",
     "//src/graphics/lib/compute/mold/*",
     "//src/graphics/lib/compute/surpass/*",
-    "//src/graphics/tests/benchmark/*",
-    "//src/graphics/tests/vkext/*",
-    "//src/graphics/tests/vkloop/*",
-    "//src/lib/cmx/*",
     "//src/lib/scoped_task/*",
-    "//src/lib/vulkan/tests/*",
     "//src/media/audio/drivers/intel-hda/controller/*",
     "//src/media/playback/mediaplayer/*",
     "//src/security/verifiers/verify_component_resolvers:*",
     "//src/security/verifiers/verify_routes:*",
     "//src/ui/bin/terminal/third_party/term-model/*",
     "//src/ui/examples/escher/test/*",
-    "//src/ui/input/drivers/hid-input-report/*",
-    "//src/ui/lib/escher/test/*",
-    "//src/ui/scenic/lib/flatland/buffers/tests/*",
-    "//src/ui/scenic/lib/flatland/renderer/tests/*",
-    "//src/ui/scenic/lib/input/tests/*",
-    "//src/ui/scenic/lib/input/tests/fuzzers/*",
     "//third_party/crashpad/*",
     "//third_party/mesa/src/intel/vulkan/tests/*",
     "//third_party/openssh-portable/*",
-    "//third_party/rapidjson/*",
-    "//tools/vboot_reference/*",
-    "//vendor/*",
-    "//zircon/system/ulib/elf-search/test/*",
-    "//zircon/system/ulib/lazy_init/test/*",
   ]
 
   args = [ "detect_leaks=0" ]
