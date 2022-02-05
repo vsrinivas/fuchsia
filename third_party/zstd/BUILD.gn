@@ -5,10 +5,6 @@
 import("//build/host.gni")
 import("//build/zircon/migrated_targets.gni")
 
-# TODO(fxbug.dev/92499): temporary during soft transition
-_zstd_changelog = read_file("src/CHANGELOG", "list lines")
-old_zstd = _zstd_changelog[0] == "v1.5.0  (May 11, 2021)"
-
 zstd_common_sources = [
   "src/lib/common/bitstream.h",
   "src/lib/common/compiler.h",
@@ -72,6 +68,7 @@ zstd_compress_sources = [
 
 zstd_decompress_sources = [
   "src/lib/decompress/huf_decompress.c",
+  "src/lib/decompress/huf_decompress_amd64.S",
   "src/lib/decompress/zstd_ddict.c",
   "src/lib/decompress/zstd_ddict.h",
   "src/lib/decompress/zstd_decompress.c",
@@ -79,10 +76,6 @@ zstd_decompress_sources = [
   "src/lib/decompress/zstd_decompress_block.h",
   "src/lib/decompress/zstd_decompress_internal.h",
 ]
-
-if (!old_zstd) {  # TODO(fxbug.dev/92499): temporary during soft transition
-  zstd_decompress_sources += [ "src/lib/decompress/huf_decompress_amd64.S" ]
-}
 
 static_library("zstd") {
   public_configs = [ ":public.config" ]
