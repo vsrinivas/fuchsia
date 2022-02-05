@@ -180,7 +180,7 @@ class FakeDdkOptee : public zxtest::Test {
         fidl::DiscoverableProtocolName<fuchsia_hardware_rpmb::Rpmb>,
         [](zx::channel) { return ZX_OK; }, "rpmb");
 
-    EXPECT_OK(OpteeController::Create(nullptr, parent_.get()));
+    ASSERT_OK(OpteeController::Create(nullptr, parent_.get()));
     optee_ = parent_->GetLatestChild()->GetDeviceContext<OpteeController>();
   }
   void SetUp() override { call_with_args_count = 0; }

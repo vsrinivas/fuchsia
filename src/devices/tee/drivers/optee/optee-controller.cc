@@ -421,33 +421,15 @@ async_dispatcher_t* OpteeController::GetDispatcherForTa(const Uuid& ta_uuid) {
 zx_status_t OpteeController::InitThreadPools() {
   zx_status_t status = ZX_ERR_INTERNAL;
   uint32_t default_pool_size = kDefaultNumThreads;
-  size_t metadata_size;
-  size_t actual;
 
-  status = device_get_metadata_size(parent(), DEVICE_METADATA_TEE_THREAD_CONFIG, &metadata_size);
-  if (status != ZX_OK || metadata_size == 0) {
+  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_tee::wire::TeeMetadata>(
+      parent(), DEVICE_METADATA_TEE_THREAD_CONFIG);
+  if (!decoded.is_ok()) {
     LOG(INFO, "No metadata for driver. Use default thread configuration.");
     return CreateThreadPool(&loop_, default_pool_size, kDefaultRoleName);
   }
 
-  auto buffer = std::make_unique<uint8_t[]>(metadata_size);
-
-  status = device_get_metadata(parent(), DEVICE_METADATA_TEE_THREAD_CONFIG, buffer.get(),
-                               metadata_size, &actual);
-  if (status != ZX_OK && actual != metadata_size) {
-    LOG(ERROR, "device_get_metadata failed %d", status);
-    return ZX_ERR_INTERNAL;
-  }
-
-  // TODO(fxbug.dev/45252): Use FIDL at rest.
-  fidl::DecodedMessage<fuchsia_hardware_tee::wire::TeeMetadata> decoded(
-      fidl::internal::WireFormatVersion::kV1, buffer.get(), metadata_size);
-  if (!decoded.ok()) {
-    LOG(ERROR, "Failed to deserialize metadata.");
-    return ZX_ERR_INTERNAL;
-  }
-
-  fuchsia_hardware_tee::wire::TeeMetadata* metadata = decoded.PrimaryObject();
+  fuchsia_hardware_tee::wire::TeeMetadata* metadata = decoded->PrimaryObject();
 
   LOG(INFO, "Default thread pool size %d, %zu custom thread pools supplied.",
       metadata->default_thread_count(), metadata->custom_threads().count());
