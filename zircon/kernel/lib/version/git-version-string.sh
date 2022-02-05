@@ -9,13 +9,12 @@
 
 readonly OUTFILE="$1"
 readonly CHECKOUT_DIR="$2"
-readonly DIRTY_CHECK="$3"
 
 set -e
 
 GIT_REV="git-$(git -C "$CHECKOUT_DIR" rev-parse HEAD 2>/dev/null)"
 
-if $DIRTY_CHECK && [ -n "$(git -C "$CHECKOUT_DIR" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
+if [ -n "$(git -C "$CHECKOUT_DIR" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
   GIT_REV+="-dirty"
 fi
 

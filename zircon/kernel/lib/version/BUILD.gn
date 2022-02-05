@@ -8,55 +8,32 @@ import("//build/tracer/tracer.gni")
 import("//build/zircon/migrated_targets.gni")
 import("version_string.gni")
 
-declare_args() {
-  # Version string embedded in the kernel for `zx_system_get_version_string`.
-  # If set to the default "", a string is generated based on the
-  # commit hash of git HEAD and the value of `kernel_version_git_dirty_check`.
-  kernel_version_string = ""
-
-  # If this is true, then the generated kernel version string also adds a
-  # "-dirty" suffix if any files in the checkout are modified from what's
-  # committed in git.
-  kernel_version_git_dirty_check = true
-}
-
 # The version string depends solely on the source and doesn't vary across
 # machines or toolchains, so generate it only once.
 gen_dir = get_label_info(".($default_toolchain)", "target_gen_dir")
 if (current_toolchain == default_toolchain) {
   assert(gen_dir == target_gen_dir)
 
-  if (kernel_version_string != "") {
-    generated_file("version-string.bin") {
-      visibility = [
-        ":*",
-        "//zircon/kernel:*",
-      ]
-      outputs = [ kernel_version_string_file ]
-      contents = kernel_version_string  # Not a list so no newline added.
-    }
-  } else {
-    action("version-string.bin") {
-      visibility = [
-        ":*",
-        "//zircon/kernel:*",
-      ]
-      script = "git-version-string.sh"
-      inputs = [ "//.git/HEAD" ]
-      outputs = [ kernel_version_string_file ]
+  action("version-string.bin") {
+    visibility = [
+      ":*",
+      "//zircon/kernel:*",
+    ]
+    script = "git-version-string.sh"
+    inputs = [
+      # Regenerate version if HEAD moves
+      "//.git/HEAD",
 
-      # fxbug.dev/68558: git dirty check is incompatible with should_trace
-      kernel_version_git_dirty_check =
-          kernel_version_git_dirty_check && !build_should_trace_actions
-      if (kernel_version_git_dirty_check) {
-        inputs += [ "//.git/index" ]
-      }
-      args = rebase_path([
-                           kernel_version_string_file,
-                           "//.git",
-                         ],
-                         root_build_dir) + [ "$kernel_version_git_dirty_check" ]
-    }
+      # Add "-dirty" suffix as needed
+      "//.git/index",
+    ]
+    outputs = [ kernel_version_string_file ]
+
+    args = rebase_path([
+                         kernel_version_string_file,
+                         "//.git",
+                       ],
+                       root_build_dir)
   }
 
   action("version-string.h") {
