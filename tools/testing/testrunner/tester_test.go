@@ -92,10 +92,6 @@ func TestSubprocessTester(t *testing.T) {
 	tmpDir := t.TempDir()
 	tester := SubprocessTester{
 		localOutputDir: tmpDir,
-		getModuleBuildIDs: func(test string) ([]string, error) {
-			name := filepath.Base(test)
-			return []string{name + "-BUILD-ID1", name + "-BUILD-ID2"}, nil
-		},
 	}
 
 	passingTest := filepath.Join("host_x64", "passing")
@@ -133,9 +129,8 @@ func TestSubprocessTester(t *testing.T) {
 			wantDataSinks: runtests.DataSinkMap{
 				"llvm-profile": []runtests.DataSink{
 					{
-						Name:     filepath.Base(passingProfile),
-						File:     passingProfile,
-						BuildIDs: []string{"passing-BUILD-ID1", "passing-BUILD-ID2"},
+						Name: filepath.Base(passingProfile),
+						File: passingProfile,
 					},
 				},
 			},
@@ -156,9 +151,8 @@ func TestSubprocessTester(t *testing.T) {
 			wantDataSinks: runtests.DataSinkMap{
 				"llvm-profile": []runtests.DataSink{
 					{
-						Name:     filepath.Base(failingProfile),
-						File:     failingProfile,
-						BuildIDs: []string{"failing-BUILD-ID1", "failing-BUILD-ID2"},
+						Name: filepath.Base(failingProfile),
+						File: failingProfile,
 					},
 				},
 			},

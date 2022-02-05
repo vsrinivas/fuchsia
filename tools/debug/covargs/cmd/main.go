@@ -43,30 +43,28 @@ const (
 )
 
 var (
-	colors             color.EnableColor
-	level              logger.LogLevel
-	summaryFile        flagmisc.StringsValue
-	buildIDDirPaths    flagmisc.StringsValue
-	symbolServers      flagmisc.StringsValue
-	symbolCache        string
-	symbolizeDumpFile  flagmisc.StringsValue
-	dryRun             bool
-	skipFunctions      bool
-	outputDir          string
-	llvmCov            string
-	llvmProfdata       flagmisc.StringsValue
-	outputFormat       string
-	jsonOutput         string
-	reportDir          string
-	saveTemps          string
-	basePath           string
-	diffMappingFile    string
-	compilationDir     string
-	pathRemapping      flagmisc.StringsValue
-	srcFiles           flagmisc.StringsValue
-	numThreads         int
-	jobs               int
-	useEmbeddedBuildId bool
+	colors          color.EnableColor
+	level           logger.LogLevel
+	summaryFile     flagmisc.StringsValue
+	buildIDDirPaths flagmisc.StringsValue
+	symbolServers   flagmisc.StringsValue
+	symbolCache     string
+	dryRun          bool
+	skipFunctions   bool
+	outputDir       string
+	llvmCov         string
+	llvmProfdata    flagmisc.StringsValue
+	outputFormat    string
+	jsonOutput      string
+	reportDir       string
+	saveTemps       string
+	basePath        string
+	diffMappingFile string
+	compilationDir  string
+	pathRemapping   flagmisc.StringsValue
+	srcFiles        flagmisc.StringsValue
+	numThreads      int
+	jobs            int
 )
 
 func init() {
@@ -79,7 +77,6 @@ func init() {
 	flag.Var(&buildIDDirPaths, "build-id-dir", "path to .build-id directory")
 	flag.Var(&symbolServers, "symbol-server", "a GCS URL or bucket name that contains debug binaries indexed by build ID")
 	flag.StringVar(&symbolCache, "symbol-cache", "", "path to directory to store cached debug binaries in")
-	flag.Var(&symbolizeDumpFile, "symbolize-dump", "path to the json emited from the symbolizer")
 	flag.BoolVar(&dryRun, "dry-run", false, "if set the system prints out commands that would be run instead of running them")
 	flag.BoolVar(&skipFunctions, "skip-functions", true, "if set, the coverage report enabled by the `report-dir` flag will not include function coverage")
 	flag.StringVar(&outputDir, "output-dir", "", "the directory to output results to")
@@ -97,7 +94,6 @@ func init() {
 		"Multiple files can be specified with multiple instances of this flag.")
 	flag.IntVar(&numThreads, "num-threads", 0, "number of processing threads")
 	flag.IntVar(&jobs, "jobs", runtime.NumCPU(), "number of parallel jobs")
-	flag.BoolVar(&useEmbeddedBuildId, "use-embedded-build-id", true, "Use embedded build id instead of symbolizer output")
 }
 
 const llvmProfileSinkType = "llvm-profile"
@@ -124,9 +120,8 @@ func readSummary(summaryFiles []string) (runtests.DataSinkMap, error) {
 			for name, data := range detail.DataSinks {
 				for _, sink := range data {
 					sinks[name] = append(sinks[name], runtests.DataSink{
-						Name:     sink.Name,
-						File:     filepath.Join(dir, sink.File),
-						BuildIDs: sink.BuildIDs,
+						Name: sink.Name,
+						File: filepath.Join(dir, sink.File),
 					})
 				}
 			}
@@ -134,55 +129,6 @@ func readSummary(summaryFiles []string) (runtests.DataSinkMap, error) {
 	}
 
 	return sinks, nil
-}
-
-func readSymbolizerOutput(outputFiles []string) (map[string]symbolize.DumpEntry, error) {
-	dumps := make(map[string]symbolize.DumpEntry)
-
-	for _, outputFile := range outputFiles {
-		// TODO(phosek): process these in parallel using goroutines.
-		file, err := os.Open(outputFile)
-		if err != nil {
-			return nil, fmt.Errorf("cannot open %q: %w", outputFile, err)
-		}
-		defer file.Close()
-		var output []symbolize.DumpEntry
-		if err := json.NewDecoder(file).Decode(&output); err != nil {
-			return nil, fmt.Errorf("cannot decode %q: %w", outputFile, err)
-		}
-
-		for _, dump := range output {
-			if existingDump, ok := dumps[dump.Name]; ok {
-				existingDump.Modules = append(existingDump.Modules, dump.Modules...)
-				existingDump.Segments = append(existingDump.Segments, dump.Segments...)
-				dumps[dump.Name] = existingDump
-			} else {
-				dumps[dump.Name] = dump
-			}
-		}
-	}
-
-	return dumps, nil
-}
-
-type indexedInfo struct {
-	dumps   map[string]symbolize.DumpEntry
-	summary runtests.DataSinkMap
-}
-
-func readInfo(dumpFiles, summaryFiles []string) (*indexedInfo, error) {
-	summary, err := readSummary(summaryFiles)
-	if err != nil {
-		return nil, err
-	}
-	dumps, err := readSymbolizerOutput(symbolizeDumpFile)
-	if err != nil {
-		return nil, err
-	}
-	return &indexedInfo{
-		dumps:   dumps,
-		summary: summary,
-	}, nil
 }
 
 type Action struct {
@@ -303,86 +249,55 @@ type partition struct {
 }
 
 type profileEntry struct {
-	Profile string   `json:"profile"`
-	Modules []string `json:"modules"`
+	Profile string `json:"profile"`
+	Module  string `json:"module"`
 }
 
 // mergeEntries combines data from runtests and build ids embedded in profiles
-// or symbolizer, returning a sequence of entries, where each entry contains
-// a raw profile and all modules (specified by build ID) present in that profile.
-func mergeEntries(ctx context.Context, dumps map[string]symbolize.DumpEntry, summary runtests.DataSinkMap, partitions map[uint64]*partition) ([]profileEntry, error) {
-	sinkToModules := make(map[string]map[string]struct{})
+// returning a sequence of entries, where each entry contains
+// a raw profile and module specified by build ID present in that profile.
+func mergeEntries(ctx context.Context, summary runtests.DataSinkMap, partitions map[uint64]*partition) ([]profileEntry, error) {
+	sinkToModules := make(map[string]string)
+	// TODO(gulfem): Parallelize this loop as reading all the profiles via llvm-profdata is costly.
 	for _, sink := range summary[llvmProfileSinkType] {
-		moduleSet, ok := sinkToModules[sink.File]
+		// If we read the embedded build id for this sink before, do not read it again.
+		if _, ok := sinkToModules[sink.File]; ok {
+			continue
+		}
+
+		version, err := getVersion(sink.File)
+		if err != nil {
+			// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
+			// Once resolved, return an error.
+			logger.Warningf(ctx, "cannot read version from profile %q: %w", sink.Name, err)
+			continue
+		}
+
+		// Find the associated llvm-profdata tool.
+		partition, ok := partitions[version]
 		if !ok {
-			moduleSet = make(map[string]struct{})
+			partition = partitions[0]
 		}
 
-		// If a sink has a list of build ids attached to it, use that list of builds ids.
-		// This happens for the profiles collected for host tests.
-		// TODO(gulfem): Switch to using embedded build ids in host tests.
-		if len(sink.BuildIDs) > 0 {
-			for _, buildID := range sink.BuildIDs {
-				moduleSet[buildID] = struct{}{}
-			}
-		} else {
-			version, err := getVersion(sink.File)
-			if err != nil {
-				// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
-				// Once resolved, return an error.
-				logger.Warningf(ctx, "cannot read version from profile %q: %w", sink.Name, err)
-				continue
-			}
-
-			// If embedded build ids are enabled, read embedded build id from profiles.
-			// Otherwise, read build ids from the symbolizer output.
-			// Embedded build ids are enabled for profile versions 7 and above.
-			if useEmbeddedBuildId && version >= 7 {
-				// If we read the embedded build id for this sink before, do not read it again.
-				if ok {
-					continue
-				}
-
-				// Find the associated llvm-profdata tool.
-				partition, ok := partitions[version]
-				if !ok {
-					partition = partitions[0]
-				}
-
-				embeddedBuildId, err := readEmbeddedBuildId(ctx, partition.tool, sink.File)
-				if err != nil {
-					switch err.(type) {
-					// TODO(fxbug.dev/83504): Known issue causes occasional malformed profiles on host tests.
-					// Only log the warning for such cases now. Once resolved, return an error.
-					case *malformedProfileError:
-						logger.Warningf(ctx, err.Error())
-					default:
-						return nil, err
-					}
-				}
-				moduleSet[embeddedBuildId] = struct{}{}
-			} else {
-				dump, ok := dumps[sink.Name]
-				if !ok {
-					logger.Warningf(ctx, "%s not found in summary file; unable to determine module build IDs\n", sink.Name)
-					continue
-				}
-				for _, mod := range dump.Modules {
-					moduleSet[mod.Build] = struct{}{}
-				}
+		// Read embedded build ids, which are enabled for profile versions 7 and above.
+		embeddedBuildId, err := readEmbeddedBuildId(ctx, partition.tool, sink.File)
+		if err != nil {
+			switch err.(type) {
+			// TODO(fxbug.dev/83504): Known issue causes occasional malformed profiles on host tests.
+			// Only log the warning for such cases now. Once resolved, return an error.
+			case *malformedProfileError:
+				logger.Warningf(ctx, err.Error())
+			default:
+				return nil, err
 			}
 		}
-		sinkToModules[sink.File] = moduleSet
+		sinkToModules[sink.File] = embeddedBuildId
 	}
 
 	entries := []profileEntry{}
-	for sink, moduleSet := range sinkToModules {
-		var modules []string
-		for module := range moduleSet {
-			modules = append(modules, module)
-		}
+	for sink, module := range sinkToModules {
 		entries = append(entries, profileEntry{
-			Modules: modules,
+			Module:  module,
 			Profile: sink,
 		})
 	}
@@ -410,14 +325,14 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		return fmt.Errorf("missing default llvm-profdata tool path")
 	}
 
-	// Read in all the data
-	info, err := readInfo(symbolizeDumpFile, summaryFile)
+	// Read in all the data in summary file
+	summary, err := readSummary(summaryFile)
 	if err != nil {
 		return fmt.Errorf("parsing info: %w", err)
 	}
 
 	// Merge all the information
-	entries, err := mergeEntries(ctx, info.dumps, info.summary, partitions)
+	entries, err := mergeEntries(ctx, summary, partitions)
 
 	if err != nil {
 		return fmt.Errorf("merging info: %w", err)
@@ -514,56 +429,49 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 
 	// Gather the set of modules and coverage files
 	modules := []symbolize.FileCloser{}
-	moduleSet := make(map[string]struct{})
 	files := make(chan symbolize.FileCloser)
 	malformedModules := make(chan string)
 	s := make(chan struct{}, jobs)
 	var wg sync.WaitGroup
 	for _, entry := range entries {
-		for _, module := range entry.Modules {
-			if _, ok := moduleSet[module]; ok {
-				continue
+		wg.Add(1)
+		go func(module string) {
+			defer wg.Done()
+			s <- struct{}{}
+			defer func() { <-s }()
+			var file symbolize.FileCloser
+			if err := retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(cloudFetchRetryBackoff), cloudFetchMaxAttempts), func() error {
+				var err error
+				file, err = repo.GetBuildObject(module)
+				return err
+			}, nil); err != nil {
+				logger.Warningf(ctx, "module with build id %s not found: %v\n", module, err)
+				return
 			}
-			moduleSet[module] = struct{}{}
-			wg.Add(1)
-			go func(module string) {
-				defer wg.Done()
-				s <- struct{}{}
-				defer func() { <-s }()
-				var file symbolize.FileCloser
-				if err := retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(cloudFetchRetryBackoff), cloudFetchMaxAttempts), func() error {
-					var err error
-					file, err = repo.GetBuildObject(module)
-					return err
-				}, nil); err != nil {
-					logger.Warningf(ctx, "module with build id %s not found: %v\n", module, err)
-					return
+			if isInstrumented(file.String()) {
+				// Run llvm-cov with the individual module to make sure it's valid.
+				args := []string{
+					"show",
+					"-instr-profile", mergedFile,
+					"-summary-only",
 				}
-				if isInstrumented(file.String()) {
-					// Run llvm-cov with the individual module to make sure it's valid.
-					args := []string{
-						"show",
-						"-instr-profile", mergedFile,
-						"-summary-only",
-					}
-					for _, remapping := range pathRemapping {
-						args = append(args, "-path-equivalence", remapping)
-					}
-					args = append(args, file.String())
-					showCmd := Action{Path: llvmCov, Args: args}
-					data, err := showCmd.Run(ctx)
-					if err != nil {
-						logger.Warningf(ctx, "module %s returned err %v:\n%s", module, err, string(data))
-						file.Close()
-						malformedModules <- module
-					} else {
-						files <- file
-					}
-				} else {
+				for _, remapping := range pathRemapping {
+					args = append(args, "-path-equivalence", remapping)
+				}
+				args = append(args, file.String())
+				showCmd := Action{Path: llvmCov, Args: args}
+				data, err := showCmd.Run(ctx)
+				if err != nil {
+					logger.Warningf(ctx, "module %s returned err %v:\n%s", module, err, string(data))
 					file.Close()
+					malformedModules <- module
+				} else {
+					files <- file
 				}
-			}(module)
-		}
+			} else {
+				file.Close()
+			}
+		}(entry.Module)
 	}
 	go func() {
 		wg.Wait()

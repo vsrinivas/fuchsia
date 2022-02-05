@@ -7,7 +7,6 @@ package testrunner
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,7 +25,6 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	botanistconstants "go.fuchsia.dev/fuchsia/tools/botanist/constants"
-	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/clock"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
@@ -125,40 +123,22 @@ func BaseTestResultFromTest(test testsharder.Test) *TestResult {
 
 // SubprocessTester executes tests in local subprocesses.
 type SubprocessTester struct {
-	env               []string
-	dir               string
-	localOutputDir    string
-	getModuleBuildIDs func(string) ([]string, error)
-	nsjailPath        string
-	nsjailRoot        string
-}
-
-func getModuleBuildIDs(test string) ([]string, error) {
-	f, err := os.Open(test)
-	if err != nil {
-		return nil, err
-	}
-	buildIDs, err := elflib.GetBuildIDs(filepath.Base(test), f)
-	if err != nil {
-		return nil, err
-	}
-	var asStrings []string
-	for _, id := range buildIDs {
-		asStrings = append(asStrings, hex.EncodeToString(id))
-	}
-	return asStrings, nil
+	env            []string
+	dir            string
+	localOutputDir string
+	nsjailPath     string
+	nsjailRoot     string
 }
 
 // NewSubprocessTester returns a SubprocessTester that can execute tests
 // locally with a given working directory and environment.
 func NewSubprocessTester(dir string, env []string, localOutputDir, nsjailPath, nsjailRoot string) Tester {
 	return &SubprocessTester{
-		dir:               dir,
-		env:               env,
-		localOutputDir:    localOutputDir,
-		getModuleBuildIDs: getModuleBuildIDs,
-		nsjailPath:        nsjailPath,
-		nsjailRoot:        nsjailRoot,
+		dir:            dir,
+		env:            env,
+		localOutputDir: localOutputDir,
+		nsjailPath:     nsjailPath,
+		nsjailRoot:     nsjailRoot,
 	}
 }
 
@@ -339,22 +319,13 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 	if exists, profileErr := osmisc.FileExists(profileAbs); profileErr != nil {
 		logger.Errorf(ctx, "unable to determine whether a profile was emitted: %s", profileErr)
 	} else if exists {
-		// TODO(fxbug.dev/61208): delete determination of build IDs once
-		// profiles embed this information.
-		var buildIDs []string
-		buildIDs, profileErr = t.getModuleBuildIDs(test.Path)
-		if profileErr == nil {
-			testResult.DataSinks.Sinks = runtests.DataSinkMap{
-				llvmProfileSinkType: []runtests.DataSink{
-					{
-						Name:     filepath.Base(profileRel),
-						File:     profileRel,
-						BuildIDs: buildIDs,
-					},
+		testResult.DataSinks.Sinks = runtests.DataSinkMap{
+			llvmProfileSinkType: []runtests.DataSink{
+				{
+					Name: filepath.Base(profileRel),
+					File: profileRel,
 				},
-			}
-		} else {
-			logger.Warningf(ctx, "failed to read module build IDs from %q", test.Path)
+			},
 		}
 	}
 	return testResult, nil
