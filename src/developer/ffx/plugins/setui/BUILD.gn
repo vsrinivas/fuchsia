@@ -13,6 +13,7 @@ ffx_plugin("ffx_setui") {
     "factory_reset:ffx_setui_factory_reset",
     "night_mode:ffx_setui_night_mode",
     "privacy:ffx_setui_privacy",
+    "setup:ffx_setui_setup",
   ]
 
   args_sources = [ "src/args.rs" ]
