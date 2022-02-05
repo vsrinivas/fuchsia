@@ -8,9 +8,6 @@ pub mod legacy_ime;
 pub mod multiplex;
 pub mod text_manager;
 
-#[cfg(test)]
-pub mod integration_tests;
-
 mod keyboard;
 use anyhow::{Context as _, Error};
 use fuchsia_async as fasync;

@@ -15,9 +15,6 @@ group("tests") {
     ":keyboard_test",
     ":text_manager",
     ":text_manager_test",
-
-    # Needed for starting up the test suite fixture.
-    "//src/ui/testing/text:text_test_suite",
   ]
 }
 
@@ -61,7 +58,6 @@ rustc_binary("bin") {
   sources = [
     "src/fidl_helpers.rs",
     "src/index_convert.rs",
-    "src/integration_tests.rs",
     "src/keyboard/events.rs",
     "src/keyboard/keyboard3.rs",
     "src/keyboard/mod.rs",
@@ -91,40 +87,24 @@ fuchsia_component("ime_service_comp") {
   deps = [ ":bin" ]
 }
 
-fuchsia_component("default_hardware_ime_comp") {
-  component_name = "default_hardware_ime"
-  manifest = "//src/ui/bin/default_hardware_ime/meta/default_hardware_ime.cmx"
-  deps = [ "//src/ui/bin/default_hardware_ime:bin" ]
-}
-
 fuchsia_package("text_manager") {
-  deps = [
-    ":default_hardware_ime_comp",
-    ":text_manager_comp",
-  ]
+  deps = [ ":text_manager_comp" ]
 }
 
 # This is the same package as `text_manager`, with the legacy name.
 # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to text_manager.
 fuchsia_package("ime_service") {
-  deps = [
-    ":default_hardware_ime_comp",
-    ":ime_service_comp",
-  ]
+  deps = [ ":ime_service_comp" ]
 }
 
 fuchsia_component("text_manager_bin_test") {
   testonly = true
   component_name = "text_manager_bin_test"
   manifest = "meta/text_manager_bin_test.cmx"
-  deps = [
-    ":bin_test",
-    "//src/ui/testing/text:text_test_suite",
-  ]
+  deps = [ ":bin_test" ]
 }
 
 fuchsia_test_package("text_manager_test") {
-  package_deps_for_infra_only = [ "//src/ui/testing/text:text_test_suite" ]
   test_components = [ ":text_manager_bin_test" ]
 }
 

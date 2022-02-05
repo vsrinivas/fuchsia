@@ -11,10 +11,7 @@ group("testing") {
 group("tests") {
   testonly = true
 
-  public_deps = [
-    "text:text_test_suite_tests",
-    "views:test_views",
-  ]
+  public_deps = [ "views:test_views" ]
 }
 
 source_set("mock_input_device") {
