@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, Context, Result},
+    async_lock::Mutex as AsyncMutex,
     bytes::Bytes,
     fidl_fuchsia_developer_bridge::{ListFields, PackageEntry, RepositoryPackage},
     fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryStorageType},
@@ -17,7 +18,7 @@ use {
         AsyncReadExt, StreamExt as _,
     },
     io_util::file::Adapter,
-    parking_lot::Mutex,
+    parking_lot::Mutex as SyncMutex,
     serde::{Deserialize, Serialize},
     std::{
         convert::TryFrom,
@@ -224,10 +225,12 @@ pub struct Repository {
     /// Backend for this repository
     backend: Box<dyn RepositoryBackend + Send + Sync>,
 
-    drop_handlers: Mutex<Vec<Box<dyn FnOnce() + Send + Sync>>>,
+    /// Call these functions upon drop. This is synchronous since it's used in the Drop impl.
+    drop_handlers: SyncMutex<Vec<Box<dyn FnOnce() + Send + Sync>>>,
 
     /// The TUF client for this repository
-    client: Arc<Mutex<Client<Json, EphemeralRepository<Json>, Box<dyn RepositoryProvider<Json>>>>>,
+    client:
+        Arc<AsyncMutex<Client<Json, EphemeralRepository<Json>, Box<dyn RepositoryProvider<Json>>>>>,
 }
 
 impl Repository {
@@ -242,8 +245,8 @@ impl Repository {
             name: name.to_string(),
             id: RepositoryId::new(),
             backend,
-            client: Arc::new(Mutex::new(tuf_client)),
-            drop_handlers: Mutex::new(Vec::new()),
+            client: Arc::new(AsyncMutex::new(tuf_client)),
+            drop_handlers: SyncMutex::new(Vec::new()),
         })
     }
 
@@ -259,6 +262,7 @@ impl Repository {
     pub fn on_drop<F: FnOnce() + Send + Sync + 'static>(&self, f: F) {
         self.drop_handlers.lock().push(Box::new(f));
     }
+
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -329,7 +333,7 @@ impl Repository {
         storage_type: Option<RepositoryStorageType>,
     ) -> Result<RepositoryConfig, Error> {
         let trusted_root = {
-            let mut client = self.client.lock();
+            let mut client = self.client.lock().await;
 
             // Update the root metadata to the latest version. We don't care if the other metadata has
             // expired.
@@ -421,7 +425,7 @@ impl Repository {
         include_fields: ListFields,
     ) -> Result<Vec<RepositoryPackage>, Error> {
         let trusted_targets = {
-            let mut client = self.client.lock();
+            let mut client = self.client.lock().await;
 
             // Get the latest TUF metadata.
             client.update().await?;
@@ -495,7 +499,7 @@ impl Repository {
 
     pub async fn show_package(&self, package_name: String) -> Result<Option<Vec<PackageEntry>>> {
         let trusted_targets = {
-            let mut client = self.client.lock();
+            let mut client = self.client.lock().await;
 
             // Get the latest TUF metadata.
             client.update().await?;

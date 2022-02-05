@@ -39,6 +39,7 @@ rustc_library("pkg") {
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-fs",
+    "//third_party/rust_crates:async-lock",
     "//third_party/rust_crates:async-net",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:bytes",
