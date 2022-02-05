@@ -15,6 +15,7 @@ use std::sync::Arc;
 use crate::auth::{Credentials, ShellJobControl};
 use crate::errno;
 use crate::error;
+use crate::execution::*;
 use crate::from_status_like_fdio;
 use crate::fs::*;
 use crate::loader::*;
@@ -219,7 +220,7 @@ impl Task {
         let mut pids = kernel.pids.write();
         let pid = pids.allocate_pid();
 
-        let (thread, thread_group, mm) = Self::create_zircon_process(kernel, pid, &initial_name)?;
+        let (thread, thread_group, mm) = create_zircon_process(kernel, pid, &initial_name)?;
 
         let task = Self::new(
             pid,
@@ -312,9 +313,9 @@ impl Task {
         let pid = pids.allocate_pid();
         let comm = self.command.read();
         let (thread, thread_group, mm) = if clone_thread {
-            Self::create_zircon_thread(self)?
+            create_zircon_thread(self)?
         } else {
-            Self::create_zircon_process(kernel, pid, &comm)?
+            create_zircon_process(kernel, pid, &comm)?
         };
 
         let child = Self::new(
@@ -358,42 +359,6 @@ impl Task {
         self.children.write().insert(child.id);
 
         Ok(child)
-    }
-
-    fn create_zircon_thread(
-        parent: &Task,
-    ) -> Result<(zx::Thread, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
-        let thread = parent
-            .thread_group
-            .process
-            .create_thread(parent.command.read().as_bytes())
-            .map_err(|status| from_status_like_fdio!(status))?;
-
-        let thread_group = parent.thread_group.clone();
-        let mm = parent.mm.clone();
-        Ok((thread, thread_group, mm))
-    }
-
-    fn create_zircon_process(
-        kernel: &Arc<Kernel>,
-        pid: pid_t,
-        name: &CString,
-    ) -> Result<(zx::Thread, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
-        let (process, root_vmar) = kernel
-            .job
-            .create_child_process(name.as_bytes())
-            .map_err(|status| from_status_like_fdio!(status))?;
-        let thread = process
-            .create_thread(name.as_bytes())
-            .map_err(|status| from_status_like_fdio!(status))?;
-
-        let mm = Arc::new(
-            MemoryManager::new(root_vmar).map_err(|status| from_status_like_fdio!(status))?,
-        );
-
-        let thread_group = Arc::new(ThreadGroup::new(kernel.clone(), process, pid));
-
-        Ok((thread, thread_group, mm))
     }
 
     /// If needed, clear the child tid for this task.

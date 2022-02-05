@@ -6,16 +6,15 @@ use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::StreamExt;
-use log::info;
 
 mod auth;
 mod collections;
 mod device;
+mod execution;
 mod fs;
 mod loader;
 mod logging;
 mod mm;
-mod runner;
 mod selinux;
 mod signals;
 mod syscalls;
@@ -29,22 +28,22 @@ mod testing;
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     diagnostics_log::init!(&[&"starnix"]);
-    info!("main");
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::local(async move {
-            runner::start_runner(stream).await.expect("failed to start runner.")
+            execution::serve_component_runner(stream).await.expect("failed to start runner.")
         })
         .detach();
     });
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::local(async move {
-            runner::start_manager(stream).await.expect("failed to start manager.")
+            execution::serve_starnix_manager(stream).await.expect("failed to start manager.")
         })
         .detach();
     });
     fs.take_and_serve_directory_handle()?;
     fs.collect::<()>().await;
+
     Ok(())
 }

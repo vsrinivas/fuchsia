@@ -9,9 +9,9 @@ use zerocopy::AsBytes;
 
 use crate::errno;
 use crate::error;
+use crate::execution::*;
 use crate::mm::*;
 use crate::not_implemented;
-use crate::runner::*;
 use crate::strace;
 use crate::syscalls::*;
 use crate::types::*;
@@ -36,7 +36,7 @@ pub fn sys_clone(
         new_task.registers.fs_base = user_tls.ptr() as u64;
     }
 
-    spawn_task(new_task, |_| {});
+    execute_task(new_task, |_| {});
     Ok(tid.into())
 }
 
