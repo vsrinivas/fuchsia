@@ -42,16 +42,16 @@ import 'package:fidl_test_someotherlibrary/fidl_async.dart'
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
 class ObjType extends $fidl.Enum {
+  static const Map<int, ObjType> _values = {
+    0x0: none,
+    0x4: channel,
+  };
   factory ObjType(int _v) {
-    switch (_v) {
-      case 0x0:
-        return none;
-      case 0x4:
-        return channel;
-      default:
-        throw $fidl.FidlError('Invalid strict enum value: $_v',
-            $fidl.FidlErrorCode.fidlInvalidEnumValue);
+    if (!_values.containsKey(_v)) {
+      throw $fidl.FidlError('Invalid strict enum value: $_v',
+          $fidl.FidlErrorCode.fidlInvalidEnumValue);
     }
+    return _values[_v]!;
   }
   static const ObjType none = ObjType._(0x0);
   static const ObjType channel = ObjType._(0x4);

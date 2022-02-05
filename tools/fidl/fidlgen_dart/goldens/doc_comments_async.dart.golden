@@ -48,16 +48,16 @@ const int c = 0x4;
 ///
 /// strict enum comment #2.
 class MyStrictEnum extends $fidl.Enum {
+  static const Map<int, MyStrictEnum> _values = {
+    0x1: foo,
+    0x2: bar,
+  };
   factory MyStrictEnum(int _v) {
-    switch (_v) {
-      case 0x1:
-        return foo;
-      case 0x2:
-        return bar;
-      default:
-        throw $fidl.FidlError('Invalid strict enum value: $_v',
-            $fidl.FidlErrorCode.fidlInvalidEnumValue);
+    if (!_values.containsKey(_v)) {
+      throw $fidl.FidlError('Invalid strict enum value: $_v',
+          $fidl.FidlErrorCode.fidlInvalidEnumValue);
     }
+    return _values[_v]!;
   }
 
   /// FOO member comment #1
@@ -117,15 +117,15 @@ const $fidl.EnumType<MyStrictEnum> kMyStrictEnum_Type =
 ///
 /// flexible enum comment #2.
 class MyFlexibleEnum extends $fidl.Enum {
-  static final Map<int, MyFlexibleEnum> _internedValues = {
+  static final Map<int, MyFlexibleEnum> _values = {
     0x1: foo,
     0x2: bar,
   };
   factory MyFlexibleEnum(int _v) {
-    if (!_internedValues.containsKey(_v)) {
-      _internedValues[_v] = MyFlexibleEnum._(_v, true);
+    if (!_values.containsKey(_v)) {
+      _values[_v] = MyFlexibleEnum._(_v, true);
     }
-    return _internedValues[_v]!;
+    return _values[_v]!;
   }
 
   /// FOO member comment #1

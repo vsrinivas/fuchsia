@@ -44,14 +44,15 @@ import 'package:fidl_test_exampleusing/fidl_async.dart'
 const int exampleConst = 0x0;
 
 class ExampleEnum extends $fidl.Enum {
+  static const Map<int, ExampleEnum> _values = {
+    0x1: member,
+  };
   factory ExampleEnum(int _v) {
-    switch (_v) {
-      case 0x1:
-        return member;
-      default:
-        throw $fidl.FidlError('Invalid strict enum value: $_v',
-            $fidl.FidlErrorCode.fidlInvalidEnumValue);
+    if (!_values.containsKey(_v)) {
+      throw $fidl.FidlError('Invalid strict enum value: $_v',
+          $fidl.FidlErrorCode.fidlInvalidEnumValue);
     }
+    return _values[_v]!;
   }
   static const ExampleEnum member = ExampleEnum._(0x1);
 

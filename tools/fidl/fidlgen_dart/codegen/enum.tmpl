@@ -9,30 +9,21 @@
 ///{{ . -}}
 {{- end }}
 class {{ .Name }} extends $fidl.Enum {
-{{ if .IsFlexible }}
-  static final Map<int, {{ .Name }}> _internedValues = {
+  static {{ if .IsStrict }}const{{ else }}final{{ end }} Map<int, {{ .Name }}> _values = {
 {{- range .Members }}
     {{ .Value }}: {{ .Name }},
 {{- end }}
   };
-{{- end }}
   factory {{ .Name }}(int _v) {
+    if (!_values.containsKey(_v)) {
 {{ if .IsStrict }}
-    switch (_v) {
-{{- range .Members }}
-      case {{ .Value }}:
-        return {{ .Name }};
-{{- end }}
-      default:
-        throw $fidl.FidlError('Invalid strict enum value: $_v',
-          $fidl.FidlErrorCode.fidlInvalidEnumValue);
-    }
+      throw $fidl.FidlError('Invalid strict enum value: $_v',
+        $fidl.FidlErrorCode.fidlInvalidEnumValue);
 {{ else }}
-    if (!_internedValues.containsKey(_v)) {
-      _internedValues[_v] = {{ .Name }}._(_v, true);
-    }
-    return _internedValues[_v]!;
+      _values[_v] = {{ .Name }}._(_v, true);
 {{ end }}
+    }
+    return _values[_v]!;
   }
 
 {{- range .Members }}

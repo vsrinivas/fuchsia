@@ -40,15 +40,15 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
 class SomeProtocolSomeMethodError extends $fidl.Enum {
-  static final Map<int, SomeProtocolSomeMethodError> _internedValues = {
+  static final Map<int, SomeProtocolSomeMethodError> _values = {
     0x1: errorOne,
     0x2: errorTwo,
   };
   factory SomeProtocolSomeMethodError(int _v) {
-    if (!_internedValues.containsKey(_v)) {
-      _internedValues[_v] = SomeProtocolSomeMethodError._(_v, true);
+    if (!_values.containsKey(_v)) {
+      _values[_v] = SomeProtocolSomeMethodError._(_v, true);
     }
-    return _internedValues[_v]!;
+    return _values[_v]!;
   }
   static const SomeProtocolSomeMethodError errorOne =
       SomeProtocolSomeMethodError._(0x1, false);
@@ -107,16 +107,16 @@ const $fidl.EnumType<SomeProtocolSomeMethodError>
         ctor: SomeProtocolSomeMethodError._ctor);
 
 class Op extends $fidl.Enum {
-  static final Map<int, Op> _internedValues = {
+  static final Map<int, Op> _values = {
     0x1: add,
     0x2: mul,
     0x3: div,
   };
   factory Op(int _v) {
-    if (!_internedValues.containsKey(_v)) {
-      _internedValues[_v] = Op._(_v, true);
+    if (!_values.containsKey(_v)) {
+      _values[_v] = Op._(_v, true);
     }
-    return _internedValues[_v]!;
+    return _values[_v]!;
   }
   static const Op add = Op._(0x1, false);
   static const Op mul = Op._(0x2, false);

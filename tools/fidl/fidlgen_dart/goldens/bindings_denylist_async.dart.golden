@@ -43,14 +43,15 @@ import 'package:fidl_test_dependent/fidl_async.dart' as lib$test_dependent;
 const int allBindings = 0x0;
 
 class OnlyDart extends $fidl.Enum {
+  static const Map<int, OnlyDart> _values = {
+    0x1: a,
+  };
   factory OnlyDart(int _v) {
-    switch (_v) {
-      case 0x1:
-        return a;
-      default:
-        throw $fidl.FidlError('Invalid strict enum value: $_v',
-            $fidl.FidlErrorCode.fidlInvalidEnumValue);
+    if (!_values.containsKey(_v)) {
+      throw $fidl.FidlError('Invalid strict enum value: $_v',
+          $fidl.FidlErrorCode.fidlInvalidEnumValue);
     }
+    return _values[_v]!;
   }
   static const OnlyDart a = OnlyDart._(0x1);
 

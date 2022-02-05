@@ -42,14 +42,14 @@ import 'package:zircon/zircon.dart' as $zircon;
 const int const$ = 0x0;
 
 class Enum extends $fidl.Enum {
-  static final Map<int, Enum> _internedValues = {
+  static final Map<int, Enum> _values = {
     0x1: a,
   };
   factory Enum(int _v) {
-    if (!_internedValues.containsKey(_v)) {
-      _internedValues[_v] = Enum._(_v, true);
+    if (!_values.containsKey(_v)) {
+      _values[_v] = Enum._(_v, true);
     }
-    return _internedValues[_v]!;
+    return _values[_v]!;
   }
   static const Enum a = Enum._(0x1, false);
 

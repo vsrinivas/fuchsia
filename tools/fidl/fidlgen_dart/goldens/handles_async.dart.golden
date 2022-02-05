@@ -41,70 +41,43 @@ import 'package:fidl_zx/fidl_async.dart' as lib$zx;
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
 class ObjType extends $fidl.Enum {
+  static const Map<int, ObjType> _values = {
+    0x0: none,
+    0x1: process,
+    0x2: thread,
+    0x3: vmo,
+    0x4: channel,
+    0x5: event,
+    0x6: port,
+    0x9: interrupt,
+    0xc: log,
+    0xe: socket,
+    0xf: resource,
+    0x10: eventpair,
+    0x11: job,
+    0x12: vmar,
+    0x13: fifo,
+    0x14: guest,
+    0x15: vcpu,
+    0x16: timer,
+    0x17: iommu,
+    0x18: bti,
+    0x19: profile,
+    0x1a: pmt,
+    0x1b: suspendToken,
+    0x1c: pager,
+    0x1d: exception,
+    0x1e: clock,
+    0x1f: stream,
+    0x20: msiAllocation,
+    0x21: msiInterrupt,
+  };
   factory ObjType(int _v) {
-    switch (_v) {
-      case 0x0:
-        return none;
-      case 0x1:
-        return process;
-      case 0x2:
-        return thread;
-      case 0x3:
-        return vmo;
-      case 0x4:
-        return channel;
-      case 0x5:
-        return event;
-      case 0x6:
-        return port;
-      case 0x9:
-        return interrupt;
-      case 0xc:
-        return log;
-      case 0xe:
-        return socket;
-      case 0xf:
-        return resource;
-      case 0x10:
-        return eventpair;
-      case 0x11:
-        return job;
-      case 0x12:
-        return vmar;
-      case 0x13:
-        return fifo;
-      case 0x14:
-        return guest;
-      case 0x15:
-        return vcpu;
-      case 0x16:
-        return timer;
-      case 0x17:
-        return iommu;
-      case 0x18:
-        return bti;
-      case 0x19:
-        return profile;
-      case 0x1a:
-        return pmt;
-      case 0x1b:
-        return suspendToken;
-      case 0x1c:
-        return pager;
-      case 0x1d:
-        return exception;
-      case 0x1e:
-        return clock;
-      case 0x1f:
-        return stream;
-      case 0x20:
-        return msiAllocation;
-      case 0x21:
-        return msiInterrupt;
-      default:
-        throw $fidl.FidlError('Invalid strict enum value: $_v',
-            $fidl.FidlErrorCode.fidlInvalidEnumValue);
+    if (!_values.containsKey(_v)) {
+      throw $fidl.FidlError('Invalid strict enum value: $_v',
+          $fidl.FidlErrorCode.fidlInvalidEnumValue);
     }
+    return _values[_v]!;
   }
   static const ObjType none = ObjType._(0x0);
   static const ObjType process = ObjType._(0x1);

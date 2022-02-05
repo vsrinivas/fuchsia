@@ -40,16 +40,16 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
 class ObjType extends $fidl.Enum {
+  static const Map<int, ObjType> _values = {
+    0x0: none,
+    0xe: socket,
+  };
   factory ObjType(int _v) {
-    switch (_v) {
-      case 0x0:
-        return none;
-      case 0xe:
-        return socket;
-      default:
-        throw $fidl.FidlError('Invalid strict enum value: $_v',
-            $fidl.FidlErrorCode.fidlInvalidEnumValue);
+    if (!_values.containsKey(_v)) {
+      throw $fidl.FidlError('Invalid strict enum value: $_v',
+          $fidl.FidlErrorCode.fidlInvalidEnumValue);
     }
+    return _values[_v]!;
   }
   static const ObjType none = ObjType._(0x0);
   static const ObjType socket = ObjType._(0xe);
@@ -97,16 +97,16 @@ const $fidl.EnumType<ObjType> kobj_type_Type = $fidl.EnumType<ObjType>(
     ctor: ObjType._ctor);
 
 class ErrorEnum extends $fidl.Enum {
+  static const Map<int, ErrorEnum> _values = {
+    0x1: errFoo,
+    0x2: errBar,
+  };
   factory ErrorEnum(int _v) {
-    switch (_v) {
-      case 0x1:
-        return errFoo;
-      case 0x2:
-        return errBar;
-      default:
-        throw $fidl.FidlError('Invalid strict enum value: $_v',
-            $fidl.FidlErrorCode.fidlInvalidEnumValue);
+    if (!_values.containsKey(_v)) {
+      throw $fidl.FidlError('Invalid strict enum value: $_v',
+          $fidl.FidlErrorCode.fidlInvalidEnumValue);
     }
+    return _values[_v]!;
   }
   static const ErrorEnum errFoo = ErrorEnum._(0x1);
   static const ErrorEnum errBar = ErrorEnum._(0x2);

@@ -76,16 +76,16 @@ const BitsType bitsTrue = BitsType.true$;
 const int bitsPrimitiveTrue = BitsType.true$;
 
 class EnumType extends $fidl.Enum {
+  static const Map<int, EnumType> _values = {
+    0x1: value,
+    0x2: true$,
+  };
   factory EnumType(int _v) {
-    switch (_v) {
-      case 0x1:
-        return value;
-      case 0x2:
-        return true$;
-      default:
-        throw $fidl.FidlError('Invalid strict enum value: $_v',
-            $fidl.FidlErrorCode.fidlInvalidEnumValue);
+    if (!_values.containsKey(_v)) {
+      throw $fidl.FidlError('Invalid strict enum value: $_v',
+          $fidl.FidlErrorCode.fidlInvalidEnumValue);
     }
+    return _values[_v]!;
   }
   static const EnumType value = EnumType._(0x1);
   static const EnumType true$ = EnumType._(0x2);
