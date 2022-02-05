@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 80,
+    "next-free-ordinal": 81,
     "exports": [
       {
         "ordinal": 4,
@@ -997,7 +997,7 @@
         "ordinal": 74,
         "name": "magma_execute_command_buffer_with_resources2",
         "type": "magma_status_t",
-        "description": "Submits a command buffer for execution on the GPU, with associated resources.",
+        "description": "DEPRECATED - TODO(fxb/86670) remove prior to SDK release. Submits a command buffer for execution on the GPU, with associated resources.",
         "arguments": [
           {
             "name": "connection",
@@ -1054,6 +1054,29 @@
             "name": "connection",
             "type": "magma_connection_t",
             "description": "An open connection."
+          }
+        ]
+      },
+      {
+        "ordinal": 80,
+        "name": "magma_execute_command",
+        "type": "magma_status_t",
+        "description": "Submits command buffers for execution on the hardware.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "context_id",
+            "type": "uint32_t",
+            "description": "A valid context id."
+          },
+          {
+            "name": "descriptor",
+            "type": "struct magma_command_descriptor*",
+            "description": "A pointer to the command descriptor."
           }
         ]
       }

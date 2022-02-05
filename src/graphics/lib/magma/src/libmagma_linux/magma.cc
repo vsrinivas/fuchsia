@@ -89,6 +89,7 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
   return MAGMA_STATUS_OK;
 }
 
+// DEPRECATED - TODO(fxb/86670) remove
 magma_status_t magma_execute_command_buffer_with_resources2(
     magma_connection_t connection, uint32_t context_id, struct magma_command_buffer* command_buffer,
     struct magma_exec_resource* resources, uint64_t* semaphore_ids) {
@@ -117,6 +118,45 @@ magma_status_t magma_execute_command_buffer_with_resources2(
   request.connection = reinterpret_cast<uint64_t>(connection_wrapped->Object());
   request.context_id = context_id;
   request.command_buffer = reinterpret_cast<uintptr_t>(&virt_command_buffer);
+
+  int32_t file_descriptor = connection_wrapped->Parent().fd();
+
+  if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
+                              sizeof(response))) {
+    assert(false);
+  }
+  return static_cast<magma_status_t>(response.result_return);
+}
+
+magma_status_t magma_execute(magma_connection_t connection, uint32_t context_id,
+                             struct magma_command_descriptor* descriptor) {
+#if VIRTMAGMA_DEBUG
+  printf("%s\n", __PRETTY_FUNCTION__);
+#endif
+
+  // Ensure host compatibility with 32bit guest
+  static_assert(sizeof(magma_command_descriptor) % 8 == 0);
+  static_assert(sizeof(magma_command_buffer) % 8 == 0);
+  static_assert(sizeof(magma_exec_resource) % 8 == 0);
+
+  virtmagma_command_descriptor vdesc = {
+      .descriptor_size = sizeof(magma_command_descriptor),
+      .descriptor = reinterpret_cast<uintptr_t>(descriptor),
+      .resource_size = sizeof(magma_exec_resource) * descriptor->resource_count,
+      .resources = reinterpret_cast<uintptr_t>(descriptor->resources),
+      .command_buffer_size = sizeof(magma_exec_command_buffer) * descriptor->command_buffer_count,
+      .command_buffers = reinterpret_cast<uintptr_t>(descriptor->command_buffers),
+      .semaphore_size = sizeof(uint64_t) *
+                        (descriptor->wait_semaphore_count + descriptor->signal_semaphore_count),
+      .semaphores = reinterpret_cast<uintptr_t>(descriptor->semaphore_ids)};
+
+  virtio_magma_execute_command_ctrl request{.hdr = {.type = VIRTIO_MAGMA_CMD_EXECUTE_COMMAND}};
+  virtio_magma_execute_command_resp response{};
+
+  auto connection_wrapped = virtmagma_connection_t::Get(connection);
+  request.connection = reinterpret_cast<uint64_t>(connection_wrapped->Object());
+  request.context_id = context_id;
+  request.descriptor = reinterpret_cast<uintptr_t>(&vdesc);
 
   int32_t file_descriptor = connection_wrapped->Parent().fd();
 

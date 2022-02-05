@@ -208,6 +208,7 @@ magma_status_t PrimaryWrapper::DestroyContext(uint32_t context_id) {
 static_assert(static_cast<uint64_t>(fuchsia_gpu_magma::wire::CommandBufferFlags::kVendorFlag0) ==
               MAGMA_COMMAND_BUFFER_VENDOR_FLAGS_0);
 
+// DEPRECATED - TODO(fxb/86670) remove
 magma_status_t PrimaryWrapper::ExecuteCommandBufferWithResources2(
     uint32_t context_id, fuchsia_gpu_magma::wire::CommandBuffer2 command_buffer,
     ::fidl::VectorView<fuchsia_gpu_magma::wire::BufferRange> resources,
@@ -219,6 +220,24 @@ magma_status_t PrimaryWrapper::ExecuteCommandBufferWithResources2(
                                context_id, std::move(command_buffer), std::move(resources),
                                std::move(wait_semaphores), std::move(signal_semaphores))
                            .status();
+  if (status == ZX_OK) {
+    UpdateFlowControl();
+  }
+  return magma::FromZxStatus(status).get();
+}
+
+magma_status_t PrimaryWrapper::ExecuteCommand(
+    uint32_t context_id, ::fidl::VectorView<fuchsia_gpu_magma::wire::BufferRange> resources,
+    ::fidl::VectorView<fuchsia_gpu_magma::wire::CommandBuffer> command_buffers,
+    ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores,
+    fuchsia_gpu_magma::wire::CommandBufferFlags flags) {
+  std::lock_guard<std::mutex> lock(flow_control_mutex_);
+  FlowControl();
+  zx_status_t status =
+      client_
+          ->ExecuteCommand(context_id, std::move(resources), std::move(command_buffers),
+                           std::move(wait_semaphores), std::move(signal_semaphores), flags)
+          .status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -536,6 +555,39 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
                                                  command_buffer->wait_semaphore_count),
         fidl::VectorView<uint64_t>::FromExternal(signal_semaphores,
                                                  command_buffer->signal_semaphore_count));
+    return result;
+  }
+
+  magma_status_t ExecuteCommand(uint32_t context_id,
+                                magma_command_descriptor* descriptor) override {
+    std::vector<fuchsia_gpu_magma::wire::BufferRange> fidl_resources;
+    fidl_resources.reserve(descriptor->resource_count);
+
+    for (uint32_t i = 0; i < descriptor->resource_count; i++) {
+      fidl_resources.push_back({.buffer_id = descriptor->resources[i].buffer_id,
+                                .offset = descriptor->resources[i].offset,
+                                .size = descriptor->resources[i].length});
+    }
+
+    std::vector<fuchsia_gpu_magma::wire::CommandBuffer> command_buffers;
+    command_buffers.reserve(descriptor->command_buffer_count);
+    for (uint32_t i = 0; i < descriptor->command_buffer_count; i++) {
+      command_buffers.push_back({.resource_index = descriptor->command_buffers[i].resource_index,
+                                 .start_offset = descriptor->command_buffers[i].start_offset});
+    }
+
+    uint64_t* wait_semaphores = descriptor->semaphore_ids;
+    uint64_t* signal_semaphores = descriptor->semaphore_ids + descriptor->wait_semaphore_count;
+
+    magma_status_t result = client_.ExecuteCommand(
+        context_id,
+        fidl::VectorView<fuchsia_gpu_magma::wire::BufferRange>::FromExternal(fidl_resources),
+        fidl::VectorView<fuchsia_gpu_magma::wire::CommandBuffer>::FromExternal(command_buffers),
+        fidl::VectorView<uint64_t>::FromExternal(wait_semaphores, descriptor->wait_semaphore_count),
+        fidl::VectorView<uint64_t>::FromExternal(signal_semaphores,
+                                                 descriptor->signal_semaphore_count),
+        static_cast<fuchsia_gpu_magma::wire::CommandBufferFlags>(descriptor->flags));
+
     return result;
   }
 

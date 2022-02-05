@@ -66,12 +66,12 @@ class TestConnection : public magma::TestDeviceBase {
 
     EXPECT_TRUE(InitBatchBuffer(batch_buffer, size));
 
-    magma_command_buffer command_buffer;
+    magma_command_descriptor descriptor;
+    magma_exec_command_buffer command_buffer;
     magma_exec_resource exec_resource;
-    EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resource, batch_buffer, size));
+    EXPECT_TRUE(InitCommand(&descriptor, &command_buffer, &exec_resource, batch_buffer, size));
 
-    status = magma_execute_command_buffer_with_resources2(connection_, context_id, &command_buffer,
-                                                          &exec_resource, nullptr);
+    status = magma_execute_command(connection_, context_id, &descriptor);
     if (!status.ok())
       return DRET(status.get());
 
@@ -101,18 +101,24 @@ class TestConnection : public magma::TestDeviceBase {
     return true;
   }
 
-  bool InitCommandBuffer(magma_command_buffer* command_buffer, magma_exec_resource* exec_resource,
-                         magma_buffer_t batch_buffer, uint64_t batch_buffer_length) {
-    command_buffer->batch_buffer_resource_index = 0;
-    command_buffer->batch_start_offset = 0;
-    command_buffer->resource_count = 1;
-    command_buffer->wait_semaphore_count = 0;
-    command_buffer->signal_semaphore_count = 0;
-    command_buffer->flags = 0;
-
+  bool InitCommand(magma_command_descriptor* descriptor, magma_exec_command_buffer* command_buffer,
+                   magma_exec_resource* exec_resource, magma_buffer_t batch_buffer,
+                   uint64_t batch_buffer_length) {
     exec_resource->buffer_id = magma_get_buffer_id(batch_buffer);
     exec_resource->offset = 0;
     exec_resource->length = batch_buffer_length;
+
+    command_buffer->resource_index = 0;
+    command_buffer->start_offset = 0;
+
+    descriptor->resource_count = 1;
+    descriptor->command_buffer_count = 1;
+    descriptor->wait_semaphore_count = 0;
+    descriptor->signal_semaphore_count = 0;
+    descriptor->resources = exec_resource;
+    descriptor->command_buffers = command_buffer;
+    descriptor->semaphore_ids = nullptr;
+    descriptor->flags = 0;
 
     return true;
   }

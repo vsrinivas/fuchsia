@@ -548,7 +548,8 @@ magma_status_t magma_virt_get_image_info(
     magma_image_info_t* image_info_out);
 
 ///
-/// \brief Submits a command buffer for execution on the GPU, with associated resources.
+/// \brief DEPRECATED - TODO(fxb/86670) remove prior to SDK release. Submits a command buffer for
+///        execution on the GPU, with associated resources.
 /// \param connection An open connection.
 /// \param context_id A valid context ID.
 /// \param command_buffer A pointer to the command buffer to execute.
@@ -583,6 +584,17 @@ magma_status_t magma_get_buffer_handle2(
 ///
 magma_status_t magma_flush(
     magma_connection_t connection);
+
+///
+/// \brief Submits command buffers for execution on the hardware.
+/// \param connection An open connection.
+/// \param context_id A valid context id.
+/// \param descriptor A pointer to the command descriptor.
+///
+magma_status_t magma_execute_command(
+    magma_connection_t connection,
+    uint32_t context_id,
+    struct magma_command_descriptor* descriptor);
 
 #if defined(__cplusplus)
 }

@@ -221,8 +221,14 @@ struct magma_exec_resource {
   uint64_t length;
 };
 
+struct magma_exec_command_buffer {
+  uint32_t resource_index;
+  uint64_t start_offset;
+} __attribute__((__aligned__(8)));
+
 // A batch buffer to be executed plus the resources required to execute it
 // Ensure 8 byte alignment for semaphores and resources that may follow in a stream.
+// DEPRECATED - TODO(fxb/86670) remove
 struct magma_command_buffer {
   uint32_t resource_count;
   uint32_t batch_buffer_resource_index;  // resource index of the batch buffer to execute
@@ -230,6 +236,27 @@ struct magma_command_buffer {
   uint32_t wait_semaphore_count;
   uint32_t signal_semaphore_count;
   uint64_t flags;
+} __attribute__((__aligned__(8)));
+
+struct magma_command_descriptor {
+  // The count of `resources` that may be referenced by the hardware. These must have been
+  // mapped to the hardware previously.
+  uint32_t resource_count;
+  // The count of `command_buffers` to be executed as a unit.
+  uint32_t command_buffer_count;
+  // The count of `semaphore_ids` to be waited upon before beginning execution; these
+  // will be reset after all have been signaled.
+  uint32_t wait_semaphore_count;
+  // The count of `semaphore_ids` to be signaled after execution is complete.
+  uint32_t signal_semaphore_count;
+
+  struct magma_exec_resource* resources;
+  struct magma_exec_command_buffer* command_buffers;
+  // List of semaphore IDs: first the wait semaphore IDs, followed by signal semaphore IDs.
+  uint64_t* semaphore_ids;
+
+  uint64_t flags;
+
 } __attribute__((__aligned__(8)));
 
 struct magma_inline_command_buffer {

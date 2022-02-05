@@ -33,11 +33,23 @@ struct virtmagma_ioctl_args_magma_command {
   __u64 response_size;
 };
 
+// DEPRECATED - TODO(fxb/86670) remove
 struct virtmagma_command_buffer {
   __u64 command_buffer_size;
   __u64 command_buffer;
   __u64 resource_size;
   __u64 resources;
+  __u64 semaphore_size;
+  __u64 semaphores;
+};
+
+struct virtmagma_command_descriptor {
+  __u64 descriptor_size;
+  __u64 descriptor;
+  __u64 resource_size;
+  __u64 resources;
+  __u64 command_buffer_size;
+  __u64 command_buffers;
   __u64 semaphore_size;
   __u64 semaphores;
 };

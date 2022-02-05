@@ -168,22 +168,24 @@ class MagmaExecuteMsdVsi : public testing::Test {
 
     std::vector<magma_exec_resource> resources;
     resources.push_back(command_stream->etna_buffer->resource_);
+    EXPECT_NE(resources[0].length, 0ul);
 
-    magma_command_buffer command_buffer = {
+    magma_exec_command_buffer command_buffer = {.resource_index = 0, .start_offset = 0};
+
+    magma_command_descriptor descriptor = {
         .resource_count = static_cast<uint32_t>(resources.size()),
-        .batch_buffer_resource_index = 0,
-        .batch_start_offset = 0,
+        .command_buffer_count = 1,
         .wait_semaphore_count = 0,
         .signal_semaphore_count = 1,
+        .resources = resources.data(),
+        .command_buffers = &command_buffer,
+        .semaphore_ids = &semaphore_id,
         .flags = 0};
-
-    EXPECT_NE(resources[0].length, 0ul);
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_execute_command_buffer_with_resources2(
-                                   magma_vsi_.GetConnection(), magma_vsi_.GetContextId(),
-                                   &command_buffer, resources.data(), &semaphore_id));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_execute_command(magma_vsi_.GetConnection(),
+                                                     magma_vsi_.GetContextId(), &descriptor));
     magma_poll_item_t item = {.semaphore = semaphore,
                               .type = MAGMA_POLL_TYPE_SEMAPHORE,
                               .condition = MAGMA_POLL_CONDITION_SIGNALED};

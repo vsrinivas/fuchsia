@@ -147,9 +147,12 @@ class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Prim
                       DestroyContextCompleter::Sync& _completer) override;
   void ExecuteImmediateCommands(ExecuteImmediateCommandsRequestView request,
                                 ExecuteImmediateCommandsCompleter::Sync& _completer) override;
+  // DEPRECATED - TODO(fxb/86670) remove
   void ExecuteCommandBufferWithResources2(
       ExecuteCommandBufferWithResources2RequestView request,
       ExecuteCommandBufferWithResources2Completer::Sync& completer) override;
+  void ExecuteCommand(ExecuteCommandRequestView request,
+                      ExecuteCommandCompleter::Sync& completer) override;
   void Flush(FlushRequestView request, FlushCompleter::Sync& _completer) override;
   void MapBufferGpu(MapBufferGpuRequestView request,
                     MapBufferGpuCompleter::Sync& _completer) override;

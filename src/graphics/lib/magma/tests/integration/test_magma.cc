@@ -981,6 +981,57 @@ class TestConnectionWithContext : public TestConnection {
         << "status: " << status;
   }
 
+  void ExecuteCommand(uint32_t resource_count) {
+    ASSERT_TRUE(connection());
+
+    magma_exec_command_buffer command_buffer = {.resource_index = 0, .start_offset = 0};
+
+    magma_exec_resource resources[resource_count];
+    memset(resources, 0, sizeof(magma_exec_resource) * resource_count);
+
+    magma_command_descriptor descriptor = {.resource_count = resource_count,
+                                           .command_buffer_count = 1,
+                                           .resources = resources,
+                                           .command_buffers = &command_buffer};
+
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_execute_command(connection(), context_id(), &descriptor));
+
+    // Command buffer is mostly zeros, so we expect an error here
+    EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_error(connection()));
+  }
+
+  void ExecuteCommandNoResources() {
+    ASSERT_TRUE(connection());
+
+    magma_command_descriptor descriptor = {.resource_count = 0, .command_buffer_count = 0};
+
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_execute_command(connection(), context_id(), &descriptor));
+
+    // Empty command buffers may or may not be valid.
+    magma_status_t status = magma_get_error(connection());
+    EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_INVALID_ARGS ||
+                status == MAGMA_STATUS_UNIMPLEMENTED)
+        << "status: " << status;
+  }
+
+  void ExecuteCommandTwoCommandBuffers() {
+    ASSERT_TRUE(connection());
+
+    std::array<magma_exec_resource, 2> resources{};
+    std::array<magma_exec_command_buffer, 2> command_buffers = {
+        magma_exec_command_buffer{.resource_index = 0, .start_offset = 0},
+        magma_exec_command_buffer{.resource_index = 1, .start_offset = 0}};
+
+    magma_command_descriptor descriptor = {.resource_count = resources.size(),
+                                           .command_buffer_count = command_buffers.size(),
+                                           .resources = resources.data(),
+                                           .command_buffers = command_buffers.data()};
+
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_execute_command(connection(), context_id(), &descriptor));
+
+    EXPECT_EQ(magma_get_error(connection()), MAGMA_STATUS_UNIMPLEMENTED);
+  }
+
  private:
   uint32_t context_id_;
 };
@@ -1114,6 +1165,14 @@ TEST(Magma, ExecuteCommandBufferWithResources2) {
 
 TEST(Magma, ExecuteCommandBufferNoResources2) {
   TestConnectionWithContext().ExecuteCommandBufferNoResources2();
+}
+
+TEST(Magma, ExecuteCommand) { TestConnectionWithContext().ExecuteCommand(5); }
+
+TEST(Magma, ExecuteCommandNoResources) { TestConnectionWithContext().ExecuteCommandNoResources(); }
+
+TEST(Magma, ExecuteCommandTwoCommandBuffers) {
+  TestConnectionWithContext().ExecuteCommandTwoCommandBuffers();
 }
 
 TEST(Magma, FlowControl) {

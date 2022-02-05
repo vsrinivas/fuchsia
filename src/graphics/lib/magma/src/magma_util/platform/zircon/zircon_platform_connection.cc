@@ -216,6 +216,7 @@ void ZirconPlatformConnection::DestroyContext(DestroyContextRequestView request,
     SetError(&completer, status.get());
 }
 
+// DEPRECATED - TODO(fxb/86670) remove
 void ZirconPlatformConnection::ExecuteCommandBufferWithResources2(
     ExecuteCommandBufferWithResources2RequestView request,
     ExecuteCommandBufferWithResources2Completer::Sync& completer) {
@@ -230,6 +231,56 @@ void ZirconPlatformConnection::ExecuteCommandBufferWithResources2(
       .wait_semaphore_count = static_cast<uint32_t>(request->wait_semaphores.count()),
       .signal_semaphore_count = static_cast<uint32_t>(request->signal_semaphores.count()),
       .flags = static_cast<uint64_t>(request->command_buffer.flags),
+  };
+
+  std::vector<magma_exec_resource> resources;
+  resources.reserve(request->resources.count());
+
+  for (auto& buffer_range : request->resources) {
+    resources.push_back({
+        buffer_range.buffer_id,
+        buffer_range.offset,
+        buffer_range.size,
+    });
+  }
+
+  // Merge semaphores into one vector
+  std::vector<uint64_t> semaphores;
+  semaphores.reserve(request->wait_semaphores.count() + request->signal_semaphores.count());
+
+  for (uint64_t semaphore_id : request->wait_semaphores) {
+    semaphores.push_back(semaphore_id);
+  }
+  for (uint64_t semaphore_id : request->signal_semaphores) {
+    semaphores.push_back(semaphore_id);
+  }
+
+  magma::Status status = delegate_->ExecuteCommandBufferWithResources(
+      request->context_id, std::move(command_buffer), std::move(resources), std::move(semaphores));
+
+  if (!status)
+    SetError(&completer, status.get());
+}
+
+void ZirconPlatformConnection::ExecuteCommand(ExecuteCommandRequestView request,
+                                              ExecuteCommandCompleter::Sync& completer) {
+  FlowControl();
+
+  // TODO(fxbug.dev/92606) - support > 1 command buffer
+  if (request->command_buffers.count() != 1) {
+    SetError(&completer, MAGMA_STATUS_UNIMPLEMENTED);
+    return;
+  }
+
+  auto command_buffer = std::make_unique<magma_command_buffer>();
+
+  *command_buffer = {
+      .resource_count = static_cast<uint32_t>(request->resources.count()),
+      .batch_buffer_resource_index = request->command_buffers[0].resource_index,
+      .batch_start_offset = request->command_buffers[0].start_offset,
+      .wait_semaphore_count = static_cast<uint32_t>(request->wait_semaphores.count()),
+      .signal_semaphore_count = static_cast<uint32_t>(request->signal_semaphores.count()),
+      .flags = static_cast<uint64_t>(request->flags),
   };
 
   std::vector<magma_exec_resource> resources;

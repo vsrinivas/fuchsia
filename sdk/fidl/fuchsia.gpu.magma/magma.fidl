@@ -136,6 +136,7 @@ type CommandBufferFlags = flexible bits : uint64 {
 };
 
 /// A command buffer may be used to pass GPU instructions in a shared buffer (VMO).
+/// DEPRECATED - TODO(fxb/86670) remove prior to SDK release
 type CommandBuffer2 = struct {
     /// Index of the resource containing instructions to start the command buffer.
     resource_index uint32;
@@ -145,6 +146,15 @@ type CommandBuffer2 = struct {
 
     /// Flags.
     flags CommandBufferFlags;
+};
+
+/// A command buffer may be used to pass GPU instructions in a shared buffer (VMO).
+type CommandBuffer = struct {
+    /// Index of the resource containing instructions to start the command buffer.
+    resource_index uint32;
+
+    /// Starting offset within the resource.
+    start_offset uint64;
 };
 
 /// Performance counter pools contain byte ranges of buffers. Whenever a performance counter dump is
@@ -190,6 +200,7 @@ protocol Primary {
         context_id uint32;
     });
 
+    /// DEPRECATED - TODO(fxb/86670) remove prior to SDK release
     /// Submits a command buffer for execution on the GPU, with associated `resources`.
     /// `resources` must refer to buffers that have been imported.
     /// `wait_semaphores` and `signal_semaphores` must refer to events that have been imported.
@@ -201,6 +212,20 @@ protocol Primary {
         resources vector<BufferRange>:MAX;
         wait_semaphores vector<zx.koid>:MAX;
         signal_semaphores vector<zx.koid>:MAX;
+    });
+
+    /// Submits command buffers for execution on the GPU, with associated `resources`.
+    /// `resources` must refer to buffers that have been imported.
+    /// `wait_semaphores` and `signal_semaphores` must refer to events that have been imported.
+    /// `wait_semaphores` must all be signaled before execution begins, then are reset.
+    /// `signal_semaphores` will be signaled after the command buffer is completed.
+    ExecuteCommand(struct {
+        context_id uint32;
+        resources vector<BufferRange>:MAX;
+        command_buffers vector<CommandBuffer>:MAX;
+        wait_semaphores vector<zx.koid>:MAX;
+        signal_semaphores vector<zx.koid>:MAX;
+        flags CommandBufferFlags;
     });
 
     /// Submits a series of commands for execution on the GPU without using a command buffer.

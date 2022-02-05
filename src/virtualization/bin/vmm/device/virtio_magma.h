@@ -57,9 +57,12 @@ class VirtioMagma : public VirtioMagmaGeneric,
   zx_status_t Handle_query_returns_buffer2(VirtioDescriptor* request_desc,
                                            VirtioDescriptor* response_desc,
                                            uint32_t* used_out) override;
+  // DEPRECATED - TODO(fxb/86670) remove
   zx_status_t Handle_execute_command_buffer_with_resources2(VirtioDescriptor* request_desc,
                                                             VirtioDescriptor* response_desc,
                                                             uint32_t* used_out) override;
+  zx_status_t Handle_execute_command(VirtioDescriptor* request_desc,
+                                     VirtioDescriptor* response_desc, uint32_t* used_out) override;
   zx_status_t Handle_poll(VirtioDescriptor* request_desc, VirtioDescriptor* response_desc,
                           uint32_t* used_out) override;
   zx_status_t Handle_virt_create_image(VirtioDescriptor* request_desc,

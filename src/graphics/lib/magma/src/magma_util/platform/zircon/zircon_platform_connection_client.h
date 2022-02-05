@@ -25,10 +25,16 @@ class PrimaryWrapper : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Pri
   magma_status_t ReleaseObject(uint64_t object_id, magma::PlatformObject::Type object_type);
   magma_status_t CreateContext(uint32_t context_id);
   magma_status_t DestroyContext(uint32_t context_id);
+  // DEPRECATED - TODO(fxb/86670) remove
   magma_status_t ExecuteCommandBufferWithResources2(
       uint32_t context_id, fuchsia_gpu_magma::wire::CommandBuffer2 command_buffer,
       ::fidl::VectorView<fuchsia_gpu_magma::wire::BufferRange> resources,
       ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores);
+  magma_status_t ExecuteCommand(
+      uint32_t context_id, ::fidl::VectorView<fuchsia_gpu_magma::wire::BufferRange> resources,
+      ::fidl::VectorView<fuchsia_gpu_magma::wire::CommandBuffer> command_buffers,
+      ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores,
+      fuchsia_gpu_magma::wire::CommandBufferFlags flags);
   magma_status_t ExecuteImmediateCommands(uint32_t context_id,
                                           ::fidl::VectorView<uint8_t> command_data,
                                           ::fidl::VectorView<uint64_t> semaphores);

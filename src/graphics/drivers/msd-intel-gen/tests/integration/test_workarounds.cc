@@ -63,13 +63,13 @@ class TestConnection : public magma::TestDeviceBase {
 
     EXPECT_TRUE(ClearBuffer(result_buffer, size, 0xabcd1234));
 
-    magma_command_buffer command_buffer;
+    magma_command_descriptor descriptor;
+    magma_exec_command_buffer command_buffer;
     std::vector<magma_exec_resource> exec_resources;
-    EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resources, batch_buffer, result_buffer));
+    EXPECT_TRUE(
+        InitCommand(&descriptor, &command_buffer, &exec_resources, batch_buffer, result_buffer));
 
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_execute_command_buffer_with_resources2(connection_, context_id, &command_buffer,
-                                                           exec_resources.data(), nullptr));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_execute_command(connection_, context_id, &descriptor));
 
     {
       magma::InflightList list;
@@ -147,9 +147,9 @@ class TestConnection : public magma::TestDeviceBase {
     return true;
   }
 
-  bool InitCommandBuffer(magma_command_buffer* command_buffer,
-                         std::vector<magma_exec_resource>* exec_resources,
-                         magma_buffer_t batch_buffer, magma_buffer_t result_buffer) {
+  bool InitCommand(magma_command_descriptor* descriptor, magma_exec_command_buffer* command_buffer,
+                   std::vector<magma_exec_resource>* exec_resources, magma_buffer_t batch_buffer,
+                   magma_buffer_t result_buffer) {
     exec_resources->clear();
 
     exec_resources->push_back({.buffer_id = magma_get_buffer_id(batch_buffer),
@@ -160,12 +160,16 @@ class TestConnection : public magma::TestDeviceBase {
                                .offset = 0,
                                .length = magma_get_buffer_size(result_buffer)});
 
-    command_buffer->batch_buffer_resource_index = 0;
-    command_buffer->batch_start_offset = 0;
-    command_buffer->resource_count = static_cast<uint32_t>(exec_resources->size());
-    command_buffer->wait_semaphore_count = 0;
-    command_buffer->signal_semaphore_count = 0;
-    command_buffer->flags = 0;
+    command_buffer->resource_index = 0;
+    command_buffer->start_offset = 0;
+
+    descriptor->resource_count = static_cast<uint32_t>(exec_resources->size());
+    descriptor->command_buffer_count = 1;
+    descriptor->wait_semaphore_count = 0;
+    descriptor->signal_semaphore_count = 0;
+    descriptor->resources = exec_resources->data(), descriptor->command_buffers = command_buffer,
+    descriptor->semaphore_ids = nullptr;
+    descriptor->flags = 0;
 
     return true;
   }

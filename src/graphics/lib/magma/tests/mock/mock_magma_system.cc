@@ -122,10 +122,17 @@ void magma_submit_command_buffer(magma_connection_t connection, uint64_t command
   DLOG("magma_system submit command buffer - STUB");
 }
 
+// DEPRECATED - TODO(fxb/86670) remove
 magma_status_t magma_execute_command_buffer_with_resources2(
     magma_connection_t connection, uint32_t context_id, struct magma_command_buffer* command_buffer,
     struct magma_exec_resource* resources, uint64_t* semaphore_ids) {
   DLOG("magma_execute_command_buffer_with_resources2 - STUB");
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_execute_command(magma_connection_t connection, uint32_t context_id,
+                                     struct magma_command_descriptor* descriptor) {
+  DLOG("magma_execute_command - STUB");
   return MAGMA_STATUS_OK;
 }
 
