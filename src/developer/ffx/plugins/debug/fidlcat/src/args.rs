@@ -186,6 +186,16 @@ pub struct FidlcatCommand {
     #[argh(option)]
     pub remote_job_name: Vec<String>,
 
+    /// add the given path as a repository for FIDL IR, in the form of .fidl.json files.  Passing
+    /// a file adds the given file.  Passing a directory adds all of the .fidl.json files in that
+    /// directory and any directory transitively reachable from there. An argfile contains a
+    /// newline-separated list of .fidl.json files relative to the directory containing the argfile;
+    /// passing an argfile (starting with the '@' character) adds all files listed in that argfile.
+    ///
+    /// This option can be specified multiple times.
+    #[argh(option)]
+    pub fidl_ir_path: Vec<String>,
+
     /// extra arguments passed to fidlcat. Any arguments starting with "-" must be after a "--" separator.
     #[argh(positional)]
     pub extra_args: Vec<String>,

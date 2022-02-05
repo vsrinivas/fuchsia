@@ -15,8 +15,12 @@ pub async fn symbolize(cmd: ffx_debug_symbolize_args::SymbolizeCommand) -> Resul
     }
 
     let symbolizer_path = ffx_config::get_sdk().await?.get_host_tool("symbolizer")?;
+    let mut args = cmd.symbolizer_args;
+    if cmd.auth {
+        args.push("--auth".to_owned());
+    }
 
-    let mut cmd = Command::new(symbolizer_path).args(cmd.symbolizer_args).spawn()?;
+    let mut cmd = Command::new(symbolizer_path).args(args).spawn()?;
 
     if let Some(exit_code) = unblock(move || cmd.wait()).await?.code() {
         Ok(exit_code)

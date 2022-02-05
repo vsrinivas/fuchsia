@@ -75,6 +75,7 @@ pub async fn fidlcat(
     arguments.add_values("--exclude-messages", &cmd.exclude_messages);
     arguments.add_values("--trigger", &cmd.trigger);
     arguments.add_values("--thread", &cmd.thread);
+    arguments.add_values("--fidl-ir-path", &cmd.fidl_ir_path);
     arguments.add_flag("--dump-messages", cmd.dump_messages);
 
     if debug_agent_socket.is_some() {

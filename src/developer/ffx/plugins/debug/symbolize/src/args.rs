@@ -9,6 +9,10 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "symbolize", description = "symbolize backtraces in markup format")]
 pub struct SymbolizeCommand {
+    /// start the authentication process.
+    #[argh(switch)]
+    pub auth: bool,
+
     /// extra arguments passed to the symbolizer. Any arguments starting with "-" must be after a "--" separator.
     #[argh(positional)]
     pub symbolizer_args: Vec<String>,
