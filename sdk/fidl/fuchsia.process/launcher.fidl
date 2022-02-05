@@ -161,7 +161,7 @@ protocol Launcher {
     /// Adds the given names to the namespace for the process.
     ///
     /// The paths in the namespace must be non-overlapping. See
-    /// <https://fuchsia.dev/fuchsia-src/concepts/framework/namespaces> for details.
+    /// <https://fuchsia.dev/fuchsia-src/concepts/process/namespaces> for details.
     ///
     /// Calling this method multiple times concatenates the names.
     AddNames(resource struct {
