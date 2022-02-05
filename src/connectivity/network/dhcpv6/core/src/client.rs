@@ -11,7 +11,7 @@ use packet_formats_dhcp::v6;
 use rand::{thread_rng, Rng};
 use std::{
     cmp::{Eq, Ord, PartialEq, PartialOrd},
-    collections::{hash_map::Entry, BinaryHeap, HashMap, HashSet},
+    collections::{hash_map::Entry, BinaryHeap, HashMap},
     convert::TryFrom,
     default::Default,
     net::Ipv6Addr,
@@ -493,37 +493,6 @@ fn get_common_value(values: &Vec<u32>) -> Option<Duration> {
         return Some(Duration::from_secs(values[0].into()));
     }
     None
-}
-
-// Creates a map of addresses to be requested, combining the IA in the selected
-// Advertise with the configured IAs that were not received in the Advertise
-// message.
-fn build_addresses_to_request(
-    advertised_addresses: &HashMap<v6::IAID, IdentityAssociation>,
-    configured_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
-) -> HashMap<v6::IAID, Option<Ipv6Addr>> {
-    let mut addresses_to_request =
-        advertised_addresses.iter().fold(HashMap::new(), |mut addrs_to_request, (iaid, ia)| {
-            let IdentityAssociation { address, preferred_lifetime: _, valid_lifetime: _ } = ia;
-            assert_eq!(addrs_to_request.insert(*iaid, Some(*address)), None);
-            addrs_to_request
-        });
-
-    for (iaid, iaaddr_opt) in configured_addresses {
-        match addresses_to_request.entry(*iaid) {
-            Entry::Occupied(e) => {
-                assert!(advertised_addresses.get(iaid).map_or(false, |ia| {
-                    let IdentityAssociation { address, preferred_lifetime: _, valid_lifetime: _ } =
-                        ia;
-                    Some(*address) == *e.get()
-                }));
-            }
-            Entry::Vacant(e) => {
-                let _: &mut Option<_> = e.insert(*iaaddr_opt);
-            }
-        }
-    }
-    addresses_to_request
 }
 
 /// Provides methods for handling state transitions from server discovery
@@ -1076,6 +1045,120 @@ fn maybe_get_nonzero_min(old_value: v6::TimeValue, new_value: v6::TimeValue) -> 
     }
 }
 
+mod private {
+    use super::*;
+    use std::net::Ipv6Addr;
+
+    /// Holds an address different from what was configured.
+    #[derive(Debug, PartialEq, Clone)]
+    pub(super) struct NonConfiguredAddress {
+        address: Option<Ipv6Addr>,
+        configured_address: Option<Ipv6Addr>,
+    }
+
+    impl NonConfiguredAddress {
+        /// Creates a `NonConfiguredAddress`. Returns `None` if the address is
+        /// the same as what was configured.
+        pub(super) fn new(
+            address: Option<Ipv6Addr>,
+            configured_address: Option<Ipv6Addr>,
+        ) -> Option<Self> {
+            if address == configured_address {
+                return None;
+            }
+            Some(Self { address, configured_address })
+        }
+
+        /// Returns the address.
+        pub(super) fn address(&self) -> Option<Ipv6Addr> {
+            let Self { address, configured_address: _ } = self;
+            *address
+        }
+
+        /// Returns the configured address.
+        pub(super) fn configured_address(&self) -> Option<Ipv6Addr> {
+            let Self { address: _, configured_address } = self;
+            *configured_address
+        }
+    }
+
+    /// Holds an IA for an address different from what was configured.
+    #[derive(Debug, PartialEq, Clone)]
+    pub(super) struct NonConfiguredIA {
+        ia: IdentityAssociation,
+        configured_address: Option<Ipv6Addr>,
+    }
+
+    impl NonConfiguredIA {
+        /// Creates a `NonConfiguredIA`. Returns `None` if the address within
+        /// the IA is the same as what was configured.
+        pub(super) fn new(
+            ia: IdentityAssociation,
+            configured_address: Option<Ipv6Addr>,
+        ) -> Option<Self> {
+            let IdentityAssociation { address, preferred_lifetime: _, valid_lifetime: _ } = &ia;
+            match configured_address {
+                Some(c) => {
+                    if *address == c {
+                        return None;
+                    }
+                }
+                None => (),
+            }
+            Some(Self { ia, configured_address })
+        }
+    }
+}
+
+use private::*;
+
+/// Represents an address to request in an IA, relative to the configured
+/// address for that IA.
+#[derive(Debug, PartialEq, Clone)]
+enum AddressToRequest {
+    /// The address to request is the same as the configured address.
+    Configured(Option<Ipv6Addr>),
+    /// The address to request is different than the configured address.
+    NonConfigured(NonConfiguredAddress),
+}
+
+impl AddressToRequest {
+    /// Extracts the configured addresses from a map of addresses to request.
+    fn to_configured_addresses(
+        addresses_to_request: HashMap<v6::IAID, AddressToRequest>,
+    ) -> HashMap<v6::IAID, Option<Ipv6Addr>> {
+        addresses_to_request
+            .iter()
+            .map(|(iaid, addr_to_request)| (*iaid, addr_to_request.configured_address()))
+            .collect()
+    }
+
+    /// Creates an `AddressToRequest`.
+    fn new(address: Option<Ipv6Addr>, configured_address: Option<Ipv6Addr>) -> Self {
+        let non_conf_addr_opt = NonConfiguredAddress::new(address, configured_address);
+        match non_conf_addr_opt {
+            None => AddressToRequest::Configured(configured_address),
+            Some(non_conf_addr) => AddressToRequest::NonConfigured(non_conf_addr),
+        }
+    }
+
+    /// Returns the address to request.
+    fn address(&self) -> Option<Ipv6Addr> {
+        match self {
+            AddressToRequest::Configured(c) => *c,
+            AddressToRequest::NonConfigured(non_conf_addr) => non_conf_addr.address(),
+        }
+    }
+
+    /// Returns the configured address.
+    fn configured_address(&self) -> Option<Ipv6Addr> {
+        match self {
+            AddressToRequest::Configured(c) => *c,
+            AddressToRequest::NonConfigured(non_conf_addr) => non_conf_addr.configured_address(),
+        }
+    }
+}
+
 /// Provides methods for handling state transitions from requesting state.
 #[derive(Debug)]
 struct Requesting {
@@ -1085,17 +1168,14 @@ struct Requesting {
     /// [Client Identifier]:
     /// https://datatracker.ietf.org/doc/html/rfc8415#section-21.2
     client_id: [u8; CLIENT_ID_LEN],
-    /// The addresses the client is configured to negotiate, indexed by IAID.
-    /// Used when server discovery is restarted.
-    configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
+    /// The addresses to request from the server.
+    addresses_to_request: HashMap<v6::IAID, AddressToRequest>,
     /// The [server identifier] of the server to which the client sends
     /// requests.
     ///
     /// [Server Identifier]:
     /// https://datatracker.ietf.org/doc/html/rfc8415#section-21.3
     server_id: Vec<u8>,
-    /// The addresses requested by the client.
-    addresses_to_request: HashMap<v6::IAID, Option<Ipv6Addr>>,
     /// The advertise collected from servers during [server discovery].
     ///
     /// [server discovery]:
@@ -1172,18 +1252,59 @@ impl Requesting {
     ) -> Transition {
         let AdvertiseMessage {
             server_id,
-            addresses,
+            addresses: advertised_addresses,
             dns_servers: _,
             preference: _,
             receive_time: _,
             preferred_addresses_count: _,
         } = advertise;
-        let addresses_to_request = build_addresses_to_request(&addresses, &configured_addresses);
+        // Create a map of addresses to be requested, combining the IA in the selected
+        // Advertise with the configured IAs that were not received in the Advertise
+        // message.
+        let addresses_to_request = configured_addresses.iter().fold(
+            HashMap::new(),
+            |mut addrs, (iaid, configured_address)| {
+                // Note that the advertised address for an IAID may be different
+                // from what was solicited by the client.
+                match advertised_addresses.get(iaid) {
+                    Some(ia) => {
+                        let IdentityAssociation {
+                            address: advertised_address,
+                            preferred_lifetime: _,
+                            valid_lifetime: _,
+                        } = ia;
+                        assert_eq!(
+                            addrs.insert(
+                                *iaid,
+                                AddressToRequest::new(
+                                    Some(*advertised_address),
+                                    *configured_address
+                                )
+                            ),
+                            None
+                        );
+                    }
+                    // The configured address was not advertised; the client
+                    // will continue to request it in subsequent messages, per
+                    // RFC 8415 section 18.2:
+                    //
+                    //    When possible, the client SHOULD use the best
+                    //    configuration available and continue to request the
+                    //    additional IAs in subsequent messages.
+                    None => {
+                        assert_eq!(
+                            addrs.insert(*iaid, AddressToRequest::Configured(*configured_address)),
+                            None
+                        );
+                    }
+                }
+                addrs
+            },
+        );
         Self {
             client_id,
-            configured_addresses,
-            server_id,
             addresses_to_request,
+            server_id,
             collected_advertise,
             first_request_time: None,
             retrans_timeout: Duration::default(),
@@ -1232,7 +1353,6 @@ impl Requesting {
     ) -> Transition {
         let Self {
             client_id,
-            configured_addresses,
             server_id,
             addresses_to_request,
             collected_advertise,
@@ -1255,11 +1375,11 @@ impl Requesting {
             vec![v6::DhcpOption::ServerId(&server_id), v6::DhcpOption::ClientId(&client_id)];
 
         let mut iaaddr_options = HashMap::new();
-        for (iaid, addr_opt) in &addresses_to_request {
+        for (iaid, addr_to_request) in &addresses_to_request {
             assert_matches!(
                 iaaddr_options.insert(
                     *iaid,
-                    addr_opt.map(|addr| {
+                    addr_to_request.address().map(|addr| {
                         [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
                     }),
                 ),
@@ -1306,9 +1426,8 @@ impl Requesting {
         Transition {
             state: ClientState::Requesting(Requesting {
                 client_id,
-                configured_addresses,
-                server_id,
                 addresses_to_request,
+                server_id,
                 collected_advertise,
                 first_request_time,
                 retrans_timeout,
@@ -1361,9 +1480,8 @@ impl Requesting {
     ) -> Transition {
         let Self {
             client_id,
-            configured_addresses,
-            server_id,
             addresses_to_request,
+            server_id,
             mut collected_advertise,
             first_request_time,
             retrans_timeout,
@@ -1373,9 +1491,8 @@ impl Requesting {
         if retrans_count != REQUEST_MAX_RC {
             return Self {
                 client_id,
-                configured_addresses,
-                server_id,
                 addresses_to_request,
+                server_id,
                 collected_advertise,
                 first_request_time,
                 retrans_timeout,
@@ -1391,7 +1508,7 @@ impl Requesting {
         if let Some(advertise) = collected_advertise.pop() {
             return Requesting::start(
                 client_id,
-                configured_addresses,
+                AddressToRequest::to_configured_addresses(addresses_to_request),
                 advertise,
                 &options_to_request,
                 collected_advertise,
@@ -1402,7 +1519,7 @@ impl Requesting {
         return ServerDiscovery::start(
             transaction_id(),
             client_id,
-            configured_addresses,
+            AddressToRequest::to_configured_addresses(addresses_to_request),
             &options_to_request,
             solicit_max_rt,
             rng,
@@ -1417,16 +1534,14 @@ impl Requesting {
     ) -> Transition {
         let Self {
             client_id,
-            configured_addresses,
+            addresses_to_request,
             server_id,
-            mut addresses_to_request,
             collected_advertise,
             first_request_time,
             retrans_timeout,
             retrans_count,
             solicit_max_rt,
         } = self;
-
         let mut status_code = None;
         let mut client_id_option = None;
         let mut server_id_option = None;
@@ -1435,10 +1550,9 @@ impl Requesting {
         let mut t2 = v6::TimeValue::Zero;
         let mut min_preferred_lifetime = v6::TimeValue::Zero;
         let mut min_valid_lifetime = v6::TimeValue::Zero;
-        let mut assigned_addresses: HashMap<v6::IAID, IdentityAssociation> = HashMap::new();
+        let mut addresses: HashMap<v6::IAID, AddressEntry> = HashMap::new();
 
         let mut dns_servers: Option<Vec<Ipv6Addr>> = None;
-        let mut iaids_not_on_link: HashSet<v6::IAID> = HashSet::new();
 
         // Process options; the client does not check whether an option is
         // present in the Reply message multiple times because each option is
@@ -1499,23 +1613,39 @@ impl Requesting {
                         }
                     }
 
+                    let configured_address =
+                        match addresses_to_request.get(&v6::IAID::new(iana_data.iaid())) {
+                            Some(address_to_request) => address_to_request.configured_address(),
+                            None => {
+                                // The RFC does not explicitly call out what to
+                                // do with IAs that were not requested by the
+                                // client. Ignore unsolicited IAs to control how
+                                // many addresses are assigned to the client.
+                                log::debug!(
+                                    "received unexpected IA_NA option
+                                  {:?} not requested by the client.",
+                                    iana_data
+                                );
+                                continue;
+                            }
+                        };
+
                     // Per RFC 8415, section 21.4, IAIDs are expected to be
                     // unique. Ignore IA_NA option with duplicate IAID.
                     //
                     //    A DHCP message may contain multiple IA_NA options
                     //    (though each must have a unique IAID).
-                    let vacant_ia_entry =
-                        match assigned_addresses.entry(v6::IAID::new(iana_data.iaid())) {
-                            Entry::Occupied(entry) => {
-                                log::debug!(
-                                    "received unexpected IA_NA option with
+                    let vacant_ia_entry = match addresses.entry(v6::IAID::new(iana_data.iaid())) {
+                        Entry::Occupied(entry) => {
+                            log::debug!(
+                                "received unexpected IA_NA option with
                                 non-unique IAID {:?}.",
-                                    entry.key()
-                                );
-                                continue;
-                            }
-                            Entry::Vacant(entry) => entry,
-                        };
+                                entry.key()
+                            );
+                            continue;
+                        }
+                        Entry::Vacant(entry) => entry,
+                    };
                     // If T1/T2 are set by the server to values greater than 0,
                     // compute the minimum T1 and T2 values, per RFC 8415,
                     // section 18.2.4:
@@ -1612,12 +1742,15 @@ impl Requesting {
                     match iana_status_code {
                         v6::StatusCode::Success => {
                             if let Some(iaaddr_data) = iaaddr_opt {
-                                let _: &mut IdentityAssociation =
-                                    vacant_ia_entry.insert(IdentityAssociation {
-                                        address: Ipv6Addr::from(iaaddr_data.addr()),
-                                        preferred_lifetime: iaaddr_data.preferred_lifetime(),
-                                        valid_lifetime: iaaddr_data.valid_lifetime(),
-                                    });
+                                let _: &mut AddressEntry =
+                                    vacant_ia_entry.insert(AddressEntry::new_assigned(
+                                        IdentityAssociation {
+                                            address: Ipv6Addr::from(iaaddr_data.addr()),
+                                            preferred_lifetime: iaaddr_data.preferred_lifetime(),
+                                            valid_lifetime: iaaddr_data.valid_lifetime(),
+                                        },
+                                        configured_address,
+                                    ));
                                 min_preferred_lifetime = maybe_get_nonzero_min(
                                     min_preferred_lifetime,
                                     iaaddr_data.preferred_lifetime(),
@@ -1631,7 +1764,8 @@ impl Requesting {
                         v6::StatusCode::NotOnLink => {
                             // If the client receives IAs with NotOnLink status,
                             // try to obtain other addresses in follow-up messages.
-                            assert!(iaids_not_on_link.insert(v6::IAID::new(iana_data.iaid())));
+                            let _: &mut AddressEntry = vacant_ia_entry
+                                .insert(AddressEntry::new_to_request(None, configured_address));
                         }
                         v6::StatusCode::UnspecFail
                         | v6::StatusCode::NoAddrsAvail
@@ -1704,9 +1838,8 @@ impl Requesting {
             return Transition {
                 state: ClientState::Requesting(Self {
                     client_id,
-                    configured_addresses,
-                    server_id,
                     addresses_to_request,
+                    server_id,
                     collected_advertise,
                     first_request_time,
                     retrans_timeout,
@@ -1747,9 +1880,8 @@ impl Requesting {
                 // TODO(https://fxbug.dev/81086): implement rate limiting.
                 return Requesting {
                     client_id,
-                    configured_addresses,
-                    server_id,
                     addresses_to_request,
+                    server_id,
                     collected_advertise,
                     first_request_time,
                     retrans_timeout,
@@ -1774,13 +1906,26 @@ impl Requesting {
                 // The client reissues the message without specifying addresses, leaving
                 // it up to the server to assign addresses appropriate for the client's
                 // link.
-                let addresses_to_request: HashMap<v6::IAID, Option<Ipv6Addr>> =
-                    addresses_to_request.into_keys().zip(std::iter::repeat(None)).collect();
+                let addresses_to_request = addresses_to_request.iter().fold(
+                    HashMap::new(),
+                    |mut addrs, (iaid, address_to_request)| {
+                            assert_eq!(
+                                addrs.insert(
+                                    *iaid,
+                                    AddressToRequest::new(
+                                        None,
+                                        address_to_request.configured_address()
+                                        )
+                                    ),
+                                    None
+                                    );
+                            addrs
+                        }
+                    );
                 return Requesting {
                     client_id,
-                    configured_addresses,
-                    server_id,
                     addresses_to_request,
+                    server_id,
                     collected_advertise,
                     first_request_time,
                     retrans_timeout,
@@ -1806,7 +1951,7 @@ impl Requesting {
                         );
                 return request_from_alternate_server_or_restart_server_discovery(
                     client_id,
-                    configured_addresses,
+                    AddressToRequest::to_configured_addresses(addresses_to_request),
                     &options_to_request,
                     collected_advertise,
                     solicit_max_rt,
@@ -1826,10 +1971,16 @@ impl Requesting {
             // configuration information only. This option is preferred when the
             // client operates in stateful mode, where the main goal for the
             // client is to negotiate addresses.
-            v6::StatusCode::Success => if assigned_addresses.is_empty() {
+            v6::StatusCode::Success => if !addresses.iter().any(|(_iaid, entry)| {
+                match entry {
+                    AddressEntry::Configured(_conf_ia) => true,
+                    AddressEntry::NonConfigured(_non_conf_ia_) => true,
+                    AddressEntry::ToRequest(_addr) => false,
+                }
+            }) {
                 return request_from_alternate_server_or_restart_server_discovery(
                     client_id,
-                    configured_addresses,
+                    AddressToRequest::to_configured_addresses(addresses_to_request),
                     &options_to_request,
                     collected_advertise,
                     solicit_max_rt,
@@ -1838,15 +1989,11 @@ impl Requesting {
             },
         }
 
-        // Build a map of addresses that were requested by the client but were
-        // not assigned in this Reply, to be requested in subsequent messages.
-        // IAs for which the server sent a NotOnLink status will be requested
-        // without specifying an address.
-        addresses_to_request.retain(|iaid, _addr| !assigned_addresses.contains_key(iaid));
-        for iaid in &iaids_not_on_link {
-            if addresses_to_request.contains_key(iaid) {
-                assert_matches!(addresses_to_request.insert(*iaid, None), Some(_));
-            }
+        // Add configured addresses that were requested by the client but were
+        // not received in this Reply.
+        for (iaid, address_to_request) in addresses_to_request {
+            let _: &mut AddressEntry =
+                addresses.entry(iaid).or_insert(AddressEntry::ToRequest(address_to_request));
         }
 
         let actions =
@@ -1922,18 +2069,48 @@ impl Requesting {
         Transition {
             state: ClientState::AddressAssigned(AddressAssigned {
                 client_id,
-                configured_addresses,
+                addresses,
                 server_id,
-                assigned_addresses,
                 t1: Duration::from_secs(t1.into()),
                 t2: Duration::from_secs(t2.into()),
-                addresses_to_request,
                 dns_servers: dns_servers.unwrap_or(Vec::new()),
                 solicit_max_rt,
             }),
             actions,
             transaction_id: None,
         }
+    }
+}
+
+/// Represents an address entry negotiated by the client.
+#[derive(Debug, PartialEq)]
+enum AddressEntry {
+    /// The address is assigned and it's the same address as the configured
+    /// address.
+    Configured(IdentityAssociation),
+    /// The address is assigned and it's different than as the configured
+    /// address.
+    NonConfigured(NonConfiguredIA),
+    /// The address is not assigned and it's to be requested in subsequent
+    /// messages.
+    ToRequest(AddressToRequest),
+}
+
+impl AddressEntry {
+    /// Creates a new assigned address entry.
+    fn new_assigned(ia: IdentityAssociation, configured_address: Option<Ipv6Addr>) -> AddressEntry {
+        match NonConfiguredIA::new(ia.clone(), configured_address) {
+            Some(non_conf_ia) => AddressEntry::NonConfigured(non_conf_ia),
+            None => AddressEntry::Configured(ia),
+        }
+    }
+
+    /// Creates a new address to request entry.
+    fn new_to_request(
+        address: Option<Ipv6Addr>,
+        configured_address: Option<Ipv6Addr>,
+    ) -> AddressEntry {
+        AddressEntry::ToRequest(AddressToRequest::new(address, configured_address))
     }
 }
 
@@ -1946,16 +2123,13 @@ struct AddressAssigned {
     ///
     /// [Client Identifier]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.2
     client_id: [u8; CLIENT_ID_LEN],
-    /// The addresses the client is configured to negotiate, indexed by IAID.
-    /// Used when server discovery is restarted.
-    configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
+    /// The addresses entries negotiated by the client.
+    addresses: HashMap<v6::IAID, AddressEntry>,
     /// The [server identifier] of the server to which the client sends
     /// requests.
     ///
     /// [Server Identifier]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.3
     server_id: Vec<u8>,
-    /// The addresses assigned to the client.
-    assigned_addresses: HashMap<v6::IAID, IdentityAssociation>,
     /// The time interval after which the client contacts the server that
     /// assigned addresses to the client, to extend the lifetimes of the
     /// assigned addresses.
@@ -1963,8 +2137,6 @@ struct AddressAssigned {
     /// The time interval after which the client contacts any server to extend
     /// the lifetimes of the assigned addresses.
     t2: Duration,
-    /// Stores addresses to be requested in follow-up messages.
-    addresses_to_request: HashMap<v6::IAID, Option<Ipv6Addr>>,
     /// Stores the DNS servers received from the reply.
     dns_servers: Vec<Ipv6Addr>,
     /// The [SOL_MAX_RT](https://datatracker.ietf.org/doc/html/rfc8415#section-21.24)
@@ -2499,9 +2671,8 @@ pub(crate) mod testutil {
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         assert_matches!(&state, Some(ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id,
                 addresses_to_request: _,
+                server_id,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -2520,7 +2691,7 @@ pub(crate) mod testutil {
         );
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        let expected_assigned_addressess =
+        let expected_addresses =
             addresses_to_assign.iter().fold(HashMap::new(), |mut addrs, (iaid, ia)| {
                 let TestIdentityAssociation {
                     address,
@@ -2532,11 +2703,14 @@ pub(crate) mod testutil {
                 assert_eq!(
                     addrs.insert(
                         *iaid,
-                        IdentityAssociation {
-                            address: *address,
-                            preferred_lifetime: *preferred_lifetime,
-                            valid_lifetime: *valid_lifetime
-                        }
+                        AddressEntry::new_assigned(
+                            IdentityAssociation {
+                                address: *address,
+                                preferred_lifetime: *preferred_lifetime,
+                                valid_lifetime: *valid_lifetime
+                            },
+                            Some(*address)
+                        )
                     ),
                     None
                 );
@@ -2546,24 +2720,18 @@ pub(crate) mod testutil {
             &state,
             Some(ClientState::AddressAssigned(AddressAssigned {
                 client_id: got_client_id,
-                configured_addresses: got_configured_addresses,
+                addresses,
                 server_id: got_server_id,
-                assigned_addresses,
                 // Because T1 and T2 are calculated based on the input
                 // configured addresses, they are not checked here to avoid
                 // duplicating the logic in the test covering T1/T2 calculation.
                 t1: _,
                 t2: _,
-                addresses_to_request,
                 dns_servers,
                 solicit_max_rt,
             })) if *got_client_id == client_id &&
-                   *got_configured_addresses == configured_addresses &&
+                   *addresses == expected_addresses &&
                    *got_server_id == server_id &&
-                   *assigned_addresses == expected_assigned_addressess &&
-                   // All configured addresses were assigned, no addresses left
-                   // to request in subsequent messages.
-                   *addresses_to_request == HashMap::new() &&
                    *dns_servers == Vec::<Ipv6Addr>::new() &&
                    *solicit_max_rt == SOLICIT_MAX_RT
         );
@@ -3078,9 +3246,8 @@ mod tests {
             state,
             Some(ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id: _,
                 addresses_to_request: _,
+                server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -3256,9 +3423,8 @@ mod tests {
             state,
             Some(ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id: _,
                 addresses_to_request: _,
+                server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -3302,9 +3468,8 @@ mod tests {
             state,
             ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id: _,
                 addresses_to_request: _,
+                server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -3372,9 +3537,8 @@ mod tests {
         let (server_id, got_addresses_to_request) = match &state {
             ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id,
                 addresses_to_request: got_addresses_to_request,
+                server_id,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -3384,11 +3548,11 @@ mod tests {
             state => panic!("unexpected state {:?}", state),
         };
         assert_eq!(*server_id, vec![1, 2, 3]);
-        let addresses_to_request = (0..)
+        let expected_addresses_to_request = (0..)
             .map(v6::IAID::new)
-            .zip(advertised_addresses.iter().map(|addr| Some(*addr)))
-            .collect::<HashMap<v6::IAID, Option<Ipv6Addr>>>();
-        assert_eq!(addresses_to_request, *got_addresses_to_request);
+            .zip(advertised_addresses.iter().map(|addr| AddressToRequest::new(Some(*addr), None)))
+            .collect::<HashMap<v6::IAID, AddressToRequest>>();
+        assert_eq!(*got_addresses_to_request, expected_addresses_to_request);
 
         // If the reply contains an top level UnspecFail status code, the
         // request should be resent.
@@ -3410,9 +3574,8 @@ mod tests {
         let (server_id, got_addresses_to_request) = match &state {
             ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id,
                 addresses_to_request: got_addresses_to_request,
+                server_id,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -3422,7 +3585,7 @@ mod tests {
             state => panic!("unexpected state {:?}", state),
         };
         assert_eq!(*server_id, vec![1, 2, 3]);
-        assert_eq!(addresses_to_request, *got_addresses_to_request);
+        assert_eq!(*got_addresses_to_request, expected_addresses_to_request);
         assert!(transaction_id.is_some());
 
         // If the reply contains an top level NotOnLink status code, the
@@ -3443,14 +3606,13 @@ mod tests {
         let Transition { state, actions: _, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg);
 
-        let expected_addresses_to_request: HashMap<v6::IAID, Option<Ipv6Addr>> =
-            HashMap::from([(v6::IAID::new(0), None)]);
+        let expected_addresses_to_request: HashMap<v6::IAID, AddressToRequest> =
+            HashMap::from([(v6::IAID::new(0), AddressToRequest::new(None, None))]);
         let (server_id, got_addresses_to_request) = match &state {
             ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id,
                 addresses_to_request: got_addresses_to_request,
+                server_id,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -3482,9 +3644,8 @@ mod tests {
             state.reply_message_received(&options_to_request, &mut rng, msg);
         assert_matches!(&state, ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id,
                 addresses_to_request: _,
+                server_id,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -3519,9 +3680,8 @@ mod tests {
             state.reply_message_received(&options_to_request, &mut rng, msg);
         assert_matches!(state, ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id,
                 addresses_to_request: _,
+                server_id,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -3542,11 +3702,12 @@ mod tests {
     #[test]
     fn requesting_receive_reply_with_ia_not_on_link() {
         let options_to_request = vec![];
-        let configured_addresses =
-            testutil::to_configured_addresses(2, vec![std_ip_v6!("::ffff:c00a:1ff")]);
+        let address1 = std_ip_v6!("::ffff:c00a:1ff");
+        let address2 = std_ip_v6!("::ffff:c00a:2ff");
+        let configured_addresses = testutil::to_configured_addresses(2, vec![address1]);
         let selected_advertise = AdvertiseMessage::new_default(
             vec![1, 2, 3],
-            &[std_ip_v6!("::ffff:c00a:1ff"), std_ip_v6!("::ffff:c00a:2ff")],
+            &[address1, address2],
             &[],
             &configured_addresses,
         );
@@ -3567,17 +3728,23 @@ mod tests {
         // client should request the IAs without specifying any addresses in
         // subsequent messages.
         let iana_options1 = [v6::DhcpOption::StatusCode(v6::StatusCode::NotOnLink.into(), "")];
+        let preferred_lifetime_value = 60;
+        let valid_lifetime_value = 90;
         let iana_options2 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            std_ip_v6!("::ffff:c00a:2ff"),
-            60,
-            60,
+            address2,
+            preferred_lifetime_value,
+            valid_lifetime_value,
             &[],
         ))];
+        let t1 = 90;
+        let t2 = 120;
+        let iaid1 = v6::IAID::new(0);
+        let iaid2 = v6::IAID::new(1);
         let options = [
             v6::DhcpOption::ServerId(&[1, 2, 3]),
             v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options1)),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(1), 60, 60, &iana_options2)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid1, t1, t2, &iana_options1)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid2, t1, t2, &iana_options2)),
         ];
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
@@ -3587,23 +3754,37 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg);
-        let expected_addresses_to_request = HashMap::from([(v6::IAID::new(0), None)]);
-        let (server_id, addresses_to_request) = match state {
+        let expected_addresses = HashMap::from([
+            (iaid1, AddressEntry::new_to_request(None, Some(address1))),
+            (
+                iaid2,
+                AddressEntry::new_assigned(
+                    IdentityAssociation {
+                        address: address2,
+                        preferred_lifetime: v6::TimeValue::Finite(
+                            v6::NonZeroOrMaxU32::new(preferred_lifetime_value)
+                                .expect("should succeed for non-zero or u32::MAX values"),
+                        ),
+                        valid_lifetime: v6::TimeValue::Finite(
+                            v6::NonZeroOrMaxU32::new(valid_lifetime_value)
+                                .expect("should succeed for non-zero or u32::MAX values"),
+                        ),
+                    },
+                    None,
+                ),
+            ),
+        ]);
+        assert_matches!(state,
             ClientState::AddressAssigned(AddressAssigned {
                 client_id: _,
-                configured_addresses: _,
+                addresses,
                 server_id,
-                assigned_addresses: _,
                 t1: _,
                 t2: _,
-                addresses_to_request,
                 dns_servers: _,
                 solicit_max_rt: _,
-            }) => (server_id, addresses_to_request),
-            state => panic!("unexpected state {:?}", state),
-        };
-        assert_eq!(*server_id, vec![1, 2, 3]);
-        assert_eq!(expected_addresses_to_request, addresses_to_request);
+            }) if server_id == vec![1, 2, 3] &&
+                  addresses == expected_addresses);
         assert_matches!(&actions[..], [Action::CancelTimer(ClientTimerType::Retransmission),]);
         assert!(transaction_id.is_none());
     }
@@ -3669,12 +3850,10 @@ mod tests {
                     state,
                     ClientState::AddressAssigned(AddressAssigned {
                         client_id: _,
-                        configured_addresses: _,
+                        addresses: _,
                         server_id: _,
-                        assigned_addresses: _,
                         t1: _,
                         t2: _,
-                        addresses_to_request: _,
                         dns_servers: _,
                         solicit_max_rt: _,
                     })
@@ -3783,12 +3962,10 @@ mod tests {
             let (t1, t2) = match state {
                 ClientState::AddressAssigned(AddressAssigned {
                     client_id: _,
-                    configured_addresses: _,
+                    addresses: _,
                     server_id: _,
-                    assigned_addresses: _,
                     t1,
                     t2,
-                    addresses_to_request: _,
                     dns_servers: _,
                     solicit_max_rt: _,
                 }) => (t1, t2),
@@ -3892,9 +4069,8 @@ mod tests {
             &client;
         assert_matches!(state, Some(ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id,
                 addresses_to_request: _,
+                server_id,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -3917,9 +4093,8 @@ mod tests {
             let (server_id, retrans_count) = match state {
                 Some(ClientState::Requesting(Requesting {
                     client_id: _,
-                    configured_addresses: _,
-                    server_id,
                     addresses_to_request: _,
+                    server_id,
                     collected_advertise: _,
                     first_request_time: _,
                     retrans_timeout: _,
@@ -3947,9 +4122,8 @@ mod tests {
         let (server_id, retrans_count) = match state {
             Some(ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id,
                 addresses_to_request: _,
+                server_id,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -3976,9 +4150,8 @@ mod tests {
             let (server_id, retrans_count) = match state {
                 Some(ClientState::Requesting(Requesting {
                     client_id: _,
-                    configured_addresses: _,
-                    server_id,
                     addresses_to_request: _,
+                    server_id,
                     collected_advertise: _,
                     first_request_time: _,
                     retrans_timeout: _,
@@ -4071,12 +4244,10 @@ mod tests {
             state,
             Some(ClientState::AddressAssigned(AddressAssigned {
                 client_id: _,
-                configured_addresses: _,
+                addresses: _,
                 server_id: _,
-                assigned_addresses: _,
                 t1: got_t1,
                 t2: got_t2,
-                addresses_to_request: _,
                 dns_servers: _,
                 solicit_max_rt: _,
             })) if *got_t1 == Duration::from_secs(T1.into()) &&
@@ -4110,9 +4281,8 @@ mod tests {
         assert_matches!(&state,
             ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id: _,
                 addresses_to_request: _,
+                server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -4143,9 +4313,8 @@ mod tests {
         assert_matches!(&state,
             ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id: _,
                 addresses_to_request: _,
+                server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -4174,9 +4343,8 @@ mod tests {
         assert_matches!(&state,
             ClientState::Requesting(Requesting {
                 client_id: _,
-                configured_addresses: _,
-                server_id: _,
                 addresses_to_request: _,
+                server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -4204,12 +4372,10 @@ mod tests {
         assert_matches!(&state,
             ClientState::AddressAssigned(AddressAssigned {
                     client_id: _,
-                    configured_addresses: _,
+                    addresses: _,
                     server_id: _,
-                    assigned_addresses: _,
                     t1: _,
                     t2: _,
-                    addresses_to_request: _,
                     dns_servers:_,
                     solicit_max_rt,
             }) if *solicit_max_rt == Duration::from_secs(received_sol_max_rt.into())
@@ -4434,5 +4600,71 @@ mod tests {
     #[test_case(INFINITY - 1, T2_T1_RATIO, INFINITY)]
     fn compute_t(min: u32, ratio: Ratio<u32>, expected_t: u32) {
         assert_eq!(super::compute_t(min, ratio), expected_t);
+    }
+
+    #[test_case(None, None, false)]
+    #[test_case(None, Some(std_ip_v6!("ff01::0102")), true)]
+    #[test_case(Some(std_ip_v6!("ff01::0102")), None, true)]
+    #[test_case(Some(std_ip_v6!("ff01::0102")), Some(std_ip_v6!("ff01::0304")), true)]
+    #[test_case(Some(std_ip_v6!("ff01::0304")), Some(std_ip_v6!("ff01::0304")), false)]
+    fn create_non_configured_address(
+        address: Option<Ipv6Addr>,
+        configured_address: Option<Ipv6Addr>,
+        expect_address_is_some: bool,
+    ) {
+        assert_eq!(
+            NonConfiguredAddress::new(address, configured_address).is_some(),
+            expect_address_is_some
+        );
+    }
+
+    #[test_case(None, Some(std_ip_v6!("ff01::0102")))]
+    #[test_case(Some(std_ip_v6!("ff01::0102")), None)]
+    #[test_case(Some(std_ip_v6!("ff01::0102")), Some(std_ip_v6!("ff01::0304")))]
+    fn non_configured_address_get_address(
+        address: Option<Ipv6Addr>,
+        configured_address: Option<Ipv6Addr>,
+    ) {
+        let non_conf_ia = NonConfiguredAddress::new(address, configured_address);
+        match non_conf_ia {
+            Some(p) => assert_eq!(p.address(), address),
+            None => panic!("should suceed to create non configured IA"),
+        }
+    }
+
+    #[test_case(None, Some(std_ip_v6!("ff01::0102")))]
+    #[test_case(Some(std_ip_v6!("ff01::0102")), None)]
+    #[test_case(Some(std_ip_v6!("ff01::0102")), Some(std_ip_v6!("ff01::0304")))]
+    fn non_configured_address_get_configured_address(
+        address: Option<Ipv6Addr>,
+        configured_address: Option<Ipv6Addr>,
+    ) {
+        let non_conf_ia = NonConfiguredAddress::new(address, configured_address);
+        match non_conf_ia {
+            Some(p) => assert_eq!(p.configured_address(), configured_address),
+            None => panic!("should suceed to create non configured IA"),
+        }
+    }
+
+    #[test_case(std_ip_v6!("ff01::0102"), None, true)]
+    #[test_case(std_ip_v6!("ff01::0102"), Some(std_ip_v6!("ff01::0304")), true)]
+    #[test_case(std_ip_v6!("ff01::0304"), Some(std_ip_v6!("ff01::0304")), false)]
+    fn create_non_configured_ia(
+        address: Ipv6Addr,
+        configured_address: Option<Ipv6Addr>,
+        expect_ia_is_some: bool,
+    ) {
+        let ia = IdentityAssociation {
+            address,
+            preferred_lifetime: v6::TimeValue::Finite(
+                v6::NonZeroOrMaxU32::new(60)
+                    .expect("should succeed for non-zero or u32::MAX values"),
+            ),
+            valid_lifetime: v6::TimeValue::Finite(
+                v6::NonZeroOrMaxU32::new(90)
+                    .expect("should succeed for non-zero or u32::MAX values"),
+            ),
+        };
+        assert_eq!(NonConfiguredIA::new(ia, configured_address).is_some(), expect_ia_is_some);
     }
 }
