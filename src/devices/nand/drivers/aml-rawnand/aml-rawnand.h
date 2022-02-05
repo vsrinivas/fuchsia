@@ -207,6 +207,10 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   zx_status_t AmlNandInitFromPage0();
   zx_status_t AmlRawNandAllocBufs() __TA_REQUIRES(mutex_);
   zx_status_t AmlNandInit();
+
+  // If true, the driver is the process of being stopped, and no attempts to access the NAND
+  // controller or device should be made.
+  bool shutdown_ __TA_GUARDED(mutex_) = false;
 };
 
 }  // namespace amlrawnand
