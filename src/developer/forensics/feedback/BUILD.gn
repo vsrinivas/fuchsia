@@ -123,6 +123,7 @@ source_set("main_service") {
     "//src/developer/forensics/crash_reports:snapshot_manager",
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/feedback/annotations:data_register",
+    "//src/developer/forensics/feedback/annotations:time_provider",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:data_provider",
     "//src/developer/forensics/feedback_data:data_provider_controller",

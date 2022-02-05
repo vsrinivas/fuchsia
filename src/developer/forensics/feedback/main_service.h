@@ -20,6 +20,7 @@
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/data_register.h"
+#include "src/developer/forensics/feedback/annotations/time_provider.h"
 #include "src/developer/forensics/feedback/crash_reports.h"
 #include "src/developer/forensics/feedback/feedback_data.h"
 #include "src/developer/forensics/feedback/last_reboot.h"
@@ -68,6 +69,8 @@ class MainService {
   DataRegister data_register_;
   InspectProtocolStats component_data_register_stats_;
   ::fidl::BindingSet<fuchsia::feedback::ComponentDataRegister> data_register_connections_;
+
+  TimeProvider time_provider_;
 
   AnnotationManager annotation_manager_;
 

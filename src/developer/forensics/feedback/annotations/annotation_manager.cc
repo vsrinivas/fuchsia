@@ -30,12 +30,14 @@ void InsertUnique(const Annotations& annotations, Annotations* out) {
 
 }  // namespace
 
-AnnotationManager::AnnotationManager(std::set<std::string> allowlist,
-                                     const Annotations static_annotations,
-                                     NonPlatformAnnotationProvider* non_platform_provider)
+AnnotationManager::AnnotationManager(
+    std::set<std::string> allowlist, const Annotations static_annotations,
+    NonPlatformAnnotationProvider* non_platform_provider,
+    std::vector<DynamicSyncAnnotationProvider*> dynamic_sync_providers)
     : allowlist_(std::move(allowlist)),
       static_annotations_(),
-      non_platform_provider_(non_platform_provider) {
+      non_platform_provider_(non_platform_provider),
+      dynamic_sync_providers_(std::move(dynamic_sync_providers)) {
   InsertUnique(static_annotations, allowlist_, &static_annotations_);
 }
 
@@ -45,6 +47,10 @@ void AnnotationManager::InsertStatic(const Annotations& annotations) {
 
 Annotations AnnotationManager::ImmediatelyAvailable() const {
   Annotations annotations(static_annotations_);
+  for (auto* provider : dynamic_sync_providers_) {
+    InsertUnique(provider->Get(), allowlist_, &annotations);
+  }
+
   if (non_platform_provider_ != nullptr) {
     InsertUnique(non_platform_provider_->Get(), &annotations);
   }

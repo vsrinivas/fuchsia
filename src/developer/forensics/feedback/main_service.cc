@@ -12,6 +12,7 @@
 
 #include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 namespace forensics::feedback {
 namespace {
@@ -46,8 +47,9 @@ MainService::MainService(async_dispatcher_t* dispatcher,
                      kDataRegisterPath),
       component_data_register_stats_(&inspect_node_manager_,
                                      "/fidl/fuchsia.feedback.ComponentDataRegister"),
+      time_provider_(std::make_unique<timekeeper::SystemClock>()),
       annotation_manager_(options.feedback_data_options.config.annotation_allowlist,
-                          startup_annotations, &data_register_),
+                          startup_annotations, &data_register_, {&time_provider_}),
       feedback_data_(dispatcher_, services_, clock_, inspect_root_, cobalt_, &annotation_manager_,
                      device_id_provider_.get(), options.feedback_data_options),
       crash_reports_(dispatcher_, services_, clock_, inspect_root_, device_id_provider_.get(),

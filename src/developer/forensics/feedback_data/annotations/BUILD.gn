@@ -19,8 +19,6 @@ source_set("annotation_providers") {
     "annotation_provider_factory.h",
     "device_id_provider.cc",
     "device_id_provider.h",
-    "time_provider.cc",
-    "time_provider.h",
   ]
 
   deps = [

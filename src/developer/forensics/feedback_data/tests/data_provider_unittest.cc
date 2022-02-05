@@ -54,9 +54,8 @@ using fuchsia::feedback::Snapshot;
 using testing::UnorderedElementsAreArray;
 
 const AnnotationKeys kDefaultAnnotations = {
-    kAnnotationBuildBoard,    kAnnotationBuildLatestCommitDate, kAnnotationBuildProduct,
-    kAnnotationBuildVersion,  kAnnotationDeviceBoardName,       kAnnotationDeviceUptime,
-    kAnnotationDeviceUtcTime,
+    kAnnotationBuildBoard,   kAnnotationBuildLatestCommitDate, kAnnotationBuildProduct,
+    kAnnotationBuildVersion, kAnnotationDeviceBoardName,
 };
 const AttachmentKeys kDefaultAttachments = {
     kAttachmentBuildSnapshot,
@@ -513,19 +512,12 @@ TEST_F(DataProviderTest, GetSnapshot_AnnotationsAsAttachment) {
     },
     "%s": {
       "type": "string"
-    },
-    "%s": {
-      "type": "string"
-    },
-    "%s": {
-      "type": "string"
     }
   },
   "additionalProperties": false
 })",
               kAnnotationBuildBoard, kAnnotationBuildIsDebug, kAnnotationBuildLatestCommitDate,
-              kAnnotationBuildProduct, kAnnotationBuildVersion, kAnnotationDeviceBoardName,
-              kAnnotationDeviceUptime, kAnnotationDeviceUtcTime))
+              kAnnotationBuildProduct, kAnnotationBuildVersion, kAnnotationDeviceBoardName))
           .HasParseError());
   rapidjson::SchemaDocument schema(schema_json);
   rapidjson::SchemaValidator validator(schema);

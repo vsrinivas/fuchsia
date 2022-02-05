@@ -70,17 +70,28 @@ TEST(AnnotationManagerTest, StaticAllowlist) {
       {"annotation2", Error::kMissingValue},
   });
 
+  DynamicNonPlatform counter;
   {
-    AnnotationManager mananger({}, static_annotations);
+    AnnotationManager mananger({}, static_annotations, nullptr, {&counter});
 
     EXPECT_THAT(mananger.ImmediatelyAvailable(), IsEmpty());
   }
 
   {
-    AnnotationManager mananger({"annotation1"}, static_annotations);
+    AnnotationManager mananger({"annotation1"}, static_annotations, nullptr, {&counter});
 
     EXPECT_THAT(mananger.ImmediatelyAvailable(), UnorderedElementsAreArray({
                                                      MakePair("annotation1", "value1"),
+                                                 }));
+  }
+
+  {
+    AnnotationManager mananger({"annotation1", "num_calls"}, static_annotations, nullptr,
+                               {&counter});
+
+    EXPECT_THAT(mananger.ImmediatelyAvailable(), UnorderedElementsAreArray({
+                                                     MakePair("annotation1", "value1"),
+                                                     MakePair("num_calls", "3"),
                                                  }));
   }
 }

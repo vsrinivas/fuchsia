@@ -51,6 +51,9 @@ constexpr const char kSystemUpdateChannelTargetKey[] = "system.update-channel.ta
 // Only 30 non-platform annotations can be registered.
 const uint32_t kMaxNumNonPlatformAnnotations = 30u;
 
+// Only 2 platform annotations are provided by the AnnotationManager.
+const uint32_t kMaxNumPlatformAnnotations = 2u;
+
 // Reserved namespaces for platform annotations. Components are not allowed to use these namespaces
 // when supplying non-platform annotations.
 const std::set<std::string> kReservedAnnotationNamespaces({

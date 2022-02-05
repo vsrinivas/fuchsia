@@ -54,3 +54,15 @@ source_set("data_register") {
 
   deps = [ "//sdk/lib/syslog/cpp" ]
 }
+
+source_set("time_provider") {
+  sources = [
+    "time_provider.cc",
+    "time_provider.h",
+  ]
+
+  public_deps = [
+    "//src/developer/forensics/feedback/annotations",
+    "//src/lib/timekeeper",
+  ]
+}

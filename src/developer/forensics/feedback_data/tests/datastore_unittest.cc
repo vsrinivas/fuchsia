@@ -213,8 +213,6 @@ TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
           kAnnotationSystemBootIdPrevious,
           kAnnotationSystemLastRebootReason,
           kAnnotationSystemLastRebootUptime,
-          kAnnotationDeviceUptime,
-          kAnnotationDeviceUtcTime,
       },
       {
           kAttachmentBuildSnapshot,
@@ -357,24 +355,6 @@ TEST_F(DatastoreTest, GetAnnotations_ProductInfo) {
                   Pair(kAnnotationHardwareProductRegulatoryDomain, "my-regulatory-domain"),
                   Pair(kAnnotationHardwareProductSKU, "my-sku"),
               }));
-
-  EXPECT_THAT(GetImmediatelyAvailableAnnotations(), IsEmpty());
-}
-
-TEST_F(DatastoreTest, GetAnnotations_Time) {
-  SetUpDatastore(
-      {
-          kAnnotationDeviceUptime,
-          kAnnotationDeviceUtcTime,
-      },
-      kDefaultAttachmentsToAvoidSpuriousLogs);
-
-  ::fpromise::result<Annotations> annotations = GetAnnotations();
-  ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(), ElementsAreArray({
-                                            Pair(kAnnotationDeviceUptime, HasValue()),
-                                            Pair(kAnnotationDeviceUtcTime, HasValue()),
-                                        }));
 
   EXPECT_THAT(GetImmediatelyAvailableAnnotations(), IsEmpty());
 }

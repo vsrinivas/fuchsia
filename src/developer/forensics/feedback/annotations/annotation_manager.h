@@ -21,7 +21,8 @@ class AnnotationManager {
   //
   // Annotations not in the allowlist or not explicitly exempted won't be returned.
   AnnotationManager(std::set<std::string> allowlist, Annotations static_annotations = {},
-                    NonPlatformAnnotationProvider* non_platform_provider = nullptr);
+                    NonPlatformAnnotationProvider* non_platform_provider = nullptr,
+                    std::vector<DynamicSyncAnnotationProvider*> dynamic_sync_providers = {});
 
   // Returns the annotations that are immediately available.
   //
@@ -34,15 +35,13 @@ class AnnotationManager {
   bool IsMissingNonPlatformAnnotations() const;
 
   // Inserts static, synchronous annotations.
-  //
-  // Note: annotation keys must be unique a check-fail will occur if |annotations| and
-  // |static_annotations_| intersect.
   void InsertStatic(const Annotations& annotations);
 
  private:
   std::set<std::string> allowlist_;
   Annotations static_annotations_;
   NonPlatformAnnotationProvider* non_platform_provider_;
+  std::vector<DynamicSyncAnnotationProvider*> dynamic_sync_providers_;
 };
 
 }  // namespace forensics::feedback

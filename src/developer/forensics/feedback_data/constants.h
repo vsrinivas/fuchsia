@@ -23,10 +23,10 @@ namespace feedback_data {
 // Annotations
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const uint32_t kMaxNumPlatformAnnotations = 32u;
+const uint32_t kMaxNumPlatformAnnotations = 30u;
 const uint32_t kMaxNumDebugAnnotations = 2u;
-static_assert(kMaxNumPlatformAnnotations + feedback::kMaxNumNonPlatformAnnotations +
-                      kMaxNumDebugAnnotations ==
+static_assert(kMaxNumPlatformAnnotations + feedback::kMaxNumPlatformAnnotations +
+                      feedback::kMaxNumNonPlatformAnnotations + kMaxNumDebugAnnotations ==
                   fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED,
               "The max number of provided annotations has to be split between a max number of "
               "platform annotations, a max number of non-platform annotations, and a max number of "
@@ -41,8 +41,6 @@ constexpr const char* kAnnotationBuildVersion = feedback::kBuildVersionKey;
 constexpr const char* kAnnotationBuildVersionPreviousBoot = feedback::kBuildVersionPreviousBootKey;
 constexpr const char* kAnnotationDeviceBoardName = feedback::kDeviceBoardNameKey;
 constexpr const char* kAnnotationDeviceFeedbackId = feedback::kDeviceFeedbackIdKey;
-constexpr const char* kAnnotationDeviceUptime = feedback::kDeviceUptimeKey;
-constexpr const char* kAnnotationDeviceUtcTime = feedback::kDeviceUtcTimeKey;
 constexpr const char* kAnnotationHardwareBoardName = feedback::kHardwareBoardNameKey;
 constexpr const char* kAnnotationHardwareBoardRevision = feedback::kHardwareBoardRevisionKey;
 constexpr const char* kAnnotationHardwareProductLanguage = feedback::kHardwareProductLanguageKey;
