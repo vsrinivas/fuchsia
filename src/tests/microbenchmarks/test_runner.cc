@@ -7,11 +7,13 @@
 #include "round_trips.h"
 
 int main(int argc, char** argv) {
+#if defined(__Fuchsia__)
   // Check for the argument used by test cases for launching subprocesses.
   if (argc == 3 && strcmp(argv[1], "--subprocess") == 0) {
     RunSubprocess(argv[2]);
     return 0;
   }
+#endif
 
   return perftest::PerfTestMain(argc, argv, "fuchsia.microbenchmarks");
 }

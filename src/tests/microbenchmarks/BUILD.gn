@@ -4,63 +4,76 @@
 
 import("//build/components.gni")
 import("//build/fidl/fidl.gni")
+import("//build/testing/host_test.gni")
 
+# This can be built as a Fuchsia executable or as a host executable.
+# The latter allows running some of the benchmarks on Linux or Mac for
+# comparison against Fuchsia.
 executable("bin") {
   output_name = "fuchsia_microbenchmarks"
   testonly = true
   sources = [
-    "async_loop.cc",
     "atomics.cc",
-    "channels.cc",
-    "clock.cc",
-    "context_switch_overhead.cc",
-    "events.cc",
     "example.cc",
-    "fdio_spawn.cc",
-    "fifos.cc",
     "filesystem.cc",
-    "get_info.cc",
-    "handle.cc",
-    "handle_creation.cc",
-    "inspect.cc",
-    "lazy_dir.cc",
     "malloc.cc",
-    "mem_alloc.cc",
     "memcpy.cc",
-    "mmu.cc",
-    "mutex.cc",
     "null.cc",
-    "object_wait.cc",
-    "ports.cc",
-    "prng.cc",
-    "pseudo_dir.cc",
     "pthreads.cc",
     "random_memcpy.cc",
-    "round_trips.cc",
-    "sleep.cc",
-    "sockets.cc",
-    "streams.cc",
-    "syscalls.cc",
     "test_runner.cc",
-    "threads.cc",
-    "timer.cc",
-    "util.cc",
-    "vmar.cc",
-    "vmo.cc",
   ]
+  if (is_fuchsia) {
+    sources += [
+      "async_loop.cc",
+      "channels.cc",
+      "clock.cc",
+      "context_switch_overhead.cc",
+      "events.cc",
+      "fdio_spawn.cc",
+      "fifos.cc",
+      "get_info.cc",
+      "handle.cc",
+      "handle_creation.cc",
+      "inspect.cc",
+      "lazy_dir.cc",
+      "mem_alloc.cc",
+      "mmu.cc",
+      "mutex.cc",
+      "object_wait.cc",
+      "ports.cc",
+      "prng.cc",
+      "pseudo_dir.cc",
+      "round_trips.cc",
+      "sleep.cc",
+      "sockets.cc",
+      "streams.cc",
+      "syscalls.cc",
+      "threads.cc",
+      "timer.cc",
+      "util.cc",
+      "vmar.cc",
+      "vmo.cc",
+    ]
+  }
   deps = [
-    ":fuchsia.zircon.benchmarks",
-    "//sdk/lib/fdio",
-    "//src/lib/fsl",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/lib/storage/vfs/cpp",
-    "//src/zircon/lib/zircon",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/zx",
   ]
+  if (is_fuchsia) {
+    deps += [
+      ":fuchsia.zircon.benchmarks",
+      "//sdk/lib/fdio",
+      "//src/lib/fsl",
+      "//src/lib/storage/vfs/cpp",
+      "//src/zircon/lib/zircon",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/inspect",
+      "//zircon/system/ulib/zx",
+    ]
+  }
   public_deps = [ "//zircon/system/ulib/perftest" ]
 }
 
@@ -163,11 +176,19 @@ fuchsia_shell_package("fuchsia_microbenchmarks_perftestmode") {
   ]
 }
 
+if (is_host) {
+  host_test("fuchsia_microbenchmarks_host_unittestmode") {
+    binary_path = "$root_out_dir/fuchsia_microbenchmarks"
+    deps = [ ":bin" ]
+  }
+}
+
 # This contains all the dependencies necessary for running
 # fuchsia_microbenchmarks in unit test mode.
 group("tests") {
   testonly = true
   deps = [
+    ":fuchsia_microbenchmarks_host_unittestmode($host_toolchain)",
     ":fuchsia_microbenchmarks_perftestmode",
     ":fuchsia_microbenchmarks_unittestmode",
   ]
