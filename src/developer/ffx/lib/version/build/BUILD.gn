@@ -13,18 +13,14 @@ if (current_toolchain == default_toolchain) {
   action("gen_version_info") {
     script = "gn_write_version_info.sh"
 
+    # Ensure this action is invoked if integration HEAD moves
+    inputs = [ "//integration/.git/HEAD" ]
     outputs = [ "$target_out_dir/ffx_version_info.txt" ]
 
     args = [
       rebase_path(outputs[0], root_build_dir),
       rebase_path("//integration/.git", root_build_dir),
     ]
-
-    # Ensure this action is invoked if integration HEAD moves
-    sources = [ "//integration/.git/HEAD" ]
-
-    # The above makes it safe to ignore other .git/* accesses.
-    hermetic_action_ignored_prefixes = [ "//integration/.git/" ]
   }
 
   compiled_action("version-info.bin") {

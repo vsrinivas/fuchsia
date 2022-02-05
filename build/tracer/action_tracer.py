@@ -926,6 +926,11 @@ def main():
         # `__untraced_flutter_assets__` and ignore accesses to them.
         "__untraced_flutter_assets__",
     }
+    # It's ok to access */.git/* if your action is sensitive to .git contents.
+    for args_input in args.inputs:
+        if ".git" in args_input.split(os.sep):
+            ignored_path_parts.add(".git")
+            break
     # TODO(fangism): for suffixes that we always ignore for writing, such as
     # safe or intended side-effect byproducts, make sure no declared inputs ever
     # match them.

@@ -38,18 +38,14 @@ template("build_info") {
     action(labels.latest_commit_date) {
       forward_variables_from(invoker, [ "testonly" ])
 
+      # Ensure this action is invoked if integration HEAD moves
+      inputs = [ "//integration/.git/HEAD" ]
       outputs = [
         invoker.latest_commit_date,
         invoker.minimum_utc_stamp,
       ]
       script = "//build/info/gen-latest-commit-date.sh"
       args = rebase_path([ "//integration/" ] + outputs, root_build_dir)
-
-      # Ensure this action is invoked if integration HEAD moves
-      sources = [ "//integration/.git/HEAD" ]
-
-      # The above makes it safe to ignore other .git/* accesses.
-      hermetic_action_ignored_prefixes = [ "//integration/.git/" ]
     }
   } else {
     group(labels.latest_commit_date) {

@@ -16,18 +16,14 @@ if (current_toolchain == default_toolchain) {
   }
 
   action("latest-commit-date") {
+    # Ensure this action is invoked if integration HEAD moves
+    inputs = [ "//integration/.git/HEAD" ]
     outputs = [
       build_info_files.latest_commit_date,
       build_info_files.minimum_utc_stamp,
     ]
     script = "gen-latest-commit-date.sh"
     args = rebase_path([ "//integration/" ] + outputs, root_build_dir)
-
-    # Ensure this action is invoked if integration HEAD moves
-    sources = [ "//integration/.git/HEAD" ]
-
-    # The above makes it safe to ignore other .git/* accesses.
-    hermetic_action_ignored_prefixes = [ "//integration/.git/" ]
   }
 } else {
   group("latest-commit-date") {
