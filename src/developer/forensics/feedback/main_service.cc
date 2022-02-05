@@ -10,7 +10,7 @@
 #include <memory>
 #include <vector>
 
-#include "lib/sys/cpp/service_directory.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 
 namespace forensics::feedback {
@@ -41,7 +41,13 @@ MainService::MainService(async_dispatcher_t* dispatcher,
       cobalt_(cobalt),
       device_id_provider_(
           MakeDeviceIdProvider(options.local_device_id_path, dispatcher_, services_)),
-      annotation_manager_(startup_annotations),
+      inspect_node_manager_(inspect_root),
+      data_register_(kMaxNumNonPlatformAnnotations, kReservedAnnotationNamespaces,
+                     kDataRegisterPath),
+      component_data_register_stats_(&inspect_node_manager_,
+                                     "/fidl/fuchsia.feedback.ComponentDataRegister"),
+      annotation_manager_(options.feedback_data_options.config.annotation_allowlist,
+                          startup_annotations, &data_register_),
       feedback_data_(dispatcher_, services_, clock_, inspect_root_, cobalt_, &annotation_manager_,
                      device_id_provider_.get(), options.feedback_data_options),
       crash_reports_(dispatcher_, services_, clock_, inspect_root_, device_id_provider_.get(),
@@ -50,14 +56,11 @@ MainService::MainService(async_dispatcher_t* dispatcher,
 
       last_reboot_(dispatcher_, services_, cobalt_, crash_reports_.CrashReporter(),
                    options.last_reboot_options),
-      inspect_node_manager_(inspect_root),
       last_reboot_info_provider_stats_(&inspect_node_manager_,
                                        "/fidl/fuchsia.feedback.LastRebootInfoProvider"),
       crash_reporter_stats_(&inspect_node_manager_, "/fidl/fuchsia.feedback.CrashReporter"),
       crash_reporting_product_register_stats_(
           &inspect_node_manager_, "/fidl/fuchsia.feedback.CrashReportingProductRegister"),
-      component_data_register_stats_(&inspect_node_manager_,
-                                     "/fidl/fuchsia.feedback.ComponentDataRegister"),
       data_provider_stats_(&inspect_node_manager_, "/fidl/fuchsia.feedback.DataProvider"),
       data_provider_controller_stats_(&inspect_node_manager_,
                                       "/fidl/fuchsia.feedback.DataProviderController"),
@@ -124,9 +127,9 @@ template <>
 MainService::GetHandler() {
   return [this](::fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request) {
     component_data_register_stats_.NewConnection();
-    feedback_data_.Handle(std::move(request), [this](zx_status_t) {
-      component_data_register_stats_.CloseConnection();
-    });
+    data_register_connections_.AddBinding(
+        &data_register_, std::move(request), dispatcher_,
+        [this](zx_status_t) { component_data_register_stats_.CloseConnection(); });
   };
 }
 

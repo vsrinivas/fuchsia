@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/data_register.h"
+#include "src/developer/forensics/feedback/annotations/data_register.h"
 
+#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/forensics/feedback_data/annotations/types.h"
-#include "src/developer/forensics/feedback_data/constants.h"
+#include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -16,8 +16,7 @@
 #include "third_party/rapidjson/include/rapidjson/prettywriter.h"
 #include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
 
-namespace forensics {
-namespace feedback_data {
+namespace forensics::feedback {
 namespace {
 
 const char kDefaultNamespace[] = "misc";
@@ -31,50 +30,71 @@ Annotations Flatten(const std::map<std::string, Annotations>& namespaced_annotat
       flat_annotations.insert({namespace_ + kNamespaceSeparator + k, v});
     }
   }
+
   return flat_annotations;
 }
 
 }  // namespace
 
-DataRegister::DataRegister(Datastore* datastore, std::string register_filepath)
-    : datastore_(datastore), register_filepath_(register_filepath) {
-  FX_CHECK(datastore_);
+DataRegister::DataRegister(size_t max_num_annotations,
+                           std::set<std::string> disallowed_annotation_namespaces,
+                           std::string register_filepath)
+    : max_num_annotations_(max_num_annotations),
+      disallowed_annotation_namespaces_(std::move(disallowed_annotation_namespaces)),
+      register_filepath_(std::move(register_filepath)) {
   RestoreFromJson();
 }
 
 void DataRegister::Upsert(fuchsia::feedback::ComponentData data, UpsertCallback callback) {
+  auto execute_callback = ::fit::defer(std::move(callback));
+
   if (!data.has_annotations()) {
     FX_LOGS(WARNING) << "No non-platform annotations to upsert";
-    callback();
     return;
   }
 
-  std::string namespace_;
-  if (!data.has_namespace()) {
-    FX_LOGS(WARNING) << "No namespace specified, defaulting to " << kDefaultNamespace;
-    namespace_ = kDefaultNamespace;
-  } else if (kReservedAnnotationNamespaces.find(data.namespace_()) !=
-             kReservedAnnotationNamespaces.end()) {
+  if (data.has_namespace() && disallowed_annotation_namespaces_.count(data.namespace_()) != 0) {
     FX_LOGS(WARNING) << fxl::StringPrintf(
         "Ignoring non-platform annotations, %s is a reserved namespace", data.namespace_().c_str());
+
     // TODO(fxbug.dev/48664): close connection with ZX_ERR_INVALID_ARGS instead.
-    callback();
     return;
-  } else {
-    namespace_ = data.namespace_();
   }
 
-  for (const auto& annotation : data.annotations()) {
-    namespaced_annotations_[namespace_].insert_or_assign(annotation.key, annotation.value);
+  if (!data.has_namespace()) {
+    FX_LOGS(WARNING) << "No namespace specified, defaulting to " << kDefaultNamespace;
+  }
+  const std::string ns = (data.has_namespace()) ? data.namespace_() : kDefaultNamespace;
+
+  Annotations new_annotations = namespaced_annotations_[ns];
+  for (const auto& [key, value] : data.annotations()) {
+    new_annotations.insert_or_assign(key, value);
   }
 
-  UpdateJson(namespace_, namespaced_annotations_[namespace_]);
+  size_t new_size = new_annotations.size();
+  for (const auto& [n, annotations] : namespaced_annotations_) {
+    if (n != ns) {
+      new_size += annotations.size();
+    }
+  }
 
-  // TODO(fxbug.dev/48666): close all connections if false.
-  datastore_->TrySetNonPlatformAnnotations(Flatten(namespaced_annotations_));
+  if (new_size > max_num_annotations_) {
+    FX_LOGS(WARNING) << fxl::StringPrintf(
+        "Ignoring all %lu new non-platform annotations as only %lu non-platform annotations "
+        "are allowed",
+        new_size, max_num_annotations_);
+    is_missing_annotations_ = true;
 
-  callback();
+    // TODO(fxbug.dev/48666): close all connections.
+    return;
+  }
+
+  namespaced_annotations_[ns] = std::move(new_annotations);
+
+  UpdateJson(ns, namespaced_annotations_[ns]);
 }
+
+Annotations DataRegister::Get() { return Flatten(namespaced_annotations_); }
 
 // The content of the data register will be stored as json where each namespace is comprised of an
 // object made up of string-string pairs.
@@ -164,9 +184,6 @@ void DataRegister::RestoreFromJson() {
       namespaced_annotations_[_namespace].emplace(key, value);
     }
   }
-
-  datastore_->TrySetNonPlatformAnnotations(Flatten(namespaced_annotations_));
 }
 
-}  // namespace feedback_data
-}  // namespace forensics
+}  // namespace forensics::feedback

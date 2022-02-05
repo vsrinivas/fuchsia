@@ -11,7 +11,7 @@
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/forensics/feedback/annotations/keys.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/feedback/constants.h"
 #include "src/developer/forensics/feedback/reboot_log/annotations.h"
 #include "src/lib/files/file.h"

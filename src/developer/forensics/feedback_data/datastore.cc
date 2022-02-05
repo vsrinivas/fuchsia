@@ -30,7 +30,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
                      const AnnotationKeys& annotation_allowlist,
                      const AttachmentKeys& attachment_allowlist,
-                     feedback::AnnotationManager* annotation_manager_,
+                     feedback::AnnotationManager* annotation_manager,
                      feedback::DeviceIdProvider* device_id_provider,
                      InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
@@ -38,8 +38,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       cobalt_(cobalt),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
-      static_annotations_(feedback_data::GetStaticAnnotations(
-          annotation_allowlist_, annotation_manager_->ImmediatelyAvailable())),
+      annotation_manager_(annotation_manager),
       static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
       reusable_annotation_providers_(
           GetReusableProviders(dispatcher_, services_, device_id_provider, cobalt_)),
@@ -69,13 +68,15 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       cobalt_(nullptr),
       annotation_allowlist_({}),
       attachment_allowlist_({}),
-      static_annotations_({}),
+      // Somewhat risky, but the AnnotationManager depends on a bunch of stuff and this constructor
+      // is intended for tests.
+      annotation_manager_(nullptr),
       static_attachments_({}),
       reusable_annotation_providers_(
           GetReusableProviders(dispatcher_, services_, device_id_provider, cobalt_)) {}
 
 ::fpromise::promise<Annotations> Datastore::GetAnnotations(const zx::duration timeout) {
-  if (annotation_allowlist_.empty() && non_platform_annotations_.empty()) {
+  if (annotation_allowlist_.empty()) {
     return ::fpromise::make_result_promise<Annotations>(::fpromise::error());
   }
 
@@ -91,8 +92,10 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
   return ::fpromise::join_promise_vector(std::move(annotations))
       .and_then([this](std::vector<::fpromise::result<Annotations>>& annotations)
                     -> ::fpromise::result<Annotations> {
-        // We seed the returned annotations with the static platform annotations.
-        Annotations ok_annotations(static_annotations_.begin(), static_annotations_.end());
+        // We seed the returned annotations with the annotations that are available immediately.
+        //
+        // The number of platform and non-platform annotations are capped so this is safe to do.
+        Annotations ok_annotations(annotation_manager_->ImmediatelyAvailable());
 
         // We then augment the returned annotations with the dynamic platform annotations.
         for (auto& result : annotations) {
@@ -101,14 +104,6 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
               ok_annotations.insert({key, value});
             }
           }
-        }
-
-        // We then augment the returned annotations with the non-platform component annotations.
-        // We are guaranteed to have enough space left in the returned annotations to do this as
-        // we cap the number of platform annotations and cap the number of non-platform annotations
-        // to sum to the max number of annotations we can return.
-        for (const auto& [key, value] : non_platform_annotations_) {
-          ok_annotations.insert({key, value});
         }
 
         for (const auto& key : annotation_allowlist_) {
@@ -191,21 +186,6 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
   }
   // There are static attachments in the allowlist that we just skip here.
   return ::fpromise::make_result_promise<AttachmentValue>(::fpromise::error());
-}
-
-bool Datastore::TrySetNonPlatformAnnotations(const Annotations& non_platform_annotations) {
-  if (non_platform_annotations.size() <= kMaxNumNonPlatformAnnotations) {
-    is_missing_non_platform_annotations_ = false;
-    non_platform_annotations_ = non_platform_annotations;
-    return true;
-  } else {
-    is_missing_non_platform_annotations_ = true;
-    FX_LOGS(WARNING) << fxl::StringPrintf(
-        "Ignoring all %lu new non-platform annotations as only %u non-platform annotations are "
-        "allowed",
-        non_platform_annotations.size(), kMaxNumNonPlatformAnnotations);
-    return false;
-  }
 }
 
 void Datastore::DropStaticAttachment(const AttachmentKey& key, const Error error) {

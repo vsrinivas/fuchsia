@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/forensics/feedback/annotations/keys.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/storage_size.h"
 
@@ -24,9 +24,8 @@ namespace feedback_data {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 const uint32_t kMaxNumPlatformAnnotations = 32u;
-const uint32_t kMaxNumNonPlatformAnnotations = 30u;
 const uint32_t kMaxNumDebugAnnotations = 2u;
-static_assert(kMaxNumPlatformAnnotations + kMaxNumNonPlatformAnnotations +
+static_assert(kMaxNumPlatformAnnotations + feedback::kMaxNumNonPlatformAnnotations +
                       kMaxNumDebugAnnotations ==
                   fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED,
               "The max number of provided annotations has to be split between a max number of "
@@ -65,18 +64,6 @@ constexpr const char* kAnnotationSystemUpdateChannelCurrent =
     feedback::kSystemUpdateChannelCurrentKey;
 constexpr const char* kAnnotationSystemUpdateChannelTarget =
     feedback::kSystemUpdateChannelTargetKey;
-
-// Reserved namespaces for platform annotations. Components are not allowed to use these namespaces
-// when supplying non-platform annotations.
-const std::set<const std::string> kReservedAnnotationNamespaces({
-    "build",
-    "device",
-    "hardware",
-    "hardware.board",
-    "hardware.product",
-    "misc",
-    "system",
-});
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Attachments

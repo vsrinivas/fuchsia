@@ -9,7 +9,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/feedback/annotations/keys.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/feedback/constants.h"
 #include "src/developer/forensics/feedback/reboot_log/annotations.h"
 #include "src/developer/forensics/feedback_data/constants.h"

@@ -145,22 +145,6 @@ executable("data_provider_controller_unittest_exe") {
   ]
 }
 
-executable("data_register_unittest_exe") {
-  testonly = true
-
-  sources = [ "data_register_unittest.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/forensics/feedback_data:data_register",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/lib/files",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("datastore_unittest_exe") {
   testonly = true
 
@@ -468,14 +452,6 @@ fuchsia_component("data_provider_controller_unittest") {
   deps = [ ":data_provider_controller_unittest_exe" ]
 }
 
-fuchsia_component("data_register_unittest") {
-  testonly = true
-
-  manifest = "meta/data_register_unittest.cmx"
-
-  deps = [ ":data_register_unittest_exe" ]
-}
-
 fuchsia_component("datastore_unittest") {
   testonly = true
 
@@ -567,7 +543,6 @@ fuchsia_test_package("feedback-data-tests") {
     ":config_unittest",
     ":data_provider_unittest",
     ":data_provider_controller_unittest",
-    ":data_register_unittest",
     ":datastore_unittest",
     ":default_annotations_unittest",
     ":inspect_data_budget_unittest",

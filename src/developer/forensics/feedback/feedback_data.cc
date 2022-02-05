@@ -35,9 +35,8 @@ FeedbackData::FeedbackData(async_dispatcher_t* dispatcher,
                  &inspect_data_budget_),
       data_provider_(dispatcher_, services_, clock_, options.is_first_instance,
                      options.config.annotation_allowlist, options.config.attachment_allowlist,
-                     cobalt_, &datastore_, &inspect_data_budget_),
-      data_provider_controller_(),
-      data_register_(&datastore_, kDataRegisterPath) {
+                     cobalt_, annotation_manager, &datastore_, &inspect_data_budget_),
+      data_provider_controller_() {
   if (options.spawn_system_log_recorder) {
     SpawnSystemLogRecorder();
   }
@@ -45,13 +44,6 @@ FeedbackData::FeedbackData(async_dispatcher_t* dispatcher,
   if (options.delete_previous_boot_logs_time) {
     DeletePreviousBootLogsAt(*options.delete_previous_boot_logs_time);
   }
-}
-
-void FeedbackData::Handle(
-    ::fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request,
-    ::fit::function<void(zx_status_t)> error_handler) {
-  data_register_connections_.AddBinding(&data_register_, std::move(request), dispatcher_,
-                                        std::move(error_handler));
 }
 
 void FeedbackData::Handle(::fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request,

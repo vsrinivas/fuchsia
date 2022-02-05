@@ -7,35 +7,111 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/feedback/annotations/provider.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 
 namespace forensics::feedback {
 namespace {
 
-TEST(AnnotationManagerTest, SynchronousStaticAnnotations) {
-  const Annotations annotations({
+using ::testing::IsEmpty;
+using ::testing::Pair;
+using ::testing::UnorderedElementsAreArray;
+
+constexpr bool kIsMissingNonPlatform = true;
+constexpr bool kNotIsMissingNonPlatform = false;
+
+auto MakePair(const char* key, const char* value) { return Pair(key, ErrorOr<std::string>(value)); }
+auto MakePair(const char* key, const Error error) { return Pair(key, ErrorOr<std::string>(error)); }
+
+class DynamicNonPlatform : public NonPlatformAnnotationProvider {
+ public:
+  DynamicNonPlatform(const bool exempt = kNotIsMissingNonPlatform)
+      : is_missing_annotations_(exempt) {}
+
+  Annotations Get() override {
+    ++calls_;
+    if (is_missing_annotations_) {
+      return {};
+    }
+
+    return {{"num_calls", std::to_string(calls_)}};
+  }
+
+  bool IsMissingAnnotations() const override { return is_missing_annotations_; }
+
+ private:
+  size_t calls_{0};
+  bool is_missing_annotations_;
+};
+
+TEST(AnnotationManagerTest, ImmediatelyAvailable) {
+  const Annotations static_annotations({
+      {"annotation1", "value1"},
+      {"annotation2", Error::kMissingValue},
+  });
+
+  DynamicNonPlatform non_platform;
+
+  {
+    AnnotationManager mananger({"annotation1", "annotation2", "num_calls"}, static_annotations,
+                               &non_platform);
+
+    EXPECT_THAT(mananger.ImmediatelyAvailable(), UnorderedElementsAreArray({
+                                                     MakePair("annotation1", "value1"),
+                                                     MakePair("annotation2", Error::kMissingValue),
+                                                     MakePair("num_calls", "1"),
+                                                 }));
+  }
+}
+
+TEST(AnnotationManagerTest, StaticAllowlist) {
+  const Annotations static_annotations({
       {"annotation1", "value1"},
       {"annotation2", Error::kMissingValue},
   });
 
   {
-    AnnotationManager mananger(annotations);
+    AnnotationManager mananger({}, static_annotations);
 
-    EXPECT_EQ(mananger.ImmediatelyAvailable(), annotations);
+    EXPECT_THAT(mananger.ImmediatelyAvailable(), IsEmpty());
   }
 
   {
-    AnnotationManager mananger;
-    mananger.InsertStatic(annotations);
+    AnnotationManager mananger({"annotation1"}, static_annotations);
 
-    EXPECT_EQ(mananger.ImmediatelyAvailable(), annotations);
+    EXPECT_THAT(mananger.ImmediatelyAvailable(), UnorderedElementsAreArray({
+                                                     MakePair("annotation1", "value1"),
+                                                 }));
+  }
+}
+
+TEST(AnnotationManagerTest, IsNotMissingNonPlatform) {
+  DynamicNonPlatform non_platform(kNotIsMissingNonPlatform);
+
+  {
+    AnnotationManager mananger({}, {}, &non_platform);
+    EXPECT_THAT(mananger.ImmediatelyAvailable(), UnorderedElementsAreArray({
+                                                     MakePair("num_calls", "1"),
+                                                 }));
+    EXPECT_FALSE(mananger.IsMissingNonPlatformAnnotations());
+  }
+}
+
+TEST(AnnotationManagerTest, IsMissingNonPlatform) {
+  DynamicNonPlatform non_platform(kIsMissingNonPlatform);
+
+  {
+    AnnotationManager mananger({}, {}, &non_platform);
+
+    EXPECT_THAT(mananger.ImmediatelyAvailable(), IsEmpty());
+    EXPECT_TRUE(mananger.IsMissingNonPlatformAnnotations());
   }
 }
 
 TEST(AnnotationManagerTest, UniqueKeys) {
   ASSERT_DEATH(
       {
-        AnnotationManager mananger;
+        AnnotationManager mananger({"annotation1"});
         mananger.InsertStatic({{"annotation1", "value1"}});
         mananger.InsertStatic({{"annotation1", "value2"}});
       },

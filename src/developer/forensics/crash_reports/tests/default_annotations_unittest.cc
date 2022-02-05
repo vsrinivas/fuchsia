@@ -7,7 +7,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/feedback/annotations/keys.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
 namespace forensics::crash_reports {

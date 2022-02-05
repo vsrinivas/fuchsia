@@ -155,13 +155,19 @@ class DataProviderTest : public UnitTestFixture {
       const AnnotationKeys& annotation_allowlist = kDefaultAnnotations,
       const AttachmentKeys& attachment_allowlist = kDefaultAttachments,
       const std::map<std::string, ErrorOr<std::string>>& startup_annotations = {}) {
-    annotation_manager_ = std::make_unique<feedback::AnnotationManager>(startup_annotations);
+    std::set<std::string> allowlist;
+    for (const auto& [k, v] : startup_annotations) {
+      allowlist.insert(k);
+    }
+    annotation_manager_ =
+        std::make_unique<feedback::AnnotationManager>(allowlist, startup_annotations);
     datastore_ = std::make_unique<Datastore>(
         dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
         annotation_manager_.get(), device_id_provider_.get(), inspect_data_budget_.get());
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), &clock_, /*is_first_instance=*/true, annotation_allowlist,
-        attachment_allowlist, cobalt_.get(), datastore_.get(), inspect_data_budget_.get());
+        attachment_allowlist, cobalt_.get(), annotation_manager_.get(), datastore_.get(),
+        inspect_data_budget_.get());
   }
 
   void SetUpScenicServer(std::unique_ptr<stubs::ScenicBase> server) {

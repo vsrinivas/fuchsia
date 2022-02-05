@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/annotations/data_register.h"
 #include "src/developer/forensics/feedback/crash_reports.h"
 #include "src/developer/forensics/feedback/feedback_data.h"
 #include "src/developer/forensics/feedback/last_reboot.h"
@@ -62,17 +63,21 @@ class MainService {
   cobalt::Logger* cobalt_;
   std::unique_ptr<DeviceIdProvider> device_id_provider_;
 
+  InspectNodeManager inspect_node_manager_;
+
+  DataRegister data_register_;
+  InspectProtocolStats component_data_register_stats_;
+  ::fidl::BindingSet<fuchsia::feedback::ComponentDataRegister> data_register_connections_;
+
   AnnotationManager annotation_manager_;
 
   FeedbackData feedback_data_;
   CrashReports crash_reports_;
   LastReboot last_reboot_;
 
-  InspectNodeManager inspect_node_manager_;
   InspectProtocolStats last_reboot_info_provider_stats_;
   InspectProtocolStats crash_reporter_stats_;
   InspectProtocolStats crash_reporting_product_register_stats_;
-  InspectProtocolStats component_data_register_stats_;
   InspectProtocolStats data_provider_stats_;
   InspectProtocolStats data_provider_controller_stats_;
   InspectProtocolStats device_id_provider_stats_;

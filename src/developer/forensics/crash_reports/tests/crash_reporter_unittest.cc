@@ -30,7 +30,7 @@
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
-#include "src/developer/forensics/feedback/annotations/keys.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/testing/fakes/privacy_settings.h"
 #include "src/developer/forensics/testing/stubs/channel_control.h"
@@ -159,12 +159,19 @@ class CrashReporterTest : public UnitTestFixture {
   void SetUpCrashReporter(
       Config config, const std::vector<CrashServer::UploadStatus>& upload_attempt_results = {}) {
     FX_CHECK(data_provider_server_);
-    annotation_manager_ = std::make_unique<feedback::AnnotationManager>(feedback::Annotations{
-        {feedback::kBuildVersionKey, kBuildVersion},
-        {feedback::kBuildBoardKey, kBuildBoard},
-        {feedback::kBuildProductKey, kBuildProduct},
-        {feedback::kBuildLatestCommitDateKey, kBuildLatestCommitDate},
-    });
+    annotation_manager_ = std::make_unique<feedback::AnnotationManager>(
+        std::set<std::string>{
+            feedback::kBuildVersionKey,
+            feedback::kBuildBoardKey,
+            feedback::kBuildProductKey,
+            feedback::kBuildLatestCommitDateKey,
+        },
+        feedback::Annotations{
+            {feedback::kBuildVersionKey, kBuildVersion},
+            {feedback::kBuildBoardKey, kBuildBoard},
+            {feedback::kBuildProductKey, kBuildProduct},
+            {feedback::kBuildLatestCommitDateKey, kBuildLatestCommitDate},
+        });
     snapshot_manager_ = std::make_unique<SnapshotManager>(
         dispatcher(), &clock_, data_provider_server_.get(), kSnapshotSharedRequestWindow,
         kGarbageCollectedSnapshotsPath, StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u)),

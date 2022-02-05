@@ -134,7 +134,6 @@ source_set("datastore") {
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback:device_id_provider",
-    "//src/developer/forensics/feedback/annotations",
     "//src/developer/forensics/feedback_data/annotations:annotation_providers",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
@@ -152,24 +151,6 @@ source_set("datastore") {
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:static_attachments",
   ]
-}
-
-source_set("data_register") {
-  sources = [
-    "data_register.cc",
-    "data_register.h",
-  ]
-
-  public_deps = [
-    ":constants",
-    ":datastore",
-    "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/forensics/feedback_data/annotations:types",
-    "//src/lib/fxl",
-    "//third_party/rapidjson",
-  ]
-
-  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("default_annotations") {

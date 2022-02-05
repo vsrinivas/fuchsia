@@ -17,6 +17,7 @@
 #include <map>
 #include <memory>
 
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/annotations/utils.h"
 #include "src/developer/forensics/feedback_data/attachments/screenshot_ptr.h"
@@ -54,11 +55,13 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
                            timekeeper::Clock* clock, const bool is_first_instance,
                            const AnnotationKeys& annotation_allowlist,
                            const AttachmentKeys& attachment_allowlist, cobalt::Logger* cobalt,
-                           Datastore* datastore, InspectDataBudget* inspect_data_budget)
+                           feedback::AnnotationManager* annotation_manager, Datastore* datastore,
+                           InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
       services_(services),
       metadata_(dispatcher_, clock, is_first_instance, annotation_allowlist, attachment_allowlist),
       cobalt_(cobalt),
+      annotation_manager_(annotation_manager),
       datastore_(datastore),
       executor_(dispatcher_),
       inspect_data_budget_(inspect_data_budget) {}
@@ -132,7 +135,7 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
 
                 attachments[kAttachmentMetadata] =
                     metadata_.MakeMetadata(annotations_result, attachments_result, uuid::Generate(),
-                                           datastore_->IsMissingNonPlatformAnnotations());
+                                           annotation_manager_->IsMissingNonPlatformAnnotations());
 
                 // We bundle the attachments into a single archive.
                 if (!attachments.empty()) {

@@ -38,6 +38,22 @@ executable("config_unittest_exe") {
   ]
 }
 
+executable("data_register_unittest_exe") {
+  testonly = true
+
+  sources = [ "data_register_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/forensics/feedback/annotations:data_register",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/lib/files",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("device_id_provider_unittest_exe") {
   testonly = true
 
@@ -303,6 +319,14 @@ fuchsia_component("config_unittest") {
   deps = [ ":config_unittest_exe" ]
 }
 
+fuchsia_component("data_register_unittest") {
+  testonly = true
+
+  manifest = "meta/data_register_unittest.cml"
+
+  deps = [ ":data_register_unittest_exe" ]
+}
+
 fuchsia_component("device_id_provider_unittest") {
   testonly = true
 
@@ -407,6 +431,7 @@ fuchsia_test_package("feedback-tests") {
   test_components = [
     ":annotation_manager_unittest",
     ":config_unittest",
+    ":data_register_unittest",
     ":device_id_provider_unittest",
     ":feedback_integration_test",
     ":feedback_integration_test_invalid_crash_reports_override_config",

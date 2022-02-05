@@ -46,25 +46,20 @@ class Datastore {
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
             cobalt::Logger* cobalt, const AnnotationKeys& annotation_allowlist,
             const AttachmentKeys& attachment_allowlist,
-            feedback::AnnotationManager* annotation_manager_,
+            feedback::AnnotationManager* annotation_manager,
             feedback::DeviceIdProvider* device_id_provider, InspectDataBudget* inspect_data_budget);
 
   ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout);
   ::fpromise::promise<Attachments> GetAttachments(zx::duration timeout);
 
-  // Returns whether the non-platform annotations were actually set as there is a cap on the number
-  // of non-platform annotations.
-  bool TrySetNonPlatformAnnotations(const Annotations& non_platform_annotations);
-
   // Exposed for testing purposes.
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
             feedback::DeviceIdProvider* device_id_provider, const char* limit_data_flag_path);
 
-  const Annotations& GetStaticAnnotations() const { return static_annotations_; }
+  Annotations GetImmediatelyAvailableAnnotations() {
+    return annotation_manager_->ImmediatelyAvailable();
+  }
   const Attachments& GetStaticAttachments() const { return static_attachments_; }
-  const Annotations& GetNonPlatformAnnotations() const { return non_platform_annotations_; }
-
-  bool IsMissingNonPlatformAnnotations() const { return is_missing_non_platform_annotations_; }
 
   void DropStaticAttachment(const AttachmentKey& key, Error error);
 
@@ -80,13 +75,10 @@ class Datastore {
   const AnnotationKeys annotation_allowlist_;
   AttachmentKeys attachment_allowlist_;
 
-  const Annotations static_annotations_;
+  feedback::AnnotationManager* annotation_manager_;
   Attachments static_attachments_;
 
   std::vector<std::unique_ptr<AnnotationProvider>> reusable_annotation_providers_;
-
-  bool is_missing_non_platform_annotations_ = false;
-  Annotations non_platform_annotations_;
 
   InspectDataBudget* inspect_data_budget_;
 };

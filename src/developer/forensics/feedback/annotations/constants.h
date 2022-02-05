@@ -1,12 +1,20 @@
-// Copyright 2021 The Fuchsia Authors.All rights reserved.
+// Copyright 2022 The Fuchsia Authors.All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_KEYS_H_
-#define SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_KEYS_H_
+#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_CONSTANTS_H_
+#define SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_CONSTANTS_H_
+
+#include <set>
+#include <string>
+
+#include "src/developer/forensics/utils/errors.h"
 
 namespace forensics::feedback {
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// KEYS
+///////////////////////////////////////////////////////////////////////////////////////////////////
 constexpr const char kBuildBoardKey[] = "build.board";
 constexpr const char kBuildVersionKey[] = "build.version";
 constexpr const char kBuildVersionPreviousBootKey[] = "build.version.previous-boot";
@@ -36,6 +44,25 @@ constexpr const char kSystemTimezonePrimaryKey[] = "system.timezone.primary";
 constexpr const char kSystemUpdateChannelCurrentKey[] = "system.update-channel.current";
 constexpr const char kSystemUpdateChannelTargetKey[] = "system.update-channel.target";
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// RESTRICTIONS
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Only 30 non-platform annotations can be registered.
+const uint32_t kMaxNumNonPlatformAnnotations = 30u;
+
+// Reserved namespaces for platform annotations. Components are not allowed to use these namespaces
+// when supplying non-platform annotations.
+const std::set<std::string> kReservedAnnotationNamespaces({
+    "build",
+    "device",
+    "hardware",
+    "hardware.board",
+    "hardware.product",
+    "misc",
+    "system",
+});
+
 }  // namespace forensics::feedback
 
-#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_KEYS_H_
+#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_CONSTANTS_H_

@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/forensics/feedback/annotations/keys.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"

@@ -15,6 +15,7 @@
 #include <map>
 #include <memory>
 
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback_data/datastore.h"
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 #include "src/developer/forensics/feedback_data/metadata.h"
@@ -45,7 +46,8 @@ class DataProvider : public fuchsia::feedback::DataProvider {
                timekeeper::Clock* clock, bool is_first_instance,
                const AnnotationKeys& annotation_allowlist,
                const AttachmentKeys& attachment_allowlist, cobalt::Logger* cobalt,
-               Datastore* datastore, InspectDataBudget* inspect_data_budget);
+               feedback::AnnotationManager* annotation_manager, Datastore* datastore,
+               InspectDataBudget* inspect_data_budget);
 
   // |fuchsia::feedback::DataProvider|
   void GetAnnotations(fuchsia::feedback::GetAnnotationsParameters params,
@@ -64,6 +66,7 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   std::shared_ptr<sys::ServiceDirectory> services_;
   Metadata metadata_;
   cobalt::Logger* cobalt_;
+  feedback::AnnotationManager* annotation_manager_;
   Datastore* datastore_;
   async::Executor executor_;
   InspectDataBudget* inspect_data_budget_;

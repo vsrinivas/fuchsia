@@ -92,7 +92,12 @@ class DatastoreTest : public UnitTestFixture {
   void SetUpDatastore(const AnnotationKeys& annotation_allowlist,
                       const AttachmentKeys& attachment_allowlist,
                       const std::map<std::string, ErrorOr<std::string>>& startup_annotations = {}) {
-    annotation_manager_ = std::make_unique<feedback::AnnotationManager>(startup_annotations);
+    std::set<std::string> allowlist;
+    for (const auto& [k, _] : startup_annotations) {
+      allowlist.insert(k);
+    }
+    annotation_manager_ =
+        std::make_unique<feedback::AnnotationManager>(allowlist, startup_annotations);
     datastore_ = std::make_unique<Datastore>(
         dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
         annotation_manager_.get(), device_id_provider_.get(), inspect_data_budget_.get());
@@ -166,10 +171,9 @@ class DatastoreTest : public UnitTestFixture {
     return result;
   }
 
-  bool TrySetNonPlatformAnnotations(const Annotations& non_platform_annotations) {
-    return datastore_->TrySetNonPlatformAnnotations(non_platform_annotations);
+  Annotations GetImmediatelyAvailableAnnotations() {
+    return datastore_->GetImmediatelyAvailableAnnotations();
   }
-  Annotations GetStaticAnnotations() { return datastore_->GetStaticAnnotations(); }
   Attachments GetStaticAttachments() { return datastore_->GetStaticAttachments(); }
 
  private:
@@ -225,12 +229,14 @@ TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
           {kAnnotationDeviceBoardName, "board-name"},
           {kAnnotationSystemBootIdCurrent, "boot-id"},
           {kAnnotationSystemBootIdPrevious, "previous-boot-id"},
+          {kAnnotationSystemLastRebootReason, Error::kMissingValue},
+          {kAnnotationSystemLastRebootUptime, Error::kMissingValue},
       });
 
   // There is not much we can assert here as no missing annotation nor attachment is fatal and we
   // cannot expect annotations or attachments to be present.
   EXPECT_THAT(
-      GetStaticAnnotations(),
+      GetImmediatelyAvailableAnnotations(),
       UnorderedElementsAreArray({
           Pair(kAnnotationBuildBoard, ErrorOr<std::string>("board")),
           Pair(kAnnotationBuildProduct, ErrorOr<std::string>(Error::kTimeout)),
@@ -268,7 +274,7 @@ TEST_F(DatastoreTest, GetAnnotations_BoardInfo) {
                                             Pair(kAnnotationHardwareBoardRevision, "my-revision"),
                                         }));
 
-  EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
+  EXPECT_THAT(GetImmediatelyAvailableAnnotations(), IsEmpty());
 }
 
 TEST_F(DatastoreTest, GetAnnotations_Channels) {
@@ -292,7 +298,7 @@ TEST_F(DatastoreTest, GetAnnotations_Channels) {
                   Pair(kAnnotationSystemUpdateChannelTarget, "target-channel"),
               }));
 
-  EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
+  EXPECT_THAT(GetImmediatelyAvailableAnnotations(), IsEmpty());
 }
 
 TEST_F(DatastoreTest, GetAnnotations_DeviceId) {
@@ -352,7 +358,7 @@ TEST_F(DatastoreTest, GetAnnotations_ProductInfo) {
                   Pair(kAnnotationHardwareProductSKU, "my-sku"),
               }));
 
-  EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
+  EXPECT_THAT(GetImmediatelyAvailableAnnotations(), IsEmpty());
 }
 
 TEST_F(DatastoreTest, GetAnnotations_Time) {
@@ -370,48 +376,7 @@ TEST_F(DatastoreTest, GetAnnotations_Time) {
                                             Pair(kAnnotationDeviceUtcTime, HasValue()),
                                         }));
 
-  EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
-}
-
-TEST_F(DatastoreTest, GetAnnotations_NonPlatformAnnotations) {
-  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, kDefaultAttachmentsToAvoidSpuriousLogs);
-  EXPECT_TRUE(TrySetNonPlatformAnnotations({{"non-platform.k", "v"}}));
-
-  ::fpromise::result<Annotations> annotations = GetAnnotations();
-  ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(), Contains(Pair("non-platform.k", "v")));
-}
-
-TEST_F(DatastoreTest, GetAnnotations_NonPlatformAboveLimit) {
-  // We set one platform annotation in the allowlist and we then check that this is the only
-  // annotation returned as we inject more non-platform annotations than allowed.
-  SetUpDatastore(
-      {
-          kAnnotationBuildIsDebug,
-      },
-      kDefaultAttachmentsToAvoidSpuriousLogs, {{kAnnotationBuildIsDebug, "true"}});
-
-  // We inject more than the limit in non-platform annotations.
-  Annotations non_platform_annotations;
-  for (size_t i = 0; i < kMaxNumNonPlatformAnnotations + 1; i++) {
-    non_platform_annotations.insert({fxl::StringPrintf("k%lu", i), fxl::StringPrintf("v%lu", i)});
-  }
-  EXPECT_FALSE(TrySetNonPlatformAnnotations(non_platform_annotations));
-
-  ::fpromise::result<Annotations> annotations = GetAnnotations();
-  ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(), ElementsAreArray({
-                                            Pair(kAnnotationBuildIsDebug, "true"),
-                                        }));
-}
-
-TEST_F(DatastoreTest, GetAnnotations_NonPlatformOnEmptyAllowlist) {
-  SetUpDatastore({}, kDefaultAttachmentsToAvoidSpuriousLogs);
-  EXPECT_TRUE(TrySetNonPlatformAnnotations({{"non-platform.k", "v"}}));
-
-  ::fpromise::result<Annotations> annotations = GetAnnotations();
-  ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(), ElementsAreArray({Pair("non-platform.k", "v")}));
+  EXPECT_THAT(GetImmediatelyAvailableAnnotations(), IsEmpty());
 }
 
 TEST_F(DatastoreTest, GetAnnotations_FailOn_EmptyAnnotationAllowlist) {
@@ -420,7 +385,7 @@ TEST_F(DatastoreTest, GetAnnotations_FailOn_EmptyAnnotationAllowlist) {
   ::fpromise::result<Annotations> annotations = GetAnnotations();
   ASSERT_TRUE(annotations.is_error());
 
-  EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
+  EXPECT_THAT(GetImmediatelyAvailableAnnotations(), IsEmpty());
 }
 
 TEST_F(DatastoreTest, GetAnnotations_FailOn_OnlyUnknownAnnotationInAllowlist) {
@@ -433,7 +398,7 @@ TEST_F(DatastoreTest, GetAnnotations_FailOn_OnlyUnknownAnnotationInAllowlist) {
                                        Pair("unknown.annotation", Error::kMissingValue),
                                    }));
 
-  EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
+  EXPECT_THAT(GetImmediatelyAvailableAnnotations(), IsEmpty());
 }
 
 TEST_F(DatastoreTest, GetAttachments_Inspect) {

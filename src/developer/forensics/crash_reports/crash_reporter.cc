@@ -209,8 +209,8 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
             std::optional<Report> final_report = MakeReport(
                 std::move(report), report_id, snapshot_uuid,
                 snapshot_manager_->GetSnapshot(snapshot_uuid), utc_provider_.CurrentTime(),
-                device_id, BuildDefaultAnnotations(annotation_manager_->ImmediatelyAvailable()), product,
-                is_hourly_snapshot);
+                device_id, BuildDefaultAnnotations(annotation_manager_->ImmediatelyAvailable()),
+                product, is_hourly_snapshot);
             if (!final_report.has_value()) {
               return ::fpromise::error(
                   CrashReporterError{cobalt::CrashState::kDropped, "failed MakeReport()"});
