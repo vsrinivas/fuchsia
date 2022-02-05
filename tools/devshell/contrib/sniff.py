@@ -100,7 +100,7 @@ def get_interface_names():
         if not line:
             break
 
-        names.append(re.match("^\d+\.(\w+)\s", line).groups()[0])
+        names.append(re.match("^\d+\.([\w-]+)\s", line).groups()[0])
 
     return names
 
