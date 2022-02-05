@@ -62,9 +62,6 @@ test("fit") {
   if (is_fuchsia) {
     deps += [ "//sdk/lib/fdio" ]
   }
-
-  # TODO(fxbug.dev/48668): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 config("shadow") {
