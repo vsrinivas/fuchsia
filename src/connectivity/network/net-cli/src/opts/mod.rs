@@ -196,7 +196,7 @@ pub struct IfAdd {
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "addr")]
-/// commands for updates network interface addresses
+/// commands for updating network interface addresses
 pub struct IfAddr {
     #[argh(subcommand)]
     pub addr_cmd: IfAddrEnum,
@@ -219,6 +219,9 @@ pub struct IfAddrAdd {
     pub addr: String,
     #[argh(positional)]
     pub prefix: u8,
+    #[argh(switch)]
+    /// skip adding a local subnet route for this interface and address
+    pub no_subnet_route: bool,
 }
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]

@@ -366,11 +366,11 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
             }
         }
         opts::IfEnum::Addr(opts::IfAddr { addr_cmd }) => match addr_cmd {
-            opts::IfAddrEnum::Add(opts::IfAddrAdd { interface, addr, prefix }) => {
+            opts::IfAddrEnum::Add(opts::IfAddrAdd { interface, addr, prefix, no_subnet_route }) => {
                 let id = interface.find_nicid(connector).await?;
                 let control = get_control(connector, id).await?;
                 let addr = fnet_ext::IpAddress::from_str(&addr)?;
-                {
+                let address_state_provider = {
                     let mut addr = match addr.into() {
                         fnet::IpAddress::Ipv4(addr) => {
                             fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
@@ -380,8 +380,10 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                         }
                         fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
                     };
-                    let (address_state_provider, server_end) =
-                        fidl::endpoints::create_proxy().context("create proxy")?;
+                    let (address_state_provider, server_end) = fidl::endpoints::create_proxy::<
+                        finterfaces_admin::AddressStateProviderMarker,
+                    >()
+                    .context("create proxy")?;
                     let () = control
                         .add_address(
                             &mut addr,
@@ -389,8 +391,59 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                             server_end,
                         )
                         .context("call add address")?;
-                    let () = address_state_provider.detach().context("detach address lifetime")?;
+                    let state_stream = finterfaces_ext::admin::assignment_state_stream(
+                        address_state_provider.clone(),
+                    );
+
+                    let address_assignment_result: Result<
+                        _,
+                        finterfaces_ext::admin::AddressStateProviderError,
+                    > = state_stream
+                        .try_filter_map(|state| {
+                            futures::future::ok(match state {
+                                finterfaces_admin::AddressAssignmentState::Tentative => None,
+                                finterfaces_admin::AddressAssignmentState::Assigned => Some(()),
+                                finterfaces_admin::AddressAssignmentState::Unavailable => Some(()),
+                            })
+                        })
+                        .try_next()
+                        .await;
+
+                    let () = address_assignment_result
+                        .context("error after adding address")?
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Address assignment state stream unexpectedly ended \
+                                 before reaching Assigned or Unavailable state. \
+                                 This is probably a bug."
+                            )
+                        })?;
+
+                    address_state_provider
+                };
+
+                if !no_subnet_route {
+                    let stack: fstack::StackProxy =
+                        connect_with_context::<fstack::StackMarker, _>(connector).await?;
+                    let mut forwarding_entry = fstack::ForwardingEntry {
+                        subnet: fnet_ext::apply_subnet_mask(
+                            fnet_ext::Subnet { addr, prefix_len: prefix }.into(),
+                        ),
+                        device_id: id,
+                        next_hop: None,
+                        metric: 0,
+                    };
+                    let () = fstack_ext::exec_fidl!(
+                        stack.add_forwarding_entry(&mut forwarding_entry),
+                        "error adding forwarding entry"
+                    )?;
+                    info!("Added forwarding entry {:?}", forwarding_entry);
                 }
+
+                // Wait to detach until the whole operation is complete so that the address is
+                // removed if any part of it fails or is interrupted.
+                let () = address_state_provider.detach().context("detach address lifetime")?;
+
                 info!("Address {}/{} added to interface {}", addr, prefix, id);
             }
             opts::IfAddrEnum::Del(opts::IfAddrDel { interface, addr, prefix }) => {
@@ -1479,6 +1532,138 @@ mod tests {
             }
             fnet::InterfaceAddress::Ipv6(addr) => fnet::IpAddress::Ipv6(addr),
         }
+    }
+
+    #[test_case(true, false ; "when interface is up, and adding subnet route")]
+    #[test_case(true, true ; "when interface is up, and not adding subnet route")]
+    #[test_case(false, false ; "when interface is down, and adding subnet route")]
+    #[test_case(false, true ; "when interface is down, and not adding subnet route")]
+    #[fasync::run_singlethreaded(test)]
+    async fn if_addr_add(interface_is_up: bool, no_subnet_route: bool) {
+        const TEST_PREFIX_LENGTH: u8 = 64;
+
+        let interface1 = TestInterface { nicid: 1, name: "interface1" };
+        let (debug_interfaces, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<fdebug::InterfacesMarker>().unwrap();
+
+        let (stack_proxy, stack_stream) = match (!no_subnet_route)
+            .then(|| fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap())
+        {
+            Some((proxy, stream)) => (Some(proxy), Some(stream)),
+            None => (None, None),
+        };
+
+        let connector = TestConnector {
+            debug_interfaces: Some(debug_interfaces),
+            stack: stack_proxy,
+            ..Default::default()
+        };
+
+        let do_if_fut = do_if(
+            std::io::sink(),
+            opts::IfEnum::Addr(opts::IfAddr {
+                addr_cmd: opts::IfAddrEnum::Add(opts::IfAddrAdd {
+                    interface: interface1.identifier(false /* use_ifname */),
+                    addr: fnet_ext::IpAddress::from(extract_ip(IF_ADDR_V6)).to_string(),
+                    prefix: TEST_PREFIX_LENGTH,
+                    no_subnet_route,
+                }),
+            }),
+            &connector,
+        )
+        .map(|res| res.expect("success"));
+
+        let admin_fut = async {
+            let (id, control, _control_handle) = requests
+                .next()
+                .await
+                .expect("debug request stream not ended")
+                .expect("debug request stream not error")
+                .into_get_admin()
+                .expect("get admin request");
+            assert_eq!(id, interface1.nicid);
+
+            let mut control: finterfaces_admin::ControlRequestStream =
+                control.into_stream().expect("control request stream");
+            let (
+                addr,
+                _addr_params,
+                address_state_provider_server_end,
+                _admin_control_control_handle,
+            ) = control
+                .next()
+                .await
+                .expect("control request stream not ended")
+                .expect("control request stream not error")
+                .into_add_address()
+                .expect("add address request");
+            assert_eq!(addr, IF_ADDR_V6);
+
+            let mut address_state_provider_request_stream = address_state_provider_server_end
+                .into_stream()
+                .expect("address state provider FIDL error");
+            async fn next_request(
+                stream: &mut finterfaces_admin::AddressStateProviderRequestStream,
+            ) -> finterfaces_admin::AddressStateProviderRequest {
+                stream
+                    .next()
+                    .await
+                    .expect("address state provider request stream not ended")
+                    .expect("address state provider request stream not error")
+            }
+
+            for _ in 0..3 {
+                let () = next_request(&mut address_state_provider_request_stream)
+                    .await
+                    .into_watch_address_assignment_state()
+                    .expect("watch address assignment state request")
+                    .send(finterfaces_admin::AddressAssignmentState::Tentative)
+                    .expect("send address assignment state succeeds");
+            }
+
+            let () = next_request(&mut address_state_provider_request_stream)
+                .await
+                .into_watch_address_assignment_state()
+                .expect("watch address assignment state request")
+                .send(if interface_is_up {
+                    finterfaces_admin::AddressAssignmentState::Assigned
+                } else {
+                    finterfaces_admin::AddressAssignmentState::Unavailable
+                })
+                .expect("send address assignment state succeeds");
+            let _address_state_provider_control_handle =
+                next_request(&mut address_state_provider_request_stream)
+                    .await
+                    .into_detach()
+                    .expect("detach request");
+        };
+
+        let stack_fut = async {
+            if let Some(mut stack_requests) = stack_stream {
+                let (entry, responder) = stack_requests
+                    .try_next()
+                    .await
+                    .expect("add route FIDL error")
+                    .expect("request stream should not have ended")
+                    .into_add_forwarding_entry()
+                    .expect("request should be of type AddRoute");
+                assert_eq!(
+                    entry,
+                    fstack::ForwardingEntry {
+                        subnet: fnet_ext::apply_subnet_mask(fnet::Subnet {
+                            addr: extract_ip(IF_ADDR_V6),
+                            prefix_len: TEST_PREFIX_LENGTH
+                        }),
+                        device_id: interface1.nicid,
+                        next_hop: None,
+                        metric: 0,
+                    }
+                );
+                responder.send(&mut Ok(())).expect("responder.send should succeed");
+            }
+        };
+
+        let ((), (), ()) = futures::join!(admin_fut, do_if_fut, stack_fut);
     }
 
     #[test_case(false ; "providing nicids")]
