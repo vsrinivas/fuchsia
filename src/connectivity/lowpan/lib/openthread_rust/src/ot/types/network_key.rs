@@ -6,11 +6,17 @@ use crate::prelude_internal::*;
 
 /// Network Key.
 /// Functional equivalent of [`otsys::otNetworkKey`](crate::otsys::otNetworkKey).
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 #[repr(transparent)]
 pub struct NetworkKey(pub otNetworkKey);
 
 impl_ot_castable!(NetworkKey, otNetworkKey);
+
+impl std::fmt::Debug for NetworkKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "NetworkKey({})", hex::encode(self.as_slice()))
+    }
+}
 
 impl NetworkKey {
     /// Returns the network key as a byte slice.
@@ -51,11 +57,17 @@ impl NetworkKey {
 /// PSKC. Functional equivalent of [`otsys::otPskc`](crate::otsys::otPskc).
 ///
 /// Used to establish the Commissioner Session.
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 #[repr(transparent)]
 pub struct Pskc(pub otPskc);
 
 impl_ot_castable!(Pskc, otPskc);
+
+impl std::fmt::Debug for Pskc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Pskc({:?})", hex::encode(self.as_slice()))
+    }
+}
 
 impl Pskc {
     /// Returns the PSKC as a byte slice.

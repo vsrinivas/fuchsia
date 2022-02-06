@@ -117,7 +117,7 @@ impl From<[u8; 8]> for Ip6NetworkPrefix {
 impl From<Ip6NetworkPrefix> for std::net::Ipv6Addr {
     fn from(prefix: Ip6NetworkPrefix) -> Self {
         let mut octets = [0u8; 16];
-        octets.clone_from_slice(prefix.as_slice());
+        octets[0..8].clone_from_slice(prefix.as_slice());
         octets.into()
     }
 }

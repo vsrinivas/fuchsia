@@ -6,11 +6,17 @@ use crate::prelude_internal::*;
 
 /// Data type representing an extended PAN-ID.
 /// Functional equivalent of [`otsys::otExtendedPanId`](crate::otsys::otExtendedPanId).
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 #[repr(transparent)]
 pub struct ExtendedPanId(pub otExtendedPanId);
 
 impl_ot_castable!(ExtendedPanId, otExtendedPanId);
+
+impl std::fmt::Debug for ExtendedPanId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ExtendedPanId({})", hex::encode(self.as_slice()))
+    }
+}
 
 impl ExtendedPanId {
     /// Tries to create an `ExtendedPanId` reference from a byte slice.

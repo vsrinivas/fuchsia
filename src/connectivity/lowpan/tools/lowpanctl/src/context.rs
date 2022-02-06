@@ -12,7 +12,7 @@ use fidl_fuchsia_lowpan_device::{
     LookupMarker, LookupProxy, Protocols,
 };
 use fidl_fuchsia_lowpan_test::{DeviceTestMarker, DeviceTestProxy};
-use fidl_fuchsia_lowpan_thread::{LegacyJoiningMarker, LegacyJoiningProxy};
+use fidl_fuchsia_lowpan_thread::*;
 use fuchsia_component::client::connect_to_protocol;
 use futures::prelude::*;
 
@@ -132,6 +132,30 @@ impl LowpanCtlContext {
             })
             .await
             .context(format!("Unable to get device route interface for {:?}", &self.device_name))?;
+
+        client.into_proxy().context("into_proxy() failed")
+    }
+
+    pub async fn get_default_thread_dataset_proxy(&self) -> Result<DatasetProxy, Error> {
+        let lookup = &self.lookup;
+
+        let (client, server) = create_endpoints::<DatasetMarker>()?;
+
+        lookup
+            .lookup_device(
+                &self.device_name,
+                Protocols { thread_dataset: Some(server), ..Protocols::EMPTY },
+            )
+            .map(|x| match x {
+                Ok(Ok(())) => Ok(()),
+                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
+                Err(x) => Err(x.into()),
+            })
+            .await
+            .context(format!(
+                "Unable to get thread_dataset interface for {:?}",
+                &self.device_name
+            ))?;
 
         client.into_proxy().context("into_proxy() failed")
     }

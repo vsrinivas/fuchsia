@@ -76,7 +76,7 @@ impl ChannelMask {
 
 impl Debug for ChannelMask {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        self.collect::<Vec<_>>().fmt(f)
+        write!(f, "{:?}", self.collect::<Vec<_>>())
     }
 }
 

@@ -5,11 +5,36 @@
 use crate::prelude_internal::*;
 
 /// Functional equivalent of [`otsys::otSecurityPolicy`](crate::otsys::otSecurityPolicy).
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 #[repr(transparent)]
 pub struct SecurityPolicy(pub otSecurityPolicy);
 
 impl_ot_castable!(SecurityPolicy, otSecurityPolicy);
+
+impl std::fmt::Debug for SecurityPolicy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SecurityPolicy")
+            .field("rotation_time_hours", &self.get_rotation_time_in_hours())
+            .field("version_threshold_for_routing", &self.get_version_threshold_for_routing())
+            .field("is_obtain_network_key_enabled", &self.is_obtain_network_key_enabled())
+            .field("is_native_commissioning_enabled", &self.is_native_commissioning_enabled())
+            .field("is_routers_enabled", &self.is_routers_enabled())
+            .field("is_external_commissioning_enabled", &self.is_external_commissioning_enabled())
+            .field("is_beacons_enabled", &self.is_beacons_enabled())
+            .field(
+                "is_commercial_commissioning_enabled",
+                &self.is_commercial_commissioning_enabled(),
+            )
+            .field("is_autonomous_enrollment_enabled", &self.is_autonomous_enrollment_enabled())
+            .field(
+                "is_network_key_provisioning_enabled",
+                &self.is_network_key_provisioning_enabled(),
+            )
+            .field("is_toble_link_enabled", &self.is_toble_link_enabled())
+            .field("is_non_ccm_routers_enabled", &self.is_non_ccm_routers_enabled())
+            .finish()
+    }
+}
 
 #[allow(missing_docs)]
 impl SecurityPolicy {

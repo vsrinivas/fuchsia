@@ -6,11 +6,17 @@ use crate::prelude_internal::*;
 
 /// Data type representing a EUI64 address.
 /// Functional equivalent of [`otsys::otExtAddress`](crate::otsys::otExtAddress).
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 #[repr(transparent)]
 pub struct ExtAddress(pub otExtAddress);
 
 impl_ot_castable!(ExtAddress, otExtAddress);
+
+impl std::fmt::Debug for ExtAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ExtAddress({})", hex::encode(self.as_slice()))
+    }
+}
 
 impl ExtAddress {
     /// Tries to create an `ExtAddress` reference from a byte slice.

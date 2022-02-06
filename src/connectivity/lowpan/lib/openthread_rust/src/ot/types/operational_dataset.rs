@@ -6,7 +6,7 @@ use crate::prelude_internal::*;
 use std::ops::Deref;
 
 /// Functional equivalent of [`otsys::otOperationalDataset`](crate::otsys::otOperationalDataset).
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 #[repr(transparent)]
 pub struct OperationalDataset(pub otOperationalDataset);
 
@@ -33,6 +33,50 @@ impl OperationalDataset {
     // pub fn to_tlvs(&self) -> OperationalDatasetTlvs {
     //     todo!()
     // }
+}
+
+impl std::fmt::Debug for OperationalDataset {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut ds = f.debug_struct("OperationalDataset");
+
+        if let Some(x) = self.get_network_name() {
+            ds.field("network_name", &x);
+        }
+        if let Some(x) = self.get_extended_pan_id() {
+            ds.field("xpanid", &x);
+        }
+        if let Some(x) = self.get_network_key() {
+            ds.field("network_key", &x);
+        }
+        if let Some(x) = self.get_mesh_local_prefix() {
+            ds.field("mesh_local_prefix", &x);
+        }
+        if let Some(x) = self.get_pan_id() {
+            ds.field("panid", &x);
+        }
+        if let Some(x) = self.get_channel() {
+            ds.field("channel", &x);
+        }
+        if let Some(x) = self.get_channel_mask() {
+            ds.field("channel_mask", &x);
+        }
+        if let Some(x) = self.get_pskc() {
+            ds.field("pskc", &x);
+        }
+        if let Some(x) = self.get_security_policy() {
+            ds.field("security_policy", &x);
+        }
+        if let Some(x) = self.get_delay() {
+            ds.field("delay", &x);
+        }
+        if let Some(x) = self.get_active_timestamp() {
+            ds.field("active_timestamp", &x);
+        }
+        if let Some(x) = self.get_pending_timestamp() {
+            ds.field("pending_timestamp", &x);
+        }
+        ds.finish()
+    }
 }
 
 impl OperationalDataset {
@@ -236,12 +280,10 @@ impl OperationalDatasetTlvs {
     /// Tries to parse the TLVs into a dataset
     /// Functional equivalent to `otDatasetParseTlvs`
     pub fn try_to_dataset(&self) -> Result<OperationalDataset> {
-        // TODO(rquattle): Update OpenThread so that we have otDatasetParseTlvs available.
-        // let mut ret = OperationalDataset::default();
-        // Error::from(unsafe { otDatasetParseTlvs(self.as_ot_ptr(), ret.as_ot_mut_ptr()) })
-        //     .into_result();
-        // Ok(ret)
-        todo!()
+        let mut ret = OperationalDataset::default();
+        Error::from(unsafe { otDatasetParseTlvs(self.as_ot_ptr(), ret.as_ot_mut_ptr()) })
+            .into_result()?;
+        Ok(ret)
     }
 
     /// Tries to create a `OperationalDatasetTlvs` instance from the given byte slice.

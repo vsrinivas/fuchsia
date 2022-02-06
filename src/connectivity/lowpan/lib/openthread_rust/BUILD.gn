@@ -21,6 +21,7 @@ rustc_library("openthread") {
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hex",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:num",

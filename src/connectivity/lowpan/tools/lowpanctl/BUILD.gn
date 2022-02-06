@@ -17,6 +17,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test-rustc",
     "//sdk/fidl/fuchsia.lowpan.thread:fuchsia.lowpan.thread-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//src/connectivity/lowpan/lib/openthread_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -33,6 +34,7 @@ rustc_binary("bin") {
 
   sources = [
     "src/context.rs",
+    "src/dataset_command.rs",
     "src/energy_scan_command.rs",
     "src/form_command.rs",
     "src/get_counters_command.rs",

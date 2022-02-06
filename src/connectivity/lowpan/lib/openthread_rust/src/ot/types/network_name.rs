@@ -19,7 +19,7 @@ impl Debug for NetworkName {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self.try_as_str() {
             Ok(s) => s.fmt(f),
-            Err(_) => self.as_slice().fmt(f),
+            Err(_) => write!(f, "[{:?}]", hex::encode(self.as_slice())),
         }
     }
 }

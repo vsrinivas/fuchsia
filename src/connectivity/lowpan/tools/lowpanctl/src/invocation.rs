@@ -6,6 +6,7 @@ use anyhow::Error;
 use argh::FromArgs;
 
 use crate::context::LowpanCtlContext;
+pub use crate::dataset_command::*;
 pub use crate::energy_scan_command::*;
 pub use crate::form_command::*;
 pub use crate::get_counters_command::*;
@@ -71,6 +72,7 @@ pub enum CommandEnumWithRepeat {
     Reset(ResetCommand),
     Join(JoinCommand),
     Form(FormCommand),
+    Dataset(DatasetCommand),
     EnergyScan(EnergyScanCommand),
     NetworkScan(NetworkScanCommand),
     SetActive(SetActiveCommand),
@@ -97,6 +99,7 @@ impl CommandEnumWithRepeat {
         match self {
             CommandEnumWithRepeat::Status(x) => x.exec(context).await,
             CommandEnumWithRepeat::Provision(x) => x.exec(context).await,
+            CommandEnumWithRepeat::Dataset(x) => x.exec(context).await,
             CommandEnumWithRepeat::Leave(x) => x.exec(context).await,
             CommandEnumWithRepeat::List(x) => x.exec(context).await,
             CommandEnumWithRepeat::Reset(x) => x.exec(context).await,
@@ -135,6 +138,7 @@ pub enum CommandEnum {
     Provision(ProvisionCommand),
     Leave(LeaveCommand),
     List(ListCommand),
+    Dataset(DatasetCommand),
     Reset(ResetCommand),
     Join(JoinCommand),
     Form(FormCommand),
@@ -164,6 +168,7 @@ impl CommandEnum {
             CommandEnum::Provision(x) => x.exec(context).await,
             CommandEnum::Leave(x) => x.exec(context).await,
             CommandEnum::List(x) => x.exec(context).await,
+            CommandEnum::Dataset(x) => x.exec(context).await,
             CommandEnum::Reset(x) => x.exec(context).await,
             CommandEnum::Join(x) => x.exec(context).await,
             CommandEnum::Form(x) => x.exec(context).await,
