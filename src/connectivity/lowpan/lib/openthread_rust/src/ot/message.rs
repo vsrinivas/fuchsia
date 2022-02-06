@@ -86,7 +86,7 @@ impl Default for Settings {
     fn default() -> Self {
         Settings(otMessageSettings {
             mLinkSecurityEnabled: true,
-            mPriority: Priority::Normal.into(),
+            mPriority: otMessagePriority_OT_MESSAGE_PRIORITY_NORMAL.try_into().unwrap(),
         })
     }
 }
