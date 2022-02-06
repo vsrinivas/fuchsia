@@ -1,5 +1,6 @@
 sdk://bind/fuchsia.test
 sdk://bind/fuchsia.usb
+sdk://bind/fuchsia.pci
 sdk://docs/metadata_schemas
 sdk://fidl/ddk.hw.physiter
 sdk://fidl/ddk.hw.wlan.ieee80211
