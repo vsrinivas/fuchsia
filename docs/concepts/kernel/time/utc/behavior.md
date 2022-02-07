@@ -2,7 +2,7 @@
 
 This page outlines the behavior of the UTC clock on Fuchsia. See the
 [UTC overview](overview.md) for more information on UTC time, and the
-[time overview](/docs/concepts/time/overview.md) for information on the other
+[time overview](/docs/concepts/kernel/time/overview.md) for information on the other
 clocks available on Fuchsia.
 
 UTC time is supplied by a
@@ -150,4 +150,4 @@ Note that components are provided a read-only handle and are unable to use the
 provided handle to modify the clock.
 
 For language specific bindings and examples, see
-[language support](/docs/concepts/time/language_support.md).
+[language support](/docs/concepts/kernel/time/language_support.md).

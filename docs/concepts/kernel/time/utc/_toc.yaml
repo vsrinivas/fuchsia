@@ -1,4 +1,4 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -7,10 +7,10 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /docs/concepts/time/utc/overview.md
+  path: /docs/concepts/kernel/time/utc/overview.md
 - title: "Architecture"
-  path: /docs/concepts/time/utc/architecture.md
+  path: /docs/concepts/kernel/time/utc/architecture.md
 - title: "Algorithms"
-  path: /docs/concepts/time/utc/algorithms.md
+  path: /docs/concepts/kernel/time/utc/algorithms.md
 - title: "Behavior"
-  path: /docs/concepts/time/utc/behavior.md
+  path: /docs/concepts/kernel/time/utc/behavior.md

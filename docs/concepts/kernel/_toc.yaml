@@ -64,6 +64,9 @@ toc:
     path: /docs/concepts/kernel/timer_slack.md
   - title: "Clock transformations"
     path: /docs/concepts/kernel/clock_transformations.md
+- title: "Time"
+  section:
+  - include: /docs/concepts/kernel/time/_toc.yaml
 - title: "Tracing"
   section:
   - title: "Fuchsia tracing system"

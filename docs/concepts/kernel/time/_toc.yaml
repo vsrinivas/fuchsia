@@ -1,4 +1,4 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -7,13 +7,13 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /docs/concepts/time/overview.md
+  path: /docs/concepts/kernel/time/overview.md
 - title: "Monotonic"
-  path: /docs/concepts/time/monotonic.md
+  path: /docs/concepts/kernel/time/monotonic.md
+- title: "Local"
+  path: /docs/concepts/kernel/time/local.md
+- title: "Language Support"
+  path: /docs/concepts/kernel/time/language_support.md
 - title: "UTC"
   section:
-  - include: /docs/concepts/time/utc/_toc.yaml
-- title: "Local"
-  path: /docs/concepts/time/local.md
-- title: "Language Support"
-  path: /docs/concepts/time/language_support.md
+  - include: /docs/concepts/kernel/time/utc/_toc.yaml

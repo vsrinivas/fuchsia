@@ -46,9 +46,6 @@ toc:
 - title: "Source code"
   section:
   - include: /docs/concepts/source_code/_toc.yaml
-- title: "Time"
-  section:
-  - include: /docs/concepts/time/_toc.yaml
 - title: "UI"
   section:
   - include: /docs/concepts/ui/_toc.yaml

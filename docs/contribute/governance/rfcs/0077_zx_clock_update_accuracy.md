@@ -230,7 +230,7 @@ alternative would create more bugs.
 [kernel_objects/clock](/docs/reference/kernel_objects/clock.md) provides an
 overview of the operation of userspace clocks.
 
-[UTC synchronization algorithms](/docs/concepts/time/utc/algorithms.md)
+[UTC synchronization algorithms](/docs/concepts/kernel/time/utc/algorithms.md)
 summarizes the current UTC synchronization design.
 
 "Zircon Syscalls Struct Evolution" is a Google-internal document from May 2019
