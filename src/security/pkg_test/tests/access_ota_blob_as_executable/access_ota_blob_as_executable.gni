@@ -19,6 +19,14 @@ template("access_ota_blob_as_executable") {
   test_binary_name = invoker.test_binary_name
   test_component_manifest = invoker.test_component_manifest
 
+  # TODO(fxbug.dev/88453): Remove default `package_domain_names` after soft
+  # transition.
+  if (defined(invoker.package_domain_names)) {
+    package_domain_names = invoker.package_domain_names
+  } else {
+    package_domain_names = [ "fuchsia.com" ]
+  }
+
   test_name = target_name
 
   # System assembly for base system version at start of test.

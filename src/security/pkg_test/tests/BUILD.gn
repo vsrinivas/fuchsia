@@ -9,6 +9,10 @@ access_ota_blob_as_executable("core_access_ota_blob_as_executable") {
       [ "//src/security/pkg_test/config:pkg_resolver_repository_config" ]
   test_binary_name = "core_access_ota_blob_as_executable"
   test_component_manifest = "access_ota_blob_as_executable/meta/core_access_ota_blob_as_executable.cml"
+
+  # Domains designated as "repo_url" in configuration files included via
+  # `//src/security/pkg_test/config:pkg_resolver_repository_config` above.
+  package_domain_names = [ "security-pkg-test.example.com" ]
 }
 
 group("tests") {

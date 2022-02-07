@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
 import("//build/components/fuchsia_package.gni")
 import("//build/components/fuchsia_test_component.gni")
 import("//build/config.gni")
@@ -28,6 +29,11 @@ import("//src/security/pkg_test/assemblies/build_info.gni")
 #   packaged_assembly_directory (required):
 #     [string] The subdirectory in data/assemblies where the
 #     packaged-in-a-fuchsia-package copy of assembled artifacts will be stored.
+#
+#   package_domain_names (required):
+#     [list of strings] The custom domain names that may be used in the update
+#     package's package.json. This value must correspond to a repository config
+#     file's configuration.
 #
 # Public targets:
 #
@@ -57,6 +63,8 @@ template("assemble_security_pkg_test_system") {
          "system_version_file must be defined for $target_name")
   assert(defined(invoker.packaged_assembly_directory),
          "packaged_assembly_directory must be defined for $target_name")
+  assert(defined(invoker.package_domain_names),
+         "package_domain_names must be defined for $target_name")
 
   assembly_name = target_name
   if (current_toolchain == target_toolchain) {
@@ -72,6 +80,7 @@ template("assemble_security_pkg_test_system") {
     empty_pkgfs = "${assembly_name}_empty_pkgfs"
     build_info = "${assembly_name}_build_info"
     repository_config = "${assembly_name}_repository_config"
+    packages_json = "${assembly_name}_packages_json"
     update_package = "${assembly_name}_update_package"
     system_resources = "${assembly_name}_system_resources"
     update_resources_group = "${assembly_name}_update_resources_group"
@@ -97,7 +106,9 @@ template("assemble_security_pkg_test_system") {
   }
 
   files = {
-    packages_json = "${directories.assembly_out}/packages.json"
+    assembly_out_packages_json = "${directories.assembly_out}/packages.json"
+    packages_json =
+        "${directories.assembly_out}/security_pkg_test_packages.json"
     partitions_json = "${directories.assembly_out}_partitions.json"
     images_json = "${directories.assembly_out}/images.json"
     package_manifest_json =
@@ -209,12 +220,38 @@ template("assemble_security_pkg_test_system") {
     pkgfs_package_label = ":${labels.empty_pkgfs}"
   }
 
+  # Process packages.json to use a custom domain name. This mirrors the domain
+  # binding strategy used in production.
+  compiled_action(labels.packages_json) {
+    testonly = true
+    tool = "//src/security/pkg_test/rewrite_packages_json_domain"
+    deps = [ ":${labels.assembly}" ]
+    inputs = [ files.assembly_out_packages_json ]
+    outputs = [ files.packages_json ]
+    args = [
+      "--input",
+      rebase_path(files.assembly_out_packages_json, root_build_dir),
+      "--output",
+      rebase_path(files.packages_json, root_build_dir),
+      "--in-domain",
+      "fuchsia.com",
+    ]
+
+    foreach(package_domain_name, invoker.package_domain_names) {
+      args += [
+        "--out-domain",
+        package_domain_name,
+      ]
+    }
+  }
+
   # Construct an update package for the system assembly.
   update_package(labels.update_package) {
     testonly = true
     deps = [
       ":${labels.assembly_image_assembler}",
       ":${labels.assembly_partitions_config}",
+      ":${labels.packages_json}",
     ]
     partitions = files.partitions_json
     packages = files.packages_json
@@ -324,7 +361,6 @@ template("assemble_security_pkg_test_system") {
   # (directly above), and the actual update package. The script succeeds when
   # update resources package contains *at least* the blobs in the update
   # package.
-
   action(labels.verify_update_package_resources) {
     testonly = true
     script =
