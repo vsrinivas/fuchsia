@@ -17,6 +17,9 @@ pub(crate) struct InstanceBacking {
     pub active_scan_fn: Cell<Option<std::boxed::Box<dyn FnMut(Option<&ActiveScanResult>)>>>,
     pub energy_scan_fn: Cell<Option<std::boxed::Box<dyn FnMut(Option<&EnergyScanResult>)>>>,
     pub joiner_fn: Cell<Option<std::boxed::Box<dyn FnOnce(Result)>>>,
+    pub srp_server_service_update_fn: Cell<
+        Option<std::boxed::Box<dyn FnMut(ot::SrpServerServiceUpdateId, &ot::SrpServerHost, u32)>>,
+    >,
 }
 
 impl InstanceBacking {
@@ -30,6 +33,7 @@ impl InstanceBacking {
             active_scan_fn: Cell::new(None),
             energy_scan_fn: Cell::new(None),
             joiner_fn: Cell::new(None),
+            srp_server_service_update_fn: Cell::new(None),
         }
     }
 }

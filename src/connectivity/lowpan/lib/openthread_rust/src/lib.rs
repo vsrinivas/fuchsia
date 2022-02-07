@@ -41,6 +41,7 @@ pub mod prelude {
     pub use ot::MessageBuffer as _;
     pub use ot::OtCastable as _;
     pub use ot::Reset as _;
+    pub use ot::SrpServer as _;
     pub use ot::State as _;
     pub use ot::Tasklets as _;
     pub use ot::Thread as _;
@@ -67,7 +68,7 @@ pub(crate) mod prelude_internal {
     pub use ot::Result;
     pub use ot::{
         types::*, BorderRouter, Boxable, Error, Instance, InstanceInterface, Ip6, Link, Message,
-        MessageBuffer, Platform, Tasklets, Thread,
+        MessageBuffer, Platform, SrpServer, Tasklets, Thread,
     };
     pub use static_assertions as sa;
     pub use std::ffi::{CStr, CString};

@@ -67,6 +67,9 @@ use std::ffi::CStr;
 mod error;
 pub use error::*;
 
+mod srp;
+pub use srp::*;
+
 mod singleton;
 pub use singleton::*;
 
@@ -122,6 +125,7 @@ pub trait InstanceInterface:
     + Tasklets
     + Thread
     + BorderRouter
+    + SrpServer
     + MessageBuffer
     + Radio
     + Joiner
