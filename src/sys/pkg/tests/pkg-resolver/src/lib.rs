@@ -9,11 +9,13 @@ use {
     cobalt_client::traits::AsEventCodes,
     diagnostics_hierarchy::{testing::TreeAssertion, DiagnosticsHierarchy},
     diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
-    fidl::endpoints::ClientEnd,
-    fidl_fuchsia_boot::ArgumentsRequestStream,
+    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker as _},
     fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
     fidl_fuchsia_component::{RealmMarker, RealmProxy},
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io::{
+        DirectoryMarker, DirectoryProxy, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
+    },
     fidl_fuchsia_pkg::{
         ExperimentToggle as Experiment, FontResolverMarker, FontResolverProxy, PackageCacheMarker,
         PackageResolverAdminMarker, PackageResolverAdminProxy, PackageResolverMarker,
@@ -25,7 +27,6 @@ use {
     },
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
     fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
         new::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
         ScopedInstance, ScopedInstanceFactory,
@@ -50,6 +51,7 @@ use {
         time::Duration,
     },
     tempfile::TempDir,
+    vfs::directory::{entry::DirectoryEntry as _, helper::DirectlyMutable as _},
 };
 
 // If the body of an https response is not large enough, hyper will download the body
@@ -395,29 +397,59 @@ where
     }
 
     pub async fn build(self) -> TestEnv<PkgFsFut::Output> {
-        let mut fs = ServiceFs::new();
-
         let pkgfs = (self.pkgfs)().await;
         let mounts = (self.mounts)();
 
-        fs.add_remote(
-            "pkgfs",
-            pkgfs.root_dir_handle().expect("pkgfs dir to open").into_proxy().unwrap(),
-        );
-        fs.add_remote(
-            "blob",
-            pkgfs.blobfs_root_dir_handle().expect("blob dir to open").into_proxy().unwrap(),
-        );
-        fs.add_remote(
-            "data",
-            mounts.pkg_resolver_data.to_proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE),
-        );
-        fs.dir("config")
-            .add_remote("data", mounts.pkg_resolver_config_data.to_proxy(OPEN_RIGHT_READABLE));
-        fs.dir("config").add_remote(
-            "ssl",
-            io_util::directory::open_in_namespace("/pkg/data/ssl", OPEN_RIGHT_READABLE).unwrap(),
-        );
+        let local_child_svc_dir = vfs::pseudo_directory! {};
+
+        let mut args = HashMap::new();
+        args.insert("tuf_repo_config".to_string(), self.tuf_repo_config_boot_arg);
+        let mut boot_arguments_service = MockBootArgumentsService::new(args);
+        pkgfs.system_image_hash().map(|hash| boot_arguments_service.insert_pkgfs_boot_arg(hash));
+        let boot_arguments_service = Arc::new(boot_arguments_service);
+        local_child_svc_dir
+            .add_entry(
+                fidl_fuchsia_boot::ArgumentsMarker::PROTOCOL_NAME,
+                vfs::service::host(move |stream| {
+                    Arc::clone(&boot_arguments_service).handle_request_stream(stream)
+                }),
+            )
+            .unwrap();
+
+        let logger_factory = Arc::new(MockLoggerFactory::new());
+        let logger_factory_clone = Arc::clone(&logger_factory);
+        local_child_svc_dir
+            .add_entry(
+                fidl_fuchsia_cobalt::LoggerFactoryMarker::PROTOCOL_NAME,
+                vfs::service::host(move |stream| {
+                    Arc::clone(&logger_factory_clone).run_logger_factory(stream)
+                }),
+            )
+            .unwrap();
+
+        let local_child_out_dir = vfs::pseudo_directory! {
+            "pkgfs" => vfs::remote::remote_dir(
+                pkgfs.root_dir_handle().unwrap().into_proxy().unwrap()
+            ),
+            "blob" => vfs::remote::remote_dir(
+                pkgfs.blobfs_root_dir_handle().expect("blob dir to open").into_proxy().unwrap()
+            ),
+            "data" => vfs::remote::remote_dir(
+                mounts.pkg_resolver_data.to_proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
+            ),
+            "config" => vfs::pseudo_directory! {
+                "data" => vfs::remote::remote_dir(
+                    mounts.pkg_resolver_config_data.to_proxy(OPEN_RIGHT_READABLE)
+                ),
+                "ssl" => vfs::remote::remote_dir(
+                    io_util::directory::open_in_namespace(
+                        "/pkg/data/ssl",
+                        OPEN_RIGHT_READABLE
+                    ).unwrap()
+                ),
+            },
+            "svc" => local_child_svc_dir,
+        };
 
         let local_mirror_dir = tempfile::tempdir().unwrap();
         if let Some((repo, url)) = self.local_mirror_repo {
@@ -426,28 +458,20 @@ where
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             )
             .unwrap();
-            repo.copy_local_repository_to_dir(&proxy, &url).await;
-            fs.dir("usb").dir("0").add_remote("fuchsia_pkg", proxy);
+            let () = repo.copy_local_repository_to_dir(&proxy, &url).await;
+            let () = local_child_out_dir
+                .add_entry(
+                    "usb",
+                    vfs::pseudo_directory! {
+                        "0" => vfs::pseudo_directory! {
+                            "fuchsia_pkg" => vfs::remote::remote_dir(proxy),
+                        },
+                    },
+                )
+                .unwrap();
         }
 
-        let mut args = HashMap::new();
-        args.insert("tuf_repo_config".to_string(), self.tuf_repo_config_boot_arg);
-        let mut boot_arguments_service = MockBootArgumentsService::new(args);
-        pkgfs.system_image_hash().map(|hash| boot_arguments_service.insert_pkgfs_boot_arg(hash));
-        let boot_arguments_service = Arc::new(boot_arguments_service);
-        fs.dir("svc").add_fidl_service(move |stream: ArgumentsRequestStream| {
-            fasync::Task::spawn(Arc::clone(&boot_arguments_service).handle_request_stream(stream))
-                .detach();
-        });
-
-        let logger_factory = Arc::new(MockLoggerFactory::new());
-        let logger_factory_clone = Arc::clone(&logger_factory);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(Arc::clone(&logger_factory_clone).run_logger_factory(stream))
-                .detach()
-        });
-
-        let fs_holder = Mutex::new(Some(fs));
+        let local_child_out_dir = Mutex::new(Some(local_child_out_dir));
 
         let builder = RealmBuilder::new().await.unwrap();
         let pkg_cache = builder
@@ -464,16 +488,19 @@ where
             .add_local_child(
                 "service_reflector",
                 move |handles| {
-                    let mut rfs = fs_holder
+                    let local_child_out_dir = local_child_out_dir
                         .lock()
                         .take()
                         .expect("mock component should only be launched once");
-                    async {
-                        rfs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
-                        let () = rfs.collect().await;
-                        Ok::<(), anyhow::Error>(())
-                    }
-                    .boxed()
+                    let scope = vfs::execution_scope::ExecutionScope::new();
+                    let () = local_child_out_dir.open(
+                        scope.clone(),
+                        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
+                        0,
+                        vfs::path::Path::dot(),
+                        handles.outgoing_dir.into_channel().into(),
+                    );
+                    async move { Ok(scope.wait().await) }.boxed()
                 },
                 ChildOptions::new(),
             )
