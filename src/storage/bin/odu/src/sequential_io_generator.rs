@@ -8,15 +8,8 @@
 //! the next offset will wrap around and starts from the beginning of the range.
 
 use {
-    crate::generator::Generator,
-    crate::operations::OperationType,
-    core::hash::Hasher,
-    crc::crc32::{self, Hasher32},
-    std::{
-        io::{self, Write},
-        mem,
-        ops::Range,
-    },
+    crate::generator::Generator, crate::io_header::IoHeader, crate::operations::OperationType,
+    anyhow::Result, std::ops::Range,
 };
 
 enum FillType {
@@ -33,16 +26,16 @@ pub fn round_up(x: usize, align: usize) -> usize {
 }
 
 pub struct SequentialIoGenerator {
-    // See struct Header
+    // See IoHeader
     magic_number: u64,
 
-    // See struct Header
+    // See IoHeader
     process_id: u64,
 
-    // See struct Header
+    // See IoHeader
     fd_unique_id: u64,
 
-    // See struct Header
+    // See IoHeader
     generator_unique_id: u64,
 
     // Range within which IO should be performed
@@ -63,9 +56,6 @@ pub struct SequentialIoGenerator {
     block_size: u64,
 
     max_io_size: u64,
-
-    // If true aligns the ios to block_size
-    align: bool,
 }
 
 impl SequentialIoGenerator {
@@ -77,7 +67,6 @@ impl SequentialIoGenerator {
         offset_range: Range<u64>,
         block_size: u64,
         max_io_size: u64,
-        align: bool,
     ) -> SequentialIoGenerator {
         return SequentialIoGenerator {
             magic_number,
@@ -90,7 +79,6 @@ impl SequentialIoGenerator {
             _fill_type: FillType::ZeroFill,
             block_size,
             max_io_size,
-            align,
             next_start_offset: offset_range.start,
         };
     }
@@ -104,35 +92,41 @@ impl SequentialIoGenerator {
 
     /// The function writes block header(s) to the buffer. We write block_header
     /// the beginning of each block. Some buffer may range over multiple blocks.
-    /// If so this routine write to each such block start.
+    /// If so this routine writes to each such block start.
     /// Buffers may very in size and offset. Not all buffers may be large enough
     /// to hold the header and not all buffers may overlap with beginning of the
     /// block.
-    /// TODO(auradkar): SInce current IOs are always 4KiB aligned, this function
-    /// works well. But not all unaligned cases are covered by this function.
-    fn write_headers(&self, buf: &mut Vec<u8>, sequence_number: u64, offset_range: Range<u64>) {
+    /// TODO(auradkar): Since current IOs are always 4KiB aligned, this function
+    /// works well. Not all unaligned cases are covered by this function.
+    fn write_headers(
+        &self,
+        buf: &mut Vec<u8>,
+        sequence_number: u64,
+        offset_range: Range<u64>,
+    ) -> Result<()> {
         let start = round_up(offset_range.start as usize, self.block_size as usize);
         let end = offset_range.end as usize;
-        let header_size = mem::size_of::<Header>();
+        let header_size = IoHeader::size() as usize;
         let mut offset = start;
 
         while offset + header_size < end {
-            let header = Header::new(
-                self.magic_number,
-                self.process_id,
-                self.fd_unique_id,
-                self.generator_unique_id as u64,
-                sequence_number,
-                offset as u64,
-                buf.capacity() as u64,
-                self.last_number,
-            );
+            let header = IoHeader {
+                magic_number: self.magic_number,
+                process_id: self.process_id,
+                fd_unique_id: self.fd_unique_id,
+                generator_unique_id: self.generator_unique_id,
+                io_op_unique_id: sequence_number,
+                file_offset: offset as u64,
+                size: buf.capacity() as u64,
+                seed: self.last_number,
+            };
 
             let buf_offset = offset - start;
-            header.write_header(&mut buf[buf_offset..(buf_offset + header_size)]);
+            header.write_header(&mut buf[buf_offset..(buf_offset + header_size)])?;
 
             offset += self.block_size as usize;
         }
+        Ok(())
     }
 
     fn io_size(&self) -> u64 {
@@ -147,10 +141,6 @@ impl Generator for SequentialIoGenerator {
         // NOTE: We don't generate number zero.
         self.last_number += 1;
         self.current_offset = self.next_start_offset;
-
-        if !self.align {
-            panic!("unaligned write not implemented yet");
-        }
 
         let size = self.io_size();
         self.next_start_offset += size;
@@ -179,165 +169,28 @@ impl Generator for SequentialIoGenerator {
         cur..end
     }
 
-    fn fill_buffer(&self, buf: &mut Vec<u8>, sequence_number: u64, offset_range: Range<u64>) {
+    fn fill_buffer(
+        &self,
+        buf: &mut Vec<u8>,
+        sequence_number: u64,
+        offset_range: Range<u64>,
+    ) -> Result<()> {
         self.zero_fill(buf);
-        self.write_headers(buf, sequence_number, offset_range);
-    }
-}
-
-/// Each block of written data contains a header field. This field helps us to
-/// verify the written data. In future this also acts as poison value to detect
-/// any corruptions. TODO(auradkar): This needs a better home.
-struct Header {
-    /// magic_number helps to identify that the block was written
-    /// by the app
-    magic_number: u64,
-
-    /// process_id helps to differentiate this run from other runs
-    process_id: u64,
-
-    /// fd_unique_id tells what file descriptor was used to write
-    /// this data
-    fd_unique_id: u64,
-
-    /// generator_unique_id is unique id of the generator that
-    /// updated this block
-    generator_unique_id: u64,
-
-    /// io_op_unique_id tells which io operation updated this block
-    io_op_unique_id: u64,
-
-    // file_offset is offset within the file where this data
-    // should be found
-    file_offset: u64,
-
-    /// size of the IO that wrote this header
-    size: u64,
-
-    /// seed that was used to generate the rest of the data in this
-    /// block
-    seed: u64,
-
-    /// Stores the crc32 of this header
-    crc32: u32,
-}
-
-fn read_u32<T: io::Read>(reader: &mut T) -> io::Result<u32> {
-    let mut buf = [0; 4];
-    let () = reader.read_exact(&mut buf)?;
-    Ok(u32::from_le_bytes(buf))
-}
-
-fn read_u64<T: io::Read>(reader: &mut T) -> io::Result<u64> {
-    let mut buf = [0; 8];
-    let () = reader.read_exact(&mut buf)?;
-    Ok(u64::from_le_bytes(buf))
-}
-
-impl Header {
-    fn new(
-        magic_number: u64,
-        process_id: u64,
-        fd_unique_id: u64,
-        generator_unique_id: u64,
-        io_op_unique_id: u64,
-        file_offset: u64,
-        size: u64,
-        seed: u64,
-    ) -> Header {
-        let mut crc = crc32::Digest::new(crc32::IEEE);
-        crc.write_u64(magic_number);
-        crc.write_u64(process_id);
-        crc.write_u64(fd_unique_id);
-        crc.write_u64(generator_unique_id);
-        crc.write_u64(io_op_unique_id);
-        crc.write_u64(file_offset);
-        crc.write_u64(size);
-        crc.write_u64(seed);
-
-        Header {
-            magic_number,
-            process_id,
-            fd_unique_id,
-            generator_unique_id,
-            io_op_unique_id,
-            file_offset,
-            size,
-            seed,
-            crc32: crc.sum32(),
-        }
-    }
-
-    /// Convert byte vector to header
-    #[allow(dead_code)]
-    pub fn read_header(buf: &[u8]) -> Header {
-        let mut cursor = io::Cursor::new(buf);
-
-        let magic_number = read_u64(&mut cursor).unwrap();
-        let process_id = read_u64(&mut cursor).unwrap();
-        let fd_unique_id = read_u64(&mut cursor).unwrap();
-        let generator_unique_id = read_u64(&mut cursor).unwrap();
-        let io_op_unique_id = read_u64(&mut cursor).unwrap();
-        let file_offset = read_u64(&mut cursor).unwrap();
-        let size = read_u64(&mut cursor).unwrap();
-        let seed = read_u64(&mut cursor).unwrap();
-        let crc32 = read_u32(&mut cursor).unwrap();
-
-        Self {
-            magic_number,
-            process_id,
-            fd_unique_id,
-            generator_unique_id,
-            io_op_unique_id,
-            file_offset,
-            size,
-            seed,
-            crc32,
-        }
-    }
-
-    /// Copy header into byte vector
-    fn write_header(&self, buf: &mut [u8]) {
-        let mut cursor = io::Cursor::new(buf);
-
-        let Self {
-            magic_number,
-            process_id,
-            fd_unique_id,
-            generator_unique_id,
-            io_op_unique_id,
-            file_offset,
-            size,
-            seed,
-            crc32,
-        } = self;
-
-        cursor.write_all(&magic_number.to_le_bytes()).unwrap();
-        cursor.write_all(&process_id.to_le_bytes()).unwrap();
-        cursor.write_all(&fd_unique_id.to_le_bytes()).unwrap();
-        cursor.write_all(&generator_unique_id.to_le_bytes()).unwrap();
-        cursor.write_all(&io_op_unique_id.to_le_bytes()).unwrap();
-        cursor.write_all(&file_offset.to_le_bytes()).unwrap();
-        cursor.write_all(&size.to_le_bytes()).unwrap();
-        cursor.write_all(&seed.to_le_bytes()).unwrap();
-        cursor.write_all(&crc32.to_le_bytes()).unwrap();
+        self.write_headers(buf, sequence_number, offset_range)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        crate::generator::Generator,
-        crate::operations::OperationType,
-        crate::sequential_io_generator::{Header, SequentialIoGenerator},
-        std::ops::Range,
+        crate::generator::Generator, crate::io_header::IoHeader, crate::operations::OperationType,
+        crate::sequential_io_generator::SequentialIoGenerator, std::ops::Range,
     };
 
     static MAGIC_NUMBER: u64 = 100;
     static PROCESS_ID: u64 = 101;
     static TARGET_ID: u64 = 102;
     static GENERATOR_ID: u64 = 103;
-    static ALIGN: bool = true;
 
     fn create_generator(
         block_size: u64,
@@ -352,7 +205,6 @@ mod tests {
             target_range,
             block_size,
             max_io_size,
-            ALIGN,
         )
     }
 
@@ -458,15 +310,20 @@ mod tests {
         let mut buf = vec![0 as u8; block_size as usize];
         let io_offset_range = block_size..2 * 4096;
         let io_op_unique_id = 10 as u64;
-        gen.fill_buffer(&mut buf, io_op_unique_id, io_offset_range.clone());
-        let header: Header = Header::read_header(&buf);
-        assert_eq!(header.magic_number, MAGIC_NUMBER);
-        assert_eq!(header.process_id, PROCESS_ID);
-        assert_eq!(header.fd_unique_id, TARGET_ID);
-        assert_eq!(header.generator_unique_id, GENERATOR_ID);
-        assert_eq!(header.io_op_unique_id, io_op_unique_id);
-        assert_eq!(header.file_offset, io_offset_range.start);
-        assert_eq!(header.size, io_offset_range.end - io_offset_range.start);
-        assert_eq!(header.crc32, 0xb9ab1797);
+        gen.fill_buffer(&mut buf, io_op_unique_id, io_offset_range.clone())
+            .expect("Header written successfully");
+        let header = IoHeader::read_header(&buf).expect("Header read successfully");
+        let expected_header = IoHeader {
+            magic_number: MAGIC_NUMBER,
+            process_id: PROCESS_ID,
+            fd_unique_id: TARGET_ID,
+            generator_unique_id: GENERATOR_ID,
+            io_op_unique_id: io_op_unique_id,
+            file_offset: io_offset_range.start,
+            size: io_offset_range.end - io_offset_range.start,
+            seed: 0,
+        };
+
+        assert_eq!(header, expected_header);
     }
 }

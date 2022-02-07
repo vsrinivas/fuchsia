@@ -7,15 +7,19 @@
 //! Generator thread accept a set of serializable arguments.
 use {
     crate::common_operations::create_target,
+    crate::io_header::IoHeader,
     crate::io_packet::IoPacketType,
     crate::issuer::{run_issuer, IssuerArgs},
     crate::log::Stats,
     crate::operations::{OperationType, PipelineStages},
+    crate::random_io_generator::RandomIoGenerator,
     crate::sequential_io_generator::SequentialIoGenerator,
     crate::target::{AvailableTargets, TargetOps},
     crate::verifier::{run_verifier, VerifierArgs},
-    anyhow::Error,
+    anyhow::Result,
     log::debug,
+    rand::SeedableRng,
+    rand_xorshift::XorShiftRng,
     serde::{Deserialize, Serialize},
     std::{
         clone::Clone,
@@ -129,7 +133,12 @@ pub trait Generator {
     fn get_io_range(&self) -> Range<u64>;
 
     /// Generates and fills the buf with data.
-    fn fill_buffer(&self, buf: &mut Vec<u8>, sequence_number: u64, offset_range: Range<u64>);
+    fn fill_buffer(
+        &self,
+        buf: &mut Vec<u8>,
+        sequence_number: u64,
+        offset_range: Range<u64>,
+    ) -> Result<()>;
 }
 
 /// GeneratorArgs contains only the fields that help generator make decisions
@@ -250,23 +259,42 @@ fn pick_operation_type(args: &GeneratorArgs) -> Vec<OperationType> {
     return operations;
 }
 
-/// Based on the input args this returns a generator that can generate requested
-/// IO load.For now we only allow sequential io.
+/// Based on the input args this returns a generator that can generate the requested
+/// IO load.
 fn pick_generator_type(args: &GeneratorArgs, target_id: u64) -> Box<dyn Generator> {
-    if !args.sequential {
-        panic!("Only sequential io generator is implemented at the moment");
+    if !args.align {
+        panic!("Unaligned operations are not supported");
     }
-
-    Box::new(SequentialIoGenerator::new(
-        args.magic_number,
-        args.process_id,
-        target_id,
-        args.generator_unique_id,
-        args.target_range.clone(),
-        args.block_size,
-        args.max_io_size,
-        args.align,
-    ))
+    if args.sequential {
+        Box::new(SequentialIoGenerator::new(
+            args.magic_number,
+            args.process_id,
+            target_id,
+            args.generator_unique_id,
+            args.target_range.clone(),
+            args.block_size,
+            args.max_io_size,
+        ))
+    } else {
+        if args.block_size != args.max_io_size {
+            panic!("The random io generator only supports fixed size operations");
+        }
+        if args.block_size < IoHeader::size() {
+            panic!("The block size must be larger than {} bytes", IoHeader::size());
+        }
+        if args.target_range.start % args.block_size != 0 {
+            panic!("The start of the range must be a block multiple");
+        }
+        Box::new(RandomIoGenerator::new(
+            args.magic_number,
+            args.process_id,
+            target_id,
+            args.generator_unique_id,
+            args.target_range.clone(),
+            args.block_size,
+            Box::new(XorShiftRng::seed_from_u64(args.seed)),
+        ))
+    }
 }
 
 fn run_generator(
@@ -275,7 +303,7 @@ fn run_generator(
     active_commands: &mut ActiveCommands,
     start_instant: Instant,
     io_map: Arc<Mutex<HashMap<u64, IoPacketType>>>,
-) -> Result<(), Error> {
+) -> Result<()> {
     // Generator specific target unique id.
     let target_id = 0;
 
@@ -315,7 +343,7 @@ fn run_generator(
         io_packet.timestamp_stage_start(stage);
 
         let io_offset_range = io_packet.io_offset_range().clone();
-        gen.fill_buffer(io_packet.buffer_mut(), io_sequence_number, io_offset_range);
+        gen.fill_buffer(io_packet.buffer_mut(), io_sequence_number, io_offset_range)?;
         {
             let mut map = io_map.lock().unwrap();
             map.insert(io_sequence_number, io_packet.clone());
@@ -338,7 +366,7 @@ pub fn run_load(
     args: GeneratorArgs,
     start_instant: Instant,
     stats: Arc<Mutex<Stats>>,
-) -> Result<(), Error> {
+) -> Result<()> {
     // Channel used to send commands from generator to issuer
     // This is the only bounded channel. The throttle control happens over this channel.
     // TODO(auradkar): Considering ActiveCommands and this channel are so tightly related, should
