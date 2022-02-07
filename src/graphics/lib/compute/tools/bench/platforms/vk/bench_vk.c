@@ -451,7 +451,7 @@ bench_statistics(struct bench_config const * const      config,
 
               // clang-format off
               double const h_ns_elapsed = BENCH_HOST_NS(splits[ii].host.stop   - splits[ii].host.start);
-              double const d_ns_elapsed = BENCH_HOST_NS(splits[ii].device.stop - splits[ii].device.start);
+              double const d_ns_elapsed = BENCH_DEVICE_NS(splits[ii].device.stop - splits[ii].device.start);
               // clang-format on
 
               if (!config->is_quiet)
