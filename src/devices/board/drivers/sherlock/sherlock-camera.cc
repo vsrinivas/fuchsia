@@ -147,7 +147,7 @@ constexpr pbus_mmio_t isp_mmios[] = {
 static const pbus_irq_t isp_irqs[] = {
     {
         .irq = T931_MALI_ISP_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+        .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
     },
 };
 
