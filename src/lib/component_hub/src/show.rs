@@ -16,7 +16,14 @@ use {
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-static CAPABILITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
+/// This value is somewhat arbitrarily chosen based on how long we expect a component to take to
+/// respond to a directory request. There is no clear answer for how long it should take a
+/// component to respond. A request may take unnaturally long if the host is connected to the
+/// target over a weak network connection. The target may be busy doing other work, resulting in a
+/// delayed response here. A request may never return a response, if the component is simply holding
+/// onto the directory handle without serving or dropping it. We should choose a value that balances
+/// a reasonable expectation from the component without making the user wait for too long.
+static DIR_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
 
 macro_rules! pretty_print {
     ( $f: expr, $title: expr, $value: expr ) => {
@@ -343,7 +350,13 @@ impl Execution {
 
             // Some runners may not serve the runtime directory, so attempting to get the entries
             // may fail. This is normal and should be treated as no ELF runtime.
-            if let Ok(true) = runtime_dir.exists("elf").await {
+            if let Ok(true) = runtime_dir
+                .exists("elf")
+                .on_timeout(DIR_TIMEOUT, || {
+                    Err(format_err!("timeout occurred opening `runtime` dir"))
+                })
+                .await
+            {
                 let elf_dir = runtime_dir.open_dir_readable("elf")?;
                 Some(ElfRuntime::parse(elf_dir).await?)
             } else {
@@ -356,9 +369,7 @@ impl Execution {
         let outgoing_capabilities = if exec_dir.exists("out").await? {
             let out_dir = exec_dir.open_dir_readable("out")?;
             get_capabilities(out_dir)
-                .on_timeout(CAPABILITY_TIMEOUT, || {
-                    Err(format_err!("Timeout occurred opening `out` dir"))
-                })
+                .on_timeout(DIR_TIMEOUT, || Err(format_err!("timeout occurred opening `out` dir")))
                 .await
                 .ok()
         } else {
@@ -391,9 +402,7 @@ impl Execution {
         let outgoing_capabilities = if hub_dir.exists("out").await? {
             let out_dir = hub_dir.open_dir_readable("out")?;
             get_capabilities(out_dir)
-                .on_timeout(CAPABILITY_TIMEOUT, || {
-                    Err(format_err!("Timeout occurred opening `out` dir"))
-                })
+                .on_timeout(DIR_TIMEOUT, || Err(format_err!("timeout occurred opening `out` dir")))
                 .await
                 .ok()
         } else {
