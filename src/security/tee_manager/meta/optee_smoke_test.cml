@@ -1,0 +1,52 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // Depends on config_data which is a system capability.
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/optee_smoke_test",
+    },
+    children: [
+        {
+            name: "tee_manager",
+            url: "#meta/tee_manager.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.tee.Application.808032e0-fd9e-4e6f-8896-544735c98480",
+                "fuchsia.tee.DeviceInfo",
+            ],
+            from: "#tee_manager",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#tee_manager",
+        },
+        {
+            directory: "dev-tee",
+            from: "parent",
+            to: "#tee_manager",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#tee_manager",
+            subdir: "tee_manager",
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: "#tee_manager",
+        },
+    ],
+}
