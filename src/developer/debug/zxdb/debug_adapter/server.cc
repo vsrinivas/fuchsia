@@ -37,6 +37,10 @@ Err DebugAdapterServer::Init() {
     addr.sin6_family = AF_INET6;
     addr.sin6_addr = in6addr_any;
     addr.sin6_port = htons(port_);
+    const int value = 1;
+    if (setsockopt(server_socket_.get(), SOL_SOCKET, SO_REUSEADDR, &value, sizeof(value)) < 0) {
+      return Err("Could not set SO_REUSEADDR");
+    }
     if (bind(server_socket_.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
       return Err("Could not bind socket to port: %d", port_);
     }
