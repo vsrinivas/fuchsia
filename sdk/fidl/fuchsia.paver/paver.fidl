@@ -192,6 +192,13 @@ protocol DataSink {
         status zx.status;
     });
 
+    /// Writes FVM with raw nand data streamed via `payload`.
+    WriteRawVolumes(resource struct {
+        payload client_end:PayloadStream;
+    }) -> (struct {
+        status zx.status;
+    });
+
     // TODO(fxbug.dev/45606): transition users to `WriteFirmware()` and delete this.
     /// Writes bootloader partition with data from `payload`.
     ///

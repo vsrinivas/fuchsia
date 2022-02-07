@@ -179,6 +179,26 @@ zx::status<> FvmPave(const fbl::unique_fd& devfs_root, const DevicePartitioner& 
   return zx::ok();
 }
 
+zx::status<> FvmReplay(const fbl::unique_fd& devfs_root, const DevicePartitioner& partitioner, 
+                       std::unique_ptr<fvm::ReaderInterface> payload) {
+  LOG("Replaying FVM partition.\n");
+  if (!partitioner.IsFvmWithinFtl()) {
+    ERROR("Failed to replay FVM: this action can only be performed on devices where the FVM "
+          "resides within the FTL.\n");
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  ERROR("Replaying FVM partition not implemented yet\n");
+  return zx::error(ZX_ERR_NOT_SUPPORTED);
+  // TODO: open the block device
+  // sys/platform/05:00:f/aml-raw_nand/nand/fvm
+  // nandpart root = "<devfs_root>/sys/platform/05:00:f/aml-raw_nand/nand/"
+  // nandpart child is "fvm"
+  // TODO: openat(devfs_root.get(), "sys/platform/05:00:f/aml-raw_nand/nand/fvm");
+  // TODO: issue the nandpart client commands here
+  // return zx::ok();
+}
+
 // Formats the FVM partition and returns a channel to the new volume.
 zx::status<zx::channel> FormatFvm(const fbl::unique_fd& devfs_root,
                                   const DevicePartitioner& partitioner) {
@@ -624,6 +644,15 @@ zx::status<> DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
     return status.take_error();
   }
   return FvmPave(devfs_root_, *partitioner_, std::move(status.value()));
+}
+
+zx::status<> DataSinkImpl::WriteRawVolumes(zx::channel payload_stream) {
+  auto status = StreamReader::Create(std::move(payload_stream));
+  if (status.is_error()) {
+    ERROR("Unable to create stream.\n");
+    return status.take_error();
+  }
+  return FvmReplay(devfs_root_, *partitioner_, std::move(status.value()));
 }
 
 // Deprecated in favor of WriteFirmware().

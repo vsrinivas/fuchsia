@@ -84,6 +84,8 @@ class DataSinkImpl {
 
   zx::status<> WriteVolumes(zx::channel payload_stream);
 
+  zx::status<> WriteRawVolumes(zx::channel payload_stream);
+
   zx::status<> WriteBootloader(fuchsia_mem::wire::Buffer payload);
 
   zx::status<> WriteDataFile(fidl::StringView filename, fuchsia_mem::wire::Buffer payload);
@@ -123,6 +125,11 @@ class DataSink : public fidl::WireServer<fuchsia_paver::DataSink> {
   void WriteVolumes(WriteVolumesRequestView request,
                     WriteVolumesCompleter::Sync& completer) override {
     completer.Reply(sink_.WriteVolumes(request->payload.TakeChannel()).status_value());
+  }
+
+  void WriteRawVolumes(WriteRawVolumesRequestView request,
+                       WriteRawVolumesCompleter::Sync& completer) override {
+    completer.Reply(sink_.WriteRawVolumes(request->payload.TakeChannel()).status_value());
   }
 
   void WriteBootloader(WriteBootloaderRequestView request,
@@ -175,6 +182,11 @@ class DynamicDataSink : public fidl::WireServer<fuchsia_paver::DynamicDataSink> 
   void WriteVolumes(WriteVolumesRequestView request,
                     WriteVolumesCompleter::Sync& completer) override {
     completer.Reply(sink_.WriteVolumes(request->payload.TakeChannel()).status_value());
+  }
+
+  void WriteRawVolumes(WriteRawVolumesRequestView request,
+                       WriteRawVolumesCompleter::Sync& completer) override {
+    completer.Reply(sink_.WriteRawVolumes(request->payload.TakeChannel()).status_value());
   }
 
   void WriteBootloader(WriteBootloaderRequestView request,

@@ -70,6 +70,7 @@ class Paver : public PaverInterface {
     kFirmware,
     kDataFile,
     kFvm,
+    kFvmRaw,
     kInitPartitionTables,
     kWipePartitionTables,
   };

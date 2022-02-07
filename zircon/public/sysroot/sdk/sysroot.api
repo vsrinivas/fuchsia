@@ -187,7 +187,7 @@
   "include/zircon/boot/driver-config.h": "c3dde151b634076ca9b946585e4bef7b",
   "include/zircon/boot/image.h": "ea7d6b275e9f07eb7e068e7ef8ef29f9",
   "include/zircon/boot/multiboot.h": "75c4ffa342d5ca0da1d261796e91a990",
-  "include/zircon/boot/netboot.h": "e226f8e10be309db8273546862108f11",
+  "include/zircon/boot/netboot.h": "d4ac26513d84a9a9a272329ef7f685b2",
   "include/zircon/boot/sysconfig.h": "b81d51a7e75a7117566005f41766f192",
   "include/zircon/compiler.h": "1dd6601600b7c036d5247f5f5dc73b41",
   "include/zircon/device/audio.h": "7e2afee52e24ad839a479e4cba9247a5",

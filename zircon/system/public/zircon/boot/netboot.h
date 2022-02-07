@@ -63,6 +63,8 @@
 #define NB_IMAGE_PREFIX "<<image>>"
 #define NB_FVM_HOST_FILENAME "sparse.fvm"
 #define NB_FVM_FILENAME NB_IMAGE_PREFIX NB_FVM_HOST_FILENAME
+#define NB_NAND_FVM_HOST_FILENAME "nanddump.fvm"
+#define NB_NAND_FVM_FILENAME NB_IMAGE_PREFIX NB_NAND_FVM_HOST_FILENAME
 #define NB_BOOTLOADER_HOST_FILENAME "bootloader.img"
 #define NB_BOOTLOADER_FILENAME NB_IMAGE_PREFIX NB_BOOTLOADER_HOST_FILENAME
 // Firmware images are slightly different, as they have an optional type suffix:

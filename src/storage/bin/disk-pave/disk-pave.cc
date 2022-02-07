@@ -46,6 +46,7 @@ void PrintUsage() {
   ERROR("  install-vbmetab    : Install a VBMETA-B partition to the device\n");
   ERROR("  install-vbmetar    : Install a VBMETA-R partition to the device\n");
   ERROR("  install-fvm        : Install a sparse FVM to the device\n");
+  ERROR("  install-raw-fvm    : Install a raw FVM (from NAND dump) to the device\n");
   ERROR("  install-data-file  : Install a file to DATA (--path required)\n");
   ERROR("  wipe               : Remove the FVM partition\n");
   ERROR("  init-partition-tables : Initialize block device with valid GPT and FVM\n");
@@ -69,6 +70,7 @@ enum class Command {
   kBootloader,
   kDataFile,
   kFvm,
+  kFvmRaw,
 };
 
 struct Flags {
@@ -131,6 +133,8 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
     flags->cmd = Command::kDataFile;
   } else if (!strcmp(argv[0], "install-fvm")) {
     flags->cmd = Command::kFvm;
+  } else if (!strcmp(argv[0], "install-raw-fvm")) {
+    flags->cmd = Command::kFvmRaw;
   } else if (!strcmp(argv[0], "wipe")) {
     flags->cmd = Command::kWipe;
   } else if (!strcmp(argv[0], "init-partition-tables")) {
@@ -289,6 +293,36 @@ zx_status_t RealMain(Flags flags) {
 
       auto result =
           fidl::BindSyncClient(std::move(data_sink_local))->WriteVolumes(std::move(client));
+      zx_status_t status = result.ok() ? result.value().status : result.status();
+      if (status != ZX_OK) {
+        ERROR("Failed to write volumes: %s\n", zx_status_get_string(status));
+        return status;
+      }
+
+      return ZX_OK;
+    }
+    case Command::kFvmRaw: {
+      auto data_sink = fidl::CreateEndpoints<fuchsia_paver::DataSink>();
+      if (data_sink.is_error()) {
+        ERROR("Unable to create channels.\n");
+        return data_sink.status_value();
+      }
+      auto [data_sink_local, data_sink_remote] = std::move(*data_sink);
+      paver_client->FindDataSink(std::move(data_sink_remote));
+
+      auto streamer_endpoints = fidl::CreateEndpoints<fuchsia_paver::PayloadStream>();
+      if (streamer_endpoints.is_error()) {
+        return streamer_endpoints.status_value();
+      }
+      auto [client, server] = std::move(*streamer_endpoints);
+
+      // Launch thread which implements interface.
+      async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+      disk_pave::PayloadStreamer streamer(std::move(server), std::move(flags.payload_fd));
+      loop.StartThread("payload-stream");
+
+      auto result =
+          fidl::BindSyncClient(std::move(data_sink_local))->WriteRawVolumes(std::move(client));
       zx_status_t status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Failed to write volumes: %s\n", zx_status_get_string(status));

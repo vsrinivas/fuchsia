@@ -18,6 +18,19 @@ executable("bootserver") {
   ]
 }
 
+executable("replay-nand") {
+  sources = [
+    "replay-nand.c",
+    "netboot.c",
+    "tftp.c",
+  ]
+  deps = [ "//zircon/system/ulib/tftp" ]
+  configs += [
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
+}
+
 sdk_host_tool("bootserver_sdk") {
   category = "partner"
   output_name = "bootserver"
@@ -25,6 +38,12 @@ sdk_host_tool("bootserver_sdk") {
 }
 
 install_host_tools("host") {
-  deps = [ ":bootserver" ]
-  outputs = [ "bootserver" ]
+  deps = [
+    ":bootserver",
+    ":replay-nand",
+  ]
+  outputs = [
+    "bootserver",
+    "replay-nand",
+  ]
 }
