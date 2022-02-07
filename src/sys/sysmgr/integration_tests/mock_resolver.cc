@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
+#include <zircon/device/vfs.h>
 
 #include <memory>
 #include <vector>
@@ -27,7 +28,7 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
 
   void Resolve(::std::string package_uri, ::fidl::InterfaceRequest<fuchsia::io::Directory> dir,
                ResolveCallback callback) override {
-    fdio_service_connect("/pkg", dir.TakeChannel().release());
+    fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE, dir.TakeChannel().release());
     callback(fuchsia::pkg::PackageResolver_Resolve_Result::WithResponse({}));
   }
 
