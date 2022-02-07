@@ -1,0 +1,25 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//products/core.gni")
+
+base_package_labels += [ "//src/media/audio/bundles:services" ]
+
+# Remove as much as possible from core to produce a minimal headless system. We
+# eventually have to reintroduce some of these packages to support a fully
+# functional product. See fxbug.dev/92985 for milestone progress.
+base_package_labels -= [
+  "//garnet/bin/setui:setui_service",
+  "//src/connectivity/bluetooth:core",
+  "//src/intl/intl_services:pkg_small",
+  "//src/intl/intl_services/config:sysmgr_small",
+  "//src/intl/intl_services/config:sysmgr_small_timezones",
+  "//src/media/audio/bundles:services",
+  "//src/media/audio/bundles:audio_config",
+  "//src/sys/activity",
+]
+
+cache_package_labels += []
+
+universe_package_labels += []

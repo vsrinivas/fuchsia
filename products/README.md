@@ -31,3 +31,11 @@ Builds on [core](#core).
 A system that software developers can use to get work done.
 
 Builds on [terminal](#terminal).
+
+## Headless track
+
+### Speaker
+
+A system without a graphical user interface.
+
+Builds on [core](#core).
