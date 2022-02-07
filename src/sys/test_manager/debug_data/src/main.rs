@@ -27,15 +27,27 @@ async fn main() -> Result<(), Error> {
     let event_stream = event_source.take_static_event_stream("EventStream").await?.unwrap();
 
     let mut fs = ServiceFs::new();
-    fs.dir("svc")
-        .add_fidl_service(|request: ftest_internal::DebugDataControllerRequestStream| request);
-    fs.take_and_serve_directory_handle()?;
-    let debug_data_controller_stream = fs.flatten();
+    inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
 
-    debug_data_set::handle_debug_data_controller_and_events(
-        debug_data_controller_stream,
-        event_stream.into_stream()?,
-        DebugRequestHandlerImpl,
+    // Here we send debug data requests to another future, so that we can poll
+    // the fs stream separately from the future that handles debug data requests.
+    // This seems to be necessary to ensure that futures serving inspect are polled.
+    let (request_stream_send, request_stream_recv) = mpsc::unbounded();
+    fs.dir("svc").add_fidl_service(
+        move |request: ftest_internal::DebugDataControllerRequestStream| {
+            let _ = request_stream_send.unbounded_send(request);
+        },
+    );
+    fs.take_and_serve_directory_handle()?;
+
+    futures::future::join(
+        debug_data_set::handle_debug_data_controller_and_events(
+            request_stream_recv.flatten(),
+            event_stream.into_stream()?,
+            DebugRequestHandlerImpl,
+            fuchsia_inspect::component::inspector().root(),
+        ),
+        fs.collect::<()>(),
     )
     .await;
     Ok(())

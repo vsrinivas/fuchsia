@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 {
     include: [
+        "inspect/client.shard.cml",
         "syslog/client.shard.cml",
-        "syslog/elf_stdio.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/debug_data_rust_bin",
     },
     children: [
