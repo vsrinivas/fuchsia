@@ -20,8 +20,8 @@ struct fdf_dispatcher;
 namespace driver_runtime {
 
 class CallbackRequest;
-using Callback = fit::inline_callback<void(std::unique_ptr<CallbackRequest>, fdf_status_t),
-                                      sizeof(fbl::RefPtr<Object>)>;
+using Callback =
+    fit::inline_callback<void(std::unique_ptr<CallbackRequest>, fdf_status_t), sizeof(void*) * 2>;
 
 // Wraps a callback so that it can be added to a list.
 class CallbackRequest : public fbl::DoublyLinkedListable<std::unique_ptr<CallbackRequest>> {
@@ -34,14 +34,19 @@ class CallbackRequest : public fbl::DoublyLinkedListable<std::unique_ptr<Callbac
 
   // Initializes the callback to be queued.
   // Sets the dispatcher, and the callback that will be called by |Call|.
+  // |async_operation| is the async_dispatcher_t operation that this callback request manages.
   void SetCallback(struct fdf_dispatcher* dispatcher, Callback callback,
-                   fdf_status_t callback_reason) {
+                   fdf_status_t callback_reason, void* async_operation = nullptr) {
     ZX_ASSERT(!dispatcher_);
     ZX_ASSERT(!callback_);
     ZX_ASSERT(!reason_);
+    ZX_ASSERT(!async_operation_);
     dispatcher_ = dispatcher;
     callback_ = std::move(callback);
     reason_ = callback_reason;
+    if (async_operation) {
+      async_operation_ = async_operation;
+    }
   }
 
   // Calls the callback, returning ownership of the request back the original requester,
@@ -53,6 +58,7 @@ class CallbackRequest : public fbl::DoublyLinkedListable<std::unique_ptr<Callbac
     }
     dispatcher_ = nullptr;
     reason_ = std::nullopt;
+    async_operation_ = std::nullopt;
     callback_(std::move(callback_request), status);
   }
 
@@ -65,7 +71,16 @@ class CallbackRequest : public fbl::DoublyLinkedListable<std::unique_ptr<Callbac
   void Reset() {
     dispatcher_ = nullptr;
     reason_ = std::nullopt;
+    async_operation_ = std::nullopt;
     callback_ = nullptr;
+  }
+
+  // Returns whether this callback manages an async_dispatcher_t operation.
+  bool has_async_operation() const { return async_operation_.has_value() && *async_operation_; }
+
+  // Returns whether this callback manages |operation|.
+  bool holds_async_operation(void* operation) const {
+    return async_operation_.has_value() && *async_operation_ == operation;
   }
 
  private:
@@ -73,6 +88,8 @@ class CallbackRequest : public fbl::DoublyLinkedListable<std::unique_ptr<Callbac
   Callback callback_;
   // Reason for scheduling the callback.
   std::optional<fdf_status_t> reason_;
+  // The async_dispatcher_t operation that this callback request is wrapping around.
+  std::optional<void*> async_operation_;
 };
 
 }  // namespace driver_runtime

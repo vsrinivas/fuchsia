@@ -292,8 +292,11 @@ TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacksReentrant) {
   ASSERT_OK(sync_completion_wait(&local[0].entered_callback, ZX_TIME_INFINITE));
   sync_completion_signal(&local[0].complete_blocking_read);
 
-  // Check that we aren't blocking the second thread by posting a task.
-  async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(dispatcher);
+  // Check that we aren't blocking the second thread by posting a task to another
+  // dispatcher.
+  fdf_dispatcher_t* dispatcher2;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", driver, &dispatcher2));
+  async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(dispatcher2);
   ASSERT_NOT_NULL(async_dispatcher);
 
   sync_completion_t task_completion;
@@ -803,6 +806,58 @@ TEST_F(DispatcherTest, FromAsyncDispatcher) {
   ASSERT_NOT_NULL(async_dispatcher);
 
   ASSERT_EQ(fdf_dispatcher_from_async_dispatcher(async_dispatcher), dispatcher);
+}
+
+TEST_F(DispatcherTest, CancelTask) {
+  loop_.Quit();
+  loop_.JoinThreads();
+  loop_.ResetQuit();
+
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+
+  async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(dispatcher);
+  ASSERT_NOT_NULL(async_dispatcher);
+
+  async::TaskClosure task;
+  task.set_handler([] { ASSERT_FALSE(true); });
+  ASSERT_OK(task.Post(async_dispatcher));
+
+  ASSERT_OK(task.Cancel());  // Task should not be running yet.
+}
+
+TEST_F(DispatcherTest, CancelTaskNotYetPosted) {
+  loop_.Quit();
+  loop_.JoinThreads();
+  loop_.ResetQuit();
+
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+
+  async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(dispatcher);
+  ASSERT_NOT_NULL(async_dispatcher);
+
+  async::TaskClosure task;
+  task.set_handler([] { ASSERT_FALSE(true); });
+
+  ASSERT_EQ(task.Cancel(), ZX_ERR_NOT_FOUND);  // Task should not be running yet.
+}
+
+TEST_F(DispatcherTest, CancelTaskAlreadyRunning) {
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+
+  async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(dispatcher);
+  ASSERT_NOT_NULL(async_dispatcher);
+
+  async::TaskClosure task;
+  sync::Completion completion;
+  task.set_handler([&] {
+    ASSERT_EQ(task.Cancel(), ZX_ERR_NOT_FOUND);  // Task is already running.
+    completion.Signal();
+  });
+  ASSERT_OK(task.Post(async_dispatcher));
+  ASSERT_OK(completion.Wait(zx::time::infinite()));
 }
 
 //

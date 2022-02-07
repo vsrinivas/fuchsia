@@ -193,15 +193,26 @@ zx_status_t Dispatcher::CancelWait(async_wait_t* wait) {
 }
 
 zx_status_t Dispatcher::PostTask(async_task_t* task) {
-  fbl::AutoLock lock(&callback_lock_);
-  if (shutting_down_) {
+  // TODO(92740): we should do something more efficient rather than creating a new
+  // callback request each time.
+  auto callback_request = std::make_unique<driver_runtime::CallbackRequest>();
+  driver_runtime::Callback callback =
+      [this, task](std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
+                   fdf_status_t status) { task->handler(this, task, status); };
+  callback_request->SetCallback(static_cast<fdf_dispatcher_t*>(this), std::move(callback), ZX_OK,
+                                task);
+  // TODO(92878): handle task deadlines.
+  callback_request = QueueCallback(std::move(callback_request));
+  // Dispatcher returned callback request as queueing failed.
+  if (callback_request) {
     return ZX_ERR_BAD_STATE;
   }
-  return async_post_task(process_shared_dispatcher_, task);
+  return ZX_OK;
 }
 
 zx_status_t Dispatcher::CancelTask(async_task_t* task) {
-  return async_cancel_task(process_shared_dispatcher_, task);
+  auto callback_request = CancelAsyncOperation(task);
+  return callback_request ? ZX_OK : ZX_ERR_NOT_FOUND;
 }
 
 zx_status_t Dispatcher::QueuePacket(async_receiver_t* receiver, const zx_packet_user_t* data) {
@@ -224,11 +235,15 @@ zx_status_t Dispatcher::UnbindIrq(async_irq_t* irq) {
   return async_unbind_irq(process_shared_dispatcher_, irq);
 }
 
-void Dispatcher::QueueCallback(std::unique_ptr<driver_runtime::CallbackRequest> callback_request) {
+std::unique_ptr<driver_runtime::CallbackRequest> Dispatcher::QueueCallback(
+    std::unique_ptr<driver_runtime::CallbackRequest> callback_request) {
   // Whether we want to call the callback now, or queue it to be run on the async loop.
   bool direct_call = false;
   {
     fbl::AutoLock lock(&callback_lock_);
+    if (shutting_down_) {
+      return callback_request;
+    }
     // Synchronous dispatchers do not allow parallel callbacks.
     // Blocking dispatchers are required to queue all callbacks onto the async loop.
     if (unsynchronized_ || (!dispatching_sync_ && !allow_sync_calls_)) {
@@ -249,17 +264,21 @@ void Dispatcher::QueueCallback(std::unique_ptr<driver_runtime::CallbackRequest> 
 
     fbl::AutoLock lock(&callback_lock_);
     dispatching_sync_ = false;
-    if (!callback_queue_.is_empty() && !event_waiter_->signaled()) {
+    if (!callback_queue_.is_empty() && !event_waiter_->signaled() && !shutting_down_) {
       event_waiter_->signal();
     }
-    return;
+    return nullptr;
   }
 
   fbl::AutoLock lock(&callback_lock_);
+  if (shutting_down_) {
+    return callback_request;
+  }
   callback_queue_.push_back(std::move(callback_request));
   if (!event_waiter_->signaled()) {
     event_waiter_->signal();
   }
+  return nullptr;
 }
 
 std::unique_ptr<CallbackRequest> Dispatcher::CancelCallback(CallbackRequest& callback_request) {
@@ -277,6 +296,13 @@ bool Dispatcher::SetCallbackReason(CallbackRequest* callback_to_update,
   }
   callback_to_update->SetCallbackReason(callback_reason);
   return true;
+}
+
+std::unique_ptr<CallbackRequest> Dispatcher::CancelAsyncOperation(void* operation) {
+  fbl::AutoLock lock(&callback_lock_);
+  return callback_queue_.erase_if([operation](const CallbackRequest& callback_request) {
+    return callback_request.holds_async_operation(operation);
+  });
 }
 
 void Dispatcher::DispatchCallback(
@@ -314,10 +340,22 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
     }
     dispatching_sync_ = true;
 
+    // For synchronized dispatchers, cancellation of ChannelReads are guaranteed to succeed.
+    // Since cancellation may be called from the ChannelRead, or from another async operation
+    // (like a task), we need to make sure that if we are calling an async operation
+    // that is the only callback request pulled from the callback queue.
+    // This will guarantee that cancellation will always succeed without having to lock |to_call|.
+    bool has_async_op = false;
     uint32_t n = 0;
-    while ((n < kBatchSize) && !callback_queue_.is_empty()) {
+    while ((n < kBatchSize) && !callback_queue_.is_empty() && !has_async_op) {
       std::unique_ptr<CallbackRequest> callback_request = callback_queue_.pop_front();
       ZX_ASSERT(callback_request);
+      has_async_op = !unsynchronized_ && callback_request->has_async_operation();
+      // For synchronized dispatchers, an async operation should be the only member in |to_call|.
+      if (has_async_op && n > 0) {
+        callback_queue_.push_front(std::move(callback_request));
+        break;
+      }
       to_call.push_back(std::move(callback_request));
       n++;
     }

@@ -75,7 +75,9 @@ class Dispatcher : public async_dispatcher_t, public fbl::RefCounted<Dispatcher>
   // Queue a callback to be invoked by the dispatcher.
   // Depending on the dispatcher options set and which driver is calling this,
   // the callback can occur on the current thread or be queued up to run on a dispatcher thread.
-  void QueueCallback(std::unique_ptr<CallbackRequest> callback_request);
+  // Takes ownership of |callback_request|. If the dispatcher is already shutting down,
+  // ownership of |callback_request| will be returned to the caller.
+  std::unique_ptr<CallbackRequest> QueueCallback(std::unique_ptr<CallbackRequest> callback_request);
 
   // Removes the callback matching |callback_request| from the queue and returns it.
   // May return nullptr if no such callback is found.
@@ -85,6 +87,10 @@ class Dispatcher : public async_dispatcher_t, public fbl::RefCounted<Dispatcher>
   // This may fail if the callback is already running or scheduled to run.
   // Returns true if a callback matching |callback_request| was found, false otherwise.
   bool SetCallbackReason(CallbackRequest* callback_request, fdf_status_t callback_reason);
+
+  // Removes the callback that manages the async dispatcher |operation| and returns it.
+  // May return nullptr if no such callback is found.
+  std::unique_ptr<CallbackRequest> CancelAsyncOperation(void* operation);
 
   // Returns the dispatcher options specified by the user.
   uint32_t options() const { return options_; }
