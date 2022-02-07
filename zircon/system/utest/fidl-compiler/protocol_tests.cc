@@ -530,20 +530,6 @@ protocol MyProtocol {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResponsesWithErrorsMustNotBeEmpty);
 }
 
-// TODO(fxbug.dev/76349): using empty structs as request/response payloads is
-//  only supported in the new syntax. Until this is supported, we throw a user
-//  facing error instead.
-TEST(NewSyntaxTests, BadMethodEmptyRequestStruct) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol MyProtocol {
-  MyMethod(struct {}) -> ();
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
-}
-
 TEST(ProtocolTests, GoodMethodNamedTypeRequest) {
   TestLibrary library(R"FIDL(
 library example;

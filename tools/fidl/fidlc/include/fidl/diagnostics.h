@@ -154,7 +154,7 @@ constexpr ErrorDef ErrComposingNonProtocol("This declaration is not a protocol")
 constexpr ErrorDef<const flat::Decl *> ErrInvalidParameterListType(
     "'{}' cannot be used as a parameter list");
 constexpr ErrorDef<const flat::Decl *> ErrNotYetSupportedParameterListType(
-    "'{}' cannot be yet be used as a parameter list (http://fxbug.dev/76349)");
+    "'{}' cannot be yet be used as a parameter list (http://fxbug.dev/88343)");
 constexpr ErrorDef<SourceSpan> ErrResponsesWithErrorsMustNotBeEmpty(
     "must define success type of method '{}'");
 constexpr ErrorDef<std::string_view> ErrEmptyPayloadStructs(

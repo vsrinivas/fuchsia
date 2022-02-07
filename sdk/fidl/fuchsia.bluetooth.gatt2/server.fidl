@@ -84,7 +84,7 @@ protocol LocalService {
     /// - response  The implementation must send an empty response once the value has been updated
     ///   as confirmation.
     /// * error See `gatt2.Error` documentation for possible errors.
-    // TODO(fxbug.dev/76349): Once table payloads are available, consider whether we could use an
+    // TODO(fxbug.dev/92757): Once table payloads are available, consider whether we could use an
     // anonymous table here instead of a table within a struct.
     WriteValue(struct {
         params WriteValueParameters;
@@ -105,7 +105,7 @@ protocol LocalService {
     /// LocalServices must keep track of available credit provided by the `ValueChangedCredit`
     /// method and send at most that many `OnNotifyValue` and `OnIndicateValue` events. If more
     /// events are sent than available credits, the protocol will be closed.
-    // TODO(fxbug.dev/76349): Once named payload layouts and table payloads are available, consider
+    // TODO(fxbug.dev/92757): Once named payload layouts and table payloads are available, consider
     // whether this can be simply -> OnNotifyValue(ValueChangedParameters)
     -> OnNotifyValue(struct {
         update ValueChangedParameters;

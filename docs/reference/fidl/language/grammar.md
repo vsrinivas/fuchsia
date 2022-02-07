@@ -250,7 +250,7 @@ an enum thereof.
 
 ### NOTE 8
 
-<!-- TODO(fxbug.dev/76349): update this when complete -->
+<!-- TODO(fxbug.dev/88343): update this when complete -->
 The `parameter-list` allows the more liberal `type-constructor` in the grammar,
 but the compiler only supports layouts that are non-empty structs.
 
