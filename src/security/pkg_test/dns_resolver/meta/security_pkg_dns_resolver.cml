@@ -1,0 +1,30 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/syslog/client.shard.cml",
+        "//sdk/lib/syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        binary: "bin/security_pkg_dns_resolver",
+    },
+    capabilities: [
+        { protocol: "fuchsia.net.name.Lookup" },
+    ],
+    use: [
+        // Parse repository URL(s) from `pkg-resolver` config to determine
+        // hostname(s) that will be used for updates.
+        {
+            directory: "pkg-resolver-repositories",
+            rights: [ "r*" ],
+            path: "/pkg-resolver-repositories",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.net.name.Lookup",
+            from: "self",
+        },
+    ],
+}

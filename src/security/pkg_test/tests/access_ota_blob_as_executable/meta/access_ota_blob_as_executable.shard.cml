@@ -5,6 +5,7 @@
     include: [
         "//sdk/lib/inspect/client.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
+        "//src/lib/fuchsia-hyper/hyper_testing.shard.cml",
         "//src/sys/test_manager/system-test.shard.cml", // For fuchsia.kernel.VmexResource.
         "//src/sys/test_runners/rust/default.shard.cml",
     ],
@@ -33,11 +34,21 @@
             name: "paver",
             url: "#meta/security_pkg_paver.cm",
         },
+        {
+            name: "dns_resolver",
+            url: "#meta/security_pkg_dns_resolver.cm",
+        },
 
         // Non-production dependencies.
         {
             name: "cobalt",
             url: "#meta/mock_cobalt.cm",
+        },
+
+        // Production non-package delivery components.
+        {
+            name: "netstack",
+            url: "#meta/netstack.cm",
         },
 
         // Production package delivery components.
@@ -163,6 +174,29 @@
             to: "#pkg-resolver",
         },
         {
+            protocol: "fuchsia.net.name.Lookup",
+            from: "#dns_resolver",
+            to: [
+                "#pkg-resolver",
+                "#pkg_server",
+            ],
+        },
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#netstack",
+            to: [
+                "#pkg-resolver",
+                "#pkg_server",
+            ],
+        },
+        {
+            directory: "pkgfs",
+            from: "#fshost",
+            as: "pkg-resolver-repositories",
+            to: "#dns_resolver",
+            subdir: "packages/config-data/0/meta/data/pkg-resolver/repositories",
+        },
+        {
             protocol: "fuchsia.pkg.PackageCache",
             from: "#pkg-cache",
             to: [
@@ -244,11 +278,7 @@
         //     to: "#pkg-cache",
         // },
         // {
-        //     protocol: [
-        //         "fuchsia.net.name.Lookup",
-        //         "fuchsia.posix.socket.Provider",
-        //         "fuchsia.pkg.LocalMirror",
-        //     ],
+        //     protocol: "fuchsia.pkg.LocalMirror",
         //     from: "???",
         //     to: "#pkg-resolver",
         // },

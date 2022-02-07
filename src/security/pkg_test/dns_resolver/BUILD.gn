@@ -1,0 +1,31 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_test_component.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("security_pkg_dns_resolver-binary") {
+  testonly = true
+  output_name = "security_pkg_dns_resolver"
+  edition = "2018"
+  source_root = "src/main.rs"
+
+  sources = [ "src/main.rs" ]
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/security/pkg_test/util",
+  ]
+}
+
+fuchsia_test_component("security_pkg_dns_resolver-component") {
+  component_name = "security_pkg_dns_resolver"
+  manifest = "meta/security_pkg_dns_resolver.cml"
+  deps = [ ":security_pkg_dns_resolver-binary" ]
+}

@@ -142,7 +142,8 @@ template("access_ota_blob_as_executable") {
       ":fshost_v0-component",
       ":fshost_v1-component",
 
-      # Paver service for update flow.
+      # Fake services for update flow.
+      "//src/security/pkg_test/dns_resolver:security_pkg_dns_resolver-component",
       "//src/security/pkg_test/paver:security_pkg_paver-component",
 
       # Production SWD components.
@@ -151,7 +152,6 @@ template("access_ota_blob_as_executable") {
       "//src/sys/pkg/bin/system-updater:component",
 
       # Production network components for OTA update.
-      "//src/connectivity/network/dns:component",
       "//src/connectivity/network/netstack:component",
 
       # Mock SWD component dependencies.

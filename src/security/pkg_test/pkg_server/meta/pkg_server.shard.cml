@@ -5,7 +5,6 @@
     include: [
         "//sdk/lib/syslog/client.shard.cml",
         "//sdk/lib/syslog/elf_stdio.shard.cml",
-        "//src/lib/fuchsia-hyper/hyper_testing.shard.cml",
         "//src/sys/test_runners/tmp_storage.shard.cml",
     ],
     program: {
@@ -17,14 +16,6 @@
     children: [
         // Note: Manifests including this shard must provide children:
         //   fshost
-        {
-            name: "netstack",
-            url: "#meta/netstack.cm",
-        },
-        {
-            name: "dns_resolver",
-            url: "#meta/dns_resolver.cm",
-        },
     ],
     capabilities: [
         { protocol: "test.security.pkg.PackageServer" },
@@ -42,11 +33,11 @@
         },
         {
             protocol: "fuchsia.posix.socket.Provider",
-            from: "#netstack",
+            from: "parent",
         },
         {
             protocol: "fuchsia.net.name.Lookup",
-            from: "#dns_resolver",
+            from: "parent",
         },
     ],
     offer: [
