@@ -451,5 +451,5 @@ advice in [Troubleshooting components][troubleshooting-components].
 [trf-provided-test-runners]: /src/sys/test_runners
 [trf-test-manager]: /docs/development/testing/components/test_runner_framework.md#the_test_manager
 [trf-test-runners]: /docs/development/testing/components/test_runner_framework.md#test-runners
-[troubleshooting-components]: /docs/development/components/v2/troubleshooting.md
+[troubleshooting-components]: /docs/development/components/troubleshooting.md
 [unit-test-manifests]: /docs/development/components/build.md#unit-tests

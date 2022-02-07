@@ -363,6 +363,6 @@ covered in a [separate roadmap document][oot-system-testing].
 [testrunner]: /tools/testing/testrunner/README.md
 [testwithenvironment]: /sdk/lib/sys/cpp/testing/test_with_environment.h
 [trf]: /docs/development/testing/components/test_runner_framework.md
-[troubleshooting-run-test-component]: /docs/development/components/v2/troubleshooting.md#troubleshoot-test
+[troubleshooting-run-test-component]: /docs/development/components/troubleshooting.md#troubleshoot-test
 [v1-test-system-services]: /docs/concepts/testing/v1_test_component.md#additional_system_services
 [workstation-out-of-tree]: /docs/contribute/roadmap/2021/workstation_out_of_tree.md

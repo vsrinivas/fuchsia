@@ -11,7 +11,7 @@ toc:
 - title: "Run components"
   path: /docs/development/components/run.md
 - title: "Troubleshooting components"
-  path: /docs/development/components/v2/troubleshooting.md
+  path: /docs/development/components/troubleshooting.md
 - title: "Provide data files to components"
   path: /docs/development/components/data.md
 - title: "Component storage index"

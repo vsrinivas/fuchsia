@@ -555,4 +555,4 @@ correctly, try following the advice in
 [manifests-use]: https://fuchsia.dev/reference/cml#use
 [sysmgr-config]: /docs/concepts/components/v1/sysmgr.md
 [sysmgr-config-search]: https://cs.opensource.google/search?q=fuchsia-pkg:%2F%2Ffuchsia.com%2F.*%23meta%2Fmy_component.cmx%20-f:.*.cmx$%20%5C%22services%5C%22&ss=fuchsia
-[troubleshooting-components]: /docs/development/components/v2/troubleshooting.md
+[troubleshooting-components]: /docs/development/components/troubleshooting.md
