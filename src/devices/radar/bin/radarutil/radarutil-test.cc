@@ -317,7 +317,7 @@ TEST(RadarUtilTest, InjectError) {
   FakeRadarDevice device;
   device.SetErrorOnBurst(10);
 
-  EXPECT_OK(device.RunRadarUtil({"radarutil", "-t", "10s", "-v", "20", "-p", "1ms"}));
+  EXPECT_EQ(device.RunRadarUtil({"radarutil", "-t", "10s", "-v", "20", "-p", "1ms"}), ZX_ERR_IO);
   EXPECT_EQ(device.GetRegisteredVmoCount(), 20);
   ASSERT_NO_FATAL_FAILURE(device.Ok());
 }

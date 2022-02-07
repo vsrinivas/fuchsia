@@ -79,11 +79,15 @@ zx_status_t RadarUtil::Run(int argc, char** argv,
     return status;
   }
 
-  if ((status = radarutil.Run()) != ZX_OK) {
+  status = radarutil.Run();
+
+  zx_status_t unregister_status = radarutil.UnregisterVmos();
+
+  if (status != ZX_OK) {
     return status;
   }
 
-  return radarutil.UnregisterVmos();
+  return unregister_status;
 }
 
 RadarUtil::~RadarUtil() {
@@ -317,7 +321,7 @@ zx_status_t RadarUtil::Run() {
             burst_errors_, elapsed.to_secs());
   }
 
-  return ZX_OK;
+  return burst_errors_ == 0 ? ZX_OK : ZX_ERR_IO;
 }
 
 zx_status_t RadarUtil::ReadBursts() {

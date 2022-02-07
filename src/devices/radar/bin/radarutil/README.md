@@ -24,3 +24,7 @@ The radarutil tool takes the following arguments:
 
 For example, to sleep 3 milliseconds for each burst, run for 5 minutes, and
 register 20 VMOs, run: `radarutil -p 3ms -t 5m -v 20`
+
+radarutil will return a nonzero status if any burst or driver errors are
+received. It will exit immediately upon encountering a driver error, but will
+continue reading after burst errors.
