@@ -195,14 +195,6 @@ mod tests {
             ),
             LifecycleData::for_lifecycle_event(
                 "different_moniker",
-                LifecycleType::Running,
-                None,
-                "different-fake-url",
-                Timestamp::from(123456790900i64),
-                vec![],
-            ),
-            LifecycleData::for_lifecycle_event(
-                "different_moniker",
                 LifecycleType::DiagnosticsReady,
                 None,
                 "different-fake-url",
