@@ -43,9 +43,16 @@ impl Actor for DeletionActor {
         // Randomly select files from the list and remove them
         let files_to_delete = files.choose_multiple(&mut self.rng, num_files_to_delete);
         for file in files_to_delete {
-            match self.home_dir.remove(file).await {
+            let res = self.home_dir.remove(file).await;
+            match &res {
                 Ok(()) => {}
-                // Any error is assumed to come from an intentional crash.
+                // Unlink should never fail because of insufficient resources, since it frees
+                // resources.  This is especially important to verify for journaling and
+                // log-structured filesystems like Fxfs.
+                Err(Status::NO_SPACE) | Err(Status::NO_RESOURCES) | Err(Status::NO_MEMORY) => {
+                    panic!("Unlink failed with {:?}, but should always succeed.", res)
+                }
+                // Any other error is assumed to come from an intentional crash.
                 // The environment verifies that an intentional crash occurred
                 // and will panic if that is not the case.
                 Err(s) => {
