@@ -13,7 +13,7 @@ use fidl_fuchsia_bluetooth_le::ScanFilter;
 use fidl_fuchsia_bluetooth_sys::{LeSecurityMode, Settings};
 use parking_lot::RwLock;
 use serde_json::{from_value, to_value, Value};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use test_call_manager::TestCallManager as HfpFacade;
 use test_rfcomm_client::RfcommManager as RfcommFacade;
 
@@ -27,9 +27,9 @@ use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 use crate::bluetooth::types::{
-    BleAdvertiseResponse, BleConnectPeripheralResponse, CustomBatteryStatus,
+    AbsoluteVolumeCommand, BleAdvertiseResponse, BleConnectPeripheralResponse, CustomBatteryStatus,
     CustomNotificationsFilter, CustomPlayerApplicationSettings,
-    CustomPlayerApplicationSettingsAttributeIds, GattcDiscoverCharacteristicResponse,
+    CustomPlayerApplicationSettingsAttributeIds, FacadeArg, GattcDiscoverCharacteristicResponse,
 };
 
 use crate::common_utils::common::{
@@ -38,46 +38,6 @@ use crate::common_utils::common::{
 };
 
 use crate::common_utils::common::macros::parse_arg;
-
-use super::types::AbsoluteVolumeCommand;
-
-// Takes a serde_json::Value and converts it to arguments required for a FIDL
-// ble_scan command
-fn ble_scan_to_fidl(args_raw: Value) -> Result<Option<ScanFilter>, Error> {
-    let scan_filter_raw = match args_raw.get("filter") {
-        Some(f) => Some(f).unwrap().clone(),
-        None => return Err(format_err!("Scan filter missing.")),
-    };
-
-    let name_substring: Option<String> =
-        scan_filter_raw["name_substring"].as_str().map(String::from);
-    // For now, no scan profile, so default to empty ScanFilter
-    let filter = Some(ScanFilter {
-        service_uuids: None,
-        service_data_uuids: None,
-        manufacturer_identifier: None,
-        connectable: None,
-        name_substring: name_substring,
-        max_path_loss: None,
-    });
-
-    Ok(filter)
-}
-
-fn ble_publish_service_to_fidl(args_raw: Value) -> Result<(ServiceInfo, String), Error> {
-    let id = parse_arg!(args_raw, as_u64, "id")?;
-    let primary = parse_arg!(args_raw, as_bool, "primary")?;
-    let type_ = parse_arg!(args_raw, as_str, "type")?;
-    let local_service_id = parse_arg!(args_raw, as_str, "local_service_id")?;
-
-    // TODO(fxbug.dev/883): Add support for GATT characterstics and includes
-    let characteristics = None;
-    let includes = None;
-
-    let service_info =
-        ServiceInfo { id, primary, type_: type_.to_string(), characteristics, includes };
-    Ok((service_info, local_service_id.to_string()))
-}
 
 #[async_trait(?Send)]
 impl Facade for BleAdvertiseFacade {
@@ -112,8 +72,11 @@ impl Facade for RwLock<BluetoothFacade> {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.as_ref() {
             "BlePublishService" => {
-                let (service_info, local_service_id) = ble_publish_service_to_fidl(args)?;
-                publish_service_async(self, service_info, local_service_id).await
+                let local_service_id = parse_arg!(args, as_str, "local_service_id")?;
+                let service_info = FacadeArg::new(args.clone());
+                //let service_info_json = ServiceInfoJson::new(args)?;
+                publish_service_async(self, service_info.try_into()?, local_service_id.to_string())
+                    .await
             }
             _ => return Err(format_err!("Invalid BLE FIDL method: {:?}", method)),
         }
@@ -252,8 +215,8 @@ impl Facade for GattClientFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.as_ref() {
             "BleStartScan" => {
-                let filter = ble_scan_to_fidl(args)?;
-                start_scan_async(&self, filter).await
+                let scan_filter = FacadeArg::new(args);
+                start_scan_async(&self, Some(scan_filter.try_into()?)).await
             }
             "BleStopScan" => stop_scan_async(self).await,
             "BleGetDiscoveredDevices" => le_get_discovered_devices_async(self).await,
@@ -926,7 +889,6 @@ impl Facade for HfpFacade {
                 Ok(to_value(())?)
             }
             "SetDialResult" => {
-                use std::convert::TryInto;
                 let number = parse_arg!(args, as_str, "number")?.to_string();
                 let status = parse_arg!(args, as_i64, "status")?.try_into()?;
                 let status = fuchsia_zircon::Status::from_raw(status);
