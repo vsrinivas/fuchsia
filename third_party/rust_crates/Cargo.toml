@@ -280,7 +280,7 @@ serial_test = "0.5.1" # Not for use on Fuchsia, only for a single process.
 shared_child = "0.3.5"
 signal-hook = "0.3.8"
 simplelog = "0.10.2"
-syn = { version = "1.0.5", features = ["full", "visit-mut", "extra-traits"] }
+syn = { version = "1.0.5", features = ["full", "visit", "visit-mut", "extra-traits"] }
 synstructure = "0.12.1"
 tar = "0.4.25"
 termios = "0.3.2"
