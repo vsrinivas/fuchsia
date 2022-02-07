@@ -80,7 +80,7 @@ zx_status_t Nelson::MaliInit() {
   Metadata metadata(allocator);
   metadata.set_supports_protected_mode(true);
   // TODO(fxbug.dev/45252): Use FIDL at rest.
-  fidl::OwnedEncodedMessage<Metadata> encoded_metadata(fidl::internal::WireFormatVersion::kV1,
+  fidl::OwnedEncodedMessage<Metadata> encoded_metadata(fidl::internal::WireFormatVersion::kV2,
                                                        &metadata);
   if (!encoded_metadata.ok()) {
     zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__,

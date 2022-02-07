@@ -291,7 +291,7 @@ void AmlGpu::SetFrequencySource(SetFrequencySourceRequestView request,
 zx_status_t AmlGpu::ProcessMetadata(std::vector<uint8_t> raw_metadata) {
   properties_ = {};
   fidl::DecodedMessage<fuchsia_hardware_gpu_amlogic::wire::Metadata> decoded(
-      fidl::internal::WireFormatVersion::kV1, raw_metadata.data(),
+      fidl::internal::WireFormatVersion::kV2, raw_metadata.data(),
       static_cast<uint32_t>(raw_metadata.size()));
   if (!decoded.ok()) {
     GPU_ERROR("Unable to parse metadata %s", decoded.FormatDescription().c_str());
