@@ -4,11 +4,15 @@
 use {
     crate::{
         errors::FxfsError,
+        round::{round_down, round_up},
         server::{errors::map_to_status, file::FxFile, node::OpenedNode},
     },
     anyhow::{bail, Error},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_hardware_block::{self as block, BlockAndNodeRequest},
+    fidl_fuchsia_hardware_block as block,
+    fidl_fuchsia_hardware_block_volume::{
+        self as volume, VolumeAndNodeMarker, VolumeAndNodeRequest,
+    },
     fidl_fuchsia_io::{
         self as fio, NodeAttributes, NodeInfo, NodeMarker, Service, INO_UNKNOWN,
         MODE_TYPE_BLOCK_DEVICE, OPEN_FLAG_NODE_REFERENCE,
@@ -19,6 +23,7 @@ use {
     remote_block_device::{BlockFifoRequest, BlockFifoResponse},
     std::{
         collections::{BTreeMap, HashMap},
+        convert::TryInto,
         hash::{Hash, Hasher},
         option::Option,
         sync::Mutex,
@@ -106,6 +111,10 @@ impl FifoMessageGroups {
         }
     }
 }
+
+// This is the default slice size used for Volumes in devices
+const DEVICE_VOLUME_SLICE_SIZE: u64 = 32 * 1024;
+
 /// Implements server to handle Block requests
 pub struct BlockServer {
     file: OpenedNode<FxFile>,
@@ -156,6 +165,7 @@ impl BlockServer {
 
     async fn handle_blockio_write(&self, request: &BlockFifoRequest) -> Result<(), Error> {
         let block_size = self.file.get_block_size();
+
         let mut data = {
             let vmos = self.vmos.lock().unwrap();
             let vmo = vmos.get(&request.vmoid).ok_or(FxfsError::NotFound)?;
@@ -164,7 +174,9 @@ impl BlockServer {
             buffer
         };
 
-        self.file.write_at(request.device_block * block_size as u64, &mut data[..]).await?;
+        self.file
+            .write_at_uncached(request.device_block * block_size as u64, &mut data[..])
+            .await?;
 
         Ok(())
     }
@@ -173,8 +185,10 @@ impl BlockServer {
         let block_size = self.file.get_block_size();
 
         let mut buffer = vec![0u8; (request.block_count as u64 * block_size) as usize];
-        let bytes_read =
-            self.file.read_at(request.device_block * (block_size as u64), &mut buffer[..]).await?;
+        let bytes_read = self
+            .file
+            .read_at_uncached(request.device_block * (block_size as u64), &mut buffer[..])
+            .await?;
 
         // Fill in the rest of the buffer if bytes_read is less than the requested amount
         buffer[bytes_read as usize..].fill(0);
@@ -213,7 +227,10 @@ impl BlockServer {
                 remote_block_device::BLOCKIO_READ => {
                     into_raw_status(self.handle_blockio_read(&request).await)
                 }
-                remote_block_device::BLOCKIO_FLUSH => into_raw_status(self.file.flush().await),
+                // TODO(fxbug.dev/89873): simply returning ZX_OK since we're
+                // writing to device and no need to flush cache, but need to
+                // check that flush goes down the stack
+                remote_block_device::BLOCKIO_FLUSH => zx::sys::ZX_OK,
                 // TODO(fxbug.dev/89873)
                 remote_block_device::BLOCKIO_TRIM => zx::sys::ZX_OK,
                 _ => panic!("Unexpected message, request {:?}", request.op_code),
@@ -287,9 +304,30 @@ impl BlockServer {
         });
     }
 
-    async fn handle_request(&self, request: BlockAndNodeRequest) -> Result<(), Error> {
+    async fn get_allocated_bytes(&self) -> Result<(u64, u64), zx::Status> {
+        let mut allocated_bytes = 0;
+        let mut unallocated_bytes = 0;
+        let mut offset = 0;
+
+        loop {
+            let (allocated, count) = self.file.is_allocated(offset).await?;
+            if count == 0 {
+                break;
+            } else {
+                offset += count;
+                if allocated {
+                    allocated_bytes += count;
+                } else {
+                    unallocated_bytes += count;
+                }
+            }
+        }
+        Ok((allocated_bytes, unallocated_bytes))
+    }
+
+    async fn handle_request(&self, request: VolumeAndNodeRequest) -> Result<(), Error> {
         match request {
-            BlockAndNodeRequest::GetInfo { responder } => {
+            VolumeAndNodeRequest::GetInfo { responder } => {
                 let block_size = self.file.get_block_size();
                 let block_count =
                     (self.file.get_size().await.unwrap() + block_size - 1) / block_size;
@@ -303,50 +341,144 @@ impl BlockServer {
                 responder.send(zx::sys::ZX_OK, Some(&mut block_info))?;
             }
             // TODO(fxbug.dev/89873)
-            BlockAndNodeRequest::GetStats { clear: _, responder } => {
+            VolumeAndNodeRequest::GetStats { clear: _, responder } => {
                 responder.send(zx::sys::ZX_OK, None)?;
             }
-            BlockAndNodeRequest::GetFifo { responder } => {
+            VolumeAndNodeRequest::GetFifo { responder } => {
                 responder.send(zx::sys::ZX_OK, self.maybe_server_fifo.lock().unwrap().take())?;
             }
-            BlockAndNodeRequest::AttachVmo { vmo, responder } => match self.get_vmo_id(vmo) {
+            VolumeAndNodeRequest::AttachVmo { vmo, responder } => match self.get_vmo_id(vmo) {
                 Some(vmo_id) => {
                     responder.send(zx::sys::ZX_OK, Some(&mut block::VmoId { id: vmo_id }))?
                 }
                 None => responder.send(zx::sys::ZX_ERR_NO_RESOURCES, None)?,
             },
             // TODO(fxbug.dev/89873): close fifo
-            BlockAndNodeRequest::CloseFifo { responder } => {
+            VolumeAndNodeRequest::CloseFifo { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
             }
             // TODO(fxbug.dev/89873)
-            BlockAndNodeRequest::RebindDevice { responder } => {
+            VolumeAndNodeRequest::RebindDevice { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
             }
             // TODO(fxbug.dev/89873)
-            BlockAndNodeRequest::IoToIo2Placeholder { control_handle: _ } => {}
-            BlockAndNodeRequest::Clone { flags: _, object, control_handle: _ } => {
+            VolumeAndNodeRequest::GetTypeGuid { responder } => {
+                responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED, None)?;
+            }
+            // TODO(fxbug.dev/89873)
+            VolumeAndNodeRequest::GetInstanceGuid { responder } => {
+                responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED, None)?;
+            }
+            // TODO(fxbug.dev/89873)
+            VolumeAndNodeRequest::GetName { responder } => {
+                responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED, None)?;
+            }
+            VolumeAndNodeRequest::QuerySlices { start_slices, responder } => {
+                // Initialise slices with default value. `slices` will be converted to an array
+                // of size volume::MAX_SLICE_REQUESTS
+                let mut slices = vec![
+                    volume::VsliceRange { allocated: false, count: 0 };
+                    volume::MAX_SLICE_REQUESTS as usize
+                ];
+
+                let mut status = zx::sys::ZX_OK;
+                let mut response_count = 0;
+                for (slice, start_slice) in slices.iter_mut().zip(start_slices.into_iter()) {
+                    match self.file.is_allocated(start_slice * DEVICE_VOLUME_SLICE_SIZE).await {
+                        Ok((allocated, bytes)) => {
+                            slice.count = round_up(bytes, DEVICE_VOLUME_SLICE_SIZE).unwrap();
+                            slice.allocated = allocated;
+                            response_count += 1;
+                        }
+                        Err(e) => {
+                            status = e.into_raw();
+                            break;
+                        }
+                    }
+                }
+
+                // Create a vector with the mutable reference to each element in the vector
+                // `slices`, then convert this vector into an array to send to the responder
+                let mut response = slices.iter_mut().collect::<Vec<_>>().try_into().unwrap();
+                responder.send(status, &mut response, response_count)?;
+            }
+            // TODO(fxbug.dev/89873): need to check if this returns the right information.
+            VolumeAndNodeRequest::GetVolumeInfo { responder } => {
+                match self.get_allocated_bytes().await {
+                    Ok((allocated_bytes, unallocated_bytes)) => {
+                        let allocated_slices =
+                            round_up(allocated_bytes, DEVICE_VOLUME_SLICE_SIZE).unwrap();
+                        let unallocated_bytes =
+                            round_down(unallocated_bytes, DEVICE_VOLUME_SLICE_SIZE);
+                        let mut manager = volume::VolumeManagerInfo {
+                            slice_size: DEVICE_VOLUME_SLICE_SIZE,
+                            slice_count: allocated_slices + unallocated_bytes,
+                            assigned_slice_count: allocated_slices,
+                            maximum_slice_count: allocated_slices + unallocated_bytes,
+                            max_virtual_slice: allocated_slices + unallocated_bytes,
+                        };
+                        let mut volume_info = volume::VolumeInfo {
+                            partition_slice_count: allocated_slices,
+                            slice_limit: 0,
+                        };
+                        responder.send(
+                            zx::sys::ZX_OK,
+                            Some(&mut manager),
+                            Some(&mut volume_info),
+                        )?;
+                    }
+                    Err(e) => {
+                        responder.send(e.into_raw(), None, None)?;
+                    }
+                }
+            }
+            VolumeAndNodeRequest::Extend { start_slice, slice_count, responder } => {
+                // TODO(fxbug.dev/89873): this is a hack. When extend is called, the extent is
+                // expected to be set as allocated. The easiest way to do this is to just
+                // write an extent of zeroed data. Another issue here is the size. The memory
+                // allocated here should be bounded to what's available.
+                let data = vec![0u8; (slice_count * DEVICE_VOLUME_SLICE_SIZE) as usize];
+                match self
+                    .file
+                    .write_at_uncached(start_slice * DEVICE_VOLUME_SLICE_SIZE, data[..].into())
+                    .await
+                {
+                    Ok(_) => responder.send(zx::sys::ZX_OK)?,
+                    Err(status) => responder.send(status.into_raw())?,
+                };
+            }
+            // TODO(fxbug.dev/89873)
+            VolumeAndNodeRequest::Shrink { start_slice: _, slice_count: _, responder } => {
+                responder.send(zx::sys::ZX_OK)?;
+            }
+            // TODO(fxbug.dev/89873)
+            VolumeAndNodeRequest::Destroy { responder } => {
+                responder.send(zx::sys::ZX_OK)?;
+            }
+            // TODO(fxbug.dev/89873)
+            VolumeAndNodeRequest::IoToIo2Placeholder { control_handle: _ } => {}
+            VolumeAndNodeRequest::Clone { flags: _, object, control_handle: _ } => {
                 // Have to move this into a non-async function to avoid Rust compiler's
                 // complaint about recursive async functions
                 self.handle_clone_request(object);
             }
             // TODO(fxbug.dev/89873)
-            BlockAndNodeRequest::Reopen { options: _, object_request: _, control_handle: _ } => {}
+            VolumeAndNodeRequest::Reopen { options: _, object_request: _, control_handle: _ } => {}
             // TODO(fxbug.dev/89873)
-            BlockAndNodeRequest::Close { responder } => {
+            VolumeAndNodeRequest::Close { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
             }
             // TODO(fxbug.dev/89873)
-            BlockAndNodeRequest::Close2 { responder } => {
+            VolumeAndNodeRequest::Close2 { responder } => {
                 responder.send(&mut Ok(()))?;
             }
             // TODO(fxbug.dev/89873)
-            BlockAndNodeRequest::Describe { responder } => {
+            VolumeAndNodeRequest::Describe { responder } => {
                 let mut info = NodeInfo::Service(Service {});
                 responder.send(&mut info)?;
             }
             // TODO(fxbug.dev/89873)
-            BlockAndNodeRequest::Describe2 { query: _, responder } => {
+            VolumeAndNodeRequest::Describe2 { query: _, responder } => {
                 let info = fio::ConnectionInfo {
                     representation: Some(fio::Representation::Connector(fio::ConnectorInfo::EMPTY)),
                     ..fio::ConnectionInfo::EMPTY
@@ -354,14 +486,14 @@ impl BlockServer {
                 responder.send(info)?;
             }
             // TODO(fxbug.dev/89873)
-            BlockAndNodeRequest::Sync { responder } => {
+            VolumeAndNodeRequest::Sync { responder } => {
                 responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED)?;
             }
             // TODO(fxbug.dev/89873)
-            BlockAndNodeRequest::Sync2 { responder } => {
+            VolumeAndNodeRequest::Sync2 { responder } => {
                 responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?;
             }
-            BlockAndNodeRequest::GetAttr { responder } => {
+            VolumeAndNodeRequest::GetAttr { responder } => {
                 match self.file.get_attrs().await {
                     Ok(mut attrs) => {
                         attrs.mode = MODE_TYPE_BLOCK_DEVICE;
@@ -381,17 +513,28 @@ impl BlockServer {
                     }
                 };
             }
+            // TODO(fxbug.dev/89873) VolumeAndNodeRequest::GetAttributes { query, responder }
             // TODO(fxbug.dev/89873)
-            BlockAndNodeRequest::SetAttr { flags: _, attributes: _, responder } => {
+            VolumeAndNodeRequest::SetAttr { flags: _, attributes: _, responder } => {
                 responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED)?;
             }
             // TODO(fxbug.dev/89873)
-            BlockAndNodeRequest::NodeGetFlags { responder } => {
+            VolumeAndNodeRequest::UpdateAttributes { attributes: _, responder } => {
+                responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?;
+            }
+            // TODO(fxbug.dev/89873)
+            VolumeAndNodeRequest::NodeGetFlags { responder } => {
                 responder.send(zx::sys::ZX_OK, OPEN_FLAG_NODE_REFERENCE)?;
             }
             // TODO(fxbug.dev/89873)
-            BlockAndNodeRequest::NodeSetFlags { flags: _, responder } => {
+            VolumeAndNodeRequest::NodeSetFlags { flags: _, responder } => {
                 responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED)?;
+            }
+            VolumeAndNodeRequest::QueryFilesystem { responder } => {
+                match self.file.query_filesystem() {
+                    Ok(mut info) => responder.send(zx::sys::ZX_OK, Some(&mut info))?,
+                    Err(e) => responder.send(e.into_raw(), None)?,
+                }
             }
             _ => bail!("Unexpected message"),
         }
@@ -400,7 +543,7 @@ impl BlockServer {
 
     async fn handle_requests(
         &self,
-        server: fidl::endpoints::ServerEnd<block::BlockAndNodeMarker>,
+        server: fidl::endpoints::ServerEnd<VolumeAndNodeMarker>,
     ) -> Result<(), Error> {
         server
             .into_stream()?
@@ -411,8 +554,7 @@ impl BlockServer {
     }
 
     pub async fn run(&mut self) -> Result<(), Error> {
-        let server =
-            ServerEnd::<block::BlockAndNodeMarker>::new(self.server_channel.take().unwrap());
+        let server = ServerEnd::<VolumeAndNodeMarker>::new(self.server_channel.take().unwrap());
 
         // Create a fifo pair
         let (server_fifo, client_fifo) =
@@ -423,15 +565,12 @@ impl BlockServer {
         let fifo_future = async {
             let fifo = fasync::Fifo::<BlockFifoRequest, BlockFifoResponse>::from_fifo(server_fifo)?;
             while let Some(request) = fifo.read_entry().await? {
-                let maybe_response = self.handle_fifo_request(request).await;
-                match maybe_response {
-                    Some(maybe_response) => {
-                        fifo.write_entries(std::slice::from_ref(&maybe_response)).await?;
-                    }
-                    _ => {}
+                if let Some(response) = self.handle_fifo_request(request).await {
+                    fifo.write_entries(std::slice::from_ref(&response)).await?;
                 }
-                // if None, then there's no reply for this request. This occurs for requests part
-                // of a group request where `BLOCK_GROUP_LAST` flag is not set
+                // if `self.handle_fifo_request(..)` returns None, then there's no reply for this
+                // request. This occurs for requests part of a group request where
+                // `BLOCK_GROUP_LAST` flag is not set.
             }
             Result::<_, Error>::Ok(())
         };
@@ -454,7 +593,7 @@ mod tests {
     use {
         crate::server::testing::{open_file_checked, TestFixture},
         fidl::endpoints::{ClientEnd, ServerEnd},
-        fidl_fuchsia_hardware_block::BlockAndNodeMarker,
+        fidl_fuchsia_hardware_block_volume::VolumeAndNodeMarker,
         fidl_fuchsia_io::{
             CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_FILE, OPEN_FLAG_CREATE,
             OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
@@ -522,7 +661,7 @@ mod tests {
                 // clone will work independent of the original
                 {
                     let original_block_device =
-                        ClientEnd::<BlockAndNodeMarker>::new(client_channel)
+                        ClientEnd::<VolumeAndNodeMarker>::new(client_channel)
                             .into_proxy()
                             .expect("convert into proxy failed");
                     original_block_device
@@ -735,7 +874,7 @@ mod tests {
 
         join!(
             async {
-                let original_block_device = ClientEnd::<BlockAndNodeMarker>::new(client_channel)
+                let original_block_device = ClientEnd::<VolumeAndNodeMarker>::new(client_channel)
                     .into_proxy()
                     .expect("convert into proxy failed");
                 let (status, attr) =
@@ -766,7 +905,7 @@ mod tests {
         let file_size = 2 * 1024 * 1024;
         join!(
             async {
-                let original_block_device = ClientEnd::<BlockAndNodeMarker>::new(client_channel)
+                let original_block_device = ClientEnd::<VolumeAndNodeMarker>::new(client_channel)
                     .into_proxy()
                     .expect("convert into proxy failed");
                 let (status, maybe_info) =

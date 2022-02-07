@@ -38,6 +38,8 @@ pub enum FxfsError {
     NotSupported,
     #[error("Access denied")]
     AccessDenied,
+    #[error("Out of range")]
+    OutOfRange,
 }
 
 impl FxfsError {

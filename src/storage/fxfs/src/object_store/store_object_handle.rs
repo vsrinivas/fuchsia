@@ -280,6 +280,103 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         Ok(())
     }
 
+    /// Return information on a contiguous set of extents that has the same allocation status,
+    /// starting from `start_offset`. The information returned is if this set of extents are marked
+    /// allocated/not allocated and also the size of this set (in bytes). This is used when
+    /// querying slices for volumes.
+    /// This function expects `start_offset` to be aligned to block size
+    pub async fn is_allocated(&self, start_offset: u64) -> Result<(bool, u64), Error> {
+        let block_size = self.block_size();
+        assert_eq!(start_offset % block_size, 0);
+
+        if start_offset > self.get_size() {
+            bail!(FxfsError::OutOfRange)
+        }
+
+        if start_offset == self.get_size() {
+            return Ok((false, 0));
+        }
+
+        let tree = &self.store().extent_tree;
+        let layer_set = tree.layer_set();
+        let offset_key =
+            ExtentKey::search_key_from_offset(self.object_id, self.attribute_id, start_offset);
+        let mut merger = layer_set.merger();
+        let mut iter = merger.seek(Bound::Included(&offset_key)).await?;
+
+        let mut allocated = None;
+        let mut end = start_offset;
+
+        loop {
+            // Iterate through the extents, each time setting `end` as the end of the previous
+            // extent
+            match iter.get() {
+                Some(ItemRef { key: extent_key, value: extent_value, .. }) => {
+                    // Equivalent of getting no extents back
+                    if extent_key.object_id != self.object_id
+                        || extent_key.attribute_id != self.attribute_id
+                    {
+                        if allocated == Some(false) || allocated.is_none() {
+                            end = self.get_size();
+                            allocated = Some(false);
+                        }
+                        break;
+                    }
+
+                    if extent_key.range.start > end {
+                        // If a previous extent has already been visited and we are tracking an
+                        // allocated set, we are only interested in an extent where the range of the
+                        // current extent follows immediately after the previous one.
+                        if allocated == Some(true) {
+                            break;
+                        } else {
+                            // The gap between the previous `end` and this extent is not allocated
+                            end = extent_key.range.start;
+                            allocated = Some(false);
+                            // Continue this iteration, except now the `end` is set to the end of
+                            // the "previous" extent which is this gap between the start_offset
+                            // and the current extent
+                        }
+                    }
+
+                    // We can assume that from here, the `end` points to the end of a previous
+                    // extent.
+                    match extent_value {
+                        // The current extent has been allocated
+                        ExtentValue::Some { .. } => {
+                            // Stop searching if previous extent was marked deleted
+                            if allocated == Some(false) {
+                                break;
+                            }
+                            allocated = Some(true);
+                        }
+                        // This extent has been marked deleted
+                        ExtentValue::None => {
+                            // Stop searching if previous extent was marked allocated
+                            if allocated == Some(true) {
+                                break;
+                            }
+                            allocated = Some(false);
+                        }
+                    }
+                    end = extent_key.range.end;
+                    iter.advance().await?;
+                }
+                // This occurs when there are no extents left
+                None => {
+                    if allocated == Some(false) || allocated.is_none() {
+                        end = self.get_size();
+                        allocated = Some(false);
+                    }
+                    // Otherwise, we were monitoring extents that were allocated, so just exit.
+                    break;
+                }
+            }
+        }
+
+        Ok((allocated.unwrap(), end - start_offset))
+    }
+
     pub async fn txn_write<'a>(
         &'a self,
         transaction: &mut Transaction<'a>,
@@ -1075,7 +1172,7 @@ mod tests {
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore, StoreObjectHandle,
             },
-            round::round_up,
+            round::{round_down, round_up},
         },
         assert_matches::assert_matches,
         fuchsia_async as fasync,
@@ -1765,5 +1862,142 @@ mod tests {
             }
         );
         fs.close().await.expect("Close failed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_is_allocated() {
+        let (fs, object) = test_filesystem_and_object().await;
+
+        // `test_filesystem_and_object()` wrote the buffer `TEST_DATA` to the device at offset
+        // `TEST_DATA_OFFSET` where the length and offset are aligned to the block size.
+        let aligned_offset = round_down(TEST_DATA_OFFSET, fs.block_size());
+        let aligned_length = round_up(TEST_DATA.len() as u64, fs.block_size()).unwrap();
+
+        // Check for the case where where we have the following extent layout
+        //       [ unallocated ][ `TEST_DATA` ]
+        // The extents before `aligned_offset` should not be allocated
+        let (allocated, count) = object.is_allocated(0).await.expect("is_allocated failed");
+        assert_eq!(count, aligned_offset);
+        assert_eq!(allocated, false);
+
+        let (allocated, count) =
+            object.is_allocated(aligned_offset).await.expect("is_allocated failed");
+        assert_eq!(count, aligned_length);
+        assert_eq!(allocated, true);
+
+        // Check for the case where where we query out of range
+        let end = aligned_offset + aligned_length;
+        object
+            .is_allocated(end)
+            .await
+            .expect_err("is_allocated should have returned ERR_OUT_OF_RANGE");
+
+        // Check for the case where where we start querying for allocation starting from
+        // an allocated range to the end of the device
+        let mut transaction = object.new_transaction().await.expect("new_transaction failed");
+        let size = 50 * fs.block_size() as u64;
+        object.truncate(&mut transaction, size).await.expect("extend failed");
+        transaction.commit().await.expect("commit failed");
+
+        let (allocated, count) = object.is_allocated(end).await.expect("is_allocated failed");
+        assert_eq!(count, size - end);
+        assert_eq!(allocated, false);
+
+        // Check for the case where where we have the following extent layout
+        //      [ unallocated ][ `buf` ][ `buf` ]
+        let buf_length = 5 * fs.block_size();
+        let mut buf = object.allocate_buffer(buf_length as usize);
+        buf.as_mut_slice().fill(123);
+        let new_offset = end + 20 * fs.block_size() as u64;
+        object.write_or_append(Some(new_offset), buf.as_ref()).await.expect("write failed");
+        object
+            .write_or_append(Some(new_offset + buf_length), buf.as_ref())
+            .await
+            .expect("write failed");
+
+        let (allocated, count) = object.is_allocated(end).await.expect("is_allocated failed");
+        assert_eq!(count, new_offset - end);
+        assert_eq!(allocated, false);
+
+        let (allocated, count) =
+            object.is_allocated(new_offset).await.expect("is_allocated failed");
+        assert_eq!(count, 2 * buf_length);
+        assert_eq!(allocated, true);
+
+        // Check the case where we query from the middle of an extent
+        let (allocated, count) = object
+            .is_allocated(new_offset + 4 * fs.block_size())
+            .await
+            .expect("is_allocated failed");
+        assert_eq!(count, 2 * buf_length - 4 * fs.block_size());
+        assert_eq!(allocated, true);
+
+        // Now, write buffer to a location already written to.
+        // Check for the case when we the following extent layout
+        //      [ unallocated ][ `other_buf` ][ (part of) `buf` ][ `buf` ]
+        let other_buf_length = 3 * fs.block_size();
+        let mut other_buf = object.allocate_buffer(other_buf_length as usize);
+        other_buf.as_mut_slice().fill(231);
+        object.write_or_append(Some(new_offset), other_buf.as_ref()).await.expect("write failed");
+
+        // We still expect that `is_allocated(..)` will return that  there are 2*`buf_length bytes`
+        // allocated from `new_offset`
+        let (allocated, count) =
+            object.is_allocated(new_offset).await.expect("is_allocated failed");
+        assert_eq!(count, 2 * buf_length);
+        assert_eq!(allocated, true);
+
+        // Check for the case when we the following extent layout
+        //   [ unallocated ][ deleted ][ unallocated ][ deleted ][ allocated ]
+        // Mark TEST_DATA as deleted
+        let mut transaction = object.new_transaction().await.expect("new_transaction failed");
+        object
+            .zero(&mut transaction, aligned_offset..aligned_offset + aligned_length)
+            .await
+            .expect("zero failed");
+        // Mark `other_buf` as deleted
+        object
+            .zero(&mut transaction, new_offset..new_offset + buf_length)
+            .await
+            .expect("zero failed");
+        transaction.commit().await.expect("commit transaction failed");
+
+        let (allocated, count) = object.is_allocated(0).await.expect("is_allocated failed");
+        assert_eq!(count, new_offset + buf_length);
+        assert_eq!(allocated, false);
+
+        let (allocated, count) =
+            object.is_allocated(new_offset + buf_length).await.expect("is_allocated failed");
+        assert_eq!(count, buf_length);
+        assert_eq!(allocated, true);
+
+        let new_end = new_offset + buf_length + count;
+
+        // Check for the case where there are objects with different keys.
+        // Case that we're checking for:
+        //      [ unallocated ][ extent (object with different key) ][ unallocated ]
+        let store = object.owner();
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let object2 =
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), None)
+                .await
+                .expect("create_object failed");
+        transaction.commit().await.expect("commit failed");
+
+        object2
+            .write_or_append(Some(new_end + fs.block_size()), buf.as_ref())
+            .await
+            .expect("write failed");
+
+        // Expecting that the extent with a different key is treated like unallocated extent
+        let (allocated, count) = object.is_allocated(new_end).await.expect("is_allocated failed");
+        assert_eq!(count, size - new_end);
+        assert_eq!(allocated, false);
+
+        fs.close().await.expect("close failed");
     }
 }

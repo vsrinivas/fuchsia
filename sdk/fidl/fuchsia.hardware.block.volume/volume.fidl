@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.hardware.block.volume;
+using fuchsia.io;
 using zx;
 using fuchsia.hardware.block.partition as partition;
 
@@ -206,4 +207,15 @@ protocol Volume {
     Destroy() -> (struct {
         status zx.status;
     });
+};
+
+/// This protocol is intended for servers that handles both hardware.block.Volume
+/// and io.Node.
+///
+/// In the C++ implementation, such a server is able to test for the requests
+/// from each protocol. However, Rust bindings make it difficult to do
+/// so and requires that we create a new protocol that is composed of the two.
+protocol VolumeAndNode {
+    compose Volume;
+    compose fuchsia.io.Node;
 };

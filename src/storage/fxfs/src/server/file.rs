@@ -5,7 +5,7 @@
 use {
     crate::{
         async_enter,
-        object_handle::{GetProperties, ObjectHandle, WriteObjectHandle},
+        object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
         object_store::{
             filesystem::SyncOptions, CachingObjectHandle, StoreObjectHandle, Timestamp,
         },
@@ -267,6 +267,40 @@ impl FxFile {
 
     pub fn get_block_size(&self) -> u64 {
         self.handle.block_size()
+    }
+
+    pub async fn is_allocated(&self, start_offset: u64) -> Result<(bool, u64), Status> {
+        self.handle.uncached_handle().is_allocated(start_offset).await.map_err(map_to_status)
+    }
+
+    // TODO(fxbug.dev/89873): might be better to have a cached/uncached mode for file and call
+    // this when in uncached mode
+    pub async fn write_at_uncached(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
+        let mut buf = self.handle.uncached_handle().allocate_buffer(content.len());
+        buf.as_mut_slice().copy_from_slice(content);
+        let _ = self
+            .handle
+            .uncached_handle()
+            .write_or_append(Some(offset), buf.as_ref())
+            .await
+            .map_err(map_to_status)?;
+        self.has_written.store(true, Ordering::Relaxed);
+        Ok(content.len() as u64)
+    }
+
+    // TODO(fxbug.dev/89873): might be better to have a cached/uncached mode for file and call
+    // this when in uncached mode
+    pub async fn read_at_uncached(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status> {
+        let mut buf = self.handle.uncached_handle().allocate_buffer(buffer.len());
+        buf.as_mut_slice().fill(0);
+        let bytes_read = self
+            .handle
+            .uncached_handle()
+            .read(offset, buf.as_mut())
+            .await
+            .map_err(map_to_status)?;
+        buffer.copy_from_slice(buf.as_slice());
+        Ok(bytes_read as u64)
     }
 }
 

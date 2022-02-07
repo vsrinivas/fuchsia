@@ -9,5 +9,6 @@ fidl("fuchsia.hardware.block.volume") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.block",
     "//sdk/fidl/fuchsia.hardware.block.partition",
+    "//sdk/fidl/fuchsia.io",
   ]
 }

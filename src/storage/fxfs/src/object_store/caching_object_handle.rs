@@ -56,6 +56,10 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
         &self.cache.data_buffer()
     }
 
+    pub fn uncached_handle(&self) -> &StoreObjectHandle<S> {
+        &self.handle
+    }
+
     pub async fn read_cached(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Error> {
         self.cache.read(offset, buf, &self.handle).await
     }
