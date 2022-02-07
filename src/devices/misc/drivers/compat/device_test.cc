@@ -14,6 +14,8 @@ namespace fdf = fuchsia_driver_framework;
 namespace fio = fuchsia_io;
 namespace frunner = fuchsia_component_runner;
 
+namespace {
+
 class TestNode : public fidl::testing::WireTestBase<fdf::Node> {
  public:
   void Clear() {
@@ -35,6 +37,8 @@ class TestNode : public fidl::testing::WireTestBase<fdf::Node> {
   std::vector<fidl::ServerEnd<fdf::NodeController>> controllers_;
   std::vector<fidl::ServerEnd<fdf::Node>> nodes_;
 };
+
+}  // namespace
 
 class DeviceTest : public gtest::TestLoopFixture {
  public:

@@ -31,6 +31,8 @@ constexpr auto kOpenFlags = fio::wire::kOpenRightReadable | fio::wire::kOpenRigh
                             fio::wire::kOpenFlagNotDirectory;
 constexpr auto kVmoFlags = fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec;
 
+namespace {
+
 fmem::wire::Buffer GetBuffer(std::string_view path) {
   auto endpoints = fidl::CreateEndpoints<fio::File>();
   EXPECT_TRUE(endpoints.is_ok());
@@ -117,6 +119,8 @@ class TestDirectory : public fidl::testing::WireTestBase<fio::Directory> {
 
   OpenHandler open_handler_;
 };
+
+}  // namespace
 
 class DriverTest : public gtest::TestLoopFixture {
  protected:
