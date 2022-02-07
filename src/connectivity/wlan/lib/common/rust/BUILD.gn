@@ -32,6 +32,7 @@ rustc_library("wlan-common") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:bytes",
+    "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:nom",
@@ -108,7 +109,9 @@ rustc_library("wlan-common") {
     "src/scan.rs",
     "src/security/mod.rs",
     "src/security/wep.rs",
-    "src/security/wpa.rs",
+    "src/security/wpa/credential.rs",
+    "src/security/wpa/data.rs",
+    "src/security/wpa/mod.rs",
     "src/sequence.rs",
     "src/sink.rs",
     "src/stats/mod.rs",
@@ -136,5 +139,8 @@ rustc_library("wlan-common") {
 }
 
 fuchsia_unittest_package("wlan-common-tests") {
-  deps = [ ":wlan-common_test" ]
+  deps = [
+    ":wlan-common_test",
+    "//third_party/rust_crates:test-case",
+  ]
 }

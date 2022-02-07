@@ -12,10 +12,12 @@ use hex;
 use std::convert::{TryFrom, TryInto};
 use thiserror::Error;
 
+use crate::security::SecurityError;
+
 pub const WEP40_KEY_BYTES: usize = 5;
 pub const WEP104_KEY_BYTES: usize = 13;
 
-#[derive(Clone, Copy, Debug, Error)]
+#[derive(Clone, Copy, Debug, Error, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum WepError {
     #[error("invalid WEP key size: {0} bytes")]
@@ -117,7 +119,7 @@ impl<'a> TryFrom<&'a [u8]> for WepKey {
 }
 
 /// WEP authenticator.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct WepAuthenticator {
     /// WEP key used to authenticate.
     pub key: WepKey,
@@ -137,7 +139,7 @@ impl From<WepAuthenticator> for fidl_security::WepCredentials {
 }
 
 impl TryFrom<fidl_security::WepCredentials> for WepAuthenticator {
-    type Error = WepError;
+    type Error = SecurityError;
 
     fn try_from(credentials: fidl_security::WepCredentials) -> Result<Self, Self::Error> {
         let key = credentials.key.as_slice().try_into()?;
@@ -147,35 +149,19 @@ impl TryFrom<fidl_security::WepCredentials> for WepAuthenticator {
 
 #[cfg(test)]
 mod tests {
+    use test_case::test_case;
+
     use crate::security::wep::{WepError, WepKey, WEP104_KEY_BYTES};
 
-    #[test]
-    fn parse_wep_key() {
-        // Parse binary WEP-40.
-        assert_eq!(WepKey::parse("wep40").unwrap(), WepKey::Wep40([b'w', b'e', b'p', b'4', b'0']),);
-        // Parse hexadecimal ASCII encoded WEP-40.
-        assert_eq!(WepKey::parse("abcdef0000").unwrap(), WepKey::Wep40([0xAB, 0xCD, 0xEF, 0, 0]),);
-        // Parse binary WEP-104.
-        assert_eq!(
-            WepKey::parse("authenticates").unwrap(),
-            WepKey::Wep104([
-                b'a', b'u', b't', b'h', b'e', b'n', b't', b'i', b'c', b'a', b't', b'e', b's'
-            ]),
-        );
-        // Parse hexadecimal ASCII encoded WEP-40.
-        assert_eq!(
-            WepKey::parse("ffffffffffffffffffffffffff").unwrap(),
-            WepKey::Wep104([0xFF; WEP104_KEY_BYTES]),
-        );
-    }
-
-    #[test]
-    fn parse_wep_key_bad_size() {
-        assert!(matches!(WepKey::parse("abcdef"), Err(WepError::Size(6))));
-    }
-
-    #[test]
-    fn parse_wep_key_bad_encoding() {
-        assert!(matches!(WepKey::parse("abcdefZZZZ"), Err(WepError::Encoding)));
+    #[test_case("wep40" => Ok(WepKey::Wep40([b'w', b'e', b'p', b'4', b'0'])))]
+    #[test_case("abcdef0000" => Ok(WepKey::Wep40([0xAB, 0xCD, 0xEF, 0, 0])))]
+    #[test_case("authenticates" => Ok(WepKey::Wep104([
+        b'a', b'u', b't', b'h', b'e', b'n', b't', b'i', b'c', b'a', b't', b'e', b's',
+    ])))]
+    #[test_case("ffffffffffffffffffffffffff" => Ok(WepKey::Wep104([0xFF; WEP104_KEY_BYTES])))]
+    #[test_case("abcdef" => Err(WepError::Size(6)))]
+    #[test_case("abcdefZZZZ" => Err(WepError::Encoding))]
+    fn parse_wep_key(bytes: impl AsRef<[u8]>) -> Result<WepKey, WepError> {
+        WepKey::parse(bytes)
     }
 }

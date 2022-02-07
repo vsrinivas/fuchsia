@@ -7,7 +7,7 @@ use {
     anyhow::ensure,
     ieee80211::Ssid,
     std::{convert::TryInto, str},
-    wlan_common::security::wpa,
+    wlan_common::security::wpa::{self, credential::Psk as CommonPsk},
 };
 
 // PBKDF2-HMAC-SHA1 is considered insecure but required for PSK computation.
@@ -15,17 +15,25 @@ use {
 use mundane::insecure::insecure_pbkdf2_hmac_sha1;
 use nonzero_ext::nonzero;
 
+/// Conversion of WPA credentials to a PSK.
 pub trait ToPsk {
-    fn to_psk(&self, ssid: &Ssid) -> wpa::Psk;
+    fn to_psk(&self, ssid: &Ssid) -> CommonPsk;
 }
 
-impl ToPsk for wpa::PersonalCredentials {
-    fn to_psk(&self, ssid: &Ssid) -> wpa::Psk {
+// Note that `Wpa1PersonalCredentials` is the same type as `Wpa2PersonalCredentials`. WPA3 does not
+// derive a PSK, so this trait is not implemented for `Wpa3PersonalCredentials`.
+/// Conversion of WPA1 and WPA2 Personal credentials to a PSK.
+///
+/// RSN specifies that PSKs are used as-is and passphrases are transformed into a PSK. This
+/// implementation performs this transformation when necessary for WPA1 Personal and WPA2 Personal
+/// credentials.
+impl ToPsk for wpa::Wpa1PersonalCredentials {
+    fn to_psk(&self, ssid: &Ssid) -> CommonPsk {
         match self {
-            wpa::PersonalCredentials::Psk(ref psk) => psk.clone(),
-            wpa::PersonalCredentials::Passphrase(ref passphrase) => {
+            wpa::Wpa1PersonalCredentials::Psk(ref psk) => psk.clone(),
+            wpa::Wpa1PersonalCredentials::Passphrase(ref passphrase) => {
                 // TODO(seanolson): Unify the representation of PSKs. There can only be one...!
-                wpa::Psk(
+                CommonPsk(
                     compute(passphrase.as_ref(), ssid)
                         .expect("invalid WPA passphrase data")
                         .as_ref()
@@ -78,7 +86,10 @@ pub fn compute(passphrase: &[u8], ssid: &Ssid) -> Result<Psk, anyhow::Error> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, hex::FromHex, std::convert::TryFrom};
+    use {
+        super::*, hex::FromHex, std::convert::TryFrom,
+        wlan_common::security::wpa::credential::Passphrase,
+    };
 
     fn assert_psk(password: &str, ssid: &str, expected: &str) {
         let psk = compute(password.as_bytes(), &Ssid::try_from(ssid).unwrap())
@@ -147,5 +158,22 @@ mod tests {
     #[test]
     fn test_psk_invalid_encoding_password() {
         assert!(compute(&[0xFFu8; 32], &Ssid::try_from("Some SSID").unwrap()).is_err());
+    }
+
+    // Note that `Wpa1PersonalCredentials` is the same type as `Wpa2PersonalCredentials`.
+    #[test]
+    fn wpa1_personal_credentials_to_psk() {
+        let ssid = Ssid::try_from("IEEE").unwrap();
+
+        let credentials = wpa::Wpa1PersonalCredentials::Psk(CommonPsk::from([0u8; 32]));
+        assert_eq!(CommonPsk::from([0u8; 32]), credentials.to_psk(&ssid));
+
+        let credentials =
+            wpa::Wpa1PersonalCredentials::Passphrase(Passphrase::try_from("password").unwrap());
+        assert_eq!(
+            CommonPsk::parse("f42c6fc52df0ebef9ebb4b90b38a5f902e83fe1b135a70e23aed762e9710a12e")
+                .unwrap(),
+            credentials.to_psk(&ssid),
+        );
     }
 }

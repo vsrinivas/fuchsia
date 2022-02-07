@@ -41,7 +41,8 @@
 
 // NOTE: At the time of this writing, the WLAN stack does not support WPA Enterprise. One
 //       consequence of this is that conversions between Rust and FIDL types may return errors or
-//       panic when they involve WPA Enterprise representations. See TODOs in this module.
+//       panic when they involve WPA Enterprise representations. See fxbug.dev/92693 and the TODOs
+//       in this module.
 
 pub mod wep;
 pub mod wpa;
@@ -49,6 +50,8 @@ pub mod wpa;
 use fidl_fuchsia_wlan_common_security as fidl_security;
 use std::convert::TryFrom;
 use thiserror::Error;
+
+use crate::security::wpa::credential::{PassphraseError, PskError};
 
 /// Extension methods for the `Credentials` FIDL datagram.
 pub trait CredentialsExt {
@@ -74,26 +77,26 @@ impl CredentialsExt for fidl_security::Credentials {
     }
 }
 
-#[derive(Clone, Copy, Debug, Error)]
+#[derive(Clone, Copy, Debug, Error, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum SecurityError {
     #[error(transparent)]
-    Wep(wep::WepError),
+    Wep(#[from] wep::WepError),
     #[error(transparent)]
-    Wpa(wpa::WpaError),
+    Wpa(#[from] wpa::WpaError),
     #[error("incompatible protocol or features")]
     Incompatible,
 }
 
-impl From<wep::WepError> for SecurityError {
-    fn from(error: wep::WepError) -> Self {
-        SecurityError::Wep(error)
+impl From<PassphraseError> for SecurityError {
+    fn from(error: PassphraseError) -> Self {
+        SecurityError::Wpa(error.into())
     }
 }
 
-impl From<wpa::WpaError> for SecurityError {
-    fn from(error: wpa::WpaError) -> Self {
-        SecurityError::Wpa(error)
+impl From<PskError> for SecurityError {
+    fn from(error: PskError) -> Self {
+        SecurityError::Wpa(error.into())
     }
 }
 
@@ -109,6 +112,14 @@ impl SecurityDescriptor {
     pub fn is_open(&self) -> bool {
         matches!(self, SecurityDescriptor::Open)
     }
+
+    pub fn is_wep(&self) -> bool {
+        matches!(self, SecurityDescriptor::Wep)
+    }
+
+    pub fn is_wpa(&self) -> bool {
+        matches!(self, SecurityDescriptor::Wpa(_))
+    }
 }
 
 impl From<fidl_security::Protocol> for SecurityDescriptor {
@@ -122,25 +133,25 @@ impl From<fidl_security::Protocol> for SecurityDescriptor {
             fidl_security::Protocol::Wpa2Personal => {
                 SecurityDescriptor::Wpa(wpa::WpaDescriptor::Wpa2 {
                     authentication: wpa::Authentication::Personal(()),
-                    encryption: None,
+                    cipher: None,
                 })
             }
             fidl_security::Protocol::Wpa2Enterprise => {
                 SecurityDescriptor::Wpa(wpa::WpaDescriptor::Wpa2 {
                     authentication: wpa::Authentication::Enterprise(()),
-                    encryption: None,
+                    cipher: None,
                 })
             }
             fidl_security::Protocol::Wpa3Personal => {
                 SecurityDescriptor::Wpa(wpa::WpaDescriptor::Wpa3 {
                     authentication: wpa::Authentication::Personal(()),
-                    encryption: None,
+                    cipher: None,
                 })
             }
             fidl_security::Protocol::Wpa3Enterprise => {
                 SecurityDescriptor::Wpa(wpa::WpaDescriptor::Wpa3 {
                     authentication: wpa::Authentication::Enterprise(()),
-                    encryption: None,
+                    cipher: None,
                 })
             }
             _ => panic!("unknown FIDL security protocol variant"),
@@ -176,7 +187,7 @@ impl From<wpa::WpaDescriptor> for SecurityDescriptor {
 
 /// Credentials and configuration for authenticating using a particular wireless network security
 /// protocol.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SecurityAuthenticator {
     Open,
     Wep(wep::WepAuthenticator),
@@ -227,6 +238,14 @@ impl SecurityAuthenticator {
     pub fn is_open(&self) -> bool {
         matches!(self, SecurityAuthenticator::Open)
     }
+
+    pub fn is_wep(&self) -> bool {
+        matches!(self, SecurityAuthenticator::Wep(_))
+    }
+
+    pub fn is_wpa(&self) -> bool {
+        matches!(self, SecurityAuthenticator::Wpa(_))
+    }
 }
 
 impl From<wep::WepAuthenticator> for SecurityAuthenticator {
@@ -256,7 +275,7 @@ impl From<SecurityAuthenticator> for fidl_security::Authentication {
                 use wpa::Authentication::{Enterprise, Personal};
                 use wpa::Wpa::{Wpa1, Wpa2, Wpa3};
 
-                let protocol = match (&wpa, wpa.as_credentials()) {
+                let protocol = match (&wpa, wpa.to_credentials()) {
                     (Wpa1 { .. }, _) => fidl_security::Protocol::Wpa1,
                     (Wpa2 { .. }, Personal(_)) => fidl_security::Protocol::Wpa2Personal,
                     (Wpa2 { .. }, Enterprise(_)) => fidl_security::Protocol::Wpa2Enterprise,
@@ -265,7 +284,7 @@ impl From<SecurityAuthenticator> for fidl_security::Authentication {
                 };
                 fidl_security::Authentication {
                     protocol,
-                    // TODO(seanolson): This panics when encountering WPA Enterprise.
+                    // TODO(fxbug.dev/92693): This panics when encountering WPA Enterprise.
                     credentials: Some(Box::new(fidl_security::Credentials::Wpa(
                         wpa.into_credentials().into(),
                     ))),
@@ -303,7 +322,7 @@ impl TryFrom<fidl_security::Authentication> for SecurityAuthenticator {
             fidl_security::Protocol::Wpa1 => credentials
                 .ok_or_else(|| SecurityError::Incompatible)? // No credentials.
                 .into_wpa()
-                .map(wpa::PersonalCredentials::try_from)
+                .map(wpa::Wpa1PersonalCredentials::try_from)
                 .transpose()? // Conversion failure.
                 .map(|authentication| wpa::WpaAuthenticator::Wpa1 { authentication })
                 .map(From::from)
@@ -311,28 +330,25 @@ impl TryFrom<fidl_security::Authentication> for SecurityAuthenticator {
             fidl_security::Protocol::Wpa2Personal => credentials
                 .ok_or_else(|| SecurityError::Incompatible)? // No credentials.
                 .into_wpa()
-                .map(wpa::PersonalCredentials::try_from)
+                .map(wpa::Wpa2PersonalCredentials::try_from)
                 .transpose()? // Conversion failure.
                 .map(From::from)
-                .map(|authentication| wpa::WpaAuthenticator::Wpa2 {
-                    encryption: None,
-                    authentication,
-                })
+                .map(|authentication| wpa::WpaAuthenticator::Wpa2 { cipher: None, authentication })
                 .map(From::from)
                 .ok_or_else(|| SecurityError::Incompatible), // Non-WPA credentials.
             fidl_security::Protocol::Wpa3Personal => credentials
                 .ok_or_else(|| SecurityError::Incompatible)? // No credentials.
                 .into_wpa()
-                .map(wpa::PersonalCredentials::try_from)
+                .map(wpa::Wpa3PersonalCredentials::try_from)
                 .transpose()? // Conversion failure.
                 .map(From::from)
-                .map(|authentication| wpa::WpaAuthenticator::Wpa3 {
-                    encryption: None,
-                    authentication,
-                })
+                .map(|authentication| wpa::WpaAuthenticator::Wpa3 { cipher: None, authentication })
                 .map(From::from)
                 .ok_or_else(|| SecurityError::Incompatible), // Non-WPA credentials.
-            // TODO(seanolson): This returns an error when encountering WPA Enterprise protocols.
+            // TODO(fxbug.dev/92693): This returns an error when encountering WPA Enterprise
+            //                        protocols. Some conversions of composing types panic, but
+            //                        this top-level conversion insulates client code from this and
+            //                        instead yields an error.
             _ => Err(SecurityError::Incompatible),
         }
     }
@@ -341,56 +357,85 @@ impl TryFrom<fidl_security::Authentication> for SecurityAuthenticator {
 #[cfg(test)]
 mod tests {
     use fidl_fuchsia_wlan_common_security as fidl_security;
-    use std::convert::TryFrom;
+    use std::convert::{TryFrom, TryInto};
+    use test_case::test_case;
 
-    use crate::security::{wpa, SecurityAuthenticator, SecurityError};
+    use crate::security::{
+        wpa::{self, Authentication, Wpa2PersonalCredentials},
+        SecurityAuthenticator, SecurityError,
+    };
 
-    #[test]
-    fn security_authenticator_from_authentication_fidl() {
-        // Well formed WPA3 authentication.
-        let authentication = fidl_security::Authentication {
-            protocol: fidl_security::Protocol::Wpa3Personal,
-            credentials: Some(Box::new(fidl_security::Credentials::Wpa(
-                fidl_security::WpaCredentials::Psk([0u8; 32]),
-            ))),
-        };
-        let authenticator = SecurityAuthenticator::try_from(authentication).unwrap();
-        assert!(matches!(authenticator.as_wpa(), Some(wpa::WpaAuthenticator::Wpa3 { .. })));
-        assert_eq!(
-            authenticator.into_wpa().unwrap().into_credentials().into_personal().unwrap(),
-            wpa::PersonalCredentials::Psk(wpa::Psk::from([0u8; 32]))
-        );
+    pub trait AuthenticationTestCase: Sized {
+        fn wpa2_personal_psk() -> Self;
+        fn wpa3_personal_psk() -> Self;
+        fn wpa3_personal_wep_key() -> Self;
+        fn wpa3_personal_no_credentials() -> Self;
+    }
 
-        // Ill-formed WPA3 authentication (incompatible credentials).
-        let authentication = fidl_security::Authentication {
-            protocol: fidl_security::Protocol::Wpa3Personal,
-            credentials: Some(Box::new(fidl_security::Credentials::Wep(
-                fidl_security::WepCredentials { key: vec![0u8; 13] },
-            ))),
-        };
-        assert!(matches!(
-            SecurityAuthenticator::try_from(authentication),
-            Err(SecurityError::Incompatible)
-        ));
+    impl AuthenticationTestCase for fidl_security::Authentication {
+        fn wpa2_personal_psk() -> Self {
+            fidl_security::Authentication {
+                protocol: fidl_security::Protocol::Wpa2Personal,
+                credentials: Some(Box::new(fidl_security::Credentials::Wpa(
+                    fidl_security::WpaCredentials::Psk([0u8; 32]),
+                ))),
+            }
+        }
 
-        // Ill-formed WPA3 authentication (no credentials).
-        let authentication = fidl_security::Authentication {
-            protocol: fidl_security::Protocol::Wpa3Personal,
-            credentials: None,
-        };
-        assert!(matches!(
-            SecurityAuthenticator::try_from(authentication),
-            Err(SecurityError::Incompatible)
-        ));
+        // Invalid: WPA3 with PSK.
+        fn wpa3_personal_psk() -> Self {
+            fidl_security::Authentication {
+                protocol: fidl_security::Protocol::Wpa3Personal,
+                credentials: Some(Box::new(fidl_security::Credentials::Wpa(
+                    fidl_security::WpaCredentials::Psk([0u8; 32]),
+                ))),
+            }
+        }
+
+        // Invalid: WPA3 with WEP key.
+        fn wpa3_personal_wep_key() -> Self {
+            fidl_security::Authentication {
+                protocol: fidl_security::Protocol::Wpa3Personal,
+                credentials: Some(Box::new(fidl_security::Credentials::Wep(
+                    fidl_security::WepCredentials { key: vec![0u8; 13] },
+                ))),
+            }
+        }
+
+        // Invalid: WPA3 with no credentials.
+        fn wpa3_personal_no_credentials() -> Self {
+            fidl_security::Authentication {
+                protocol: fidl_security::Protocol::Wpa3Personal,
+                credentials: None,
+            }
+        }
+    }
+
+    // TODO(seanolson): Move this assertion into a `SecurityAuthenticatorAssertion` trait (a la
+    //                  `AuthenticationTestCase`) and test via the `using` pattern in the
+    //                  `test-case` 2.0.0 series.
+    #[test_case(AuthenticationTestCase::wpa2_personal_psk() => matches
+        Ok(SecurityAuthenticator::Wpa(wpa::Wpa::Wpa2 {
+            authentication: Authentication::Personal(Wpa2PersonalCredentials::Psk(_)),
+            ..
+        }))
+    )]
+    #[test_case(AuthenticationTestCase::wpa3_personal_psk() => Err(SecurityError::Incompatible))]
+    #[test_case(AuthenticationTestCase::wpa3_personal_wep_key() => Err(SecurityError::Incompatible))]
+    #[test_case(AuthenticationTestCase::wpa3_personal_no_credentials() => Err(SecurityError::Incompatible))]
+    fn security_authenticator_from_authentication_fidl(
+        authentication: fidl_security::Authentication,
+    ) -> Result<SecurityAuthenticator, SecurityError> {
+        SecurityAuthenticator::try_from(authentication)
     }
 
     #[test]
     fn authentication_fidl_from_security_authenticator() {
         let authenticator = SecurityAuthenticator::Wpa(wpa::WpaAuthenticator::Wpa3 {
-            authentication: wpa::Credentials::Personal(wpa::PersonalCredentials::Psk(
-                wpa::Psk::from([0u8; 32]),
-            )),
-            encryption: None,
+            authentication: wpa::Authentication::Personal(
+                wpa::Wpa3PersonalCredentials::Passphrase("roflcopter".try_into().unwrap()),
+            ),
+            cipher: None,
         });
         let authentication = fidl_security::Authentication::from(authenticator);
         assert_eq!(
@@ -398,7 +443,7 @@ mod tests {
             fidl_security::Authentication {
                 protocol: fidl_security::Protocol::Wpa3Personal,
                 credentials: Some(Box::new(fidl_security::Credentials::Wpa(
-                    fidl_security::WpaCredentials::Psk([0u8; 32]),
+                    fidl_security::WpaCredentials::Passphrase(b"roflcopter".as_slice().into()),
                 ))),
             }
         );
