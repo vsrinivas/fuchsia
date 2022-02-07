@@ -13,6 +13,7 @@ pub mod hypervisor_resource;
 pub mod info_resource;
 pub mod ioport_resource;
 pub mod irq_resource;
+pub mod items;
 pub mod kernel_stats;
 pub mod log;
 pub mod mmio_resource;
