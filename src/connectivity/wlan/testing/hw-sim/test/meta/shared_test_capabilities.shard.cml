@@ -6,23 +6,23 @@
     children: [
         {
             name: "stash",
-            url: "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cm",
+            url: "#meta/stash_secure.cm",
         },
         {
             name: "wlancfg",
-            url: "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cm",
+            url: "#meta/wlancfg.cm",
         },
         {
             name: "wlandevicemonitor",
-            url: "fuchsia-pkg://fuchsia.com/wlandevicemonitor#meta/wlandevicemonitor.cm",
+            url: "#meta/wlandevicemonitor.cm",
         },
         {
             name: "regulatory_region",
-            url: "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cm",
+            url: "#meta/regulatory_region.cm",
         },
         {
             name: "emergency_location",
-            url: "fuchsia-pkg://fuchsia.com/emergency#meta/emergency.cm",
+            url: "#meta/emergency.cm",
         },
     ],
     offer: [

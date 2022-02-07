@@ -238,11 +238,12 @@ fuchsia_component("run-without-regulatory-manager-driver") {
 
 shared_deps = [
   "//sdk/lib/driver_test_realm/simple",
-  "//src/connectivity/location/regulatory_region",
+  "//src/connectivity/location/regulatory_region:regulatory_region_component",
   "//src/connectivity/wlan/testing/wlan-devmgr:wlan_devmgr_deps",
-  "//src/connectivity/wlan/wlancfg:wlancfg",
-  "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor",
-  "//src/connectivity/wlan/wlanstack:wlanstack",
+  "//src/connectivity/wlan/wlancfg:service",
+  "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor_component",
+  "//src/connectivity/wlan/wlanstack:wlanstack-comp",
+  "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy-comp",
   "//src/sys/stash:stash_secure_v2",
 ]
 
