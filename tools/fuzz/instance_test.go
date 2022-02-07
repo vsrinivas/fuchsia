@@ -200,7 +200,7 @@ func TestInstance(t *testing.T) {
 		t.Fatalf("Error getting from instance: %s", err)
 	}
 
-	expected := []string{"/data/r/sys/fuchsia.com:foo:0#meta:bar.cmx/path/to/remoteFile"}
+	expected := []string{"/tmp/r/sys/fuchsia.com:foo:0#meta:bar.cmx/path/to/remoteFile"}
 	got := i.Connector.(*mockConnector).PathsGot
 	if !reflect.DeepEqual(got, expected) {
 		t.Fatalf("incorrect file get list: %v", got)
@@ -211,7 +211,7 @@ func TestInstance(t *testing.T) {
 		t.Fatalf("Error putting to instance: %s", err)
 	}
 
-	expected = []string{"/data/r/sys/fuchsia.com:foo:0#meta:bar.cmx/path/to/otherFile"}
+	expected = []string{"/tmp/r/sys/fuchsia.com:foo:0#meta:bar.cmx/path/to/otherFile"}
 	got = i.Connector.(*mockConnector).PathsPut
 	if !reflect.DeepEqual(got, expected) {
 		t.Fatalf("incorrect file put list: %v", got)
@@ -246,7 +246,8 @@ func TestInstanceRunFuzzerWithArtifactFetch(t *testing.T) {
 
 	hostArtifactDir := "/art/dir"
 	var outBuf bytes.Buffer
-	if err := i.RunFuzzer(&outBuf, "foo/bar", hostArtifactDir, "-artifact_prefix=data/wow/x"); err != nil {
+	args := []string{"-artifact_prefix=data/wow/x", "data/corpus"}
+	if err := i.RunFuzzer(&outBuf, "foo/bar", hostArtifactDir, args...); err != nil {
 		t.Fatalf("Error running fuzzer: %s", err)
 	}
 
@@ -255,7 +256,7 @@ func TestInstanceRunFuzzerWithArtifactFetch(t *testing.T) {
 		t.Fatalf("fuzzer output missing host artifact path: %q", out)
 	}
 
-	expected := []string{"/data/r/sys/fuchsia.com:foo:0#meta:bar.cmx/wow/xcrash-1312"}
+	expected := []string{"/tmp/r/sys/fuchsia.com:foo:0#meta:bar.cmx/wow/xcrash-1312"}
 	got := i.Connector.(*mockConnector).PathsGot
 	if !reflect.DeepEqual(got, expected) {
 		t.Fatalf("incorrect file get list: %v", got)

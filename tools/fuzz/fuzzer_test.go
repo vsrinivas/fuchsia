@@ -21,7 +21,7 @@ func TestAbsPath(t *testing.T) {
 	absPaths := map[string]string{
 		"pkg/data/relpath":  "/pkgfs/packages/foo/0/data/relpath",
 		"/pkg/data/relpath": "/pkg/data/relpath",
-		"data/relpath":      "/data/r/sys/fuchsia.com:foo:0#meta:bar.cmx/relpath",
+		"data/relpath":      "/tmp/r/sys/fuchsia.com:foo:0#meta:bar.cmx/relpath",
 		"/data/relpath":     "/data/relpath",
 		"relpath":           "/relpath",
 		"/relpath":          "/relpath",
@@ -94,7 +94,7 @@ func runFuzzer(t *testing.T, name string, args []string, scenario int) (string, 
 		t.Fatalf("failed to load fuzzer: %s", err)
 	}
 
-	f.Parse(args)
+	f.Parse(append(args, "data/corpus"))
 
 	var outBuf bytes.Buffer
 	artifacts, err := f.Run(conn, &outBuf, "/some/artifactDir")
@@ -103,7 +103,8 @@ func runFuzzer(t *testing.T, name string, args []string, scenario int) (string, 
 }
 
 func TestRun(t *testing.T) {
-	out, artifacts, err := runFuzzer(t, "foo/bar", nil, FuzzerNormal)
+	out, artifacts, err := runFuzzer(t, "foo/bar",
+		[]string{"-merge_control_file=data/.mergefile"}, FuzzerNormal)
 	if err != nil {
 		t.Fatalf("failed to run fuzzer: %s", err)
 	}
@@ -119,7 +120,7 @@ func TestRun(t *testing.T) {
 	}
 
 	// Check for artifact detection
-	artifactAbsPath := "/data/r/sys/fuchsia.com:foo:0#meta:bar.cmx/crash-1312"
+	artifactAbsPath := "/tmp/r/sys/fuchsia.com:foo:0#meta:bar.cmx/crash-1312"
 	if !reflect.DeepEqual(artifacts, []string{artifactAbsPath}) {
 		t.Fatalf("unexpected artifact list: %s", artifacts)
 	}
@@ -128,12 +129,21 @@ func TestRun(t *testing.T) {
 	if !strings.Contains(out, "/some/artifactDir/crash-1312") {
 		t.Fatalf("artifact prefix not rewritten: %q", out)
 	}
+
+	// Check that paths in libFuzzer options/args are translated
+	if !strings.Contains(out, "tmp/.mergefile") {
+		t.Fatalf("mergefile prefix not rewritten: %q", out)
+	}
+
+	if !strings.Contains(out, "tmp/corpus") {
+		t.Fatalf("corpus prefix not rewritten: %q", out)
+	}
 }
 
 func TestRunWithInvalidArtifactPrefix(t *testing.T) {
 	args := []string{"-artifact_prefix=foo/bar"}
 	_, _, err := runFuzzer(t, "foo/bar", args, FuzzerNormal)
-	if err == nil || !strings.Contains(err.Error(), "artifact_prefix not in data/") {
+	if err == nil || !strings.Contains(err.Error(), "artifact_prefix not in mutable") {
 		t.Fatalf("expected failure to run but got: %s", err)
 	}
 }

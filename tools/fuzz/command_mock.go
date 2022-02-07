@@ -35,12 +35,21 @@ func (c *mockInstanceCmd) getOutput() ([]byte, error) {
 		}
 		fuzzerName := fmt.Sprintf("%s/%s", m[1], m[2])
 
-		// Look up the artifact prefix to use
+		// Look up arguments that we want to test
 		var artifactPrefix string
+		var mergeFile string
+		var corpusPath string
 		for _, arg := range c.args[1:] {
+			// Save first non-option arg
+			if corpusPath == "" && !strings.HasPrefix(arg, "-") {
+				corpusPath = arg
+				continue
+			}
+
 			if parts := strings.Split(arg, "="); parts[0] == "-artifact_prefix" {
 				artifactPrefix = parts[1]
-				break
+			} else if parts[0] == "-merge_control_file" {
+				mergeFile = parts[1]
 			}
 		}
 		if artifactPrefix == "" {
@@ -48,6 +57,11 @@ func (c *mockInstanceCmd) getOutput() ([]byte, error) {
 		}
 		artifactLine := fmt.Sprintf("artifact_prefix='%s'; "+
 			"Test unit written to %scrash-1312", artifactPrefix, artifactPrefix)
+
+		if corpusPath == "" {
+			return nil, fmt.Errorf("run command missing output corpus dir: %q", c.args)
+		}
+		corpusLine := fmt.Sprintf("INFO:        4 files found in %s", corpusPath)
 
 		var output []string
 		switch fuzzerName {
@@ -60,11 +74,20 @@ func (c *mockInstanceCmd) getOutput() ([]byte, error) {
 			}
 			output = append(filler,
 				fmt.Sprintf("running %v", c.args),
+				corpusLine,
 				"==123==", // pid
 				"MS: ",    // mut
 				"Deadly signal",
 				artifactLine,
 			)
+
+			// This wouldn't actually be emitted during a non-merge run, but we
+			// want to exercise an option with a path
+			if mergeFile != "" {
+				output = append(output,
+					fmt.Sprintf("MERGE-INNER: using the control file '%s'", mergeFile),
+				)
+			}
 		case "fail/nopid":
 			// No PID
 			output = []string{

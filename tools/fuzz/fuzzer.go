@@ -52,16 +52,35 @@ func NewFuzzer(build Build, pkg, fuzzer string) *Fuzzer {
 	}
 }
 
+// Map paths as referenced by ClusterFuzz to internally-used paths as seen by
+// libFuzzer, SFTP, etc.
+func translatePath(relpath string) string {
+	// Note: we can't use path.Join or other path functions that normalize the path
+	// because it will drop trailing slashes, which is important to preserve in
+	// places like artifact_prefix.
+
+	// Rewrite all references to data/ to tmp/ for better performance
+	if strings.HasPrefix(relpath, "data/") {
+		relpath = "tmp/" + strings.TrimPrefix(relpath, "data/")
+	}
+
+	return relpath
+}
+
 // AbsPath returns the absolute target path for a given relative path in a
 // fuzzer package. The path may differ depending on whether it is identified as
 // a resource, data, or neither.
 func (f *Fuzzer) AbsPath(relpath string) string {
+	relpath = translatePath(relpath)
+
 	if strings.HasPrefix(relpath, "/") {
 		return relpath
 	} else if strings.HasPrefix(relpath, "pkg/") {
 		return fmt.Sprintf("/pkgfs/packages/%s/0/%s", f.pkg, relpath[4:])
 	} else if strings.HasPrefix(relpath, "data/") {
 		return fmt.Sprintf("/data/r/sys/fuchsia.com:%s:0#meta:%s/%s", f.pkg, f.cmx, relpath[5:])
+	} else if strings.HasPrefix(relpath, "tmp/") {
+		return fmt.Sprintf("/tmp/r/sys/fuchsia.com:%s:0#meta:%s/%s", f.pkg, f.cmx, relpath[4:])
 	} else {
 		return fmt.Sprintf("/%s", relpath)
 	}
@@ -75,9 +94,9 @@ func (f *Fuzzer) Parse(args []string) {
 	for _, arg := range args {
 		submatch := re.FindStringSubmatch(arg)
 		if submatch == nil {
-			f.args = append(f.args, arg)
+			f.args = append(f.args, translatePath(arg))
 		} else {
-			f.options[submatch[1]] = submatch[2]
+			f.options[submatch[1]] = translatePath(submatch[2])
 		}
 	}
 }
@@ -230,7 +249,7 @@ func (f *Fuzzer) Prepare(conn Connector) error {
 	}
 
 	// Clear any persistent data in the fuzzer's namespace, resetting its state
-	dataPath := f.AbsPath("data/*")
+	dataPath := f.AbsPath("tmp/*")
 	if err := conn.Command("rm", "-rf", dataPath).Run(); err != nil {
 		return fmt.Errorf("error clear fuzzer data namespace %q: %s", dataPath, err)
 	}
@@ -250,11 +269,11 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]s
 	// Ensure artifact_prefix will be writable, and fall back to default if not
 	// specified
 	if artPrefix, ok := f.options["artifact_prefix"]; ok {
-		if !strings.HasPrefix(strings.TrimLeft(artPrefix, "/"), "data/") {
-			return nil, fmt.Errorf("artifact_prefix not in data/ namespace: %q", artPrefix)
+		if !strings.HasPrefix(artPrefix, "tmp/") {
+			return nil, fmt.Errorf("artifact_prefix not in mutable namespace: %q", artPrefix)
 		}
 	} else {
-		f.options["artifact_prefix"] = "data/"
+		f.options["artifact_prefix"] = "tmp/"
 	}
 
 	// The overall flow of fuzzer output data is as follows:
