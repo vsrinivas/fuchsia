@@ -18,21 +18,4 @@ compatibility_test_suite("canary_tests") {
 
 compatibility_test_suite("current_milestone_tests") {
   path = "//prebuilt/cts/current_milestone/$host_platform/cts"
-
-  # Disable tests that are failing because they existed back when the CTS
-  # builder did not have to pass on CQ. Delete this after branching F6.
-  disabled_tests = [
-    {
-      package = "fuchsia-diagnostics-tests_f5"
-      component_name = "inspect-publisher"
-    },
-    {
-      package = "fuchsia-hwinfo-tests_f5"
-      component_name = "hwinfo-test"
-    },
-    {
-      package = "fuchsia-element-tests_f5"
-      component_name = "element-manager-test"
-    },
-  ]
 }
