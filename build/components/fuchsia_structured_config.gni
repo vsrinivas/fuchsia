@@ -203,12 +203,8 @@ template("fuchsia_structured_config_values") {
 #     Name for the generated Rust library. If not specified, the target name is used.
 #     Type: string
 #
-#   fidl_library_name (optional)
-#     Name for the generated FIDL library. If not specified, the default (cf.sc.internal) is used.
-#     Type: string
-#
 #   with_inspect (optional)
-#     Whether or not to include config values in inspect.
+#     Adds inspect support to the generated library. Default is true.
 #     Type: bool
 #
 #   testonly (optional)
@@ -220,22 +216,19 @@ template("fuchsia_structured_config_rust_lib") {
     rust_library_name = invoker.name
   }
 
-  # The library name is a string that is also used internally by configc when generating
-  # FIDL and Rust source files. It is not visible to the end user.
-  if (defined(invoker.fidl_library_name)) {
-    fidl_library_name = invoker.fidl_library_name
-  } else {
-    fidl_library_name = "cf.sc.internal"
-  }
-
   if (defined(invoker.with_inspect)) {
     with_inspect = invoker.with_inspect
   } else {
-    with_inspect = false
+    with_inspect = true
   }
 
   rust_library_name = string_replace(rust_library_name, ".", "_")
   rust_library_name = string_replace(rust_library_name, "-", "_")
+
+  # The library name is a string that is also used internally by configc when generating
+  # FIDL and Rust source files. It is not visible to the end user.
+  fidl_library_name = string_replace(rust_library_name, "_", "")
+  fidl_library_name = "cf.sc.internal.${fidl_library_name}"
 
   fidl_source_target = "${target_name}_fidl_config_lib_source"
   rust_source_target = "${target_name}_rust_config_lib_source"
@@ -319,10 +312,7 @@ template("fuchsia_structured_config_rust_lib") {
     ]
 
     if (with_inspect) {
-      deps += [
-        "//src/lib/diagnostics/inspect/runtime/rust",
-        "//src/lib/diagnostics/inspect/rust",
-      ]
+      deps += [ "//src/lib/diagnostics/inspect/rust" ]
     }
 
     non_rust_deps = [ ":${rust_source_target}($default_toolchain)" ]

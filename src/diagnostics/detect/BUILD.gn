@@ -23,7 +23,7 @@ rustc_library("lib") {
   ]
 
   deps = [
-    ":triage-detect-config-lib",
+    ":triage-detect-config",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
@@ -72,7 +72,7 @@ fuchsia_component_manifest("triage-detect-manifest") {
   restricted_features = [ "structured_config" ]
 }
 
-fuchsia_structured_config_values("triage-detect-config") {
+fuchsia_structured_config_values("triage-detect-prod-config") {
   cm_target = ":triage-detect-manifest"
   values = "configs/default.json5"
 }
@@ -82,11 +82,8 @@ fuchsia_structured_config_values("triage-detect-test-config") {
   values = "configs/integration-test.json5"
 }
 
-fuchsia_structured_config_rust_lib("triage-detect-config-lib") {
-  name = "triage_detect_config"
+fuchsia_structured_config_rust_lib("triage-detect-config") {
   cm_target = ":triage-detect-manifest"
-  fidl_library_name = "cf.sc.internal.detect"
-  with_inspect = true
 }
 
 fuchsia_component("triage-detect-component") {
@@ -97,7 +94,7 @@ fuchsia_component("triage-detect-component") {
 fuchsia_package("triage-detect") {
   deps = [
     ":triage-detect-component",
-    ":triage-detect-config",
+    ":triage-detect-prod-config",
   ]
 }
 

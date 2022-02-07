@@ -9,8 +9,8 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{self as inspect, health::Reporter},
     futures::{StreamExt, TryStreamExt},
+    sampler_component_config::Config as ComponentConfig,
     sampler_config as config,
-    sampler_config_lib::Config as ManifestConfig,
     tracing::{info, warn},
 };
 
@@ -39,10 +39,10 @@ pub async fn main() -> Result<(), Error> {
     // Starting service.
     inspect::component::health().set_starting_up();
 
-    let manifest_config = ManifestConfig::from_args().record_to_inspect(inspector.root());
+    let component_config = ComponentConfig::from_args().record_to_inspect(inspector.root());
 
     match config::SamplerConfig::from_directories(
-        manifest_config.minimum_sample_rate_sec,
+        component_config.minimum_sample_rate_sec,
         "/config/data/metrics", /* Sampler config */
         "/config/data/fire",    /* FIRE config */
     ) {

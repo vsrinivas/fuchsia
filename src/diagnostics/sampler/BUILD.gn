@@ -20,7 +20,7 @@ rustc_library("lib") {
   ]
 
   deps = [
-    ":sampler-config-lib",
+    ":sampler-component-config",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
@@ -83,7 +83,7 @@ fuchsia_component("sampler-component") {
   ]
 }
 
-fuchsia_structured_config_values("sampler-config") {
+fuchsia_structured_config_values("sampler-prod-config") {
   values = "configs/default.json5"
   cm_target = ":sampler-manifest"
 }
@@ -93,16 +93,14 @@ fuchsia_structured_config_values("sampler-test-config") {
   cm_target = ":sampler-manifest"
 }
 
-fuchsia_structured_config_rust_lib("sampler-config-lib") {
+fuchsia_structured_config_rust_lib("sampler-component-config") {
   cm_target = ":sampler-manifest"
-  fidl_library_name = "cf.sc.internal.sampler"
-  with_inspect = true
 }
 
 fuchsia_package("sampler") {
   deps = [
     ":sampler-component",
-    ":sampler-config",
+    ":sampler-prod-config",
   ]
 }
 

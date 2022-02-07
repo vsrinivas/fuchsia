@@ -156,6 +156,10 @@ template("fidl_config_client_lib_source") {
 #     Name for the internal FIDL library.
 #     Type: string
 #
+#   with_inspect (required)
+#     Adds inspect support to the generated library.
+#     Type: bool
+#
 #   deps (optional)
 #   metadata (optional)
 #   output_name (optional)
@@ -167,6 +171,8 @@ template("rust_config_client_lib_source") {
          "the path to a compiled component manifest must be specified")
   assert(defined(invoker.fidl_library_name),
          "the name of the internal FIDL library must be specified")
+  assert(defined(invoker.with_inspect),
+         "the with_inspect boolean flag must be specified")
   compiled_manifest = invoker.compiled_manifest
 
   compiled_action(target_name) {
@@ -207,7 +213,7 @@ template("rust_config_client_lib_source") {
       rebase_path("//rustfmt.toml", root_build_dir),
     ]
 
-    if (defined(invoker.with_inspect) && invoker.with_inspect) {
+    if (invoker.with_inspect) {
       args += [ "--with-inspect" ]
     }
 

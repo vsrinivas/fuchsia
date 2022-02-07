@@ -26,7 +26,7 @@ use {
     snapshot::SnapshotRequest,
     std::collections::HashMap,
     tracing::{error, info, warn},
-    triage_detect_config::Config as ManifestConfig,
+    triage_detect_config::Config as ComponentConfig,
 };
 
 const MINIMUM_CHECK_TIME_NANOS: i64 = 60 * 1_000_000_000;
@@ -186,15 +186,15 @@ pub async fn main() -> Result<(), Error> {
     })
     .detach();
 
-    let manifest_config = ManifestConfig::from_args().record_to_inspect(inspector.root());
+    let component_config = ComponentConfig::from_args().record_to_inspect(inspector.root());
 
     let stats = Stats::new().with_inspect(inspector.root(), "stats")?;
-    let mode = match manifest_config.test_only {
+    let mode = match component_config.test_only {
         true => Mode::Test,
         false => Mode::Production,
     };
     let check_every = on_error!(
-        appropriate_check_interval(&manifest_config.check_every, &mode),
+        appropriate_check_interval(&component_config.check_every, &mode),
         "Invalid command line arg for check time: {}"
     )?;
     let program_config = on_error!(load_program_config(), "Error loading program config: {}")?;
