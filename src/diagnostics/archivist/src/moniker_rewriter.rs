@@ -12,14 +12,9 @@ lazy_static! {
         MonikerRewritePair {
             legacy_str: "memory_monitor.cmx",
             modern_str: "core/memory_monitor",
-        },
-        MonikerRewritePair {
+        }, MonikerRewritePair {
             legacy_str: "wlanstack.cmx",
             modern_str: "core/wlanstack",
-        },
-        MonikerRewritePair {
-            legacy_str: "omaha-client-service.cmx",
-            modern_str: "core/omaha-client-service",
         },
     ];
 }
