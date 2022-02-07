@@ -8,11 +8,11 @@ use {
     anyhow::{anyhow, Error},
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl::endpoints::ClientEnd,
+    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker as _},
     fidl_fuchsia_cobalt::CobaltEvent,
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
+        DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, OPEN_RIGHT_EXECUTABLE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::RW_STAR_DIR,
     fidl_fuchsia_pkg::{
@@ -24,7 +24,6 @@ use {
     fidl_fuchsia_space::{ManagerMarker as SpaceManagerMarker, ManagerProxy as SpaceManagerProxy},
     fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
     fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
     fuchsia_component_test::new::{
         Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
     },
@@ -50,6 +49,7 @@ use {
     },
     system_image::StaticPackages,
     tempfile::TempDir,
+    vfs::directory::{entry::DirectoryEntry as _, helper::DirectlyMutable as _},
 };
 
 mod base_pkg_index;
@@ -328,19 +328,20 @@ where
     }
 
     async fn build(self) -> TestEnv<PkgFsFut::Output> {
-        let mut fs = ServiceFs::new();
-
         let pkgfs = (self.pkgfs)().await;
-        fs.add_remote("pkgfs", pkgfs.root_dir_handle().unwrap().into_proxy().unwrap());
-        fs.add_remote("blob", pkgfs.blobfs_root_proxy().unwrap());
+        let local_child_svc_dir = vfs::pseudo_directory! {};
 
         // Cobalt mocks so we can assert that we emit the correct events
         let logger_factory = Arc::new(MockLoggerFactory::new());
         let logger_factory_clone = Arc::clone(&logger_factory);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(Arc::clone(&logger_factory_clone).run_logger_factory(stream))
-                .detach()
-        });
+        local_child_svc_dir
+            .add_entry(
+                fidl_fuchsia_cobalt::LoggerFactoryMarker::PROTOCOL_NAME,
+                vfs::service::host(move |stream| {
+                    Arc::clone(&logger_factory_clone).run_logger_factory(stream)
+                }),
+            )
+            .unwrap();
 
         // Paver service, so we can verify that we submit the expected requests and so that
         // we can verify if the paver service returns errors, that we handle them correctly.
@@ -348,25 +349,29 @@ where
             self.paver_service_builder.unwrap_or_else(|| MockPaverServiceBuilder::new()).build(),
         );
         let paver_service_clone = Arc::clone(&paver_service);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(
-                Arc::clone(&paver_service_clone)
-                    .run_paver_service(stream)
-                    .unwrap_or_else(|e| panic!("error running paver service: {:#}", anyhow!(e))),
+        local_child_svc_dir
+            .add_entry(
+                fidl_fuchsia_paver::PaverMarker::PROTOCOL_NAME,
+                vfs::service::host(move |stream| {
+                    Arc::clone(&paver_service_clone)
+                        .run_paver_service(stream)
+                        .unwrap_or_else(|e| panic!("error running paver service: {:#}", anyhow!(e)))
+                }),
             )
-            .detach()
-        });
+            .unwrap();
 
         // Set up verifier service so we can verify that we reject GC until after the verifier
         // commits this boot/slot as successful, lest we break rollbacks.
         let verifier_service = Arc::new(MockVerifierService::new(|_| Ok(())));
         let verifier_service_clone = Arc::clone(&verifier_service);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(
-                Arc::clone(&verifier_service_clone).run_blobfs_verifier_service(stream),
+        local_child_svc_dir
+            .add_entry(
+                fidl_fuchsia_update_verify::BlobfsVerifierMarker::PROTOCOL_NAME,
+                vfs::service::host(move |stream| {
+                    Arc::clone(&verifier_service_clone).run_blobfs_verifier_service(stream)
+                }),
             )
-            .detach()
-        });
+            .unwrap();
 
         // fuchsia.boot/Arguments service to supply the hash of the system_image package.
         let mut arguments_service = MockBootArgumentsService::new(HashMap::new());
@@ -377,12 +382,24 @@ where
         }
         let arguments_service = Arc::new(arguments_service);
         let arguments_service_clone = Arc::clone(&arguments_service);
-        fs.dir("svc").add_fidl_service(move |stream| {
-            fasync::Task::spawn(Arc::clone(&arguments_service_clone).handle_request_stream(stream))
-                .detach()
-        });
+        local_child_svc_dir
+            .add_entry(
+                fidl_fuchsia_boot::ArgumentsMarker::PROTOCOL_NAME,
+                vfs::service::host(move |stream| {
+                    Arc::clone(&arguments_service_clone).handle_request_stream(stream)
+                }),
+            )
+            .unwrap();
 
-        let fs_holder = Mutex::new(Some(fs));
+        let local_child_out_dir = vfs::pseudo_directory! {
+            "pkgfs" => vfs::remote::remote_dir(
+                pkgfs.root_dir_handle().unwrap().into_proxy().unwrap()
+            ),
+            "blob" => vfs::remote::remote_dir(pkgfs.blobfs_root_proxy().unwrap()),
+            "svc" => local_child_svc_dir,
+        };
+
+        let local_child_out_dir = Mutex::new(Some(local_child_out_dir));
 
         let pkg_cache_manifest = if self.ignore_system_image {
             "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-ignore-system-image.cm"
@@ -398,17 +415,20 @@ where
         let service_reflector = builder
             .add_local_child(
                 "service_reflector",
-                move |mock_handles| {
-                    let mut rfs = fs_holder
+                move |handles| {
+                    let local_child_out_dir = local_child_out_dir
                         .lock()
                         .take()
                         .expect("mock component should only be launched once");
-                    async {
-                        rfs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
-                        let () = rfs.collect().await;
-                        Ok(())
-                    }
-                    .boxed()
+                    let scope = vfs::execution_scope::ExecutionScope::new();
+                    let () = local_child_out_dir.open(
+                        scope.clone(),
+                        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
+                        0,
+                        vfs::path::Path::dot(),
+                        handles.outgoing_dir.into_channel().into(),
+                    );
+                    async move { Ok(scope.wait().await) }.boxed()
                 },
                 ChildOptions::new(),
             )
