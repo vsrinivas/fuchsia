@@ -23,7 +23,7 @@ where
         }
 
         // Unfortunately we must render the packet out before we can pass it along.
-        let packet = msg.as_vec();
+        let packet = msg.to_vec();
 
         if let Err(err) = self.net_if.inbound_packet_to_stack(&packet).now_or_never().transpose() {
             error!("Unable to send packet to netstack: {:?}", err);

@@ -125,6 +125,25 @@ impl std::fmt::Display for Error {
     }
 }
 
+/// Trait for converting types into `otError` values.
+pub trait IntoOtError {
+    /// Converts this value into a
+    /// [`otsys::otError`](crate::otsys::otError).
+    fn into_ot_error(self) -> otError;
+}
+
+impl IntoOtError for Error {
+    fn into_ot_error(self) -> otError {
+        self.to_u32().unwrap()
+    }
+}
+
+impl IntoOtError for Result<(), Error> {
+    fn into_ot_error(self) -> otError {
+        self.err().unwrap_or(Error::None).into_ot_error()
+    }
+}
+
 impl From<Result<(), Error>> for Error {
     fn from(result: Result<(), Error>) -> Self {
         match result {
@@ -137,6 +156,12 @@ impl From<Result<(), Error>> for Error {
 impl From<otError> for Error {
     fn from(err: otError) -> Self {
         Error::from_u32(err).expect(format!("Unknown otError value: {}", err).as_str())
+    }
+}
+
+impl From<()> for Error {
+    fn from(_: ()) -> Self {
+        Error::None
     }
 }
 

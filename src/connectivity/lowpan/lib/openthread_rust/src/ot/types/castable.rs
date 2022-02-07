@@ -49,6 +49,18 @@ pub unsafe trait OtCastable: Sized {
     /// 2. `ptr` MUST point to a valid instance of [`Self::OtType`].
     unsafe fn ref_from_ot_ptr<'a>(ptr: *const Self::OtType) -> Option<&'a Self>;
 
+    /// Creates a mut reference from a mut pointer to an [`Self::OtType`].
+    ///
+    /// ## Safety ##
+    ///
+    /// This method is unsafe because unchecked conversion of pointers
+    /// to references is generally unsafe. The following assumptions
+    /// need to be verified to avoid undefined behavior:
+    ///
+    /// 1. `ptr` MUST NOT be `NULL`.
+    /// 2. `ptr` MUST point to a valid instance of [`Self::OtType`].
+    unsafe fn mut_from_ot_mut_ptr<'a>(ptr: *mut Self::OtType) -> Option<&'a mut Self>;
+
     /// Casts a reference to the original OpenThread type to a reference to `Self`.
     fn ref_from_ot_ref(x: &Self::OtType) -> &Self {
         unsafe { Self::ref_from_ot_ptr(x as *const Self::OtType) }.unwrap()
@@ -142,6 +154,16 @@ macro_rules! impl_ot_castable {
                     None
                 } else {
                     Some(&*(ptr as *const Self))
+                }
+            }
+
+            unsafe fn mut_from_ot_mut_ptr<'a>(ptr: *mut Self::OtType) -> Option<&'a mut Self> {
+                static_assertions::assert_eq_size!($wrapper, $inner);
+                static_assertions::assert_eq_align!($wrapper, $inner);
+                if ptr.is_null() {
+                    None
+                } else {
+                    Some(&mut *(ptr as *mut Self))
                 }
             }
         }

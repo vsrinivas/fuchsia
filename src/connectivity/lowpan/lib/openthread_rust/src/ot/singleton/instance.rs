@@ -71,15 +71,11 @@ impl Instance {
 
     pub(crate) fn platform_poll(self: &Self, cx: &mut Context<'_>) {
         unsafe {
-            // SAFETY: We are making calls to two unsafe methods here,
-            //         backing_as_mut() and process_poll(). Both methods must
+            // SAFETY: The underlying unsafe call, process_poll(), must
             //         only be called from the same thread that the OpenThread
             //         instance is being used on. Since the OpenThread instance
             //         does not implement `Sync`, the self reference is neither
             //         `Send` nor `Sync`, so it is is safe to call here.
-            //         backing_as_mut() must also be used carefully to ensure that
-            //         there is never more than one mutable reference outstanding
-            //         to the backing. In this case we clearly only have one instance.
             self.borrow_backing().platform.borrow_mut().process_poll(self, cx);
         }
     }

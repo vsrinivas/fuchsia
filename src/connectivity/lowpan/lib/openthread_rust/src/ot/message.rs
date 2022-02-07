@@ -138,9 +138,9 @@ unsafe impl<'a> ot::Boxable for Message<'a> {
 
 impl<'a> Message<'a> {
     /// Functional equivalent of [`otsys::otIp6NewMessage`](crate::otsys::otIp6NewMessage).
-    pub fn ip6_new<T: ot::Boxable<OtType = otInstance>, S: AsRef<Settings>>(
+    pub fn ip6_new<T: ot::Boxable<OtType = otInstance>>(
         instance: &'a T,
-        settings: S,
+        settings: Option<&Settings>,
     ) -> Result<ot::Box<Message<'a>>, ot::NoBufs> {
         unsafe {
             // This is safe because we own the `otMessage*` resulting from
@@ -148,7 +148,7 @@ impl<'a> Message<'a> {
             //  of the implementation of `otIp6NewMessage`.
             ot::Box::from_ot_ptr(otIp6NewMessage(
                 instance.as_ot_ptr(),
-                settings.as_ref().as_ot_ptr(),
+                settings.map(|x| x.as_ref().as_ot_ptr()).unwrap_or(null()),
             ))
         }
         .ok_or(ot::NoBufs)
@@ -160,14 +160,10 @@ impl<'a> Message<'a> {
     /// Note that, due to limitation in how the underlying method can report errors,
     /// it is impossible to differentiate the "NoBufs" error condition from the "IPv6 header
     /// malformed" error condition, hence the unusual error type.
-    pub fn ip6_new_from_bytes<
-        T: ot::Boxable<OtType = otInstance>,
-        D: AsRef<[u8]>,
-        S: AsRef<Settings>,
-    >(
+    pub fn ip6_new_from_bytes<T: ot::Boxable<OtType = otInstance>, D: AsRef<[u8]>>(
         instance: &'a T,
         data: D,
-        settings: S,
+        settings: Option<&Settings>,
     ) -> Result<ot::Box<Message<'a>>, ot::MalformedOrNoBufs> {
         let data = data.as_ref();
         unsafe {
@@ -178,7 +174,7 @@ impl<'a> Message<'a> {
                 instance.as_ot_ptr(),
                 data.as_ptr(),
                 data.len().try_into().expect("ot::Message::ip6_new_from_bytes: Buffer too large"),
-                settings.as_ref().as_ot_ptr(),
+                settings.map(|x| x.as_ref().as_ot_ptr()).unwrap_or(null()),
             ))
         }
         .ok_or(ot::MalformedOrNoBufs)
@@ -264,7 +260,7 @@ impl<'a> Message<'a> {
 
     /// Renders this message to a new `Vec<u8>` using
     /// [`otsys::otMessageRead`](crate::otsys::otMessageRead).
-    pub fn as_vec(&self) -> Vec<u8> {
+    pub fn to_vec(&self) -> Vec<u8> {
         let mut buffer = Vec::with_capacity(self.len());
         unsafe {
             buffer.set_len(self.len());

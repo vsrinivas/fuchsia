@@ -62,9 +62,21 @@ unsafe impl OtCastable for std::net::Ipv6Addr {
             Some(&*(ptr as *const Self))
         }
     }
+
+    unsafe fn mut_from_ot_mut_ptr<'a>(ptr: *mut otIp6Address) -> Option<&'a mut Self> {
+        if ptr.is_null() {
+            None
+        } else {
+            sa::assert_eq_size!(Ip6Address, otIp6Address);
+            sa::assert_eq_align!(Ip6Address, otIp6Address);
+
+            // SAFETY: The safety of this dereference is ensured by the above two static assertions.
+            Some(&mut *(ptr as *mut Self))
+        }
+    }
 }
 
-/// Data type representing an 64-bit IPv6 network prefix.
+/// Data type representing a 64-bit IPv6 network prefix.
 ///
 /// Functional equivalent of [`otsys::otIp6NetworkPrefix`](crate::otsys::otIp6NetworkPrefix).
 #[derive(Default, Clone, Copy)]

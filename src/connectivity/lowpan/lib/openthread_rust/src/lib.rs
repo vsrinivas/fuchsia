@@ -38,6 +38,7 @@ pub mod prelude {
     pub use ot::Boxable as _;
     pub use ot::Dnssd as _;
     pub use ot::DnssdExt as _;
+    pub use ot::IntoOtError as _;
     pub use ot::Ip6 as _;
     pub use ot::Link as _;
     pub use ot::MessageBuffer as _;

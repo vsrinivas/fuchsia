@@ -180,7 +180,7 @@ impl Ip6 for Instance {
     }
 
     fn ip6_send_data(&self, data: &[u8]) -> Result {
-        if let Ok(msg) = Message::ip6_new_from_bytes(self, data, ot::message::Settings::default()) {
+        if let Ok(msg) = Message::ip6_new_from_bytes(self, data, None) {
             self.ip6_send(msg)
         } else {
             if self.get_buffer_info().0.mFreeBuffers == 0 {
@@ -192,9 +192,7 @@ impl Ip6 for Instance {
     }
 
     fn ip6_send_data_direct(&self, data: &[u8]) -> Result {
-        if let Ok(mut msg) =
-            Message::ip6_new_from_bytes(self, data, ot::message::Settings::default())
-        {
+        if let Ok(mut msg) = Message::ip6_new_from_bytes(self, data, None) {
             msg.set_direct_transmission(true);
             self.ip6_send(msg)
         } else {
