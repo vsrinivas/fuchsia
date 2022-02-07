@@ -26,7 +26,7 @@ const INITIAL_INFO_REQ_TIMEOUT: Duration = Duration::from_secs(1);
 /// Max Information-request timeout `INF_MAX_RT` from [RFC 8415, Section 7.6].
 ///
 /// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
-const INFO_REQ_MAX_RT: Duration = Duration::from_secs(3600);
+const MAX_INFO_REQ_TIMEOUT: Duration = Duration::from_secs(3600);
 /// Default information refresh time from [RFC 8415, Section 7.6].
 ///
 /// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
@@ -46,12 +46,12 @@ const INITIAL_SOLICIT_TIMEOUT: Duration = Duration::from_secs(1);
 /// Max Solicit timeout `SOL_MAX_RT` from [RFC 8415, Section 7.6].
 ///
 /// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
-const SOLICIT_MAX_RT: Duration = Duration::from_secs(3600);
+const MAX_SOLICIT_TIMEOUT: Duration = Duration::from_secs(3600);
 
 /// The valid range for `SOL_MAX_RT`, as defined in [RFC 8415, Section 21.24].
 ///
 /// [RFC 8415, Section 21.24](https://datatracker.ietf.org/doc/html/rfc8415#section-21.24)
-const VALID_SOLICIT_MAX_RT_RANGE: std::ops::RangeInclusive<u32> = 60..=86400;
+const VALID_MAX_SOLICIT_TIMEOUT_RANGE: std::ops::RangeInclusive<u32> = 60..=86400;
 
 /// The maximum [Preference option] value that can be present in an advertise,
 /// as described in [RFC 8415, Section 18.2.1].
@@ -91,7 +91,7 @@ const INITIAL_REQUEST_TIMEOUT: Duration = Duration::from_secs(1);
 /// Max Request timeout `REQ_MAX_RT` from [RFC 8415, Section 7.6].
 ///
 /// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
-const REQUEST_MAX_RT: Duration = Duration::from_secs(30);
+const MAX_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Max Request retry attempts `REQ_MAX_RC` from [RFC 8415, Section 7.6].
 ///
@@ -246,7 +246,12 @@ impl InformationRequesting {
     /// [RFC 8415, Section 18.2.6]: https://tools.ietf.org/html/rfc8415#section-18.2.6
     fn retransmission_timeout<R: Rng>(&self, rng: &mut R) -> Duration {
         let Self { retrans_timeout } = self;
-        retransmission_timeout(*retrans_timeout, INITIAL_INFO_REQ_TIMEOUT, INFO_REQ_MAX_RT, rng)
+        retransmission_timeout(
+            *retrans_timeout,
+            INITIAL_INFO_REQ_TIMEOUT,
+            MAX_INFO_REQ_TIMEOUT,
+            rng,
+        )
     }
 
     /// A helper function that returns a transition back to `InformationRequesting`, with actions
@@ -931,7 +936,7 @@ impl ServerDiscovery {
         //
         let mut collected_sol_max_rt = collected_sol_max_rt;
         if let Some(solicit_max_rt_option) = solicit_max_rt_option {
-            if VALID_SOLICIT_MAX_RT_RANGE.contains(&solicit_max_rt_option) {
+            if VALID_MAX_SOLICIT_TIMEOUT_RANGE.contains(&solicit_max_rt_option) {
                 collected_sol_max_rt.push(solicit_max_rt_option);
             }
         }
@@ -1319,7 +1324,12 @@ impl Requesting {
     ///
     /// [RFC 8415, Section 18.2.2]: https://tools.ietf.org/html/rfc8415#section-18.2.2
     fn retransmission_timeout<R: Rng>(prev_retrans_timeout: Duration, rng: &mut R) -> Duration {
-        retransmission_timeout(prev_retrans_timeout, INITIAL_REQUEST_TIMEOUT, REQUEST_MAX_RT, rng)
+        retransmission_timeout(
+            prev_retrans_timeout,
+            INITIAL_REQUEST_TIMEOUT,
+            MAX_REQUEST_TIMEOUT,
+            rng,
+        )
     }
 
     /// A helper function that returns a transition back to `Requesting`, with
@@ -1592,7 +1602,7 @@ impl Requesting {
                 }
                 v6::ParsedDhcpOption::SolMaxRt(sol_max_rt_opt) => {
                     let sol_max_rt_opt = sol_max_rt_opt.get();
-                    if VALID_SOLICIT_MAX_RT_RANGE.contains(&sol_max_rt_opt) {
+                    if VALID_MAX_SOLICIT_TIMEOUT_RANGE.contains(&sol_max_rt_opt) {
                         solicit_max_rt_option = Some(Duration::from_secs(sol_max_rt_opt.into()));
                     }
                 }
@@ -2336,7 +2346,7 @@ impl<R: Rng> ClientStateMachine<R> {
                 client_id,
                 configured_addresses,
                 &options_to_request,
-                SOLICIT_MAX_RT,
+                MAX_SOLICIT_TIMEOUT,
                 &mut rng,
             );
         (
@@ -2492,7 +2502,7 @@ pub(crate) mod testutil {
                     configured_addresses: got_configured_addresses,
                     first_solicit_time: Some(_),
                     retrans_timeout: INITIAL_SOLICIT_TIMEOUT,
-                    solicit_max_rt: SOLICIT_MAX_RT,
+                    solicit_max_rt: MAX_SOLICIT_TIMEOUT,
                     collected_advertise,
                     collected_sol_max_rt,
                 })),
@@ -2733,7 +2743,7 @@ pub(crate) mod testutil {
                    *addresses == expected_addresses &&
                    *got_server_id == server_id &&
                    *dns_servers == Vec::<Ipv6Addr>::new() &&
-                   *solicit_max_rt == SOLICIT_MAX_RT
+                   *solicit_max_rt == MAX_SOLICIT_TIMEOUT
         );
         client
     }
@@ -3458,7 +3468,7 @@ mod tests {
             selected_advertise,
             &options_to_request[..],
             BinaryHeap::new(),
-            SOLICIT_MAX_RT,
+            MAX_SOLICIT_TIMEOUT,
             &mut rng,
         );
         assert_matches!(transaction_id, Some(_));
@@ -3530,7 +3540,7 @@ mod tests {
             selected_advertise,
             &options_to_request[..],
             collected_advertise,
-            SOLICIT_MAX_RT,
+            MAX_SOLICIT_TIMEOUT,
             &mut rng,
         );
 
@@ -3720,7 +3730,7 @@ mod tests {
             selected_advertise,
             &options_to_request[..],
             BinaryHeap::new(),
-            SOLICIT_MAX_RT,
+            MAX_SOLICIT_TIMEOUT,
             &mut rng,
         );
 
@@ -3817,7 +3827,7 @@ mod tests {
             selected_advertise,
             &options_to_request[..],
             BinaryHeap::new(),
-            SOLICIT_MAX_RT,
+            MAX_SOLICIT_TIMEOUT,
             &mut rng,
         );
 
@@ -3919,7 +3929,7 @@ mod tests {
                 selected_advertise.clone(),
                 &[],
                 BinaryHeap::new(),
-                SOLICIT_MAX_RT,
+                MAX_SOLICIT_TIMEOUT,
                 &mut rng,
             );
 
@@ -4275,7 +4285,7 @@ mod tests {
             selected_advertise,
             &options_to_request[..],
             BinaryHeap::new(),
-            SOLICIT_MAX_RT,
+            MAX_SOLICIT_TIMEOUT,
             &mut rng,
         );
         assert_matches!(&state,
@@ -4288,7 +4298,7 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt,
-            }) if *solicit_max_rt == SOLICIT_MAX_RT
+            }) if *solicit_max_rt == MAX_SOLICIT_TIMEOUT
         );
         let received_sol_max_rt = 4800;
 
@@ -4320,7 +4330,7 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt,
-            }) if *solicit_max_rt == SOLICIT_MAX_RT
+            }) if *solicit_max_rt == MAX_SOLICIT_TIMEOUT
         );
 
         // If the reply has a different client ID than the test client's client ID,
@@ -4350,7 +4360,7 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt,
-            }) if *solicit_max_rt == SOLICIT_MAX_RT
+            }) if *solicit_max_rt == MAX_SOLICIT_TIMEOUT
         );
 
         // If the client receives a valid reply containing a SOL_MAX_RT option,
