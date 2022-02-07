@@ -678,9 +678,26 @@ where
     /// This will hash the file with the hash specified in [RepoBuilder::file_hash_algorithms]. If
     /// none was specified, the file will be hashed with [HashAlgorithm::Sha256].
     pub async fn add_target<Rd>(
+        self,
+        target_path: TargetPath,
+        reader: Rd,
+    ) -> Result<RepoBuilder<'a, D, R, Targets<D>>>
+    where
+        Rd: AsyncRead + AsyncSeek + Unpin + Send,
+    {
+        self.add_target_with_custom(target_path, reader, HashMap::new())
+            .await
+    }
+
+    /// Add a target that's loaded in from the reader. This will store the target in the repository.
+    ///
+    /// This will hash the file with the hash specified in [RepoBuilder::file_hash_algorithms]. If
+    /// none was specified, the file will be hashed with [HashAlgorithm::Sha256].
+    pub async fn add_target_with_custom<Rd>(
         mut self,
         target_path: TargetPath,
         mut reader: Rd,
+        custom: HashMap<String, serde_json::Value>,
     ) -> Result<RepoBuilder<'a, D, R, Targets<D>>>
     where
         Rd: AsyncRead + AsyncSeek + Unpin + Send,
@@ -693,8 +710,12 @@ where
             return Err(Error::MissingMetadata(Role::Root));
         };
 
-        let target_description =
-            TargetDescription::from_reader(&mut reader, &self.state.file_hash_algorithms).await?;
+        let target_description = TargetDescription::from_reader_with_custom(
+            &mut reader,
+            &self.state.file_hash_algorithms,
+            custom,
+        )
+        .await?;
 
         // According to TUF section 5.5.2, when consistent snapshot is enabled, target files should be
         // stored at `$HASH.FILENAME.EXT`. Otherwise it is stored at `FILENAME.EXT`.
@@ -1000,7 +1021,7 @@ where
     /// * stage a targets metadata if necessary.
     /// * stage a snapshot metadata if necessary.
     pub fn stage_timestamp(self) -> Result<RepoBuilder<'a, D, R, Done<D>>> {
-        self.with_timestamp_builder(|builder| builder)
+        self.stage_timestamp_with_builder(|builder| builder)
     }
 
     /// Stage a new timestamp using the default settings if:
@@ -1036,7 +1057,7 @@ where
     ///
     /// * version: 1 if a new repository, otherwise 1 past the trusted snapshot's version.
     /// * expires: 1 day from the current day.
-    pub fn with_timestamp_builder<F>(self, f: F) -> Result<RepoBuilder<'a, D, R, Done<D>>>
+    pub fn stage_timestamp_with_builder<F>(self, f: F) -> Result<RepoBuilder<'a, D, R, Done<D>>>
     where
         F: FnOnce(TimestampMetadataBuilder) -> TimestampMetadataBuilder,
     {
@@ -1216,7 +1237,7 @@ where
                 .repo
                 .store_metadata(
                     &MetadataPath::from_role(&Role::Root),
-                    &MetadataVersion::Number(root.metadata.version()),
+                    MetadataVersion::Number(root.metadata.version()),
                     &mut root.raw.as_bytes(),
                 )
                 .await?;
@@ -1225,7 +1246,7 @@ where
                 .repo
                 .store_metadata(
                     &MetadataPath::from_role(&Role::Root),
-                    &MetadataVersion::None,
+                    MetadataVersion::None,
                     &mut root.raw.as_bytes(),
                 )
                 .await?;
@@ -1241,7 +1262,7 @@ where
             let path = MetadataPath::from_role(&Role::Targets);
             self.ctx
                 .repo
-                .store_metadata(&path, &MetadataVersion::None, &mut targets.raw.as_bytes())
+                .store_metadata(&path, MetadataVersion::None, &mut targets.raw.as_bytes())
                 .await?;
 
             if consistent_snapshot {
@@ -1249,7 +1270,7 @@ where
                     .repo
                     .store_metadata(
                         &path,
-                        &MetadataVersion::Number(targets.metadata.version()),
+                        MetadataVersion::Number(targets.metadata.version()),
                         &mut targets.raw.as_bytes(),
                     )
                     .await?;
@@ -1260,7 +1281,7 @@ where
             let path = MetadataPath::from_role(&Role::Snapshot);
             self.ctx
                 .repo
-                .store_metadata(&path, &MetadataVersion::None, &mut snapshot.raw.as_bytes())
+                .store_metadata(&path, MetadataVersion::None, &mut snapshot.raw.as_bytes())
                 .await?;
 
             if consistent_snapshot {
@@ -1268,7 +1289,7 @@ where
                     .repo
                     .store_metadata(
                         &path,
-                        &MetadataVersion::Number(snapshot.metadata.version()),
+                        MetadataVersion::Number(snapshot.metadata.version()),
                         &mut snapshot.raw.as_bytes(),
                     )
                     .await?;
@@ -1280,7 +1301,7 @@ where
                 .repo
                 .store_metadata(
                     &MetadataPath::from_role(&Role::Timestamp),
-                    &MetadataVersion::None,
+                    MetadataVersion::None,
                     &mut timestamp.raw.as_bytes(),
                 )
                 .await?;
@@ -1310,6 +1331,7 @@ mod tests {
         futures_executor::block_on,
         futures_util::io::{AsyncReadExt, Cursor},
         lazy_static::lazy_static,
+        maplit::hashmap,
         matches::assert_matches,
         pretty_assertions::assert_eq,
         std::collections::BTreeMap,
@@ -1547,7 +1569,7 @@ mod tests {
             .unwrap()
             .timestamp_includes_length(true)
             .timestamp_includes_hashes(&[HashAlgorithm::Sha256])
-            .with_timestamp_builder(|builder| builder.expires(expires1))
+            .stage_timestamp_with_builder(|builder| builder.expires(expires1))
             .unwrap()
             .commit()
             .await
@@ -1643,10 +1665,19 @@ mod tests {
         .await
         .unwrap();
         client.update().await.unwrap();
-        assert_eq!(client.trusted_root().version(), 1);
-        assert_eq!(client.trusted_targets().map(|m| m.version()), Some(1));
-        assert_eq!(client.trusted_snapshot().map(|m| m.version()), Some(1));
-        assert_eq!(client.trusted_timestamp().map(|m| m.version()), Some(1));
+        assert_eq!(client.database().trusted_root().version(), 1);
+        assert_eq!(
+            client.database().trusted_targets().map(|m| m.version()),
+            Some(1)
+        );
+        assert_eq!(
+            client.database().trusted_snapshot().map(|m| m.version()),
+            Some(1)
+        );
+        assert_eq!(
+            client.database().trusted_timestamp().map(|m| m.version()),
+            Some(1)
+        );
 
         // Create a new metadata, derived from the tuf database we created
         // with the client.
@@ -1667,7 +1698,7 @@ mod tests {
             .unwrap()
             .timestamp_includes_length(false)
             .timestamp_includes_hashes(&[])
-            .with_timestamp_builder(|builder| builder.expires(expires2))
+            .stage_timestamp_with_builder(|builder| builder.expires(expires2))
             .unwrap()
             .commit()
             .await
@@ -1752,10 +1783,19 @@ mod tests {
         // And make sure the client can update to the latest metadata.
         let mut client = Client::from_parts(parts);
         client.update().await.unwrap();
-        assert_eq!(client.trusted_root().version(), 2);
-        assert_eq!(client.trusted_targets().map(|m| m.version()), Some(2));
-        assert_eq!(client.trusted_snapshot().map(|m| m.version()), Some(2));
-        assert_eq!(client.trusted_timestamp().map(|m| m.version()), Some(2));
+        assert_eq!(client.database().trusted_root().version(), 2);
+        assert_eq!(
+            client.database().trusted_targets().map(|m| m.version()),
+            Some(2)
+        );
+        assert_eq!(
+            client.database().trusted_snapshot().map(|m| m.version()),
+            Some(2)
+        );
+        assert_eq!(
+            client.database().trusted_timestamp().map(|m| m.version()),
+            Some(2)
+        );
     }
 
     #[test]
@@ -1792,7 +1832,7 @@ mod tests {
         .unwrap();
 
         assert!(client.update().await.unwrap());
-        assert_eq!(client.trusted_root().version(), 1);
+        assert_eq!(client.database().trusted_root().version(), 1);
 
         // Make sure doing another commit makes no changes.
         let mut parts = client.into_parts();
@@ -1809,7 +1849,7 @@ mod tests {
 
         let mut client = Client::from_parts(parts);
         assert!(!client.update().await.unwrap());
-        assert_eq!(client.trusted_root().version(), 1);
+        assert_eq!(client.database().trusted_root().version(), 1);
     }
 
     #[test]
@@ -1849,15 +1889,19 @@ mod tests {
         .unwrap();
 
         assert!(client.update().await.unwrap());
-        assert_eq!(client.trusted_root().version(), 1);
+        assert_eq!(client.database().trusted_root().version(), 1);
         assert_eq!(
-            client.trusted_root().root_keys().collect::<Vec<_>>(),
+            client
+                .database()
+                .trusted_root()
+                .root_keys()
+                .collect::<Vec<_>>(),
             vec![KEYS[1].public()],
         );
 
         // Another update should not fetch anything.
         assert!(!client.update().await.unwrap());
-        assert_eq!(client.trusted_root().version(), 1);
+        assert_eq!(client.database().trusted_root().version(), 1);
 
         // Now bump the root to version 2. We sign the root metadata with both
         // key 1 and 2, but the builder should only trust key 2.
@@ -1874,19 +1918,23 @@ mod tests {
 
         let mut client = Client::from_parts(parts);
         assert!(client.update().await.unwrap());
-        assert_eq!(client.trusted_root().version(), 2);
+        assert_eq!(client.database().trusted_root().version(), 2);
         assert_eq!(
-            client.trusted_root().consistent_snapshot(),
+            client.database().trusted_root().consistent_snapshot(),
             consistent_snapshot
         );
         assert_eq!(
-            client.trusted_root().root_keys().collect::<Vec<_>>(),
+            client
+                .database()
+                .trusted_root()
+                .root_keys()
+                .collect::<Vec<_>>(),
             vec![KEYS[2].public()],
         );
 
         // Another update should not fetch anything.
         assert!(!client.update().await.unwrap());
-        assert_eq!(client.trusted_root().version(), 2);
+        assert_eq!(client.database().trusted_root().version(), 2);
 
         // Now bump the root to version 3. The metadata will only be signed with
         // key 2, and trusted by key 2.
@@ -1904,15 +1952,19 @@ mod tests {
 
         let mut client = Client::from_parts(parts);
         assert!(client.update().await.unwrap());
-        assert_eq!(client.trusted_root().version(), 3);
+        assert_eq!(client.database().trusted_root().version(), 3);
         assert_eq!(
-            client.trusted_root().root_keys().collect::<Vec<_>>(),
+            client
+                .database()
+                .trusted_root()
+                .root_keys()
+                .collect::<Vec<_>>(),
             vec![KEYS[2].public()],
         );
 
         // Another update should not fetch anything.
         assert!(!client.update().await.unwrap());
-        assert_eq!(client.trusted_root().version(), 3);
+        assert_eq!(client.database().trusted_root().version(), 3);
     }
 
     #[test]
@@ -1952,31 +2004,50 @@ mod tests {
 
             let hash_algs = &[HashAlgorithm::Sha256, HashAlgorithm::Sha512];
 
-            let target_path = TargetPath::new("foo/bar").unwrap();
-            let target_file: &[u8] = b"things fade, alternatives exclude";
+            let target_path1 = TargetPath::new("foo/default").unwrap();
+            let target_path1_hashed = TargetPath::new(
+                "foo/522dd05a607a520657daa19c061a0271224030307117c2e661505e14601d1e44.default",
+            )
+            .unwrap();
+            let target_file1: &[u8] = b"things fade, alternatives exclude";
+
+            let target_path2 = TargetPath::new("foo/custom").unwrap();
+            let target_path2_hashed = TargetPath::new(
+                "foo/b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9.custom",
+            )
+            .unwrap();
+            let target_file2: &[u8] = b"hello world";
 
             let metadata = RepoBuilder::create(&mut repo)
                 .trusted_root_keys(&[&KEYS[0]])
                 .trusted_targets_keys(&[&KEYS[0]])
                 .trusted_snapshot_keys(&[&KEYS[0]])
                 .trusted_timestamp_keys(&[&KEYS[0]])
-                .stage_root_with_builder(|builder| builder.consistent_snapshot(false))
+                .add_target(target_path1.clone(), Cursor::new(target_file1))
+                .await
                 .unwrap()
                 .file_hash_algorithms(hash_algs)
-                .add_target(target_path.clone(), Cursor::new(target_file))
+                .add_target(target_path2.clone(), Cursor::new(target_file2))
                 .await
                 .unwrap()
                 .commit()
                 .await
                 .unwrap();
 
-            // Make sure the target was written correctly.
-            let mut rdr = repo.fetch_target(&target_path).await.unwrap();
+            // Make sure the targets were written correctly.
+            let mut rdr = repo.fetch_target(&target_path1_hashed).await.unwrap();
             let mut buf = vec![];
             rdr.read_to_end(&mut buf).await.unwrap();
             drop(rdr);
 
-            assert_eq!(&buf, target_file);
+            assert_eq!(&buf, target_file1);
+
+            let mut rdr = repo.fetch_target(&target_path2_hashed).await.unwrap();
+            let mut buf = vec![];
+            rdr.read_to_end(&mut buf).await.unwrap();
+            drop(rdr);
+
+            assert_eq!(&buf, target_file2);
 
             let mut client = Client::with_trusted_root(
                 Config::default(),
@@ -1989,17 +2060,34 @@ mod tests {
 
             client.update().await.unwrap();
 
-            // Make sure the target description is correct.
+            // Make sure the target descriptions are correct.
             assert_eq!(
-                client.fetch_target_description(&target_path).await.unwrap(),
-                TargetDescription::from_slice(target_file, hash_algs).unwrap(),
+                client
+                    .fetch_target_description(&target_path1)
+                    .await
+                    .unwrap(),
+                TargetDescription::from_slice(target_file1, &[HashAlgorithm::Sha256]).unwrap(),
             );
 
-            // Make sure we can fetch the target.
-            let mut rdr = client.fetch_target(&target_path).await.unwrap();
+            assert_eq!(
+                client
+                    .fetch_target_description(&target_path2)
+                    .await
+                    .unwrap(),
+                TargetDescription::from_slice(target_file2, hash_algs).unwrap(),
+            );
+
+            // Make sure we can fetch the targets.
+            let mut rdr = client.fetch_target(&target_path1).await.unwrap();
             let mut buf = vec![];
             rdr.read_to_end(&mut buf).await.unwrap();
-            assert_eq!(&buf, target_file);
+            assert_eq!(&buf, target_file1);
+            drop(rdr);
+
+            let mut rdr = client.fetch_target(&target_path2).await.unwrap();
+            let mut buf = vec![];
+            rdr.read_to_end(&mut buf).await.unwrap();
+            assert_eq!(&buf, target_file2);
         })
     }
 
@@ -2010,8 +2098,14 @@ mod tests {
 
             let hash_algs = &[HashAlgorithm::Sha256, HashAlgorithm::Sha512];
 
-            let target_path = TargetPath::new("foo/bar").unwrap();
-            let target_file: &[u8] = b"things fade, alternatives exclude";
+            let target_path1 = TargetPath::new("foo/bar").unwrap();
+            let target_file1: &[u8] = b"things fade, alternatives exclude";
+
+            let target_path2 = TargetPath::new("baz").unwrap();
+            let target_file2: &[u8] = b"hello world";
+            let target_custom2 = hashmap! {
+                "hello".into() => "world".into(),
+            };
 
             let metadata = RepoBuilder::create(&mut repo)
                 .trusted_root_keys(&[&KEYS[0]])
@@ -2021,7 +2115,14 @@ mod tests {
                 .stage_root_with_builder(|builder| builder.consistent_snapshot(true))
                 .unwrap()
                 .file_hash_algorithms(hash_algs)
-                .add_target(target_path.clone(), Cursor::new(target_file))
+                .add_target(target_path1.clone(), Cursor::new(target_file1))
+                .await
+                .unwrap()
+                .add_target_with_custom(
+                    target_path2.clone(),
+                    Cursor::new(target_file2),
+                    target_custom2.clone(),
+                )
                 .await
                 .unwrap()
                 .commit()
@@ -2029,15 +2130,20 @@ mod tests {
                 .unwrap();
 
             // Make sure the target was written correctly with hash prefixes.
-            for hash_alg in hash_algs {
-                let hash = crypto::calculate_hash(target_file, hash_alg);
-                let target_path = target_path.with_hash_prefix(&hash).unwrap();
+            for (target_path, target_file) in &[
+                (&target_path1, &target_file1),
+                (&target_path2, &target_file2),
+            ] {
+                for hash_alg in hash_algs {
+                    let hash = crypto::calculate_hash(target_file, hash_alg);
+                    let target_path = target_path.with_hash_prefix(&hash).unwrap();
 
-                let mut rdr = repo.fetch_target(&target_path).await.unwrap();
-                let mut buf = vec![];
-                rdr.read_to_end(&mut buf).await.unwrap();
+                    let mut rdr = repo.fetch_target(&target_path).await.unwrap();
+                    let mut buf = vec![];
+                    rdr.read_to_end(&mut buf).await.unwrap();
 
-                assert_eq!(&buf, target_file);
+                    assert_eq!(&buf, *target_file);
+                }
             }
 
             let mut client = Client::with_trusted_root(
@@ -2051,17 +2157,34 @@ mod tests {
 
             client.update().await.unwrap();
 
-            // Make sure the target description is correct.
+            // Make sure the target descriptions ar correct.
             assert_eq!(
-                client.fetch_target_description(&target_path).await.unwrap(),
-                TargetDescription::from_slice(target_file, hash_algs).unwrap(),
+                client
+                    .fetch_target_description(&target_path1)
+                    .await
+                    .unwrap(),
+                TargetDescription::from_slice(target_file1, hash_algs).unwrap(),
             );
 
-            // Make sure we can fetch the target.
-            let mut rdr = client.fetch_target(&target_path).await.unwrap();
-            let mut buf = vec![];
-            rdr.read_to_end(&mut buf).await.unwrap();
-            assert_eq!(&buf, target_file);
+            assert_eq!(
+                client
+                    .fetch_target_description(&target_path2)
+                    .await
+                    .unwrap(),
+                TargetDescription::from_slice_with_custom(target_file2, hash_algs, target_custom2)
+                    .unwrap(),
+            );
+
+            // Make sure we can fetch the targets.
+            for (target_path, target_file) in &[
+                (&target_path1, &target_file1),
+                (&target_path2, &target_file2),
+            ] {
+                let mut rdr = client.fetch_target(target_path).await.unwrap();
+                let mut buf = vec![];
+                rdr.read_to_end(&mut buf).await.unwrap();
+                assert_eq!(&buf, *target_file);
+            }
         })
     }
 
@@ -2085,7 +2208,7 @@ mod tests {
                 .unwrap()
                 .stage_snapshot_with_builder(|builder| builder.expires(expires1))
                 .unwrap()
-                .with_timestamp_builder(|builder| builder.expires(expires1))
+                .stage_timestamp_with_builder(|builder| builder.expires(expires1))
                 .unwrap()
                 .commit()
                 .await
@@ -2163,7 +2286,7 @@ mod tests {
                 .unwrap()
                 .stage_snapshot_with_builder(|builder| builder.expires(expires2))
                 .unwrap()
-                .with_timestamp_builder(|builder| builder.expires(expires2))
+                .stage_timestamp_with_builder(|builder| builder.expires(expires2))
                 .unwrap()
                 .commit()
                 .await
@@ -2228,7 +2351,7 @@ mod tests {
                 .skip_targets()
                 .stage_snapshot_with_builder(|builder| builder.expires(expires3))
                 .unwrap()
-                .with_timestamp_builder(|builder| builder.expires(expires3))
+                .stage_timestamp_with_builder(|builder| builder.expires(expires3))
                 .unwrap()
                 .commit()
                 .await
@@ -2278,7 +2401,7 @@ mod tests {
                 .skip_root()
                 .skip_targets()
                 .skip_snapshot()
-                .with_timestamp_builder(|builder| builder.expires(expires4))
+                .stage_timestamp_with_builder(|builder| builder.expires(expires4))
                 .unwrap()
                 .commit()
                 .await

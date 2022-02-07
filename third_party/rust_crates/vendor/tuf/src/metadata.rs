@@ -205,7 +205,7 @@ impl Display for Role {
 }
 
 /// Enum used for addressing versioned TUF metadata.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub enum MetadataVersion {
     /// The metadata is unversioned. This is the latest version of the metadata.
     None,
@@ -1021,12 +1021,12 @@ impl MetadataPath {
     /// # use tuf::metadata::{MetadataPath, MetadataVersion};
     /// #
     /// let path = MetadataPath::new("foo/bar").unwrap();
-    /// assert_eq!(path.components::<Json>(&MetadataVersion::None),
+    /// assert_eq!(path.components::<Json>(MetadataVersion::None),
     ///            ["foo".to_string(), "bar.json".to_string()]);
-    /// assert_eq!(path.components::<Json>(&MetadataVersion::Number(1)),
+    /// assert_eq!(path.components::<Json>(MetadataVersion::Number(1)),
     ///            ["foo".to_string(), "1.bar.json".to_string()]);
     /// ```
-    pub fn components<D>(&self, version: &MetadataVersion) -> Vec<String>
+    pub fn components<D>(&self, version: MetadataVersion) -> Vec<String>
     where
         D: DataInterchange,
     {
@@ -1591,7 +1591,7 @@ impl Borrow<str> for TargetPath {
 pub struct TargetDescription {
     length: u64,
     hashes: HashMap<HashAlgorithm, HashValue>,
-    custom: Option<HashMap<String, serde_json::Value>>,
+    custom: HashMap<String, serde_json::Value>,
 }
 
 impl TargetDescription {
@@ -1602,7 +1602,7 @@ impl TargetDescription {
     pub fn new(
         length: u64,
         hashes: HashMap<HashAlgorithm, HashValue>,
-        custom: Option<HashMap<String, serde_json::Value>>,
+        custom: HashMap<String, serde_json::Value>,
     ) -> Result<Self> {
         if hashes.is_empty() {
             return Err(Error::IllegalArgument(
@@ -1643,12 +1643,7 @@ impl TargetDescription {
     /// assert_eq!(target_description.hashes().get(&HashAlgorithm::Sha512), Some(&sha512));
     /// ```
     pub fn from_slice(buf: &[u8], hash_algs: &[HashAlgorithm]) -> Result<Self> {
-        let hashes = crypto::calculate_hashes_from_slice(buf, hash_algs)?;
-        Ok(TargetDescription {
-            length: buf.len() as u64,
-            hashes,
-            custom: None,
-        })
+        Self::from_slice_with_custom(buf, hash_algs, HashMap::new())
     }
 
     /// Read the from the given reader and custom metadata and calculate the length and hash
@@ -1682,7 +1677,7 @@ impl TargetDescription {
     /// assert_eq!(target_description.length(), bytes.len() as u64);
     /// assert_eq!(target_description.hashes().get(&HashAlgorithm::Sha256), Some(&sha256));
     /// assert_eq!(target_description.hashes().get(&HashAlgorithm::Sha512), Some(&sha512));
-    /// assert_eq!(target_description.custom().and_then(|c| c.get("Hello")), Some(&"World".into()));
+    /// assert_eq!(target_description.custom().get("Hello"), Some(&"World".into()));
     /// ```
     pub fn from_slice_with_custom(
         buf: &[u8],
@@ -1693,7 +1688,7 @@ impl TargetDescription {
         Ok(TargetDescription {
             length: buf.len() as u64,
             hashes,
-            custom: Some(custom),
+            custom,
         })
     }
 
@@ -1729,12 +1724,7 @@ impl TargetDescription {
     where
         R: AsyncRead + Unpin,
     {
-        let (length, hashes) = crypto::calculate_hashes_from_reader(read, hash_algs).await?;
-        Ok(TargetDescription {
-            length,
-            hashes,
-            custom: None,
-        })
+        Self::from_reader_with_custom(read, hash_algs, HashMap::new()).await
     }
 
     /// Read the from the given reader and custom metadata and calculate the length and hash
@@ -1770,7 +1760,7 @@ impl TargetDescription {
     /// assert_eq!(target_description.length(), bytes.len() as u64);
     /// assert_eq!(target_description.hashes().get(&HashAlgorithm::Sha256), Some(&sha256));
     /// assert_eq!(target_description.hashes().get(&HashAlgorithm::Sha512), Some(&sha512));
-    /// assert_eq!(target_description.custom().and_then(|c| c.get("Hello")), Some(&"World".into()));
+    /// assert_eq!(target_description.custom().get("Hello"), Some(&"World".into()));
     /// })
     /// ```
     pub async fn from_reader_with_custom<R>(
@@ -1785,7 +1775,7 @@ impl TargetDescription {
         Ok(TargetDescription {
             length,
             hashes,
-            custom: Some(custom),
+            custom,
         })
     }
 
@@ -1800,8 +1790,8 @@ impl TargetDescription {
     }
 
     /// An immutable reference to the custom metadata.
-    pub fn custom(&self) -> Option<&HashMap<String, serde_json::Value>> {
-        self.custom.as_ref()
+    pub fn custom(&self) -> &HashMap<String, serde_json::Value> {
+        &self.custom
     }
 }
 
@@ -2812,12 +2802,21 @@ mod test {
         block_on(async {
             let targets = TargetsMetadataBuilder::new()
                 .expires(Utc.ymd(2017, 1, 1).and_hms(0, 0, 0))
-                .insert_target_description(
-                    TargetPath::new("foo").unwrap(),
-                    TargetDescription::from_slice(&b"foo"[..], &[HashAlgorithm::Sha256]).unwrap(),
+                .insert_target_from_slice(
+                    TargetPath::new("insert-target-from-slice").unwrap(),
+                    &b"foo"[..],
+                    &[HashAlgorithm::Sha256],
                 )
+                .unwrap()
+                .insert_target_from_reader(
+                    TargetPath::new("insert-target-from-reader").unwrap(),
+                    &b"foo"[..],
+                    &[HashAlgorithm::Sha256],
+                )
+                .await
+                .unwrap()
                 .insert_target_description(
-                    TargetPath::new("bar").unwrap(),
+                    TargetPath::new("insert-target-description-from-slice-with-custom").unwrap(),
                     TargetDescription::from_slice_with_custom(
                         &b"foo"[..],
                         &[HashAlgorithm::Sha256],
@@ -2826,7 +2825,7 @@ mod test {
                     .unwrap(),
                 )
                 .insert_target_description(
-                    TargetPath::new("baz").unwrap(),
+                    TargetPath::new("insert-target-description-from-reader-with-custom").unwrap(),
                     TargetDescription::from_reader_with_custom(
                         &b"foo"[..],
                         &[HashAlgorithm::Sha256],
@@ -2847,22 +2846,28 @@ mod test {
                 "version": 1,
                 "expires": "2017-01-01T00:00:00Z",
                 "targets": {
-                    "foo": {
+                    "insert-target-from-slice": {
                         "length": 3,
                         "hashes": {
                             "sha256": "2c26b46b68ffc68ff99b453c1d30413413422d706483\
                                 bfa0f98a5e886266e7ae",
                         },
                     },
-                    "bar": {
+                    "insert-target-description-from-slice-with-custom": {
                         "length": 3,
                         "hashes": {
                             "sha256": "2c26b46b68ffc68ff99b453c1d30413413422d706483\
                                 bfa0f98a5e886266e7ae",
                         },
-                        "custom": {},
                     },
-                    "baz": {
+                    "insert-target-from-reader": {
+                        "length": 3,
+                        "hashes": {
+                            "sha256": "2c26b46b68ffc68ff99b453c1d30413413422d706483\
+                                bfa0f98a5e886266e7ae",
+                        },
+                    },
+                    "insert-target-description-from-reader-with-custom": {
                         "length": 3,
                         "hashes": {
                             "sha256": "2c26b46b68ffc68ff99b453c1d30413413422d706483\

@@ -29,7 +29,7 @@ use {
     tuf::{
         error::Error as TufError,
         interchange::Json,
-        metadata::{TargetDescription, TargetPath},
+        metadata::{Metadata, TargetDescription, TargetPath},
         repository::{RepositoryProvider, RepositoryStorageProvider},
     },
 };
@@ -138,7 +138,7 @@ impl UpdatingTufClient {
             } else {
                 (None, None)
             };
-        let root_version = client.root_version();
+        let root_version = client.database().trusted_root().version();
 
         let ret = Arc::new(AsyncMutex::new(Self {
             client,
@@ -193,6 +193,10 @@ impl UpdatingTufClient {
         ret
     }
 
+    pub(super) fn switch_local_repo_to_write_only_mode(&mut self) {
+        self.client.local_repo_mut().switch_to_write_only_mode();
+    }
+
     pub async fn fetch_target_description(
         &mut self,
         target: &TargetPath,
@@ -217,10 +221,10 @@ impl UpdatingTufClient {
     /// Provides the current known metadata versions.
     pub fn metadata_versions(&self) -> RepoVersions {
         RepoVersions {
-            root: self.client.root_version(),
-            timestamp: self.client.timestamp_version(),
-            snapshot: self.client.snapshot_version(),
-            targets: self.client.targets_version(),
+            root: self.client.database().trusted_root().version(),
+            timestamp: self.client.database().trusted_timestamp().map(|m| m.version()),
+            snapshot: self.client.database().trusted_snapshot().map(|m| m.version()),
+            targets: self.client.database().trusted_targets().map(|m| m.version()),
         }
     }
 
@@ -239,16 +243,16 @@ impl UpdatingTufClient {
             .map_err(error::TufOrTimeout::Tuf)
             .on_timeout(self.tuf_metadata_timeout, || Err(crate::error::TufOrTimeout::Timeout))
             .await;
-        self.inspect.root_version.set(self.client.root_version().into());
-        self.inspect
-            .timestamp_version
-            .set(self.client.timestamp_version().map(|uint| uint.into()).unwrap_or(-1i64));
-        self.inspect
-            .snapshot_version
-            .set(self.client.snapshot_version().map(|uint| uint.into()).unwrap_or(-1i64));
-        self.inspect
-            .targets_version
-            .set(self.client.targets_version().map(|uint| uint.into()).unwrap_or(-1i64));
+        self.inspect.root_version.set(self.client.database().trusted_root().version().into());
+        self.inspect.timestamp_version.set(
+            self.client.database().trusted_timestamp().map(|m| m.version().into()).unwrap_or(-1i64),
+        );
+        self.inspect.snapshot_version.set(
+            self.client.database().trusted_snapshot().map(|m| m.version().into()).unwrap_or(-1i64),
+        );
+        self.inspect.targets_version.set(
+            self.client.database().trusted_targets().map(|m| m.version().into()).unwrap_or(-1i64),
+        );
         if let Ok(update_occurred) = &res {
             self.last_update_successfully_checked_time.get_mut().replace(clock::now());
             self.inspect.update_check_success_count.increment();

@@ -52,7 +52,7 @@ async fn init_client(
     let local = EphemeralRepository::new();
     let mut client = Client::with_trusted_root_keys(
         config,
-        &MetadataVersion::Number(1),
+        MetadataVersion::Number(1),
         1,
         root_public_keys,
         local,

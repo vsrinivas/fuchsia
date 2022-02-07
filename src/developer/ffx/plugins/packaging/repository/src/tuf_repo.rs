@@ -146,12 +146,12 @@ impl TufRepo {
         self.versions[role as usize] = version;
         futures::executor::block_on(self.repo.store_metadata(
             &path,
-            &MetadataVersion::None,
+            MetadataVersion::None,
             &mut metadata_raw.as_bytes(),
         ))?;
         futures::executor::block_on(self.repo.store_metadata(
             &path,
-            &MetadataVersion::Number(version),
+            MetadataVersion::Number(version),
             &mut metadata_raw.as_bytes(),
         ))?;
 
@@ -162,7 +162,7 @@ impl TufRepo {
     fn load_signed_metadata<M: Metadata>(&self) -> Result<SignedMetadata<Json, M>> {
         let path = MetadataPath::from_role(&M::ROLE);
         let mut metadata_reader =
-            futures::executor::block_on(self.repo.fetch_metadata(&path, &MetadataVersion::None))?;
+            futures::executor::block_on(self.repo.fetch_metadata(&path, MetadataVersion::None))?;
         let mut buf = Vec::new();
         futures::executor::block_on(metadata_reader.read_to_end(&mut buf))?;
         Ok(Json::from_slice(&buf)?)

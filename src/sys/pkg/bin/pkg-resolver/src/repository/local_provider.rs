@@ -36,9 +36,9 @@ impl RepositoryProvider<Json> for LocalMirrorRepositoryProvider {
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
-        let path = meta_path.components::<Json>(&version).join("/");
+        let path = meta_path.components::<Json>(version).join("/");
         async move {
             let (local, remote) = fidl::endpoints::create_endpoints::<FileMarker>()
                 .context("creating file proxy")
@@ -158,7 +158,7 @@ mod tests {
         let env = TestEnv::new().await;
         let mut result = env
             .provider
-            .fetch_metadata(&MetadataPath::from_role(&Role::Root), &MetadataVersion::None)
+            .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::None)
             .await
             .expect("fetch_metadata succeeds");
 
@@ -172,7 +172,7 @@ mod tests {
         let env = TestEnv::new().await;
         let mut result = env
             .provider
-            .fetch_metadata(&MetadataPath::from_role(&Role::Root), &MetadataVersion::Number(1))
+            .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::Number(1))
             .await
             .expect("fetch_metadata succeeds");
 
@@ -186,7 +186,7 @@ mod tests {
         let env = TestEnv::new().await;
         let result = env
             .provider
-            .fetch_metadata(&MetadataPath::from_role(&Role::Root), &MetadataVersion::Number(4))
+            .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::Number(4))
             .await;
 
         assert!(result.is_err());

@@ -451,8 +451,8 @@ impl Delegations {
 pub struct TargetDescription {
     length: u64,
     hashes: BTreeMap<crypto::HashAlgorithm, crypto::HashValue>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    custom: Option<BTreeMap<String, serde_json::Value>>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    custom: BTreeMap<String, serde_json::Value>,
 }
 
 impl TargetDescription {
@@ -466,7 +466,9 @@ impl TargetDescription {
                 .collect(),
             custom: description
                 .custom()
-                .map(|custom| custom.iter().map(|(k, v)| (k.clone(), v.clone())).collect()),
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect(),
         }
     }
 
@@ -474,7 +476,7 @@ impl TargetDescription {
         metadata::TargetDescription::new(
             self.length,
             self.hashes.into_iter().collect(),
-            self.custom.map(|custom| custom.into_iter().collect()),
+            self.custom.into_iter().collect(),
         )
     }
 }

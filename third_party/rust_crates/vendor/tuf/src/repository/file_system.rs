@@ -119,7 +119,7 @@ where
         }
     }
 
-    fn metadata_path(&self, meta_path: &MetadataPath, version: &MetadataVersion) -> PathBuf {
+    fn metadata_path(&self, meta_path: &MetadataPath, version: MetadataVersion) -> PathBuf {
         let mut path = self.metadata_path.clone();
         path.extend(meta_path.components::<D>(version));
         path
@@ -153,7 +153,7 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let path = self.metadata_path(meta_path, version);
         self.fetch_path(&path)
@@ -175,7 +175,7 @@ where
     fn store_metadata<'a>(
         &'a mut self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, Result<()>> {
         let path = self.metadata_path(meta_path, version);
@@ -263,7 +263,7 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let path = self.repo.metadata_path(meta_path, version);
         if let Some(temp_path) = self.metadata.get(&path) {
@@ -293,7 +293,7 @@ where
     fn store_metadata<'a>(
         &'a mut self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
         read: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, Result<()>> {
         let path = self.repo.metadata_path(meta_path, version);
@@ -369,7 +369,7 @@ mod test {
                 Repository::<_, Json>::new(repo)
                     .fetch_metadata::<RootMetadata>(
                         &MetadataPath::from_role(&Role::Root),
-                        &MetadataVersion::None,
+                        MetadataVersion::None,
                         None,
                         vec![],
                     )
@@ -449,7 +449,7 @@ mod test {
             let committed_meta = "committed meta";
             let committed_target = "committed target";
 
-            repo.store_metadata(&meta_path, &meta_version, &mut committed_meta.as_bytes())
+            repo.store_metadata(&meta_path, meta_version, &mut committed_meta.as_bytes())
                 .await
                 .unwrap();
 
@@ -461,7 +461,7 @@ mod test {
 
             // Make sure we can read back the committed stuff.
             assert_eq!(
-                fetch_metadata_to_string(&batch, &meta_path, &meta_version)
+                fetch_metadata_to_string(&batch, &meta_path, meta_version)
                     .await
                     .unwrap(),
                 committed_meta,
@@ -475,7 +475,7 @@ mod test {
             let staged_meta = "staged meta";
             let staged_target = "staged target";
             batch
-                .store_metadata(&meta_path, &meta_version, &mut staged_meta.as_bytes())
+                .store_metadata(&meta_path, meta_version, &mut staged_meta.as_bytes())
                 .await
                 .unwrap();
             batch
@@ -485,7 +485,7 @@ mod test {
 
             // Make sure it got staged.
             assert_eq!(
-                fetch_metadata_to_string(&batch, &meta_path, &meta_version)
+                fetch_metadata_to_string(&batch, &meta_path, meta_version)
                     .await
                     .unwrap(),
                 staged_meta,
@@ -500,7 +500,7 @@ mod test {
             drop(batch);
 
             assert_eq!(
-                fetch_metadata_to_string(&repo, &meta_path, &meta_version)
+                fetch_metadata_to_string(&repo, &meta_path, meta_version)
                     .await
                     .unwrap(),
                 committed_meta,
@@ -513,7 +513,7 @@ mod test {
             // Do the batch_update again, but this time write the data.
             let mut batch = repo.batch_update();
             batch
-                .store_metadata(&meta_path, &meta_version, &mut staged_meta.as_bytes())
+                .store_metadata(&meta_path, meta_version, &mut staged_meta.as_bytes())
                 .await
                 .unwrap();
             batch
@@ -524,7 +524,7 @@ mod test {
 
             // Make sure the new data got to the repository.
             assert_eq!(
-                fetch_metadata_to_string(&repo, &meta_path, &meta_version)
+                fetch_metadata_to_string(&repo, &meta_path, meta_version)
                     .await
                     .unwrap(),
                 staged_meta,

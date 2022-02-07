@@ -13,7 +13,7 @@ use crate::repository::{RepositoryProvider, RepositoryStorage};
 use crate::Result;
 
 /// An ephemeral repository contained solely in memory.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EphemeralRepository<D> {
     metadata: HashMap<(MetadataPath, MetadataVersion), Box<[u8]>>,
     targets: HashMap<TargetPath, Box<[u8]>>,
@@ -48,15 +48,6 @@ where
     }
 }
 
-impl<D> Default for EphemeralRepository<D>
-where
-    D: DataInterchange,
-{
-    fn default() -> Self {
-        EphemeralRepository::new()
-    }
-}
-
 impl<D> RepositoryProvider<D> for EphemeralRepository<D>
 where
     D: DataInterchange + Sync,
@@ -64,9 +55,9 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
-        let bytes = match self.metadata.get(&(meta_path.clone(), version.clone())) {
+        let bytes = match self.metadata.get(&(meta_path.clone(), version)) {
             Some(bytes) => Ok(bytes),
             None => Err(Error::NotFound),
         };
@@ -92,11 +83,10 @@ where
     fn store_metadata<'a>(
         &'a mut self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, Result<()>> {
         let meta_path = meta_path.clone();
-        let version = version.clone();
         let self_metadata = &mut self.metadata;
         async move {
             let mut buf = Vec::new();
@@ -161,9 +151,9 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
-        let key = (meta_path.clone(), version.clone());
+        let key = (meta_path.clone(), version);
         let bytes = if let Some(bytes) = self.staging_repo.metadata.get(&key) {
             Ok(bytes)
         } else {
@@ -195,7 +185,7 @@ where
     fn store_metadata<'a>(
         &'a mut self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, Result<()>> {
         self.staging_repo
@@ -226,11 +216,19 @@ mod test {
     use crate::interchange::Json;
     use crate::repository::{fetch_metadata_to_string, fetch_target_to_string};
     use futures_executor::block_on;
+    use matches::assert_matches;
 
     #[test]
     fn ephemeral_repo_targets() {
         block_on(async {
             let mut repo = EphemeralRepository::<Json>::new();
+
+            let path = TargetPath::new("batty").unwrap();
+            if let Err(err) = repo.fetch_target(&path).await {
+                assert_matches!(err, Error::NotFound);
+            } else {
+                panic!("expected fetch_target to fail");
+            }
 
             let data: &[u8] = b"like tears in the rain";
             let path = TargetPath::new("batty").unwrap();
@@ -265,7 +263,7 @@ mod test {
             let committed_meta = "committed meta";
             let committed_target = "committed target";
 
-            repo.store_metadata(&meta_path, &meta_version, &mut committed_meta.as_bytes())
+            repo.store_metadata(&meta_path, meta_version, &mut committed_meta.as_bytes())
                 .await
                 .unwrap();
 
@@ -277,7 +275,7 @@ mod test {
 
             // Make sure we can read back the committed stuff.
             assert_eq!(
-                fetch_metadata_to_string(&batch, &meta_path, &meta_version)
+                fetch_metadata_to_string(&batch, &meta_path, meta_version)
                     .await
                     .unwrap(),
                 committed_meta,
@@ -291,7 +289,7 @@ mod test {
             let staged_meta = "staged meta";
             let staged_target = "staged target";
             batch
-                .store_metadata(&meta_path, &meta_version, &mut staged_meta.as_bytes())
+                .store_metadata(&meta_path, meta_version, &mut staged_meta.as_bytes())
                 .await
                 .unwrap();
             batch
@@ -301,7 +299,7 @@ mod test {
 
             // Make sure it got staged.
             assert_eq!(
-                fetch_metadata_to_string(&batch, &meta_path, &meta_version)
+                fetch_metadata_to_string(&batch, &meta_path, meta_version)
                     .await
                     .unwrap(),
                 staged_meta,
@@ -316,7 +314,7 @@ mod test {
             drop(batch);
 
             assert_eq!(
-                fetch_metadata_to_string(&repo, &meta_path, &meta_version)
+                fetch_metadata_to_string(&repo, &meta_path, meta_version)
                     .await
                     .unwrap(),
                 committed_meta,
@@ -329,7 +327,7 @@ mod test {
             // Do the batch_update again, but this time write the data.
             let mut batch = repo.batch_update();
             batch
-                .store_metadata(&meta_path, &meta_version, &mut staged_meta.as_bytes())
+                .store_metadata(&meta_path, meta_version, &mut staged_meta.as_bytes())
                 .await
                 .unwrap();
             batch
@@ -340,7 +338,7 @@ mod test {
 
             // Make sure the new data got to the repository.
             assert_eq!(
-                fetch_metadata_to_string(&repo, &meta_path, &meta_version)
+                fetch_metadata_to_string(&repo, &meta_path, meta_version)
                     .await
                     .unwrap(),
                 staged_meta,

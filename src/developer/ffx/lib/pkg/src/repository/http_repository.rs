@@ -174,7 +174,6 @@ where
         .await?
         .context("missing target description here")?
         .custom()
-        .context("missing custom data")?
         .get("merkle")
         .context("missing merkle")?
         .clone();

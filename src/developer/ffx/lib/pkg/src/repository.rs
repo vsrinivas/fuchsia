@@ -318,7 +318,7 @@ impl Repository {
         let mut client = Self::get_tuf_client(self.backend.get_tuf_repo()?).await?;
         let _ = client.update().await?;
 
-        match client.trusted_targets() {
+        match client.database().trusted_targets() {
             Some(trusted_targets) => Ok(trusted_targets
                 .targets()
                 .get(&TargetPath::new(path).map_err(|e| anyhow::anyhow!(e))?)
@@ -351,7 +351,7 @@ impl Repository {
                 }
             }
 
-            client.trusted_root().clone()
+            client.database().trusted_root().clone()
         };
 
         let root_keys = trusted_root
@@ -384,7 +384,7 @@ impl Repository {
             // FIXME(http://fxbug.dev/92126) we really should be initializing trust, rather than just
             // trusting 1.root.json.
             let mut md = tuf_repo
-                .fetch_metadata(&MetadataPath::from_role(&Role::Root), &MetadataVersion::Number(1))
+                .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::Number(1))
                 .await?;
 
             let mut buf = Vec::new();
@@ -430,12 +430,12 @@ impl Repository {
             // Get the latest TUF metadata.
             client.update().await?;
 
-            client.trusted_targets().context("missing target information")?.clone()
+            client.database().trusted_targets().context("missing target information")?.clone()
         };
 
         let packages: Result<Vec<RepositoryPackage>, Error> =
             join_all(trusted_targets.targets().into_iter().filter_map(|(k, v)| {
-                let custom = v.custom()?;
+                let custom = v.custom();
                 let size = custom.get("size")?.as_u64()?;
                 let hash = custom.get("merkle")?.as_str().unwrap_or("").to_string();
                 let path = format!("blobs/{}", hash);
@@ -504,7 +504,7 @@ impl Repository {
             // Get the latest TUF metadata.
             client.update().await?;
 
-            client.trusted_targets().context("expected targets information")?.clone()
+            client.database().trusted_targets().context("expected targets information")?.clone()
         };
 
         self.show_target_package(&trusted_targets, package_name).await
@@ -522,9 +522,7 @@ impl Repository {
             return Ok(None);
         };
 
-        let custom = target
-            .custom()
-            .ok_or_else(|| anyhow!("package {:?} is missing custom metadata", package_name))?;
+        let custom = target.custom();
 
         let hash = custom
             .get("merkle")

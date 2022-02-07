@@ -248,7 +248,7 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let components = meta_path.components::<D>(version);
         async move {

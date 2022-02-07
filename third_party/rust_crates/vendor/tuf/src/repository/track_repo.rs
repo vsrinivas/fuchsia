@@ -29,19 +29,19 @@ pub(crate) enum Track {
 }
 
 impl Track {
-    pub(crate) fn store<T>(meta_path: &MetadataPath, version: &MetadataVersion, metadata: T) -> Self
+    pub(crate) fn store<T>(meta_path: &MetadataPath, version: MetadataVersion, metadata: T) -> Self
     where
         T: Into<Vec<u8>>,
     {
         Track::Store {
             path: meta_path.clone(),
-            version: version.clone(),
+            version,
             metadata: String::from_utf8(metadata.into()).unwrap(),
         }
     }
 
     pub(crate) fn store_meta<M, D>(
-        version: &MetadataVersion,
+        version: MetadataVersion,
         metadata: &RawSignedMetadata<D, M>,
     ) -> Self
     where
@@ -57,7 +57,7 @@ impl Track {
 
     pub(crate) fn fetch_found<T>(
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
         metadata: T,
     ) -> Self
     where
@@ -65,13 +65,13 @@ impl Track {
     {
         Track::FetchFound {
             path: meta_path.clone(),
-            version: version.clone(),
+            version,
             metadata: String::from_utf8(metadata.into()).unwrap(),
         }
     }
 
     pub(crate) fn fetch_meta_found<M, D>(
-        version: &MetadataVersion,
+        version: MetadataVersion,
         metadata: &RawSignedMetadata<D, M>,
     ) -> Self
     where
@@ -117,24 +117,23 @@ where
     fn store_metadata<'a>(
         &'a mut self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, Result<()>> {
         let meta_path = meta_path.clone();
-        let version = version.clone();
         async move {
             let mut buf = Vec::new();
             metadata.read_to_end(&mut buf).await?;
 
             let () = self
                 .repo
-                .store_metadata(&meta_path, &version, &mut buf.as_slice())
+                .store_metadata(&meta_path, version, &mut buf.as_slice())
                 .await?;
 
             self.tracks
                 .lock()
                 .unwrap()
-                .push(Track::store(&meta_path, &version, buf));
+                .push(Track::store(&meta_path, version, buf));
 
             Ok(())
         }
@@ -158,12 +157,11 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let meta_path = meta_path.clone();
-        let version = version.clone();
         async move {
-            let fut = self.repo.fetch_metadata(&meta_path, &version);
+            let fut = self.repo.fetch_metadata(&meta_path, version);
             match fut.await {
                 Ok(mut rdr) => {
                     let mut buf = Vec::new();
@@ -171,7 +169,7 @@ where
 
                     self.tracks.lock().unwrap().push(Track::fetch_found(
                         &meta_path,
-                        &version,
+                        version,
                         buf.clone(),
                     ));
 

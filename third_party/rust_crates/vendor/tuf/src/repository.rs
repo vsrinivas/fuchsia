@@ -56,7 +56,7 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>>;
 
     /// Fetch the given target.
@@ -78,7 +78,7 @@ where
 pub(crate) async fn fetch_metadata_to_string<D, R>(
     repo: &R,
     meta_path: &MetadataPath,
-    version: &MetadataVersion,
+    version: MetadataVersion,
 ) -> Result<String>
 where
     D: DataInterchange + Sync,
@@ -119,7 +119,7 @@ where
     fn store_metadata<'a>(
         &'a mut self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, Result<()>>;
 
@@ -155,7 +155,7 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         (**self).fetch_metadata(meta_path, version)
     }
@@ -176,7 +176,7 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         (**self).fetch_metadata(meta_path, version)
     }
@@ -197,7 +197,7 @@ where
     fn store_metadata<'a>(
         &'a mut self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, Result<()>> {
         (**self).store_metadata(meta_path, version, metadata)
@@ -220,7 +220,7 @@ where
     fn store_metadata<'a>(
         &'a mut self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, Result<()>> {
         (**self).store_metadata(meta_path, version, metadata)
@@ -243,7 +243,7 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         (**self).fetch_metadata(meta_path, version)
     }
@@ -264,7 +264,7 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         (**self).fetch_metadata(meta_path, version)
     }
@@ -315,9 +315,12 @@ impl<R, D> Repository<R, D> {
         self.repository
     }
 
-    #[cfg(test)]
     pub(crate) fn as_inner(&self) -> &R {
         &self.repository
+    }
+
+    pub(crate) fn as_inner_mut(&mut self) -> &mut R {
+        &mut self.repository
     }
 }
 
@@ -336,7 +339,7 @@ where
     pub(crate) async fn fetch_metadata<'a, M>(
         &'a self,
         meta_path: &'a MetadataPath,
-        version: &'a MetadataVersion,
+        version: MetadataVersion,
         max_length: Option<usize>,
         hashes: Vec<(&'static HashAlgorithm, HashValue)>,
     ) -> Result<RawSignedMetadata<D, M>>
@@ -422,7 +425,7 @@ where
     pub async fn store_metadata<'a, M>(
         &'a mut self,
         path: &'a MetadataPath,
-        version: &'a MetadataVersion,
+        version: MetadataVersion,
         metadata: &'a RawSignedMetadata<D, M>,
     ) -> Result<()>
     where
@@ -462,7 +465,7 @@ mod test {
             assert_matches!(
                 repo.fetch_metadata::<RootMetadata>(
                     &MetadataPath::from_role(&Role::Root),
-                    &MetadataVersion::None,
+                    MetadataVersion::None,
                     None,
                     vec![],
                 )
@@ -480,7 +483,7 @@ mod test {
 
             repo.store_metadata(
                 &MetadataPath::from_role(&Role::Root),
-                &MetadataVersion::None,
+                MetadataVersion::None,
                 &fake_metadata,
             )
             .await
@@ -489,7 +492,7 @@ mod test {
             assert_matches!(
                 repo.store_metadata(
                     &MetadataPath::from_role(&Role::Snapshot),
-                    &MetadataVersion::None,
+                    MetadataVersion::None,
                     &fake_metadata,
                 )
                 .await,
@@ -499,7 +502,7 @@ mod test {
             assert_matches!(
                 repo.fetch_metadata::<SnapshotMetadata>(
                     &MetadataPath::from_role(&Role::Root),
-                    &MetadataVersion::None,
+                    MetadataVersion::None,
                     None,
                     vec![],
                 )
@@ -519,7 +522,7 @@ mod test {
             let data_hash = crypto::calculate_hash(data, &HashAlgorithm::Sha256);
 
             let mut repo = EphemeralRepository::new();
-            repo.store_metadata(&path, &version, &mut &*data)
+            repo.store_metadata(&path, version, &mut &*data)
                 .await
                 .unwrap();
 
@@ -529,7 +532,7 @@ mod test {
                 client
                     .fetch_metadata::<RootMetadata>(
                         &path,
-                        &version,
+                        version,
                         None,
                         vec![(&HashAlgorithm::Sha256, data_hash)],
                     )
@@ -547,7 +550,7 @@ mod test {
             let data: &[u8] = b"corrupt metadata";
 
             let mut repo = EphemeralRepository::new();
-            repo.store_metadata(&path, &version, &mut &*data)
+            repo.store_metadata(&path, version, &mut &*data)
                 .await
                 .unwrap();
 
@@ -557,7 +560,7 @@ mod test {
                 client
                     .fetch_metadata::<RootMetadata>(
                         &path,
-                        &version,
+                        version,
                         None,
                         vec![(&HashAlgorithm::Sha256, HashValue::new(vec![]))],
                     )
@@ -576,7 +579,7 @@ mod test {
             let _metadata = RawSignedMetadata::<Json, RootMetadata>::new(data.to_vec());
 
             let mut repo = EphemeralRepository::new();
-            repo.store_metadata(&path, &version, &mut &*data)
+            repo.store_metadata(&path, version, &mut &*data)
                 .await
                 .unwrap();
 
@@ -584,7 +587,7 @@ mod test {
 
             assert_matches!(
                 client
-                    .fetch_metadata::<RootMetadata>(&path, &version, Some(100), vec![])
+                    .fetch_metadata::<RootMetadata>(&path, version, Some(100), vec![])
                     .await,
                 Ok(_metadata)
             );
@@ -599,7 +602,7 @@ mod test {
             let data: &[u8] = b"very big metadata";
 
             let mut repo = EphemeralRepository::new();
-            repo.store_metadata(&path, &version, &mut &*data)
+            repo.store_metadata(&path, version, &mut &*data)
                 .await
                 .unwrap();
 
@@ -607,7 +610,7 @@ mod test {
 
             assert_matches!(
                 client
-                    .fetch_metadata::<RootMetadata>(&path, &version, Some(4), vec![])
+                    .fetch_metadata::<RootMetadata>(&path, version, Some(4), vec![])
                     .await,
                 Err(_)
             );

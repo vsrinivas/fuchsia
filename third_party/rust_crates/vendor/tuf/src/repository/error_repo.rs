@@ -40,7 +40,7 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         self.repo.fetch_metadata(meta_path, version)
     }
@@ -61,7 +61,7 @@ where
     fn store_metadata<'a>(
         &'a mut self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, Result<()>> {
         if self.fail_metadata_stores.load(Ordering::SeqCst) {

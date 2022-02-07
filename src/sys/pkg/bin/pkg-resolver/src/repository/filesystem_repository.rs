@@ -9,7 +9,6 @@ use {
     fuchsia_zircon as zx,
     futures::{future::BoxFuture, prelude::*},
     io_util::file::AsyncReader,
-    parking_lot::Mutex,
     std::{convert::TryInto as _, marker::PhantomData, path::Path},
     tuf::{
         interchange::DataInterchange,
@@ -137,7 +136,7 @@ async fn write_all(
 
 fn get_metadata_path<D: DataInterchange>(
     meta_path: &MetadataPath,
-    version: &MetadataVersion,
+    version: MetadataVersion,
 ) -> String {
     let mut path = vec!["metadata"];
     let components = meta_path.components::<D>(version);
@@ -159,7 +158,7 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let path = get_metadata_path::<D>(meta_path, version);
         self.fetch_path(path).boxed()
@@ -181,7 +180,7 @@ where
     fn store_metadata<'a>(
         &'a mut self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, tuf::Result<()>> {
         let path = get_metadata_path::<D>(meta_path, version);
@@ -200,17 +199,17 @@ where
 
 pub struct RWRepository<D, R> {
     inner: R,
-    mode: Mutex<Mode>,
+    mode: Mode,
     _phantom: PhantomData<D>,
 }
 
 impl<D, R> RWRepository<D, R> {
     pub fn new(repo: R) -> Self {
-        Self { inner: repo, mode: Mutex::new(Mode::ReadWrite), _phantom: PhantomData }
+        Self { inner: repo, mode: Mode::ReadWrite, _phantom: PhantomData }
     }
 
-    pub fn switch_to_write_only_mode(&self) {
-        *self.mode.lock() = Mode::WriteOnly;
+    pub fn switch_to_write_only_mode(&mut self) {
+        self.mode = Mode::WriteOnly;
     }
 }
 
@@ -222,7 +221,7 @@ where
     fn store_metadata<'a>(
         &'a mut self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
         metadata: &'a mut (dyn AsyncRead + Send + Unpin + 'a),
     ) -> BoxFuture<'a, tuf::Result<()>> {
         self.inner.store_metadata(meta_path, version, metadata)
@@ -245,9 +244,9 @@ where
     fn fetch_metadata<'a>(
         &'a self,
         meta_path: &MetadataPath,
-        version: &MetadataVersion,
+        version: MetadataVersion,
     ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
-        if *self.mode.lock() == Mode::WriteOnly {
+        if self.mode == Mode::WriteOnly {
             return future::ready(Err(make_opaque_error(anyhow!(
                 "attempt to read in write only mode"
             ))))
@@ -260,7 +259,7 @@ where
         &'a self,
         target_path: &TargetPath,
     ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
-        if *self.mode.lock() == Mode::WriteOnly {
+        if self.mode == Mode::WriteOnly {
             return future::ready(Err(make_opaque_error(anyhow!(
                 "attempt to read in write only mode"
             ))))
@@ -320,7 +319,7 @@ mod tests {
         std::fs::write(temp.path().join("metadata/root.json"), &expected_data).unwrap();
         let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
         let mut result = repo
-            .fetch_metadata(&MetadataPath::new("root").unwrap(), &MetadataVersion::None)
+            .fetch_metadata(&MetadataPath::new("root").unwrap(), MetadataVersion::None)
             .await
             .unwrap();
 
@@ -351,7 +350,7 @@ mod tests {
         let mut cursor = Cursor::new(&expected_data);
         repo.store_metadata(
             &MetadataPath::new("root").unwrap(),
-            &MetadataVersion::Number(0),
+            MetadataVersion::Number(0),
             &mut cursor,
         )
         .await
@@ -377,12 +376,12 @@ mod tests {
     async fn test_fetch_fail_when_write_only() {
         let temp = tempdir().unwrap();
         let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
-        let repo = RWRepository::new(repo);
+        let mut repo = RWRepository::new(repo);
         std::fs::create_dir(temp.path().join("metadata")).unwrap();
         std::fs::write(temp.path().join("metadata/foo.json"), get_random_buffer()).unwrap();
 
         let mut data = Vec::new();
-        repo.fetch_metadata(&MetadataPath::new("foo").unwrap(), &MetadataVersion::None)
+        repo.fetch_metadata(&MetadataPath::new("foo").unwrap(), MetadataVersion::None)
             .await
             .unwrap()
             .read_to_end(&mut data)
@@ -392,7 +391,7 @@ mod tests {
         repo.switch_to_write_only_mode();
 
         assert!(repo
-            .fetch_metadata(&MetadataPath::new("foo").unwrap(), &MetadataVersion::None)
+            .fetch_metadata(&MetadataPath::new("foo").unwrap(), MetadataVersion::None)
             .await
             .is_err());
     }
