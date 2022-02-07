@@ -167,14 +167,18 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
         fidl_fuchsia_net::IpAddress::Ipv6(addr) => fidl_fuchsia_net::InterfaceAddress::Ipv6(addr),
     };
 
-    // Keep address alive.
-    let _address_state_provider = add_address_wait_assigned(
+    let address_state_provider = add_address_wait_assigned(
         &control,
         interface_address,
         fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
     )
     .await
     .context("add address")?;
+
+    // We have to detach the address state provider because the end of the test
+    // is not synchronized, which can cause the address to be removed before the
+    // TCP state machine has fully run its course and cause flakes.
+    let () = address_state_provider.detach().context("detach address state provider")?;
 
     let subnet = fidl_fuchsia_net_ext::apply_subnet_mask(subnet);
     let () = stack
