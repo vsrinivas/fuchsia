@@ -15,9 +15,11 @@
 
 #include <deque>
 #include <forward_list>
+#include <queue>
 #include <stack>
 #include <unordered_set>
 
+#include "fidl/fuchsia.driver.development/cpp/wire_types.h"
 #include "src/devices/lib/driver2/start_args.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/fxl/strings/join_strings.h"
@@ -157,13 +159,15 @@ void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
 }  // namespace
 
 DriverComponent::DriverComponent(fidl::ClientEnd<fdf::Driver> driver,
-                                 async_dispatcher_t* dispatcher)
-    : driver_(std::move(driver), dispatcher, this) {}
+                                 async_dispatcher_t* dispatcher, std::string_view url)
+    : driver_(std::move(driver), dispatcher, this), url_(url) {}
 
 DriverComponent::~DriverComponent() {
   node_->set_driver_component(std::nullopt);
   node_->Remove();
 }
+
+std::string_view DriverComponent::url() const { return url_; }
 
 void DriverComponent::set_driver_ref(
     fidl::ServerBindingRef<frunner::ComponentController> driver_ref) {
@@ -258,6 +262,10 @@ Node::Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driv
 Node::~Node() { UnbindAndReset(controller_ref_); }
 
 const std::string& Node::name() const { return name_; }
+
+const std::optional<DriverComponent*>& Node::driver_component() const { return driver_component_; }
+
+const std::vector<Node*>& Node::parents() const { return parents_; }
 
 const std::vector<std::shared_ptr<Node>>& Node::children() const { return children_; }
 
@@ -527,7 +535,8 @@ size_t DriverRunner::NumOrphanedNodes() const { return orphaned_nodes_.size(); }
 
 zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto service = [this](fidl::ServerEnd<frunner::ComponentRunner> request) {
-    fidl::BindServer(dispatcher_, std::move(request), this);
+    fidl::BindServer<fidl::WireServer<frunner::ComponentRunner>>(dispatcher_, std::move(request),
+                                                                 this);
     return ZX_OK;
   };
   zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<frunner::ComponentRunner>,
@@ -542,6 +551,8 @@ zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDi
 zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
   return StartDriver(*root_node_, url);
 }
+
+const Node* DriverRunner::root_node() const { return root_node_.get(); }
 
 zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url) {
   zx::event token;
@@ -642,7 +653,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   }
 
   // Create a DriverComponent to manage the driver.
-  auto driver = std::make_unique<DriverComponent>(std::move(*start), dispatcher_);
+  auto driver = std::make_unique<DriverComponent>(std::move(*start), dispatcher_, url);
   auto bind_driver =
       fidl::BindServer(dispatcher_, std::move(request->controller), driver.get(),
                        [this](DriverComponent* driver, auto, auto) { drivers_.erase(*driver); });
