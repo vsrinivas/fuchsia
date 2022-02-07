@@ -3,6 +3,12 @@
 // found in the LICENSE file.
 library fuchsia.diagnostics;
 
+// NOTE TO REVIEWERS:
+// sdk/lib/syslog/duplicate_header_test/duplicate_header_unittest.cc
+// MUST be updated when updating this file. Do not +2 any changes
+// unless that test is updated. Other header files must be kept in-sync with
+// these values.
+
 /// The severity of a given record.
 // Note that these severities correspond to and must match the values defined in
 // fuchsia.logger.LogLevelFilter.

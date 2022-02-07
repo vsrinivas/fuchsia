@@ -10,6 +10,10 @@
 #include <zircon/syscalls.h>
 __BEGIN_CDECLS
 
+// REVIEWERS: DO NOT +2 any changes to this header
+// file unless this number is incremented with each change.
+#define FUCHSIA_LOG_API_VERSION (0)
+
 // Default log levels.
 #define FUCHSIA_LOG_TRACE (0x10)
 #define FUCHSIA_LOG_DEBUG (0x20)

@@ -8,6 +8,10 @@
 #ifndef LIB_SYSLOG_LOGGER_H_
 #define LIB_SYSLOG_LOGGER_H_
 
+// REVIEWERS: DO NOT +2 any changes to this header
+// file unless this number is incremented with each change.
+#define FX_LOG_LEGACY_API_VERSION (0)
+
 #include <stdarg.h>
 #include <unistd.h>
 #include <zircon/types.h>

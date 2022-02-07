@@ -30,6 +30,7 @@ group("tests") {
 
   deps = [
     "cpp:tests",
+    "duplicate_header_test:tests",
     "streams/cpp:tests",
   ]
 }
