@@ -20,6 +20,9 @@ pub enum NetworkInterfaceEvent {
 
 #[async_trait()]
 pub trait NetworkInterface: Send + Sync {
+    /// Returns the network interface index.
+    fn get_index(&self) -> u64;
+
     /// Blocks until the network stack has a packet to send.
     async fn outbound_packet_from_stack(&self) -> Result<Vec<u8>, Error>;
 
@@ -98,6 +101,10 @@ impl Default for DummyNetworkInterface {
 
 #[async_trait]
 impl NetworkInterface for DummyNetworkInterface {
+    fn get_index(&self) -> u64 {
+        3
+    }
+
     async fn outbound_packet_from_stack(&self) -> Result<Vec<u8>, Error> {
         futures::future::pending().await
     }

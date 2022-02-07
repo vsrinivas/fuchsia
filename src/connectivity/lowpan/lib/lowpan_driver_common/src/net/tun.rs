@@ -135,6 +135,10 @@ impl TunNetworkInterface {
 
 #[async_trait]
 impl NetworkInterface for TunNetworkInterface {
+    fn get_index(&self) -> u64 {
+        self.id
+    }
+
     async fn outbound_packet_from_stack(&self) -> Result<Vec<u8>, Error> {
         let frame = self
             .tun_dev
