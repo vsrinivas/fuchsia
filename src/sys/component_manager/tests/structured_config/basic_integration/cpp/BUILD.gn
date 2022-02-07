@@ -29,6 +29,7 @@ fuchsia_component_manifest("manifest") {
 
 fuchsia_structured_config_cpp_elf_lib("config_lib") {
   testonly = true
+  with_inspect = true
   namespace = "receiver_config"
   cm_target = ":manifest"
 }

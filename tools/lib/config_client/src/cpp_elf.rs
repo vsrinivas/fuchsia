@@ -14,6 +14,7 @@ pub fn create_cpp_elf_wrapper(
     config_decl: &ConfigDecl,
     cpp_namespace: String,
     fidl_library_name: String,
+    with_inspect: bool,
 ) -> Result<CppSource, SourceGenError> {
     let cpp_namespace = cpp_namespace.replace('.', "_").replace('-', "_").to_ascii_lowercase();
     let header_guard = fidl_library_name.replace('.', "_").to_ascii_uppercase();
@@ -25,16 +26,36 @@ pub fn create_cpp_elf_wrapper(
 
     let mut declarations = vec![];
     let mut conversions = vec![];
+    let mut record_to_inspect_ops = vec![];
 
     for field in &config_decl.fields {
-        let (declaration, conversion) =
-            get_cpp_field_declaration_and_conversion(&field.key, &field.type_);
-        declarations.push(declaration);
+        let CppTokens { decl, conversion, record_to_inspect } =
+            get_cpp_tokens(&field.key, &field.type_);
+        declarations.push(decl);
         conversions.push(conversion);
+        record_to_inspect_ops.push(record_to_inspect);
     }
 
     let declarations = declarations.join("\n");
     let conversions = conversions.join(",\n");
+    let (record_to_inspect, record_to_inspect_h, inspect_includes) = if with_inspect {
+        (
+            format!(
+                r#"
+void {cpp_namespace}::Config::record_to_inspect(sys::ComponentInspector  * inspector) {{
+    inspect::Node inspect_config = inspector->root().CreateChild("config");
+    {}
+    inspector->emplace(std::move(inspect_config));
+}}
+        "#,
+                record_to_inspect_ops.join("\n")
+            ),
+            "void record_to_inspect(sys::ComponentInspector * inspector);".to_string(),
+            "#include <lib/sys/inspect/cpp/component.h>".to_string(),
+        )
+    } else {
+        ("".to_string(), "".to_string(), "".to_string())
+    };
 
     // TODO(http://fxbug.dev/93026): Use a templating library instead of the format macro.
     let h_source = format!(
@@ -45,11 +66,15 @@ pub fn create_cpp_elf_wrapper(
 #include <string>
 #include <vector>
 
+{inspect_includes}
+
 namespace {cpp_namespace} {{
 struct Config {{
 {declarations}
 
 static Config from_args() noexcept;
+
+{record_to_inspect_h}
 }};
 }}
 
@@ -147,38 +172,81 @@ std::vector<std::string> from_vector_string_view(fidl::VectorView<fidl::StringVi
 
     return c;
 }}
+{record_to_inspect}
 "#
     );
     return Ok(CppSource { cc_source, h_source });
 }
 
-fn get_cpp_field_declaration_and_conversion(
-    key: &str,
-    type_: &ConfigValueType,
-) -> (String, String) {
+struct CppTokens {
+    decl: String,
+    conversion: String,
+    record_to_inspect: String,
+}
+
+fn get_cpp_tokens(key: &str, type_: &ConfigValueType) -> CppTokens {
     let identifier = normalize_field_key(key);
-    let cpp_type = match type_ {
-        ConfigValueType::Bool => "bool",
-        ConfigValueType::Uint8 => "uint8_t",
-        ConfigValueType::Uint16 => "uint16_t",
-        ConfigValueType::Uint32 => "uint32_t",
-        ConfigValueType::Uint64 => "uint64_t",
-        ConfigValueType::Int8 => "int8_t",
-        ConfigValueType::Int16 => "int16_t",
-        ConfigValueType::Int32 => "int32_t",
-        ConfigValueType::Int64 => "int64_t",
-        ConfigValueType::String { .. } => "std::string",
+
+    let get_create_token =
+        |vtype| format!(r#"inspect_config.Create{vtype}("{key}", this->{key}, inspector);"#);
+
+    let get_create_array_token = |vtype| {
+        format!(
+            r#"
+auto {key} = inspect_config.Create{vtype}Array("{key}", this->{key}.size());
+for (size_t i = 0; i < this->{key}.size(); i++) {{
+    {key}.Set(i, this->{key}[i]);
+}}
+inspector->emplace(std::move({key}));
+"#
+        )
+    };
+
+    let get_create_string_array_token = || {
+        format!(
+            r#"
+auto {key} = inspect_config.CreateStringArray("{key}", this->{key}.size());
+for (size_t i = 0; i < this->{key}.size(); i++) {{
+    auto ref = std::string_view(this->{key}[i].data());
+    {key}.Set(i, ref);
+}}
+inspector->emplace(std::move({key}));
+"#
+        )
+    };
+
+    let (cpp_type, record_to_inspect) = match type_ {
+        ConfigValueType::Bool => ("bool", get_create_token("Bool")),
+        ConfigValueType::Uint8 => ("uint8_t", get_create_token("Uint")),
+        ConfigValueType::Uint16 => ("uint16_t", get_create_token("Uint")),
+        ConfigValueType::Uint32 => ("uint32_t", get_create_token("Uint")),
+        ConfigValueType::Uint64 => ("uint64_t", get_create_token("Uint")),
+        ConfigValueType::Int8 => ("int8_t", get_create_token("Int")),
+        ConfigValueType::Int16 => ("int16_t", get_create_token("Int")),
+        ConfigValueType::Int32 => ("int32_t", get_create_token("Int")),
+        ConfigValueType::Int64 => ("int64_t", get_create_token("Int")),
+        ConfigValueType::String { .. } => ("std::string", get_create_token("String")),
         ConfigValueType::Vector { nested_type, .. } => match nested_type {
-            ConfigNestedValueType::Bool => "std::vector<bool>",
-            ConfigNestedValueType::Uint8 => "std::vector<uint8_t>",
-            ConfigNestedValueType::Uint16 => "std::vector<uint16_t>",
-            ConfigNestedValueType::Uint32 => "std::vector<uint32_t>",
-            ConfigNestedValueType::Uint64 => "std::vector<uint64_t>",
-            ConfigNestedValueType::Int8 => "std::vector<int8_t>",
-            ConfigNestedValueType::Int16 => "std::vector<int16_t>",
-            ConfigNestedValueType::Int32 => "std::vector<int32_t>",
-            ConfigNestedValueType::Int64 => "std::vector<int64_t>",
-            ConfigNestedValueType::String { .. } => "std::vector<std::string>",
+            ConfigNestedValueType::Bool => ("std::vector<bool>", get_create_array_token("Uint")),
+            ConfigNestedValueType::Uint8 => {
+                ("std::vector<uint8_t>", get_create_array_token("Uint"))
+            }
+            ConfigNestedValueType::Uint16 => {
+                ("std::vector<uint16_t>", get_create_array_token("Uint"))
+            }
+            ConfigNestedValueType::Uint32 => {
+                ("std::vector<uint32_t>", get_create_array_token("Uint"))
+            }
+            ConfigNestedValueType::Uint64 => {
+                ("std::vector<uint64_t>", get_create_array_token("Uint"))
+            }
+            ConfigNestedValueType::Int8 => ("std::vector<int8_t>", get_create_array_token("Int")),
+            ConfigNestedValueType::Int16 => ("std::vector<int16_t>", get_create_array_token("Int")),
+            ConfigNestedValueType::Int32 => ("std::vector<int32_t>", get_create_array_token("Int")),
+            ConfigNestedValueType::Int64 => ("std::vector<int64_t>", get_create_array_token("Int")),
+            ConfigNestedValueType::String { .. } => {
+                ("std::vector<std::string>", get_create_string_array_token())
+            }
         },
     };
     let decl = format!("{} {};", cpp_type, identifier);
@@ -196,5 +264,5 @@ fn get_cpp_field_declaration_and_conversion(
             format!(".{} = fidl_config->{}", identifier, identifier)
         }
     };
-    (decl, conversion)
+    CppTokens { decl, conversion, record_to_inspect }
 }

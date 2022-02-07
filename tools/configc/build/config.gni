@@ -243,6 +243,10 @@ template("rust_config_client_lib_source") {
 #     Namespace used by the C++ library.
 #     Type: string
 #
+#   with_inspect (required)
+#     Adds inspect support to the generated library.
+#     Type: bool
+#
 #   deps (optional)
 #   metadata (optional)
 #   output_name (optional)
@@ -254,6 +258,8 @@ template("cpp_elf_config_client_lib_source") {
          "the path to a compiled component manifest must be specified")
   assert(defined(invoker.fidl_library_name),
          "the name of the internal FIDL library must be specified")
+  assert(defined(invoker.with_inspect),
+         "the with_inspect boolean flag must be specified")
   if (defined(invoker.namespace)) {
     namespace = invoker.namespace
   } else {
@@ -296,6 +302,10 @@ template("cpp_elf_config_client_lib_source") {
       "--clang-format",
       "${rebased_clang_prefix}/clang-format",
     ]
+
+    if (invoker.with_inspect) {
+      args += [ "--with-inspect" ]
+    }
 
     if (!defined(deps)) {
       deps = []

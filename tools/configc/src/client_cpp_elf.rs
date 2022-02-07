@@ -39,6 +39,10 @@ pub struct GenerateCppElfSource {
     /// path to clang-format binary
     #[argh(option)]
     clang_format: PathBuf,
+
+    /// whether or not to include config values in inspect
+    #[argh(switch)]
+    with_inspect: bool,
 }
 
 impl GenerateCppElfSource {
@@ -53,9 +57,13 @@ impl GenerateCppElfSource {
             .as_ref()
             .ok_or_else(|| anyhow::format_err!("missing config declaration in manifest"))?;
 
-        let CppSource { h_source, cc_source } =
-            create_cpp_elf_wrapper(config_decl, self.namespace, self.fidl_library_name)
-                .context("creating cpp elf wrapper")?;
+        let CppSource { h_source, cc_source } = create_cpp_elf_wrapper(
+            config_decl,
+            self.namespace,
+            self.fidl_library_name,
+            self.with_inspect,
+        )
+        .context("creating cpp elf wrapper")?;
 
         let formatted_cc_source = format_source(&self.clang_format, cc_source)?;
         let formatted_h_source = format_source(&self.clang_format, h_source)?;
