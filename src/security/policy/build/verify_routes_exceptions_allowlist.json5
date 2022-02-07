@@ -967,7 +967,7 @@
                 },
                 {
                     // `BatteryManager` is not present in all products.
-                    using_node: "/core/bt-a2dp/bt-avrcp-target",
+                    using_node: "/core/bt-a2dp",
                     capability: "fuchsia.power.BatteryManager",
                     error: {
                         error: {
@@ -986,10 +986,36 @@
                                                     collection: null,
                                                     rep: "bt-a2dp",
                                                 },
+                                            ]
+                                        },
+                                        "capability_id": "fuchsia.power.BatteryManager"
+                                    }
+                                },
+                            },
+                        },
+                        "message": "A `use from parent` declaration was found at `/core/bt-a2dp` for `fuchsia.power.BatteryManager`, but no matching `offer` declaration was found in the parent"
+                    },
+                },
+                {
+                    // `BatteryManager` is not present in all products.
+                    using_node: "/core/bt-a2dp/bt-avrcp-target",
+                    capability: "fuchsia.power.BatteryManager",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
                                                 {
-                                                    name: "bt-avrcp-target",
+                                                    name: "core",
                                                     collection: null,
-                                                    rep: "bt-avrcp-target",
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    name: "bt-a2dp",
+                                                    collection: null,
+                                                    rep: "bt-a2dp",
                                                 },
                                             ]
                                         },
@@ -998,7 +1024,7 @@
                                 },
                             },
                         },
-                        "message": "A `use from parent` declaration was found at `/core/bt-a2dp/bt-avrcp-target` for `fuchsia.power.BatteryManager`, but no matching `offer` declaration was found in the parent"
+                        "message": "An `offer from parent` declaration was found at `/core/bt-a2dp` for `fuchsia.power.BatteryManager`, but no matching `offer` declaration was found in the parent"
                     },
                 },
                 {

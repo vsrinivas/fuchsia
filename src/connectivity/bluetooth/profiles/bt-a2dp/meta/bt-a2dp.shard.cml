@@ -20,6 +20,7 @@
     //
     // This allows for hermetic packaging as manifests can use a relative URL for the child.
     include: [
+        "//src/connectivity/bluetooth/lib/battery-client/meta/client.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -62,6 +63,7 @@
                 "fuchsia.bluetooth.avrcp.PeerManager",
                 "fuchsia.logger.LogSink",
                 "fuchsia.media.sessions2.Discovery",
+                "fuchsia.power.BatteryManager",
             ],
             from: "parent",
             to: [ "#bt-avrcp-target" ],

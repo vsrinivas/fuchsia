@@ -4,6 +4,8 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
+    async_helpers::maybe_stream::MaybeStream,
+    battery_client::{BatteryClient, BatteryInfo, BatteryLevel},
     fidl::endpoints,
     fidl_fuchsia_bluetooth_avrcp as avrcp, fidl_fuchsia_media as media,
     fidl_fuchsia_media_sessions2 as sessions2,
@@ -80,7 +82,9 @@ impl AvrcpRelay {
         let avrcp_svc =
             fuchsia_component::client::connect_to_protocol::<avrcp::PeerManagerMarker>()
                 .context("Failed to connect to Bluetooth AVRCP interface")?;
-        let session_fut = Self::session_relay(avrcp_svc, peer_id, player_request_stream);
+        let battery_client = BatteryClient::create().ok().into();
+        let session_fut =
+            Self::session_relay(avrcp_svc, peer_id, player_request_stream, battery_client);
         Ok(fasync::Task::spawn(async move {
             if let Err(e) = session_fut.await {
                 info!("Session completed with error: {:?}", e);
@@ -92,6 +96,7 @@ impl AvrcpRelay {
         mut avrcp: avrcp::PeerManagerProxy,
         peer_id: PeerId,
         mut player_request_stream: sessions2::PlayerRequestStream,
+        mut battery_client: MaybeStream<BatteryClient>,
     ) -> Result<(), Error> {
         let controller =
             connect_avrcp(&mut avrcp, peer_id).await.context("getting controller from AVRCP")?;
@@ -138,6 +143,7 @@ impl AvrcpRelay {
             let mut player_request_fut = player_request_stream.next();
             let mut avrcp_notify_fut = avrcp_notify_stream.next();
             let mut update_status_fut = status_update_interval.next();
+            let mut battery_client_fut = battery_client.next();
 
             select! {
                 request = player_request_fut => {
@@ -219,6 +225,17 @@ impl AvrcpRelay {
                     let building = staged_info.get_or_insert(sessions2::PlayerInfoDelta::EMPTY);
                     building.player_status = Some(last_player_status.clone().into());
                 }
+                update = battery_client_fut => {
+                    match update {
+                        None => info!("BatteryClient stream finished"),
+                        Some(Err(e)) => info!("Error in BatteryClient stream: {:?}", e),
+                        Some(Ok(info)) => {
+                            if let Err(e) = update_battery_status(&controller, info).await {
+                                info!("Couldn't update AVRCP with battery status: {:?}", e);
+                            }
+                        }
+                    }
+                }
                 complete => unreachable!(),
             }
 
@@ -267,6 +284,24 @@ async fn update_status(
     Ok(())
 }
 
+async fn update_battery_status(
+    controller: &avrcp::ControllerProxy,
+    status: BatteryInfo,
+) -> Result<(), Error> {
+    let avrcp_status = match status {
+        BatteryInfo::External => avrcp::BatteryStatus::External,
+        BatteryInfo::Battery(BatteryLevel::Normal(_)) => avrcp::BatteryStatus::Normal,
+        BatteryInfo::Battery(BatteryLevel::Warning(_)) => avrcp::BatteryStatus::Warning,
+        BatteryInfo::Battery(BatteryLevel::Critical(_)) => avrcp::BatteryStatus::Critical,
+        BatteryInfo::Battery(BatteryLevel::FullCharge) => avrcp::BatteryStatus::FullCharge,
+        BatteryInfo::NotAvailable => return Ok(()),
+    };
+    controller
+        .inform_battery_status(avrcp_status)
+        .await?
+        .or_else(|e| Err(format_err!("AVRCP error: {:?}", e)))
+}
+
 macro_rules! nonempty_to_property {
     ( $source:expr, $prop_str:expr, $target:ident ) => {
         if let Some(value) = $source {
@@ -313,10 +348,15 @@ async fn connect_avrcp(
 mod tests {
     use super::*;
 
+    use assert_matches::assert_matches;
+    use async_test_helpers::run_while;
+    use async_utils::PollExt;
     use fidl::endpoints::{self, RequestStream};
+    use fidl_fuchsia_power as fpower;
     use fuchsia_async::pin_mut;
     use futures::{task::Poll, Future};
     use std::{convert::TryInto, pin::Pin};
+    use test_battery_manager::TestBatteryManager;
 
     fn setup_media_relay(
     ) -> Result<(sessions2::PlayerProxy, avrcp::PeerManagerRequestStream, impl Future), fidl::Error>
@@ -327,8 +367,33 @@ mod tests {
             endpoints::create_proxy_and_stream::<avrcp::PeerManagerMarker>()?;
         let peer_id = PeerId(0);
 
-        let relay_fut = AvrcpRelay::session_relay(avrcp_proxy, peer_id, player_requests);
+        let relay_fut =
+            AvrcpRelay::session_relay(avrcp_proxy, peer_id, player_requests, None.into());
         Ok((player_proxy, avrcp_requests, relay_fut))
+    }
+
+    fn setup_media_relay_with_battery_manager(
+        exec: &mut fasync::TestExecutor,
+    ) -> (sessions2::PlayerProxy, avrcp::PeerManagerRequestStream, impl Future, TestBatteryManager)
+    {
+        let (player_proxy, player_requests) =
+            endpoints::create_proxy_and_stream::<sessions2::PlayerMarker>().unwrap();
+        let (avrcp_proxy, avrcp_requests) =
+            endpoints::create_proxy_and_stream::<avrcp::PeerManagerMarker>().unwrap();
+        let peer_id = PeerId(1);
+
+        let setup_fut = TestBatteryManager::make_battery_client_with_test_manager();
+        pin_mut!(setup_fut);
+        let (battery_client, test_battery_manager) = exec.run_singlethreaded(&mut setup_fut);
+
+        let relay_fut = AvrcpRelay::session_relay(
+            avrcp_proxy,
+            peer_id,
+            player_requests,
+            Some(battery_client).into(),
+        );
+
+        (player_proxy, avrcp_requests, relay_fut, test_battery_manager)
     }
 
     fn expect_media_attributes_request(
@@ -792,5 +857,101 @@ mod tests {
         )?;
 
         Ok(())
+    }
+
+    fn expect_inform_battery_status_command(
+        exec: &mut fasync::TestExecutor,
+        controller_requests: &mut avrcp::ControllerRequestStream,
+        expected_battery_status: avrcp::BatteryStatus,
+    ) {
+        match exec.run_until_stalled(&mut controller_requests.next()) {
+            Poll::Ready(Some(Ok(avrcp::ControllerRequest::InformBatteryStatus {
+                battery_status,
+                responder,
+            }))) => {
+                assert_eq!(battery_status, expected_battery_status);
+                responder.send(&mut Ok(())).expect("can respond to client");
+            }
+            x => panic!("Expected a InformBatteryStatus request, got {:?}", x),
+        }
+    }
+
+    #[fuchsia::test]
+    fn relay_sends_battery_update_to_avrcp() {
+        let mut exec = fasync::TestExecutor::new().expect("executor needed");
+
+        let (_player_client, avrcp_requests, relay_fut, test_battery_manager) =
+            setup_media_relay_with_battery_manager(&mut exec);
+        pin_mut!(relay_fut);
+        exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
+
+        let mut controller_requests = finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests)
+            .expect("controller requests received");
+        exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
+
+        // Simulate a battery update via the TestBatteryManager.
+        let update = fpower::BatteryInfo {
+            status: Some(fpower::BatteryStatus::Ok),
+            level_status: Some(fpower::LevelStatus::Low),
+            level_percent: Some(33f32),
+            ..fpower::BatteryInfo::EMPTY
+        };
+        let update_fut = test_battery_manager.send_update(update);
+        pin_mut!(update_fut);
+        let (res, mut relay_fut) = run_while(&mut exec, relay_fut, update_fut);
+        assert_matches!(res, Ok(_));
+
+        expect_inform_battery_status_command(
+            &mut exec,
+            &mut controller_requests,
+            avrcp::BatteryStatus::Normal,
+        );
+        exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
+    }
+
+    #[fuchsia::test]
+    fn not_available_battery_update_is_not_relayed_to_avrcp() {
+        let mut exec = fasync::TestExecutor::new().expect("executor needed");
+
+        let (_player_client, avrcp_requests, relay_fut, test_battery_manager) =
+            setup_media_relay_with_battery_manager(&mut exec);
+        pin_mut!(relay_fut);
+        exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
+
+        let mut controller_requests = finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests)
+            .expect("controller requests received");
+        exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
+
+        // Simulate a battery update via the TestBatteryManager.
+        let update = fpower::BatteryInfo {
+            status: Some(fpower::BatteryStatus::Unknown),
+            ..fpower::BatteryInfo::EMPTY
+        };
+        let update_fut = test_battery_manager.send_update(update);
+        pin_mut!(update_fut);
+        let (res, mut relay_fut) = run_while(&mut exec, relay_fut, update_fut);
+        assert_matches!(res, Ok(_));
+
+        exec.run_until_stalled(&mut controller_requests.next()).expect_pending("No avrcp update");
+        exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
+    }
+
+    #[fuchsia::test]
+    fn relay_still_active_when_battery_client_terminates() {
+        let mut exec = fasync::TestExecutor::new().expect("executor needed");
+
+        let (_player_client, avrcp_requests, relay_fut, test_battery_manager) =
+            setup_media_relay_with_battery_manager(&mut exec);
+        pin_mut!(relay_fut);
+        exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
+
+        let _controller_requests = finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests)
+            .expect("controller requests received");
+        exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
+
+        // Battery Manager server disappears. The Battery Client stream should finish and the relay
+        // should be resilient.
+        drop(test_battery_manager);
+        exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
     }
 }
