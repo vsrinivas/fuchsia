@@ -36,6 +36,7 @@ rustc_library("openthread") {
     "src/lib.rs",
     "src/ot/border_router.rs",
     "src/ot/dataset.rs",
+    "src/ot/dnssd.rs",
     "src/ot/error.rs",
     "src/ot/ip6.rs",
     "src/ot/joiner.rs",

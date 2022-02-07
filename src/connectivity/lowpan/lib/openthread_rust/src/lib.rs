@@ -36,6 +36,8 @@ pub mod prelude {
     pub use crate::{OtBox, OtInstanceBox, OtMessageBox};
     pub use ot::BorderRouter as _;
     pub use ot::Boxable as _;
+    pub use ot::Dnssd as _;
+    pub use ot::DnssdExt as _;
     pub use ot::Ip6 as _;
     pub use ot::Link as _;
     pub use ot::MessageBuffer as _;

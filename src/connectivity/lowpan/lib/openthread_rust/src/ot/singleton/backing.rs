@@ -20,6 +20,7 @@ pub(crate) struct InstanceBacking {
     pub srp_server_service_update_fn: Cell<
         Option<std::boxed::Box<dyn FnMut(ot::SrpServerServiceUpdateId, &ot::SrpServerHost, u32)>>,
     >,
+    pub dnssd_query_sub_unsub_fn: Cell<Option<std::boxed::Box<dyn FnMut(bool, &CStr)>>>,
 }
 
 impl InstanceBacking {
@@ -34,6 +35,7 @@ impl InstanceBacking {
             energy_scan_fn: Cell::new(None),
             joiner_fn: Cell::new(None),
             srp_server_service_update_fn: Cell::new(None),
+            dnssd_query_sub_unsub_fn: Cell::new(None),
         }
     }
 }

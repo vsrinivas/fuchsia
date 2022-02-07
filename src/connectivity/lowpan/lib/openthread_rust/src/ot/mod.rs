@@ -85,6 +85,9 @@ pub use link::*;
 pub(crate) mod types;
 pub use types::*;
 
+mod dnssd;
+pub use dnssd::*;
+
 mod thread;
 pub use thread::*;
 
@@ -121,6 +124,7 @@ pub trait InstanceInterface:
     + Reset
     + Dataset
     + Link
+    + Dnssd
     + State
     + Tasklets
     + Thread
