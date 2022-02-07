@@ -249,21 +249,8 @@ impl SoftPcmOutput {
             StreamConfigRequest::GetHealthState { responder } => {
                 responder.send(HealthState::EMPTY)?;
             }
-            StreamConfigRequest::GetProcessingElements { responder } => {
-                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
-            }
-            StreamConfigRequest::SetProcessingElement {
-                processing_element_id: _,
-                control: _,
-                responder,
-            } => {
-                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
-            }
-            StreamConfigRequest::GetTopologies { responder } => {
-                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
-            }
-            StreamConfigRequest::SetTopology { topology_id: _, responder } => {
-                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
+            StreamConfigRequest::SignalProcessingConnect { protocol: _, control_handle } => {
+                control_handle.shutdown_with_epitaph(zx::Status::NOT_SUPPORTED);
             }
             StreamConfigRequest::GetProperties { responder } => {
                 #[rustfmt::skip]

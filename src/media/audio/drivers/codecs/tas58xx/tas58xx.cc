@@ -210,8 +210,17 @@ Info Tas58xx::GetInfo() {
 
 zx_status_t Tas58xx::Shutdown() { return ZX_OK; }
 
+void Tas58xx::SignalProcessingConnect(
+    fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing> signal_processing) {
+  if (signal_processing_binding_.has_value()) {
+    signal_processing.Close(ZX_ERR_ALREADY_BOUND);
+    return;
+  }
+  signal_processing_binding_.emplace(this, std::move(signal_processing), dispatcher());
+}
+
 void Tas58xx::GetProcessingElements(
-    fuchsia::hardware::audio::Codec::GetProcessingElementsCallback callback) {
+    fuchsia::hardware::audio::SignalProcessing::GetProcessingElementsCallback callback) {
   fuchsia::hardware::audio::ProcessingElement pe;
   pe.set_id(kAglPeId);
   pe.set_type(fuchsia::hardware::audio::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);

@@ -24,7 +24,7 @@
 
 namespace audio {
 
-class Tas58xx : public SimpleCodecServer {
+class Tas58xx : public SimpleCodecServer, public fuchsia::hardware::audio::SignalProcessing {
  public:
   static zx_status_t Create(zx_device_t* parent);
 
@@ -46,7 +46,7 @@ class Tas58xx : public SimpleCodecServer {
   GainState GetGainState() override;
   void SetGainState(GainState state) override;
   void GetProcessingElements(
-      fuchsia::hardware::audio::Codec::GetProcessingElementsCallback callback) override;
+      fuchsia::hardware::audio::SignalProcessing::GetProcessingElementsCallback callback) override;
   void SetProcessingElement(
       uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementControl control,
       fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback) override;
@@ -55,6 +55,8 @@ class Tas58xx : public SimpleCodecServer {
   void SetTopology(
       uint64_t topology_id,
       fuchsia::hardware::audio::SignalProcessing::SetTopologyCallback callback) override;
+  void SignalProcessingConnect(fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing>
+                                   signal_processing) override;
 
   // Protected for unit tests.
   uint64_t GetTopologyId() { return kTopologyId; }
@@ -77,6 +79,8 @@ class Tas58xx : public SimpleCodecServer {
   fbl::Mutex lock_;
   metadata::ti::TasConfig metadata_ = {};
   bool last_agl_ TA_GUARDED(lock_) = false;
+  std::optional<fidl::Binding<fuchsia::hardware::audio::SignalProcessing>>
+      signal_processing_binding_;
 };
 }  // namespace audio
 

@@ -96,6 +96,7 @@ class SimpleCodecClient {
   bool thread_started_ = false;
 
   fidl::WireSharedClient<fuchsia_hardware_audio::Codec> codec_;
+  fidl::WireSyncClient<fuchsia_hardware_audio::SignalProcessing> signal_processing_;
   std::future<void> codec_torn_down_;
 
   fbl::Mutex gain_state_lock_;

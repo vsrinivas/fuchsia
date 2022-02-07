@@ -19,7 +19,7 @@ namespace brownout_protection {
 
 namespace audio_fidl = ::fuchsia::hardware::audio;
 
-class FakeCodec : public audio::SimpleCodecServer {
+class FakeCodec : public audio::SimpleCodecServer, public audio_fidl::SignalProcessing {
  public:
   FakeCodec(zx_device_t* parent) : SimpleCodecServer(parent) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
@@ -45,7 +45,12 @@ class FakeCodec : public audio::SimpleCodecServer {
   zx_status_t Start() override { return ZX_OK; }
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
-  void GetProcessingElements(audio_fidl::Codec::GetProcessingElementsCallback callback) override {
+  void SignalProcessingConnect(
+      fidl::InterfaceRequest<audio_fidl::SignalProcessing> signal_processing) override {
+    signal_processing_binding_.emplace(this, std::move(signal_processing), dispatcher());
+  }
+  void GetProcessingElements(
+      audio_fidl::SignalProcessing::GetProcessingElementsCallback callback) override {
     audio_fidl::ProcessingElement pe;
     pe.set_id(kAglPeId);
     pe.set_type(audio_fidl::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);
@@ -88,6 +93,7 @@ class FakeCodec : public audio::SimpleCodecServer {
   audio::GainState gain_state = {};
   // agl_enabled_ is accessed from different threads in SetAgl() and agl_enabled().
   std::atomic<bool> agl_enabled_ = false;
+  std::optional<fidl::Binding<audio_fidl::SignalProcessing>> signal_processing_binding_;
 };
 
 class FakePowerSensor : public ddk::PowerSensorProtocol<FakePowerSensor, ddk::base_protocol>,

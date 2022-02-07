@@ -433,9 +433,15 @@ TEST(Tas58xxTest, GetTopologySignalProcessing) {
   fuchsia::hardware::audio::CodecSyncPtr codec_client;
   codec_client.Bind(std::move(channel_local));
 
+  fidl::InterfaceHandle<fuchsia::hardware::audio::SignalProcessing> signal_processing_handle;
+  fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing> signal_processing_request =
+      signal_processing_handle.NewRequest();
+  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
+  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
+
   // We should get one topology with an AGL processing element.
   fuchsia::hardware::audio::SignalProcessing_GetTopologies_Result result;
-  ASSERT_OK(codec_client->GetTopologies(&result));
+  ASSERT_OK(signal_processing_client->GetTopologies(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().topologies.size(), 1);
   ASSERT_EQ(result.response().topologies[0].id(), codec->GetTopologyId());
@@ -451,13 +457,56 @@ TEST(Tas58xxTest, GetTopologySignalProcessing) {
 
   // Set the only topology must work.
   fuchsia::hardware::audio::SignalProcessing_SetTopology_Result result2;
-  ASSERT_OK(codec_client->SetTopology(codec->GetTopologyId(), &result2));
+  ASSERT_OK(signal_processing_client->SetTopology(codec->GetTopologyId(), &result2));
   ASSERT_FALSE(result2.is_err());
 
   // Set the an incorrect topology id must fail.
   fuchsia::hardware::audio::SignalProcessing_SetTopology_Result result3;
-  ASSERT_OK(codec_client->SetTopology(codec->GetTopologyId() + 1, &result3));
+  ASSERT_OK(signal_processing_client->SetTopology(codec->GetTopologyId() + 1, &result3));
   ASSERT_TRUE(result3.is_err());
+
+  mock_i2c.VerifyAndClear();
+}
+
+TEST(Tas58xxTest, SignalProcessingConnectTooManyConnections) {
+  auto fake_parent = MockDevice::FakeRootParent();
+  mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+
+  ASSERT_OK(
+      SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(), mock_i2c.GetProto()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
+  auto codec_proto = codec->GetProto();
+
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  zx::channel channel_remote, channel_local;
+  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
+  ddk::CodecProtocolClient proto_client;
+  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
+  fuchsia::hardware::audio::CodecSyncPtr codec_client;
+  codec_client.Bind(std::move(channel_local));
+
+  // First connection succeeds in making a 2-way call.
+  fidl::InterfaceHandle<fuchsia::hardware::audio::SignalProcessing> signal_processing_handle;
+  fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing> signal_processing_request =
+      signal_processing_handle.NewRequest();
+  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
+  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
+  fuchsia::hardware::audio::SignalProcessing_GetTopologies_Result result;
+  ASSERT_OK(signal_processing_client->GetTopologies(&result));
+  ASSERT_FALSE(result.is_err());
+
+  // Second connection fails to make a 2-way call.
+  fidl::InterfaceHandle<fuchsia::hardware::audio::SignalProcessing> signal_processing_handle2;
+  fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing> signal_processing_request2 =
+      signal_processing_handle2.NewRequest();
+  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request2)));
+  fidl::SynchronousInterfacePtr signal_processing_client2 = signal_processing_handle2.BindSync();
+  fuchsia::hardware::audio::SignalProcessing_GetTopologies_Result result2;
+  ASSERT_EQ(signal_processing_client2->GetTopologies(&result2), ZX_ERR_PEER_CLOSED);
 
   mock_i2c.VerifyAndClear();
 }

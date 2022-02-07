@@ -144,7 +144,13 @@ void SimpleCodecServerInternal<T>::GetInfo(Codec::GetInfoCallback callback) {
 }
 
 template <class T>
-void SimpleCodecServerInternal<T>::IsBridgeable(Codec::IsBridgeableCallback callback) {
+void SimpleCodecServerInternal<T>::SignalProcessingConnect(
+    fidl::InterfaceRequest<audio_fidl::SignalProcessing> signal_processing) {
+  static_cast<T*>(this)->SignalProcessingConnect(std::move(signal_processing));
+}
+
+template <class T>
+void SimpleCodecServerInternal<T>::IsBridgeable(audio_fidl::Codec::IsBridgeableCallback callback) {
   callback(static_cast<T*>(this)->IsBridgeable());
 }
 

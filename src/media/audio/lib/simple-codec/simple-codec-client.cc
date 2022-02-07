@@ -66,8 +66,15 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
   // Update the stored gain state, and start a hanging get to receive further gain state changes.
   UpdateGainState(&mutable_response);
 
-  auto pes = codec_.sync()->GetProcessingElements();
-  if (pes->result.is_err()) {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::SignalProcessing>();
+  if (endpoints.status_value() != ZX_OK) {
+    return ZX_OK;  // We allow servers not supporting signal processing.
+  }
+  signal_processing_ =
+      fidl::WireSyncClient<fuchsia_hardware_audio::SignalProcessing>(std::move(endpoints->client));
+  codec_.sync()->SignalProcessingConnect(std::move(endpoints->server));
+  auto pes = signal_processing_->GetProcessingElements();
+  if (!pes.ok() || pes->result.is_err()) {
     return ZX_OK;  // We allow servers not supporting signal processing.
   }
   for (auto& pe : pes->result.response().processing_elements) {
@@ -231,7 +238,7 @@ zx_status_t SimpleCodecClient::SetAgl(bool agl_enable) {
   }
   fuchsia_hardware_audio::wire::ProcessingElementControl control(allocator);
   control.set_enabled(agl_enable);
-  codec_.sync()->SetProcessingElement(agl_pe_id_.value(), std::move(control));
+  signal_processing_->SetProcessingElement(agl_pe_id_.value(), std::move(control));
   return ZX_OK;
 }
 

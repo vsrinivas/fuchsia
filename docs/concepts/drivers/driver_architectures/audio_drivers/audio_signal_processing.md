@@ -4,7 +4,8 @@
 
 The signal processing interface is available to be potentially used by audio hardware codecs (from
 here on referred to as 'codecs') , DAIs and glue drivers. This interface `SignalProcessing` is a
-FIDL protocol composed by the `Codec`, `Dai` and `StreamConf` protocols.
+FIDL protocol used by the `Codec`, `Dai` and `StreamConf` protocols to provide audio signal
+processing capabilities.
 
 The `SignalProcessing` interface is defined to control signal processing hardware and their
 topologies. We define processing elements (PEs) as a logical unit of audio data processing provided
@@ -36,8 +37,8 @@ A PE is expected to be hardware-provided functionality managed by a particular d
 be emulated in software, as any other driver functionality). A pipeline is composed of one or more
 PEs and a topology is composed of one or more pipelines.
 
-A codec or DAI driver can expose their topology by implementing the composed `SignalProcessing`
-protocol. A glue driver can use `Codec` and `Dai` protocols `SignalProcessing` functionality on the
+A codec or DAI driver can expose their topology by implementing the `SignalProcessing` protocol.
+A glue driver can use `Codec` and `Dai` protocols signal processing functionality on the
 particular product or system. Finally a `StreamConf` user like `audio_core` can use a `StreamConf`
 protocol `SignalProcessing` functionality.
 

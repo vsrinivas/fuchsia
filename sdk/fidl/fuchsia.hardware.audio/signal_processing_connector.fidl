@@ -1,0 +1,18 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.audio;
+
+/// For an overview of the signal processing protocols see
+/// [Audio Signal Processing](//docs/concepts/drivers/driver_architectures/audio_drivers/audio_signal_processing.md)
+protocol SignalProcessingConnector {
+    /// Connect to a `SingalProcessing` protocol.
+    /// Multiple connections may be supported, if a new connection request is not supported, i.e.
+    /// the maximum number of connections have already been created, for instance one, then the
+    /// channel will be closed with an ZX_ERR_ALREADY_BOUND epitaph.
+    /// If signal processing is not supported at all, then the channel will be closed with a
+    /// ZX_ERR_NOT_SUPPORTED epitaph.
+    SignalProcessingConnect(resource struct {
+        protocol server_end:SignalProcessing;
+    });
+};

@@ -81,7 +81,7 @@ protocol Codec {
     compose Health;
 
     /// Allows providing signal processing capabilities.
-    compose SignalProcessing;
+    compose SignalProcessingConnector;
 
     /// Resets the codec.
     /// `Reset` returns when the reset is completed. If the driver can't successfully reset the

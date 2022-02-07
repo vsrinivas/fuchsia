@@ -202,7 +202,7 @@ protocol StreamConfig {
     compose Health;
 
     /// Allows providing signal processing capabilities.
-    compose SignalProcessing;
+    compose SignalProcessingConnector;
 
     /// Retrieves top level static properties.
     GetProperties() -> (struct {

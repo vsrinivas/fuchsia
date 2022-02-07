@@ -28,7 +28,7 @@ protocol Dai {
     compose Health;
 
     /// Allows providing signal processing capabilities.
-    compose SignalProcessing;
+    compose SignalProcessingConnector;
 
     /// Resets the DAI HW. The `ring_buffer` channel obtained via `CreateRingBuffer` may be closed
     /// by the driver, in this case the client needs to obtain a new `ring_buffer`.
