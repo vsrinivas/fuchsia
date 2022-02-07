@@ -15,7 +15,7 @@ cd "$(dirname "$0")"
 source ../../tools/devshell/lib/vars.sh
 
 UPDATE=0
-while getopts u: flag
+while getopts "u" flag
 do
   case "${flag}" in
     u)
