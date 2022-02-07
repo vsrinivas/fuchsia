@@ -14,14 +14,13 @@ use {
         mem::size_of,
     },
     thiserror::Error,
-    zbi_abi::{
-        is_zbi_type_driver_metadata, zbi_header_t, ZBI_ALIGNMENT_BYTES, ZBI_CONTAINER_MAGIC,
-        ZBI_FLAG_CRC32, ZBI_FLAG_VERSION, ZBI_ITEM_MAGIC, ZBI_ITEM_NO_CRC32,
-    },
+    zbi_abi::{is_zbi_type_driver_metadata, ZBI_ALIGNMENT_BYTES, ZBI_FLAG_CRC32},
     zerocopy::LayoutVerified,
 };
 
-pub use zbi_abi::ZbiType;
+pub use zbi_abi::{
+    zbi_header_t, ZbiType, ZBI_CONTAINER_MAGIC, ZBI_FLAG_VERSION, ZBI_ITEM_MAGIC, ZBI_ITEM_NO_CRC32,
+};
 
 const ZBI_HEADER_SIZE: usize = size_of::<zbi_header_t>();
 
@@ -66,6 +65,9 @@ pub enum ZbiParserError {
     #[error("{:?} was not found in the ZBI", zbi_type)]
     ItemNotFound { zbi_type: ZbiType },
 
+    #[error("{:?} with an extra value of {} was not found in the ZBI", zbi_type, extra)]
+    ItemWithExtraNotFound { zbi_type: ZbiType, extra: u32 },
+
     #[error("Failed to decommit pages: {}", status)]
     FailedToDecommitPages { status: zx::Status },
 
@@ -106,7 +108,7 @@ pub struct ZbiParser {
 }
 
 impl ZbiParser {
-    fn get_type(raw_type: u32) -> ZbiType {
+    pub fn get_type(raw_type: u32) -> ZbiType {
         match raw_type {
             x if x == ZbiType::Container as u32 => ZbiType::Container,
             x if x == ZbiType::Cmdline as u32 => ZbiType::Cmdline,
@@ -125,7 +127,7 @@ impl ZbiParser {
     }
 
     // ZBI items are padded to 8 byte boundaries.
-    fn align_zbi_item(length: u32) -> Result<u32, ZbiParserError> {
+    pub fn align_zbi_item(length: u32) -> Result<u32, ZbiParserError> {
         let rem = length % ZBI_ALIGNMENT_BYTES;
         if rem > 0 {
             length.checked_add(ZBI_ALIGNMENT_BYTES - rem).ok_or(ZbiParserError::Overflow)
@@ -238,6 +240,34 @@ impl ZbiParser {
         }
 
         Ok(result)
+    }
+
+    /// Helper function to return the first item matching a given type and extra value. This avoids
+    /// reading unwanted results from the underlying VMO.
+    pub fn try_get_first_matching_item(
+        &self,
+        zbi_type: ZbiType,
+        extra: u32,
+    ) -> Result<ZbiResult, ZbiParserError> {
+        if !self.items.contains_key(&zbi_type) {
+            return Err(ZbiParserError::ItemNotFound { zbi_type });
+        }
+
+        for item in &self.items[&zbi_type] {
+            if item.extra == extra {
+                let mut bytes = vec![0; item.item_length as usize];
+                self.vmo.read(&mut bytes, item.item_offset.into()).map_err(|status| {
+                    ZbiParserError::FailedToReadPayload {
+                        size: bytes.len(),
+                        offset: item.item_offset,
+                        status,
+                    }
+                })?;
+                return Ok(ZbiResult { bytes, extra: item.extra });
+            }
+        }
+
+        Err(ZbiParserError::ItemWithExtraNotFound { zbi_type, extra })
     }
 
     /// Get all stored ZBI items.
@@ -640,9 +670,15 @@ mod tests {
             .expect("failed to create zbi");
         let parser = ZbiParser::new(zbi).parse().expect("Failed to parse ZBI");
 
-        let items = parser.try_get_item(ZbiType::Crashlog).expect("Failed to get item");
-        assert_eq!(items.len(), 1);
-        assert_eq!(items[0].extra, 0xABCD);
+        let item = parser
+            .try_get_first_matching_item(ZbiType::Crashlog, 0xABCD)
+            .expect("Failed to get item");
+        assert_eq!(item.extra, 0xABCD);
+
+        assert_eq!(
+            parser.try_get_first_matching_item(ZbiType::Crashlog, 0xDEF).unwrap_err(),
+            ZbiParserError::ItemWithExtraNotFound { zbi_type: ZbiType::Crashlog, extra: 0xDEF }
+        );
     }
 
     #[fuchsia::test]
