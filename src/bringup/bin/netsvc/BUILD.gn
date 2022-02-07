@@ -241,12 +241,18 @@ source_set("netifc-discover") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
     "//sdk/lib/fdio",
+    "//src/lib/fsl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/service:service-llcpp",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//zircon/system/ulib/zx",
   ]
+
   visibility = [
     ":*",
     "//src/bringup/bin/device-name-provider:*",

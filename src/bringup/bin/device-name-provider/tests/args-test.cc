@@ -20,7 +20,6 @@
 namespace {
 constexpr char kInterface[] = "/dev/whatever/whatever";
 constexpr char kNodename[] = "some-four-word-name";
-constexpr char kEthDir[] = "/dev";
 
 class FakeSvc {
  public:
@@ -74,19 +73,20 @@ TEST_F(ArgsTest, DeviceNameProviderNoneProvided) {
   ASSERT_TRUE(args.interface.empty());
   ASSERT_TRUE(args.nodename.empty());
   ASSERT_EQ(args.namegen, 1);
-  ASSERT_EQ(args.ethdir, std::string("/dev/class/ethernet"));
+  ASSERT_EQ(args.devdir, kDefaultDevdir);
   ASSERT_EQ(error, nullptr);
 }
 
 TEST_F(ArgsTest, DeviceNameProviderAllProvided) {
   int argc = 9;
+  constexpr char kDevDir[] = "/foo";
   const char* argv[] = {"device-name-provider",
                         "--nodename",
                         kNodename,
                         "--interface",
                         kInterface,
-                        "--ethdir",
-                        kEthDir,
+                        "--devdir",
+                        kDevDir,
                         "--namegen",
                         "0"};
   const char* error = nullptr;
@@ -94,7 +94,7 @@ TEST_F(ArgsTest, DeviceNameProviderAllProvided) {
   ASSERT_EQ(ParseArgs(argc, const_cast<char**>(argv), svc_root(), &error, &args), 0, "%s", error);
   ASSERT_EQ(args.interface, std::string(kInterface));
   ASSERT_EQ(args.nodename, std::string(kNodename));
-  ASSERT_EQ(args.ethdir, std::string(kEthDir));
+  ASSERT_EQ(args.devdir, std::string(kDevDir));
   ASSERT_EQ(args.namegen, 0);
   ASSERT_EQ(error, nullptr);
 }

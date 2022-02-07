@@ -245,25 +245,9 @@ zx_status_t eth_send(eth_buffer_t* ethbuf, size_t len) {
 
 int eth_add_mcast_filter(const mac_addr_t* addr) { return 0; }
 
-zx::status<> netifc_open(async_dispatcher_t* dispatcher, cpp17::string_view interface,
-                         fit::callback<void(zx_status_t)> on_error) {
-  std::lock_guard lock(g_state.eth_lock);
-
-  g_state.on_error = std::move(on_error);
-
-  fidl::ClientEnd<fuchsia_hardware_ethernet::Device> device;
-  // TODO: parameterize netsvc ethdir as well?
-  {
-    zx::status status = netifc_discover("/dev/class/ethernet", interface);
-    if (status.is_error()) {
-      printf("netifc: failed to discover interface %s\n", status.status_string());
-      return status.take_error();
-    }
-    auto& [dev, mac] = status.value();
-    device.channel() = std::move(dev);
-    g_state.netmac = mac;
-  }
-
+zx::status<> open_ethernet(async_dispatcher_t* dispatcher,
+                           fidl::ClientEnd<fuchsia_hardware_ethernet::Device> device)
+    __TA_REQUIRES(g_state.eth_lock) {
   // Allocate shareable ethernet buffer data heap.
   size_t iosize = 2ul * NET_BUFFERS * NET_BUFFERSZ;
   zx::vmo vmo;
@@ -325,6 +309,40 @@ zx::status<> netifc_open(async_dispatcher_t* dispatcher, cpp17::string_view inte
   g_state.eth = std::move(eth);
 
   return zx::ok();
+}
+
+// Helpers to visit on device variants.
+template <class... Ts>
+struct overloaded : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
+zx::status<> netifc_open(async_dispatcher_t* dispatcher, cpp17::string_view interface,
+                         fit::callback<void(zx_status_t)> on_error) {
+  std::lock_guard lock(g_state.eth_lock);
+
+  g_state.on_error = std::move(on_error);
+
+  zx::status status = netifc_discover("/dev", interface);
+  if (status.is_error()) {
+    printf("netifc: failed to discover interface %s\n", status.status_string());
+    return status.take_error();
+  }
+  auto& [dev, mac] = status.value();
+
+  g_state.netmac = mac;
+  return std::visit(
+      overloaded{
+          [dispatcher](fidl::ClientEnd<fuchsia_hardware_ethernet::Device>& d) -> zx::status<> {
+            []() __TA_ASSERT(g_state.eth_lock) {}();
+            return open_ethernet(dispatcher, std::move(d));
+          },
+          [](fidl::ClientEnd<fuchsia_hardware_network::Device>& d) -> zx::status<> {
+            return zx::error(ZX_ERR_NOT_SUPPORTED);
+          }},
+      dev);
 }
 
 void netifc_close() {

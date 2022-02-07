@@ -110,11 +110,11 @@ int main(int argc, char** argv) {
   if (!args.nodename.empty()) {
     strlcpy(device_name, args.nodename.c_str(), sizeof(device_name));
   } else {
-    zx::status status = netifc_discover(args.ethdir, args.interface);
+    zx::status status = netifc_discover(args.devdir, args.interface);
     if (status.is_error()) {
       strlcpy(device_name, fuchsia_device::wire::kDefaultDeviceName, sizeof(device_name));
       printf("device-name-provider: using default name \"%s\": netifc_discover(\"%s\", ...) = %s\n",
-             device_name, args.ethdir.c_str(), status.status_string());
+             device_name, args.devdir.c_str(), status.status_string());
     } else {
       const auto& [dev, mac] = status.value();
       device_id_get(mac.x, device_name, args.namegen);

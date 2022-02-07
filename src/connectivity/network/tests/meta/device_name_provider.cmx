@@ -4,8 +4,8 @@
     ],
     "program": {
         "args": [
-            "--ethdir",
-            "/vdev/class/ethernet"
+            "--devdir",
+            "/vdev"
         ],
         "binary": "bin/device-name-provider"
     },

@@ -72,10 +72,10 @@ int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Director
     return err;
   }
 
-  out->ethdir = std::string("/dev/class/ethernet");
+  out->devdir = kDefaultDevdir;
 
   while (argc > 1) {
-    if (!strncmp(argv[1], "--nodename", 10)) {
+    if (!strcmp(argv[1], "--nodename")) {
       if (argc < 3) {
         *error = "netsvc: missing argument to --nodename";
         return -1;
@@ -84,16 +84,16 @@ int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Director
       argv++;
       argc--;
     }
-    if (!strncmp(argv[1], "--ethdir", 12)) {
+    if (!strcmp(argv[1], "--devdir")) {
       if (argc < 3) {
-        *error = "netsvc: missing argument to --ethdir";
+        *error = "netsvc: missing argument to --devdir";
         return -1;
       }
-      out->ethdir = argv[2];
+      out->devdir = argv[2];
       argv++;
       argc--;
     }
-    if (!strncmp(argv[1], "--namegen", 10)) {
+    if (!strcmp(argv[1], "--namegen")) {
       if (argc < 3) {
         *error = "netsvc: missing argument to --namegen";
         return -1;
