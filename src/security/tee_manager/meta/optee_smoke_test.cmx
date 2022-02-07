@@ -1,0 +1,24 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.tee.Application.808032e0-fd9e-4e6f-8896-544735c98480": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx",
+                "fuchsia.tee.DeviceInfo": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx"
+            }
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/optee_smoke_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader",
+            "fuchsia.tee.Application.808032e0-fd9e-4e6f-8896-544735c98480",
+            "fuchsia.tee.DeviceInfo"
+        ]
+    }
+}

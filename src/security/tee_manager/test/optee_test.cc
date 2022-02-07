@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/tee/cpp/fidl.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -261,7 +262,7 @@ void OpteeFileHandleGuard::Close() {
 
 }  // namespace
 
-class OpteeTest : public ::testing::Test {
+class OpteeTest : public gtest::TestWithEnvironmentFixture {
  protected:
   void SetUp() override {
     TEEC_Result result = TEEC_InitializeContext(nullptr, &context_);

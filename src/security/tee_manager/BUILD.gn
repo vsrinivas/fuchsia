@@ -16,14 +16,9 @@ group("tests") {
   ]
 }
 
-fuchsia_component("tee_manager_cmp_legacy") {
+fuchsia_package_with_single_component("tee_manager") {
   manifest = "meta/tee_manager.cmx"
-  component_name = "tee_manager"
   deps = [ ":bin" ]
-}
-
-fuchsia_package("tee_manager") {
-  deps = [ ":tee_manager_cmp_legacy" ]
 }
 
 rustc_binary("bin") {
@@ -66,7 +61,7 @@ rustc_binary("bin") {
 }
 
 fuchsia_unittest_package("tee-manager-tests") {
-  manifest = "meta/tee_manager_bin_test.cml"
+  manifest = "meta/tee_manager_bin_test.cmx"
   deps = [ ":bin_test" ]
 }
 
@@ -75,36 +70,19 @@ source_set("test_common") {
   visibility = [ ":*" ]
   sources = [ "test/common.cc" ]
   public_deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.tee",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/security/tee/tee-client-api",
   ]
 }
 
-fuchsia_component("optee_test_cmp") {
-  testonly = true
-  component_name = "optee_test"
-  manifest = "meta/optee_test.cml"
+fuchsia_unittest_package("optee_test") {
+  manifest = "meta/optee_test.cmx"
   deps = [ ":optee_test_bin" ]
-}
-
-fuchsia_component("tee_manager_optee_test_cmp") {
-  manifest = "meta/tee_manager.optee_test.cml"
-  component_name = "tee_manager"
-  deps = [ ":bin" ]
-}
-
-fuchsia_test_package("optee_test") {
-  test_components = [ ":optee_test_cmp" ]
-  deps = [ ":tee_manager_optee_test_cmp" ]
   test_specs = {
-    environments = [
-      astro_env,
-      sherlock_env,
-      nelson_env,
-    ]
+    environments = [ astro_env ]
   }
 }
 
@@ -117,22 +95,9 @@ executable("optee_test_bin") {
   deps = [ ":test_common" ]
 }
 
-fuchsia_component("optee_smoke_test_cmp") {
-  testonly = true
-  component_name = "optee_smoke_test"
-  manifest = "meta/optee_smoke_test.cml"
+fuchsia_unittest_package("optee_smoke_test") {
+  manifest = "meta/optee_smoke_test.cmx"
   deps = [ ":optee_smoke_test_bin" ]
-}
-
-fuchsia_component("tee_manager_optee_smoke_test_cmp") {
-  manifest = "meta/tee_manager.optee_smoke_test.cml"
-  component_name = "tee_manager"
-  deps = [ ":bin" ]
-}
-
-fuchsia_test_package("optee_smoke_test") {
-  test_components = [ ":optee_smoke_test_cmp" ]
-  deps = [ ":tee_manager_optee_smoke_test_cmp" ]
   test_specs = {
     environments = [ astro_env ]
   }
