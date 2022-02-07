@@ -954,7 +954,7 @@ From //build/images/custom_signing.gni:21
 
 **Current value (from the default):** `""`
 
-From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/35ce57bb2f9686843ef10192484dfe92b302e9b0/BUILD.gn#22)
+From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/9acec52615bfc8dfefd8488db9b7ad1d0c4c96c7/BUILD.gn#22)
 
 ### dart_aot_debug_build_cfg
 Builds the component in a non-product AOT build. This will
@@ -3604,7 +3604,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"beE1WRS4PXPkuCWWs-RB23ZnZ5xJ3SOjpmT4k-KBGEsC"`
+**Current value (from the default):** `"9Jg5aoY-ZHbPR9h6Q4qiN2e2QFIEtY7aUn2NfKSGf3QC"`
 
 From //build/rust/config.gni:30
 
