@@ -33,6 +33,7 @@ source_set("lib") {
   ]
   deps = [ "//src/devices/lib/compat" ]
   public_deps = [
+    "fidl:fuchsia.driver.compat_llcpp",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/lib/stdcompat",

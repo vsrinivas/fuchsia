@@ -87,6 +87,23 @@ def main():
                 'protocol': "fuchsia.device.fs.Exporter"
             }, {
                 'protocol': "fuchsia.boot.Items"
+            }, {
+                'directory': "fuchsia.driver.compat.Service",
+                'rights': ['rw*'],
+                'path': "/fuchsia.driver.compat.Service",
+            }
+        ]
+        manifest['capabilities'] = [
+            {
+                'directory': "fuchsia.driver.compat.Service",
+                'rights': ["rw*"],
+                'path': "/fuchsia.driver.compat.Service",
+            }
+        ]
+        manifest['expose'] = [
+            {
+                'directory': "fuchsia.driver.compat.Service",
+                'from': "self",
             }
         ]
     else:

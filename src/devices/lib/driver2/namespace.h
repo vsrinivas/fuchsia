@@ -11,6 +11,12 @@
 
 namespace driver {
 
+namespace internal {
+
+zx::status<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path, zx::channel remote);
+
+}  // namespace internal
+
 // Manages a driver's namespace.
 class Namespace {
  public:
@@ -24,7 +30,7 @@ class Namespace {
   Namespace(Namespace&& other) noexcept;
   Namespace& operator=(Namespace&& other) noexcept;
 
-  // Connect to a service within a driver's namespace.
+  // Connect to a protocol within a driver's namespace.
   template <typename T>
   zx::status<fidl::ClientEnd<T>> Connect(
       std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>,
@@ -38,6 +44,19 @@ class Namespace {
       return result.take_error();
     }
     return zx::ok(std::move(endpoints->client));
+  }
+
+  // Connect to a service within a driver's namespace.
+  template <typename FidlService>
+  zx::status<typename FidlService::ServiceClient> OpenService(cpp17::string_view instance) const {
+    std::string path = std::string("/") + FidlService::Name + "/" + std::string(instance);
+    auto result = Connect<fuchsia_io::Directory>(path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE);
+    if (result.is_error()) {
+      return result.take_error();
+    }
+
+    return zx::ok(typename FidlService::ServiceClient(std::move(result.value().TakeChannel()),
+                                                      internal::DirectoryOpenFunc));
   }
 
  private:

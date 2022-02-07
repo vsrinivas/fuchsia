@@ -6,6 +6,20 @@
 
 namespace driver {
 
+namespace internal {
+
+zx::status<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path, zx::channel remote) {
+  constexpr uint32_t flags =
+      fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable;
+  fidl::UnownedClientEnd<fuchsia_io::Directory> dir_end(dir);
+  fidl::ServerEnd<fuchsia_io::Node> node_end(std::move(remote));
+  fidl::WireResult<fuchsia_io::Directory::Open> result =
+      fidl::WireCall<fuchsia_io::Directory>(dir_end)->Open(flags, 0755u, path, std::move(node_end));
+  return zx::make_status(result.status());
+}
+
+}  // namespace internal
+
 zx::status<Namespace> Namespace::Create(
     fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry>& entries) {
   fdio_ns_t* ns;

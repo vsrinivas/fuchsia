@@ -14,6 +14,7 @@
 #include "src/devices/lib/driver2/logger.h"
 #include "src/devices/lib/driver2/namespace.h"
 #include "src/devices/misc/drivers/compat/device.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace compat {
 
@@ -67,6 +68,12 @@ class Driver {
   // Stops the DFv1 driver if there was a failure.
   fpromise::result<> StopDriver(const zx_status_t& status);
 
+  fpromise::promise<void, zx_status_t> ConnectToParentCompatService();
+  fpromise::promise<std::string, zx_status_t> GetTopologicalPath();
+
+  fidl::WireSharedClient<fuchsia_driver_compat::Device> device_client_;
+
+  fbl::RefPtr<fs::PseudoDir> compat_service_;
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
   service::OutgoingDirectory outgoing_;

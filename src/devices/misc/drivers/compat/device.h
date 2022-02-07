@@ -6,11 +6,13 @@
 #define SRC_DEVICES_MISC_DRIVERS_COMPAT_DEVICE_H_
 
 #include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.driver.compat/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/fpromise/scope.h>
+#include <lib/service/llcpp/outgoing_directory.h>
 
 #include <list>
 #include <memory>
@@ -19,11 +21,14 @@
 #include <fbl/intrusive_double_list.h>
 
 #include "src/devices/lib/driver2/logger.h"
+#include "src/devices/misc/drivers/compat/service.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace compat {
 
 // Device is an implementation of a DFv1 device.
-class Device : public std::enable_shared_from_this<Device> {
+class Device : public std::enable_shared_from_this<Device>,
+               public fidl::WireServer<fuchsia_driver_compat::Device> {
  public:
   Device(std::string_view name, void* context, const zx_protocol_device_t* ops,
          std::optional<Device*> parent, std::optional<Device*> linked_device,
@@ -57,7 +62,9 @@ class Device : public std::enable_shared_from_this<Device> {
     vnode_teardown_callback_ = std::move(cb);
   }
 
-  std::string_view topological_path() const { return topological_path_; }
+  zx_status_t StartCompatService(ServiceDir dir);
+
+  std::string_view topological_path() const { return linked_device_.topological_path_; }
   void set_topological_path(std::string path) { topological_path_ = std::move(path); }
 
   fpromise::scope& scope() { return scope_; }
@@ -67,6 +74,10 @@ class Device : public std::enable_shared_from_this<Device> {
 
   Device(Device&&) = delete;
   Device& operator=(Device&&) = delete;
+
+  // fuchsia.driver.compat.Compat
+  void GetTopologicalPath(GetTopologicalPathRequestView request,
+                          GetTopologicalPathCompleter::Sync& completer) override;
 
   void RemoveChild(std::shared_ptr<Device>& child);
 
@@ -82,6 +93,8 @@ class Device : public std::enable_shared_from_this<Device> {
   void* proto_ops_ = nullptr;
 
   std::optional<fit::callback<void()>> vnode_teardown_callback_;
+
+  std::optional<ServiceDir> compat_service_;
 
   // The device's parent. If this field is set then the Device ptr is guaranteed
   // to be non-null. The parent is also guaranteed to outlive its child.

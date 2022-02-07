@@ -38,5 +38,4 @@ fuchsia_driver_component("component") {
   component_name = "root"
   deps = [ ":driver" ]
   info = "root-info.json"
-  colocate = true
 }

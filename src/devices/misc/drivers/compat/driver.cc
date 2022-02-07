@@ -117,6 +117,22 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
     return serve.take_error();
   }
 
+  compat_service_ = fbl::MakeRefCounted<fs::PseudoDir>();
+  outgoing_.root_dir()->AddEntry("fuchsia.driver.compat.Service", compat_service_);
+
+  auto compat_connect = ConnectToParentCompatService()
+                            .and_then(fit::bind_member<&Driver::GetTopologicalPath>(this))
+                            .then([this](result<std::string, zx_status_t>& result)
+                                      -> fpromise::result<void, zx_status_t> {
+                              if (result.is_error()) {
+                                FDF_LOG(WARNING, "Connecting to compat service failed with %s",
+                                        zx_status_get_string(result.error()));
+                                return ok();
+                              }
+                              this->device_.set_topological_path(std::move(result.value()));
+                              return ok();
+                            });
+
   auto root_resource =
       driver::Connect<fboot::RootResource>(ns_, dispatcher_)
           .and_then(fit::bind_member<&Driver::GetRootResource>(this))
@@ -133,10 +149,12 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
       join_promises(std::move(root_resource), std::move(loader_vmo), std::move(driver_vmo))
           .then(fit::bind_member<&Driver::Join>(this))
           .and_then(fit::bind_member<&Driver::LoadDriver>(this))
+          .and_then(std::move(compat_connect))
           .and_then(fit::bind_member<&Driver::StartDriver>(this))
           .or_else(fit::bind_member<&Driver::StopDriver>(this))
           .wrap_with(scope_);
   executor_.schedule_task(std::move(start_driver));
+
   return zx::ok();
 }
 
@@ -344,6 +362,40 @@ result<> Driver::StopDriver(const zx_status_t& status) {
   return ok();
 }
 
+fpromise::promise<void, zx_status_t> Driver::ConnectToParentCompatService() {
+  auto result = ns_.OpenService<fuchsia_driver_compat::Service>("default");
+  if (result.is_error()) {
+    return fpromise::make_error_promise(result.status_value());
+  }
+  auto connection = result.value().connect_device();
+  if (connection.is_error()) {
+    return fpromise::make_error_promise(connection.status_value());
+  }
+  device_client_ = fidl::WireSharedClient<fuchsia_driver_compat::Device>(
+      std::move(connection.value()), dispatcher_);
+
+  return fpromise::make_result_promise<void, zx_status_t>(ok());
+}
+
+promise<std::string, zx_status_t> Driver::GetTopologicalPath() {
+  if (!device_client_) {
+    return fpromise::make_result_promise<std::string, zx_status_t>(error(ZX_ERR_PEER_CLOSED));
+  }
+
+  bridge<std::string, zx_status_t> bridge;
+  device_client_->GetTopologicalPath(
+      [completer = std::move(bridge.completer)](
+          fidl::WireUnownedResult<fuchsia_driver_compat::Device::GetTopologicalPath>&
+              result) mutable {
+        if (result.ok()) {
+          completer.complete_ok(std::string(result->path.data(), result->path.size()));
+        } else {
+          completer.complete_error(result.status());
+        }
+      });
+  return bridge.consumer.promise_or(error(ZX_ERR_INTERNAL));
+}
+
 void* Driver::Context() const { return context_; }
 
 void Driver::Log(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
@@ -352,6 +404,13 @@ void Driver::Log(FuchsiaLogSeverity severity, const char* tag, const char* file,
 }
 
 zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out) {
+  auto result = ServiceDir::Create(compat_service_, args->name);
+  if (result.is_error()) {
+    FDF_LOG(ERROR, "Device %s: failed to add device %s, creating ServiceDir failed with: %s",
+            parent->Name(), args->name, result.status_string());
+    return result.status_value();
+  }
+
   zx_device_t* child;
   zx_status_t status = parent->Add(args, &child);
   if (status != ZX_OK) {
@@ -360,6 +419,9 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
   if (out) {
     *out = child;
   }
+
+  child->StartCompatService(std::move(result.value()));
+
   std::string child_protocol = "device-" + std::to_string(next_device_id_);
   next_device_id_++;
 

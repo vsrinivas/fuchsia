@@ -13,6 +13,7 @@
 #include "src/devices/lib/compat/symbols.h"
 
 namespace fdf = fuchsia_driver_framework;
+namespace fcd = fuchsia_component_decl;
 
 namespace {
 
@@ -111,6 +112,19 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
 
   // Create NodeAddArgs from `zx_args`.
   fidl::Arena arena;
+
+  fcd::wire::Ref ref;
+  ref.set_self(fcd::wire::SelfRef());
+  fcd::wire::OfferDirectory compat_dir(arena);
+  compat_dir.set_source_name(arena, "fuchsia.driver.compat.Service");
+  compat_dir.set_target_name(arena, "fuchsia.driver.compat.Service");
+  compat_dir.set_rights(arena, fuchsia_io2::wire::kRwStarDir);
+  compat_dir.set_subdir(arena, fidl::StringView::FromExternal(device->name_));
+  compat_dir.set_dependency_type(fcd::wire::DependencyType::kStrong);
+
+  fcd::wire::Offer offer;
+  offer.set_directory(arena, std::move(compat_dir));
+
   std::vector<fdf::wire::NodeSymbol> symbols;
   symbols.emplace_back(arena)
       .set_name(arena, kName)
@@ -148,6 +162,7 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   auto valid_name = MakeValidName(zx_args->name);
   args.set_name(arena, fidl::StringView::FromExternal(valid_name))
       .set_symbols(arena, fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(symbols))
+      .set_offers(arena, fidl::VectorView<fcd::wire::Offer>::FromExternal(&offer, 1))
       .set_properties(arena, fidl::VectorView<fdf::wire::NodeProperty>::FromExternal(props));
 
   // Create NodeController, so we can control the device.
@@ -313,6 +328,30 @@ zx_status_t Device::MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   return ops_->message(context_, msg, txn);
+}
+
+zx_status_t Device::StartCompatService(ServiceDir dir) {
+  compat_service_.emplace(std::move(dir));
+
+  service::ServiceHandler handler;
+  fuchsia_driver_compat::Service::Handler compat_service(&handler);
+  auto device = [this](fidl::ServerEnd<fuchsia_driver_compat::Device> server_end) -> zx::status<> {
+    fidl::BindServer<fidl::WireServer<fuchsia_driver_compat::Device>>(dispatcher_,
+                                                                      std::move(server_end), this);
+    return zx::ok();
+  };
+  zx::status<> status = compat_service.add_device(std::move(device));
+  if (status.is_error()) {
+    return status.status_value();
+  }
+  compat_service_->dir()->AddEntry("default", handler.TakeDirectory());
+
+  return ZX_OK;
+}
+
+void Device::GetTopologicalPath(GetTopologicalPathRequestView request,
+                                GetTopologicalPathCompleter::Sync& completer) {
+  completer.Reply(fidl::StringView::FromExternal(topological_path_));
 }
 
 }  // namespace compat
