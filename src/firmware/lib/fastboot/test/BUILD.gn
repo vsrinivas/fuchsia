@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":fastboot-test-package" ]
+}
+
+test("fastboot-test") {
+  sources = [ "fastboot-test.cc" ]
+  include_dirs = [ "../include" ]
+  deps = [
+    "..:lib",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("fastboot-test-package") {
+  package_name = "fastboot-test"
+  deps = [ ":fastboot-test" ]
+}
