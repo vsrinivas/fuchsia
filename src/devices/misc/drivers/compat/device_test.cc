@@ -10,6 +10,9 @@
 
 #include <gtest/gtest.h>
 
+#include "lib/ddk/binding_priv.h"
+#include "lib/ddk/device.h"
+
 namespace fdf = fuchsia_driver_framework;
 namespace fio = fuchsia_io;
 namespace frunner = fuchsia_component_runner;
@@ -23,8 +26,15 @@ class TestNode : public fidl::testing::WireTestBase<fdf::Node> {
     nodes_.clear();
   }
 
+  void SetAddChildHook(std::function<void(AddChildRequestView& rv)> func) {
+    add_child_hook_.emplace(std::move(func));
+  }
+
  private:
   void AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) override {
+    if (add_child_hook_) {
+      add_child_hook_.value()(request);
+    }
     controllers_.push_back(std::move(request->controller));
     nodes_.push_back(std::move(request->node));
     completer.ReplySuccess();
@@ -34,6 +44,7 @@ class TestNode : public fidl::testing::WireTestBase<fdf::Node> {
     printf("Not implemented: Node::%s\n", name.data());
   }
 
+  std::optional<std::function<void(AddChildRequestView& rv)>> add_child_hook_;
   std::vector<fidl::ServerEnd<fdf::NodeController>> controllers_;
   std::vector<fidl::ServerEnd<fdf::Node>> nodes_;
 };
@@ -119,6 +130,42 @@ TEST_F(DeviceTest, AddChildDevice) {
 
   // Ensure that AddChild was executed.
   ASSERT_TRUE(RunLoopUntilIdle());
+}
+
+TEST_F(DeviceTest, AddChildWithProtoPropAndProtoId) {
+  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+
+  // Create a node.
+  TestNode node;
+  auto binding = fidl::BindServer(dispatcher(), std::move(endpoints->server), &node);
+
+  // Create a device.
+  zx_protocol_device_t ops{};
+  compat::Device parent("parent", nullptr, &ops, std::nullopt, std::nullopt, logger(),
+                        dispatcher());
+  parent.Bind({std::move(endpoints->client), dispatcher()});
+
+  bool ran = false;
+  node.SetAddChildHook([&ran](TestNode::AddChildRequestView& rv) {
+    ran = true;
+    auto& prop = rv->args.properties()[0];
+    ASSERT_EQ(prop.key().int_value(), (uint32_t)BIND_PROTOCOL);
+    ASSERT_EQ(prop.value().int_value(), ZX_PROTOCOL_I2C);
+  });
+
+  // Add a child device.
+  zx_device_prop_t prop{.id = BIND_PROTOCOL, .value = ZX_PROTOCOL_I2C};
+  device_add_args_t args{
+      .name = "child", .props = &prop, .prop_count = 1, .proto_id = ZX_PROTOCOL_BLOCK};
+  zx_device_t* child = nullptr;
+  zx_status_t status = parent.Add(&args, &child);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_NE(nullptr, child);
+  EXPECT_STREQ("child", child->Name());
+  EXPECT_TRUE(parent.HasChildren());
+
+  ASSERT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(ran);
 }
 
 TEST_F(DeviceTest, AddChildDeviceWithInit) {
