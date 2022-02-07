@@ -1532,36 +1532,25 @@ zx_status_t NodeManager::RecoverInodePage(Page &page) {
   return ZX_OK;
 }
 
-zx_status_t NodeManager::RestoreNodeSummary(F2fs &fs, uint32_t segno, SummaryBlock &sum) {
-  SuperblockInfo &superblock_info = fs.GetSuperblockInfo();
-
-  // scan the node segment
-  int last_offset = superblock_info.GetBlocksPerSeg();
-  block_t addr = fs.GetSegmentManager().StartBlock(segno);
+zx_status_t NodeManager::RestoreNodeSummary(uint32_t segno, SummaryBlock &sum) {
+  int last_offset = GetSuperblockInfo().GetBlocksPerSeg();
+  block_t addr = fs_->GetSegmentManager().StartBlock(segno);
   Summary *sum_entry = &sum.entries[0];
 
-  // alloc temporal page for read node
-  fbl::RefPtr<Page> page;
-  if (zx_status_t ret = fs.GetMetaVnode().GrabCachePage(-1, &page); ret != ZX_OK) {
-    return ret;
-  }
-
-  for (int i = 0; i < last_offset; ++i, ++sum_entry) {
-    if (VnodeF2fs::Readpage(&fs, page.get(), addr, kReadSync)) {
-      break;
+  for (int i = 0; i < last_offset; ++i, ++sum_entry, ++addr) {
+    fbl::RefPtr<Page> page;
+    if (zx_status_t ret = fs_->GetMetaPage(addr, &page); ret != ZX_OK) {
+      return ret;
     }
 
     Node *rn = static_cast<Node *>(page->GetAddress());
     sum_entry->nid = rn->footer.nid;
     sum_entry->version = 0;
     sum_entry->ofs_in_node = 0;
-    ++addr;
 
-    // In order to read next node page,
-    // we must clear PageUptodate flag.
-    page->ClearUptodate();
+    page->Invalidate();
+    Page::PutPage(std::move(page), true);
   }
-  Page::PutPage(std::move(page), true);
   return ZX_OK;
 }
 

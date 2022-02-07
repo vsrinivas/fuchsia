@@ -322,11 +322,11 @@ zx_status_t F2fs::FillSuper() {
   InitOrphanInfo();
 
   segment_manager_ = std::make_unique<SegmentManager>(this);
+  node_manager_ = std::make_unique<NodeManager>(this);
   if (err = segment_manager_->BuildSegmentManager(); err != ZX_OK) {
     return err;
   }
 
-  node_manager_ = std::make_unique<NodeManager>(this);
   if (err = node_manager_->BuildNodeManager(); err != ZX_OK) {
     return err;
   }

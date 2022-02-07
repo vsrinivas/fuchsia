@@ -110,7 +110,7 @@ class NodeManager {
   zx_status_t GetDnodeOfData(DnodeOfData &dn, pgoff_t index, int ro);
   void FillNodeFooterBlkaddr(Page *page, block_t blkaddr);
 
-  static zx_status_t RestoreNodeSummary(F2fs &fs, uint32_t segno, SummaryBlock &sum);
+  zx_status_t RestoreNodeSummary(uint32_t segno, SummaryBlock &sum);
 
   static void FillNodeFooter(Page &page, nid_t nid, nid_t ino, uint32_t ofs, bool reset);
   static void CopyNodeFooter(Page &dst, Page &src);

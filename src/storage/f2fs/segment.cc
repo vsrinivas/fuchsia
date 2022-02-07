@@ -1252,7 +1252,7 @@ zx_status_t SegmentManager::ReadNormalSummaries(int type) {
         ns->ofs_in_node = 0;
       }
     } else {
-      if (NodeManager::RestoreNodeSummary(*fs_, segno, *sum)) {
+      if (fs_->GetNodeManager().RestoreNodeSummary(segno, *sum)) {
         Page::PutPage(std::move(new_page), true);
         return ZX_ERR_INVALID_ARGS;
       }
