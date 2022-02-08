@@ -18,12 +18,7 @@ use {
 fn get_global_allowlist() -> HashSet<String> {
     hashset! {
         "driver_test_realm".to_string(),
-        "wlancfg".to_string(),
-        "emergency".to_string(),
-        "wlandevicemonitor".to_string(),
         "regulatory_region".to_string(),
-        "stash".to_string(),
-        "wlanstack".to_string(),
         "blobfs-integration".to_string(),
         "archivist-with-feedback-filtering".to_string(),
         "archivist-with-legacy-metrics".to_string(),
@@ -31,7 +26,6 @@ fn get_global_allowlist() -> HashSet<String> {
         "battery-manager".to_string(),
         "fuzz-registry".to_string(),
         "test_manager".to_string(),
-        "reference-oemcrypto".to_string(),
         "component_hub_integration_test".to_string(),
         "example-tests".to_string(),
     }
