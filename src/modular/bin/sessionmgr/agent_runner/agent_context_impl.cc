@@ -143,12 +143,13 @@ class AgentContextImpl::StopCall : public Operation<> {
     //
     // TODO(mesch): AppClient/AsyncHolder should implement this. See also
     // StoryProviderImpl::StopStoryShellCall.
-    agent_context_impl_->app_client_->Teardown(kBasicTimeout, [this, branch] {
-      std::unique_ptr<FlowToken> cont = branch.Continue();
-      if (cont) {
-        Stop(*cont);
-      }
-    });
+    agent_context_impl_->app_client_->Teardown(
+        kBasicTimeout, [this, weak_this = GetWeakPtr(), branch] {
+          std::unique_ptr<FlowToken> cont = branch.Continue();
+          if (cont && weak_this) {
+            Stop(*cont);
+          }
+        });
   }
 
   void Stop(FlowToken flow) {

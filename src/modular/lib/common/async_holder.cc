@@ -27,7 +27,9 @@ AsyncHolderBase::~AsyncHolderBase() {
 void AsyncHolderBase::Teardown(zx::duration timeout, fit::function<void()> done) {
   fit::callback<void(bool)> cont = [this, down = down_, timeout = timeout,
                                     done = std::move(done)](const bool from_timeout) mutable {
-    if (*down) {  // |down| shared_ptr prevents using |this| after destruct
+    if (*down) {
+      // The holder has already been torn down, or the destructor was called.
+      done();
       return;
     }
 
@@ -43,13 +45,19 @@ void AsyncHolderBase::Teardown(zx::duration timeout, fit::function<void()> done)
   };
 
   auto cont_timeout = [cont = cont.share()]() mutable {
-    if (cont)
-      cont(true);
+    // Continue only if the normal path (`cont_normal`) has not been invoked,
+    // i.e. when the normal path has timed out.
+    if (cont) {
+      cont(/*from_timeout=*/true);
+    }
   };
 
   auto cont_normal = [cont = std::move(cont)]() mutable {
-    if (cont)
-      cont(false);
+    // Continue only if the timeout path (`cont_timeout`) has not been invoked,
+    // i.e. when ImplTeardown finishes before the timeout period.
+    if (cont) {
+      cont(/*from_timeout=*/false);
+    }
   };
 
   async::PostDelayedTask(async_get_default_dispatcher(), std::move(cont_timeout), timeout);

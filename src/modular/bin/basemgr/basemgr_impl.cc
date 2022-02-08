@@ -130,11 +130,7 @@ void BasemgrImpl::Shutdown() {
   // Always completes successfully.
   auto teardown_session_provider = [this]() {
     auto bridge = fpromise::bridge();
-    if (session_provider_.get()) {
-      session_provider_.Teardown(kSessionProviderTimeout, bridge.completer.bind());
-    } else {
-      bridge.completer.complete_ok();
-    }
+    session_provider_.Teardown(kSessionProviderTimeout, bridge.completer.bind());
     return bridge.consumer.promise();
   };
 
@@ -249,11 +245,9 @@ void BasemgrImpl::GetPresentation(
 void BasemgrImpl::LaunchSessionmgr(fuchsia::modular::session::ModularConfig config) {
   // If there is a session provider, tear it down and try again. This stops any running session.
   if (session_provider_.get()) {
-    session_provider_.Teardown(kSessionProviderTimeout,
-                               [this, config = std::move(config)]() mutable {
-                                 session_provider_.reset(nullptr);
-                                 LaunchSessionmgr(std::move(config));
-                               });
+    session_provider_.Teardown(
+        kSessionProviderTimeout,
+        [this, config = std::move(config)]() mutable { LaunchSessionmgr(std::move(config)); });
     return;
   }
 

@@ -24,7 +24,7 @@ namespace modular {
 // and should align with that, but it owns impl and isn't a client of it.
 class AsyncHolderBase {
  public:
-  AsyncHolderBase(std::string name);
+  explicit AsyncHolderBase(std::string name);
   virtual ~AsyncHolderBase();
 
   // Timeout is the first argument because: (1) the second argument can be very
@@ -32,6 +32,13 @@ class AsyncHolderBase {
   // timeout happens first, the done callback after that, so this ordering is
   // actually quite natural.
   void Teardown(zx::duration timeout, fit::function<void()> done);
+
+ protected:
+  // Used by derived classes to set the torn down state dependent on implementation.
+  //
+  // For example, to allow destruction of a default-initialized holder
+  // without invoking Teardown.
+  void set_down(bool down) { *down_ = down; }
 
  private:
   // Called by Teardown(). A timeout callback is scheduled simultaneously.
@@ -60,8 +67,17 @@ class AsyncHolderBase {
 template <class Impl>
 class AsyncHolder : public AsyncHolderBase {
  public:
-  AsyncHolder(const char* const name) : AsyncHolderBase(name) {}
-  ~AsyncHolder() override = default;
+  explicit AsyncHolder(const char* const name) : AsyncHolderBase(name) {}
+  AsyncHolder(const char* const name, std::unique_ptr<Impl> impl)
+      : AsyncHolderBase(name), impl_(std::move(impl)) {}
+
+  ~AsyncHolder() override {
+    // Allow destruction without calling Teardown if there is no
+    // implementation to destroy.
+    if (!impl_) {
+      set_down(true);
+    }
+  }
 
   void reset(Impl* const impl) { impl_.reset(impl); }
 
@@ -76,8 +92,11 @@ class AsyncHolder : public AsyncHolderBase {
 
  private:
   void ImplTeardown(fit::function<void()> done) override {
-    FX_DCHECK(impl_.get());
-    impl_->Teardown(std::move(done));
+    if (impl_) {
+      impl_->Teardown(std::move(done));
+    } else {
+      done();
+    }
   }
 
   void ImplReset() override { impl_.reset(); }

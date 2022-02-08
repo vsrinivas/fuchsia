@@ -92,10 +92,6 @@ class SessionProvider {
   // The timestamp of when last crash happened
   zx::time last_crash_time_;
 
-  // If set, this will be used for the value of |use_random_session_id| instead of
-  // the one from the configuration.
-  std::optional<bool> use_random_session_id_ = std::nullopt;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionProvider);
 };
 

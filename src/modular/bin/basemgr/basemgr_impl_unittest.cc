@@ -42,6 +42,7 @@ TEST_F(BasemgrImplTest, StartsSessionWithConfig) {
       sessionmgr.component()->namespace_map().find(modular_config::kOverriddenConfigDir);
   ASSERT_TRUE(config_dir_it != sessionmgr.component()->namespace_map().end());
 
+  auto did_read_config = false;
   ASSERT_EQ(ZX_OK, loop().StartThread());
   async::TaskClosure task([&] {
     auto dir_fd = fsl::OpenChannelAsFileDescriptor(config_dir_it->second.TakeChannel());
@@ -52,10 +53,14 @@ TEST_F(BasemgrImplTest, StartsSessionWithConfig) {
 
     EXPECT_EQ(config_json, config_contents);
 
-    basemgr_impl_->Terminate();
+    did_read_config = true;
   });
   task.Post(dispatcher());
 
+  RunLoopUntil([&]() { return did_read_config; });
+  loop().JoinThreads();
+
+  basemgr_impl_->Terminate();
   RunLoopUntil([&]() { return did_shut_down_; });
 }
 
@@ -141,6 +146,9 @@ TEST_F(BasemgrImplTest, LaunchSessionmgrReplacesExistingSession) {
   session_launcher->LaunchSessionmgr(std::move(config_buf));
 
   RunLoopUntil([&] { return sessionmgr.component()->launch_count() == 2; });
+
+  basemgr_impl_->Terminate();
+  RunLoopUntil([&]() { return did_shut_down_; });
 }
 
 }  // namespace modular

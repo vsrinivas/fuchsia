@@ -44,10 +44,6 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
     return fpromise::error(ZX_ERR_BAD_STATE);
   }
 
-  auto done = [this](SessionContextImpl::ShutDownReason shutdown_reason) {
-    OnSessionShutdown(shutdown_reason);
-  };
-
   fuchsia::modular::session::AppConfig sessionmgr_app_config;
   sessionmgr_app_config.set_url(modular_config::kSessionmgrUrl);
 
@@ -64,7 +60,10 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
       [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));
       },
-      done);
+      /*on_session_shutdown=*/
+      [this](SessionContextImpl::ShutDownReason shutdown_reason) {
+        OnSessionShutdown(shutdown_reason);
+      });
 
   return fpromise::ok();
 }
@@ -76,7 +75,7 @@ void SessionProvider::Teardown(fit::function<void()> callback) {
   }
 
   // Shutdown will execute the given |callback|, then destroy |session_context_|.
-  session_context_->Shutdown(ShutDownReason::CRITICAL_FAILURE, std::move(callback));
+  session_context_->Shutdown(ShutDownReason::CLIENT_REQUEST, std::move(callback));
 }
 
 void SessionProvider::RestartSession(fit::function<void()> on_restart_complete) {
