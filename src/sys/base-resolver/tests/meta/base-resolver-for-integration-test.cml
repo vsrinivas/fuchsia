@@ -13,6 +13,10 @@
             resolver: "pkg_cache_resolver",
             path: "/pkg-cache-resolver/fuchsia.sys2.ComponentResolver",
         },
+        {
+            protocol: "fuchsia.sys2.ComponentResolver-ForPkgCache",
+            path: "/pkg-cache-resolver/fuchsia.sys2.ComponentResolver",
+        },
     ],
     use: [
         {
@@ -28,6 +32,10 @@
     expose: [
         {
             resolver: "pkg_cache_resolver",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.sys2.ComponentResolver-ForPkgCache",
             from: "self",
         },
     ],

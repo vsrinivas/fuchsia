@@ -856,7 +856,10 @@
 
         // -- End Archivist offers --
         {
-            directory: "pkgfs-packages-delayed",
+            directory: [
+                "minfs-delayed",
+                "pkgfs-packages-delayed",
+            ],
             from: "#fshost",
             to: "#base_resolver",
         },

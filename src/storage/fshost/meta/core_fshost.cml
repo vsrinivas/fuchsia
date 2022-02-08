@@ -36,6 +36,14 @@
             path: "/fs/data",
         },
         {
+            directory: "minfs-delayed",
+            rights: [
+                "enumerate",
+                "traverse",
+            ],
+            path: "/delayed/fs/data",
+        },
+        {
             directory: "pkgfs",
             rights: [
                 "execute",
@@ -130,6 +138,10 @@
         },
         {
             directory: "minfs",
+            from: "self",
+        },
+        {
+            directory: "minfs-delayed",
             from: "self",
         },
         {

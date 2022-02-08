@@ -20,6 +20,11 @@
             rights: [ "rx*" ],
             path: "/blob",
         },
+        {
+            directory: "minfs-delayed",
+            rights: [ "r*" ],
+            path: "/minfs-delayed",
+        },
     ],
     use: [
         {
@@ -41,6 +46,10 @@
         },
         {
             directory: "blob",
+            from: "self",
+        },
+        {
+            directory: "minfs-delayed",
             from: "self",
         },
     ],

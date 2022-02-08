@@ -20,6 +20,14 @@
             rights: [ "rx*" ],
             path: "/pkgfs/packages",
         },
+        {
+            directory: "minfs-delayed",
+            rights: [
+                "enumerate",
+                "traverse",
+            ],
+            path: "/minfs-delayed",
+        },
     ],
     expose: [
         {

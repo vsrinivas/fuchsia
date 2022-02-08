@@ -38,6 +38,11 @@
             to: "#base_resolver",
         },
         {
+            directory: "minfs-delayed",
+            from: "#fake_blobfs_and_boot_args",
+            to: "#base_resolver",
+        },
+        {
             protocol: "fuchsia.boot.Arguments",
             from: "#fake_blobfs_and_boot_args",
             to: "#base_resolver",

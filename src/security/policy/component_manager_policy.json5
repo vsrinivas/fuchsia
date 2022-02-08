@@ -256,6 +256,16 @@
             {
                 source_moniker: "/bootstrap/fshost",
                 source: "component",
+                source_name: "minfs-delayed",
+                capability: "directory",
+                target_monikers: [
+                    "/bootstrap/base_resolver",
+                    "/bootstrap/fshost",
+                ],
+            },
+            {
+                source_moniker: "/bootstrap/fshost",
+                source: "component",
                 source_name: "system",
                 capability: "directory",
                 target_monikers: [

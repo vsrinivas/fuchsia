@@ -17,6 +17,8 @@ static PKG_CACHE_MANIFEST_PATH: &'static str = "meta/pkg-cache.cm";
 static PKG_CACHE_PACKAGE_URL: &'static str = "fuchsia-pkg-cache:///";
 
 pub async fn serve(stream: ComponentResolverRequestStream) -> anyhow::Result<()> {
+    // TODO(fxbug.dev/92415) Stop waiting once non-delayed minfs queues requests.
+    let () = wait_for_minfs().await.context("waiting for minfs")?;
     let blobfs =
         blobfs::Client::open_from_namespace_executable().context("failed to open /blob")?;
     let pkg_cache_hash = get_pkg_cache_hash(
@@ -27,6 +29,18 @@ pub async fn serve(stream: ComponentResolverRequestStream) -> anyhow::Result<()>
     .await
     .context("failed to get pkg-cache hash")?;
     serve_impl(stream, &blobfs, pkg_cache_hash).await
+}
+
+async fn wait_for_minfs() -> anyhow::Result<()> {
+    let minfs = io_util::directory::open_in_namespace("/minfs-delayed", fio::OPEN_RIGHT_READABLE)
+        .context("opening minfs")?;
+    // Opening from namespace doesn't require the directory itself to respond to requests, so
+    // re-open and wait for the OnDescribe event.
+    let _: fio::DirectoryProxy =
+        io_util::directory::open_directory(&minfs, ".", fio::OPEN_RIGHT_READABLE)
+            .await
+            .context("reopening minfs")?;
+    Ok(())
 }
 
 async fn get_pkg_cache_hash(
