@@ -50,7 +50,7 @@ application such as `audio_core`.
 
 The client is responsible for requesting and then configuring any signal processing capabilities.
 Once the server provides its PEs by replying to a client's `GetProcessingElements`, the client may
-dynamically control the PEs parameters as needed by calling `SetProcessingElement`.
+dynamically control the PEs parameters as needed by calling `SetProcessingElementState`.
 
 Also after the server provides its PEs by replying to a client's `GetProcessingElements`, the client
 may request available topologies with the `GetTopologies` method. If more than one topology is
@@ -62,12 +62,11 @@ returned by `GetTopologies`, then `SetTopology` can be used to pick the topology
 be called by a glue driver on a codec. Once the list of PEs is known to the client, the client may
 configure the PEs based on the parameters exposed by the PE types.
 
-### SetProcessingElement
+### SetProcessingElementState
 
-`SetProcessingElement` allows a client to control the parameters of a PE using an id returned by
-`GetProcessingElements`. PEs of different types may have different controls exposed to
-clients, the `SetProcessingElement` parameter `control` has a different type depending on the type
-of PE.
+`SetProcessingElementState` allows a client to control the state of a PE using an id returned by
+`GetProcessingElements`. PEs of different types may have different state exposed to clients, the
+`SetProcessingElementState` parameter `state` has a different type depending on the type of PE.
 
 ### GetTopologies
 
@@ -95,8 +94,8 @@ mixing, PEs may make the number of output channels different from the number of 
 Data in each channel (a.k.a. the signal that is processed) may be altered by the PE. For instance
 if there is a single PE of type `AGL` in a `Codec` protocol with a `DaiFormat` `number_of_channels`
 set to 2, then AGL (Automatic Gain Limiting) can be enabled or disabled for these 2 channels by a
-client calling `SetProcessingElement` with `control` `enable` set to true or false (this assumes the
-AGL `ProcessingElement`s `can_disable` was set to true).
+client calling `SetProcessingElementState` with `state` `enable` set to true or false (this assumes
+the AGL `ProcessingElement`s `can_disable` was set to true).
 
 ## Topologies {#topologies}
 

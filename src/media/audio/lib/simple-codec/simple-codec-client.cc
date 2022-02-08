@@ -236,9 +236,9 @@ zx_status_t SimpleCodecClient::SetAgl(bool agl_enable) {
   if (!agl_pe_id_.has_value()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  fuchsia_hardware_audio::wire::ProcessingElementControl control(allocator);
-  control.set_enabled(agl_enable);
-  signal_processing_->SetProcessingElement(agl_pe_id_.value(), std::move(control));
+  fuchsia_hardware_audio::wire::ProcessingElementState state(allocator);
+  state.set_enabled(agl_enable);
+  signal_processing_->SetProcessingElementState(agl_pe_id_.value(), std::move(state));
   return ZX_OK;
 }
 

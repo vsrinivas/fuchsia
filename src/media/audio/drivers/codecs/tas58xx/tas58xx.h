@@ -47,9 +47,10 @@ class Tas58xx : public SimpleCodecServer, public fuchsia::hardware::audio::Signa
   void SetGainState(GainState state) override;
   void GetProcessingElements(
       fuchsia::hardware::audio::SignalProcessing::GetProcessingElementsCallback callback) override;
-  void SetProcessingElement(
-      uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementControl control,
-      fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback) override;
+  void SetProcessingElementState(
+      uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementState control,
+      fuchsia::hardware::audio::SignalProcessing::SetProcessingElementStateCallback callback)
+      override;
   void GetTopologies(
       fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) override;
   void SetTopology(

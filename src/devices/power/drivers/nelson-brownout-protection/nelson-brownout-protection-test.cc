@@ -62,14 +62,14 @@ class FakeCodec : public audio::SimpleCodecServer, public audio_fidl::SignalProc
     result.set_response(std::move(response));
     callback(std::move(result));
   }
-  void SetProcessingElement(
-      uint64_t processing_element_id, audio_fidl::ProcessingElementControl control,
-      audio_fidl::SignalProcessing::SetProcessingElementCallback callback) override {
+  void SetProcessingElementState(
+      uint64_t processing_element_id, audio_fidl::ProcessingElementState state,
+      audio_fidl::SignalProcessing::SetProcessingElementStateCallback callback) override {
     ASSERT_EQ(processing_element_id, kAglPeId);
-    ASSERT_TRUE(control.has_enabled());
-    agl_enabled_ = control.enabled();
-    callback(audio_fidl::SignalProcessing_SetProcessingElement_Result::WithResponse(
-        audio_fidl::SignalProcessing_SetProcessingElement_Response()));
+    ASSERT_TRUE(state.has_enabled());
+    agl_enabled_ = state.enabled();
+    callback(audio_fidl::SignalProcessing_SetProcessingElementState_Result::WithResponse(
+        audio_fidl::SignalProcessing_SetProcessingElementState_Response()));
   }
   void GetTopologies(audio_fidl::SignalProcessing::GetTopologiesCallback callback) override {
     callback(audio_fidl::SignalProcessing_GetTopologies_Result::WithErr(ZX_ERR_NOT_SUPPORTED));

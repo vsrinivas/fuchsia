@@ -58,14 +58,14 @@ class TestCodec : public SimpleCodecServer, public audio_fidl::SignalProcessing 
     result.set_response(std::move(response));
     callback(std::move(result));
   }
-  void SetProcessingElement(
-      uint64_t processing_element_id, audio_fidl::ProcessingElementControl control,
-      audio_fidl::SignalProcessing::SetProcessingElementCallback callback) override {
+  void SetProcessingElementState(
+      uint64_t processing_element_id, audio_fidl::ProcessingElementState state,
+      audio_fidl::SignalProcessing::SetProcessingElementStateCallback callback) override {
     ASSERT_EQ(processing_element_id, kAglPeId);
-    ASSERT_TRUE(control.has_enabled());
-    agl_mode_ = control.enabled();
-    callback(audio_fidl::SignalProcessing_SetProcessingElement_Result::WithResponse(
-        audio_fidl::SignalProcessing_SetProcessingElement_Response()));
+    ASSERT_TRUE(state.has_enabled());
+    agl_mode_ = state.enabled();
+    callback(audio_fidl::SignalProcessing_SetProcessingElementState_Result::WithResponse(
+        audio_fidl::SignalProcessing_SetProcessingElementState_Response()));
   }
   void GetTopologies(audio_fidl::SignalProcessing::GetTopologiesCallback callback) override {
     audio_fidl::EdgePair edge;
@@ -252,11 +252,11 @@ TEST_F(SimpleCodecTest, AglStateServerWithClientViaSignalProcessingApi) {
   ASSERT_FALSE(codec->agl_mode());
 
   // Control with enabled = true.
-  audio_fidl::SignalProcessing_SetProcessingElement_Result result_enable;
-  audio_fidl::ProcessingElementControl control_enable;
-  control_enable.set_enabled(true);
-  ASSERT_OK(signal_processing_client->SetProcessingElement(
-      result.response().processing_elements[0].id(), std::move(control_enable), &result_enable));
+  audio_fidl::SignalProcessing_SetProcessingElementState_Result result_enable;
+  audio_fidl::ProcessingElementState state_enable;
+  state_enable.set_enabled(true);
+  ASSERT_OK(signal_processing_client->SetProcessingElementState(
+      result.response().processing_elements[0].id(), std::move(state_enable), &result_enable));
   ASSERT_FALSE(result_enable.is_err());
   ASSERT_TRUE(codec->agl_mode());
 }

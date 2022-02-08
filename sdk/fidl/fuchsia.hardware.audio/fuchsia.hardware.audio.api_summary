@@ -172,18 +172,13 @@ table fuchsia.hardware.audio/PlugState
 table/member fuchsia.hardware.audio/ProcessingElement.can_disable bool
 table/member fuchsia.hardware.audio/ProcessingElement.description string:256
 table/member fuchsia.hardware.audio/ProcessingElement.id uint64
-table/member fuchsia.hardware.audio/ProcessingElement.is_enabled bool
-table/member fuchsia.hardware.audio/ProcessingElement.latency fuchsia.hardware.audio/Latency
-table/member fuchsia.hardware.audio/ProcessingElement.parameters fuchsia.hardware.audio/ProcessingElementParameters
 table/member fuchsia.hardware.audio/ProcessingElement.type fuchsia.hardware.audio/ProcessingElementType
+table/member fuchsia.hardware.audio/ProcessingElement.type_specific fuchsia.hardware.audio/ProcessingElementTypeSpecific
 table fuchsia.hardware.audio/ProcessingElement
-table/member fuchsia.hardware.audio/ProcessingElementControl.control fuchsia.hardware.audio/ProcessingElementControlParameters
-table/member fuchsia.hardware.audio/ProcessingElementControl.enabled bool
-table fuchsia.hardware.audio/ProcessingElementControl
-union/member fuchsia.hardware.audio/ProcessingElementControlParameters.vendor_specific_control fuchsia.hardware.audio/VendorSpecificControl
-flexible union fuchsia.hardware.audio/ProcessingElementControlParameters
-union/member fuchsia.hardware.audio/ProcessingElementParameters.vendor_specific_parameters fuchsia.hardware.audio/VendorSpecificParameters
-flexible union fuchsia.hardware.audio/ProcessingElementParameters
+table/member fuchsia.hardware.audio/ProcessingElementState.enabled bool
+table/member fuchsia.hardware.audio/ProcessingElementState.latency fuchsia.hardware.audio/Latency
+table/member fuchsia.hardware.audio/ProcessingElementState.state fuchsia.hardware.audio/ProcessingElementTypeSpecificState
+table fuchsia.hardware.audio/ProcessingElementState
 enum/member fuchsia.hardware.audio/ProcessingElementType.AUTOMATIC_GAIN_CONTROL 5
 enum/member fuchsia.hardware.audio/ProcessingElementType.AUTOMATIC_GAIN_LIMITER 6
 enum/member fuchsia.hardware.audio/ProcessingElementType.CONNECTION_POINT 3
@@ -196,6 +191,10 @@ enum/member fuchsia.hardware.audio/ProcessingElementType.MUTE 8
 enum/member fuchsia.hardware.audio/ProcessingElementType.SAMPLE_RATE_CONVERSION 11
 enum/member fuchsia.hardware.audio/ProcessingElementType.VENDOR_SPECIFIC 1
 flexible enum fuchsia.hardware.audio/ProcessingElementType uint32
+union/member fuchsia.hardware.audio/ProcessingElementTypeSpecific.vendor_specific fuchsia.hardware.audio/VendorSpecificTypeSpecific
+flexible union fuchsia.hardware.audio/ProcessingElementTypeSpecific
+union/member fuchsia.hardware.audio/ProcessingElementTypeSpecificState.vendor_specific fuchsia.hardware.audio/VendorSpecificState
+flexible union fuchsia.hardware.audio/ProcessingElementTypeSpecificState
 protocol/member fuchsia.hardware.audio/RingBuffer.GetProperties() -> (fuchsia.hardware.audio/RingBufferProperties properties)
 protocol/member fuchsia.hardware.audio/RingBuffer.GetVmo(uint32 min_frames,uint32 clock_recovery_notifications_per_ring) -> (fuchsia.hardware.audio/RingBuffer_GetVmo_Result result)
 protocol/member fuchsia.hardware.audio/RingBuffer.SetActiveChannels(uint64 active_channels_bitmask) -> (fuchsia.hardware.audio/RingBuffer_SetActiveChannels_Result result)
@@ -228,7 +227,7 @@ enum/member fuchsia.hardware.audio/SampleFormat.PCM_UNSIGNED 2
 strict enum fuchsia.hardware.audio/SampleFormat uint8
 protocol/member fuchsia.hardware.audio/SignalProcessing.GetProcessingElements() -> (fuchsia.hardware.audio/SignalProcessing_GetProcessingElements_Result result)
 protocol/member fuchsia.hardware.audio/SignalProcessing.GetTopologies() -> (fuchsia.hardware.audio/SignalProcessing_GetTopologies_Result result)
-protocol/member fuchsia.hardware.audio/SignalProcessing.SetProcessingElement(uint64 processing_element_id,fuchsia.hardware.audio/ProcessingElementControl control) -> (fuchsia.hardware.audio/SignalProcessing_SetProcessingElement_Result result)
+protocol/member fuchsia.hardware.audio/SignalProcessing.SetProcessingElementState(uint64 processing_element_id,fuchsia.hardware.audio/ProcessingElementState state) -> (fuchsia.hardware.audio/SignalProcessing_SetProcessingElementState_Result result)
 protocol/member fuchsia.hardware.audio/SignalProcessing.SetTopology(uint64 topology_id) -> (fuchsia.hardware.audio/SignalProcessing_SetTopology_Result result)
 protocol fuchsia.hardware.audio/SignalProcessing
 protocol/member fuchsia.hardware.audio/SignalProcessingConnector.SignalProcessingConnect(server_end:fuchsia.hardware.audio/SignalProcessing protocol)
@@ -243,10 +242,10 @@ struct fuchsia.hardware.audio/SignalProcessing_GetTopologies_Response
 union/member fuchsia.hardware.audio/SignalProcessing_GetTopologies_Result.err int32
 union/member fuchsia.hardware.audio/SignalProcessing_GetTopologies_Result.response fuchsia.hardware.audio/SignalProcessing_GetTopologies_Response
 strict union fuchsia.hardware.audio/SignalProcessing_GetTopologies_Result
-struct fuchsia.hardware.audio/SignalProcessing_SetProcessingElement_Response
-union/member fuchsia.hardware.audio/SignalProcessing_SetProcessingElement_Result.err int32
-union/member fuchsia.hardware.audio/SignalProcessing_SetProcessingElement_Result.response fuchsia.hardware.audio/SignalProcessing_SetProcessingElement_Response
-strict union fuchsia.hardware.audio/SignalProcessing_SetProcessingElement_Result
+struct fuchsia.hardware.audio/SignalProcessing_SetProcessingElementState_Response
+union/member fuchsia.hardware.audio/SignalProcessing_SetProcessingElementState_Result.err int32
+union/member fuchsia.hardware.audio/SignalProcessing_SetProcessingElementState_Result.response fuchsia.hardware.audio/SignalProcessing_SetProcessingElementState_Response
+strict union fuchsia.hardware.audio/SignalProcessing_SetProcessingElementState_Result
 struct fuchsia.hardware.audio/SignalProcessing_SetTopology_Response
 union/member fuchsia.hardware.audio/SignalProcessing_SetTopology_Result.err int32
 union/member fuchsia.hardware.audio/SignalProcessing_SetTopology_Result.response fuchsia.hardware.audio/SignalProcessing_SetTopology_Response
@@ -278,6 +277,6 @@ table/member fuchsia.hardware.audio/Topology.id uint64
 table/member fuchsia.hardware.audio/Topology.processing_elements_edge_pairs vector<fuchsia.hardware.audio/EdgePair>:64
 table fuchsia.hardware.audio/Topology
 const fuchsia.hardware.audio/UNIQUE_ID_SIZE uint32 16
-table fuchsia.hardware.audio/VendorSpecificControl
-table fuchsia.hardware.audio/VendorSpecificParameters
+table fuchsia.hardware.audio/VendorSpecificState
+table fuchsia.hardware.audio/VendorSpecificTypeSpecific
 library fuchsia.hardware.audio

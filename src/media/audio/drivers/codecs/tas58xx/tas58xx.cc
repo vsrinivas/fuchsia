@@ -234,16 +234,16 @@ void Tas58xx::GetProcessingElements(
   callback(std::move(result));
 }
 
-void Tas58xx::SetProcessingElement(
-    uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementControl control,
-    fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback) {
-  if (processing_element_id != kAglPeId || !control.has_enabled()) {
-    callback(fuchsia::hardware::audio::SignalProcessing_SetProcessingElement_Result::WithErr(
+void Tas58xx::SetProcessingElementState(
+    uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementState state,
+    fuchsia::hardware::audio::SignalProcessing::SetProcessingElementStateCallback callback) {
+  if (processing_element_id != kAglPeId || !state.has_enabled()) {
+    callback(fuchsia::hardware::audio::SignalProcessing_SetProcessingElementState_Result::WithErr(
         ZX_ERR_INVALID_ARGS));
     return;
   }
 
-  bool enable_agl = control.enabled();
+  bool enable_agl = state.enabled();
 
   fbl::AutoLock lock(&lock_);
   TRACE_DURATION_BEGIN("tas58xx", "SetAgl", "Enable AGL", enable_agl != last_agl_);
@@ -303,8 +303,9 @@ void Tas58xx::SetProcessingElement(
   // will let us calculate the total latency.
   TRACE_DURATION_END("tas58xx", "SetAgl", "timestamp", zx::clock::get_monotonic().get());
 
-  callback(fuchsia::hardware::audio::SignalProcessing_SetProcessingElement_Result::WithResponse(
-      fuchsia::hardware::audio::SignalProcessing_SetProcessingElement_Response()));
+  callback(
+      fuchsia::hardware::audio::SignalProcessing_SetProcessingElementState_Result::WithResponse(
+          fuchsia::hardware::audio::SignalProcessing_SetProcessingElementState_Response()));
 }
 
 void Tas58xx::GetTopologies(
