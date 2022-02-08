@@ -526,31 +526,25 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
     FIDL_DEPTH_GUARD(obj_depth);
 
     if (payload_type != nullptr) {
+      uint32_t padding;
       switch (type_size) {
-        case 1: {
-          auto status = visitor_->VisitInternalPadding(envelope_position, 0xffffff00);
-          FIDL_STATUS_GUARD(status);
+        case 1:
+          padding = 0xffffff00;
           break;
-        }
-        case 2: {
-          auto status = visitor_->VisitInternalPadding(envelope_position, 0xffff0000);
-          FIDL_STATUS_GUARD(status);
+        case 2:
+          padding = 0xffff0000;
           break;
-        }
-        case 3: {
-          auto status = visitor_->VisitInternalPadding(envelope_position, 0xff000000);
-          FIDL_STATUS_GUARD(status);
+        case 3:
+          padding = 0xff000000;
           break;
-        }
         case 4:
-          // No padding needed.
+          padding = 0x00000000;
           break;
         default:
-          // Only sizes 1-4 may be inlined.
-          visitor_->OnError("Value incorrectly inlined");
-          FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-          break;
+          __builtin_unreachable();
       }
+      auto status = visitor_->VisitInternalPadding(envelope_position, padding);
+      FIDL_STATUS_GUARD(status);
 
       auto result = WalkInternal(payload_type, envelope_position, obj_depth);
       FIDL_RESULT_GUARD(result);
