@@ -22,7 +22,7 @@ extern "C" const fidl_type_t
         ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>*
             request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -54,7 +54,7 @@ namespace test_inheritancewithrecursivedecl {
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -74,7 +74,7 @@ namespace test_inheritancewithrecursivedecl {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
       _request_object{std::move(request)};
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
@@ -96,7 +96,7 @@ namespace test_inheritancewithrecursivedecl {
 
   ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
       _request{std::move(request)};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
@@ -174,7 +174,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fidl::DecodedMessage<::fidl::WireRequest<
+          ::fidl::unstable::DecodedMessage<::fidl::WireRequest<
               ::test_inheritancewithrecursivedecl::Parent::First>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -271,7 +271,7 @@ extern "C" const fidl_type_t
         ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>*
             request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -303,7 +303,7 @@ namespace test_inheritancewithrecursivedecl {
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -322,7 +322,7 @@ namespace test_inheritancewithrecursivedecl {
         ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>*
             request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -354,7 +354,7 @@ namespace test_inheritancewithrecursivedecl {
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -374,7 +374,7 @@ namespace test_inheritancewithrecursivedecl {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
       _request_object{std::move(request)};
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
@@ -388,7 +388,7 @@ namespace test_inheritancewithrecursivedecl {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
       _request_object{std::move(request)};
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
@@ -410,7 +410,7 @@ namespace test_inheritancewithrecursivedecl {
 
   ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
       _request{std::move(request)};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
@@ -430,7 +430,7 @@ namespace test_inheritancewithrecursivedecl {
 
   ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
       _request{std::move(request)};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
@@ -508,7 +508,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fidl::DecodedMessage<::fidl::WireRequest<
+          ::fidl::unstable::DecodedMessage<::fidl::WireRequest<
               ::test_inheritancewithrecursivedecl::Child::First>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -530,7 +530,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fidl::DecodedMessage<::fidl::WireRequest<
+          ::fidl::unstable::DecodedMessage<::fidl::WireRequest<
               ::test_inheritancewithrecursivedecl::Child::Second>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {

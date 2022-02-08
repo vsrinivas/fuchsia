@@ -101,7 +101,8 @@ void CannotProxyUnknownEnvelope(std::vector<uint8_t> bytes, std::vector<zx_handl
   // we always use a full size buffer.
   FIDL_ALIGNDECL
   uint8_t encoded_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  fidl::UnownedEncodedMessage<FidlType> encoded(encoded_bytes, ZX_CHANNEL_MAX_MSG_BYTES, result);
+  fidl::unstable::UnownedEncodedMessage<FidlType> encoded(encoded_bytes, ZX_CHANNEL_MAX_MSG_BYTES,
+                                                          result);
   ASSERT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS) << encoded.status_string();
 
   // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.

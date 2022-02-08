@@ -22,7 +22,7 @@
   uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
 
   {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-  ::fidl::UnownedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
+  ::fidl::unstable::UnownedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
       _buffer, _buffer_size, &_request);
   fidl::WriteOptions _options = {};
   _options.outgoing_transport_context =

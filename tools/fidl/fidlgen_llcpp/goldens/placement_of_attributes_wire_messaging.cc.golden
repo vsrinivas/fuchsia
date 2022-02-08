@@ -22,7 +22,7 @@ extern "C" const fidl_type_t
         ::fidl::WireRequest<
             ::test_placementofattributes::ExampleProtocol::Method>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<
           ::test_placementofattributes::ExampleProtocol::Method>,
       ::fidl::internal::ChannelTransport>
@@ -56,7 +56,7 @@ namespace test_placementofattributes {
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
       ::test_placementofattributes::ExampleProtocol::Method>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -75,7 +75,7 @@ namespace test_placementofattributes {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>
       _request_object{arg};
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<
           ::test_placementofattributes::ExampleProtocol::Method>,
       ::fidl::internal::ChannelTransport>
@@ -97,7 +97,7 @@ namespace test_placementofattributes {
 
   ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>
       _request{arg};
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
       ::test_placementofattributes::ExampleProtocol::Method>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
@@ -175,7 +175,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fidl::DecodedMessage<::fidl::WireRequest<
+          ::fidl::unstable::DecodedMessage<::fidl::WireRequest<
               ::test_placementofattributes::ExampleProtocol::Method>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {

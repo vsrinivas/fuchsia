@@ -22,7 +22,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
   explicit {{ .WireUnownedResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
   {{- if .HasResponse }}
   explicit {{ .WireUnownedResult.Self }}(
-    ::fidl::DecodedMessage<{{ .WireResponse }}>&& decoded,
+    ::fidl::unstable::DecodedMessage<{{ .WireResponse }}>&& decoded,
     ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded)
         {
@@ -115,7 +115,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
   uint8_t* request_bytes = buffer;
 {{- end }}
 
-  ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> request_message(
+  ::fidl::unstable::UnownedEncodedMessage<{{ .WireRequest }}> request_message(
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
 {{- if .HasResponse }}

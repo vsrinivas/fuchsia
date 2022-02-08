@@ -78,7 +78,7 @@ fidl::Result {{ $.WireWeakEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) {
   {{ .WireEvent }} _response{ {{- RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireEvent }}, {{ .Transport.Type }}> _response_message{
+  ::fidl::unstable::OwnedEncodedMessage<{{ .WireEvent }}, {{ .Transport.Type }}> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -97,7 +97,7 @@ fidl::Result {{ $.WireWeakBufferEventSender.NoLeading }}::{{ .Name }}(
   }
 
   {{ .WireEvent }} _response{ {{- RenderForwardParams .ResponseArgs }} };
-  ::fidl::UnownedEncodedMessage<{{ .WireEvent }}, {{ .Transport.Type }}> _response_message(
+  ::fidl::unstable::UnownedEncodedMessage<{{ .WireEvent }}, {{ .Transport.Type }}> _response_message(
       _allocation->data, _buffer_size, &_response);
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
@@ -108,7 +108,7 @@ fidl::Result {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) {
   {{ .WireEvent }} _response{ {{- RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireEvent }}, {{ .Transport.Type }}> _response_message{
+  ::fidl::unstable::OwnedEncodedMessage<{{ .WireEvent }}, {{ .Transport.Type }}> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -128,7 +128,7 @@ fidl::Result {{ $.InternalWireBufferEventSender.NoLeading }}::{{ .Name }}(
   }
 
   {{ .WireEvent }} _response{ {{- RenderForwardParams .ResponseArgs }} };
-  ::fidl::UnownedEncodedMessage<{{ .WireEvent }}, {{ .Transport.Type }}> _response_message(
+  ::fidl::unstable::UnownedEncodedMessage<{{ .WireEvent }}, {{ .Transport.Type }}> _response_message(
         _allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());

@@ -108,7 +108,7 @@ class {{ .WireEventDispatcher }} final :
   switch (hdr->ordinal) {
   {{- range .Events }}
     case {{ .OrdinalName }}: {
-      ::fidl::DecodedMessage<{{ .WireEvent }}> decoded{::std::move(msg)};
+      ::fidl::unstable::DecodedMessage<{{ .WireEvent }}> decoded{::std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::Result(decoded);
       }
@@ -130,7 +130,7 @@ std::optional<::fidl::UnbindInfo>
   {{- range .Events }}
     case {{ .OrdinalName }}:
     {
-      ::fidl::DecodedMessage<{{ .WireEvent }}> decoded{std::move(msg)};
+      ::fidl::unstable::DecodedMessage<{{ .WireEvent }}> decoded{std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::UnbindInfo{decoded};
       }

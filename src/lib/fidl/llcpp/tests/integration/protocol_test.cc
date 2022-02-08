@@ -205,7 +205,7 @@ TEST(MagicNumberTest, EventRead) {
   fidl::WireEvent<test::Frobinator::Hrob> _response(fidl::StringView::FromExternal(s));
   // Set an incompatible magic number
   _response._hdr.magic_number = 0;
-  fidl::OwnedEncodedMessage<fidl::WireEvent<test::Frobinator::Hrob>> encoded(&_response);
+  fidl::unstable::OwnedEncodedMessage<fidl::WireEvent<test::Frobinator::Hrob>> encoded(&_response);
   encoded.Write(remote.channel());
   ASSERT_OK(encoded.status());
 

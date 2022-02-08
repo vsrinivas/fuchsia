@@ -46,7 +46,7 @@ extern "C" const fidl_type_t
     ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
     ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -61,7 +61,7 @@ extern "C" const fidl_type_t
     ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>* request,
     zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -99,7 +99,7 @@ namespace test_protocolrequest {
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -118,7 +118,7 @@ namespace test_protocolrequest {
     ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>*
         request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -135,7 +135,7 @@ namespace test_protocolrequest {
         request,
     zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -174,7 +174,7 @@ namespace test_protocolrequest {
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -193,7 +193,7 @@ namespace test_protocolrequest {
     ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
     ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -224,7 +224,7 @@ namespace test_protocolrequest {
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -242,7 +242,7 @@ namespace test_protocolrequest {
         ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>*
             request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -273,7 +273,7 @@ namespace test_protocolrequest {
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -292,7 +292,7 @@ namespace test_protocolrequest {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>
       _request_object{std::move(c)};
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
@@ -305,7 +305,7 @@ namespace test_protocolrequest {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
       _request_object{std::move(r)};
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
@@ -336,7 +336,7 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>::
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
@@ -372,7 +372,7 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>::
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
@@ -404,7 +404,7 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>::
   ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
@@ -443,7 +443,7 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>::
   ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
@@ -463,7 +463,7 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>::
 
   ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> _request{
       std::move(c)};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
@@ -482,7 +482,7 @@ fidl::internal::WireWeakOnewayBufferClientImpl<::test_protocolrequest::Parent>::
 
   ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
       _request{std::move(r)};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
@@ -503,7 +503,7 @@ void fidl::internal::
   }
 
   ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> _request{};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -526,7 +526,7 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
 
   ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
       _request{};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -661,7 +661,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fidl::DecodedMessage<
+          ::fidl::unstable::DecodedMessage<
               ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -681,7 +681,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fidl::DecodedMessage<::fidl::WireRequest<
+          ::fidl::unstable::DecodedMessage<::fidl::WireRequest<
               ::test_protocolrequest::Parent::TakeChildRequest>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -737,7 +737,7 @@ void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(
   ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> _response{
       std::move(c)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -753,7 +753,7 @@ void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(
         ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
   ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> _response{
       std::move(c)};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
@@ -768,7 +768,7 @@ void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(
   ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>
       _response{std::move(r)};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -784,7 +784,7 @@ void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(
         ::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
   ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>
       _response{std::move(r)};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),

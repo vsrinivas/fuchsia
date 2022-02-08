@@ -234,7 +234,7 @@ class ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::Add> final
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<
+      ::fidl::unstable::DecodedMessage<
           ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {

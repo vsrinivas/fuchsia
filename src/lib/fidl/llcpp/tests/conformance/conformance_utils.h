@@ -83,8 +83,8 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
                    bool check_handle_rights) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
-  ::fidl::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{},
-                                                wire_format_version, value);
+  ::fidl::unstable::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{},
+                                                          wire_format_version, value);
   if (!encoded.ok()) {
     std::cout << "Encoding failed: " << encoded.error() << std::endl;
     return false;
@@ -145,8 +145,8 @@ bool EncodeFailure(fidl::internal::WireFormatVersion wire_format_version, FidlTy
                    zx_status_t expected_error_code) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
-  ::fidl::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{},
-                                                wire_format_version, value);
+  ::fidl::unstable::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{},
+                                                          wire_format_version, value);
   if (encoded.ok()) {
     std::cout << "Encoding unexpectedly succeeded" << std::endl;
     return false;
@@ -177,7 +177,7 @@ bool DecodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
         .rights = handle_info.rights,
     });
   }
-  fidl::DecodedMessage<FidlType> decoded(
+  fidl::unstable::DecodedMessage<FidlType> decoded(
       wire_format_version, bytes.data(), static_cast<uint32_t>(bytes.size()), handles.data(),
       handle_metadata.data(), static_cast<uint32_t>(handle_infos.size()));
   if (!decoded.ok()) {
@@ -203,7 +203,7 @@ bool DecodeFailure(fidl::internal::WireFormatVersion wire_format_version,
         .rights = handle_info.rights,
     });
   }
-  fidl::DecodedMessage<FidlType> decoded(
+  fidl::unstable::DecodedMessage<FidlType> decoded(
       wire_format_version, bytes.data(), static_cast<uint32_t>(bytes.size()), handles.data(),
       handle_metadata.data(), static_cast<uint32_t>(handle_infos.size()));
   if (decoded.ok()) {

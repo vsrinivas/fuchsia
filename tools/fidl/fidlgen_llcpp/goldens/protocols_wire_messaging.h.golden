@@ -490,7 +490,7 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_protocols::HandleRightsProtocol::ResponseMethod>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -1644,7 +1644,7 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<
+      ::fidl::unstable::DecodedMessage<
           ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
                                    NoRequestEmptyResponse>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
@@ -1809,7 +1809,7 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<
+      ::fidl::unstable::DecodedMessage<
           ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
                                    NoRequestWithResponse>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
@@ -2012,7 +2012,7 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<
+      ::fidl::unstable::DecodedMessage<
           ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
                                    WithRequestEmptyResponse>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
@@ -2177,7 +2177,7 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<
+      ::fidl::unstable::DecodedMessage<
           ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
                                    WithRequestWithResponse>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
@@ -3021,7 +3021,7 @@ class ::fidl::WireUnownedResult<::test_protocols::Transitional::Request> final
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_protocols::Transitional::Request>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -4127,7 +4127,7 @@ class ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::ClientEnds>
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_protocols::WithProtocolEnds::ClientEnds>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -4276,7 +4276,7 @@ class ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::ServerEnds>
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_protocols::WithProtocolEnds::ServerEnds>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -4436,7 +4436,7 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_protocols::WithProtocolEnds::StructContainingEnds>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -5728,7 +5728,7 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_protocols::WithErrorSyntax::ResponseAsStruct>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -5876,7 +5876,7 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -6020,7 +6020,7 @@ class ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::ErrorAsEnum>
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_protocols::WithErrorSyntax::ErrorAsEnum>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -6165,7 +6165,7 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_protocols::WithErrorSyntax::HandleInResult>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -7503,7 +7503,7 @@ class ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MethodB>
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_protocols::ChannelProtocol::MethodB>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -7639,7 +7639,7 @@ class ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::TakeHandle>
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_protocols::ChannelProtocol::TakeHandle>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -7783,7 +7783,7 @@ class ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MutateSocket>
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_protocols::ChannelProtocol::MutateSocket>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {

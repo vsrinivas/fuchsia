@@ -27,7 +27,7 @@ extern "C" const fidl_type_t test_doccomments_InterfaceOnEventEventMessageTable;
     ::fidl::UnownedClientEnd<::test_doccomments::Interface> client,
     ::fidl::WireRequest<::test_doccomments::Interface::Method>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_doccomments::Interface::Method>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -45,7 +45,7 @@ namespace test_doccomments {
     ::test_doccomments::Interface>::Method() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_doccomments::Interface::Method> _request_object{};
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_doccomments::Interface::Method>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
@@ -64,7 +64,7 @@ namespace test_doccomments {
   }
 
   ::fidl::WireRequest<::test_doccomments::Interface::Method> _request{};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_doccomments::Interface::Method>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
@@ -118,7 +118,7 @@ fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
-      ::fidl::DecodedMessage<
+      ::fidl::unstable::DecodedMessage<
           ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
@@ -139,7 +139,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
         ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
-      ::fidl::DecodedMessage<
+      ::fidl::unstable::DecodedMessage<
           ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>>
           decoded{std::move(msg)};
       if (!decoded.ok()) {
@@ -225,7 +225,7 @@ fidl::Result
 fidl::internal::WireWeakEventSender<::test_doccomments::Interface>::OnEvent() {
   ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -244,7 +244,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   }
 
   ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> _response{};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
@@ -255,7 +255,7 @@ fidl::Result
 fidl::internal::WireEventSender<::test_doccomments::Interface>::OnEvent() {
   ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -275,7 +275,7 @@ fidl::Result fidl::internal::WireBufferEventSender<
   }
 
   ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> _response{};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);

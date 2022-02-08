@@ -36,7 +36,7 @@ constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::e
       [](void* interface, ::fidl::IncomingMessage&& msg,
         internal::IncomingTransportContext transport_context, ::fidl::Transaction* txn) {
         {{- if .RequestArgs }}
-        ::fidl::DecodedMessage<{{ .WireRequest }}> decoded{std::move(msg)};
+        ::fidl::unstable::DecodedMessage<{{ .WireRequest }}> decoded{std::move(msg)};
         if (unlikely(!decoded.ok())) {
           return decoded.status();
         }

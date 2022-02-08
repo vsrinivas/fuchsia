@@ -21,7 +21,7 @@
         {{- RenderParams .RequestArgs }}) {
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     {{ .WireRequest }} _request_object{ {{ RenderForwardParams .RequestArgs }} };
-    ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
+    ::fidl::unstable::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
         ::fidl::internal::AllowUnownedInputRef{}, &_request_object);
     return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
   }

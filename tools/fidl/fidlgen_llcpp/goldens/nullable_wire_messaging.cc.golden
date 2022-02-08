@@ -18,7 +18,7 @@ extern "C" const fidl_type_t
     ::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> client,
     ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -33,7 +33,7 @@ extern "C" const fidl_type_t
     ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>* request,
     zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -70,7 +70,7 @@ namespace test_nullable {
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -108,7 +108,7 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_nullable::SimpleProtocol>::
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> _request{a, b};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
@@ -144,7 +144,7 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_nullable::SimpleProtocol>::
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> _request{a, b};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
@@ -167,7 +167,7 @@ void fidl::internal::
   }
 
   ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> _request{a, b};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -256,7 +256,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fidl::DecodedMessage<
+          ::fidl::unstable::DecodedMessage<
               ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -309,7 +309,7 @@ void fidl::WireServer<::test_nullable::SimpleProtocol>::dispatch_message(
     ::test_nullable::SimpleProtocol::Add>::Reply(int32_t sum) {
   ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> _response{sum};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -323,7 +323,7 @@ void fidl::WireServer<::test_nullable::SimpleProtocol>::dispatch_message(
 fidl::internal::WireCompleterBase<::test_nullable::SimpleProtocol::Add>::Reply(
     ::fidl::BufferSpan _buffer, int32_t sum) {
   ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> _response{sum};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),

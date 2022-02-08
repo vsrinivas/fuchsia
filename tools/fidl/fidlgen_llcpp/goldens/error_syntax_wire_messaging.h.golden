@@ -410,7 +410,7 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<
+      ::fidl::unstable::DecodedMessage<
           ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                    ComposedCallWhichMayFail>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
@@ -579,7 +579,7 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)

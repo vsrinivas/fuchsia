@@ -23,7 +23,7 @@ extern "C" const fidl_type_t
                    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
                    request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<
           ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
@@ -45,7 +45,7 @@ extern "C" const fidl_type_t
                    request,
                zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<
           ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
@@ -90,7 +90,7 @@ namespace test_foreigntypeinresponseusedthroughcompose {
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
       ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -134,7 +134,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<
           ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
@@ -177,7 +177,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<
           ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
@@ -203,7 +203,7 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
   ::fidl::WireRequest<
       ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
       _request{};
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
       ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -355,7 +355,7 @@ void fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>::
       ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
       _response{foo};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireResponse<
           ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
@@ -372,7 +372,7 @@ void fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>::
   ::fidl::WireResponse<
       ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
       _response{foo};
-  ::fidl::UnownedEncodedMessage<::fidl::WireResponse<
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireResponse<
       ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),

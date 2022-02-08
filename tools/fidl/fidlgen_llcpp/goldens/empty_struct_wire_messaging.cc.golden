@@ -37,7 +37,7 @@ extern "C" const fidl_type_t
     ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client,
     ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -67,7 +67,7 @@ namespace test_emptystruct {
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -85,7 +85,7 @@ namespace test_emptystruct {
         ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>*
             request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -103,7 +103,7 @@ namespace test_emptystruct {
             request,
         zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -142,7 +142,7 @@ namespace test_emptystruct {
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -164,7 +164,7 @@ namespace test_emptystruct {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> _request_object{
       e};
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
@@ -199,7 +199,7 @@ void fidl::internal::
   ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
       _request{e};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
@@ -239,7 +239,7 @@ void fidl::internal::
   ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
       _request{e};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
@@ -258,7 +258,7 @@ void fidl::internal::
   }
 
   ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> _request{e};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
@@ -282,7 +282,7 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
 
   ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
       _request{e};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -351,7 +351,7 @@ fidl::WireSyncEventHandler<::test_emptystruct::EmptyProtocol>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     case ::test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
-      ::fidl::DecodedMessage<
+      ::fidl::unstable::DecodedMessage<
           ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
@@ -372,7 +372,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
         ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     case ::test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
-      ::fidl::DecodedMessage<
+      ::fidl::unstable::DecodedMessage<
           ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>>
           decoded{std::move(msg)};
       if (!decoded.ok()) {
@@ -399,7 +399,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fidl::DecodedMessage<
+          ::fidl::unstable::DecodedMessage<
               ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -419,7 +419,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fidl::DecodedMessage<::fidl::WireRequest<
+          ::fidl::unstable::DecodedMessage<::fidl::WireRequest<
               ::test_emptystruct::EmptyProtocol::SendAndReceive>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -475,7 +475,7 @@ void fidl::WireServer<::test_emptystruct::EmptyProtocol>::dispatch_message(
   ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>
       _response{e};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -490,7 +490,7 @@ void fidl::WireServer<::test_emptystruct::EmptyProtocol>::dispatch_message(
         ::fidl::BufferSpan _buffer, const ::test_emptystruct::wire::Empty& e) {
   ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>
       _response{e};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
@@ -529,7 +529,7 @@ fidl::internal::WireWeakEventSender<::test_emptystruct::EmptyProtocol>::Receive(
     const ::test_emptystruct::wire::Empty& e) {
   ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> _response{e};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -549,7 +549,7 @@ fidl::Result fidl::internal::
   }
 
   ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> _response{e};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
@@ -561,7 +561,7 @@ fidl::internal::WireEventSender<::test_emptystruct::EmptyProtocol>::Receive(
     const ::test_emptystruct::wire::Empty& e) {
   ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> _response{e};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -582,7 +582,7 @@ fidl::Result fidl::internal::
   }
 
   ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> _response{e};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);

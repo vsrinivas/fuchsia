@@ -52,7 +52,7 @@
 {{ .WireCompleterBase.NoLeading }}::Reply({{ RenderParams .ResponseArgs }}) {
   {{ .WireResponse }} _response{ {{ RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}, {{ .Transport.Type }}> _response_message{
+  ::fidl::unstable::OwnedEncodedMessage<{{ .WireResponse }}, {{ .Transport.Type }}> _response_message{
     ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return {{ .WireCompleterBase }}::SendReply(&_response_message.GetOutgoingMessage(),
@@ -91,7 +91,7 @@
   ::fidl::Result {{ .WireCompleterBase.NoLeading }}::Reply(
         {{- RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) {
     {{ .WireResponse }} _response{ {{ RenderForwardParams .ResponseArgs }} };
-    ::fidl::UnownedEncodedMessage<{{ .WireResponse }}> _response_message(
+    ::fidl::unstable::UnownedEncodedMessage<{{ .WireResponse }}> _response_message(
           _buffer.data, _buffer.capacity, &_response);
     return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
                                     ::fidl::internal::OutgoingTransportContext());

@@ -50,7 +50,7 @@ TEST(InlineXUnionInStruct, Success) {
     input.before = fidl::StringView::FromExternal(before);
     input.xu.set_su(fidl::ObjectView<llcpp_misc::wire::SimpleUnion>::FromExternal(&simple_union));
     input.after = fidl::StringView::FromExternal(after);
-    fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(
+    fidl::unstable::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(
         fidl::internal::WireFormatVersion::kV1, &input);
     ASSERT_TRUE(encoded.ok());
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
@@ -60,7 +60,7 @@ TEST(InlineXUnionInStruct, Success) {
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
-    fidl::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
+    fidl::unstable::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
         fidl::internal::WireFormatVersion::kV1, encoded_bytes.data(),
         static_cast<uint32_t>(encoded_bytes.size()));
     ASSERT_TRUE(decoded.ok());
@@ -102,7 +102,7 @@ TEST(PrimitiveInXUnionInStruct, Success) {
     input.before = fidl::StringView::FromExternal(before);
     input.xu.set_i(integer);
     input.after = fidl::StringView::FromExternal(after);
-    fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(
+    fidl::unstable::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(
         fidl::internal::WireFormatVersion::kV1, &input);
     ASSERT_TRUE(encoded.ok());
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
@@ -112,7 +112,7 @@ TEST(PrimitiveInXUnionInStruct, Success) {
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
-    fidl::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
+    fidl::unstable::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
         fidl::internal::WireFormatVersion::kV1, encoded_bytes.data(),
         static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
     ASSERT_TRUE(decoded.ok());
@@ -141,7 +141,7 @@ TEST(SampleXUnion, Success) {
   {
     llcpp_misc::wire::SampleXUnion xu;
     xu.set_i(integer);
-    fidl::OwnedEncodedMessage<llcpp_misc::wire::SampleXUnion> encoded(
+    fidl::unstable::OwnedEncodedMessage<llcpp_misc::wire::SampleXUnion> encoded(
         fidl::internal::WireFormatVersion::kV1, &xu);
     ASSERT_TRUE(encoded.ok()) << encoded.FormatDescription();
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
@@ -151,7 +151,7 @@ TEST(SampleXUnion, Success) {
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
-    fidl::DecodedMessage<llcpp_misc::wire::SampleXUnion> decoded(
+    fidl::unstable::DecodedMessage<llcpp_misc::wire::SampleXUnion> decoded(
         fidl::internal::WireFormatVersion::kV1, encoded_bytes.data(),
         static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
     ASSERT_TRUE(decoded.ok());
@@ -167,7 +167,7 @@ TEST(InlineXUnionInStruct, FailToEncodeAbsentXUnion) {
   std::string empty_str = "";
   input.before = fidl::StringView::FromExternal(empty_str);
   input.after = fidl::StringView::FromExternal(empty_str);
-  fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(
+  fidl::unstable::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(
       fidl::internal::WireFormatVersion::kV1, &input);
   EXPECT_FALSE(encoded.ok());
   // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
@@ -191,7 +191,7 @@ TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   // clang-format on
-  fidl::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
+  fidl::unstable::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
       fidl::internal::WireFormatVersion::kV1, encoded_bytes.data(),
       static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
   EXPECT_FALSE(decoded.ok());
@@ -217,7 +217,7 @@ TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   // clang-format on
-  fidl::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
+  fidl::unstable::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
       fidl::internal::WireFormatVersion::kV1, encoded_bytes.data(),
       static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
   EXPECT_FALSE(decoded.ok());
@@ -247,7 +247,7 @@ TEST(InlineXUnionInStruct, SuccessLargeXUnionOrdinal) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   // clang-format on
-  fidl::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
+  fidl::unstable::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
       fidl::internal::WireFormatVersion::kV1, encoded_bytes.data(),
       static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
   ASSERT_TRUE(decoded.ok());
@@ -264,7 +264,7 @@ TEST(ComplexTable, SuccessEmpty) {
   {
     fidl::Arena allocator;
     llcpp_misc::wire::ComplexTable input(allocator);
-    fidl::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(
+    fidl::unstable::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(
         fidl::internal::WireFormatVersion::kV1, &input);
     ASSERT_TRUE(encoded.ok());
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
@@ -274,7 +274,7 @@ TEST(ComplexTable, SuccessEmpty) {
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
-    fidl::DecodedMessage<llcpp_misc::wire::ComplexTable> decoded(
+    fidl::unstable::DecodedMessage<llcpp_misc::wire::ComplexTable> decoded(
         fidl::internal::WireFormatVersion::kV1, encoded_bytes.data(),
         static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
     ASSERT_TRUE(decoded.ok());
@@ -292,7 +292,7 @@ TEST(ComplexTable, FailToDecodeAbsentTable) {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelopes data pointer is absent
   };
   // clang-format on
-  fidl::DecodedMessage<llcpp_misc::wire::ComplexTable> decoded(
+  fidl::unstable::DecodedMessage<llcpp_misc::wire::ComplexTable> decoded(
       fidl::internal::WireFormatVersion::kV1, encoded_bytes.data(),
       static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
   ASSERT_FALSE(decoded.ok());
@@ -367,7 +367,7 @@ TEST(ComplexTable, Success) {
     input.set_simple(allocator, std::move(simple_table))
         .set_u(allocator, std::move(xu))
         .set_strings(allocator, std::move(strings));
-    fidl::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(
+    fidl::unstable::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(
         fidl::internal::WireFormatVersion::kV1, &input);
     ASSERT_TRUE(encoded.ok());
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
@@ -377,7 +377,7 @@ TEST(ComplexTable, Success) {
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
-    fidl::DecodedMessage<llcpp_misc::wire::ComplexTable> decoded(
+    fidl::unstable::DecodedMessage<llcpp_misc::wire::ComplexTable> decoded(
         fidl::internal::WireFormatVersion::kV1, encoded_bytes.data(),
         static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
     ASSERT_TRUE(decoded.ok());
@@ -420,7 +420,7 @@ TEST(InputExceeds64KiB, EncodeUnsupported) {
                   "Need a reasonably sized last piece of data to make the whole message reliably "
                   "go over the 64 KiB limit.");
 
-    fidl::OwnedEncodedMessage<manual_conformance_large::wire::LargeTable> encoded{
+    fidl::unstable::OwnedEncodedMessage<manual_conformance_large::wire::LargeTable> encoded{
         fidl::internal::WireFormatVersion::kV1, &table};
     EXPECT_FALSE(encoded.ok());
     // TODO(fxbug.dev/74362): Consistently propagate ZX_ERR_BUFFER_TOO_SMALL.

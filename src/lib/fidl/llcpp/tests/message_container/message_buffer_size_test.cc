@@ -38,14 +38,16 @@ TEST(MessageBufferSize, ResponseStorageAllocationStrategy) {
   static_assert(sizeof(fidl::WireRequest<Protocol::RequestOf512Bytes>) == 512);
   // Buffers for messages no bigger than 512 bytes are embedded, for this request,
   // OwnedEncodedMessage size is bigger than 512 bytes.
-  static_assert(sizeof(fidl::OwnedEncodedMessage<fidl::WireRequest<Protocol::RequestOf512Bytes>>) >
-                512);
+  static_assert(
+      sizeof(fidl::unstable::OwnedEncodedMessage<fidl::WireRequest<Protocol::RequestOf512Bytes>>) >
+      512);
 
   static_assert(sizeof(fidl::WireRequest<Protocol::RequestOf513Bytes>) == 520);
   // Buffers for messages bigger than 512 bytes are store on the heap, for this request,
   // OwnedEncodedMessage size is smaller than 512 bytes.
-  static_assert(sizeof(fidl::OwnedEncodedMessage<fidl::WireRequest<Protocol::RequestOf513Bytes>>) <
-                512);
+  static_assert(
+      sizeof(fidl::unstable::OwnedEncodedMessage<fidl::WireRequest<Protocol::RequestOf513Bytes>>) <
+      512);
 }
 
 TEST(MessageBufferSize, MaxSizeInChannel) {

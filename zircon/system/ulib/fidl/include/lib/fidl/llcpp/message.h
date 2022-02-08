@@ -294,7 +294,7 @@ class DecodedMessageBase;
 //
 // |IncomingMessage| relinquishes the ownership of the handles after decoding.
 // Instead, callers must adopt the decoded content into another RAII class, such
-// as |fidl::DecodedMessage<FidlType>|.
+// as |fidl::unstable::DecodedMessage<FidlType>|.
 //
 // Functions that take |IncomingMessage&| conditionally take ownership of the
 // message. For functions in the public API, they must then indicate through
@@ -464,7 +464,7 @@ class IncomingMessage : public ::fidl::Result {
                   fidl_handle_metadata_t* handle_metadata, uint32_t handle_actual,
                   SkipMessageHeaderValidationTag);
 
-  // Only |fidl::DecodedMessage<T>| instances may decode this message.
+  // Only |fidl::unstable::DecodedMessage<T>| instances may decode this message.
   template <typename T>
   friend class internal::DecodedMessageBase;
 
@@ -573,7 +573,7 @@ IncomingMessage MessageRead(TransportObject&& transport, ::fidl::BufferSpan byte
 namespace internal {
 
 // DecodedMessageBase implements the common behavior to all
-// |fidl::DecodedMessage<T>| subclasses. They may be created from an incoming
+// |fidl::unstable::DecodedMessage<T>| subclasses. They may be created from an incoming
 // message in encoded form, in which case they would perform the necessary
 // decoding and own the decoded handles via RAII.
 //
@@ -633,6 +633,10 @@ class DecodedMessageBase : public ::fidl::Result {
 };
 
 }  // namespace internal
+
+// TODO(fxbug.dev/82681): Re-introduce stable APIs for standalone use of the
+// FIDL wire format.
+namespace unstable {
 
 // This class manages the handles within |FidlType| and encodes the message automatically upon
 // construction. Different from |OwnedEncodedMessage|, it takes in a caller-allocated buffer and
@@ -748,7 +752,7 @@ class OwnedEncodedMessage final {
 
  private:
   ::fidl::internal::OutgoingMessageBuffer<FidlType> backing_buffer_;
-  ::fidl::UnownedEncodedMessage<FidlType, Transport> message_;
+  ::fidl::unstable::UnownedEncodedMessage<FidlType, Transport> message_;
 };
 
 // This class manages the handles within |FidlType| and decodes the message automatically upon
@@ -851,6 +855,17 @@ class DecodedMessage<FidlType, Transport,
   // After calling this method, the |DecodedMessage| object should not be used anymore.
   void ReleasePrimaryObject() { Base::ResetBytes(); }
 };
+
+}  // namespace unstable
+
+// TODO(fxbug.dev/82681): Remove aliases after migrating users.
+template <typename FidlType, typename Transport = internal::ChannelTransport>
+using UnownedEncodedMessage = unstable::UnownedEncodedMessage<FidlType, Transport>;
+template <typename FidlType, typename Transport = internal::ChannelTransport>
+using OwnedEncodedMessage = unstable::OwnedEncodedMessage<FidlType, Transport>;
+template <typename FidlType, typename Transport = internal::ChannelTransport,
+          typename Enable = void>
+using DecodedMessage = unstable::DecodedMessage<FidlType, Transport, Enable>;
 
 // Holds the result of converting an outgoing message to an incoming message.
 //

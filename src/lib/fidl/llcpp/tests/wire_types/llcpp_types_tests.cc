@@ -41,7 +41,7 @@ TEST(LlcppTypesTests, EncodedMessageTest) {
   EXPECT_EQ(zx::channel::create(0, &msg.channel, &channel_1), ZX_OK);
 
   {
-    fidl::OwnedEncodedMessage<NonNullableChannelRequest> encoded(&msg);
+    fidl::unstable::OwnedEncodedMessage<NonNullableChannelRequest> encoded(&msg);
 
     HelperExpectPeerValid(channel_1);
   }
@@ -63,8 +63,8 @@ TEST(LlcppTypesTests, RoundTripTest) {
   // We need to define our own storage because it is used after encoded is deleted.
   FIDL_ALIGNDECL uint8_t storage[sizeof(NonNullableChannelRequest)];
 
-  auto* encoded =
-      new fidl::UnownedEncodedMessage<NonNullableChannelRequest>(storage, sizeof(storage), &msg);
+  auto* encoded = new fidl::unstable::UnownedEncodedMessage<NonNullableChannelRequest>(
+      storage, sizeof(storage), &msg);
   EXPECT_EQ(encoded->status(), ZX_OK);
   encoded->GetOutgoingMessage().set_txid(10);
   auto encoded_bytes = encoded->GetOutgoingMessage().CopyBytes();
@@ -86,7 +86,7 @@ TEST(LlcppTypesTests, RoundTripTest) {
   auto converted = fidl::OutgoingToIncomingMessage(encoded->GetOutgoingMessage());
   auto& incoming = converted.incoming_message();
   ASSERT_EQ(ZX_OK, incoming.status());
-  auto decoded = fidl::DecodedMessage<NonNullableChannelRequest>(std::move(incoming));
+  auto decoded = fidl::unstable::DecodedMessage<NonNullableChannelRequest>(std::move(incoming));
   EXPECT_TRUE(decoded.ok());
   EXPECT_EQ(decoded.PrimaryObject()->_hdr.txid, 10u);
   EXPECT_EQ(decoded.PrimaryObject()->_hdr.ordinal, 0x67982ebd88e037a2lu);
@@ -100,7 +100,8 @@ TEST(LlcppTypesTests, RoundTripTest) {
 
   // Encode
   {
-    fidl::OwnedEncodedMessage<NonNullableChannelRequest> encoded2(decoded.PrimaryObject());
+    fidl::unstable::OwnedEncodedMessage<NonNullableChannelRequest> encoded2(
+        decoded.PrimaryObject());
     EXPECT_TRUE(encoded2.ok());
 
     // Byte-level comparison
@@ -167,7 +168,7 @@ TEST(LlcppTypesTests, VectorView) {
 // point directly into its body. This behavior could change, however, but is verified in the test.
 TEST(LlcppTypesTests, OwnedEncodedMessageOwns) {
   constexpr uint32_t vector_view_count = 100;
-  std::unique_ptr<fidl::OwnedEncodedMessage<VectorStruct>> encoded;
+  std::unique_ptr<fidl::unstable::OwnedEncodedMessage<VectorStruct>> encoded;
 
   {
     fidl::Arena<vector_view_count * sizeof(uint32_t)> allocator;
@@ -178,11 +179,11 @@ TEST(LlcppTypesTests, OwnedEncodedMessageOwns) {
       vector_struct.v[i] = i;
     }
 
-    encoded = std::make_unique<fidl::OwnedEncodedMessage<VectorStruct>>(
+    encoded = std::make_unique<fidl::unstable::OwnedEncodedMessage<VectorStruct>>(
         fidl::internal::WireFormatVersion::kV1, &vector_struct);
     ASSERT_TRUE(encoded->ok());
 
-    auto encoded_with_iovecs = std::make_unique<fidl::OwnedEncodedMessage<VectorStruct>>(
+    auto encoded_with_iovecs = std::make_unique<fidl::unstable::OwnedEncodedMessage<VectorStruct>>(
         fidl::internal::AllowUnownedInputRef{}, fidl::internal::WireFormatVersion::kV1,
         &vector_struct);
     ASSERT_TRUE(encoded_with_iovecs->ok());
@@ -190,8 +191,8 @@ TEST(LlcppTypesTests, OwnedEncodedMessageOwns) {
 
   fidl::OutgoingToIncomingMessage converted(encoded->GetOutgoingMessage());
   ASSERT_TRUE(converted.ok());
-  fidl::DecodedMessage<VectorStruct> decoded(fidl::internal::WireFormatVersion::kV1,
-                                             std::move(converted.incoming_message()));
+  fidl::unstable::DecodedMessage<VectorStruct> decoded(fidl::internal::WireFormatVersion::kV1,
+                                                       std::move(converted.incoming_message()));
 
   ASSERT_EQ(vector_view_count, decoded.PrimaryObject()->v.count());
   for (uint32_t i = 0; i < vector_view_count; i++) {

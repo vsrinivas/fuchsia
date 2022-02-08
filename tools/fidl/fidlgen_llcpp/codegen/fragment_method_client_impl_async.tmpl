@@ -46,7 +46,7 @@
     auto* _context = new ResponseContext(std::move(_cb));
     {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-    ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
+    ::fidl::unstable::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
           ::fidl::internal::AllowUnownedInputRef{}, &_request);
     _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
   }
@@ -75,7 +75,7 @@
     auto* _context = new ResponseContext(std::move(_cb));
     {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-    ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
+    ::fidl::unstable::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
     ::fidl::internal::AllowUnownedInputRef{}, &_request);
     _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
   }

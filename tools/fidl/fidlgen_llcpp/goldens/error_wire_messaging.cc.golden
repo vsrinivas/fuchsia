@@ -17,8 +17,9 @@ extern "C" const fidl_type_t test_error_ExamplefooResponseMessageTable;
     ::fidl::UnownedClientEnd<::test_error::Example> client,
     ::fidl::WireRequest<::test_error::Example::Foo>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<::test_error::Example::Foo>,
-                              ::fidl::internal::ChannelTransport>
+  ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_error::Example::Foo>,
+      ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<::test_error::Example::Foo>>(
@@ -31,8 +32,9 @@ extern "C" const fidl_type_t test_error_ExamplefooResponseMessageTable;
     ::fidl::WireRequest<::test_error::Example::Foo>* request,
     zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<::test_error::Example::Foo>,
-                              ::fidl::internal::ChannelTransport>
+  ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_error::Example::Foo>,
+      ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<::test_error::Example::Foo>>(
@@ -66,7 +68,8 @@ namespace test_error {
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<::test_error::Example::Foo>>
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_error::Example::Foo>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<::fidl::WireResponse<::test_error::Example::Foo>>(
@@ -102,8 +105,9 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_error::Example>::Foo(
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::WireRequest<::test_error::Example::Foo> _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<::test_error::Example::Foo>,
-                              ::fidl::internal::ChannelTransport>
+  ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_error::Example::Foo>,
+      ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
@@ -136,8 +140,9 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_error::Example>::Foo(
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::WireRequest<::test_error::Example::Foo> _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<::test_error::Example::Foo>,
-                              ::fidl::internal::ChannelTransport>
+  ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_error::Example::Foo>,
+      ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
@@ -156,7 +161,8 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<::test_error::Example>::Foo(
   }
 
   ::fidl::WireRequest<::test_error::Example::Foo> _request{s};
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<::test_error::Example::Foo>>
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_error::Example::Foo>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
@@ -243,7 +249,7 @@ constexpr ::fidl::internal::MethodEntry
             [](void* interface, ::fidl::IncomingMessage&& msg,
                internal::IncomingTransportContext transport_context,
                ::fidl::Transaction* txn) {
-              ::fidl::DecodedMessage<
+              ::fidl::unstable::DecodedMessage<
                   ::fidl::WireRequest<::test_error::Example::Foo>>
                   decoded{std::move(msg)};
               if (unlikely(!decoded.ok())) {
@@ -296,8 +302,9 @@ fidl::internal::WireCompleterBase<::test_error::Example::Foo>::Reply(
     ::test_error::wire::ExampleFooResult result) {
   ::fidl::WireResponse<::test_error::Example::Foo> _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireResponse<::test_error::Example::Foo>,
-                              ::fidl::internal::ChannelTransport>
+  ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::WireResponse<::test_error::Example::Foo>,
+      ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return ::fidl::internal::WireCompleterBase<::test_error::Example::Foo>::
       SendReply(&_response_message.GetOutgoingMessage(),
@@ -321,7 +328,7 @@ fidl::internal::WireCompleterBase<::test_error::Example::Foo>::Reply(
 fidl::internal::WireCompleterBase<::test_error::Example::Foo>::Reply(
     ::fidl::BufferSpan _buffer, ::test_error::wire::ExampleFooResult result) {
   ::fidl::WireResponse<::test_error::Example::Foo> _response{result};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireResponse<::test_error::Example::Foo>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),

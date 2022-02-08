@@ -86,15 +86,15 @@ struct fidl::IsFidlObject<Input> : public std::true_type {};
 
 TEST(Coding, EncodedDecode) {
   Input input{.h = 123};
-  fidl::OwnedEncodedMessage<Input, TestTransport> encoded(fidl::internal::WireFormatVersion::kV1,
-                                                          &input);
+  fidl::unstable::OwnedEncodedMessage<Input, TestTransport> encoded(
+      fidl::internal::WireFormatVersion::kV1, &input);
   ASSERT_OK(encoded.status());
   auto& msg = encoded.GetOutgoingMessage();
 
   ASSERT_EQ(kTestMetadataValue, msg.handle_metadata<TestTransport>()[0].metadata);
 
   auto copied_bytes = encoded.GetOutgoingMessage().CopyBytes();
-  fidl::DecodedMessage<Input, TestTransport> decoded(
+  fidl::unstable::DecodedMessage<Input, TestTransport> decoded(
       copied_bytes.data(), static_cast<uint32_t>(copied_bytes.size()), msg.handles(),
       msg.handle_metadata<TestTransport>(), msg.handle_actual());
   ASSERT_OK(decoded.status());

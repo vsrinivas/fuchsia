@@ -20,7 +20,7 @@ extern "C" const fidl_type_t
     ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>*
         request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -39,7 +39,7 @@ namespace test_service {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
       _request_object{};
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
@@ -59,7 +59,7 @@ namespace test_service {
 
   ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
       _request{};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
@@ -204,7 +204,7 @@ extern "C" const fidl_type_t
     ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>*
         request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -223,7 +223,7 @@ namespace test_service {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>
       _request_object{};
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
@@ -242,7 +242,7 @@ namespace test_service {
   }
 
   ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst> _request{};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());

@@ -120,7 +120,7 @@ extern "C" const fidl_type_t test_versions_ProtocolFooResponseMessageTable;
     ::fidl::UnownedClientEnd<::test_versions::Protocol> client,
     ::fidl::WireRequest<::test_versions::Protocol::Foo>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_versions::Protocol::Foo>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -138,7 +138,7 @@ namespace test_versions {
 fidl::internal::WireWeakOnewayClientImpl<::test_versions::Protocol>::Foo() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_versions::Protocol::Foo> _request_object{};
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_versions::Protocol::Foo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
@@ -157,7 +157,7 @@ fidl::internal::WireWeakOnewayClientImpl<::test_versions::Protocol>::Foo() {
   }
 
   ::fidl::WireRequest<::test_versions::Protocol::Foo> _request{};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_versions::Protocol::Foo>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());

@@ -21,7 +21,7 @@ extern "C" const fidl_type_t
         ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>*
             request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -40,7 +40,7 @@ extern "C" const fidl_type_t
             request,
         zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -80,7 +80,7 @@ namespace test_transitivedependenciescompose {
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -123,7 +123,7 @@ void fidl::internal::
   ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
@@ -162,7 +162,7 @@ void fidl::internal::
   ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
@@ -185,7 +185,7 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
 
   ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>
       _request{};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -332,7 +332,7 @@ void fidl::WireServer<::test_transitivedependenciescompose::Top>::
   ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>
       _response{foo};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -347,7 +347,7 @@ void fidl::WireServer<::test_transitivedependenciescompose::Top>::
         ::fidl::BufferSpan _buffer, const ::test_bottom::wire::Foo& foo) {
   ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>
       _response{foo};
-  ::fidl::UnownedEncodedMessage<
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),

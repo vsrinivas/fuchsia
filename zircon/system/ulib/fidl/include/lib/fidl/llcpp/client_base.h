@@ -231,7 +231,7 @@ class WireResponseContext : public internal::ResponseContext {
       OnResult(result);
       return cpp17::nullopt;
     }
-    ::fidl::DecodedMessage<::fidl::WireResponse<FidlMethod>> decoded{std::move(msg)};
+    ::fidl::unstable::DecodedMessage<::fidl::WireResponse<FidlMethod>> decoded{std::move(msg)};
     ::fidl::Result maybe_error = decoded;
     ::fidl::internal::WireUnownedResultType<FidlMethod> result(std::move(decoded),
                                                                std::move(transport_context));

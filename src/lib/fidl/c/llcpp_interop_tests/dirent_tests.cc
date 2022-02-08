@@ -90,7 +90,7 @@ class Server {
  private:
   template <typename FidlType>
   zx_status_t Reply(fidl_txn_t* txn, FidlType* value) {
-    fidl::OwnedEncodedMessage<FidlType> encoded(value);
+    fidl::unstable::OwnedEncodedMessage<FidlType> encoded(value);
     fidl_outgoing_msg_t c_msg = std::move(encoded.GetOutgoingMessage()).ReleaseToEncodedCMessage();
     zx_status_t status = txn->reply(txn, &c_msg);
     return status;
@@ -98,8 +98,8 @@ class Server {
 
   zx_status_t DoCountNumDirectories(
       fidl_txn_t* txn,
-      fidl::DecodedMessage<fidl::WireRequest<gen::DirEntTestInterface::CountNumDirectories>>&
-          decoded) {
+      fidl::unstable::DecodedMessage<
+          fidl::WireRequest<gen::DirEntTestInterface::CountNumDirectories>>& decoded) {
     count_num_directories_num_calls_.fetch_add(1);
     const auto& request = *decoded.PrimaryObject();
     int64_t count = 0;
@@ -115,7 +115,8 @@ class Server {
 
   zx_status_t DoReadDir(
       fidl_txn_t* txn,
-      fidl::DecodedMessage<fidl::WireRequest<gen::DirEntTestInterface::ReadDir>>& decoded) {
+      fidl::unstable::DecodedMessage<fidl::WireRequest<gen::DirEntTestInterface::ReadDir>>&
+          decoded) {
     read_dir_num_calls_.fetch_add(1);
     auto golden = golden_dirents();
     fidl::WireResponse<gen::DirEntTestInterface::ReadDir> response(golden);
@@ -125,8 +126,8 @@ class Server {
 
   zx_status_t DoConsumeDirectories(
       fidl_txn_t* txn,
-      fidl::DecodedMessage<fidl::WireRequest<gen::DirEntTestInterface::ConsumeDirectories>>&
-          decoded) {
+      fidl::unstable::DecodedMessage<
+          fidl::WireRequest<gen::DirEntTestInterface::ConsumeDirectories>>& decoded) {
     consume_directories_num_calls_.fetch_add(1);
     EXPECT_EQ(decoded.PrimaryObject()->dirents.count(), 3);
     fidl::WireResponse<gen::DirEntTestInterface::ConsumeDirectories> response;
@@ -136,7 +137,8 @@ class Server {
 
   zx_status_t DoOneWayDirents(
       fidl_txn_t* txn,
-      fidl::DecodedMessage<fidl::WireRequest<gen::DirEntTestInterface::OneWayDirents>>& decoded) {
+      fidl::unstable::DecodedMessage<fidl::WireRequest<gen::DirEntTestInterface::OneWayDirents>>&
+          decoded) {
     one_way_dirents_num_calls_.fetch_add(1);
     EXPECT_EQ(decoded.PrimaryObject()->dirents.count(), 3);
     EXPECT_OK(decoded.PrimaryObject()->ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED));
@@ -145,8 +147,8 @@ class Server {
   }
 
   template <typename FidlType>
-  static fidl::DecodedMessage<FidlType> DecodeAs(fidl::IncomingMessage& msg) {
-    return fidl::DecodedMessage<FidlType>(std::move(msg));
+  static fidl::unstable::DecodedMessage<FidlType> DecodeAs(fidl::IncomingMessage& msg) {
+    return fidl::unstable::DecodedMessage<FidlType>(std::move(msg));
   }
 
   static zx_status_t FidlDispatch(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* c_msg,

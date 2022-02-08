@@ -257,7 +257,7 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
           ::test_transitivedependenciescompose::Top::GetFoo>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {

@@ -109,7 +109,7 @@ class TestClient {
           ::fidl::IncomingMessage&& result,
           fidl::internal::IncomingTransportContext incoming_transport_context) override {
         ZX_ASSERT(result.ok());
-        fidl::DecodedMessage<TwoWayResponse, fidl::internal::SocketTransport> decoded(
+        fidl::unstable::DecodedMessage<TwoWayResponse, fidl::internal::SocketTransport> decoded(
             std::move(result));
         callback(*decoded.PrimaryObject());
         delete this;
@@ -118,7 +118,8 @@ class TestClient {
       fit::callback<void(TwoWayResponse)> callback;
     };
     auto* context = new TwoWayResponseContext(std::move(callback));
-    fidl::OwnedEncodedMessage<TwoWayRequest, fidl::internal::SocketTransport> encoded(&request);
+    fidl::unstable::OwnedEncodedMessage<TwoWayRequest, fidl::internal::SocketTransport> encoded(
+        &request);
     client_controller_.get().SendTwoWay(encoded.GetOutgoingMessage(), context);
   }
 
@@ -139,12 +140,14 @@ class TestServer : public fidl::internal::IncomingMessageDispatcher {
   void dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
                         fidl::internal::IncomingTransportContext transport_context) override {
     ZX_ASSERT(msg.ok());
-    fidl::DecodedMessage<TwoWayRequest, fidl::internal::SocketTransport> decoded(std::move(msg));
+    fidl::unstable::DecodedMessage<TwoWayRequest, fidl::internal::SocketTransport> decoded(
+        std::move(msg));
     ZX_ASSERT(decoded.PrimaryObject()->payload == kRequestPayload);
 
     TwoWayResponse response{.payload = kResponsePayload};
     fidl_init_txn_header(&response.header, kTwoWayTxid, kTwoWayOrdinal);
-    fidl::OwnedEncodedMessage<TwoWayResponse, fidl::internal::SocketTransport> encoded(&response);
+    fidl::unstable::OwnedEncodedMessage<TwoWayResponse, fidl::internal::SocketTransport> encoded(
+        &response);
     txn->Reply(&encoded.GetOutgoingMessage());
   }
 };

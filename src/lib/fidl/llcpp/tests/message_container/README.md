@@ -8,8 +8,8 @@ for them:
   - `fidl::OutgoingMessage`
   - `fidl::OutgoingMessage`
   - `fidl::OutgoingIovecMessage`
-  - `fidl::OwnedEncodedMessage<Foo>`
-  - `fidl::UnownedEncodedMessage<Foo>`
+  - `fidl::unstable::OwnedEncodedMessage<Foo>`
+  - `fidl::unstable::UnownedEncodedMessage<Foo>`
   - `fidl::OutgoingToIncomingMessage`
   - ...
 

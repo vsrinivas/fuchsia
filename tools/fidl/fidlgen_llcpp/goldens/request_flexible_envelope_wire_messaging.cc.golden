@@ -32,7 +32,7 @@ extern "C" const fidl_type_t
         ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                                 RequestStrictResponseFlexible>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestStrictResponseFlexible>,
       ::fidl::internal::ChannelTransport>
@@ -53,7 +53,7 @@ extern "C" const fidl_type_t
                                 RequestStrictResponseFlexible>* request,
         zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestStrictResponseFlexible>,
       ::fidl::internal::ChannelTransport>
@@ -97,7 +97,7 @@ namespace test_requestflexibleenvelope {
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -120,7 +120,7 @@ namespace test_requestflexibleenvelope {
         ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                                 RequestFlexibleResponseStrict>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestFlexibleResponseStrict>,
       ::fidl::internal::ChannelTransport>
@@ -141,7 +141,7 @@ namespace test_requestflexibleenvelope {
                                 RequestFlexibleResponseStrict>* request,
         zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestFlexibleResponseStrict>,
       ::fidl::internal::ChannelTransport>
@@ -185,7 +185,7 @@ namespace test_requestflexibleenvelope {
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -232,7 +232,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
       _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestStrictResponseFlexible>,
       ::fidl::internal::ChannelTransport>
@@ -277,7 +277,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
       _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestStrictResponseFlexible>,
       ::fidl::internal::ChannelTransport>
@@ -315,7 +315,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
       _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestFlexibleResponseStrict>,
       ::fidl::internal::ChannelTransport>
@@ -360,7 +360,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
       _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestFlexibleResponseStrict>,
       ::fidl::internal::ChannelTransport>
@@ -389,7 +389,7 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
   ::fidl::WireRequest<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
       _request{s};
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -416,7 +416,7 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
   ::fidl::WireRequest<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
       _request{s};
-  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -533,7 +533,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fidl::DecodedMessage<
+          ::fidl::unstable::DecodedMessage<
               ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                                       RequestStrictResponseFlexible>>
               decoded{std::move(msg)};
@@ -557,7 +557,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fidl::DecodedMessage<
+          ::fidl::unstable::DecodedMessage<
               ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                                       RequestFlexibleResponseStrict>>
               decoded{std::move(msg)};
@@ -617,7 +617,7 @@ void fidl::WireServer<::test_requestflexibleenvelope::Protocol>::
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
       _response{f};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                RequestStrictResponseFlexible>,
       ::fidl::internal::ChannelTransport>
@@ -635,7 +635,7 @@ void fidl::WireServer<::test_requestflexibleenvelope::Protocol>::
   ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
       _response{f};
-  ::fidl::UnownedEncodedMessage<::fidl::WireResponse<
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
@@ -651,7 +651,7 @@ void fidl::WireServer<::test_requestflexibleenvelope::Protocol>::
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
       _response{f};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
+  ::fidl::unstable::OwnedEncodedMessage<
       ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                RequestFlexibleResponseStrict>,
       ::fidl::internal::ChannelTransport>
@@ -669,7 +669,7 @@ void fidl::WireServer<::test_requestflexibleenvelope::Protocol>::
   ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
       _response{f};
-  ::fidl::UnownedEncodedMessage<::fidl::WireResponse<
+  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),

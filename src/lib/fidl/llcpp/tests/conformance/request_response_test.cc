@@ -20,13 +20,14 @@ TEST(FidlHost, Request) {
   // The request.
   fidl::WireRequest<test_types::Baz::Foo> foo(req);
   // Serialized version of the request.
-  fidl::OwnedEncodedMessage<fidl::WireRequest<test_types::Baz::Foo>> message(&foo);
+  fidl::unstable::OwnedEncodedMessage<fidl::WireRequest<test_types::Baz::Foo>> message(&foo);
   EXPECT_EQ(message.status(), ZX_OK);
   // Linear byte buffer for the request.
   auto bytes = message.GetOutgoingMessage().CopyBytes();
   EXPECT_EQ(bytes.size(), 24U);
   // Decoded version of the linear buffer.
-  fidl::DecodedMessage<fidl::WireRequest<test_types::Baz::Foo>> decoded(bytes.data(), bytes.size());
+  fidl::unstable::DecodedMessage<fidl::WireRequest<test_types::Baz::Foo>> decoded(bytes.data(),
+                                                                                  bytes.size());
   // Checks that the decoded version is equivalent to the original.
   EXPECT_EQ(decoded.PrimaryObject()->req.bar, req.bar);
 }
@@ -38,14 +39,14 @@ TEST(FidlHost, Response) {
   // The response.
   fidl::WireResponse<test_types::Baz::Foo> foo(res);
   // Serialized version of the response.
-  fidl::OwnedEncodedMessage<fidl::WireResponse<test_types::Baz::Foo>> message(&foo);
+  fidl::unstable::OwnedEncodedMessage<fidl::WireResponse<test_types::Baz::Foo>> message(&foo);
   EXPECT_EQ(message.status(), ZX_OK);
   // Linear byte buffer for the response.
   auto bytes = message.GetOutgoingMessage().CopyBytes();
   EXPECT_EQ(bytes.size(), 24U);
   // Decoded version of the linear buffer.
-  fidl::DecodedMessage<fidl::WireResponse<test_types::Baz::Foo>> decoded(bytes.data(),
-                                                                         bytes.size());
+  fidl::unstable::DecodedMessage<fidl::WireResponse<test_types::Baz::Foo>> decoded(bytes.data(),
+                                                                                   bytes.size());
   // Checks that the decoded version is equivalent to the original.
   EXPECT_EQ(decoded.PrimaryObject()->res.bar, res.bar);
 }
