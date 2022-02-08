@@ -63,6 +63,7 @@ fuchsia_driver_component("platform-bus") {
   component_name = "platform-bus"
   deps = [ ":platform-bus-driver" ]
   info = "platform-bus-info.json"
+  root_resource = true
 }
 
 fuchsia_driver("platform-bus.proxy-driver") {

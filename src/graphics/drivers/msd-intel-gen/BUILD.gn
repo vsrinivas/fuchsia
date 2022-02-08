@@ -22,6 +22,7 @@ fuchsia_driver_component("msd_intel") {
   deps = [ ":msd_intel-driver" ]
   info = "msd_intel-info.json"
   colocate = true
+  root_resource = true
 }
 
 # The gpu device; runs gtests at startup

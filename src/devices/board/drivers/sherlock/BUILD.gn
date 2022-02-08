@@ -726,6 +726,7 @@ template("sherlock_driver") {
     colocate = true
     deps = [ ":${target_name}-driver" ]
     info = "${target_name}-info.json"
+    root_resource = true
   }
 }
 

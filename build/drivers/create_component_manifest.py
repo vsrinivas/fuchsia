@@ -37,6 +37,10 @@ def main():
         '--fallback',
         action='store_true',
         help='Whether or not the driver is a fallback driver')
+    parser.add_argument(
+        '--root_resource',
+        action='store_true',
+        help='Whether or not to give the driver access to the root resource')
     args = parser.parse_args()
 
     distribution_manifest = json.load(args.distribution_manifest_file)
@@ -74,6 +78,7 @@ def main():
                 'bind': bind,
                 'fallback': 'true' if args.fallback else 'false'
             },
+        'use': []
     }
     if args.is_v1:
         manifest["program"]["binary"] = "driver/compat.so"
@@ -111,6 +116,9 @@ def main():
 
     if args.colocate:
         manifest["program"]["colocate"] = "true"
+
+    if args.root_resource:
+        manifest['use'].append({'protocol': "fuchsia.boot.RootResource"})
 
     json_manifest = json.dumps(manifest)
     args.output.write(json_manifest)

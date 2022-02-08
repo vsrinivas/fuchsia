@@ -46,4 +46,5 @@ fuchsia_driver_component("machina") {
   deps = [ ":machina-driver" ]
   info = "machina-info.json"
   colocate = true
+  root_resource = true
 }

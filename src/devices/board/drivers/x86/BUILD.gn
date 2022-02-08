@@ -166,6 +166,7 @@ fuchsia_driver_component("platform-bus-x86") {
   deps = [ ":platform-bus-x86-driver" ]
   info = "platform-bus-x86-info.json"
   colocate = true
+  root_resource = true
 }
 
 test("x86-lid-test") {

@@ -75,6 +75,7 @@ foreach(driver, simple_drivers) {
     deps = [ ":simple.$driver-driver" ]
     info = "simple.$driver-info.json"
     colocate = true
+    root_resource = true
   }
 }
 group("tests") {

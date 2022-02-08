@@ -45,6 +45,15 @@
                     "/bootstrap",
                     "/bootstrap/console-launcher",
                     "/bootstrap/driver_manager",
+
+                    // Driver component names vary depending on the
+                    // exact hardware configuration of the board.
+                    // Grant all drivers the ability to access the root
+                    // resource because of this.
+                    // TODO(fxbug.dev/93188): remove this once the root
+                    // resource is not widely used.
+                    "/bootstrap/boot-drivers:**",
+                    "/bootstrap/pkg-drivers:**",
                     "/bootstrap/netsvc",
                     "/bootstrap/svchost",
                     "/core",

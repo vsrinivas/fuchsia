@@ -42,4 +42,5 @@ fuchsia_driver_component("pc-ps2") {
   deps = [ ":pc-ps2-driver" ]
   info = "pc-ps2-info.json"
   colocate = true
+  root_resource = true
 }

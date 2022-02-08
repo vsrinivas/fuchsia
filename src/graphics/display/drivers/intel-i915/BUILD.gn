@@ -69,6 +69,7 @@ fuchsia_driver_component("intel-i915") {
   deps = [ ":intel-i915-driver" ]
   info = "intel-i915-info.json"
   colocate = true
+  root_resource = true
 }
 
 test("intel-i915-test") {

@@ -139,6 +139,7 @@ if (platform_enable_user_pci) {
     deps = [ ":bus-pci-driver" ]
     info = "bus-pci-info.json"
     colocate = true
+    root_resource = true
   }
 }
 

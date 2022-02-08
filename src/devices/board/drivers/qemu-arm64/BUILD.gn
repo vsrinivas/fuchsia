@@ -63,4 +63,5 @@ fuchsia_driver_component("qemu-arm64") {
   deps = [ ":qemu-arm64-driver" ]
   info = "qemu-arm64-info.json"
   colocate = true
+  root_resource = true
 }

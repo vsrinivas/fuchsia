@@ -74,6 +74,7 @@ fuchsia_driver_component("cpu-trace") {
   deps = [ ":cpu-trace-driver" ]
   info = "cpu-trace-info.json"
   colocate = true
+  root_resource = true
 }
 
 group("tests") {

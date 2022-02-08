@@ -41,6 +41,11 @@ import("//tools/cmc/build/cmc.gni")
 #     This currently only affects composite drivers.
 #     Type: boolean
 #     Default: false
+#   root_resource (optional)
+#     If this is true, the driver will be given access to the root resource.
+#     This only affects drivers with automatically generated manifests.
+#     Type: bool
+#     Default: false
 #   info (mandatory for //src and //zircon)
 #     Name of the file containing the driver information file.
 #     Type: file
@@ -99,6 +104,9 @@ template("fuchsia_driver_component") {
         }
         if (defined(invoker.colocate) && invoker.colocate) {
           args += [ "--colocate" ]
+        }
+        if (defined(invoker.root_resource) && invoker.root_resource) {
+          args += [ "--root_resource" ]
         }
       }
 
