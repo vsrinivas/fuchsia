@@ -716,4 +716,38 @@ extern "C" void otTaskletsSignalPending(otInstance* a_instance) {
 
 extern "C" void otPlatReset(otInstance* a_instance) { sLowpanSpinelPtr->Reset(); }
 
+extern "C" otError otPlatUdpSocket(otUdpSocket* aUdpSocket) { return OT_ERROR_NONE; }
+extern "C" otError otPlatUdpClose(otUdpSocket* aUdpSocket) { return OT_ERROR_NONE; }
+extern "C" otError otPlatUdpBind(otUdpSocket* aUdpSocket) { return OT_ERROR_NONE; }
+extern "C" otError otPlatUdpBindToNetif(otUdpSocket* aUdpSocket,
+                                        otNetifIdentifier aNetifIdentifier) {
+  return OT_ERROR_NONE;
+}
+extern "C" otError otPlatUdpConnect(otUdpSocket* aUdpSocket) { return OT_ERROR_NONE; }
+extern "C" otError otPlatUdpSend(otUdpSocket* aUdpSocket, otMessage* aMessage,
+                                 const otMessageInfo* aMessageInfo) {
+  return OT_ERROR_NONE;
+}
+extern "C" otError otPlatUdpJoinMulticastGroup(otUdpSocket* aUdpSocket,
+                                               otNetifIdentifier aNetifIdentifier,
+                                               const otIp6Address* aAddress) {
+  return OT_ERROR_NONE;
+}
+
+extern "C" otError otPlatUdpLeaveMulticastGroup(otUdpSocket* aUdpSocket,
+                                                otNetifIdentifier aNetifIdentifier,
+                                                const otIp6Address* aAddress) {
+  return OT_ERROR_NONE;
+}
+
+extern "C" void otPlatTrelEnable(otInstance* aInstance, uint16_t* aUdpPort) {}
+
+extern "C" void otPlatTrelDisable(otInstance* aInstance) {}
+
+extern "C" void otPlatTrelRegisterService(otInstance* aInstance, uint16_t aPort,
+                                          const uint8_t* aTxtData, uint8_t aTxtLength) {}
+
+extern "C" void otPlatTrelSend(otInstance* aInstance, const uint8_t* aUdpPayload,
+                               uint16_t aUdpPayloadLen, const otSockAddr* aDestSockAddr) {}
+
 }  // namespace otstack
