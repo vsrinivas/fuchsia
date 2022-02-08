@@ -1470,6 +1470,10 @@ group("default-images") {
   if (check_vtables_in_rodata) {
     deps += [ ":check_vtables_in_rodata" ]
   }
+
+  if (build_usb_installer) {
+    deps += [ "//build/installer_images" ]
+  }
 }
 
 generated_file("image_paths") {

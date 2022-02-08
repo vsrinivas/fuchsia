@@ -25,6 +25,11 @@ declare_args() {
   # Generate a UEFI disk image
   build_uefi_disk = false
 
+  # Generate installer disk image (ISO) to be flashed to a USB drive.
+  # Will be located at obj/build/installer_images/ relative to the build directory.
+  # See https://fuchsia.dev/fuchsia-src/development/hardware/installer
+  build_usb_installer = false
+
   # (deprecated) List of kernel images to include in the update (OTA) package.
   # If no list is provided, all built kernels are included. The names in the
   # list are strings that must match the filename to be included in the update

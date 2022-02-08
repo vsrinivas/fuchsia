@@ -1,0 +1,84 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+cgpt_path = "$root_build_dir/host-tools/cgpt"
+fvm_path = "$root_build_dir/obj/build/images/fuchsia/fuchsia/fvm.sparse.blk"
+zbi_path = "$root_build_dir/fuchsia.zbi"
+zbi_signed_path = "$root_build_dir/fuchsia.zbi.signed"
+zedboot_path = "$root_build_dir/zedboot.zbi"
+zedboot_signed_path = "$root_build_dir/zedboot.zbi.signed"
+
+input_partition_labels = [
+  "//build/images/fuchsia:fuchsia_copy_zbi",
+  "//build/images/fuchsia:fuchsia_copy_zbi_signed",
+  "//build/images/fuchsia:fuchsia_image_assembler",
+  "//build/images/zedboot:zedboot_copy_zbi",
+  "//build/images/zedboot:zedboot_copy_zbi_signed",
+]
+
+input_partition_paths = [
+  cgpt_path,
+  fvm_path,
+  zbi_path,
+  zbi_signed_path,
+  zedboot_path,
+  zedboot_signed_path,
+]
+
+# To avoid a circular dependency, collect image-related metadata into a JSON file with the same
+# format as the one produced by //:images (which $target_name cannot depend on), but only for the
+# input partitions.
+# TODO(fxbug.dev/91796): Have //build/images:default-images depend on installer_image and
+# system_image to prevent this.
+input_images_json = "installer_images_json"
+input_images_json_file =
+    get_label_info(":$input_images_json", "target_gen_dir") + "/images.json"
+generated_file(input_images_json) {
+  testonly = true
+  data_keys = [ "images" ]
+  deps = input_partition_labels
+  outputs = [ input_images_json_file ]
+  output_conversion = "json"
+}
+
+action("installer_images") {
+  testonly = true
+  script = "//scripts/mkinstaller/mkinstaller.py"
+  outputs = [ "$target_out_dir/$target_name.img" ]
+  dest_image = rebase_path("$target_out_dir/$target_name.img", root_build_dir)
+  args = [
+    "--create",
+    "--force",
+    "--cgpt-path",
+    "host-tools/cgpt",
+    "--images",
+    rebase_path(input_images_json_file, root_build_dir),
+    "--build-dir",
+    ".",
+    dest_image,
+  ]
+
+  # this pulls in all the image dependencies we need.
+  deps = [
+    ":$input_images_json",
+    "//build/images:paver-script",
+    "//tools/vboot_reference:cgpt_host",
+  ]
+
+  deps += input_partition_labels
+
+  inputs = input_partition_paths + [ input_images_json_file ]
+
+  metadata = {
+    images = [
+      {
+        label = get_label_info(":$target_name", "label_with_toolchain")
+        name = "installer"
+        path = dest_image
+        type = "installer"
+      },
+    ]
+    image_paths = [ "INSTALLER_IMAGE=$target_name.img" ]
+  }
+}

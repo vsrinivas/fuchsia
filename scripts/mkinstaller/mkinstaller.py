@@ -306,7 +306,7 @@ class Image:
     logging.info('Done.')
     self.file.close()
 
-def GetPartitions(build_dir):
+def GetPartitions(build_dir, images_file):
   """Get all partitions to be written to the output image.
 
   The list of partitions is currently determined by the IMAGES dict
@@ -314,12 +314,14 @@ def GetPartitions(build_dir):
 
   Args:
     build_dir: path to the build directory containing images.
+    images_file: path to images.json. If None, will generate from build_dir
 
   Returns:
     a list of |Partition| objects to be written to the disk.
   """
   images = {}
-  images_file = os.path.join(build_dir, 'images.json')
+  if images_file is None:
+    images_file = os.path.join(build_dir, 'images.json')
   try:
     with open(images_file) as f:
       images_list = json.load(f)
@@ -425,7 +427,7 @@ def Main(args):
   build_dir = args.build_dir
   if build_dir == '':
     build_dir = paths.FUCHSIA_BUILD_DIR
-  parts = GetPartitions(build_dir)
+  parts = GetPartitions(build_dir, args.images)
   if not parts:
     return 1
 
@@ -471,6 +473,12 @@ if __name__ == '__main__':
       type=str,
       default='',
       help='Path to cgpt in the Fuchsia tree. The script will try and guess if no path is provided.'
+  )
+  parser.add_argument(
+      '--images',
+      type=str,
+      default='',
+      help='Path to images.json in the Fuchsia tree. Default to build_dir/images.json.'
   )
   parser.add_argument(
       '--build-dir',
