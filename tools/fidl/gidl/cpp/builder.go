@@ -219,9 +219,14 @@ memcpy(%[1]s.data() + offset, %[1]s.data(), %[2]d);
 			panic("large vectors that are not repeating are not supported, for build performance reasons")
 		}
 	}
+
 	for i, item := range value {
 		elem := a.visit(item, decl.Elem())
-		a.write("%s[%d] = %s;\n", vector, i, elem)
+		if decl.IsNullable() {
+			a.write("%s.value()[%d] = %s;\n", vector, i, elem)
+		} else {
+			a.write("%s[%d] = %s;\n", vector, i, elem)
+		}
 	}
 	return fmt.Sprintf("std::move(%s)", vector)
 }
@@ -250,6 +255,9 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 	case *gidlmixer.ArrayDecl:
 		return fmt.Sprintf("std::array<%s, %d>", typeName(decl.Elem()), decl.Size())
 	case *gidlmixer.VectorDecl:
+		if !ignoreNullable && decl.IsNullable() {
+			return fmt.Sprintf("std::optional<std::vector<%s>>", typeName(decl.Elem()))
+		}
 		return fmt.Sprintf("std::vector<%s>", typeName(decl.Elem()))
 	case *gidlmixer.HandleDecl:
 		switch decl.Subtype() {

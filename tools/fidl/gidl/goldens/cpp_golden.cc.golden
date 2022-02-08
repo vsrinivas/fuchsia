@@ -86,6 +86,21 @@ var1.v() = "abcd";
 		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes, expected_handles);
 }
 
+TEST(Conformance, GoldenNullableStringStructNonNull_V2_Encode) {
+	auto var1 = test_conformance::GoldenNullableStringStruct{};
+var1.v() = "abcd";
+
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes, expected_handles);
+}
+
 TEST(Conformance, GoldenNullableStringStructNull_V2_Encode) {
 	auto var1 = test_conformance::GoldenNullableStringStruct{};
 var1.v() = std::optional<std::string>();
@@ -94,6 +109,32 @@ var1.v() = std::optional<std::string>();
 	const auto expected_bytes = std::vector<uint8_t>{
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes, expected_handles);
+}
+
+TEST(Conformance, GoldenEnumStruct_V2_Encode) {
+	auto var1 = test_conformance::GoldenEnumStruct{};
+var1.v() = test_conformance::GoldenEnum(1ull);
+
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes, expected_handles);
+}
+
+TEST(Conformance, GoldenBitsStruct_V2_Encode) {
+	auto var1 = test_conformance::GoldenBitsStruct{};
+var1.v() = static_cast<test_conformance::GoldenBits>(1ull);
+
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
 	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
 	conformance_utils::EncodeSuccess(
@@ -208,9 +249,29 @@ var1.v() = std::move(var2);
 		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes, expected_handles);
 }
 
+TEST(Conformance, GoldenByteNullableVectorStructNonNull_V2_Encode) {
+	auto var1 = test_conformance::GoldenNullableByteVectorStruct{};
+auto var2 = std::optional<std::vector<uint8_t>>(4);
+var2.value()[0] = uint8_t(1ull);
+var2.value()[1] = uint8_t(2ull);
+var2.value()[2] = uint8_t(3ull);
+var2.value()[3] = uint8_t(4ull);
+var1.v() = std::move(var2);
+
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes, expected_handles);
+}
+
 TEST(Conformance, GoldenNullableByteVectorStructNull_V2_Encode) {
 	auto var1 = test_conformance::GoldenNullableByteVectorStruct{};
-var1.v() = std::vector<uint8_t>();
+var1.v() = std::optional<std::vector<uint8_t>>();
 
 	auto obj = std::move(var1);
 	const auto expected_bytes = std::vector<uint8_t>{
@@ -414,6 +475,22 @@ ASSERT_STREQ(f1.v(), "abcd");
 	});
 }
 
+TEST(Conformance, GoldenNullableStringStructNonNull_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	conformance_utils::DecodeSuccess<test_conformance::GoldenNullableStringStruct>(
+		::fidl::internal::WireFormatVersion::kV2, bytes, handles, [&](test_conformance::GoldenNullableStringStruct& value) {
+		[[maybe_unused]] auto& f1 = value;
+ASSERT_TRUE(f1.v().has_value());
+ASSERT_STREQ((*f1.v()), "abcd");
+
+	});
+}
+
 TEST(Conformance, GoldenNullableStringStructNull_V2_Decode) {
 	auto bytes = std::vector<uint8_t>{
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -424,6 +501,32 @@ TEST(Conformance, GoldenNullableStringStructNull_V2_Decode) {
 		::fidl::internal::WireFormatVersion::kV2, bytes, handles, [&](test_conformance::GoldenNullableStringStruct& value) {
 		[[maybe_unused]] auto& f1 = value;
 ASSERT_FALSE(f1.v().has_value());
+
+	});
+}
+
+TEST(Conformance, GoldenEnumStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	conformance_utils::DecodeSuccess<test_conformance::GoldenEnumStruct>(
+		::fidl::internal::WireFormatVersion::kV2, bytes, handles, [&](test_conformance::GoldenEnumStruct& value) {
+		[[maybe_unused]] auto& f1 = value;
+ASSERT_EQ(f1.v(), test_conformance::GoldenEnum(1ull));
+
+	});
+}
+
+TEST(Conformance, GoldenBitsStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	conformance_utils::DecodeSuccess<test_conformance::GoldenBitsStruct>(
+		::fidl::internal::WireFormatVersion::kV2, bytes, handles, [&](test_conformance::GoldenBitsStruct& value) {
+		[[maybe_unused]] auto& f1 = value;
+ASSERT_EQ(f1.v(), static_cast<test_conformance::GoldenBits>(1ull));
 
 	});
 }
@@ -534,6 +637,26 @@ ASSERT_EQ(f2[8], uint8_t(1ull));
 ASSERT_EQ(f2[9], uint8_t(2ull));
 ASSERT_EQ(f2[10], uint8_t(3ull));
 ASSERT_EQ(f2[11], uint8_t(4ull));
+
+	});
+}
+
+TEST(Conformance, GoldenByteNullableVectorStructNonNull_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	conformance_utils::DecodeSuccess<test_conformance::GoldenNullableByteVectorStruct>(
+		::fidl::internal::WireFormatVersion::kV2, bytes, handles, [&](test_conformance::GoldenNullableByteVectorStruct& value) {
+		[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v().value();
+ASSERT_EQ(f2.size(), 4);
+ASSERT_EQ(f2[0], uint8_t(1ull));
+ASSERT_EQ(f2[1], uint8_t(2ull));
+ASSERT_EQ(f2[2], uint8_t(3ull));
+ASSERT_EQ(f2[3], uint8_t(4ull));
 
 	});
 }

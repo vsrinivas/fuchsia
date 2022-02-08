@@ -7,6 +7,7 @@
 
 #include <lib/fidl/cpp/coding_traits.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_types.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/wire_types.h>
 #include <lib/stdcompat/optional.h>
@@ -30,11 +31,26 @@ struct CodingTraits<cpp17::optional<std::vector<T>>> {
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, cpp17::optional<std::vector<T>>* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    if (value->has_value()) {
+      fidl::CodingTraits<std::vector<T>>::Encode(encoder, &value->value(), offset,
+                                                 maybe_handle_info);
+      return;
+    }
+    fidl_vector_t* vec = encoder->template GetPtr<fidl_vector_t>(offset);
+    vec->count = 0;
+    vec->data = reinterpret_cast<char*>(FIDL_ALLOC_ABSENT);
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, cpp17::optional<std::vector<T>>* value, size_t offset) {
-    // TODO: decode
+    fidl_vector_t* vec = decoder->template GetPtr<fidl_vector_t>(offset);
+    if (vec->data == nullptr) {
+      ZX_ASSERT(vec->count == 0);
+      value->reset();
+      return;
+    }
+    std::vector<T> unwrapped;
+    fidl::CodingTraits<std::vector<T>>::Decode(decoder, &unwrapped, offset);
+    value->emplace(std::move(unwrapped));
   }
 };
 
@@ -46,11 +62,26 @@ struct CodingTraits<cpp17::optional<std::string>> {
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, cpp17::optional<std::string>* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    // TODO: encode
+    ZX_DEBUG_ASSERT(!maybe_handle_info.has_value());
+    if (value->has_value()) {
+      fidl::CodingTraits<std::string>::Encode(encoder, &value->value(), offset);
+      return;
+    }
+    fidl_string_t* string = encoder->template GetPtr<fidl_string_t>(offset);
+    string->size = 0;
+    string->data = reinterpret_cast<char*>(FIDL_ALLOC_ABSENT);
   }
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, cpp17::optional<std::string>* value, size_t offset) {
-    // TODO: decode
+    fidl_string_t* string = decoder->template GetPtr<fidl_string_t>(offset);
+    if (string->data == nullptr) {
+      ZX_ASSERT(string->size == 0);
+      value->reset();
+      return;
+    }
+    std::string unwrapped;
+    fidl::CodingTraits<std::string>::Decode(decoder, &unwrapped, offset);
+    value->emplace(unwrapped);
   }
 };
 

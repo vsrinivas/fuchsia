@@ -100,6 +100,7 @@ func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue gidlir.Val
 	case string:
 		dereferencedActual := actualExpr
 		if decl.IsNullable() {
+			b.assertTrue(fmt.Sprintf("%s.has_value()", actualExpr))
 			dereferencedActual = fmt.Sprintf("(*%s)", actualExpr)
 		}
 		b.assertStringEquals(dereferencedActual, escapeStr(expectedValue))
