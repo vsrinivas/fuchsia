@@ -30,6 +30,7 @@
 #include <fbl/algorithm.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
+#include <ktl/bit.h>
 #include <ktl/iterator.h>
 #include <ktl/limits.h>
 #include <lk/init.h>
@@ -137,6 +138,17 @@ affine::Ratio hpet_ticks_to_clock_monotonic;  // Non-static so that hpet_init ha
 // TODO(fxb/91701): Make this ktl::atomic when we start to mutate the offset to
 // deal with suspend.
 static uint64_t raw_ticks_to_ticks_offset{0};
+
+// An affine transformation from times sampled from the EarlyTicks timeline to
+// the chosen ticks timeline.  By default, this transformation is set up as:
+//
+//   f(t) = (((t - 0) * 0) / 1) + 0;
+//
+// meaning that it will map all early ticks value `t` to 0, and the inverse
+// transformation will be undefined.  This is consistent with with simply
+// reporting 0 for normalized EarlyTicks values if we cannot (or do not know how
+// to) convert from one timeline to the other.
+static affine::Transform early_ticks_to_ticks{0, 0, {0, 1}};
 
 #define INTERNAL_FREQ 1193182U
 #define INTERNAL_FREQ_3X 3579546U
@@ -601,6 +613,26 @@ static void pc_init_timer(uint level) {
     // to define the zero point on our ticks timeline moving forward.
     platform_set_ticks_to_time_ratio(rdtsc_ticks_to_clock_monotonic);
     raw_ticks_to_ticks_offset = -current_ticks_rdtsc();
+
+    // A note about this casting operation.  There is a technical risk of UB
+    // here, in the case that -raw_ticks_to_ticks_offset is a value too large to
+    // fit into a signed 64 bit integer.  UBSAN builds _might_ technically
+    // assert if the value -raw_ticks_to_ticks_offset is >= 2^63 during this
+    // cast.
+    //
+    // This _should_ never happen, however.  This offset is the two's compliment
+    // of what the TSC read when we decided that the ticks timeline should be
+    // zero.  For -raw_ticks_to_ticks_offset to be >= 2^63, the TSC counter
+    // value itself would have needed to be >= 2^63 in the line above where it
+    // was sampled.  Assuming that the TSC started to count from 0 at cold power
+    // on time, and assuming that the TSC was running extremely quickly (say,
+    // 5GHz), the system would have needed to be powered on for at least ~58.45
+    // years before we hit this mark (and this assumes that the TSC is not reset
+    // during a warm reboot, or that no warm reboots take place over almost 60
+    // years of uptime).  So, for now, we perform the cast and take
+    // the risk, assuming that nothing bad will happen.
+    early_ticks_to_ticks =
+        affine::Transform{static_cast<int64_t>(-raw_ticks_to_ticks_offset), 0, {1, 1}};
     wall_clock = CLOCK_TSC;
   } else {
     if (constant_tsc || invariant_tsc) {
@@ -614,8 +646,29 @@ static void pc_init_timer(uint level) {
       // transformation from ticks to clock monotonic.
       platform_set_ticks_to_time_ratio(hpet_ticks_to_clock_monotonic);
       raw_ticks_to_ticks_offset = 0;
+
+      // Explicitly set the value of the HPET to zero, then make sure it is
+      // started.  Take a correspondence pair between HPET and TSC by observing
+      // TSC after we start the HPET so we can define the transformation between
+      // TSC (the EarlyTicks reference) and HPET.
+      //
+      // Note: we do not bother to bracket the observation of HPET with a TSC
+      // observation before and after.  We are at a point in the boot where we
+      // are running on a single core, and should not be taking exceptions or
+      // interrupts yet.  TL;DR, this observation should be "good enough"
+      // without any need for averaging.
       hpet_set_value(0);
       hpet_enable();
+      const zx_ticks_t tsc_reference = current_ticks_rdtsc();
+
+      // Now set up our transformation from EarlyTicks (using TSC as a
+      // reference) and HPET (the reference for the zx_ticks_get timeline).
+      affine::Ratio rdtsc_ticks_to_hpet_ticks =
+          affine::Ratio::Product(rdtsc_ticks_to_clock_monotonic,
+                                 hpet_ticks_to_clock_monotonic.Inverse(), affine::Ratio::Exact::No);
+      early_ticks_to_ticks = affine::Transform{tsc_reference, 0, rdtsc_ticks_to_hpet_ticks};
+
+      // HPET is now our chosen "ticks" reference.
       wall_clock = CLOCK_HPET;
     } else {
       if (force_wallclock && gBootOptions->x86_wallclock != WallclockType::kPit) {
@@ -633,7 +686,23 @@ static void pc_init_timer(uint level) {
       DEBUG_ASSERT(status == ZX_OK);
       unmask_interrupt(irq);
 
+      // See the HPET code above.  Observe the value of TSC as we figure out the
+      // PIT offset so that we can define a function which maps EarlyTicks to
+      // ticks.
       raw_ticks_to_ticks_offset = -current_ticks_pit();
+      const zx_ticks_t tsc_reference = current_ticks_rdtsc();
+
+      affine::Ratio rdtsc_ticks_to_pit_ticks = affine::Ratio::Product(
+          rdtsc_ticks_to_clock_monotonic, affine::Ratio{1, 1'000'000}, affine::Ratio::Exact::No);
+
+      // Note, see the comment above in the TSC section for why it is considered
+      // to be reasonably safe to perform the static cast from unsigned to
+      // signed here.
+      early_ticks_to_ticks =
+          affine::Transform{tsc_reference, static_cast<int64_t>(-raw_ticks_to_ticks_offset),
+                            rdtsc_ticks_to_pit_ticks};
+
+      // PIT is now our chosen "ticks" reference.
       wall_clock = CLOCK_PIT;
     }
   }
@@ -736,10 +805,7 @@ void platform_shutdown_timer(void) {
 }
 
 zx_ticks_t platform_convert_early_ticks(arch::EarlyTicks sample) {
-  // Early tick timestamps are always raw ticks.  We need to convert back to
-  // ticks by subtracting the raw_ticks to ticks offset.
-  return wall_clock == CLOCK_TSC ? static_cast<zx_ticks_t>(sample.tsc) + raw_ticks_to_ticks_offset
-                                 : 0;
+  return early_ticks_to_ticks.Apply(sample.tsc);
 }
 
 // Currently, usermode can access our source of ticks only if we have chosen TSC
