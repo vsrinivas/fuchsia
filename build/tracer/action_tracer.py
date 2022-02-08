@@ -845,16 +845,6 @@ def main():
 
     # Paths that are ignored
     ignored_prefixes = {
-        ### Git
-        # Allow actions to run `git` commands.
-        # Actions can set certain refs under .git as inputs to trigger on
-        # relevant changes to git. However fully predicting what files will be
-        # accessed by certain git commands used in the build is not viable, it's
-        # not necessarily stable and doesn't make a good contract.
-        os.path.join(src_root, "third_party", "mesa", ".git/"),
-        os.path.join(src_root, "third_party", "glslang", ".git/"),
-        os.path.join(src_root, "third_party", "spirv-tools", ".git/"),
-
         ### C/C++
         # Clang standard libraries, compiler runtime, etc are not strict inputs.
         os.path.join(
