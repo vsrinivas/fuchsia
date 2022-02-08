@@ -52,8 +52,6 @@ rustc_binary("rust_bin") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.test.internal:fuchsia.test.internal-rustc",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
-    "//src/lib/diagnostics/inspect/runtime/rust",
-    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
