@@ -184,6 +184,7 @@ impl UnhandledResolveErrorKindStats {
 #[derive(Default, Debug, PartialEq)]
 struct FailureStats {
     message: u64,
+    no_connections: u64,
     no_records_found: NoRecordsFoundStats,
     io: u64,
     proto: u64,
@@ -195,12 +196,14 @@ impl FailureStats {
     fn increment(&mut self, kind: &ResolveErrorKind) {
         let FailureStats {
             message,
+            no_connections,
             no_records_found,
             io,
             proto,
             timeout,
             unhandled_resolve_error_kind,
         } = self;
+
         match kind {
             ResolveErrorKind::Message(error) => {
                 let _: &str = error;
@@ -210,6 +213,7 @@ impl FailureStats {
                 let _: &String = error;
                 *message += 1
             }
+            ResolveErrorKind::NoConnections => *no_connections += 1,
             ResolveErrorKind::NoRecordsFound {
                 query: _,
                 soa: _,
@@ -968,6 +972,7 @@ fn add_query_stats_inspect(
                 );
                 let FailureStats {
                     message,
+                    no_connections,
                     no_records_found: NoRecordsFoundStats {
                         response_code_counts,
                     },
@@ -980,6 +985,7 @@ fn add_query_stats_inspect(
                 } = failure_stats;
                 let errors = child.create_child("errors");
                 let () = errors.record_uint("Message", *message);
+                let () = errors.record_uint("NoConnections", *no_connections);
                 let () = errors.record_uint("Io", *io);
                 let () = errors.record_uint("Proto", *proto);
                 let () = errors.record_uint("Timeout", *timeout);
@@ -1767,6 +1773,7 @@ mod tests {
                     average_failure_duration_micros: NonZeroUintProperty,
                     errors: {
                         Message: 0u64,
+                        NoConnections: 0u64,
                         NoRecordsFoundResponseCodeCounts: {
                             NoError: 1u64,
                         },
@@ -1841,6 +1848,7 @@ mod tests {
                 ).unwrap() / 2,
                 errors: {
                     Message: 0u64,
+                    NoConnections: 0u64,
                     NoRecordsFoundResponseCodeCounts: {},
                     Io: 0u64,
                     Proto: 0u64,
@@ -1890,6 +1898,7 @@ mod tests {
                     ).unwrap(),
                     errors: {
                         Message: 0u64,
+                        NoConnections: 0u64,
                         NoRecordsFoundResponseCodeCounts: {},
                         Io: 0u64,
                         Proto: 0u64,
@@ -1949,6 +1958,7 @@ mod tests {
                     ).unwrap(),
                     errors: {
                         Message: 0u64,
+                        NoConnections: 0u64,
                         NoRecordsFoundResponseCodeCounts: {
                           NXDomain: FAILED_QUERY_COUNT,
                           Refused: FAILED_QUERY_COUNT,
@@ -2012,6 +2022,7 @@ mod tests {
                     ).unwrap(),
                     errors: {
                         Message: 0u64,
+                        NoConnections: 0u64,
                         NoRecordsFoundResponseCodeCounts: {},
                         Io: 0u64,
                         Proto: 0u64,
@@ -2065,6 +2076,7 @@ mod tests {
                 average_success_duration_micros: u64::try_from(DELAY.into_micros()).unwrap(),
                 errors: {
                     Message: 0u64,
+                    NoConnections: 0u64,
                     NoRecordsFoundResponseCodeCounts: {},
                     Io: 0u64,
                     Proto: 0u64,
@@ -2251,9 +2263,23 @@ mod tests {
                 },
             ),
             (
+                ResolveErrorKind::NoConnections,
+                FailureStats {
+                    message: 2,
+                    no_connections: 1,
+                    no_records_found: NoRecordsFoundStats {
+                        response_code_counts: [(ResponseCode::Refused.into(), 1)].into(),
+                    },
+                    io: 1,
+                    proto: 1,
+                    ..Default::default()
+                },
+            ),
+            (
                 ResolveErrorKind::Timeout,
                 FailureStats {
                     message: 2,
+                    no_connections: 1,
                     no_records_found: NoRecordsFoundStats {
                         response_code_counts: [(ResponseCode::Refused.into(), 1)].into(),
                     },
@@ -2273,6 +2299,7 @@ mod tests {
                 },
                 FailureStats {
                     message: 2,
+                    no_connections: 1,
                     no_records_found: NoRecordsFoundStats {
                         response_code_counts: [
                             (ResponseCode::NXDomain.into(), 1),
@@ -2296,6 +2323,7 @@ mod tests {
                 },
                 FailureStats {
                     message: 2,
+                    no_connections: 1,
                     no_records_found: NoRecordsFoundStats {
                         response_code_counts: [
                             (ResponseCode::NXDomain.into(), 2),
