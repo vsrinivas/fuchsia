@@ -31,6 +31,11 @@ pub unsafe trait OtCastable: Sized {
         unsafe { &*self.as_ot_ptr() }
     }
 
+    /// Returns a mutable reference to the original OpenThread type [`Self::OtType`].
+    fn as_ot_mut(&mut self) -> &mut Self::OtType {
+        unsafe { &mut *self.as_ot_mut_ptr() }
+    }
+
     /// Returns a pointer to the underlying [`Self::OtType`] instance.
     fn as_ot_ptr(&self) -> *const Self::OtType;
 

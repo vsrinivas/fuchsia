@@ -100,6 +100,9 @@ pub use state::*;
 mod radio;
 pub use radio::*;
 
+mod udp;
+pub use udp::*;
+
 pub mod message;
 pub use message::{Message, MessageBuffer};
 
@@ -133,6 +136,7 @@ pub trait InstanceInterface:
     + MessageBuffer
     + Radio
     + Joiner
+    + Udp
 {
 }
 

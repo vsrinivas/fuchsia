@@ -6,6 +6,7 @@ use crate::prelude_internal::*;
 
 use core::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
+use std::net::SocketAddrV6;
 
 /// IPv6 Address Type. Functional equivalent of [`otsys::otIp6Address`](crate::otsys::otIp6Address).
 ///
@@ -429,5 +430,110 @@ impl Ip6Prefix {
     /// Returns the prefix length.
     pub fn prefix_len(&self) -> u8 {
         self.0.mLength
+    }
+}
+
+/// Functional equivalent of [`otsys::otSockAddr`](crate::otsys::otSockAddr).
+#[derive(Default, Clone, Copy)]
+#[repr(transparent)]
+pub struct SockAddr(pub otSockAddr);
+
+impl_ot_castable!(SockAddr, otSockAddr);
+
+impl PartialEq for SockAddr {
+    fn eq(&self, other: &Self) -> bool {
+        self.addr() == other.addr() && self.port() == other.port()
+    }
+}
+
+impl Eq for SockAddr {}
+
+impl Debug for SockAddr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[")?;
+        self.addr().fmt(f)?;
+        write!(f, "]:{}", self.port())
+    }
+}
+
+impl std::fmt::Display for SockAddr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
+impl SockAddr {
+    /// Creates a new `ot::SockAddr` from an address and port.
+    pub fn new(addr: Ip6Address, port: u16) -> Self {
+        SockAddr(otSockAddr { mAddress: addr.into_ot(), mPort: port })
+    }
+
+    /// Returns the IPv6 address.
+    pub fn addr(&self) -> Ip6Address {
+        Ip6Address::from_ot(self.0.mAddress)
+    }
+
+    /// Returns the port number.
+    pub fn port(&self) -> u16 {
+        self.0.mPort
+    }
+}
+
+impl From<(Ip6Address, u16)> for SockAddr {
+    fn from(x: (Ip6Address, u16)) -> Self {
+        Self::new(x.0, x.1)
+    }
+}
+
+impl From<Ip6Address> for SockAddr {
+    fn from(x: Ip6Address) -> Self {
+        Self::new(x, 0)
+    }
+}
+
+impl From<std::net::SocketAddrV6> for SockAddr {
+    fn from(x: std::net::SocketAddrV6) -> Self {
+        SockAddr::new(x.ip().clone(), x.port())
+    }
+}
+
+impl From<SockAddr> for std::net::SocketAddrV6 {
+    fn from(x: SockAddr) -> Self {
+        SocketAddrV6::new(x.addr(), x.port(), 0, 0)
+    }
+}
+
+impl From<SockAddr> for std::net::SocketAddr {
+    fn from(x: SockAddr) -> Self {
+        std::net::SocketAddr::V6(x.into())
+    }
+}
+
+/// This enumeration defines the OpenThread network interface identifiers.
+///
+/// Functional equivalent of [`otsys::otNetifIdentifier`](crate::otsys::otNetifIdentifier).
+#[derive(Debug, Copy, Clone, Eq, Ord, PartialOrd, PartialEq, num_derive::FromPrimitive)]
+#[allow(missing_docs)]
+pub enum NetifIdentifier {
+    /// Functional equivalent of [`otsys::otNetifIdentifier_OT_NETIF_BACKBONE`](crate::otsys::otNetifIdentifier_OT_NETIF_BACKBONE).
+    Backbone = otNetifIdentifier_OT_NETIF_BACKBONE as isize,
+
+    /// Functional equivalent of [`otsys::otNetifIdentifier_OT_NETIF_THREAD`](crate::otsys::otNetifIdentifier_OT_NETIF_THREAD).
+    Thread = otNetifIdentifier_OT_NETIF_THREAD as isize,
+
+    /// Functional equivalent of [`otsys::otNetifIdentifier_OT_NETIF_UNSPECIFIED`](crate::otsys::otNetifIdentifier_OT_NETIF_UNSPECIFIED).
+    Unspecified = otNetifIdentifier_OT_NETIF_UNSPECIFIED as isize,
+}
+
+impl From<otNetifIdentifier> for NetifIdentifier {
+    fn from(x: otNetifIdentifier) -> Self {
+        use num::FromPrimitive;
+        Self::from_u32(x).expect(format!("Unknown otNetifIdentifier value: {}", x).as_str())
+    }
+}
+
+impl From<NetifIdentifier> for otNetifIdentifier {
+    fn from(x: NetifIdentifier) -> Self {
+        x as otNetifIdentifier
     }
 }

@@ -48,6 +48,7 @@ pub mod prelude {
     pub use ot::State as _;
     pub use ot::Tasklets as _;
     pub use ot::Thread as _;
+    pub use ot::Udp as _;
 
     pub use ot::TaskletsStreamExt as _;
     pub use std::convert::TryFrom as _;

@@ -68,6 +68,107 @@ impl From<Priority> for u8 {
     }
 }
 
+/// Message Info.
+/// Functional equivalent of `otsys::otMessageInfo`.
+#[derive(Clone)]
+#[repr(transparent)]
+pub struct Info(pub otMessageInfo);
+
+impl_ot_castable!(Info, otMessageInfo);
+
+impl AsRef<Info> for Info {
+    fn as_ref(&self) -> &Info {
+        self
+    }
+}
+
+impl Info {
+    /// Creates a new message info instance.
+    pub fn new(local: SockAddr, remote: SockAddr) -> Info {
+        Info(otMessageInfo {
+            mSockAddr: local.addr().into_ot(),
+            mPeerAddr: remote.addr().into_ot(),
+            mSockPort: local.port(),
+            mPeerPort: remote.port(),
+            ..otMessageInfo::default()
+        })
+    }
+
+    /// The ECN status of the packet, represented as in the IPv6 header.
+    pub fn ecn(&self) -> u8 {
+        self.0.mEcn()
+    }
+
+    /// Sets the the ECN status of the packet.
+    pub fn set_ecn(&mut self, ecn: u8) {
+        self.0.set_mEcn(ecn)
+    }
+
+    /// Gets the IPv6 Hop Limit value.
+    pub fn hop_limit(&self) -> u8 {
+        self.0.mHopLimit
+    }
+
+    /// Sets the IPv6 Hop Limit value.
+    pub fn set_hop_limit(&mut self, hop_limit: u8) {
+        self.0.mHopLimit = hop_limit
+    }
+
+    /// TRUE if packets sent/received via host interface, FALSE otherwise.
+    pub fn is_host_interface(&self) -> bool {
+        self.0.mIsHostInterface()
+    }
+
+    /// Set to TRUE if packets sent/received via host interface, FALSE otherwise.
+    pub fn set_host_interface(&mut self, host_interface: bool) {
+        self.0.set_mIsHostInterface(host_interface)
+    }
+
+    /// TRUE if allowing looping back multicast, FALSE otherwise.
+    pub fn multicast_loop(&self) -> bool {
+        self.0.mMulticastLoop()
+    }
+
+    /// Set to TRUE to allow looping back multicast, FALSE otherwise.
+    pub fn set_multicast_loop(&mut self, multicast_loop: bool) {
+        self.0.set_mMulticastLoop(multicast_loop)
+    }
+
+    /// TRUE if allowing IPv6 Hop Limit 0 in mHopLimit, FALSE otherwise.
+    pub fn allow_zero_hop_limit(&self) -> bool {
+        self.0.mAllowZeroHopLimit()
+    }
+
+    /// Set to TRUE to allow IPv6 Hop Limit 0 in mHopLimit, FALSE otherwise.
+    pub fn set_allow_zero_hop_limit(&mut self, allow_zero_hop_limit: bool) {
+        self.0.set_mAllowZeroHopLimit(allow_zero_hop_limit)
+    }
+
+    /// Local address and port.
+    pub fn sock_name(&self) -> SockAddr {
+        SockAddr::new(Ip6Address::from_ot(self.0.mSockAddr), self.0.mSockPort)
+    }
+
+    /// Remote address and port.
+    pub fn peer_name(&self) -> SockAddr {
+        SockAddr::new(Ip6Address::from_ot(self.0.mPeerAddr), self.0.mPeerPort)
+    }
+}
+
+impl std::fmt::Debug for Info {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("otMessageInfo")
+            .field("sock_name", &self.sock_name())
+            .field("peer_name", &self.peer_name())
+            .field("ecn", &self.ecn())
+            .field("hop_limit", &self.hop_limit())
+            .field("allow_zero_hop_limit", &self.allow_zero_hop_limit())
+            .field("multicast_loop", &self.multicast_loop())
+            .field("is_host_interface", &self.is_host_interface())
+            .finish()
+    }
+}
+
 /// Message Settings.
 /// Functional equivalent of `otsys::otMessageSettings`.
 #[derive(Debug, Clone)]
@@ -178,6 +279,25 @@ impl<'a> Message<'a> {
             ))
         }
         .ok_or(ot::MalformedOrNoBufs)
+    }
+}
+
+impl<'a> Message<'a> {
+    /// Functional equivalent of [`otsys::otIp6NewMessage`](crate::otsys::otIp6NewMessage).
+    pub fn udp_new<T: ot::Boxable<OtType = otInstance>>(
+        instance: &'a T,
+        settings: Option<&Settings>,
+    ) -> Result<ot::Box<Message<'a>>, ot::NoBufs> {
+        unsafe {
+            // This is safe because we own the `otMessage*` resulting from
+            // `otUdpNewMessage`. Safety is also dependent on the correctness
+            //  of the implementation of `otUdpNewMessage`.
+            ot::Box::from_ot_ptr(otUdpNewMessage(
+                instance.as_ot_ptr(),
+                settings.map(|x| x.as_ref().as_ot_ptr()).unwrap_or(null()),
+            ))
+        }
+        .ok_or(ot::NoBufs)
     }
 }
 

@@ -58,3 +58,6 @@ pub type ChannelIndex = u8;
 ///
 /// Same type as [`Ip6NetworkPrefix`]. Functional equivalent of [`otsys::otMeshLocalPrefix`](crate::otsys::otMeshLocalPrefix).
 pub type MeshLocalPrefix = Ip6NetworkPrefix;
+
+/// Network Interface Identifier.
+pub type NetifIndex = u32;

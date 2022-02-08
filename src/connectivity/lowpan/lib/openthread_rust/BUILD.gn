@@ -73,6 +73,7 @@ rustc_library("openthread") {
     "src/ot/types/route_preference.rs",
     "src/ot/types/scan_results.rs",
     "src/ot/types/security_policy.rs",
+    "src/ot/udp.rs",
     "src/otfuchsia.rs",
   ]
 
