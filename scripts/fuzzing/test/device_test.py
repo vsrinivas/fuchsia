@@ -105,7 +105,7 @@ class DeviceTest(TestCaseWithFactory):
         self.device.ssh(cmd).check_call()
         self.assertSsh(*cmd)
 
-    def test_has_cs_info(self):
+    def test_v1_component_is_running(self):
         url1 = 'fuchsia-pkg://fuchsia.com/http#meta/http.cmx'
         url2 = 'fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target1.cmx'
         url3 = 'fuchsia-pkg://fuchsia.com/fake-package1#meta/fake-target2.cmx'
@@ -117,22 +117,22 @@ class DeviceTest(TestCaseWithFactory):
         self.set_running(url4)
 
         # Can check various URLs
-        self.assertTrue(self.device.has_cs_info(url1))
-        self.assertTrue(self.device.has_cs_info(url2))
-        self.assertTrue(self.device.has_cs_info(url3))
-        self.assertTrue(self.device.has_cs_info(url4))
+        self.assertTrue(self.device.v1_component_is_running(url1))
+        self.assertTrue(self.device.v1_component_is_running(url2))
+        self.assertTrue(self.device.v1_component_is_running(url3))
+        self.assertTrue(self.device.v1_component_is_running(url4))
 
         # URLs are cached until refresh.
         self.host.sleep(10)
-        self.assertTrue(self.device.has_cs_info(url1))
-        self.assertTrue(self.device.has_cs_info(url2))
-        self.assertTrue(self.device.has_cs_info(url3))
-        self.assertTrue(self.device.has_cs_info(url4))
+        self.assertTrue(self.device.v1_component_is_running(url1))
+        self.assertTrue(self.device.v1_component_is_running(url2))
+        self.assertTrue(self.device.v1_component_is_running(url3))
+        self.assertTrue(self.device.v1_component_is_running(url4))
 
-        self.assertTrue(self.device.has_cs_info(url1, refresh=True))
-        self.assertFalse(self.device.has_cs_info(url2))
-        self.assertFalse(self.device.has_cs_info(url3))
-        self.assertTrue(self.device.has_cs_info(url4))
+        self.assertTrue(self.device.v1_component_is_running(url1, refresh=True))
+        self.assertFalse(self.device.v1_component_is_running(url2))
+        self.assertFalse(self.device.v1_component_is_running(url3))
+        self.assertTrue(self.device.v1_component_is_running(url4))
 
     def test_isfile(self):
         some_file = 'path-to-some-file'

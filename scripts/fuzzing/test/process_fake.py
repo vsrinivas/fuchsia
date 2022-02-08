@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import json
 import subprocess
 from io import StringIO
 
@@ -20,6 +21,12 @@ class FakeProcess(Process):
     def __init__(self, host, args, **kwargs):
         self._host = host
         self._popen = FakeProcess.Popen(host)
+
+        # Special case to emulate JSON output for `ffx` commands. We can't just
+        # do type-based detection because of the empty-output case.
+        if ('--machine', 'json') in zip(args[:-1], args[1:]):
+            self._popen._output_json = True
+
         super(FakeProcess, self).__init__(args)
 
     @property
@@ -75,6 +82,7 @@ class FakeProcess(Process):
             self._returncode = None
 
             self._outputs = []
+            self._output_json = False
             self._stdin = StringIO()
             self._stdout = StringIO()
             self._stderr = StringIO()
@@ -126,14 +134,20 @@ class FakeProcess(Process):
             if self.returncode is None and self._completion <= now:
                 self._stdout.truncate(0)
                 self._stdout.seek(0)
+                current_outputs = []
                 for output, returncode, start, end in self._outputs:
                     if now < start:
                         continue
                     if end and end <= now:
                         continue
-                    self._stdout.write(output)
-                    self._stdout.write('\n')
                     self._returncode = returncode
+                    current_outputs.append(output)
+
+                if self._output_json:
+                    self._stdout.write(json.dumps(current_outputs))
+                else:
+                    self._stdout.write('\n'.join(current_outputs))
+                self._stdout.write('\n')
                 self._stdout.flush()
                 # If no return code was explicitly specified for this time
                 # period, fall back to the `succeeds` setting

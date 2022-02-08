@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import json
 import os
 import sys
 import unittest
@@ -137,6 +138,7 @@ class TestCaseWithFactory(TestCaseWithIO):
             end=None,
             returncode=None,
             reset=True,
+            raw=False,
             ssh=False):
         """Sets what will be returned from the stdout and return code of a fake
         process.
@@ -144,13 +146,16 @@ class TestCaseWithFactory(TestCaseWithIO):
         Providing a start and/or end will schedule the output to be added and/or
         removed, respectively, at a later time; see FakeProcess.schedule.
         Setting reset to True will replace any existing output for the command.
-        Setting ssh to true will automatically add the necessary SSH arguments.
+        Setting ssh to True will automatically add the necessary SSH arguments.
+        If raw is True, the output will be passed as-is (useful for processes
+        that output JSON).
         """
         process = self.get_process(args, ssh=ssh)
         if reset:
             process.clear()
-        process.schedule(
-            '\n'.join(outputs), start=start, end=end, returncode=returncode)
+        if not raw:
+            outputs = '\n'.join(outputs)
+        process.schedule(outputs, start=start, end=end, returncode=returncode)
 
     def set_running(self, url, refresh=True, duration=None):
         """Marks a packaged executable as running on device.
@@ -159,12 +164,15 @@ class TestCaseWithFactory(TestCaseWithIO):
         If a duration is provided, the component will stop running
         after the given duration.
         """
-        cmd = ['/fuchsia_dir/.jiri_root/bin/fx ffx component show .']
-        output = 'URL: {}'.format(url)
+        cmd = [
+            '/fuchsia_dir/.jiri_root/bin/fx', 'ffx', '--machine', 'json',
+            'component', 'show', '/core/appmgr/sys'
+        ]
+        output = {"url": url, "execution": {"elf_runtime": {"job_id": 123}}}
         end = None if not duration else self.host.elapsed + duration
-        self.set_outputs(cmd, [output], end=end, reset=False)
+        self.set_outputs(cmd, output, end=end, reset=False, raw=True)
         if refresh:
-            self.device.has_cs_info(url, refresh)
+            self.device.v1_component_is_running(url, refresh)
 
     def touch_on_device(
             self, pathname, start=None, end=None, reset=False, size=1000):

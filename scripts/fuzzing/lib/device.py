@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import json
 import re
 import subprocess
 import time
@@ -166,17 +167,17 @@ class Device(object):
 
         return process
 
-    def has_cs_info(self, url, refresh=False):
-        """Returns whether a component given by a URL is running.
+    def v1_component_is_running(self, url, refresh=False):
+        """Returns whether a v1 component given by a URL is running.
 
            Relative to the duration of most "fx fuzz" commands, the SSH
            invocation to get component status is fairly expensive. Most
-           prcoesses won't meaningfully change during or command (or will only
+           processes won't meaningfully change during our command (or will only
            change as a result of it). Thus, it makes sense to generally cache
-           the `cs info` results. This can lead to small degree of inaccuracy, e.g.
+           the results. This can lead to small degree of inaccuracy, e.g.
            "fx fuzz check" reporting a fuzzer as "RUNNING" when it stops
            between the command invocation and the display of results. This is
-           unlikely (and inconseuqential) enough in normal operation to be
+           unlikely (and inconsequential) enough in normal operation to be
            deemed acceptable.
 
            If an accurate status is needed, e.g. as part of a long-lived command
@@ -185,21 +186,22 @@ class Device(object):
         """
         if not self.reachable:
             return False
-        if self._urls == None or refresh:
-            self._urls = []
+        if self._urls is None or refresh:
+            # All v1 components will run underneath appmgr, so for performance
+            # reasons we scope our enumeration to that moniker prefix.
+            #
+            # We could also pass the explicit URL, but that takes just about the
+            # same amount of time, and in cases where we are listing multiple
+            # fuzzers the list-all-and-cache method is thus more efficient.
             cmd = [
                 self.buildenv.abspath(
                     self.buildenv.fuchsia_dir, '.jiri_root/bin/fx'), 'ffx',
-                'component', 'show', '.'
+                '--machine', 'json', 'component', 'show', '/core/appmgr/sys'
             ]
-            out = self.host.create_process(cmd).check_output().strip()
-
-            pat = re.compile(r'^URL: (?P<url>.*)')
-            for line in str(out).split('\n'):
-                match = pat.match(line)
-                if not match:
-                    continue
-                self._urls.append(match.group('url'))
+            out = self.host.create_process(cmd).check_output()
+            # Components that are not running can be either absent or have null
+            # execution info
+            self._urls = [c["url"] for c in json.loads(out) if c["execution"]]
         return url in self._urls
 
     def isfile(self, pathname):

@@ -319,9 +319,10 @@ class Fuzzer(object):
     def is_running(self, refresh=False):
         """Checks the device and returns whether the fuzzer is running.
 
-           See the note about "refresh" on Device.has_cs_info().
+           See the note about "refresh" on Device.v1_component_is_running().
         """
-        return self.device.has_cs_info(self.executable_url, refresh=refresh)
+        return self.device.v1_component_is_running(
+            self.executable_url, refresh=refresh)
 
     def require_stopped(self):
         """Raise an exception if the fuzzer is running."""
