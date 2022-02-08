@@ -21,13 +21,16 @@ template("generate_chromium_targets") {
   prebuilt_archive_root_path = "//prebuilt/third_party"
   build_output_gen_base_path = "/gen"
 
-  # This target is provided for use by the //src:src target. Dependencies on
-  # Chromium-supplied packages should refer explicitly to the desired package.
+  # This target is provided for use by //src:src* targets. Dependencies on
+  # Chromium-supplied packages should reference specific package(s).
   group(target_name) {
+    visibility = [ "//src:*" ]
+
     public_deps = [
       ":web_engine",
       ":web_runner",
     ]
+
     # TODO(fxbug.dev/81925): Uncomment once this will not fail without
     # `-fetch-optional=chrome-browser`.
     # if (target_cpu == "x64") {
@@ -239,13 +242,18 @@ template("generate_chromium_targets") {
       testonly = true
     }
 
+    # This target is provided for use by //src:test* targets. Dependencies on
+    # Chromium tests should reference specific target(s).
     group("tests") {
       testonly = true
+
+      visibility = [ "//src:*" ]
 
       deps = [
         ":chromium_cast_runner_tests",
         ":chromium_common_tests",
         ":chromium_web_engine_tests",
+        ":web_engine_shell",
         "web_runner_tests:tests",
         "//src/fonts:downstream_test_deps",
       ]
