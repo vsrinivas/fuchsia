@@ -11,6 +11,25 @@ import (
 	"testing"
 )
 
+func TestIsExample(t *testing.T) {
+	build, _ := newMockBuild()
+	f, err := build.Fuzzer("foo/bar")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+	if f.IsExample() {
+		t.Fatalf("%s marked as example but shouldn't be", f.Name)
+	}
+
+	f, err = build.Fuzzer("example-fuzzers/noop_fuzzer")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+	if !f.IsExample() {
+		t.Fatalf("%s not marked as example but should be", f.Name)
+	}
+}
+
 func TestAbsPath(t *testing.T) {
 	build, _ := newMockBuild()
 	f, err := build.Fuzzer("foo/bar")

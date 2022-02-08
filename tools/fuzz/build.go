@@ -272,12 +272,16 @@ func (b *BaseBuild) LoadFuzzers() error {
 	return nil
 }
 
-// ListFuzzers lists the names of fuzzers present in the build
-// TODO(fxbug.dev/45108): handle variant stripping
+// ListFuzzers lists the names of fuzzers present in the build, excluding any
+// that we don't want ClusterFuzz to actually pick up. We can't just omit the
+// example fuzzers from the build entirely because they are used in integration
+// testing.
 func (b *BaseBuild) ListFuzzers() []string {
 	var names []string
-	for k := range b.Fuzzers {
-		names = append(names, k)
+	for _, fuzzer := range b.Fuzzers {
+		if !fuzzer.IsExample() {
+			names = append(names, fuzzer.Name)
+		}
 	}
 	return names
 }

@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"reflect"
 	"testing"
 )
 
@@ -111,6 +112,34 @@ func TestLoadFuzzers(t *testing.T) {
 	}
 	if _, err := build.Fuzzer("foo/baz-fuzzer"); err != nil {
 		t.Fatalf("missing expected fuzzer")
+	}
+}
+
+func TestListFuzzers(t *testing.T) {
+	build := newBaseBuild()
+
+	data := `[
+	{"label": "//src/foo:bar", "package": "foo", "package_url": "fuchsia-pkg://fuchsia.com/foo"},
+	{"label": "//src/foo:bar", "fuzzer": "bar-fuzzer", "manifest": "bar-fuzzer.cmx"},
+	{"label": "//src/example-fuzzers:baz", "package": "example-fuzzers",
+		"package_url": "fuchsia-pkg://fuchsia.com/example-fuzzers"},
+	{"label": "//src/example-fuzzers:baz", "fuzzer": "baz-fuzzer", "manifest": "baz-fuzzer.cmx"}
+	]`
+
+	filename := createTempfileWithContents(t, data, "json")
+	defer os.Remove(filename)
+
+	build.Paths["fuzzers.json"] = filename
+
+	if err := build.LoadFuzzers(); err != nil {
+		t.Fatalf("error loading fuzzers: %s", err)
+	}
+
+	fuzzers := build.ListFuzzers()
+
+	// Example fuzzer should be excluded
+	if !reflect.DeepEqual(fuzzers, []string{"foo/bar-fuzzer"}) {
+		t.Fatalf("incorrect fuzzer list: %v", fuzzers)
 	}
 }
 

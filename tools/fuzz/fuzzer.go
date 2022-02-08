@@ -52,6 +52,12 @@ func NewFuzzer(build Build, pkg, fuzzer string) *Fuzzer {
 	}
 }
 
+func (f *Fuzzer) IsExample() bool {
+	// Temporarily allow specific examples through for testing ClusterFuzz behavior in production
+	return f.pkg == "example-fuzzers" &&
+		!(f.cmx == "out_of_memory_fuzzer.cmx" || f.cmx == "toy_example_arbitrary.cmx")
+}
+
 // Map paths as referenced by ClusterFuzz to internally-used paths as seen by
 // libFuzzer, SFTP, etc.
 func translatePath(relpath string) string {

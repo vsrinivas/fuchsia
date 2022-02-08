@@ -70,11 +70,13 @@ func TestEndToEnd(t *testing.T) {
 		t.Fatalf("Post-boot debug log missing expected content:\n%s", out)
 	}
 
-	fuzzer := "example-fuzzers/crash_fuzzer"
+	fuzzer := "example-fuzzers/out_of_memory_fuzzer"
 	out = runCommand(t, "list_fuzzers", "-handle", handle)
 	if !strings.Contains(out, fuzzer) {
 		t.Fatalf("%q fuzzer missing from output:\n%s", fuzzer, out)
 	}
+
+	fuzzer = "example-fuzzers/crash_fuzzer"
 
 	// Make a tempdir for holding local files
 	dir := t.TempDir()
