@@ -23,7 +23,6 @@ declare_args() {
 #   - name;
 #   - sdk_category;
 #   - sources.
-#   - experimental_api_summary
 #   - lenient_api_summary
 #
 #   should_lint (optional, boolean)
@@ -46,28 +45,21 @@ template("fidl_library") {
     experimental_flags = invoker.experimental_flags
   }
 
-  # TODO(fxbug.dev/68952): Setting generate_api_summary to false makes the
-  # generation optional in case of an emergency.  Once the tool is stabilized,
-  # make this unconditional.
-  generate_api_summary = true
-  if (defined(invoker.experimental_api_summary) || generate_api_summary) {
-    generate_api_summary =
-        generate_api_summary || invoker.experimental_api_summary
-    summarization_target_name = "${target_name}_api_summarize"
-    summarization_target_name_json = "${target_name}_api_summarize_json"
+  summarization_target_name = "${target_name}_api_summarize"
+  summarization_target_name_json = "${target_name}_api_summarize_json"
 
-    is_sdk_publishable =
-        defined(invoker.sdk_category) && invoker.sdk_category != "internal" &&
-        invoker.sdk_category != "experimental" &&
-        invoker.sdk_category != "excluded"
-    if (is_sdk_publishable) {
-      verify_api_summary_target_name = "${target_name}_verify_api_summary"
+  is_sdk_publishable =
+      defined(invoker.sdk_category) && invoker.sdk_category != "internal" &&
+      invoker.sdk_category != "experimental" &&
+      invoker.sdk_category != "excluded"
+  if (is_sdk_publishable) {
+    verify_api_summary_target_name = "${target_name}_verify_api_summary"
 
-      # A kill switch for API summarization
-      lenient_api_summary = false
-      if (defined(invoker.lenient_api_summary)) {
-        lenient_api_summary = invoker.lenient_api_summary
-      }
+    # A kill switch for API summarization. Set to true to permit compilations
+    # that have summary errors.
+    lenient_api_summary = false
+    if (defined(invoker.lenient_api_summary)) {
+      lenient_api_summary = invoker.lenient_api_summary
     }
   }
 
@@ -260,79 +252,77 @@ template("fidl_library") {
     }
   }
 
-  if (generate_api_summary) {
-    # Generates the FIDL API summary files based on the FIDL IR generated
-    # by fidlc.
-    fidl_api_summarize_tool = "//tools/fidl/fidl_api_summarize"
-    summary_file = "${target_gen_dir}/${target_name}.api_summary"
-    compiled_action(summarization_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
+  # Generates the FIDL API summary files based on the FIDL IR generated
+  # by fidlc.
+  fidl_api_summarize_tool = "//tools/fidl/fidl_api_summarize"
+  summary_file = "${target_gen_dir}/${target_name}.api_summary"
+  compiled_action(summarization_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
 
-      visibility = [ ":*" ]
+    visibility = [ ":*" ]
 
-      tool = fidl_api_summarize_tool
-      args = [
-        "--fidl-ir-file",
-        rebase_path(json_representation, root_build_dir),
-        "--output-file",
-        rebase_path(summary_file, root_build_dir),
+    tool = fidl_api_summarize_tool
+    args = [
+      "--fidl-ir-file",
+      rebase_path(json_representation, root_build_dir),
+      "--output-file",
+      rebase_path(summary_file, root_build_dir),
+    ]
+
+    inputs = [ json_representation ]
+
+    outputs = [ summary_file ]
+
+    deps = [ ":$compilation_target_name" ]
+  }
+
+  # JSON summary file
+  summary_file_json = "${summary_file}.json"
+  compiled_action(summarization_target_name_json) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    visibility = [ ":*" ]
+
+    tool = fidl_api_summarize_tool
+    args = [
+      "--format",
+      "json",
+      "--fidl-ir-file",
+      rebase_path(json_representation, root_build_dir),
+      "--output-file",
+      rebase_path(summary_file_json, root_build_dir),
+    ]
+
+    inputs = [ json_representation ]
+
+    outputs = [ summary_file_json ]
+
+    metadata = {
+      # Refer to //sdk/cts/plasa/plasa_artifacts.gni for the explanation of
+      # this metadata item.
+      plasa = [
+        {
+          kind = "api_fidl"
+          file = summary_file_json
+          path = rebase_path(summary_file_json, root_build_dir)
+          dest = "fidl/" + rebase_path(summary_file_json, target_gen_dir)
+        },
       ]
-
-      inputs = [ json_representation ]
-
-      outputs = [ summary_file ]
-
-      deps = [ ":$compilation_target_name" ]
     }
 
-    # JSON summary file
-    summary_file_json = "${summary_file}.json"
-    compiled_action(summarization_target_name_json) {
+    deps = [ ":$compilation_target_name" ]
+  }
+
+  # Enforce summary checks only for the FIDL files in the SDK.
+  if (is_sdk_publishable) {
+    golden_file(verify_api_summary_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
-
-      visibility = [ ":*" ]
-
-      tool = fidl_api_summarize_tool
-      args = [
-        "--format",
-        "json",
-        "--fidl-ir-file",
-        rebase_path(json_representation, root_build_dir),
-        "--output-file",
-        rebase_path(summary_file_json, root_build_dir),
-      ]
-
-      inputs = [ json_representation ]
-
-      outputs = [ summary_file_json ]
-
-      metadata = {
-        # Refer to //sdk/cts/plasa/plasa_artifacts.gni for the explanation of
-        # this metadata item.
-        plasa = [
-          {
-            kind = "api_fidl"
-            file = summary_file_json
-            path = rebase_path(summary_file_json, root_build_dir)
-            dest = "fidl/" + rebase_path(summary_file_json, target_gen_dir)
-          },
-        ]
-      }
-
-      deps = [ ":$compilation_target_name" ]
+      warn_on_changes = lenient_api_summary
+      golden = "${library_name}.api_summary"
+      current = "${target_gen_dir}/${library_name}.api_summary"
+      deps = [ ":${summarization_target_name}" ]
     }
-
-    # Enforce summary checks only for the FIDL files in the SDK.
-    if (is_sdk_publishable) {
-      golden_file(verify_api_summary_target_name) {
-        forward_variables_from(invoker, [ "testonly" ])
-        warn_on_changes = lenient_api_summary
-        golden = "${library_name}.api_summary"
-        current = "${target_gen_dir}/${library_name}.api_summary"
-        deps = [ ":${summarization_target_name}" ]
-      }
-    }
-  }  # generate_api_summary
+  }
 
   compiled_action(compilation_target_name) {
     forward_variables_from(invoker,
@@ -393,13 +383,13 @@ template("fidl_library") {
       ":$response_file_target_name",
     ]
 
-    deps = [ ":$verification_target_name" ]
-    if (generate_api_summary) {
-      deps += [ ":${summarization_target_name}" ]
+    deps = [
+      ":$verification_target_name",
+      ":${summarization_target_name}",
+    ]
 
-      if (is_sdk_publishable) {
-        deps += [ ":${verify_api_summary_target_name}" ]
-      }
+    if (is_sdk_publishable) {
+      deps += [ ":${verify_api_summary_target_name}" ]
     }
   }
 
@@ -498,10 +488,7 @@ template("fidl_library") {
 
         api_contents = [
           {
-            source = normalized_file
-            if (generate_api_summary) {
-              source = summary_file
-            }
+            source = summary_file
             dest = "fidl/$library_name"
           },
         ]
@@ -536,13 +523,9 @@ template("fidl_library") {
         ":$api_normalize_target_name",
         ":$compilation_target_name",
         ":$meta_target_name",
+        ":${summarization_target_name_json}",
+        ":${summarization_target_name}",
       ]
-      if (generate_api_summary) {
-        non_sdk_deps += [
-          ":${summarization_target_name_json}",
-          ":${summarization_target_name}",
-        ]
-      }
 
       deps = []
       foreach(dep, fidl_deps) {

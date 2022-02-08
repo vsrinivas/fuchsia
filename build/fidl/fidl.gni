@@ -65,18 +65,11 @@ import("//build/rust/toolchain.gni")
 #   should_lint (optional, boolean)
 #     If set to false, the linting step is skipped.
 #
-#   experimental_api_summary (optional, boolean, default false)
-#     If set, the builder will generate FIDL API summary files.  The generated
-#     file names are "<fidl_library_name>.api_summary" (human-readable), and
-#     "<fidl_library_name>.api_summary.json" (machine-readable).
-#
 #   lenient_api_summary (optional, boolean, default false)
 #     If set, the builder will check the generated FIDL API summary files against
 #     their checked in version.  If unset, or false, no such check will happen.
 #     This switch is used to deploy API summary checks across petals without
 #     breaking global integration. See fxb/68951 for details.
-#
-#     Only has effect if experimental_api_summary==true.
 #
 #   dart_analysis (optional, boolean, default false)
 #     If set to true, dart analysis is run on generated Dart bindings.
@@ -107,9 +100,6 @@ template("fidl") {
   }
   if (defined(invoker.host_llcpp)) {
     not_needed(invoker, [ "host_llcpp" ])
-  }
-  if (defined(invoker.experimental_api_summary)) {
-    not_needed(invoker, [ "experimental_api_summary" ])
   }
   if (defined(invoker.lenient_api_summary)) {
     not_needed(invoker, [ "lenient_api_summary" ])
