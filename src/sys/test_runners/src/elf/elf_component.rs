@@ -612,7 +612,7 @@ mod tests {
         anyhow::Error,
         assert_matches::assert_matches,
         fidl::endpoints::{self, ClientEnd, Proxy},
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        fidl_fuchsia_io::{OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE},
         fidl_fuchsia_test::{Invocation, RunListenerProxy},
         fuchsia_runtime::job_default,
         futures::future::{AbortHandle, Aborted},
@@ -648,7 +648,8 @@ mod tests {
     }
 
     async fn sample_test_component() -> Result<Arc<Component>, Error> {
-        let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
+        let ns =
+            create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)])?;
 
         Ok(Arc::new(
             Component::create_for_tests(BuilderArgs {
