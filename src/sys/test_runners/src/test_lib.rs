@@ -324,7 +324,10 @@ pub async fn test_component(
     binary: &str,
     args: Vec<String>,
 ) -> Result<Arc<Component>, Error> {
-    let ns = create_ns_from_current_ns(vec![("/pkg", io_util::OPEN_RIGHT_READABLE)])?;
+    let ns = create_ns_from_current_ns(vec![(
+        "/pkg",
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
+    )])?;
     let component = Component::create_for_tests(BuilderArgs {
         url: url.to_string(),
         name: name.to_string(),
