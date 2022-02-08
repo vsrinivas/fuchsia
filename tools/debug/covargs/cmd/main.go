@@ -201,12 +201,13 @@ func isInstrumented(filepath string) bool {
 	return false
 }
 
-type malformedProfileError struct {
-	profile string
+type profileReadingError struct {
+	profile    string
+	errMessage string
 }
 
-func (e *malformedProfileError) Error() string {
-	return fmt.Sprintf("cannot read embedded build id from profile %q", e.profile)
+func (e *profileReadingError) Error() string {
+	return fmt.Sprintf("cannot read profile %q: %q", e.profile, e.errMessage)
 }
 
 // Returns the embedded build id read from a profile by invoking llvm-profdata tool.
@@ -221,7 +222,7 @@ func readEmbeddedBuildId(ctx context.Context, tool string, profile string) (stri
 	readCmd := Action{Path: tool, Args: args}
 	output, err := readCmd.Run(ctx)
 	if err != nil {
-		return "", &malformedProfileError{profile}
+		return "", &profileReadingError{profile, string(output)}
 	}
 
 	// Split the lines in llvm-profdata output, which should have the following lines for build ids.
@@ -285,7 +286,7 @@ func mergeEntries(ctx context.Context, summary runtests.DataSinkMap, partitions 
 			switch err.(type) {
 			// TODO(fxbug.dev/83504): Known issue causes occasional malformed profiles on host tests.
 			// Only log the warning for such cases now. Once resolved, return an error.
-			case *malformedProfileError:
+			case *profileReadingError:
 				logger.Warningf(ctx, err.Error())
 			default:
 				return nil, err
