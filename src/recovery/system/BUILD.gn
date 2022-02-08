@@ -28,13 +28,18 @@ group("fdr") {
 
 group("installer") {
   testonly = true
-  deps = [ ":system_recovery_installer" ]
+  deps = [
+    ":system_recovery_installer",
+    ":tests",
+  ]
 }
 
 group("tests") {
   testonly = true
   deps = [
+    ":system_installer_tests",
     ":system_recovery",
+    ":system_recovery_installer",
     ":system_recovery_tests",
     "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
     "//src/sys/pkg/lib/isolated-swd:isolated-swd-components",
@@ -247,7 +252,18 @@ rustc_binary("bin_installer") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
-  sources = [ "installer/main.rs" ]
+  test_deps = [
+    "//src/lib/storage/ramdevice_client",
+    "//src/sys/lib/fidl-fuchsia-pkg-ext",
+    "//src/sys/pkg/lib/fuchsia-merkle",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/testing/blobfs-ramdisk",
+    "//src/sys/pkg/testing/mock-paver",
+  ]
+  sources = [
+    "installer/main.rs",
+    "installer/menu.rs",
+  ]
 }
 
 config_data("config_installer") {
@@ -272,4 +288,26 @@ fuchsia_component("system_installer_bin_test") {
   testonly = true
   deps = [ ":bin_installer_test" ]
   manifest = "meta/system_installer_bin_test.cmx"
+}
+
+fuchsia_test_package("system_installer_tests") {
+  test_components = [ ":system_installer_bin_test" ]
+  deps = [
+    ":recovery_logo",
+    ":roboto_regular",
+    "//src/connectivity/network/dns:component-legacy",
+    "//src/connectivity/network/netstack:component-legacy",
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
+    "//src/sys/pkg/bin/pkgfs:pkgsvr",
+    "//src/sys/pkg/bin/pm:pm_bin",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
+    "//src/sys/pkg/tests/pkg-resolver:empty-repo",
+  ]
+  test_specs = {
+    environments = [ nuc_env ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

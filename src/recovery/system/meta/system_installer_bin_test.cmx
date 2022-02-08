@@ -17,7 +17,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/system_installer_bin_test"
+        "binary": "bin/system_recovery_installer_bin_test"
     },
     "sandbox": {
         "dev": [
