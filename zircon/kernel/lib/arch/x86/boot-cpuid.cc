@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/arch/x86/boot-cpuid.h>
+#include <lib/special-sections/special-sections.h>
 
 namespace arch {
 namespace internal {
@@ -19,15 +20,13 @@ CpuidIo gBootCpuidExt0;
 // These leaves are used from assembly code that needs unmangled names for
 // them, but InitializeBootCpuid handles them like implicit instantiations.
 
-[[gnu::section("BootCpuidData")]] alignas(uint32_t) CpuidIo gBootCpuidFeature;
-[[gnu::section("BootCpuidLeaf"),
-  gnu::used]] alignas(uint32_t) static const uint32_t kBootCpuidFeatureLeaf[2] = {
-    CpuidFeatureFlagsC::kLeaf, 0};
+SPECIAL_SECTION("BootCpuidData", uint32_t) CpuidIo gBootCpuidFeature;
+SPECIAL_SECTION("BootCpuidLeaf", uint32_t)
+static const uint32_t kBootCpuidFeatureLeaf[2] = {CpuidFeatureFlagsC::kLeaf, 0};
 
-[[gnu::section("BootCpuidData")]] alignas(uint32_t) CpuidIo gBootCpuidExtf;
-[[gnu::section("BootCpuidLeaf"),
-  gnu::used]] alignas(uint32_t) static const uint32_t kBootCpuidExtfLeaf[2] = {
-    CpuidExtendedFeatureFlagsB::kLeaf, 0};
+SPECIAL_SECTION("BootCpuidData", uint32_t) CpuidIo gBootCpuidExtf;
+SPECIAL_SECTION("BootCpuidLeaf", uint32_t)
+static const uint32_t kBootCpuidExtfLeaf[2] = {CpuidExtendedFeatureFlagsB::kLeaf, 0};
 
 }  // namespace internal
 }  // namespace arch

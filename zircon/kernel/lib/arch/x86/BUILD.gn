@@ -27,6 +27,7 @@ zx_library("x86") {
       "random.cc",
       "standard-segments.cc",
     ]
+    deps += [ "//zircon/kernel/lib/special-sections" ]
 
     if (toolchain_environment == "kernel.phys32") {
       sources += [ "zbi-boot.cc" ]
