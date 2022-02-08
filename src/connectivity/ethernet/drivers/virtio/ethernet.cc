@@ -385,8 +385,13 @@ void EthernetDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* ne
   const void* data = op.operation()->data_buffer;
   size_t length = op.operation()->data_size;
   // First, validate the packet
-  if (!data || length > kEthFrameSize) {
-    zxlogf(ERROR, "dropping packet; invalid packet");
+  if (!data) {
+    zxlogf(ERROR, "dropping packet: no data");
+    op.Complete(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  if (length > kEthFrameSize) {
+    zxlogf(ERROR, "dropping packet: excess frame length %zu > %zu", length, kEthFrameSize);
     op.Complete(ZX_ERR_INVALID_ARGS);
     return;
   }
