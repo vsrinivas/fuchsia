@@ -73,12 +73,10 @@ class AuthService {
       }
       _accountIds.addAll(ids);
       runInAction(() => _ready.value = true);
-      _accountIds.addAll(ids);
       if (ids.length > 1) {
         log.shout(
             'Multiple (${ids.length}) accounts found, will use the first.');
       }
-      runInAction(() => _ready.value = true);
       // ignore: avoid_catches_without_on_clauses
     } catch (e) {
       log.shout('Failed during deprecated account removal: $e');

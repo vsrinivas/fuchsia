@@ -21,6 +21,10 @@ const simpleBrowserUrl =
     'fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx';
 const terminalUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
 const stashCtlUrl = 'fuchsia-pkg://fuchsia.com/stash_ctl#meta/stash_ctl.cmx';
+const kLoginInspectSelector =
+    'core/session-manager/session\\:session/workstation_session/login_shell';
+const kErmineInspectSelector =
+    'core/session-manager/session\\:session/workstation_session/login_shell/ermine_shell';
 
 // USB HID code for ENTER key.
 // See <https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf>
@@ -41,6 +45,7 @@ class ErmineDriver {
   final Component _component;
 
   FlutterDriver? _driver;
+  FlutterDriver? _login;
   final FlutterDriverConnector _connector;
 
   /// Constructor.
@@ -50,6 +55,9 @@ class ErmineDriver {
 
   /// The instance of [FlutterDriver] that is connected to Ermine flutter app.
   FlutterDriver get driver => _driver!;
+
+  /// The instance of [FlutterDriver] that is connected to Login flutter app.
+  FlutterDriver get login => _login!;
 
   /// The instance of [Component] that is connected to the DUT.
   Component get component => _component;
@@ -70,21 +78,17 @@ class ErmineDriver {
     await _connector.initialize();
     print('Flutter driver connector initialized');
 
-    // Now connect to ermine.
-    _driver = await _connector.driverForIsolateBySelector('ermine.cm',
-        'core/session-manager/session\\:session/workstation_session/login_shell/ermine_shell');
-    if (_driver == null) {
-      fail('Unable to connect to ermine.');
+    // Connect to login shell's flutter driver.
+    _login = await connectToFlutterDriver('login', kLoginInspectSelector,
+        (snapshot) => snapshot['ready'] == true);
+    if (_login == null) {
+      fail('Unable to connect to login shell.');
     }
+    print('Connected to login shell');
+
+    // Now connect to ermine.
+    _driver = await authenticate();
     print('Driver is connected to Ermine');
-
-    // Wait for shell to draw first frame.
-    await driver.waitUntilFirstFrameRasterized();
-    print('The first frame has been rasterized');
-
-    // Wait until rendering stabilizes and animations settle.
-    await driver.waitUntilNoTransientCallbacks();
-    print('No further transient callbacks. ErmineDriver is ready.');
   }
 
   /// Closes [FlutterDriverConnector] and performs cleanup.
@@ -356,12 +360,19 @@ class ErmineDriver {
     });
   }
 
-  Future<Map<String, dynamic>> inspectSnapshot(String componentSelector,
-      {Duration timeout = waitForTimeout}) {
+  Future<Map<String, dynamic>> inspectSnapshot(
+    String componentSelector, {
+    Duration timeout = waitForTimeout,
+    bool predicate(Map<String, dynamic> snapshot)?,
+  }) {
     return waitFor(() async {
       final snapshot = await Inspect(sl4f).snapshotRoot(componentSelector);
+      // Supply a default predicate that simply returns true.
+      predicate ??= (_) => true;
       // ignore: unnecessary_null_comparison
-      return snapshot == null || snapshot.isEmpty ? null : snapshot;
+      return snapshot == null || snapshot.isEmpty || !predicate!(snapshot)
+          ? null
+          : snapshot;
     }, timeout: timeout);
   }
 
@@ -529,6 +540,141 @@ class ErmineDriver {
     // We ran out of time.
     throw TimeoutException('waitFor timeout expired', timeout);
   }
+
+  /// Connects to [FlutterDriver] for isolate [name] with [selector];
+  Future<FlutterDriver> connectToFlutterDriver(String name, String selector,
+      [bool predicate(Map<String, dynamic> snapshot)?]) async {
+    // Connect to Login flutter app.
+    print('Connecting to $name flutter isolate');
+    await inspectSnapshot(selector, predicate: predicate);
+    final driver = await _connector.driverForIsolateBySelector(name, selector);
+
+    // Wait for shell to draw first frame.
+    await driver.waitUntilFirstFrameRasterized();
+    print('The first frame has been rasterized');
+
+    // Wait until rendering stabilizes and animations settle.
+    await driver.waitUntilNoTransientCallbacks();
+    print('No further transient callbacks. $name is ready.');
+    return driver;
+  }
+
+  /// If the workstation build is enabled for authentication through the login
+  /// shell, go through the create password or login flow.
+  ///
+  /// Returns [true] is successfully performed authentication flows.
+  Future<FlutterDriver> authenticate() async {
+    // Check if login shell's inspect data is published and is 'ready'.
+    final snapshot = await inspectSnapshot(kLoginInspectSelector,
+        predicate: (snapshot) => snapshot['ready'] == true);
+
+    // Check if OOBE is skipped or shown.
+    if (snapshot['launchOOBE'] == true) {
+      // Check if auth status is authenticated. If no, start auth flow.
+      if (snapshot['authenticated'] != true) {
+        // Check if create password is visible.
+        print('Performing authentication...');
+
+        const testPassword = '11223344';
+        if (snapshot['screen'] == 'password') {
+          print('Creating password...');
+
+          // Tap on the first password text field.
+          var passwordTextField = find.byValueKey('password1');
+          await enterText(testPassword,
+              driver: login, textField: passwordTextField);
+          print('password 1 done');
+
+          // Tap on the second password text field.
+          passwordTextField = find.byValueKey('password2');
+          await enterText(testPassword,
+              driver: login, textField: passwordTextField);
+          print('password 2 done');
+
+          // Tap the Set Password button and wait for auth to succeed.
+          await login.tap(find.byValueKey('setPassword'));
+          await login.waitForAbsent(find.byType('Password'),
+              timeout: Duration(minutes: 2));
+          print('Password set');
+
+          // Tap through the 'Start Workstation' screen.
+          await login.tap(find.byValueKey('startWorkstation'));
+          await login.waitForAbsent(find.byType('Ready'));
+        } else {
+          print('Adding login credentials...');
+          // Tap on the password text field.
+          var passwordTextField = find.byValueKey('password');
+          await enterText(testPassword,
+              driver: login, textField: passwordTextField);
+          print('password entered');
+
+          // Tap the Login button and wait for auth to succeed.
+          await login.tap(find.byValueKey('login'));
+          await login.waitForAbsent(find.byType('Login'),
+              timeout: Duration(minutes: 2));
+          print('password entered');
+        }
+      }
+    }
+
+    print('Starting ermine shell');
+    await inspectSnapshot(kLoginInspectSelector,
+        predicate: (snapshot) => snapshot['ermineReady'] == true);
+    // We should land on the Ermine shell.
+    await login.waitUntilNoTransientCallbacks();
+    await login.waitFor(find.byType('ErmineApp'));
+
+    return connectToFlutterDriver('ermine', kErmineInspectSelector);
+  }
+
+  /// Performs a logout followed by login authentication flow.
+  ///
+  /// This is done in one flow to ensure ermine's flutter [_driver] is valid at
+  /// the end of the flow.
+  Future<void> logoutAndLogin() async {
+    // Ensure that ermine shell is running.
+    await login.waitFor(find.byType('ErmineApp'));
+    await inspectSnapshot(kErmineInspectSelector);
+    await driver.waitUntilNoTransientCallbacks();
+
+    // Send logout action
+    await driver.requestData('logout');
+    await driver.waitUntilNoTransientCallbacks();
+
+    // Tap 'Log out' button to confirm logout dialog, but don't wait for it to
+    // complete because ermine is killed.
+    // ignore: unawaited_futures
+    driver.tap(find.text('LOGOUT')).catchError((_) {});
+    // ignore: unawaited_futures
+    driver.close();
+
+    // If launchOOBE is true, wait for the login screen.
+    final snapshot = await inspectSnapshot(kLoginInspectSelector,
+        predicate: (snapshot) => snapshot['ready'] == true);
+    if (snapshot['launchOOBE'] == true) {
+      await login.waitUntilNoTransientCallbacks();
+      await login.waitFor(find.byType('Login'));
+    }
+
+    // Now log back in and set the new flutter driver connection to ermine.
+    _driver = await authenticate();
+  }
+
+  /// Enters text using [Input] to [textField] using [driver].
+  Future<void> enterText(
+    String text, {
+    required FlutterDriver driver,
+    required SerializableFinder textField,
+  }) async {
+    final input = Input(sl4f);
+    // Tap on the text field.
+    await driver.tap(textField);
+    await input.text(text);
+    // Wait for input to make to the text field.
+    await waitFor(() async {
+      return (await driver.getText(textField)) == text;
+    });
+  }
 }
 
 /// Holds Ermine shell state which is derived from inspect data.
@@ -542,6 +688,7 @@ class ShellSnapshot {
   bool get sideBarVisible => inspectData['sideBarVisible'] == true;
   bool get overlaysVisible => inspectData['overlaysVisible'] == true;
   String get lastAction => inspectData['lastAction'] ?? '';
+  bool get darkMode => inspectData['darkMode'] ?? true;
   ViewSnapshot? get activeView =>
       numViews > 0 ? views[inspectData['activeView'] ?? 0] : null;
 

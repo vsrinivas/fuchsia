@@ -17,7 +17,9 @@ class Dialogs extends StatelessWidget {
   Widget build(BuildContext context) {
     // Display queued up dialogs if none are being displayed currently.
     if (!Navigator.canPop(context)) {
-      _showAllDialogs(context);
+      WidgetsBinding.instance?.addPostFrameCallback((_) {
+        _showAllDialogs(context);
+      });
     }
     return Offstage();
   }

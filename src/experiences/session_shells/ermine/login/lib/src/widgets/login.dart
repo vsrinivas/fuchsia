@@ -80,6 +80,7 @@ class Login extends StatelessWidget {
                               SizedBox(
                                 width: kOobeBodyFieldWidth,
                                 child: TextFormField(
+                                  key: ValueKey('password'),
                                   autofocus: true,
                                   autovalidateMode:
                                       AutovalidateMode.onUserInteraction,
@@ -182,6 +183,7 @@ class Login extends StatelessWidget {
                             SizedBox(width: 24),
                             // Login button.
                             ElevatedButton(
+                              key: ValueKey('login'),
                               onPressed: () => _validate() && !oobe.wait
                                   ? oobe.login(_passwordController.text)
                                   : null,

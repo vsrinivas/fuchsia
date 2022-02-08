@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:convert' show json;
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_buildinfo/fidl_async.dart' as buildinfo;
@@ -13,7 +14,6 @@ import 'package:fidl_fuchsia_intl/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_activity/fidl_async.dart' as activity;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:fuchsia/fuchsia.dart' as fuchsia;
 import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_logger/logger.dart';
@@ -211,7 +211,10 @@ class StartupService extends activity.Listener {
   void logout() {
     // Exit the current isolate, which allows the parent to treat it as a logout
     // action.
-    fuchsia.exit(0);
+    WidgetsBinding.instance?.addPostFrameCallback((_) {
+      Isolate.current.setErrorsFatal(true);
+      Isolate.current.kill(priority: Isolate.beforeNextEvent);
+    });
   }
 
   Stream<Locale> get stream => LocaleSource(_intl).stream();
