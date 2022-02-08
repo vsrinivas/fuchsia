@@ -2,16 +2,15 @@
 
 This guide provides instructions on how to contribute a test to CTS.
 
+## How to write an ABI test
 
-## How to write a prebuilt CTS test
-
-A CTS prebuilt test is a Fuchsia package containing a test component. These
-tests run entirely on the target device and are shipped in CTS as prebuilt
-package archives in FAR format.
+An ABI test is a test that verifies the ABI or runtime behavior of an API in
+the SDK. These tests are distributed as Fuchsia packages containing test
+components and run entirely on the target device.
 
 ### Prerequisites
 
-* Your prebuilt test must be written in C, C++, or Rust.
+* Your test must be written in C, C++, or Rust.
 * This guide assumes the reader is familiar with Fuchsia [Packages],
 [Components] and [Component Manifests].
 
@@ -228,17 +227,49 @@ Next add this target as a dependency to the closest ancestor
 Once these steps are complete, submit your change and you should see your test run
 as part of the next CTS release.
 
-## How to write an API test
-
-Note: TODO(fxbug.dev/84165)
-
-## How to write a CTS test for a tool
-
-Note: See fxbug.dev/83948; Tools tests are not yet supported in CTS.
-
-## Debugging Tips
+### Debugging Tips
 
 * If your test hangs, use `ffx component list -v` to inspect its current state.
+
+## How to remove an ABI test
+
+Users might want to permanently remove a test from CTS if the API under test is
+being deprecated and removed from the SDK in an upcoming release. To remove
+the test, simply delete its BUILD rules and source code from HEAD. It will not
+be included in the next release.
+
+If you have an urgent need to remove a test before the next release is cut,
+please reach out to [fuchsia-cts-team@google.com](mailto:fuchsia-cts-team@google.com).
+
+## How to disable an ABI test
+
+Once the test is running in Fuchsia's presubmit as part of a CTS release, it can
+be disabled by adding the test's package and component name to the list of
+`disabled_tests` on the appropriate `compatibility_test_suite` target in
+`//sdk/cts/release/BUILD.gn`.
+
+For example, a test running in Fuchsia's canary release might have the package
+URL:
+
+```
+fuchsia-pkg://fuchsia.com/my_test_canary#meta/my_test_component.cm
+```
+
+This can be disabled as follows:
+
+```
+compatibility_test_suite("canary") {
+  {{ '<strong>' }}disabled_tests = [
+    {
+      package = "my_test_canary"
+      component_name = "my_test_component"
+    },
+  ]{{ '</strong>' }}
+}
+```
+
+Please include a comment with a bug ID as a reminder to re-enable the test in
+the future, when possible.
 
 [Component Manifests]: /docs/concepts/components/v2/component_manifests.md
 [Components]: /docs/concepts/components/v2
