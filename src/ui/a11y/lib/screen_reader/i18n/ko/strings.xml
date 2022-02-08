@@ -20,6 +20,9 @@
   <string name="role_table_row_header">행 헤더</string>
   <string name="role_table_column_header">열 헤더</string>
   <string name="role_table_cell">셀</string>
+  <string name="set_size">항목 {num_items}개</string>
+  <string name="entered_list">목록이 열림</string>
+  <string name="exited_list">목록이 닫힘</string>
   <string name="table_summary">{table_name},        {table_rows}행 {table_columns}열</string>
   <string name="cell_summary">{row_index}행 {column_index}열</string>
   <string name="row_summary">{row_index}행</string>

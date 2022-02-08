@@ -20,6 +20,9 @@
   <string name="role_table_row_header">Radrubrik</string>
   <string name="role_table_column_header">Kolumnrubrik</string>
   <string name="role_table_cell">Cell</string>
+  <string name="set_size">{num_items} objekt</string>
+  <string name="entered_list">En lista har öppnats</string>
+  <string name="exited_list">En lista har stängts</string>
   <string name="table_summary">{table_name},        {table_rows} gånger {table_columns}</string>
   <string name="cell_summary">Rad {row_index} kolumn {column_index}</string>
   <string name="row_summary">Rad {row_index}</string>

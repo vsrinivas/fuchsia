@@ -20,6 +20,9 @@
   <string name="role_table_row_header">Radoverskrift</string>
   <string name="role_table_column_header">Kolonneoverskrift</string>
   <string name="role_table_cell">Celle</string>
+  <string name="set_size">{num_items} elementer</string>
+  <string name="entered_list">Du har lagt inn en liste</string>
+  <string name="exited_list">Du gikk ut av listen</string>
   <string name="table_summary">{table_name},        {table_rows} ganger {table_columns}</string>
   <string name="cell_summary">Rad {row_index} kolonne {column_index}</string>
   <string name="row_summary">Rad {row_index}</string>

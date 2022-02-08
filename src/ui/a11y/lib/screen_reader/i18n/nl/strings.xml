@@ -20,6 +20,9 @@
   <string name="role_table_row_header">Rijkop</string>
   <string name="role_table_column_header">Kolomkop</string>
   <string name="role_table_cell">Cel</string>
+  <string name="set_size">{num_items} items</string>
+  <string name="entered_list">Lijst geopend</string>
+  <string name="exited_list">Lijst gesloten</string>
   <string name="table_summary">{table_name}, {table_rows} bij {table_columns}</string>
   <string name="cell_summary">Rij {row_index}, kolom {column_index}</string>
   <string name="row_summary">Rij {row_index}</string>

@@ -20,6 +20,9 @@
   <string name="role_table_row_header">Row header</string>
   <string name="role_table_column_header">Column header</string>
   <string name="role_table_cell">Cell</string>
+  <string name="set_size">{num_items} items</string>
+  <string name="entered_list">Entered list</string>
+  <string name="exited_list">Exited list</string>
   <string name="table_summary">{table_name},        {table_rows} by {table_columns}</string>
   <string name="cell_summary">Row {row_index} column {column_index}</string>
   <string name="row_summary">Row {row_index}</string>

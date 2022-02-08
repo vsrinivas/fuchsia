@@ -20,6 +20,9 @@
   <string name="role_table_row_header">En-tête de ligne</string>
   <string name="role_table_column_header">En-tête de colonne</string>
   <string name="role_table_cell">Cellule</string>
+  <string name="set_size">{num_items} éléments</string>
+  <string name="entered_list">A ouvert une liste</string>
+  <string name="exited_list">A quitté une liste</string>
   <string name="table_summary">{table_name},        {table_rows} lignes et {table_columns} colonnes</string>
   <string name="cell_summary">Ligne {row_index}, colonne {column_index}</string>
   <string name="row_summary">Ligne {row_index}</string>

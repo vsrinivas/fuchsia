@@ -20,6 +20,9 @@
   <string name="role_table_row_header">Encabezado de fila</string>
   <string name="role_table_column_header">Encabezado de columna</string>
   <string name="role_table_cell">Celda</string>
+  <string name="set_size">{num_items} elementos</string>
+  <string name="entered_list">Has entrado en la lista</string>
+  <string name="exited_list">Has salido de la lista</string>
   <string name="table_summary">{table_name}, {table_rows} por {table_columns}</string>
   <string name="cell_summary">Fila {row_index}, columna {column_index}</string>
   <string name="row_summary">Fila {row_index}</string>

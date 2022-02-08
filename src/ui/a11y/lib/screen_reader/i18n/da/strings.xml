@@ -20,6 +20,9 @@
   <string name="role_table_row_header">Rækkeoverskrift</string>
   <string name="role_table_column_header">Kolonneoverskrift</string>
   <string name="role_table_cell">Celle</string>
+  <string name="set_size">{num_items} elementer</string>
+  <string name="entered_list">En liste er åbnet</string>
+  <string name="exited_list">En liste er lukket</string>
   <string name="table_summary">{table_name},        {table_rows} efter {table_columns}</string>
   <string name="cell_summary">Række {row_index}, kolonne {column_index}</string>
   <string name="row_summary">Række {row_index}</string>

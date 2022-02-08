@@ -20,6 +20,9 @@
   <string name="role_table_row_header">Intestazione di riga</string>
   <string name="role_table_column_header">Intestazione di colonna</string>
   <string name="role_table_cell">Cella</string>
+  <string name="set_size">{num_items} elementi</string>
+  <string name="entered_list">Elenco aperto</string>
+  <string name="exited_list">Elenco chiuso</string>
   <string name="table_summary">{table_name},        {table_rows} per {table_columns}</string>
   <string name="cell_summary">Riga {row_index} colonna {column_index}</string>
   <string name="row_summary">Riga {row_index}</string>
