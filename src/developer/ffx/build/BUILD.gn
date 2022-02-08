@@ -44,7 +44,6 @@ if (is_host) {
       sdk = {
         root = rebase_path(root_build_dir, root_build_dir)
         type = "in-tree"
-        module = "host_tools.modular"
       }
     }
   }
