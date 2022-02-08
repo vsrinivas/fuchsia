@@ -27,13 +27,13 @@ Top::~Top() = default;
 
 const fidl_type_t* ::test::transitivedependenciescompose::Top_RequestDecoder::
     GetType(uint64_t ordinal, bool* out_needs_response) {
+  *out_needs_response = false;
   switch (ordinal) {
     case ::test::transitivedependenciescompose::internal::kTop_GetFoo_Ordinal:
       *out_needs_response = true;
-      return &::test::transitivedependenciescompose::_internal::
-          test_transitivedependenciescompose_TopGetFooRequestMessageTable;
+      return nullptr;
+      ;
     default:
-      *out_needs_response = false;
       return nullptr;
   }
 }
@@ -43,6 +43,7 @@ const fidl_type_t* Top_ResponseDecoder::GetType(uint64_t ordinal) {
     case ::test::transitivedependenciescompose::internal::kTop_GetFoo_Ordinal:
       return &::test::transitivedependenciescompose::_internal::
           test_transitivedependenciescompose_TopGetFooResponseMessageTable;
+      ;
     default:
       return nullptr;
   }
@@ -91,9 +92,9 @@ Top_GetFoo_ResponseHandler(Top::GetFooCallback&& callback) {
 void Top_Proxy::GetFoo(GetFooCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::transitivedependenciescompose::internal::kTop_GetFoo_Ordinal);
+  const fidl_type_t* req_type = nullptr;
   controller_->Send(
-      &::test::transitivedependenciescompose::_internal::
-          test_transitivedependenciescompose_TopGetFooRequestMessageTable,
+      req_type,
       ::test::transitivedependenciescompose::Top_RequestEncoder::GetFoo(
           &_encoder),
       Top_GetFoo_ResponseHandler(std::move(callback)));
@@ -117,9 +118,11 @@ class Top_GetFoo_Responder final {
   void operator()(::test::bottom::Foo foo) {
     ::fidl::MessageEncoder _encoder(
         ::test::transitivedependenciescompose::internal::kTop_GetFoo_Ordinal);
-    response_.Send(
+    const fidl_type_t* resp_type =
         &::test::transitivedependenciescompose::_internal::
-            test_transitivedependenciescompose_TopGetFooResponseMessageTable,
+            test_transitivedependenciescompose_TopGetFooResponseMessageTable;
+    response_.Send(
+        resp_type,
         ::test::transitivedependenciescompose::Top_ResponseEncoder::GetFoo(
             &_encoder, &foo));
   }
@@ -136,9 +139,18 @@ zx_status_t Top_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
   const fidl_type_t* request_type =
       ::test::transitivedependenciescompose::Top_RequestDecoder::GetType(
           message.ordinal(), &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
   }
+
   if (response.needs_response() != needs_response) {
     if (needs_response) {
       FIDL_REPORT_DECODING_ERROR(message, request_type,
@@ -149,12 +161,7 @@ zx_status_t Top_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
     }
     return ZX_ERR_INVALID_ARGS;
   }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
+
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case ::test::transitivedependenciescompose::internal::kTop_GetFoo_Ordinal: {
@@ -162,11 +169,10 @@ zx_status_t Top_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
       break;
     }
     default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return status;
+  return ZX_OK;
 }
 
 Top_SyncProxy::Top_SyncProxy(::zx::channel channel)
@@ -179,11 +185,12 @@ zx_status_t Top_SyncProxy::GetFoo(::test::bottom::Foo* out_foo) {
       ::test::transitivedependenciescompose::internal::kTop_GetFoo_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  const fidl_type_t* req_type = nullptr;
+  const fidl_type_t* resp_type =
+      &::test::transitivedependenciescompose::_internal::
+          test_transitivedependenciescompose_TopGetFooResponseMessageTable;
   zx_status_t status_ = proxy_.Call(
-      &::test::transitivedependenciescompose::_internal::
-          test_transitivedependenciescompose_TopGetFooRequestMessageTable,
-      &::test::transitivedependenciescompose::_internal::
-          test_transitivedependenciescompose_TopGetFooResponseMessageTable,
+      req_type, resp_type,
       ::test::transitivedependenciescompose::Top_RequestEncoder::GetFoo(
           &_encoder),
       &response_);

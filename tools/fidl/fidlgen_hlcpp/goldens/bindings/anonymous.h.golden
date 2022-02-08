@@ -1156,6 +1156,7 @@ class SomeProtocol_ResponseEncoder {
                    test_anonymous_SomeProtocolSomeMethodResponseMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };

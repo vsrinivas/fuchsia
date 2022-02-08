@@ -89,6 +89,7 @@ class super_ResponseEncoder {
                    test_inheritance_superfooResponseMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };
@@ -161,6 +162,7 @@ class sub_ResponseEncoder {
                    test_inheritance_subfooResponseMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };

@@ -643,13 +643,12 @@ Interface::~Interface() = default;
 
 const fidl_type_t* ::test::doccomments::Interface_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
+  *out_needs_response = false;
   switch (ordinal) {
     case ::test::doccomments::internal::kInterface_Method_Ordinal:
-      *out_needs_response = false;
-      return &::test::doccomments::_internal::
-          test_doccomments_InterfaceMethodRequestMessageTable;
+      return nullptr;
+      ;
     default:
-      *out_needs_response = false;
       return nullptr;
   }
 }
@@ -657,8 +656,8 @@ const fidl_type_t* ::test::doccomments::Interface_RequestDecoder::GetType(
 const fidl_type_t* Interface_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::test::doccomments::internal::kInterface_OnEvent_Ordinal:
-      return &::test::doccomments::_internal::
-          test_doccomments_InterfaceOnEventEventMessageTable;
+      return nullptr;
+      ;
     default:
       return nullptr;
   }
@@ -683,19 +682,6 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
         status = ZX_OK;
         break;
       }
-      const char* error_msg = nullptr;
-      status =
-          message.Decode(&::test::doccomments::_internal::
-                             test_doccomments_InterfaceOnEventEventMessageTable,
-                         &error_msg);
-      if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(
-            message,
-            &::test::doccomments::_internal::
-                test_doccomments_InterfaceOnEventEventMessageTable,
-            error_msg);
-        break;
-      }
       OnEvent();
       break;
     }
@@ -710,9 +696,9 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
 void Interface_Proxy::Method() {
   ::fidl::MessageEncoder _encoder(
       ::test::doccomments::internal::kInterface_Method_Ordinal);
+  const fidl_type_t* req_type = nullptr;
   controller_->Send(
-      &::test::doccomments::_internal::
-          test_doccomments_InterfaceMethodRequestMessageTable,
+      req_type,
       ::test::doccomments::Interface_RequestEncoder::Method(&_encoder),
       nullptr);
 }
@@ -734,9 +720,18 @@ zx_status_t Interface_Stub::Dispatch_(
   const fidl_type_t* request_type =
       ::test::doccomments::Interface_RequestDecoder::GetType(message.ordinal(),
                                                              &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
   }
+
   if (response.needs_response() != needs_response) {
     if (needs_response) {
       FIDL_REPORT_DECODING_ERROR(message, request_type,
@@ -747,12 +742,7 @@ zx_status_t Interface_Stub::Dispatch_(
     }
     return ZX_ERR_INVALID_ARGS;
   }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
+
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case ::test::doccomments::internal::kInterface_Method_Ordinal: {
@@ -760,18 +750,17 @@ zx_status_t Interface_Stub::Dispatch_(
       break;
     }
     default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return status;
+  return ZX_OK;
 }
 void Interface_Stub::OnEvent() {
   ::fidl::MessageEncoder _encoder(
       ::test::doccomments::internal::kInterface_OnEvent_Ordinal);
+  const fidl_type_t* resp_type = nullptr;
   sender_()->Send(
-      &::test::doccomments::_internal::
-          test_doccomments_InterfaceOnEventEventMessageTable,
+      resp_type,
       ::test::doccomments::Interface_ResponseEncoder::OnEvent(&_encoder));
 }
 
@@ -783,9 +772,9 @@ Interface_SyncProxy::~Interface_SyncProxy() = default;
 zx_status_t Interface_SyncProxy::Method() {
   ::fidl::MessageEncoder _encoder(
       ::test::doccomments::internal::kInterface_Method_Ordinal);
+  const fidl_type_t* req_type = nullptr;
   return proxy_.Send(
-      &::test::doccomments::_internal::
-          test_doccomments_InterfaceMethodRequestMessageTable,
+      req_type,
       ::test::doccomments::Interface_RequestEncoder::Method(&_encoder));
 }
 #endif  // __Fuchsia__

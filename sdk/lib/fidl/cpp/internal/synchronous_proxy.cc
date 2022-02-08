@@ -27,22 +27,32 @@ zx_status_t SynchronousProxy::Call(const fidl_type_t* request_type,
                                    const fidl_type_t* response_type, HLCPPOutgoingMessage request,
                                    HLCPPIncomingMessage* response) {
   const char* error_msg = nullptr;
-  zx_status_t status = request.Validate(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_ENCODING_ERROR(request, request_type, error_msg);
-    return status;
+  if (request_type != nullptr) {
+    zx_status_t status = request.Validate(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_ENCODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+  } else if (!request.has_only_header()) {
+    return ZX_ERR_INVALID_ARGS;
   }
+
   fidl_trace(WillHLCPPChannelCall, request_type, request.bytes().data(), request.bytes().actual(),
              request.handles().actual());
-  status = request.Call(channel_.get(), 0, ZX_TIME_INFINITE, response);
+  zx_status_t status = request.Call(channel_.get(), 0, ZX_TIME_INFINITE, response);
   fidl_trace(DidHLCPPChannelCall, response_type, response->bytes().data(),
              response->bytes().actual(), response->handles().actual());
   if (status != ZX_OK)
     return status;
-  status = response->Decode(response_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(*response, response_type, error_msg);
-    return status;
+
+  if (response_type != nullptr) {
+    status = response->Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(*response, response_type, error_msg);
+      return status;
+    }
+  } else if (!response->has_only_header()) {
+    return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
 }

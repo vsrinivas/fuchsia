@@ -24,13 +24,12 @@ SecondProtocol::~SecondProtocol() = default;
 
 const fidl_type_t* ::test::service::SecondProtocol_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
+  *out_needs_response = false;
   switch (ordinal) {
     case ::test::service::internal::kSecondProtocol_MethodOnSecond_Ordinal:
-      *out_needs_response = false;
-      return &::test::service::_internal::
-          test_service_SecondProtocolMethodOnSecondRequestMessageTable;
+      return nullptr;
+      ;
     default:
-      *out_needs_response = false;
       return nullptr;
   }
 }
@@ -69,9 +68,9 @@ zx_status_t SecondProtocol_Proxy::Dispatch_(
 void SecondProtocol_Proxy::MethodOnSecond() {
   ::fidl::MessageEncoder _encoder(
       ::test::service::internal::kSecondProtocol_MethodOnSecond_Ordinal);
+  const fidl_type_t* req_type = nullptr;
   controller_->Send(
-      &::test::service::_internal::
-          test_service_SecondProtocolMethodOnSecondRequestMessageTable,
+      req_type,
       ::test::service::SecondProtocol_RequestEncoder::MethodOnSecond(&_encoder),
       nullptr);
 }
@@ -93,9 +92,18 @@ zx_status_t SecondProtocol_Stub::Dispatch_(
   const fidl_type_t* request_type =
       ::test::service::SecondProtocol_RequestDecoder::GetType(message.ordinal(),
                                                               &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
   }
+
   if (response.needs_response() != needs_response) {
     if (needs_response) {
       FIDL_REPORT_DECODING_ERROR(message, request_type,
@@ -106,12 +114,7 @@ zx_status_t SecondProtocol_Stub::Dispatch_(
     }
     return ZX_ERR_INVALID_ARGS;
   }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
+
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case ::test::service::internal::kSecondProtocol_MethodOnSecond_Ordinal: {
@@ -119,11 +122,10 @@ zx_status_t SecondProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return status;
+  return ZX_OK;
 }
 
 SecondProtocol_SyncProxy::SecondProtocol_SyncProxy(::zx::channel channel)
@@ -134,11 +136,10 @@ SecondProtocol_SyncProxy::~SecondProtocol_SyncProxy() = default;
 zx_status_t SecondProtocol_SyncProxy::MethodOnSecond() {
   ::fidl::MessageEncoder _encoder(
       ::test::service::internal::kSecondProtocol_MethodOnSecond_Ordinal);
+  const fidl_type_t* req_type = nullptr;
   return proxy_.Send(
-      &::test::service::_internal::
-          test_service_SecondProtocolMethodOnSecondRequestMessageTable,
-      ::test::service::SecondProtocol_RequestEncoder::MethodOnSecond(
-          &_encoder));
+      req_type, ::test::service::SecondProtocol_RequestEncoder::MethodOnSecond(
+                    &_encoder));
 }
 }  // namespace service
 }  // namespace test
@@ -157,13 +158,12 @@ FirstProtocol::~FirstProtocol() = default;
 
 const fidl_type_t* ::test::service::FirstProtocol_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
+  *out_needs_response = false;
   switch (ordinal) {
     case ::test::service::internal::kFirstProtocol_MethodOnFirst_Ordinal:
-      *out_needs_response = false;
-      return &::test::service::_internal::
-          test_service_FirstProtocolMethodOnFirstRequestMessageTable;
+      return nullptr;
+      ;
     default:
-      *out_needs_response = false;
       return nullptr;
   }
 }
@@ -202,9 +202,9 @@ zx_status_t FirstProtocol_Proxy::Dispatch_(
 void FirstProtocol_Proxy::MethodOnFirst() {
   ::fidl::MessageEncoder _encoder(
       ::test::service::internal::kFirstProtocol_MethodOnFirst_Ordinal);
+  const fidl_type_t* req_type = nullptr;
   controller_->Send(
-      &::test::service::_internal::
-          test_service_FirstProtocolMethodOnFirstRequestMessageTable,
+      req_type,
       ::test::service::FirstProtocol_RequestEncoder::MethodOnFirst(&_encoder),
       nullptr);
 }
@@ -226,9 +226,18 @@ zx_status_t FirstProtocol_Stub::Dispatch_(
   const fidl_type_t* request_type =
       ::test::service::FirstProtocol_RequestDecoder::GetType(message.ordinal(),
                                                              &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
   }
+
   if (response.needs_response() != needs_response) {
     if (needs_response) {
       FIDL_REPORT_DECODING_ERROR(message, request_type,
@@ -239,12 +248,7 @@ zx_status_t FirstProtocol_Stub::Dispatch_(
     }
     return ZX_ERR_INVALID_ARGS;
   }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
+
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case ::test::service::internal::kFirstProtocol_MethodOnFirst_Ordinal: {
@@ -252,11 +256,10 @@ zx_status_t FirstProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return status;
+  return ZX_OK;
 }
 
 FirstProtocol_SyncProxy::FirstProtocol_SyncProxy(::zx::channel channel)
@@ -267,9 +270,9 @@ FirstProtocol_SyncProxy::~FirstProtocol_SyncProxy() = default;
 zx_status_t FirstProtocol_SyncProxy::MethodOnFirst() {
   ::fidl::MessageEncoder _encoder(
       ::test::service::internal::kFirstProtocol_MethodOnFirst_Ordinal);
+  const fidl_type_t* req_type = nullptr;
   return proxy_.Send(
-      &::test::service::_internal::
-          test_service_FirstProtocolMethodOnFirstRequestMessageTable,
+      req_type,
       ::test::service::FirstProtocol_RequestEncoder::MethodOnFirst(&_encoder));
 }
 }  // namespace service

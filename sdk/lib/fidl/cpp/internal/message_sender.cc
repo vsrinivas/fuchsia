@@ -13,14 +13,18 @@ MessageSender::~MessageSender() = default;
 
 zx_status_t SendMessage(const zx::channel& channel, const fidl_type_t* type,
                         HLCPPOutgoingMessage message) {
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Validate(type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
-    return status;
+  if (type != nullptr) {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Validate(type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
+      return status;
+    }
+  } else if (unlikely(!message.has_only_header())) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
-  status = message.Write(channel.get(), 0);
+  zx_status_t status = message.Write(channel.get(), 0);
   if (status != ZX_OK) {
     // Channel closure always races with any channel write that's been started but not yet
     // completed, so ZX_ERR_PEER_CLOSED is expected to occur sometimes under normal operation.
@@ -30,7 +34,7 @@ zx_status_t SendMessage(const zx::channel& channel, const fidl_type_t* type,
     return status;
   }
 
-  return ZX_OK;
+  return status;
 }
 
 }  // namespace internal

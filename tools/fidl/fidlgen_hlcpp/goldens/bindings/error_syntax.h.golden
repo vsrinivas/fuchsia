@@ -320,6 +320,7 @@ class ExampleUseOfErrorSyntax_ResponseEncoder {
             test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage CallWhichMayFail(
@@ -349,6 +350,7 @@ class ExampleUseOfErrorSyntax_ResponseEncoder {
             test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };

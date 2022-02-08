@@ -1334,53 +1334,11 @@ class TestProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage
   StrictXUnionHenceResponseMayBeStackAllocated(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::union_::_internal::
-            test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage
   FlexibleXUnionHenceResponseMustBeHeapAllocated(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::union_::_internal::
-            test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
 };
@@ -1421,6 +1379,7 @@ class TestProtocol_ResponseEncoder {
             test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage
@@ -1449,6 +1408,7 @@ class TestProtocol_ResponseEncoder {
             test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };

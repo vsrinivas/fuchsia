@@ -635,14 +635,14 @@ ExampleProtocol::~ExampleProtocol() = default;
 const fidl_type_t* ::test::placementofattributes::
     ExampleProtocol_RequestDecoder::GetType(uint64_t ordinal,
                                             bool* out_needs_response) {
+  *out_needs_response = false;
   switch (ordinal) {
     case ::test::placementofattributes::internal::
         kExampleProtocol_Method_Ordinal:
-      *out_needs_response = false;
       return &::test::placementofattributes::_internal::
           test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
+      ;
     default:
-      *out_needs_response = false;
       return nullptr;
   }
 }
@@ -681,9 +681,11 @@ zx_status_t ExampleProtocol_Proxy::Dispatch_(
 void ExampleProtocol_Proxy::Method(::test::exampleusing::Empty arg) {
   ::fidl::MessageEncoder _encoder(
       ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal);
-  controller_->Send(
+  const fidl_type_t* req_type =
       &::test::placementofattributes::_internal::
-          test_placementofattributes_ExampleProtocolMethodRequestMessageTable,
+          test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
+  controller_->Send(
+      req_type,
       ::test::placementofattributes::ExampleProtocol_RequestEncoder::Method(
           &_encoder, &arg),
       nullptr);
@@ -707,9 +709,18 @@ zx_status_t ExampleProtocol_Stub::Dispatch_(
   const fidl_type_t* request_type =
       ::test::placementofattributes::ExampleProtocol_RequestDecoder::GetType(
           message.ordinal(), &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
   }
+
   if (response.needs_response() != needs_response) {
     if (needs_response) {
       FIDL_REPORT_DECODING_ERROR(message, request_type,
@@ -720,12 +731,7 @@ zx_status_t ExampleProtocol_Stub::Dispatch_(
     }
     return ZX_ERR_INVALID_ARGS;
   }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
+
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case ::test::placementofattributes::internal::
@@ -736,11 +742,10 @@ zx_status_t ExampleProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return status;
+  return ZX_OK;
 }
 
 ExampleProtocol_SyncProxy::ExampleProtocol_SyncProxy(::zx::channel channel)
@@ -751,9 +756,11 @@ ExampleProtocol_SyncProxy::~ExampleProtocol_SyncProxy() = default;
 zx_status_t ExampleProtocol_SyncProxy::Method(::test::exampleusing::Empty arg) {
   ::fidl::MessageEncoder _encoder(
       ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal);
-  return proxy_.Send(
+  const fidl_type_t* req_type =
       &::test::placementofattributes::_internal::
-          test_placementofattributes_ExampleProtocolMethodRequestMessageTable,
+          test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
+  return proxy_.Send(
+      req_type,
       ::test::placementofattributes::ExampleProtocol_RequestEncoder::Method(
           &_encoder, &arg));
 }

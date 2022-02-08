@@ -403,26 +403,6 @@ __LOCAL extern "C" const fidl_type_t
 class Protocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Foo(::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(DidHLCPPEncode,
-               &::test::versions::_internal::
-                   test_versions_ProtocolFooRequestMessageTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
 };

@@ -90,13 +90,18 @@ class SingleUseMessageHandler {
   SingleUseMessageHandler& operator=(SingleUseMessageHandler&&) = delete;
 
   zx_status_t operator()(fidl::HLCPPIncomingMessage message) {
-    const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(type_, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(message, type_, error_msg);
-      return status;
+    if (type_ != nullptr) {
+      const char* error_msg = nullptr;
+      zx_status_t status = message.Decode(type_, &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(message, type_, error_msg);
+        return status;
+      }
+    } else if (unlikely(!message.has_only_header())) {
+      return ZX_ERR_INVALID_ARGS;
     }
-    status = invoke_(this, std::move(message));
+
+    zx_status_t status = invoke_(this, std::move(message));
     invoke_ = nullptr;
     destroy_(this);
     return status;

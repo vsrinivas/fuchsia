@@ -328,13 +328,14 @@ Example::~Example() = default;
 
 const fidl_type_t* ::test::error::Example_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
+  *out_needs_response = false;
   switch (ordinal) {
     case ::test::error::internal::kExample_foo_Ordinal:
       *out_needs_response = true;
       return &::test::error::_internal::
           test_error_ExamplefooRequestMessageTable;
+      ;
     default:
-      *out_needs_response = false;
       return nullptr;
   }
 }
@@ -344,6 +345,7 @@ const fidl_type_t* Example_ResponseDecoder::GetType(uint64_t ordinal) {
     case ::test::error::internal::kExample_foo_Ordinal:
       return &::test::error::_internal::
           test_error_ExamplefooResponseMessageTable;
+      ;
     default:
       return nullptr;
   }
@@ -392,10 +394,11 @@ Example_foo_ResponseHandler(Example::fooCallback&& callback) {
 void Example_Proxy::foo(::std::string s, fooCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::error::internal::kExample_foo_Ordinal);
-  controller_->Send(
-      &::test::error::_internal::test_error_ExamplefooRequestMessageTable,
-      ::test::error::Example_RequestEncoder::foo(&_encoder, &s),
-      Example_foo_ResponseHandler(std::move(callback)));
+  const fidl_type_t* req_type =
+      &::test::error::_internal::test_error_ExamplefooRequestMessageTable;
+  controller_->Send(req_type,
+                    ::test::error::Example_RequestEncoder::foo(&_encoder, &s),
+                    Example_foo_ResponseHandler(std::move(callback)));
 }
 
 Example_Stub::Example_Stub(::test::error::Example_Stub::Example_clazz* impl)
@@ -415,9 +418,10 @@ class Example_foo_Responder final {
   void operator()(::test::error::Example_foo_Result result) {
     ::fidl::MessageEncoder _encoder(
         ::test::error::internal::kExample_foo_Ordinal);
-    response_.Send(
-        &::test::error::_internal::test_error_ExamplefooResponseMessageTable,
-        ::test::error::Example_ResponseEncoder::foo(&_encoder, &result));
+    const fidl_type_t* resp_type =
+        &::test::error::_internal::test_error_ExamplefooResponseMessageTable;
+    response_.Send(resp_type, ::test::error::Example_ResponseEncoder::foo(
+                                  &_encoder, &result));
   }
 
  private:
@@ -433,9 +437,18 @@ zx_status_t Example_Stub::Dispatch_(
   const fidl_type_t* request_type =
       ::test::error::Example_RequestDecoder::GetType(message.ordinal(),
                                                      &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
   }
+
   if (response.needs_response() != needs_response) {
     if (needs_response) {
       FIDL_REPORT_DECODING_ERROR(message, request_type,
@@ -446,12 +459,7 @@ zx_status_t Example_Stub::Dispatch_(
     }
     return ZX_ERR_INVALID_ARGS;
   }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
+
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case ::test::error::internal::kExample_foo_Ordinal: {
@@ -462,11 +470,10 @@ zx_status_t Example_Stub::Dispatch_(
       break;
     }
     default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return status;
+  return ZX_OK;
 }
 
 Example_SyncProxy::Example_SyncProxy(::zx::channel channel)
@@ -480,9 +487,12 @@ zx_status_t Example_SyncProxy::foo(
       ::test::error::internal::kExample_foo_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  const fidl_type_t* req_type =
+      &::test::error::_internal::test_error_ExamplefooRequestMessageTable;
+  const fidl_type_t* resp_type =
+      &::test::error::_internal::test_error_ExamplefooResponseMessageTable;
   zx_status_t status_ = proxy_.Call(
-      &::test::error::_internal::test_error_ExamplefooRequestMessageTable,
-      &::test::error::_internal::test_error_ExamplefooResponseMessageTable,
+      req_type, resp_type,
       ::test::error::Example_RequestEncoder::foo(&_encoder, &s), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));

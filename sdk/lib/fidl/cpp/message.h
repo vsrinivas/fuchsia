@@ -144,6 +144,9 @@ class HLCPPIncomingMessage {
   const HLCPPIncomingBody& body_view() const { return body_view_; }
   HLCPPIncomingBody& body_view() { return body_view_; }
 
+  // Is this a message containing only a header?
+  bool has_only_header() const { return bytes_.actual() == sizeof(fidl_message_header_t); }
+
   // The message payload that follows the header interpreted as the given type.
   template <typename T>
   T* GetBodyViewAs() const {
@@ -334,6 +337,9 @@ class HLCPPOutgoingMessage {
 
   // The message body that follows the header.
   const HLCPPOutgoingBody& body_view() const { return body_view_; }
+
+  // Is this a message containing only a header?
+  bool has_only_header() const { return bytes_.actual() == sizeof(fidl_message_header_t); }
 
   // The storage for the bytes of the transactional message.
   const BytePart& bytes() const { return bytes_; }

@@ -394,19 +394,21 @@ ExampleUseOfErrorSyntax::~ExampleUseOfErrorSyntax() = default;
 
 const fidl_type_t* ::test::errorsyntax::ExampleUseOfErrorSyntax_RequestDecoder::
     GetType(uint64_t ordinal, bool* out_needs_response) {
+  *out_needs_response = false;
   switch (ordinal) {
     case ::test::errorsyntax::internal::
         kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal:
       *out_needs_response = true;
       return &::test::errorsyntax::_internal::
           test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
+      ;
     case ::test::errorsyntax::internal::
         kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal:
       *out_needs_response = true;
       return &::test::errorsyntax::_internal::
           test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
+      ;
     default:
-      *out_needs_response = false;
       return nullptr;
   }
 }
@@ -418,10 +420,12 @@ const fidl_type_t* ExampleUseOfErrorSyntax_ResponseDecoder::GetType(
         kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal:
       return &::test::errorsyntax::_internal::
           test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
+      ;
     case ::test::errorsyntax::internal::
         kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal:
       return &::test::errorsyntax::_internal::
           test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
+      ;
     default:
       return nullptr;
   }
@@ -480,9 +484,11 @@ void ExampleUseOfErrorSyntax_Proxy::ComposedCallWhichMayFail(
   ::fidl::MessageEncoder _encoder(
       ::test::errorsyntax::internal::
           kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal);
-  controller_->Send(
+  const fidl_type_t* req_type =
       &::test::errorsyntax::_internal::
-          test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable,
+          test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
+  controller_->Send(
+      req_type,
       ::test::errorsyntax::ExampleUseOfErrorSyntax_RequestEncoder::
           ComposedCallWhichMayFail(&_encoder, &s),
       ExampleUseOfErrorSyntax_ComposedCallWhichMayFail_ResponseHandler(
@@ -516,9 +522,11 @@ void ExampleUseOfErrorSyntax_Proxy::CallWhichMayFail(
   ::fidl::MessageEncoder _encoder(
       ::test::errorsyntax::internal::
           kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal);
-  controller_->Send(
+  const fidl_type_t* req_type =
       &::test::errorsyntax::_internal::
-          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable,
+          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
+  controller_->Send(
+      req_type,
       ::test::errorsyntax::ExampleUseOfErrorSyntax_RequestEncoder::
           CallWhichMayFail(&_encoder, &s),
       ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseHandler(
@@ -548,9 +556,11 @@ class ExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Responder final {
     ::fidl::MessageEncoder _encoder(
         ::test::errorsyntax::internal::
             kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal);
-    response_.Send(
+    const fidl_type_t* resp_type =
         &::test::errorsyntax::_internal::
-            test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable,
+            test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
+    response_.Send(
+        resp_type,
         ::test::errorsyntax::ExampleUseOfErrorSyntax_ResponseEncoder::
             ComposedCallWhichMayFail(&_encoder, &result));
   }
@@ -571,9 +581,11 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Responder final {
     ::fidl::MessageEncoder _encoder(
         ::test::errorsyntax::internal::
             kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal);
-    response_.Send(
+    const fidl_type_t* resp_type =
         &::test::errorsyntax::_internal::
-            test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable,
+            test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
+    response_.Send(
+        resp_type,
         ::test::errorsyntax::ExampleUseOfErrorSyntax_ResponseEncoder::
             CallWhichMayFail(&_encoder, &result));
   }
@@ -591,9 +603,18 @@ zx_status_t ExampleUseOfErrorSyntax_Stub::Dispatch_(
   const fidl_type_t* request_type =
       ::test::errorsyntax::ExampleUseOfErrorSyntax_RequestDecoder::GetType(
           message.ordinal(), &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
   }
+
   if (response.needs_response() != needs_response) {
     if (needs_response) {
       FIDL_REPORT_DECODING_ERROR(message, request_type,
@@ -604,12 +625,7 @@ zx_status_t ExampleUseOfErrorSyntax_Stub::Dispatch_(
     }
     return ZX_ERR_INVALID_ARGS;
   }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
+
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case ::test::errorsyntax::internal::
@@ -633,11 +649,10 @@ zx_status_t ExampleUseOfErrorSyntax_Stub::Dispatch_(
       break;
     }
     default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return status;
+  return ZX_OK;
 }
 
 ExampleUseOfErrorSyntax_SyncProxy::ExampleUseOfErrorSyntax_SyncProxy(
@@ -656,14 +671,17 @@ zx_status_t ExampleUseOfErrorSyntax_SyncProxy::ComposedCallWhichMayFail(
           kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  zx_status_t status_ = proxy_.Call(
+  const fidl_type_t* req_type =
       &::test::errorsyntax::_internal::
-          test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable,
+          test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
+  const fidl_type_t* resp_type =
       &::test::errorsyntax::_internal::
-          test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable,
-      ::test::errorsyntax::ExampleUseOfErrorSyntax_RequestEncoder::
-          ComposedCallWhichMayFail(&_encoder, &s),
-      &response_);
+          test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
+  zx_status_t status_ =
+      proxy_.Call(req_type, resp_type,
+                  ::test::errorsyntax::ExampleUseOfErrorSyntax_RequestEncoder::
+                      ComposedCallWhichMayFail(&_encoder, &s),
+                  &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result = ::fidl::DecodeAs<
@@ -682,14 +700,17 @@ zx_status_t ExampleUseOfErrorSyntax_SyncProxy::CallWhichMayFail(
           kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  zx_status_t status_ = proxy_.Call(
+  const fidl_type_t* req_type =
       &::test::errorsyntax::_internal::
-          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable,
+          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
+  const fidl_type_t* resp_type =
       &::test::errorsyntax::_internal::
-          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable,
-      ::test::errorsyntax::ExampleUseOfErrorSyntax_RequestEncoder::
-          CallWhichMayFail(&_encoder, &s),
-      &response_);
+          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
+  zx_status_t status_ =
+      proxy_.Call(req_type, resp_type,
+                  ::test::errorsyntax::ExampleUseOfErrorSyntax_RequestEncoder::
+                      CallWhichMayFail(&_encoder, &s),
+                  &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result = ::fidl::DecodeAs<

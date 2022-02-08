@@ -334,6 +334,7 @@ class Protocol_ResponseEncoder {
             test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage RequestFlexibleResponseStrict(
@@ -362,6 +363,7 @@ class Protocol_ResponseEncoder {
             test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };

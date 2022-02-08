@@ -1637,13 +1637,14 @@ SomeProtocol::~SomeProtocol() = default;
 
 const fidl_type_t* ::test::anonymous::SomeProtocol_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
+  *out_needs_response = false;
   switch (ordinal) {
     case ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal:
       *out_needs_response = true;
       return &::test::anonymous::_internal::
           test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
+      ;
     default:
-      *out_needs_response = false;
       return nullptr;
   }
 }
@@ -1653,6 +1654,7 @@ const fidl_type_t* SomeProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
     case ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal:
       return &::test::anonymous::_internal::
           test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
+      ;
     default:
       return nullptr;
   }
@@ -1708,9 +1710,11 @@ void SomeProtocol_Proxy::SomeMethod(::test::anonymous::UnionMember union_member,
                                     SomeMethodCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal);
-  controller_->Send(
+  const fidl_type_t* req_type =
       &::test::anonymous::_internal::
-          test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
+          test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
+  controller_->Send(
+      req_type,
       ::test::anonymous::SomeProtocol_RequestEncoder::SomeMethod(
           &_encoder, &union_member, &table_member),
       SomeProtocol_SomeMethod_ResponseHandler(std::move(callback)));
@@ -1734,11 +1738,12 @@ class SomeProtocol_SomeMethod_Responder final {
   void operator()(::test::anonymous::SomeProtocol_SomeMethod_Result result) {
     ::fidl::MessageEncoder _encoder(
         ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal);
-    response_.Send(
+    const fidl_type_t* resp_type =
         &::test::anonymous::_internal::
-            test_anonymous_SomeProtocolSomeMethodResponseMessageTable,
-        ::test::anonymous::SomeProtocol_ResponseEncoder::SomeMethod(&_encoder,
-                                                                    &result));
+            test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
+    response_.Send(resp_type,
+                   ::test::anonymous::SomeProtocol_ResponseEncoder::SomeMethod(
+                       &_encoder, &result));
   }
 
  private:
@@ -1754,9 +1759,18 @@ zx_status_t SomeProtocol_Stub::Dispatch_(
   const fidl_type_t* request_type =
       ::test::anonymous::SomeProtocol_RequestDecoder::GetType(message.ordinal(),
                                                               &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
   }
+
   if (response.needs_response() != needs_response) {
     if (needs_response) {
       FIDL_REPORT_DECODING_ERROR(message, request_type,
@@ -1767,12 +1781,7 @@ zx_status_t SomeProtocol_Stub::Dispatch_(
     }
     return ZX_ERR_INVALID_ARGS;
   }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
+
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal: {
@@ -1785,11 +1794,10 @@ zx_status_t SomeProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return status;
+  return ZX_OK;
 }
 
 SomeProtocol_SyncProxy::SomeProtocol_SyncProxy(::zx::channel channel)
@@ -1805,11 +1813,14 @@ zx_status_t SomeProtocol_SyncProxy::SomeMethod(
       ::test::anonymous::internal::kSomeProtocol_SomeMethod_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  const fidl_type_t* req_type =
+      &::test::anonymous::_internal::
+          test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
+  const fidl_type_t* resp_type =
+      &::test::anonymous::_internal::
+          test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
   zx_status_t status_ =
-      proxy_.Call(&::test::anonymous::_internal::
-                      test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
-                  &::test::anonymous::_internal::
-                      test_anonymous_SomeProtocolSomeMethodResponseMessageTable,
+      proxy_.Call(req_type, resp_type,
                   ::test::anonymous::SomeProtocol_RequestEncoder::SomeMethod(
                       &_encoder, &union_member, &table_member),
                   &response_);

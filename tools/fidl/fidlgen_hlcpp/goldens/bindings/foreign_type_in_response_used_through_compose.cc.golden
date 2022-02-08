@@ -27,14 +27,14 @@ Top::~Top() = default;
 
 const fidl_type_t* ::test::foreigntypeinresponseusedthroughcompose::
     Top_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+  *out_needs_response = false;
   switch (ordinal) {
     case ::test::foreigntypeinresponseusedthroughcompose::internal::
         kTop_GetFoo_Ordinal:
       *out_needs_response = true;
-      return &::test::foreigntypeinresponseusedthroughcompose::_internal::
-          test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable;
+      return nullptr;
+      ;
     default:
-      *out_needs_response = false;
       return nullptr;
   }
 }
@@ -45,6 +45,7 @@ const fidl_type_t* Top_ResponseDecoder::GetType(uint64_t ordinal) {
         kTop_GetFoo_Ordinal:
       return &::test::foreigntypeinresponseusedthroughcompose::_internal::
           test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+      ;
     default:
       return nullptr;
   }
@@ -94,12 +95,11 @@ void Top_Proxy::GetFoo(GetFooCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::foreigntypeinresponseusedthroughcompose::internal::
           kTop_GetFoo_Ordinal);
-  controller_->Send(
-      &::test::foreigntypeinresponseusedthroughcompose::_internal::
-          test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable,
-      ::test::foreigntypeinresponseusedthroughcompose::Top_RequestEncoder::
-          GetFoo(&_encoder),
-      Top_GetFoo_ResponseHandler(std::move(callback)));
+  const fidl_type_t* req_type = nullptr;
+  controller_->Send(req_type,
+                    ::test::foreigntypeinresponseusedthroughcompose::
+                        Top_RequestEncoder::GetFoo(&_encoder),
+                    Top_GetFoo_ResponseHandler(std::move(callback)));
 }
 
 Top_Stub::Top_Stub(
@@ -121,11 +121,11 @@ class Top_GetFoo_Responder final {
     ::fidl::MessageEncoder _encoder(
         ::test::foreigntypeinresponseusedthroughcompose::internal::
             kTop_GetFoo_Ordinal);
-    response_.Send(
+    const fidl_type_t* resp_type =
         &::test::foreigntypeinresponseusedthroughcompose::_internal::
-            test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable,
-        ::test::foreigntypeinresponseusedthroughcompose::Top_ResponseEncoder::
-            GetFoo(&_encoder, &foo));
+            test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+    response_.Send(resp_type, ::test::foreigntypeinresponseusedthroughcompose::
+                                  Top_ResponseEncoder::GetFoo(&_encoder, &foo));
   }
 
  private:
@@ -140,9 +140,18 @@ zx_status_t Top_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
   const fidl_type_t* request_type =
       ::test::foreigntypeinresponseusedthroughcompose::Top_RequestDecoder::
           GetType(message.ordinal(), &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
   }
+
   if (response.needs_response() != needs_response) {
     if (needs_response) {
       FIDL_REPORT_DECODING_ERROR(message, request_type,
@@ -153,12 +162,7 @@ zx_status_t Top_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
     }
     return ZX_ERR_INVALID_ARGS;
   }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
+
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case ::test::foreigntypeinresponseusedthroughcompose::internal::
@@ -167,11 +171,10 @@ zx_status_t Top_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
       break;
     }
     default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return status;
+  return ZX_OK;
 }
 
 Top_SyncProxy::Top_SyncProxy(::zx::channel channel)
@@ -185,14 +188,15 @@ zx_status_t Top_SyncProxy::GetFoo(::test::bottom::Foo* out_foo) {
           kTop_GetFoo_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  zx_status_t status_ = proxy_.Call(
+  const fidl_type_t* req_type = nullptr;
+  const fidl_type_t* resp_type =
       &::test::foreigntypeinresponseusedthroughcompose::_internal::
-          test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable,
-      &::test::foreigntypeinresponseusedthroughcompose::_internal::
-          test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable,
-      ::test::foreigntypeinresponseusedthroughcompose::Top_RequestEncoder::
-          GetFoo(&_encoder),
-      &response_);
+          test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+  zx_status_t status_ =
+      proxy_.Call(req_type, resp_type,
+                  ::test::foreigntypeinresponseusedthroughcompose::
+                      Top_RequestEncoder::GetFoo(&_encoder),
+                  &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_foo = ::fidl::DecodeAs<::test::bottom::Foo>(

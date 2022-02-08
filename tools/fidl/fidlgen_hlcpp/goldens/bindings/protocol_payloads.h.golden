@@ -1403,6 +1403,7 @@ class MainProtocol_ResponseEncoder {
             test_protocolpayloads_MainProtocolTwoWayComposedResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage TwoWayComposedWithError(
@@ -1432,6 +1433,7 @@ class MainProtocol_ResponseEncoder {
             test_protocolpayloads_MainProtocolTwoWayComposedWithErrorResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnComposed(
@@ -1459,6 +1461,7 @@ class MainProtocol_ResponseEncoder {
             test_protocolpayloads_MainProtocolOnComposedEventMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnComposedWithError(
@@ -1488,6 +1491,7 @@ class MainProtocol_ResponseEncoder {
             test_protocolpayloads_MainProtocolOnComposedWithErrorEventMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage TwoWayLocal(
@@ -1519,6 +1523,7 @@ class MainProtocol_ResponseEncoder {
             test_protocolpayloads_MainProtocolTwoWayLocalResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage TwoWayLocalWithError(
@@ -1548,6 +1553,7 @@ class MainProtocol_ResponseEncoder {
             test_protocolpayloads_MainProtocolTwoWayLocalWithErrorResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnLocal(::fidl::MessageEncoder* _encoder,
@@ -1578,6 +1584,7 @@ class MainProtocol_ResponseEncoder {
                    test_protocolpayloads_MainProtocolOnLocalEventMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnLocalWithError(
@@ -1606,6 +1613,7 @@ class MainProtocol_ResponseEncoder {
             test_protocolpayloads_MainProtocolOnLocalWithErrorEventMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage TwoWayImport(
@@ -1633,6 +1641,7 @@ class MainProtocol_ResponseEncoder {
             test_protocolpayloads_MainProtocolTwoWayImportResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage TwoWayImportWithError(
@@ -1662,6 +1671,7 @@ class MainProtocol_ResponseEncoder {
             test_protocolpayloads_MainProtocolTwoWayImportWithErrorResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnImport(::fidl::MessageEncoder* _encoder,
@@ -1688,6 +1698,7 @@ class MainProtocol_ResponseEncoder {
                    test_protocolpayloads_MainProtocolOnImportEventMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnImportWithError(
@@ -1716,6 +1727,7 @@ class MainProtocol_ResponseEncoder {
             test_protocolpayloads_MainProtocolOnImportWithErrorEventMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage TwoWayAnon(
@@ -1747,6 +1759,7 @@ class MainProtocol_ResponseEncoder {
             test_protocolpayloads_MainProtocolTwoWayAnonResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage TwoWayAnonWithError(
@@ -1776,6 +1789,7 @@ class MainProtocol_ResponseEncoder {
             test_protocolpayloads_MainProtocolTwoWayAnonWithErrorResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnAnon(::fidl::MessageEncoder* _encoder,
@@ -1806,6 +1820,7 @@ class MainProtocol_ResponseEncoder {
                    test_protocolpayloads_MainProtocolOnAnonEventMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnAnonWithError(
@@ -1834,6 +1849,7 @@ class MainProtocol_ResponseEncoder {
             test_protocolpayloads_MainProtocolOnAnonWithErrorEventMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };

@@ -475,6 +475,7 @@ class HandleRightsProtocol_ResponseEncoder {
             test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage AnEvent(::fidl::MessageEncoder* _encoder,
@@ -509,6 +510,7 @@ class HandleRightsProtocol_ResponseEncoder {
                    test_protocols_HandleRightsProtocolAnEventEventMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };
@@ -920,77 +922,14 @@ class WithAndWithoutRequestResponse_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage NoRequestNoResponse(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage NoRequestEmptyResponse(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage NoRequestWithResponse(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage WithRequestNoResponse(
@@ -1102,26 +1041,6 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage NoRequestEmptyResponse(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage NoRequestWithResponse(
@@ -1149,30 +1068,11 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
             test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage WithRequestEmptyResponse(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage WithRequestWithResponse(
@@ -1200,30 +1100,11 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
             test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnEmptyResponse(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnWithResponse(
@@ -1251,6 +1132,7 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
             test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };
@@ -1357,6 +1239,7 @@ class Transitional_ResponseEncoder {
                    test_protocols_TransitionalRequestResponseMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage Event(::fidl::MessageEncoder* _encoder,
@@ -1383,6 +1266,7 @@ class Transitional_ResponseEncoder {
                    test_protocols_TransitionalEventEventMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };
@@ -1716,6 +1600,7 @@ class WithProtocolEnds_ResponseEncoder {
             test_protocols_WithProtocolEndsClientEndsResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ServerEnds(
@@ -1752,6 +1637,7 @@ class WithProtocolEnds_ResponseEncoder {
             test_protocols_WithProtocolEndsServerEndsResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage StructContainingEnds(
@@ -1779,6 +1665,7 @@ class WithProtocolEnds_ResponseEncoder {
             test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };
@@ -2036,101 +1923,18 @@ class WithErrorSyntax_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ResponseAsStruct(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_WithErrorSyntaxResponseAsStructRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ErrorAsPrimitive(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ErrorAsEnum(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(DidHLCPPEncode,
-               &::test::protocols::_internal::
-                   test_protocols_WithErrorSyntaxErrorAsEnumRequestMessageTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage HandleInResult(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_WithErrorSyntaxHandleInResultRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
 };
@@ -2176,6 +1980,7 @@ class WithErrorSyntax_ResponseEncoder {
             test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ErrorAsPrimitive(
@@ -2204,6 +2009,7 @@ class WithErrorSyntax_ResponseEncoder {
             test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ErrorAsEnum(
@@ -2232,6 +2038,7 @@ class WithErrorSyntax_ResponseEncoder {
             test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage HandleInResult(
@@ -2260,6 +2067,7 @@ class WithErrorSyntax_ResponseEncoder {
             test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };
@@ -2275,26 +2083,6 @@ __LOCAL extern "C" const fidl_type_t
 class DiscoverableProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Method(::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(DidHLCPPEncode,
-               &::test::protocols::_internal::
-                   test_protocols_DiscoverableProtocolMethodRequestMessageTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
 };
@@ -2500,6 +2288,7 @@ class ChannelProtocol_ResponseEncoder {
                    test_protocols_ChannelProtocolEventAEventMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::MessageEncoder* _encoder,
@@ -2526,29 +2315,11 @@ class ChannelProtocol_ResponseEncoder {
                    test_protocols_ChannelProtocolMethodBResponseMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage TakeHandle(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(DidHLCPPEncode,
-               &::test::protocols::_internal::
-                   test_protocols_ChannelProtocolTakeHandleResponseMessageTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage MutateSocket(
@@ -2584,6 +2355,7 @@ class ChannelProtocol_ResponseEncoder {
             test_protocols_ChannelProtocolMutateSocketResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };

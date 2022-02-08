@@ -93,27 +93,6 @@ class OnlyLibfuzzerAndDeps_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage LibfuzzerNeedsNonemptyProtocol(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
 };
@@ -126,26 +105,6 @@ class OnlyLibfuzzerAndDeps_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage LibfuzzerNeedsNonemptyProtocol(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
@@ -232,52 +191,10 @@ class ImportsSameNameContext_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Unattributed(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage AlwaysAppearsInImportingLibrary(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
 };
@@ -1363,6 +1280,7 @@ class DenyEachBinding_ResponseEncoder {
             test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnlyDenyGo(
@@ -1391,6 +1309,7 @@ class DenyEachBinding_ResponseEncoder {
             test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnlyDenyLibfuzzer(
@@ -1420,6 +1339,7 @@ class DenyEachBinding_ResponseEncoder {
             test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnlyDenyRust(
@@ -1448,6 +1368,7 @@ class DenyEachBinding_ResponseEncoder {
             test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage OnlyDenySyzkaller(
@@ -1477,6 +1398,7 @@ class DenyEachBinding_ResponseEncoder {
             test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };

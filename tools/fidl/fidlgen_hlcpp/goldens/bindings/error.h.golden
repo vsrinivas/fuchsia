@@ -231,6 +231,7 @@ class Example_ResponseEncoder {
         &::test::error::_internal::test_error_ExamplefooResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };

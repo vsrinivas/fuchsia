@@ -41,51 +41,10 @@ class Parent_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetChild(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(DidHLCPPEncode,
-               &::test::protocolrequest::_internal::
-                   test_protocolrequest_ParentGetChildRequestMessageTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage GetChildRequest(
       ::fidl::MessageEncoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(0);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(0);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-    } else {
-    }
-
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolrequest::_internal::
-            test_protocolrequest_ParentGetChildRequestRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage TakeChild(
@@ -205,6 +164,7 @@ class Parent_ResponseEncoder {
                    test_protocolrequest_ParentGetChildResponseMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage GetChildRequest(
@@ -241,6 +201,7 @@ class Parent_ResponseEncoder {
             test_protocolrequest_ParentGetChildRequestResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };

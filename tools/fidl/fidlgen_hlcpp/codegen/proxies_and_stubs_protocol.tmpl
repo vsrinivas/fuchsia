@@ -230,20 +230,22 @@ const char {{ .Name }}::Name_[] = {{ .DiscoverableName }};
 {{- end }}
 
 const fidl_type_t* {{ .RequestDecoder }}::GetType(uint64_t ordinal, bool* out_needs_response) {
+  *out_needs_response = false;
   switch (ordinal) {
     {{- range .Methods }}
       {{- if .HasRequest }}
     case {{ .OrdinalName }}:
         {{- if .HasResponse }}
       *out_needs_response = true;
-        {{- else }}
-      *out_needs_response = false;
         {{- end }}
+        {{- if .HasRequestPayload }}
       return &{{ .Request.HlCodingTable }};
+        {{ else }}
+      return nullptr;
+        {{ end -}};
       {{- end }}
     {{- end }}
     default:
-      *out_needs_response = false;
       return nullptr;
   }
 }
@@ -253,7 +255,11 @@ const fidl_type_t* {{ .ResponseDecoder.Name }}::GetType(uint64_t ordinal) {
     {{- range .Methods }}
       {{- if .HasResponse }}
     case {{ .OrdinalName }}:
+        {{- if .HasResponsePayload }}
       return &{{ .Response.HlCodingTable }};
+        {{ else }}
+      return nullptr;
+        {{ end -}};
       {{- end }}
     {{- end }}
     default:
@@ -284,6 +290,7 @@ zx_status_t {{ .Proxy.Name }}::Dispatch_(::fidl::HLCPPIncomingMessage message) {
         status = ZX_OK;
         break;
       }
+      {{- if .HasResponsePayload }}
       const char* error_msg = nullptr;
       status = message.Decode(&{{ .Response.HlCodingTable }}, &error_msg);
       if (status != ZX_OK) {
@@ -293,6 +300,7 @@ zx_status_t {{ .Proxy.Name }}::Dispatch_(::fidl::HLCPPIncomingMessage message) {
         {{- if .ResponseArgs }}
       ::fidl::Decoder decoder(std::move(message));
         {{- end }}
+      {{- end }}
       {{ .Name }}(
         {{- range $index, $param := .ResponseArgs -}}
           {{- if $index }}, {{ end }}::fidl::DecodeAs<{{ .Type }}>(&decoder, {{ .OffsetV2 }} + sizeof(fidl_message_header_t))
@@ -333,14 +341,20 @@ namespace {
       {{- end -}}
         );
         return ZX_OK;
-      }, &{{ .Response.HlCodingTable }});
+      }, {{ if .HasResponsePayload }}&{{ .Response.HlCodingTable }}{{ else }}nullptr{{ end }});
 }
 
 }  // namespace
 {{- end }}
 void {{ $.Proxy.Name }}::{{ template "RequestMethodSignature" . }} {
   ::fidl::MessageEncoder _encoder({{ .OrdinalName }});
-  controller_->Send(&{{ .Request.HlCodingTable }}, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
+  const fidl_type_t* req_type =
+    {{- if .HasRequestPayload -}}
+      &{{ .Request.HlCodingTable }};
+    {{- else -}}
+      nullptr;
+    {{- end }}
+  controller_->Send(req_type, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .RequestArgs -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -373,7 +387,13 @@ class {{ .ResponderType }} final {
 
   void operator()({{ template "Params" .ResponseArgs }}) {
     ::fidl::MessageEncoder _encoder({{ .OrdinalName }});
-    response_.Send(&{{ .Response.HlCodingTable }}, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder
+    const fidl_type_t* resp_type =
+    {{- if .HasResponsePayload -}}
+      &{{ .Response.HlCodingTable }};
+    {{- else -}}
+      nullptr;
+    {{- end }}
+    response_.Send(resp_type, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .ResponseArgs -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -394,9 +414,18 @@ zx_status_t {{ .Stub.Name }}::Dispatch_(
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type = {{ .RequestDecoder }}::GetType(message.ordinal(), &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
   }
+
   if (response.needs_response() != needs_response) {
     if (needs_response) {
       FIDL_REPORT_DECODING_ERROR(message, request_type, "Message needing a response with no txid");
@@ -405,12 +434,7 @@ zx_status_t {{ .Stub.Name }}::Dispatch_(
     }
     return ZX_ERR_INVALID_ARGS;
   }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
+
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     {{- range .Methods }}
@@ -433,11 +457,10 @@ zx_status_t {{ .Stub.Name }}::Dispatch_(
       {{- end }}
     {{- end }}
     default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return status;
+  return ZX_OK;
 }
 
 {{- range .Methods }}
@@ -445,7 +468,13 @@ zx_status_t {{ .Stub.Name }}::Dispatch_(
     {{- if .HasResponse }}
 void {{ $.Stub.Name }}::{{ template "EventMethodSignature" . }} {
   ::fidl::MessageEncoder _encoder({{ .OrdinalName }});
-  sender_()->Send(&{{ .Response.HlCodingTable }}, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder
+  const fidl_type_t* resp_type =
+    {{- if .HasResponsePayload -}}
+      &{{ .Response.HlCodingTable }};
+    {{- else -}}
+      nullptr;
+    {{- end -}}
+  sender_()->Send(resp_type, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .ResponseArgs -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -468,8 +497,20 @@ zx_status_t {{ $.SyncProxy.Name }}::{{ template "SyncRequestMethodSignature" . }
     {{- if .HasResponse }}
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  zx_status_t status_ = proxy_.Call(&{{ .Request.HlCodingTable }}, &{{ .Response.HlCodingTable }}, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
-  {{- range $index, $param := .RequestArgs -}}
+  const fidl_type_t* req_type =
+  {{- if .HasRequestPayload -}}
+    &{{ .Request.HlCodingTable }};
+  {{- else -}}
+    nullptr;
+  {{- end }}
+  const fidl_type_t* resp_type =
+  {{- if .HasResponsePayload -}}
+    &{{ .Response.HlCodingTable }};
+  {{- else -}}
+    nullptr;
+  {{- end }}
+  zx_status_t status_ = proxy_.Call(req_type, resp_type, {{ $.RequestEncoder }}::{{
+  .Name }}(&_encoder {{- range $index, $param := .RequestArgs -}}
     , &{{ $param.Name }}
   {{- end -}}
   ), &response_);
@@ -483,7 +524,13 @@ zx_status_t {{ $.SyncProxy.Name }}::{{ template "SyncRequestMethodSignature" . }
       {{- end }}
   return ZX_OK;
     {{- else }}
-  return proxy_.Send(&{{ .Request.HlCodingTable }}, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
+    const fidl_type_t* req_type =
+    {{- if .HasRequestPayload -}}
+      &{{ .Request.HlCodingTable }};
+    {{- else -}}
+      nullptr;
+    {{- end }}
+  return proxy_.Send(req_type, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .RequestArgs -}}
     , &{{ $param.Name }}
   {{- end -}}

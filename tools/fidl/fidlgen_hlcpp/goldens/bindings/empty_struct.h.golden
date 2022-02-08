@@ -143,6 +143,7 @@ class EmptyProtocol_ResponseEncoder {
                    test_emptystruct_EmptyProtocolReceiveEventMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage SendAndReceive(
@@ -170,6 +171,7 @@ class EmptyProtocol_ResponseEncoder {
             test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+
     return _encoder->GetMessage();
   }
 };

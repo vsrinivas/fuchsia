@@ -616,13 +616,14 @@ SimpleProtocol::~SimpleProtocol() = default;
 
 const fidl_type_t* ::test::nullable::SimpleProtocol_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
+  *out_needs_response = false;
   switch (ordinal) {
     case ::test::nullable::internal::kSimpleProtocol_Add_Ordinal:
       *out_needs_response = true;
       return &::test::nullable::_internal::
           test_nullable_SimpleProtocolAddRequestMessageTable;
+      ;
     default:
-      *out_needs_response = false;
       return nullptr;
   }
 }
@@ -632,6 +633,7 @@ const fidl_type_t* SimpleProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
     case ::test::nullable::internal::kSimpleProtocol_Add_Ordinal:
       return &::test::nullable::_internal::
           test_nullable_SimpleProtocolAddResponseMessageTable;
+      ;
     default:
       return nullptr;
   }
@@ -683,9 +685,11 @@ SimpleProtocol_Add_ResponseHandler(SimpleProtocol::AddCallback&& callback) {
 void SimpleProtocol_Proxy::Add(int32_t a, int32_t b, AddCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::nullable::internal::kSimpleProtocol_Add_Ordinal);
-  controller_->Send(
+  const fidl_type_t* req_type =
       &::test::nullable::_internal::
-          test_nullable_SimpleProtocolAddRequestMessageTable,
+          test_nullable_SimpleProtocolAddRequestMessageTable;
+  controller_->Send(
+      req_type,
       ::test::nullable::SimpleProtocol_RequestEncoder::Add(&_encoder, &a, &b),
       SimpleProtocol_Add_ResponseHandler(std::move(callback)));
 }
@@ -708,9 +712,11 @@ class SimpleProtocol_Add_Responder final {
   void operator()(int32_t sum) {
     ::fidl::MessageEncoder _encoder(
         ::test::nullable::internal::kSimpleProtocol_Add_Ordinal);
-    response_.Send(
+    const fidl_type_t* resp_type =
         &::test::nullable::_internal::
-            test_nullable_SimpleProtocolAddResponseMessageTable,
+            test_nullable_SimpleProtocolAddResponseMessageTable;
+    response_.Send(
+        resp_type,
         ::test::nullable::SimpleProtocol_ResponseEncoder::Add(&_encoder, &sum));
   }
 
@@ -727,9 +733,18 @@ zx_status_t SimpleProtocol_Stub::Dispatch_(
   const fidl_type_t* request_type =
       ::test::nullable::SimpleProtocol_RequestDecoder::GetType(
           message.ordinal(), &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
   }
+
   if (response.needs_response() != needs_response) {
     if (needs_response) {
       FIDL_REPORT_DECODING_ERROR(message, request_type,
@@ -740,12 +755,7 @@ zx_status_t SimpleProtocol_Stub::Dispatch_(
     }
     return ZX_ERR_INVALID_ARGS;
   }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
+
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case ::test::nullable::internal::kSimpleProtocol_Add_Ordinal: {
@@ -758,11 +768,10 @@ zx_status_t SimpleProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return status;
+  return ZX_OK;
 }
 
 SimpleProtocol_SyncProxy::SimpleProtocol_SyncProxy(::zx::channel channel)
@@ -776,11 +785,14 @@ zx_status_t SimpleProtocol_SyncProxy::Add(int32_t a, int32_t b,
       ::test::nullable::internal::kSimpleProtocol_Add_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  const fidl_type_t* req_type =
+      &::test::nullable::_internal::
+          test_nullable_SimpleProtocolAddRequestMessageTable;
+  const fidl_type_t* resp_type =
+      &::test::nullable::_internal::
+          test_nullable_SimpleProtocolAddResponseMessageTable;
   zx_status_t status_ = proxy_.Call(
-      &::test::nullable::_internal::
-          test_nullable_SimpleProtocolAddRequestMessageTable,
-      &::test::nullable::_internal::
-          test_nullable_SimpleProtocolAddResponseMessageTable,
+      req_type, resp_type,
       ::test::nullable::SimpleProtocol_RequestEncoder::Add(&_encoder, &a, &b),
       &response_);
   if (status_ != ZX_OK) return status_;

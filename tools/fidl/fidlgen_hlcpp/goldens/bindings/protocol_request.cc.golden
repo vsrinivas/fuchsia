@@ -39,25 +39,25 @@ Parent::~Parent() = default;
 
 const fidl_type_t* ::test::protocolrequest::Parent_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
+  *out_needs_response = false;
   switch (ordinal) {
     case ::test::protocolrequest::internal::kParent_GetChild_Ordinal:
       *out_needs_response = true;
-      return &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildRequestMessageTable;
+      return nullptr;
+      ;
     case ::test::protocolrequest::internal::kParent_GetChildRequest_Ordinal:
       *out_needs_response = true;
-      return &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildRequestRequestMessageTable;
+      return nullptr;
+      ;
     case ::test::protocolrequest::internal::kParent_TakeChild_Ordinal:
-      *out_needs_response = false;
       return &::test::protocolrequest::_internal::
           test_protocolrequest_ParentTakeChildRequestMessageTable;
+      ;
     case ::test::protocolrequest::internal::kParent_TakeChildRequest_Ordinal:
-      *out_needs_response = false;
       return &::test::protocolrequest::_internal::
           test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+      ;
     default:
-      *out_needs_response = false;
       return nullptr;
   }
 }
@@ -67,9 +67,11 @@ const fidl_type_t* Parent_ResponseDecoder::GetType(uint64_t ordinal) {
     case ::test::protocolrequest::internal::kParent_GetChild_Ordinal:
       return &::test::protocolrequest::_internal::
           test_protocolrequest_ParentGetChildResponseMessageTable;
+      ;
     case ::test::protocolrequest::internal::kParent_GetChildRequest_Ordinal:
       return &::test::protocolrequest::_internal::
           test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+      ;
     default:
       return nullptr;
   }
@@ -120,9 +122,9 @@ Parent_GetChild_ResponseHandler(Parent::GetChildCallback&& callback) {
 void Parent_Proxy::GetChild(GetChildCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::protocolrequest::internal::kParent_GetChild_Ordinal);
+  const fidl_type_t* req_type = nullptr;
   controller_->Send(
-      &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildRequestMessageTable,
+      req_type,
       ::test::protocolrequest::Parent_RequestEncoder::GetChild(&_encoder),
       Parent_GetChild_ResponseHandler(std::move(callback)));
 }
@@ -150,9 +152,9 @@ Parent_GetChildRequest_ResponseHandler(
 void Parent_Proxy::GetChildRequest(GetChildRequestCallback callback) {
   ::fidl::MessageEncoder _encoder(
       ::test::protocolrequest::internal::kParent_GetChildRequest_Ordinal);
+  const fidl_type_t* req_type = nullptr;
   controller_->Send(
-      &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildRequestRequestMessageTable,
+      req_type,
       ::test::protocolrequest::Parent_RequestEncoder::GetChildRequest(
           &_encoder),
       Parent_GetChildRequest_ResponseHandler(std::move(callback)));
@@ -161,9 +163,11 @@ void Parent_Proxy::TakeChild(
     ::fidl::InterfaceHandle<::test::protocolrequest::Child> c) {
   ::fidl::MessageEncoder _encoder(
       ::test::protocolrequest::internal::kParent_TakeChild_Ordinal);
-  controller_->Send(
+  const fidl_type_t* req_type =
       &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentTakeChildRequestMessageTable,
+          test_protocolrequest_ParentTakeChildRequestMessageTable;
+  controller_->Send(
+      req_type,
       ::test::protocolrequest::Parent_RequestEncoder::TakeChild(&_encoder, &c),
       nullptr);
 }
@@ -171,9 +175,11 @@ void Parent_Proxy::TakeChildRequest(
     ::fidl::InterfaceRequest<::test::protocolrequest::Child> r) {
   ::fidl::MessageEncoder _encoder(
       ::test::protocolrequest::internal::kParent_TakeChildRequest_Ordinal);
-  controller_->Send(
+  const fidl_type_t* req_type =
       &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentTakeChildRequestRequestMessageTable,
+          test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+  controller_->Send(
+      req_type,
       ::test::protocolrequest::Parent_RequestEncoder::TakeChildRequest(
           &_encoder, &r),
       nullptr);
@@ -197,8 +203,10 @@ class Parent_GetChild_Responder final {
   void operator()(::fidl::InterfaceHandle<::test::protocolrequest::Child> c) {
     ::fidl::MessageEncoder _encoder(
         ::test::protocolrequest::internal::kParent_GetChild_Ordinal);
-    response_.Send(&::test::protocolrequest::_internal::
-                       test_protocolrequest_ParentGetChildResponseMessageTable,
+    const fidl_type_t* resp_type =
+        &::test::protocolrequest::_internal::
+            test_protocolrequest_ParentGetChildResponseMessageTable;
+    response_.Send(resp_type,
                    ::test::protocolrequest::Parent_ResponseEncoder::GetChild(
                        &_encoder, &c));
   }
@@ -215,9 +223,11 @@ class Parent_GetChildRequest_Responder final {
   void operator()(::fidl::InterfaceRequest<::test::protocolrequest::Child> r) {
     ::fidl::MessageEncoder _encoder(
         ::test::protocolrequest::internal::kParent_GetChildRequest_Ordinal);
-    response_.Send(
+    const fidl_type_t* resp_type =
         &::test::protocolrequest::_internal::
-            test_protocolrequest_ParentGetChildRequestResponseMessageTable,
+            test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+    response_.Send(
+        resp_type,
         ::test::protocolrequest::Parent_ResponseEncoder::GetChildRequest(
             &_encoder, &r));
   }
@@ -234,9 +244,18 @@ zx_status_t Parent_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
   const fidl_type_t* request_type =
       ::test::protocolrequest::Parent_RequestDecoder::GetType(message.ordinal(),
                                                               &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
   }
+
   if (response.needs_response() != needs_response) {
     if (needs_response) {
       FIDL_REPORT_DECODING_ERROR(message, request_type,
@@ -247,12 +266,7 @@ zx_status_t Parent_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
     }
     return ZX_ERR_INVALID_ARGS;
   }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
+
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case ::test::protocolrequest::internal::kParent_GetChild_Ordinal: {
@@ -280,11 +294,10 @@ zx_status_t Parent_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
       break;
     }
     default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return status;
+  return ZX_OK;
 }
 
 Parent_SyncProxy::Parent_SyncProxy(::zx::channel channel)
@@ -298,11 +311,12 @@ zx_status_t Parent_SyncProxy::GetChild(
       ::test::protocolrequest::internal::kParent_GetChild_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  const fidl_type_t* req_type = nullptr;
+  const fidl_type_t* resp_type =
+      &::test::protocolrequest::_internal::
+          test_protocolrequest_ParentGetChildResponseMessageTable;
   zx_status_t status_ = proxy_.Call(
-      &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildRequestMessageTable,
-      &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildResponseMessageTable,
+      req_type, resp_type,
       ::test::protocolrequest::Parent_RequestEncoder::GetChild(&_encoder),
       &response_);
   if (status_ != ZX_OK) return status_;
@@ -319,11 +333,12 @@ zx_status_t Parent_SyncProxy::GetChildRequest(
       ::test::protocolrequest::internal::kParent_GetChildRequest_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  const fidl_type_t* req_type = nullptr;
+  const fidl_type_t* resp_type =
+      &::test::protocolrequest::_internal::
+          test_protocolrequest_ParentGetChildRequestResponseMessageTable;
   zx_status_t status_ = proxy_.Call(
-      &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildRequestRequestMessageTable,
-      &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildRequestResponseMessageTable,
+      req_type, resp_type,
       ::test::protocolrequest::Parent_RequestEncoder::GetChildRequest(
           &_encoder),
       &response_);
@@ -339,9 +354,11 @@ zx_status_t Parent_SyncProxy::TakeChild(
     ::fidl::InterfaceHandle<::test::protocolrequest::Child> c) {
   ::fidl::MessageEncoder _encoder(
       ::test::protocolrequest::internal::kParent_TakeChild_Ordinal);
-  return proxy_.Send(
+  const fidl_type_t* req_type =
       &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentTakeChildRequestMessageTable,
+          test_protocolrequest_ParentTakeChildRequestMessageTable;
+  return proxy_.Send(
+      req_type,
       ::test::protocolrequest::Parent_RequestEncoder::TakeChild(&_encoder, &c));
 }
 
@@ -349,9 +366,11 @@ zx_status_t Parent_SyncProxy::TakeChildRequest(
     ::fidl::InterfaceRequest<::test::protocolrequest::Child> r) {
   ::fidl::MessageEncoder _encoder(
       ::test::protocolrequest::internal::kParent_TakeChildRequest_Ordinal);
-  return proxy_.Send(
+  const fidl_type_t* req_type =
       &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentTakeChildRequestRequestMessageTable,
+          test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+  return proxy_.Send(
+      req_type,
       ::test::protocolrequest::Parent_RequestEncoder::TakeChildRequest(
           &_encoder, &r));
 }
@@ -367,9 +386,9 @@ Child::~Child() = default;
 
 const fidl_type_t* ::test::protocolrequest::Child_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
+  *out_needs_response = false;
   switch (ordinal) {
     default:
-      *out_needs_response = false;
       return nullptr;
   }
 }
@@ -418,9 +437,18 @@ zx_status_t Child_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
   const fidl_type_t* request_type =
       ::test::protocolrequest::Child_RequestDecoder::GetType(message.ordinal(),
                                                              &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!message.has_only_header()) {
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+      return status;
+    }
   }
+
   if (response.needs_response() != needs_response) {
     if (needs_response) {
       FIDL_REPORT_DECODING_ERROR(message, request_type,
@@ -431,20 +459,14 @@ zx_status_t Child_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
     }
     return ZX_ERR_INVALID_ARGS;
   }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
+
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
+      return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  return status;
+  return ZX_OK;
 }
 
 Child_SyncProxy::Child_SyncProxy(::zx::channel channel)
