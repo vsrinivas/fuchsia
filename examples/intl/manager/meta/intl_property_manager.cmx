@@ -1,0 +1,13 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "--set_initial_profile",
+            "--locale_ids=en-US,nl-NL",
+            "--timezone_ids=und-u-tz-uslax"
+        ],
+        "binary": "bin/intl_property_manager"
+    }
+}
