@@ -399,6 +399,12 @@ func execute(
 		defer localTester.Close()
 	}
 	finalize := func(t testrunner.Tester, sinks []runtests.DataSinkReference) error {
+		if ctx.Err() != nil {
+			// If the context is canceled, just return the context error.
+			// Otherwise, the RunSnapshot method will fail anyway and just
+			// mask the context error as a snapshot error.
+			return ctx.Err()
+		}
 		if t != nil {
 			if err := t.RunSnapshot(ctx, flags.snapshotFile); err != nil {
 				// This error usually has a different root cause that gets masked when we
