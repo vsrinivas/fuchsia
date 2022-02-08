@@ -124,8 +124,6 @@ if (target_cpu == "arm64") {
       "decoder_core.h",
       "firmware_blob.cc",
       "firmware_blob.h",
-      "h264_decoder.cc",
-      "h264_decoder.h",
       "h264_multi_decoder.cc",
       "h264_multi_decoder.h",
       "h264_utils.cc",
@@ -160,8 +158,6 @@ if (target_cpu == "arm64") {
       "watchdog.h",
 
       # CodecFactory+Codec interface handling:
-      "codec_adapter_h264.cc",
-      "codec_adapter_h264.h",
       "codec_adapter_h264_multi.cc",
       "codec_adapter_h264_multi.h",
       "codec_adapter_mpeg2.cc",
@@ -241,7 +237,6 @@ if (target_cpu == "arm64") {
       "tests/integration/test_25fps_vp9_hashes.h",
       "tests/integration/test_amlogic_video.cc",
       "tests/integration/test_frame_allocator.h",
-      "tests/integration/test_h264.cc",
       "tests/integration/test_h264_multi.cc",
       "tests/integration/test_mpeg2.cc",
       "tests/integration/test_parser.cc",
