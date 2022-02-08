@@ -93,6 +93,8 @@ source_set("main") {
 
 source_set("main_service") {
   sources = [
+    "annotation_providers.cc",
+    "annotation_providers.h",
     "crash_reports.cc",
     "crash_reports.h",
     "feedback_data.cc",
