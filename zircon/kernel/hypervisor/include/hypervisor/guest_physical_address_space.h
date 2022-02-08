@@ -71,6 +71,7 @@ class GuestPhysicalAddressSpace {
   zx_status_t UnmapRange(zx_gpaddr_t guest_paddr, size_t len);
   zx_status_t GetPage(zx_gpaddr_t guest_paddr, zx_paddr_t* host_paddr);
   zx_status_t PageFault(zx_gpaddr_t guest_paddr);
+  zx_status_t QueryFlags(zx_gpaddr_t guest_paddr, uint* mmu_flags);
   zx_status_t CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len, const char* name,
                              GuestPtr* guest_ptr);
 

@@ -42,6 +42,7 @@ static const char* const vcpu_exit[] = {
     [VCPU_WRMSR] = "exit:wrmsr",
     [VCPU_VM_ENTRY_FAILURE] = "exit:vm_entry_failure",
     [VCPU_EPT_VIOLATION] = "exit:ept_violation",
+    [VCPU_EPT_MISCONFIGURATION] = "exit:ept_misconfiguration",
     [VCPU_XSETBV] = "exit:xsetbv",
     [VCPU_PAUSE] = "exit:pause",
     [VCPU_VMCALL] = "exit:vmcall",

@@ -1053,7 +1053,7 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
                                         hypervisor::GuestPhysicalAddressSpace* gpas,
                                         hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
   EptViolationInfo ept_violation_info(exit_info.exit_qualification);
-  zx_vaddr_t guest_paddr = exit_info.guest_physical_address;
+  zx_gpaddr_t guest_paddr = exit_info.guest_physical_address;
   zx_status_t status =
       handle_trap(exit_info, vmcs, ept_violation_info.read, guest_paddr, gpas, traps, packet);
   switch (status) {
@@ -1074,10 +1074,22 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
 
   status = gpas->PageFault(guest_paddr);
   if (status != ZX_OK) {
-    dprintf(CRITICAL, "hypervisor: Unhandled EPT violation %#lx\n",
-            exit_info.guest_physical_address);
+    dprintf(CRITICAL, "hypervisor: Unhandled EPT violation %#lx\n", guest_paddr);
   }
   return status;
+}
+
+static zx_status_t handle_ept_misconfiguration(const ExitInfo& exit_info,
+                                               hypervisor::GuestPhysicalAddressSpace* gpas) {
+  zx_gpaddr_t guest_paddr = exit_info.guest_physical_address;
+  uint mmu_flags = 0;
+  zx_status_t status = gpas->QueryFlags(guest_paddr, &mmu_flags);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  dprintf(CRITICAL, "hypervisor: EPT misconfiguration %#lx flags %#x\n", guest_paddr, mmu_flags);
+  return ZX_ERR_INTERNAL;
 }
 
 static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,
@@ -1224,6 +1236,11 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
       ktrace_vcpu_exit(VCPU_EPT_VIOLATION, exit_info.guest_rip);
       GUEST_STATS_INC(ept_violations);
       status = handle_ept_violation(exit_info, vmcs, gpas, traps, packet);
+      break;
+    case ExitReason::EPT_MISCONFIGURATION:
+      LTRACEF("handling EPT misconfiguration\n\n");
+      ktrace_vcpu_exit(VCPU_EPT_MISCONFIGURATION, exit_info.guest_rip);
+      status = handle_ept_misconfiguration(exit_info, gpas);
       break;
     case ExitReason::XSETBV:
       LTRACEF("handling XSETBV\n\n");

@@ -133,6 +133,16 @@ zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
   return mapping->PageFault(guest_paddr, pf_flags, nullptr);
 }
 
+zx_status_t GuestPhysicalAddressSpace::QueryFlags(zx_gpaddr_t guest_paddr, uint* mmu_flags) {
+  fbl::RefPtr<VmMapping> mapping = FindMapping(RootVmar(), guest_paddr);
+  if (!mapping) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  zx_gpaddr_t offset = guest_paddr - mapping->base();
+  return mapping->aspace()->arch_aspace().Query(offset, nullptr, mmu_flags);
+}
+
 zx_status_t GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len,
                                                       const char* name, GuestPtr* guest_ptr) {
   const zx_gpaddr_t begin = ROUNDDOWN(guest_paddr, PAGE_SIZE);
