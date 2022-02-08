@@ -32,10 +32,12 @@ source_set("src") {
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//src/connectivity/network/drivers/network-device/device:shared_lock",
+    "//src/devices/lib/dev-operation",
     "//src/lib/ddktl",
     "//src/lib/vmo_store",
     "//zircon/system/public",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zircon-internal",
   ]
 }
 

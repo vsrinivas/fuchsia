@@ -49,6 +49,12 @@ class NetdeviceMigrationTestHelper {
     NetdeviceMigrationVmoStore& vmo_store = netdev_.vmo_store_;
     return fn(vmo_store);
   }
+  template <typename T, typename F>
+  T WithNetbufPool(F fn) __TA_EXCLUDES(netdev_.tx_lock_) {
+    std::lock_guard<std::mutex> lock(netdev_.tx_lock_);
+    NetbufPool& netbuf_pool = netdev_.netbuf_pool_;
+    return fn(netbuf_pool);
+  }
 
  private:
   NetdeviceMigration& netdev_;
@@ -60,6 +66,8 @@ namespace {
 
 constexpr uint8_t kVmoId = 13;
 constexpr uint32_t kFifoDepth = netdevice_migration::NetdeviceMigration::kFifoDepth;
+// Include arbitrary bytes to exercise fuchsia.hardware.ethernet API contract.
+constexpr size_t kNetbufSz = sizeof(ethernet_netbuf_t) + 40;
 
 class MockNetworkDeviceIfc : public ddk::Device<MockNetworkDeviceIfc>,
                              public ddk::NetworkDeviceIfcProtocol<MockNetworkDeviceIfc> {
@@ -118,6 +126,11 @@ class NetdeviceMigrationTest : public ::testing::Test {
     device_ = std::move(device.value());
   }
 
+  void CreateDeviceFails(zx_status_t expected) {
+    zx::status device = netdevice_migration::NetdeviceMigration::Create(parent_.get());
+    ASSERT_STATUS(device.status_value(), expected);
+  }
+
   void SetUpWithFeatures(uint32_t features) {
     EXPECT_CALL(mock_ethernet_impl_, EthernetImplQuery(0, testing::_))
         .WillOnce([features](uint32_t options, ethernet_info_t* out_info) -> zx_status_t {
@@ -125,6 +138,7 @@ class NetdeviceMigrationTest : public ::testing::Test {
               .features = features,
               .mtu = ETH_MTU_SIZE,
               .mac = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF},
+              .netbuf_size = kNetbufSz,
           };
           return ZX_OK;
         });
@@ -378,11 +392,32 @@ TEST_F(NetdeviceMigrationTest, NetworkDeviceDoesNotGetBtiIfEthDoesNotSupportDma)
       .WillOnce([](uint32_t options, ethernet_info_t* out_info) -> zx_status_t {
         *out_info = {
             .features = 0,
+            .netbuf_size = sizeof(ethernet_netbuf_t),
         };
         return ZX_OK;
       });
   EXPECT_CALL(MockEthernet(), EthernetImplGetBti(testing::_)).Times(0);
   ASSERT_NO_FATAL_FAILURE(CreateDevice());
+}
+
+TEST_F(NetdeviceMigrationTest, InvalidNetbufSzRemovesDriver) {
+  EXPECT_CALL(MockEthernet(), EthernetImplQuery(0, testing::_))
+      .WillOnce([](uint32_t options, ethernet_info_t* out_info) -> zx_status_t {
+        *out_info = {
+            .netbuf_size = sizeof(ethernet_netbuf_t) / 2,
+        };
+        return ZX_OK;
+      });
+  ASSERT_NO_FATAL_FAILURE(CreateDeviceFails(ZX_ERR_NOT_SUPPORTED));
+}
+
+TEST_F(NetdeviceMigrationDefaultSetupTest, ObservesNetbufSz) {
+  netdevice_migration::NetdeviceMigrationTestHelper helper(Device());
+  helper.WithNetbufPool<void>([](netdevice_migration::NetbufPool& netbuf_pool) {
+    std::optional netbuf = netbuf_pool.pop();
+    ASSERT_TRUE(netbuf.has_value());
+    ASSERT_GE(netbuf->size(), kNetbufSz);
+  });
 }
 
 TEST_F(NetdeviceMigrationDefaultSetupTest, NetworkDeviceImplQueueRxSpace) {
@@ -617,7 +652,7 @@ TEST_P(FillTxQueueTest, Succeeds) {
       buffers[buf_id] = buf;
     }
     struct CallbackRecord {
-      ethernet_netbuf_t netbuf;
+      ethernet_netbuf_t* netbuf;
       ethernet_impl_queue_tx_callback cb;
       void* cookie;
     };
@@ -636,7 +671,7 @@ TEST_P(FillTxQueueTest, Succeeds) {
           EXPECT_EQ(netbuf->data_size, ETH_MTU_SIZE);
           EXPECT_EQ(netbuf->phys, 0ul);
           if (ool.enabled) {
-            callbacks.push_back({.netbuf = *netbuf, .cb = callback, .cookie = cookie});
+            callbacks.push_back({.netbuf = netbuf, .cb = callback, .cookie = cookie});
           } else {
             callback(cookie, ZX_OK, netbuf);
           }
@@ -652,7 +687,7 @@ TEST_P(FillTxQueueTest, Succeeds) {
     Device().NetworkDeviceImplQueueTx(buffers, input.buffer_count);
     if (ool.enabled) {
       for (CallbackRecord& callback : callbacks) {
-        callback.cb(callback.cookie, ZX_OK, &callback.netbuf);
+        callback.cb(callback.cookie, ZX_OK, callback.netbuf);
       }
     }
   }

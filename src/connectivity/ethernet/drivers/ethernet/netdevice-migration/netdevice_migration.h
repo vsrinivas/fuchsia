@@ -18,11 +18,14 @@
 #include <fbl/mutex.h>
 
 #include "src/connectivity/network/drivers/network-device/device/public/locks.h"
+#include "src/devices/lib/dev-operation/include/lib/operation/ethernet.h"
 #include "src/lib/vmo_store/vmo_store.h"
 
 namespace netdevice_migration {
 
 using NetdeviceMigrationVmoStore = vmo_store::VmoStore<vmo_store::SlabStorage<uint32_t>>;
+using Netbuf = eth::Operation<>;
+using NetbufPool = eth::OperationPool<>;
 
 class NetdeviceMigration;
 using DeviceType = ddk::Device<NetdeviceMigration>;
@@ -92,7 +95,8 @@ class NetdeviceMigration
 
  private:
   NetdeviceMigration(zx_device_t* parent, ddk::EthernetImplProtocolClient ethernet, uint32_t mtu,
-                     zx::bti eth_bti, vmo_store::Options opts, std::array<uint8_t, MAC_SIZE> mac)
+                     zx::bti eth_bti, vmo_store::Options opts, std::array<uint8_t, MAC_SIZE> mac,
+                     size_t netbuf_size, NetbufPool netbuf_pool)
       : DeviceType(parent),
         ethernet_(ethernet),
         ethernet_ifc_proto_({&ethernet_ifc_protocol_ops_, this}),
@@ -125,6 +129,8 @@ class NetdeviceMigration
             .tx_types_list = tx_types_.data(),
             .tx_types_count = tx_types_.size(),
         }),
+        netbuf_size_(netbuf_size),
+        netbuf_pool_(std::move(netbuf_pool)),
         vmo_store_(opts) {
     for (FrameCookie& cookie : cookie_storage_) {
       tx_frame_cookies_.push_back(&cookie);
@@ -144,6 +150,7 @@ class NetdeviceMigration
   const std::array<uint8_t, 1> rx_types_;
   const std::array<tx_support_t, 1> tx_types_;
   const port_info_t port_info_;
+  const size_t netbuf_size_;
 
   std::mutex status_lock_;
   fuchsia_hardware_network::wire::StatusFlags port_status_flags_ __TA_GUARDED(status_lock_);
@@ -156,6 +163,7 @@ class NetdeviceMigration
   };
   std::array<FrameCookie, kFifoDepth> cookie_storage_ __TA_GUARDED(tx_lock_);
   std::vector<FrameCookie*> tx_frame_cookies_ __TA_GUARDED(tx_lock_);
+  NetbufPool netbuf_pool_ __TA_GUARDED(tx_lock_);
 
   std::mutex rx_lock_ __TA_ACQUIRED_BEFORE(tx_lock_, vmo_lock_);
   bool rx_started_ __TA_GUARDED(rx_lock_) = false;

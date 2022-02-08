@@ -6,6 +6,7 @@
 
 #include <fidl/fuchsia.hardware.ethernet/cpp/wire.h>
 #include <lib/ddk/debug.h>
+#include <lib/zircon-internal/align.h>
 #include <zircon/system/public/zircon/assert.h>
 
 #include <algorithm>
@@ -79,9 +80,24 @@ zx::status<std::unique_ptr<NetdeviceMigration>> NetdeviceMigration::Create(zx_de
   }
   std::array<uint8_t, sizeof(eth_info.mac)> mac;
   std::copy_n(eth_info.mac, sizeof(eth_info.mac), mac.begin());
+  if (eth_info.netbuf_size < sizeof(ethernet_netbuf_t)) {
+    zxlogf(ERROR, "netdevice-migration: invalid buffer size %ld < min %zu", eth_info.netbuf_size,
+           sizeof(ethernet_netbuf_t));
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+  eth_info.netbuf_size = ZX_ROUNDUP(eth_info.netbuf_size, 8);
+  NetbufPool netbuf_pool;
+  for (uint32_t i = 0; i < kFifoDepth; i++) {
+    std::optional netbuf = Netbuf::Alloc(eth_info.netbuf_size);
+    if (!netbuf.has_value()) {
+      return zx::error(ZX_ERR_NO_MEMORY);
+    }
+    netbuf_pool.push(std::move(netbuf.value()));
+  }
   fbl::AllocChecker ac;
   auto netdevm = std::unique_ptr<NetdeviceMigration>(
-      new (&ac) NetdeviceMigration(dev, ethernet, eth_info.mtu, std::move(eth_bti), opts, mac));
+      new (&ac) NetdeviceMigration(dev, ethernet, eth_info.mtu, std::move(eth_bti), opts, mac,
+                                   eth_info.netbuf_size, std::move(netbuf_pool)));
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
@@ -221,7 +237,7 @@ void NetdeviceMigration::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_lis
     __TA_EXCLUDES(tx_lock_, vmo_lock_) {
   constexpr uint32_t kQueueOpts = 0;
   struct CompleteArgs {
-    ethernet_netbuf_t netbuf;
+    std::optional<Netbuf> netbuf;
     FrameCookie* cookie;
   };
   CompleteArgs args[kFifoDepth];
@@ -296,20 +312,26 @@ void NetdeviceMigration::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_lis
           .id = buffer.id,
           .netdev = this,
       };
+      std::optional netbuf = netbuf_pool_.pop();
+      if (!netbuf.has_value()) {
+        zxlogf(ERROR, "netdevice-migration: netbuf pool exhausted");
+        DdkAsyncRemove();
+        return;
+      }
+      *(netbuf->operation()) = {
+          .data_buffer = vmo_view.data(),
+          .data_size = vmo_view.size(),
+          .phys = phys_addr,
+      };
       *args_iter++ = {
-          .netbuf =
-              {
-                  .data_buffer = vmo_view.data(),
-                  .data_size = vmo_view.size(),
-                  .phys = phys_addr,
-              },
+          .netbuf = std::move(netbuf),
           .cookie = cookie,
       };
     }
   }
   for (auto arg = std::begin(args); arg != args_iter; ++arg) {
     ethernet_.QueueTx(
-        kQueueOpts, &arg->netbuf,
+        kQueueOpts, arg->netbuf->take(),
         [](void* ctx, zx_status_t status, ethernet_netbuf_t* netbuf) {
           // The error semantics of fuchsia.hardware.ethernet/EthernetImpl.QueueTx are unspecified
           // other than `ZX_OK` indicating success. However, ethernet driver usages of
@@ -332,7 +354,10 @@ void NetdeviceMigration::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_lis
           cookie->netdev->netdevice_.CompleteTx(&result, 1);
           {
             std::lock_guard tx_lock(cookie->netdev->tx_lock_);
+            // TODO(https://fxbug.dev/93293): move tx cookie into Netbuf
             cookie->netdev->tx_frame_cookies_.push_back(cookie);
+            Netbuf op(netbuf, cookie->netdev->netbuf_size_);
+            cookie->netdev->netbuf_pool_.push(std::move(op));
           }
         },
         arg->cookie);
