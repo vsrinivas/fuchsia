@@ -3,16 +3,16 @@
         {
             "mirrors": [
                 {
-                    "blob_mirror_url": "http://fuchsia-blobs.example.com",
-                    "mirror_url": "https://fuchsia-security-pkg-test.example.com",
+                    "blob_mirror_url": "https://test.fuchsia.com/blobs",
+                    "mirror_url": "https://test.fuchsia.com",
                     "subscribe": false
                 }
             ],
-            "repo_url": "fuchsia-pkg://security-pkg-test.example.com",
+            "repo_url": "fuchsia-pkg://test.fuchsia.com",
             "root_keys": [
                 {
                     "type": "ed25519",
-                    "value": "2285e0e34210613662c60ff935caa3e7d9e4e6d95ea91db2a05831100e85acf0"
+                    "value": "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307"
                 }
             ],
             "root_threshold": 1,
