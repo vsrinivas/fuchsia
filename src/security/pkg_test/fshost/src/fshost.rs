@@ -4,13 +4,18 @@
 
 use {
     crate::{pkgfs::PkgfsInstance, storage::BlobfsInstance},
-    fidl_fuchsia_io::{OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fuchsia_async::futures::StreamExt,
-    fuchsia_component::server::ServiceFs,
+    fidl_fuchsia_io::{
+        MODE_TYPE_DIRECTORY, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+    },
     fuchsia_merkle::MerkleTree,
+    fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_syslog::fx_log_info,
     io_util::directory::open_in_namespace,
     std::{fs::File, ops::Drop},
+    vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
+        pseudo_directory, remote::remote_dir,
+    },
 };
 
 pub struct FSHost {
@@ -39,16 +44,24 @@ impl FSHost {
     }
 
     pub async fn serve(&self) {
-        fx_log_info!("Preparing ServiceFs");
+        fx_log_info!("Preparing services via VFS");
 
-        let mut fs = ServiceFs::new();
-        fs.add_remote("blob", self.blobfs.open_root_dir());
-        fs.add_remote("pkgfs", self.pkgfs.as_ref().unwrap().proxy());
-        fs.take_and_serve_directory_handle().unwrap();
+        let out_dir = pseudo_directory! {
+            "blob" => remote_dir(self.blobfs.open_root_dir()),
+            "pkgfs" => remote_dir(self.pkgfs.as_ref().unwrap().proxy()),
+        };
+        let scope = ExecutionScope::new();
+        out_dir.open(
+            scope.clone(),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::dot(),
+            take_startup_handle(HandleType::DirectoryRequest.into()).unwrap().into(),
+        );
 
-        fx_log_info!("Serving from ServiceFs");
+        fx_log_info!("Serving services via VFS");
 
-        fs.collect::<()>().await;
+        let () = scope.wait().await;
     }
 }
 

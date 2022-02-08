@@ -29,7 +29,10 @@
         },
         {
             directory: "pkgfs",
-            rights: [ "rw*" ],
+            rights: [
+                "execute",
+                "rw*",
+            ],
             path: "/pkgfs",
         },
     ],

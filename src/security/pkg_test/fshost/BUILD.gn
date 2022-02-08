@@ -31,6 +31,7 @@ rustc_binary("fshost-binary") {
     "//src/lib/scoped_task",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/lib/storage/ramdevice_client",
+    "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/bin/blobfs",
