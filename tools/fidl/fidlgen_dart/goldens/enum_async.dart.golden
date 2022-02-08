@@ -76,18 +76,6 @@ class MyStrictEnum extends $fidl.Enum {
     return false;
   }
 
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x1:
-        return r'MyStrictEnum.foo';
-      case 0x2:
-        return r'MyStrictEnum.bar';
-      default:
-        return r'MyStrictEnum.' '${$value}';
-    }
-  }
-
   static MyStrictEnum _ctor(int v) => MyStrictEnum(v);
 }
 
@@ -136,18 +124,6 @@ class MyFlexibleEnum extends $fidl.Enum {
   @override
   bool isUnknown() {
     return _isUnknown;
-  }
-
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x1:
-        return r'MyFlexibleEnum.foo';
-      case 0x2:
-        return r'MyFlexibleEnum.bar';
-      default:
-        return r'MyFlexibleEnum.' '${$value}';
-    }
   }
 
   static MyFlexibleEnum _ctor(int v) => MyFlexibleEnum(v);
@@ -209,20 +185,6 @@ class MyFlexibleEnumWithCustomUnknown extends $fidl.Enum {
     return _isUnknown;
   }
 
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x1:
-        return r'MyFlexibleEnumWithCustomUnknown.foo';
-      case 0x2:
-        return r'MyFlexibleEnumWithCustomUnknown.bar';
-      case 0x3:
-        return r'MyFlexibleEnumWithCustomUnknown.customUnknown';
-      default:
-        return r'MyFlexibleEnumWithCustomUnknown.' '${$value}';
-    }
-  }
-
   static MyFlexibleEnumWithCustomUnknown _ctor(int v) =>
       MyFlexibleEnumWithCustomUnknown(v);
 }
@@ -263,14 +225,6 @@ class MyEmptyFlexibleEnum extends $fidl.Enum {
   @override
   bool isUnknown() {
     return _isUnknown;
-  }
-
-  @override
-  String toString() {
-    switch ($value) {
-      default:
-        return r'MyEmptyFlexibleEnum.' '${$value}';
-    }
   }
 
   static MyEmptyFlexibleEnum _ctor(int v) => MyEmptyFlexibleEnum(v);

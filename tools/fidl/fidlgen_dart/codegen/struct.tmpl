@@ -82,15 +82,6 @@ class {{ .Name }} extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'{{ .Name }}' r'(
-{{- range $index, $member := .Members -}}
-      {{- if $index }}, {{ end -}}{{ $member.Name  }}: ' + {{ $member.Name }}.toString() + r'
-{{- end -}}
-    )';
-  }
-
   static {{ .Name }} _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:

@@ -78,16 +78,6 @@ class Enum extends $fidl.Enum {
     return _isUnknown;
   }
 
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x1:
-        return r'Enum.a';
-      default:
-        return r'Enum.' '${$value}';
-    }
-  }
-
   static Enum _ctor(int v) => Enum(v);
 }
 
@@ -127,22 +117,6 @@ class Bits extends $fidl.Bits {
   @override
   int getUnknownBits() {
     return $value & ~$mask.$value;
-  }
-
-  @override
-  String toString() {
-    List<String> parts = [];
-    if ($value & 0x1 != 0) {
-      parts.add(r'Bits.a');
-    }
-    if (hasUnknownBits()) {
-      parts.add('0x${getUnknownBits().toRadixString(16)}');
-    }
-    if (parts.isEmpty) {
-      return r'Bits.$none';
-    } else {
-      return parts.join(" | ");
-    }
   }
 
   static Bits _ctor(int v) => Bits(v);
@@ -189,16 +163,6 @@ class Union extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'Union.x(' + x.toString() + ')';
-      default:
-        return r'Union.<UNKNOWN>';
     }
   }
 
@@ -269,11 +233,6 @@ class Struct extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'Struct' r'(x: ' + x.toString() + r')';
   }
 
   static Struct _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {

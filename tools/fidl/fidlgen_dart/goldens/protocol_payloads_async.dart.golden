@@ -97,22 +97,6 @@ class MainProtocolTwoWayLocalWithErrorResult extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'MainProtocolTwoWayLocalWithErrorResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'MainProtocolTwoWayLocalWithErrorResult.err(' +
-            err.toString() +
-            ')';
-      default:
-        return r'MainProtocolTwoWayLocalWithErrorResult.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -207,22 +191,6 @@ class MainProtocolOnLocalWithErrorResult extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'MainProtocolOnLocalWithErrorResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'MainProtocolOnLocalWithErrorResult.err(' +
-            err.toString() +
-            ')';
-      default:
-        return r'MainProtocolOnLocalWithErrorResult.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -312,22 +280,6 @@ class MainProtocolTwoWayImportWithErrorResult extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'MainProtocolTwoWayImportWithErrorResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'MainProtocolTwoWayImportWithErrorResult.err(' +
-            err.toString() +
-            ')';
-      default:
-        return r'MainProtocolTwoWayImportWithErrorResult.<UNKNOWN>';
     }
   }
 
@@ -426,22 +378,6 @@ class MainProtocolOnImportWithErrorResult extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'MainProtocolOnImportWithErrorResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'MainProtocolOnImportWithErrorResult.err(' +
-            err.toString() +
-            ')';
-      default:
-        return r'MainProtocolOnImportWithErrorResult.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -531,22 +467,6 @@ class MainProtocolTwoWayAnonWithErrorResult extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'MainProtocolTwoWayAnonWithErrorResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'MainProtocolTwoWayAnonWithErrorResult.err(' +
-            err.toString() +
-            ')';
-      default:
-        return r'MainProtocolTwoWayAnonWithErrorResult.<UNKNOWN>';
     }
   }
 
@@ -644,20 +564,6 @@ class MainProtocolOnAnonWithErrorResult extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'MainProtocolOnAnonWithErrorResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'MainProtocolOnAnonWithErrorResult.err(' + err.toString() + ')';
-      default:
-        return r'MainProtocolOnAnonWithErrorResult.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -739,15 +645,6 @@ class MainProtocolTwoWayAnonWithErrorResponse extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'MainProtocolTwoWayAnonWithErrorResponse' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
-  }
-
   static MainProtocolTwoWayAnonWithErrorResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -818,15 +715,6 @@ class MainProtocolOnAnonWithErrorResponse extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'MainProtocolOnAnonWithErrorResponse' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
-  }
-
   static MainProtocolOnAnonWithErrorResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -895,15 +783,6 @@ class LocalStructPayload extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'LocalStructPayload' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
   }
 
   static LocalStructPayload _structDecode(

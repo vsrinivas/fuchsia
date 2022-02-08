@@ -90,15 +90,6 @@ class ExampleUseOfVectors extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'ExampleUseOfVectors' r'(vectorOfUint8: ' +
-        vectorOfUint8.toString() +
-        r', vectorOfVectorOfBool: ' +
-        vectorOfVectorOfBool.toString() +
-        r')';
-  }
-
   static ExampleUseOfVectors _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {

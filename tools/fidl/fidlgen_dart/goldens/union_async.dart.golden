@@ -92,18 +92,6 @@ class PizzaOrPasta extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'PizzaOrPasta.pizza(' + pizza.toString() + ')';
-      case 2:
-        return r'PizzaOrPasta.pasta(' + pasta.toString() + ')';
-      default:
-        return r'PizzaOrPasta.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -188,18 +176,6 @@ class ExplicitPizzaOrPasta extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'ExplicitPizzaOrPasta.pizza(' + pizza.toString() + ')';
-      case 4:
-        return r'ExplicitPizzaOrPasta.pasta(' + pasta.toString() + ')';
-      default:
-        return r'ExplicitPizzaOrPasta.<UNKNOWN>';
     }
   }
 
@@ -299,18 +275,6 @@ class FlexiblePizzaOrPasta extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'FlexiblePizzaOrPasta.pizza(' + pizza.toString() + ')';
-      case 2:
-        return r'FlexiblePizzaOrPasta.pasta(' + pasta.toString() + ')';
-      default:
-        return r'FlexiblePizzaOrPasta.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -396,18 +360,6 @@ class StrictPizzaOrPasta extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'StrictPizzaOrPasta.pizza(' + pizza.toString() + ')';
-      case 2:
-        return r'StrictPizzaOrPasta.pasta(' + pasta.toString() + ')';
-      default:
-        return r'StrictPizzaOrPasta.<UNKNOWN>';
     }
   }
 
@@ -510,24 +462,6 @@ class Union extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'Union.primitive(' + primitive.toString() + ')';
-      case 2:
-        return r'Union.stringNeedsConstructor(' +
-            stringNeedsConstructor.toString() +
-            ')';
-      case 3:
-        return r'Union.vectorStringAlsoNeedsConstructor(' +
-            vectorStringAlsoNeedsConstructor.toString() +
-            ')';
-      default:
-        return r'Union.<UNKNOWN>';
     }
   }
 
@@ -643,24 +577,6 @@ class FlexibleUnion extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'FlexibleUnion.primitive(' + primitive.toString() + ')';
-      case 2:
-        return r'FlexibleUnion.stringNeedsConstructor(' +
-            stringNeedsConstructor.toString() +
-            ')';
-      case 3:
-        return r'FlexibleUnion.vectorStringAlsoNeedsConstructor(' +
-            vectorStringAlsoNeedsConstructor.toString() +
-            ')';
-      default:
-        return r'FlexibleUnion.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -769,24 +685,6 @@ class StrictUnion extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'StrictUnion.primitive(' + primitive.toString() + ')';
-      case 2:
-        return r'StrictUnion.stringNeedsConstructor(' +
-            stringNeedsConstructor.toString() +
-            ')';
-      case 3:
-        return r'StrictUnion.vectorStringAlsoNeedsConstructor(' +
-            vectorStringAlsoNeedsConstructor.toString() +
-            ')';
-      default:
-        return r'StrictUnion.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -863,18 +761,6 @@ class FieldCollision extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'FieldCollision.fieldCollisionTag(' +
-            fieldCollisionTag.toString() +
-            ')';
-      default:
-        return r'FieldCollision.<UNKNOWN>';
     }
   }
 
@@ -965,20 +851,6 @@ class ExplicitUnion extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'ExplicitUnion.primitive(' + primitive.toString() + ')';
-      case 3:
-        return r'ExplicitUnion.stringNeedsConstructor(' +
-            stringNeedsConstructor.toString() +
-            ')';
-      default:
-        return r'ExplicitUnion.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -1063,18 +935,6 @@ class ReverseOrdinalUnion extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 2:
-        return r'ReverseOrdinalUnion.second(' + second.toString() + ')';
-      case 1:
-        return r'ReverseOrdinalUnion.first(' + first.toString() + ')';
-      default:
-        return r'ReverseOrdinalUnion.<UNKNOWN>';
     }
   }
 
@@ -1171,18 +1031,6 @@ class FlexibleFoo extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'FlexibleFoo.s(' + s.toString() + ')';
-      case 2:
-        return r'FlexibleFoo.i(' + i.toString() + ')';
-      default:
-        return r'FlexibleFoo.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -1267,18 +1115,6 @@ class StrictFoo extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'StrictFoo.s(' + s.toString() + ')';
-      case 2:
-        return r'StrictFoo.i(' + i.toString() + ')';
-      default:
-        return r'StrictFoo.<UNKNOWN>';
     }
   }
 
@@ -1374,18 +1210,6 @@ class ExplicitFoo extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 2:
-        return r'ExplicitFoo.s(' + s.toString() + ')';
-      case 1:
-        return r'ExplicitFoo.i(' + i.toString() + ')';
-      default:
-        return r'ExplicitFoo.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -1470,18 +1294,6 @@ class ExplicitStrictFoo extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 3:
-        return r'ExplicitStrictFoo.s(' + s.toString() + ')';
-      case 2:
-        return r'ExplicitStrictFoo.i(' + i.toString() + ')';
-      default:
-        return r'ExplicitStrictFoo.<UNKNOWN>';
     }
   }
 
@@ -1575,18 +1387,6 @@ class OlderSimpleUnion extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'OlderSimpleUnion.i(' + i.toString() + ')';
-      case 2:
-        return r'OlderSimpleUnion.f(' + f.toString() + ')';
-      default:
-        return r'OlderSimpleUnion.<UNKNOWN>';
     }
   }
 
@@ -1694,20 +1494,6 @@ class NewerSimpleUnion extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'NewerSimpleUnion.i(' + i.toString() + ')';
-      case 2:
-        return r'NewerSimpleUnion.s(' + s.toString() + ')';
-      case 3:
-        return r'NewerSimpleUnion.v(' + v.toString() + ')';
-      default:
-        return r'NewerSimpleUnion.<UNKNOWN>';
     }
   }
 
@@ -1820,20 +1606,6 @@ class StrictSimpleXUnion extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'StrictSimpleXUnion.i(' + i.toString() + ')';
-      case 2:
-        return r'StrictSimpleXUnion.f(' + f.toString() + ')';
-      case 3:
-        return r'StrictSimpleXUnion.s(' + s.toString() + ')';
-      default:
-        return r'StrictSimpleXUnion.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -1917,16 +1689,6 @@ class XUnionContainingEmptyStruct extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'XUnionContainingEmptyStruct.empty(' + empty.toString() + ')';
-      default:
-        return r'XUnionContainingEmptyStruct.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -1997,16 +1759,6 @@ class StrictBoundedXUnion extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'StrictBoundedXUnion.v(' + v.toString() + ')';
-      default:
-        return r'StrictBoundedXUnion.<UNKNOWN>';
     }
   }
 
@@ -2104,18 +1856,6 @@ class ExplicitXUnion extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'ExplicitXUnion.i(' + i.toString() + ')';
-      case 4:
-        return r'ExplicitXUnion.f(' + f.toString() + ')';
-      default:
-        return r'ExplicitXUnion.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -2195,16 +1935,6 @@ class UnionWithAttributes extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'UnionWithAttributes.x(' + x.toString() + ')';
-      default:
-        return r'UnionWithAttributes.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -2276,11 +2006,6 @@ class Pizza extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Pizza' r'(toppings: ' + toppings.toString() + r')';
-  }
-
   static Pizza _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
@@ -2334,11 +2059,6 @@ class Pasta extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'Pasta' r'(sauce: ' + sauce.toString() + r')';
   }
 
   static Pasta _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
@@ -2401,11 +2121,6 @@ class NullableUnionStruct extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'NullableUnionStruct' r'(theUnion: ' + theUnion.toString() + r')';
-  }
-
   static NullableUnionStruct _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -2463,11 +2178,6 @@ class Empty extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'Empty' r'(reserved: ' + reserved.toString() + r')';
   }
 
   static Empty _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
@@ -2532,11 +2242,6 @@ class StructWithNullableXUnion extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'StructWithNullableXUnion' r'(x1: ' + x1.toString() + r')';
   }
 
   static StructWithNullableXUnion _structDecode(
@@ -2612,17 +2317,6 @@ class UnionSandwich extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'UnionSandwich' r'(a: ' +
-        a.toString() +
-        r', u: ' +
-        u.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
   }
 
   static UnionSandwich _structDecode(

@@ -97,22 +97,6 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'ExampleUseOfErrorSyntaxCallWhichMayFailResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'ExampleUseOfErrorSyntaxCallWhichMayFailResult.err(' +
-            err.toString() +
-            ')';
-      default:
-        return r'ExampleUseOfErrorSyntaxCallWhichMayFailResult.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -185,13 +169,6 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResponse extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'ExampleUseOfErrorSyntaxCallWhichMayFailResponse' r'(value: ' +
-        value.toString() +
-        r')';
   }
 
   static ExampleUseOfErrorSyntaxCallWhichMayFailResponse _structDecode(

@@ -83,15 +83,6 @@ class Padding1ByteEnd extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Padding1ByteEnd' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
-  }
-
   static Padding1ByteEnd _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -161,15 +152,6 @@ class Padding2ByteEnd extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'Padding2ByteEnd' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
   }
 
   static Padding2ByteEnd _structDecode(
@@ -243,15 +225,6 @@ class Padding3ByteEnd extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Padding3ByteEnd' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
-  }
-
   static Padding3ByteEnd _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -321,15 +294,6 @@ class Padding4ByteEnd extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'Padding4ByteEnd' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
   }
 
   static Padding4ByteEnd _structDecode(
@@ -411,17 +375,6 @@ class Padding5ByteEnd extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Padding5ByteEnd' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r', c: ' +
-        c.toString() +
-        r')';
-  }
-
   static Padding5ByteEnd _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -495,15 +448,6 @@ class Padding6ByteEnd extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Padding6ByteEnd' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
-  }
-
   static Padding6ByteEnd _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -573,15 +517,6 @@ class Padding7ByteEnd extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'Padding7ByteEnd' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
   }
 
   static Padding7ByteEnd _structDecode(
@@ -655,15 +590,6 @@ class Padding1ByteMiddle extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Padding1ByteMiddle' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
-  }
-
   static Padding1ByteMiddle _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -733,15 +659,6 @@ class Padding2ByteMiddle extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'Padding2ByteMiddle' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
   }
 
   static Padding2ByteMiddle _structDecode(
@@ -815,15 +732,6 @@ class Padding3ByteMiddle extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Padding3ByteMiddle' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
-  }
-
   static Padding3ByteMiddle _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -893,15 +801,6 @@ class Padding4ByteMiddle extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'Padding4ByteMiddle' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
   }
 
   static Padding4ByteMiddle _structDecode(
@@ -983,17 +882,6 @@ class Padding5ByteMiddle extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Padding5ByteMiddle' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r', c: ' +
-        c.toString() +
-        r')';
-  }
-
   static Padding5ByteMiddle _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -1067,15 +955,6 @@ class Padding6ByteMiddle extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Padding6ByteMiddle' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
-  }
-
   static Padding6ByteMiddle _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -1145,15 +1024,6 @@ class Padding7ByteMiddle extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'Padding7ByteMiddle' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
   }
 
   static Padding7ByteMiddle _structDecode(
@@ -1243,19 +1113,6 @@ class Padding4ByteAlignmentLength12 extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Padding4ByteAlignmentLength12' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r', c: ' +
-        c.toString() +
-        r', d: ' +
-        d.toString() +
-        r')';
-  }
-
   static Padding4ByteAlignmentLength12 _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -1341,17 +1198,6 @@ class Padding2ByteAlignmentLength6 extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'Padding2ByteAlignmentLength6' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r', c: ' +
-        c.toString() +
-        r')';
   }
 
   static Padding2ByteAlignmentLength6 _structDecode(

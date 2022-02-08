@@ -112,19 +112,6 @@ class ByteAndBytes extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'ByteAndBytes' r'(singleByte: ' +
-        singleByte.toString() +
-        r', manyBytes: ' +
-        manyBytes.toString() +
-        r', onlyOneKBytes: ' +
-        onlyOneKBytes.toString() +
-        r', optOnlyOneKBytes: ' +
-        optOnlyOneKBytes.toString() +
-        r')';
-  }
-
   static ByteAndBytes _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {

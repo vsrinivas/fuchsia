@@ -75,11 +75,6 @@ class Empty extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Empty' r'(reserved: ' + reserved.toString() + r')';
-  }
-
   static Empty _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:

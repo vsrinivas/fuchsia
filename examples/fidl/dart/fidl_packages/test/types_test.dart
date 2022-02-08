@@ -14,7 +14,7 @@ void main() {
     expect(fidl_examples.FileMode.read.$value, equals(1));
     final readWrite =
         fidl_examples.FileMode.read | fidl_examples.FileMode.write;
-    expect(readWrite.toString(), 'FileMode.read | FileMode.write');
+    expect(readWrite.toString(), 'FileMode(3)');
   });
   // [END bits]
 
@@ -23,7 +23,7 @@ void main() {
     const museum = fidl_examples.LocationType.museum;
     expect(fidl_examples.LocationType(1), equals(museum));
     expect(fidl_examples.LocationType.$valueOf('museum'), equals(museum));
-    expect(museum.toString(), 'LocationType.museum');
+    expect(museum.toString(), 'LocationType(1)');
   });
   // [END enums]
 
@@ -35,7 +35,7 @@ void main() {
 
     final blue = fidl_examples.Color(id: 1, name: 'blue');
     expect(blue == withDefaultName, equals(false));
-    expect(blue.toString(), 'Color(id: 1, name: blue)');
+    expect(blue.toString(), 'Color([1, blue])');
 
     final deepBlue = fidl_examples.Color.clone(blue, name: 'deep blue');
     expect(deepBlue.id, equals(1));
@@ -51,7 +51,7 @@ void main() {
     expect(
         intVal == fidl_examples.JsonValue.withStringValue('1'), equals(false));
 
-    expect(intVal.toString(), 'JsonValue.intValue(1)');
+    expect(intVal.toString(), 'JsonValue(2: 1)');
   });
   // [END unions]
 

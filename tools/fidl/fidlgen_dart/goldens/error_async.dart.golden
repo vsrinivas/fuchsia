@@ -92,18 +92,6 @@ class ExampleFooResult extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'ExampleFooResult.response(' + response.toString() + ')';
-      case 2:
-        return r'ExampleFooResult.err(' + err.toString() + ')';
-      default:
-        return r'ExampleFooResult.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -173,11 +161,6 @@ class ExampleFooResponse extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'ExampleFooResponse' r'(y: ' + y.toString() + r')';
   }
 
   static ExampleFooResponse _structDecode(

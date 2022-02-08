@@ -78,16 +78,6 @@ class UnionSmallArray extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'UnionSmallArray.a(' + a.toString() + ')';
-      default:
-        return r'UnionSmallArray.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -158,16 +148,6 @@ class UnionLargeArray extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'UnionLargeArray.a(' + a.toString() + ')';
-      default:
-        return r'UnionLargeArray.<UNKNOWN>';
     }
   }
 
@@ -244,11 +224,6 @@ class StructSmallArray extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'StructSmallArray' r'(a: ' + a.toString() + r')';
-  }
-
   static StructSmallArray _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -307,11 +282,6 @@ class StructLargeArray extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'StructLargeArray' r'(a: ' + a.toString() + r')';
   }
 
   static StructLargeArray _structDecode(

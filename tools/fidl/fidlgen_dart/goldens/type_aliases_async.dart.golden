@@ -78,18 +78,6 @@ class ObjType extends $fidl.Enum {
     return false;
   }
 
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x0:
-        return r'ObjType.none';
-      case 0x4:
-        return r'ObjType.channel';
-      default:
-        return r'ObjType.' '${$value}';
-    }
-  }
-
   static ObjType _ctor(int v) => ObjType(v);
 }
 
@@ -226,27 +214,6 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'ExampleOfUseOfAliases' r'(fieldOfU32: ' +
-        fieldOfU32.toString() +
-        r', fieldOfVecOfStrings: ' +
-        fieldOfVecOfStrings.toString() +
-        r', fieldOfVecOfStringsAtMostNine: ' +
-        fieldOfVecOfStringsAtMostNine.toString() +
-        r', fieldOfVecOfStringsAtMost5: ' +
-        fieldOfVecOfStringsAtMost5.toString() +
-        r', fieldOfVecOfRefMeAtMost5: ' +
-        fieldOfVecOfRefMeAtMost5.toString() +
-        r', fieldOfChannel: ' +
-        fieldOfChannel.toString() +
-        r', fieldOfClientEnd: ' +
-        fieldOfClientEnd.toString() +
-        r', fieldOfNullableClientEnd: ' +
-        fieldOfNullableClientEnd.toString() +
-        r')';
   }
 
   static ExampleOfUseOfAliases _structDecode(

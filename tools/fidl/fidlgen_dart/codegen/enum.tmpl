@@ -72,18 +72,6 @@ class {{ .Name }} extends $fidl.Enum {
 {{ end }}
   }
 
-  @override
-  String toString() {
-    switch ($value) {
-  {{- range .Members }}
-      case {{ .Value }}:
-        return r'{{ $.Name }}.{{ .Name }}';
-  {{- end }}
-      default:
-        return r'{{ $.Name }}.' '${$value}';
-    }
-  }
-
   static {{ .Name }} _ctor(int v) => {{ .Name }}(v);
 }
 

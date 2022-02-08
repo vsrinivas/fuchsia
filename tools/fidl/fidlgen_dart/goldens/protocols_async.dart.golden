@@ -76,18 +76,6 @@ class ObjType extends $fidl.Enum {
     return false;
   }
 
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x0:
-        return r'ObjType.none';
-      case 0xe:
-        return r'ObjType.socket';
-      default:
-        return r'ObjType.' '${$value}';
-    }
-  }
-
   static ObjType _ctor(int v) => ObjType(v);
 }
 
@@ -131,18 +119,6 @@ class ErrorEnum extends $fidl.Enum {
   @override
   bool isUnknown() {
     return false;
-  }
-
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x1:
-        return r'ErrorEnum.errFoo';
-      case 0x2:
-        return r'ErrorEnum.errBar';
-      default:
-        return r'ErrorEnum.' '${$value}';
-    }
   }
 
   static ErrorEnum _ctor(int v) => ErrorEnum(v);
@@ -191,22 +167,6 @@ class Rights extends $fidl.Bits {
   @override
   int getUnknownBits() {
     return $value & ~$mask.$value;
-  }
-
-  @override
-  String toString() {
-    List<String> parts = [];
-    if ($value & 0x1 != 0) {
-      parts.add(r'Rights.transfer');
-    }
-    if ($value & 0x2 != 0) {
-      parts.add(r'Rights.duplicate');
-    }
-    if (parts.isEmpty) {
-      return r'Rights.$none';
-    } else {
-      return parts.join(" | ");
-    }
   }
 
   static Rights _ctor(int v) => Rights(v);
@@ -267,22 +227,6 @@ class WithErrorSyntaxResponseAsStructResult extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'WithErrorSyntaxResponseAsStructResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'WithErrorSyntaxResponseAsStructResult.err(' +
-            err.toString() +
-            ')';
-      default:
-        return r'WithErrorSyntaxResponseAsStructResult.<UNKNOWN>';
     }
   }
 
@@ -380,22 +324,6 @@ class WithErrorSyntaxErrorAsPrimitiveResult extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'WithErrorSyntaxErrorAsPrimitiveResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'WithErrorSyntaxErrorAsPrimitiveResult.err(' +
-            err.toString() +
-            ')';
-      default:
-        return r'WithErrorSyntaxErrorAsPrimitiveResult.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -485,20 +413,6 @@ class WithErrorSyntaxErrorAsEnumResult extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'WithErrorSyntaxErrorAsEnumResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'WithErrorSyntaxErrorAsEnumResult.err(' + err.toString() + ')';
-      default:
-        return r'WithErrorSyntaxErrorAsEnumResult.<UNKNOWN>';
     }
   }
 
@@ -596,22 +510,6 @@ class WithErrorSyntaxHandleInResultResult extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'WithErrorSyntaxHandleInResultResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'WithErrorSyntaxHandleInResultResult.err(' +
-            err.toString() +
-            ')';
-      default:
-        return r'WithErrorSyntaxHandleInResultResult.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -687,16 +585,6 @@ class TheUnion extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'TheUnion.v(' + v.toString() + ')';
-      default:
-        return r'TheUnion.<UNKNOWN>';
     }
   }
 
@@ -785,17 +673,6 @@ class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'WithErrorSyntaxResponseAsStructResponse' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r', c: ' +
-        c.toString() +
-        r')';
-  }
-
   static WithErrorSyntaxResponseAsStructResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -860,13 +737,6 @@ class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'WithErrorSyntaxErrorAsPrimitiveResponse' r'(reserved: ' +
-        reserved.toString() +
-        r')';
-  }
-
   static WithErrorSyntaxErrorAsPrimitiveResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -927,13 +797,6 @@ class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'WithErrorSyntaxErrorAsEnumResponse' r'(reserved: ' +
-        reserved.toString() +
-        r')';
   }
 
   static WithErrorSyntaxErrorAsEnumResponse _structDecode(
@@ -997,13 +860,6 @@ class WithErrorSyntaxHandleInResultResponse extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'WithErrorSyntaxHandleInResultResponse' r'(h: ' +
-        h.toString() +
-        r')';
   }
 
   static WithErrorSyntaxHandleInResultResponse _structDecode(
@@ -1101,19 +957,6 @@ class ProtocolEnds extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'ProtocolEnds' r'(client: ' +
-        client.toString() +
-        r', server: ' +
-        server.toString() +
-        r', clientOpt: ' +
-        clientOpt.toString() +
-        r', serverOpt: ' +
-        serverOpt.toString() +
-        r')';
   }
 
   static ProtocolEnds _structDecode(

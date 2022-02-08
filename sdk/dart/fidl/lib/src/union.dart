@@ -29,6 +29,11 @@ abstract class Union {
     }
     return deepEquals($data, otherUnion.$data);
   }
+
+  @override
+  String toString() {
+    return '$runtimeType(${$ordinal}: ${$data})';
+  }
 }
 
 typedef UnionFactory<T> = T Function(int index, Object data);

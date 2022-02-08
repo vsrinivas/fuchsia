@@ -96,18 +96,6 @@ class FlexibleFoo extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'FlexibleFoo.s(' + s.toString() + ')';
-      case 2:
-        return r'FlexibleFoo.i(' + i.toString() + ')';
-      default:
-        return r'FlexibleFoo.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -192,18 +180,6 @@ class StrictFoo extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'StrictFoo.s(' + s.toString() + ')';
-      case 2:
-        return r'StrictFoo.i(' + i.toString() + ')';
-      default:
-        return r'StrictFoo.<UNKNOWN>';
     }
   }
 

@@ -78,16 +78,6 @@ class UnionSize8Alignment4 extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'UnionSize8Alignment4.variant(' + variant.toString() + ')';
-      default:
-        return r'UnionSize8Alignment4.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -157,16 +147,6 @@ class UnionSize12Alignment4 extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'UnionSize12Alignment4.variant(' + variant.toString() + ')';
-      default:
-        return r'UnionSize12Alignment4.<UNKNOWN>';
     }
   }
 
@@ -246,16 +226,6 @@ class UnionSize24Alignment8 extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'UnionSize24Alignment8.variant(' + variant.toString() + ')';
-      default:
-        return r'UnionSize24Alignment8.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -325,16 +295,6 @@ class UnionSize36Alignment4 extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'UnionSize36Alignment4.variant(' + variant.toString() + ')';
-      default:
-        return r'UnionSize36Alignment4.<UNKNOWN>';
     }
   }
 
@@ -427,17 +387,6 @@ class SandwichUnionSize8Alignment4 extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'SandwichUnionSize8Alignment4' r'(before: ' +
-        before.toString() +
-        r', union: ' +
-        union.toString() +
-        r', after: ' +
-        after.toString() +
-        r')';
-  }
-
   static SandwichUnionSize8Alignment4 _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -523,17 +472,6 @@ class SandwichUnionSize12Alignment4 extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'SandwichUnionSize12Alignment4' r'(before: ' +
-        before.toString() +
-        r', union: ' +
-        union.toString() +
-        r', after: ' +
-        after.toString() +
-        r')';
-  }
-
   static SandwichUnionSize12Alignment4 _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -611,15 +549,6 @@ class StructSize16Alignment8 extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'StructSize16Alignment8' r'(f1: ' +
-        f1.toString() +
-        r', f2: ' +
-        f2.toString() +
-        r')';
-  }
-
   static StructSize16Alignment8 _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -695,17 +624,6 @@ class SandwichUnionSize24Alignment8 extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'SandwichUnionSize24Alignment8' r'(before: ' +
-        before.toString() +
-        r', union: ' +
-        union.toString() +
-        r', after: ' +
-        after.toString() +
-        r')';
   }
 
   static SandwichUnionSize24Alignment8 _structDecode(
@@ -791,17 +709,6 @@ class SandwichUnionSize36Alignment4 extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'SandwichUnionSize36Alignment4' r'(before: ' +
-        before.toString() +
-        r', union: ' +
-        union.toString() +
-        r', after: ' +
-        after.toString() +
-        r')';
   }
 
   static SandwichUnionSize36Alignment4 _structDecode(

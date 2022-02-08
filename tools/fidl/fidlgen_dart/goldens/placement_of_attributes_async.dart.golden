@@ -76,16 +76,6 @@ class ExampleEnum extends $fidl.Enum {
     return false;
   }
 
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x1:
-        return r'ExampleEnum.member';
-      default:
-        return r'ExampleEnum.' '${$value}';
-    }
-  }
-
   static ExampleEnum _ctor(int v) => ExampleEnum(v);
 }
 
@@ -132,19 +122,6 @@ class ExampleBits extends $fidl.Bits {
     return $value & ~$mask.$value;
   }
 
-  @override
-  String toString() {
-    List<String> parts = [];
-    if ($value & 0x1 != 0) {
-      parts.add(r'ExampleBits.member');
-    }
-    if (parts.isEmpty) {
-      return r'ExampleBits.$none';
-    } else {
-      return parts.join(" | ");
-    }
-  }
-
   static ExampleBits _ctor(int v) => ExampleBits(v);
 }
 
@@ -187,16 +164,6 @@ class ExampleUnion extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'ExampleUnion.variant(' + variant.toString() + ')';
-      default:
-        return r'ExampleUnion.<UNKNOWN>';
     }
   }
 
@@ -277,16 +244,6 @@ class ExampleXUnion extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'ExampleXUnion.variant(' + variant.toString() + ')';
-      default:
-        return r'ExampleXUnion.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -354,11 +311,6 @@ class ExampleStruct extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'ExampleStruct' r'(member: ' + member.toString() + r')';
   }
 
   static ExampleStruct _structDecode(

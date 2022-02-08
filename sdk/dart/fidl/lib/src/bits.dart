@@ -22,6 +22,11 @@ abstract class Bits {
   @override
   int get hashCode => $value.hashCode;
 
+  @override
+  String toString() {
+    return '$runtimeType(${$value})';
+  }
+
   bool hasUnknownBits();
 
   int getUnknownBits();

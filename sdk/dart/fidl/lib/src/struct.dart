@@ -28,6 +28,11 @@ abstract class Struct {
     final Struct otherStruct = other;
     return deepEquals($fields, otherStruct.$fields);
   }
+
+  @override
+  String toString() {
+    return '$runtimeType(${$fields})';
+  }
 }
 
 typedef StructDecode<T> = T Function(Decoder decoder, int offset, int depth);

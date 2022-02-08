@@ -112,18 +112,6 @@ class EnumType extends $fidl.Enum {
     return false;
   }
 
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x1:
-        return r'EnumType.value';
-      case 0x2:
-        return r'EnumType.true$';
-      default:
-        return r'EnumType.' '${$value}';
-    }
-  }
-
   static EnumType _ctor(int v) => EnumType(v);
 }
 
@@ -170,22 +158,6 @@ class BitsType extends $fidl.Bits {
   @override
   int getUnknownBits() {
     return $value & ~$mask.$value;
-  }
-
-  @override
-  String toString() {
-    List<String> parts = [];
-    if ($value & 0x1 != 0) {
-      parts.add(r'BitsType.value');
-    }
-    if ($value & 0x2 != 0) {
-      parts.add(r'BitsType.true$');
-    }
-    if (parts.isEmpty) {
-      return r'BitsType.$none';
-    } else {
-      return parts.join(" | ");
-    }
   }
 
   static BitsType _ctor(int v) => BitsType(v);

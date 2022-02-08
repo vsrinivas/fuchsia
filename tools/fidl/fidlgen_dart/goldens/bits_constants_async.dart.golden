@@ -86,25 +86,6 @@ class BitsType extends $fidl.Bits {
     return $value & ~$mask.$value;
   }
 
-  @override
-  String toString() {
-    List<String> parts = [];
-    if ($value & 0x1 != 0) {
-      parts.add(r'BitsType.a');
-    }
-    if ($value & 0x80 != 0) {
-      parts.add(r'BitsType.b');
-    }
-    if ($value & 0x2 != 0) {
-      parts.add(r'BitsType.c');
-    }
-    if (parts.isEmpty) {
-      return r'BitsType.$none';
-    } else {
-      return parts.join(" | ");
-    }
-  }
-
   static BitsType _ctor(int v) => BitsType(v);
 }
 

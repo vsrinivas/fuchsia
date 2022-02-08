@@ -28,6 +28,11 @@ abstract class Table {
     final Table otherTable = other;
     return deepEquals($fields, otherTable.$fields);
   }
+
+  @override
+  String toString() {
+    return '$runtimeType(${$fields})';
+  }
 }
 
 typedef TableFactory<T> = T Function(Map<int, dynamic> argv,

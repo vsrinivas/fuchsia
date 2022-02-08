@@ -386,67 +386,6 @@ class Testing extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Testing' r'(u1: ' +
-        u1.toString() +
-        r', u2: ' +
-        u2.toString() +
-        r', u3: ' +
-        u3.toString() +
-        r', u4: ' +
-        u4.toString() +
-        r', u5: ' +
-        u5.toString() +
-        r', u6: ' +
-        u6.toString() +
-        r', u7: ' +
-        u7.toString() +
-        r', v1: ' +
-        v1.toString() +
-        r', v2: ' +
-        v2.toString() +
-        r', v3: ' +
-        v3.toString() +
-        r', a1: ' +
-        a1.toString() +
-        r', a2: ' +
-        a2.toString() +
-        r', a3: ' +
-        a3.toString() +
-        r', r1: ' +
-        r1.toString() +
-        r', r2: ' +
-        r2.toString() +
-        r', r3: ' +
-        r3.toString() +
-        r', b1: ' +
-        b1.toString() +
-        r', b2: ' +
-        b2.toString() +
-        r', b3: ' +
-        b3.toString() +
-        r', s1: ' +
-        s1.toString() +
-        r', s2: ' +
-        s2.toString() +
-        r', s3: ' +
-        s3.toString() +
-        r', vv1: ' +
-        vv1.toString() +
-        r', vv2: ' +
-        vv2.toString() +
-        r', vv3: ' +
-        vv3.toString() +
-        r', aa1: ' +
-        aa1.toString() +
-        r', aa2: ' +
-        aa2.toString() +
-        r', aa3: ' +
-        aa3.toString() +
-        r')';
-  }
-
   static Testing _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {

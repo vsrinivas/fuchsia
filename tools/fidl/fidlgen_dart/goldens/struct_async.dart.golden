@@ -83,15 +83,6 @@ class Simple extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Simple' r'(f1: ' +
-        f1.toString() +
-        r', f2: ' +
-        f2.toString() +
-        r')';
-  }
-
   static Simple _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
@@ -155,15 +146,6 @@ class BasicStruct extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'BasicStruct' r'(x: ' +
-        x.toString() +
-        r', y: ' +
-        y.toString() +
-        r')';
   }
 
   static BasicStruct _structDecode(

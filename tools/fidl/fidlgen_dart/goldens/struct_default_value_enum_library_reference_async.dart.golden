@@ -76,11 +76,6 @@ class Foo extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Foo' r'(field: ' + field.toString() + r')';
-  }
-
   static Foo _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:

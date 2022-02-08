@@ -76,18 +76,6 @@ class ObjType extends $fidl.Enum {
     return false;
   }
 
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x0:
-        return r'ObjType.none';
-      case 0x3:
-        return r'ObjType.vmo';
-      default:
-        return r'ObjType.' '${$value}';
-    }
-  }
-
   static ObjType _ctor(int v) => ObjType(v);
 }
 
@@ -136,16 +124,6 @@ class UnionWithHandle extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'UnionWithHandle.h(' + h.toString() + ')';
-      default:
-        return r'UnionWithHandle.<UNKNOWN>';
     }
   }
 
@@ -269,23 +247,6 @@ class HandlesInTypes extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'HandlesInTypes' r'(normalHandle: ' +
-        normalHandle.toString() +
-        r', handleInVec: ' +
-        handleInVec.toString() +
-        r', handleInArray: ' +
-        handleInArray.toString() +
-        r', handleInMixedVecArray: ' +
-        handleInMixedVecArray.toString() +
-        r', tableWithHandle: ' +
-        tableWithHandle.toString() +
-        r', unionWithHandle: ' +
-        unionWithHandle.toString() +
-        r')';
   }
 
   static HandlesInTypes _structDecode(

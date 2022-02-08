@@ -75,16 +75,6 @@ class OnlyDart extends $fidl.Enum {
     return false;
   }
 
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x1:
-        return r'OnlyDart.a';
-      default:
-        return r'OnlyDart.' '${$value}';
-    }
-  }
-
   static OnlyDart _ctor(int v) => OnlyDart(v);
 }
 
@@ -143,20 +133,6 @@ class DenyEachBindingOnlyDenyCppResult extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'DenyEachBindingOnlyDenyCppResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'DenyEachBindingOnlyDenyCppResult.err(' + err.toString() + ')';
-      default:
-        return r'DenyEachBindingOnlyDenyCppResult.<UNKNOWN>';
     }
   }
 
@@ -254,20 +230,6 @@ class DenyEachBindingOnlyDenyGoResult extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'DenyEachBindingOnlyDenyGoResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'DenyEachBindingOnlyDenyGoResult.err(' + err.toString() + ')';
-      default:
-        return r'DenyEachBindingOnlyDenyGoResult.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -357,22 +319,6 @@ class DenyEachBindingOnlyDenyLibfuzzerResult extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'DenyEachBindingOnlyDenyLibfuzzerResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'DenyEachBindingOnlyDenyLibfuzzerResult.err(' +
-            err.toString() +
-            ')';
-      default:
-        return r'DenyEachBindingOnlyDenyLibfuzzerResult.<UNKNOWN>';
     }
   }
 
@@ -471,20 +417,6 @@ class DenyEachBindingOnlyDenyRustResult extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'DenyEachBindingOnlyDenyRustResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'DenyEachBindingOnlyDenyRustResult.err(' + err.toString() + ')';
-      default:
-        return r'DenyEachBindingOnlyDenyRustResult.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -578,22 +510,6 @@ class DenyEachBindingOnlyDenySyzkallerResult extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'DenyEachBindingOnlyDenySyzkallerResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'DenyEachBindingOnlyDenySyzkallerResult.err(' +
-            err.toString() +
-            ')';
-      default:
-        return r'DenyEachBindingOnlyDenySyzkallerResult.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -668,11 +584,6 @@ class DenyEachBindingOnlyDenyCppResponse extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'DenyEachBindingOnlyDenyCppResponse' r'(b: ' + b.toString() + r')';
-  }
-
   static DenyEachBindingOnlyDenyCppResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -731,11 +642,6 @@ class DenyEachBindingOnlyDenyGoResponse extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'DenyEachBindingOnlyDenyGoResponse' r'(b: ' + b.toString() + r')';
   }
 
   static DenyEachBindingOnlyDenyGoResponse _structDecode(
@@ -798,13 +704,6 @@ class DenyEachBindingOnlyDenyLibfuzzerResponse extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'DenyEachBindingOnlyDenyLibfuzzerResponse' r'(b: ' +
-        b.toString() +
-        r')';
-  }
-
   static DenyEachBindingOnlyDenyLibfuzzerResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -863,11 +762,6 @@ class DenyEachBindingOnlyDenyRustResponse extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'DenyEachBindingOnlyDenyRustResponse' r'(b: ' + b.toString() + r')';
   }
 
   static DenyEachBindingOnlyDenyRustResponse _structDecode(
@@ -930,13 +824,6 @@ class DenyEachBindingOnlyDenySyzkallerResponse extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'DenyEachBindingOnlyDenySyzkallerResponse' r'(b: ' +
-        b.toString() +
-        r')';
-  }
-
   static DenyEachBindingOnlyDenySyzkallerResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -995,11 +882,6 @@ class MemberOnlyAppearsInImportingLibrary extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'MemberOnlyAppearsInImportingLibrary' r'(a: ' + a.toString() + r')';
   }
 
   static MemberOnlyAppearsInImportingLibrary _structDecode(
@@ -1064,14 +946,6 @@ class OnlyAppearsInImportingLibrary extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'OnlyAppearsInImportingLibrary'
-            r'(memberOnlyAppearsInImportingLibrary: ' +
-        memberOnlyAppearsInImportingLibrary.toString() +
-        r')';
   }
 
   static OnlyAppearsInImportingLibrary _structDecode(

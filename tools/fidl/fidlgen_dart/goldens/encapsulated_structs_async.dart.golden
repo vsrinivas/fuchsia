@@ -84,11 +84,6 @@ class Int8Int32 extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Int8Int32' r'(a: ' + a.toString() + r', b: ' + b.toString() + r')';
-  }
-
   static Int8Int32 _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -157,11 +152,6 @@ class Int16Int8 extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Int16Int8' r'(a: ' + a.toString() + r', b: ' + b.toString() + r')';
-  }
-
   static Int16Int8 _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -221,11 +211,6 @@ class ArrayInt16Int8 extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'ArrayInt16Int8' r'(arr: ' + arr.toString() + r')';
   }
 
   static ArrayInt16Int8 _structDecode(
@@ -301,17 +286,6 @@ class StructPaddingTestStruct extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'StructPaddingTestStruct' r'(trailing: ' +
-        trailing.toString() +
-        r', inner: ' +
-        inner.toString() +
-        r', array: ' +
-        array.toString() +
-        r')';
   }
 
   static StructPaddingTestStruct _structDecode(
@@ -395,15 +369,6 @@ class NonInlineStructTestStruct extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'NonInlineStructTestStruct' r'(element: ' +
-        element.toString() +
-        r', h: ' +
-        h.toString() +
-        r')';
-  }
-
   static NonInlineStructTestStruct _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -474,15 +439,6 @@ class TopLevelStruct extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'TopLevelStruct' r'(a: ' +
-        a.toString() +
-        r', b: ' +
-        b.toString() +
-        r')';
   }
 
   static TopLevelStruct _structDecode(

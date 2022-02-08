@@ -76,11 +76,6 @@ class Baz extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Baz' r'(g: ' + g.toString() + r')';
-  }
-
   static Baz _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:

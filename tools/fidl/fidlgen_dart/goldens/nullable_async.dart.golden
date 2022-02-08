@@ -93,18 +93,6 @@ class SimpleUnion extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'SimpleUnion.a(' + a.toString() + ')';
-      case 2:
-        return r'SimpleUnion.b(' + b.toString() + ')';
-      default:
-        return r'SimpleUnion.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -183,11 +171,6 @@ class StructWithNullableString extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'StructWithNullableString' r'(val: ' + val.toString() + r')';
-  }
-
   static StructWithNullableString _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -253,11 +236,6 @@ class StructWithNullableVector extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'StructWithNullableVector' r'(val: ' + val.toString() + r')';
   }
 
   static StructWithNullableVector _structDecode(
@@ -327,11 +305,6 @@ class StructWithNullableHandle extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'StructWithNullableHandle' r'(val: ' + val.toString() + r')';
-  }
-
   static StructWithNullableHandle _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -397,11 +370,6 @@ class StructWithNullableProtocol extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'StructWithNullableProtocol' r'(val: ' + val.toString() + r')';
   }
 
   static StructWithNullableProtocol _structDecode(
@@ -472,11 +440,6 @@ class StructWithNullableRequest extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'StructWithNullableRequest' r'(val: ' + val.toString() + r')';
-  }
-
   static StructWithNullableRequest _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -535,11 +498,6 @@ class Int32Wrapper extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'Int32Wrapper' r'(val: ' + val.toString() + r')';
   }
 
   static Int32Wrapper _structDecode(
@@ -609,11 +567,6 @@ class StructWithNullableStruct extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'StructWithNullableStruct' r'(val: ' + val.toString() + r')';
-  }
-
   static StructWithNullableStruct _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -678,11 +631,6 @@ class StructWithNullableUnion extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'StructWithNullableUnion' r'(val: ' + val.toString() + r')';
   }
 
   static StructWithNullableUnion _structDecode(

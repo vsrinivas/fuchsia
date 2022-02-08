@@ -76,11 +76,6 @@ class DocCommentWithQuotes extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'DocCommentWithQuotes' r'(reserved: ' + reserved.toString() + r')';
-  }
-
   static DocCommentWithQuotes _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {

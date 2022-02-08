@@ -92,18 +92,6 @@ class MyStrictEnum extends $fidl.Enum {
     return false;
   }
 
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x1:
-        return r'MyStrictEnum.foo';
-      case 0x2:
-        return r'MyStrictEnum.bar';
-      default:
-        return r'MyStrictEnum.' '${$value}';
-    }
-  }
-
   static MyStrictEnum _ctor(int v) => MyStrictEnum(v);
 }
 
@@ -163,18 +151,6 @@ class MyFlexibleEnum extends $fidl.Enum {
   @override
   bool isUnknown() {
     return _isUnknown;
-  }
-
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x1:
-        return r'MyFlexibleEnum.foo';
-      case 0x2:
-        return r'MyFlexibleEnum.bar';
-      default:
-        return r'MyFlexibleEnum.' '${$value}';
-    }
   }
 
   static MyFlexibleEnum _ctor(int v) => MyFlexibleEnum(v);
@@ -237,22 +213,6 @@ class MyStrictBits extends $fidl.Bits {
     return $value & ~$mask.$value;
   }
 
-  @override
-  String toString() {
-    List<String> parts = [];
-    if ($value & 0x1 != 0) {
-      parts.add(r'MyStrictBits.myFirstBit');
-    }
-    if ($value & 0x2 != 0) {
-      parts.add(r'MyStrictBits.myOtherBit');
-    }
-    if (parts.isEmpty) {
-      return r'MyStrictBits.$none';
-    } else {
-      return parts.join(" | ");
-    }
-  }
-
   static MyStrictBits _ctor(int v) => MyStrictBits(v);
 }
 
@@ -307,25 +267,6 @@ class MyFlexibleBits extends $fidl.Bits {
     return $value & ~$mask.$value;
   }
 
-  @override
-  String toString() {
-    List<String> parts = [];
-    if ($value & 0x1 != 0) {
-      parts.add(r'MyFlexibleBits.myFirstBit');
-    }
-    if ($value & 0x2 != 0) {
-      parts.add(r'MyFlexibleBits.myOtherBit');
-    }
-    if (hasUnknownBits()) {
-      parts.add('0x${getUnknownBits().toRadixString(16)}');
-    }
-    if (parts.isEmpty) {
-      return r'MyFlexibleBits.$none';
-    } else {
-      return parts.join(" | ");
-    }
-  }
-
   static MyFlexibleBits _ctor(int v) => MyFlexibleBits(v);
 }
 
@@ -371,16 +312,6 @@ class StrictUnion extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'StrictUnion.field(' + field.toString() + ')';
-      default:
-        return r'StrictUnion.<UNKNOWN>';
     }
   }
 
@@ -464,16 +395,6 @@ class FlexibleUnion extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'FlexibleUnion.field(' + field.toString() + ')';
-      default:
-        return r'FlexibleUnion.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -547,11 +468,6 @@ class Struct extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'Struct' r'(field: ' + field.toString() + r')';
   }
 
   static Struct _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {

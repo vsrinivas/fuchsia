@@ -75,11 +75,6 @@ class Payload extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'Payload' r'(value: ' + value.toString() + r')';
-  }
-
   static Payload _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {

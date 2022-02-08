@@ -12,28 +12,27 @@ void main() {
   print('toString-test');
   group('bits', () {
     test('no bit', () {
-      expect(ExampleBits.$none.toString(), equals(r'ExampleBits.$none'));
+      expect(ExampleBits.$none.toString(), equals(r'ExampleBits(0)'));
     });
     test('single bit', () {
-      expect(ExampleBits.memberC.toString(), equals(r'ExampleBits.memberC'));
+      expect(ExampleBits.memberC.toString(), equals(r'ExampleBits(8)'));
     });
     test('multiple bits', () {
       expect((ExampleBits.memberC | ExampleBits.memberA).toString(),
-          equals(r'ExampleBits.memberA | ExampleBits.memberC'));
+          equals(r'ExampleBits(10)'));
     });
     test('unknown bits', () {
       expect((FlexibleBits.one | FlexibleBits(4)).toString(),
-          equals(r'FlexibleBits.one | 0x4'));
+          equals(r'FlexibleBits(5)'));
     });
   });
   group('enum', () {
     test('strict-enum', () {
-      expect(EnumTwo.two.toString(), equals(r'EnumTwo.two'));
+      expect(EnumTwo.two.toString(), equals(r'EnumTwo(2)'));
     });
     test('flexible-enum', () {
-      expect(
-          FlexibleEnumThree.two.toString(), equals(r'FlexibleEnumThree.two'));
-      expect(FlexibleEnumThree(5).toString(), equals(r'FlexibleEnumThree.5'));
+      expect(FlexibleEnumThree.two.toString(), equals(r'FlexibleEnumThree(2)'));
+      expect(FlexibleEnumThree(5).toString(), equals(r'FlexibleEnumThree(5)'));
     });
   });
 }

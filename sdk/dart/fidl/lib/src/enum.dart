@@ -10,6 +10,11 @@ abstract class Enum {
   int get $value;
 
   bool isUnknown();
+
+  @override
+  String toString() {
+    return '$runtimeType(${$value})';
+  }
 }
 
 typedef EnumFactory<T> = T Function(int value);

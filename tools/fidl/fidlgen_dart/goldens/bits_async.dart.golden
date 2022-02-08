@@ -80,25 +80,6 @@ class MyBits extends $fidl.Bits {
     return $value & ~$mask.$value;
   }
 
-  @override
-  String toString() {
-    List<String> parts = [];
-    if ($value & 0x1 != 0) {
-      parts.add(r'MyBits.myFirstBit');
-    }
-    if ($value & 0x2 != 0) {
-      parts.add(r'MyBits.myOtherBit');
-    }
-    if ($value & 0x4 != 0) {
-      parts.add(r'MyBits.mask');
-    }
-    if (parts.isEmpty) {
-      return r'MyBits.$none';
-    } else {
-      return parts.join(" | ");
-    }
-  }
-
   static MyBits _ctor(int v) => MyBits(v);
 }
 
@@ -145,22 +126,6 @@ class StrictBits extends $fidl.Bits {
     return $value & ~$mask.$value;
   }
 
-  @override
-  String toString() {
-    List<String> parts = [];
-    if ($value & 0x1 != 0) {
-      parts.add(r'StrictBits.smallest');
-    }
-    if ($value & 0x8000000000000000 != 0) {
-      parts.add(r'StrictBits.biggest');
-    }
-    if (parts.isEmpty) {
-      return r'StrictBits.$none';
-    } else {
-      return parts.join(" | ");
-    }
-  }
-
   static StrictBits _ctor(int v) => StrictBits(v);
 }
 
@@ -201,25 +166,6 @@ class FlexibleBits extends $fidl.Bits {
   @override
   int getUnknownBits() {
     return $value & ~$mask.$value;
-  }
-
-  @override
-  String toString() {
-    List<String> parts = [];
-    if ($value & 0x1 != 0) {
-      parts.add(r'FlexibleBits.smallest');
-    }
-    if ($value & 0x8000000000000000 != 0) {
-      parts.add(r'FlexibleBits.biggest');
-    }
-    if (hasUnknownBits()) {
-      parts.add('0x${getUnknownBits().toRadixString(16)}');
-    }
-    if (parts.isEmpty) {
-      return r'FlexibleBits.$none';
-    } else {
-      return parts.join(" | ");
-    }
   }
 
   static FlexibleBits _ctor(int v) => FlexibleBits(v);

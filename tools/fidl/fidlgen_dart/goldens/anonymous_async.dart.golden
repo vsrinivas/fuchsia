@@ -83,18 +83,6 @@ class SomeProtocolSomeMethodError extends $fidl.Enum {
     return _isUnknown;
   }
 
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x1:
-        return r'SomeProtocolSomeMethodError.errorOne';
-      case 0x2:
-        return r'SomeProtocolSomeMethodError.errorTwo';
-      default:
-        return r'SomeProtocolSomeMethodError.' '${$value}';
-    }
-  }
-
   static SomeProtocolSomeMethodError _ctor(int v) =>
       SomeProtocolSomeMethodError(v);
 }
@@ -151,20 +139,6 @@ class Op extends $fidl.Enum {
     return _isUnknown;
   }
 
-  @override
-  String toString() {
-    switch ($value) {
-      case 0x1:
-        return r'Op.add';
-      case 0x2:
-        return r'Op.mul';
-      case 0x3:
-        return r'Op.div';
-      default:
-        return r'Op.' '${$value}';
-    }
-  }
-
   static Op _ctor(int v) => Op(v);
 }
 
@@ -209,25 +183,6 @@ class BitsMember extends $fidl.Bits {
     return $value & ~$mask.$value;
   }
 
-  @override
-  String toString() {
-    List<String> parts = [];
-    if ($value & 0x1 != 0) {
-      parts.add(r'BitsMember.bitOne');
-    }
-    if ($value & 0x2 != 0) {
-      parts.add(r'BitsMember.bitTwo');
-    }
-    if (hasUnknownBits()) {
-      parts.add('0x${getUnknownBits().toRadixString(16)}');
-    }
-    if (parts.isEmpty) {
-      return r'BitsMember.$none';
-    } else {
-      return parts.join(" | ");
-    }
-  }
-
   static BitsMember _ctor(int v) => BitsMember(v);
 }
 
@@ -267,22 +222,6 @@ class Flags extends $fidl.Bits {
   @override
   int getUnknownBits() {
     return $value & ~$mask.$value;
-  }
-
-  @override
-  String toString() {
-    List<String> parts = [];
-    if ($value & 0x1 != 0) {
-      parts.add(r'Flags.inline');
-    }
-    if (hasUnknownBits()) {
-      parts.add('0x${getUnknownBits().toRadixString(16)}');
-    }
-    if (parts.isEmpty) {
-      return r'Flags.$none';
-    } else {
-      return parts.join(" | ");
-    }
   }
 
   static Flags _ctor(int v) => Flags(v);
@@ -330,16 +269,6 @@ class UnionMember extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 2:
-        return r'UnionMember.unionData(' + unionData.toString() + ')';
-      default:
-        return r'UnionMember.<UNKNOWN>';
     }
   }
 
@@ -429,20 +358,6 @@ class SomeProtocolSomeMethodResult extends $fidl.Union {
         return null;
       default:
         return _data;
-    }
-  }
-
-  @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'SomeProtocolSomeMethodResult.response(' +
-            response.toString() +
-            ')';
-      case 2:
-        return r'SomeProtocolSomeMethodResult.err(' + err.toString() + ')';
-      default:
-        return r'SomeProtocolSomeMethodResult.<UNKNOWN>';
     }
   }
 
@@ -555,22 +470,6 @@ class Expression extends $fidl.Union {
   }
 
   @override
-  String toString() {
-    switch (_ordinal) {
-      case 1:
-        return r'Expression.value(' + value.toString() + ')';
-      case 2:
-        return r'Expression.binOp(' + binOp.toString() + ')';
-      case 3:
-        return r'Expression.functionApplication(' +
-            functionApplication.toString() +
-            ')';
-      default:
-        return r'Expression.<UNKNOWN>';
-    }
-  }
-
-  @override
   int get $ordinal => _ordinal;
 
   @override
@@ -644,11 +543,6 @@ class TableData extends $fidl.Struct {
     }
   }
 
-  @override
-  String toString() {
-    return r'TableData' r'(data: ' + data.toString() + r')';
-  }
-
   static TableData _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
@@ -703,13 +597,6 @@ class SomeProtocolSomeMethodResponse extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'SomeProtocolSomeMethodResponse' r'(bitsMember: ' +
-        bitsMember.toString() +
-        r')';
   }
 
   static SomeProtocolSomeMethodResponse _structDecode(
@@ -796,17 +683,6 @@ class OverrideTest extends $fidl.Struct {
       default:
         throw $fidl.FidlError('unknown wire format');
     }
-  }
-
-  @override
-  String toString() {
-    return r'OverrideTest' r'(op: ' +
-        op.toString() +
-        r', left: ' +
-        left.toString() +
-        r', right: ' +
-        right.toString() +
-        r')';
   }
 
   static OverrideTest _structDecode(
