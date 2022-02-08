@@ -78,7 +78,7 @@ if (is_fuchsia) {
     sdk = "source"
 
     # TODO(fxbug.dev/80525): Change this back to "partner" post API stability.
-    sdk_publishable = "partner"
+    sdk_publishable = "experimental"
     sdk_name = "fidl-llcpp-experimental-driver-only"
     sdk_headers = [
                     "lib/fidl/llcpp/array.h",
