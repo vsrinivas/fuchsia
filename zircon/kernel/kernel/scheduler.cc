@@ -1513,7 +1513,7 @@ void Scheduler::Unblock(Thread* thread) {
   RescheduleMask(cpu_num_to_mask(target_cpu));
 }
 
-void Scheduler::Unblock(WaitQueueSublist list) {
+void Scheduler::Unblock(Thread::UnblockList list) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_unblock_list"_stringref};
 
   thread_lock.AssertHeld();

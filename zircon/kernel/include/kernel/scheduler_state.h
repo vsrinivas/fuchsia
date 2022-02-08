@@ -171,7 +171,10 @@ class SchedulerState {
   zx_duration_t runtime_ns() const { return runtime_ns_.raw_value(); }
   zx_duration_t expected_runtime_ns() const { return expected_runtime_ns_.raw_value(); }
 
-  SchedDeadlineParams deadline() const { return deadline_; }
+  const SchedTime start_time() const { return start_time_; }
+  const SchedTime finish_time() const { return finish_time_; }
+  const auto& fair() const { return fair_; }
+  const auto& deadline() const { return deadline_; }
 
   cpu_mask_t hard_affinity() const { return hard_affinity_; }
   cpu_mask_t soft_affinity() const { return soft_affinity_; }
@@ -186,9 +189,7 @@ class SchedulerState {
   thread_state state() const { return state_; }
   void set_state(thread_state state) { state_ = state; }
 
-  void set_next_cpu(cpu_num_t next_cpu) {
-    next_cpu_ = next_cpu;
-  }
+  void set_next_cpu(cpu_num_t next_cpu) { next_cpu_ = next_cpu; }
 
  private:
   friend class Scheduler;

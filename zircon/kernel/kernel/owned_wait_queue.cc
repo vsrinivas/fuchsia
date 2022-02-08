@@ -445,7 +445,7 @@ void OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio) {
   }
 }
 
-void OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, Thread** out_new_owner,
+void OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, Thread** out_new_owner, zx_time_t now,
                                          Hook on_thread_wake_hook) {
   DEBUG_ASSERT(magic() == kOwnedMagic);
   DEBUG_ASSERT(out_new_owner != nullptr);
@@ -454,31 +454,32 @@ void OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, Thread** out_new_o
   // order that the scheduler would prefer to wake threads.
   *out_new_owner = nullptr;
 
-  // If our wake_count is zero, then there is nothing to do.
-  if (wake_count == 0) {
-    return;
-  }
+  for (uint32_t woken = 0; woken < wake_count; ++woken) {
+    // Consider the thread that the queue considers to be the most important to
+    // wake right now.  If there are no threads left in the queue, then we are
+    // done.
+    Thread* t = Peek(now);
+    if (t == nullptr) {
+      break;
+    }
 
-  uint32_t woken = 0;
-  collection_.ForeachThread([&](Thread* t) TA_REQ(thread_lock) -> bool {
     // Call the user supplied hook and let them decide what to do with this
     // thread (updating their own bookkeeping in the process)
     using Action = Hook::Action;
     Action action = on_thread_wake_hook(t);
 
+    // If we should stop, just return.  We are done.
     if (action == Action::Stop) {
-      return false;
+      break;
     }
 
     // All other choices involve waking up this thread, so go ahead and do that now.
-    ++woken;
     DequeueThread(t, ZX_OK);
     Scheduler::Unblock(t);
 
-    // If we are supposed to keep going, do so now if we are still permitted
-    // to wake more threads.
+    // If we are supposed to keep going, simply continue the loop.
     if (action == Action::SelectAndKeepGoing) {
-      return (woken < wake_count);
+      continue;
     }
 
     // No matter what the user chose at this point, we are going to stop after
@@ -486,13 +487,12 @@ void OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, Thread** out_new_o
     // pointer to the thread who is to become the new owner if there are still
     // threads waiting in the queue.
     DEBUG_ASSERT(action == Action::SelectAndAssignOwner);
-    DEBUG_ASSERT(woken == 1);
+    DEBUG_ASSERT(woken == 0);
     if (!IsEmpty()) {
       *out_new_owner = t;
     }
-
-    return false;
-  });
+    break;
+  }
 }
 
 zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread* new_owner,
@@ -545,10 +545,11 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread
 
 void OwnedWaitQueue::WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook) {
   DEBUG_ASSERT(magic() == kOwnedMagic);
+  zx_time_t now = current_time();
 
   Thread* new_owner;
   const int old_queue_prio = BlockedPriority();
-  WakeThreadsInternal(wake_count, &new_owner, on_thread_wake_hook);
+  WakeThreadsInternal(wake_count, &new_owner, now, on_thread_wake_hook);
   UpdateBookkeeping(new_owner, old_queue_prio);
   UpdateStats();
 }
@@ -559,6 +560,7 @@ void OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
   DEBUG_ASSERT(magic() == kOwnedMagic);
   DEBUG_ASSERT(requeue_target != nullptr);
   DEBUG_ASSERT(requeue_target->magic() == kOwnedMagic);
+  zx_time_t now = current_time();
 
   // If the potential new owner of the requeue wait queue is already dead,
   // then it cannot become the owner of the requeue wait queue.
@@ -580,13 +582,20 @@ void OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
   const int old_requeue_prio = requeue_target->BlockedPriority();
 
   Thread* new_wake_owner;
-  WakeThreadsInternal(wake_count, &new_wake_owner, on_thread_wake_hook);
+  WakeThreadsInternal(wake_count, &new_wake_owner, now, on_thread_wake_hook);
 
   // If there are still threads left in the wake queue (this), and we were asked to
   // requeue threads, then do so.
   if (!this->IsEmpty() && requeue_count) {
-    uint32_t requeued = 0;
-    collection_.ForeachThread([&](Thread* t) TA_REQ(thread_lock) -> bool {
+    for (uint32_t requeued = 0; requeued < requeue_count; ++requeued) {
+      // Consider the thread that the queue considers to be the most important to
+      // wake right now.  If there are no threads left in the queue, then we are
+      // done.
+      Thread* t = Peek(now);
+      if (t == nullptr) {
+        break;
+      }
+
       // Call the user's requeue hook so that we can decide what to do
       // with this thread.
       using Action = Hook::Action;
@@ -595,18 +604,17 @@ void OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
       // It is illegal to ask for a requeue operation to assign ownership.
       DEBUG_ASSERT(action != Action::SelectAndAssignOwner);
 
+      // If we are supposed to stop, do so now.
       if (action == Action::Stop) {
-        return false;
+        break;
       }
-
-      // Actually move the thread from this to the requeue_target.
-      WaitQueue::MoveThread(this, requeue_target, t);
-      ++requeued;
 
       // SelectAndKeepGoing is the only legal choice left.
       DEBUG_ASSERT(action == Action::SelectAndKeepGoing);
-      return (requeued < requeue_count);
-    });
+
+      // Actually move the thread from this to the requeue_target.
+      WaitQueue::MoveThread(this, requeue_target, t);
+    };
   }
 
   // Now that we are finished moving everyone around, update the ownership of

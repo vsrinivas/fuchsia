@@ -27,6 +27,7 @@
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
+#include <fbl/wavl_tree_best_node_observer.h>
 #include <kernel/cpu.h>
 #include <kernel/deadline.h>
 #include <kernel/koid.h>
@@ -72,118 +73,208 @@ enum class Interruptible : bool { No, Yes };
 // the priority change should be propagated down the PI chain (if any) or not.
 enum class PropagatePI : bool { No = false, Yes };
 
-// A trait for Threads that are the head of a wait queue sublist.
-struct WaitQueueHeadsTrait {
-  using NodeState = fbl::DoublyLinkedListNodeState<Thread*>;
-  static NodeState& node_state(Thread& thread);
-};
-using WaitQueueHeads = fbl::DoublyLinkedListCustomTraits<Thread*, WaitQueueHeadsTrait>;
-
-// A trait for Threads on a wait queue sublist.
+// A WaitQueueCollection is the data structure which holds a collection of
+// threads which are currently blocked in a wait queue.  The data structure
+// imposes a total ordering on the threads meant to represent the order in which
+// the threads should be woken, from "most important" to "least important".
 //
-// Threads can be removed from a sublist without knowing which sublist they are on.
-struct WaitQueueSublistTrait {
-  using NodeState =
-      fbl::DoublyLinkedListNodeState<Thread*, fbl::NodeOptions::AllowRemoveFromContainer>;
-  static NodeState& node_state(Thread& thread);
-};
-using WaitQueueSublist = fbl::DoublyLinkedListCustomTraits<Thread*, WaitQueueSublistTrait>;
-
-// Encapsulation of all the per-thread state for the wait queue data structure.
-class WaitQueueState {
- public:
-  WaitQueueState() = default;
-
-  ~WaitQueueState();
-
-  // Disallow copying.
-  WaitQueueState(const WaitQueueState&) = delete;
-  WaitQueueState& operator=(const WaitQueueState&) = delete;
-
-  bool IsHead() const { return heads_node_.InContainer(); }
-  bool InWaitQueue() const { return IsHead() || sublist_node_.InContainer(); }
-
-  zx_status_t BlockedStatus() const TA_REQ(thread_lock) { return blocked_status_; }
-
-  void Block(Interruptible interruptible, zx_status_t status) TA_REQ(thread_lock);
-
-  void UnblockIfInterruptible(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
-
-  void Unsleep(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
-  void UnsleepIfInterruptible(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
-
-  void UpdatePriorityIfBlocked(Thread* thread, int priority, PropagatePI propagate)
-      TA_REQ(thread_lock);
-
-  void AssertNoOwnedWaitQueues() const TA_REQ(thread_lock) {
-    DEBUG_ASSERT(owned_wait_queues_.is_empty());
-  }
-
-  void AssertNotBlocked() const TA_REQ(thread_lock) {
-    DEBUG_ASSERT(blocking_wait_queue_ == nullptr);
-    DEBUG_ASSERT(!InWaitQueue());
-  }
-
- private:
-  // WaitQueues, WaitQueueCollections, and their List types, can
-  // directly manipulate the contents of the per-thread state, for now.
-  friend class OwnedWaitQueue;
-  friend class WaitQueue;
-  friend class WaitQueueCollection;
-  friend struct WaitQueueHeadsTrait;
-  friend struct WaitQueueSublistTrait;
-
-  // If blocked, a pointer to the WaitQueue the Thread is on.
-  WaitQueue* blocking_wait_queue_ TA_GUARDED(thread_lock) = nullptr;
-
-  // A list of the WaitQueues currently owned by this Thread.
-  fbl::DoublyLinkedList<OwnedWaitQueue*> owned_wait_queues_ TA_GUARDED(thread_lock);
-
-  // Any given thread is either a WaitQueue head (in which case
-  // sublist_ is in use, and may be non-empty), or not (in which case
-  // sublist_node_ is used).
-
-  // The Thread's position in a WaitQueue sublist. If active, this
-  // Thread is under some queue head (another Thread of the same
-  // priority).
-  //
-  // This storage is also used for Scheduler::Unblock()ing multiple
-  // Threads from a WaitQueue at once.
-  WaitQueueSublistTrait::NodeState sublist_node_;
-
-  // The Thread's sublist. This is only used when the Thread is a
-  // WaitQueue head (and so, when IsHead() is true).
-  WaitQueueSublist sublist_;
-
-  // The Thread's position in a WaitQueue heads list. If active, this
-  // Thread is a WaitQueue head (and so, IsHead() is true).
-  WaitQueueHeadsTrait::NodeState heads_node_;
-
-  // Return code if woken up abnormally from suspend, sleep, or block.
-  zx_status_t blocked_status_ = ZX_OK;
-
-  // Dumping routines are allowed to see inside us.
-  friend void dump_thread_locked(Thread* t, bool full_dump);
-
-  // Are we allowed to be interrupted on the current thing we're blocked/sleeping on?
-  Interruptible interruptible_ = Interruptible::No;
-};
-
-// Encapsulation of the data structure backing the wait queue.
+// One unusual property of the ordering implemented by a WaitQueueCollection is
+// that, unlike an ordering determined by completely properties such as thread
+// priority or weight, it is dynamic with respect to time.  This is to say that
+// while at any instant in time there is always a specific order to the threads,
+// as time advances, this order can change.  The ordering itself is determined
+// by the nature of the various dynamic scheduling disciplines implemented by
+// the Zircon scheduler.
 //
-// This maintains an ordered collection of Threads.
+// At any specific time |now|, the order of the collection is considered to
+// be:
 //
-// All such collections are protected by the thread_lock.
+// 1) The deadline threads in the collection whose absolute deadlines are in the
+//    future, sorted by ascending absolute deadline.  These are the threads who
+//    still have a chance of meeting their absolute deadline, with the nearest
+//    absolute deadline considered to be the most important.
+// 2) The deadline threads in the collection whose absolute deadlines are in the
+//    past, sorted by ascending relative deadline.  These are the threads who
+//    have been blocked until after their last cycle's absolute deadline.  If
+//    all threads were to be woken |now|, the thread with the minimum relative
+//    deadline would be the thread which has the new absolute deadline across
+//    the set.
+// 3) The fair threads in the collection, sorted by their "virtual finish time".
+//    This is equal to the start time of the thread plus the scheduler's maximum
+//    target latency divided by the thread's weight (normalized to the range
+//    (0.0, 1.0].  This is the same ordering imposed by the Scheduler's RunQueue
+//    for fair threads, and is intended to prioritize higher weight threads,
+//    while still ensuring some level of fairness over time.  The start time
+//    represents the last time that a thread entered a run queue, and while high
+//    weight threads will be chosen before low weight threads who arrived at
+//    similar times, threads who arrived earlier (and have been waiting for
+//    longer) will eventually end up being chosen, no matter how much weight
+//    other threads in the collection have compared to it.
+//    TODO(johngro): Instead of using the start time for the last time a
+//    thread entered a RunQueue, should we use the time at which the thread
+//    joined the wait queue instead?
+//
+// In an attempt to make the selection of the "best" thread in a wait queue as
+// efficient as we can, in light of the dynamic nature of the total ordering, we
+// use an "augmented" WAVL tree as our data structure, much like the scheduler's
+// RunQueue.  The tree keeps all of its threads sorted according to a primary
+// key representing the minimum absolute deadline or a modified version its
+// virtual finish time, depending on the thread's scheduling discipline).
+//
+// The virtual finish time of threads is modified so that the MSB of the time is
+// always set. This guarantees that fair threads _always_ come after in the
+// sorting of threads.  Note that we could have also achieved this partitioning
+// by tracking fair threads separately from deadline thread in a separate tree
+// instance.  We keep things in a single tree (for now) in order to help to
+// minimize the size of WaitQueueCollections to help control the size of objects
+// in the kernel (such as the Mutex object).
+//
+// There should be no serious issue with using the MSB of the sort key in this
+// fashion.  Absolute timestamps in zircon use signed 64 bit integers, and the
+// monotonic clock is set at startup to start from zero, meaning that there is
+// no real world case where we would be searching for a deadline thread to
+// wake using a timestamp with the MSB set.
+//
+// Finally, we also maintain an addition augmented invariant such that: For
+// every node (X) in the tree, the pointer to the thread with the minimum
+// relative deadline in the subtree headed by X is maintained as nodes are
+// inserted and removed.
+//
+// With these invariants in place, finding the best thread to run can be
+// computed as follows.
+//
+// 1) If the left-most member of the tree has the MSB of its sorting key set,
+//    then the thread is a fair thread, and there are _no_ deadline threads in
+//    the tree.  Additionally, this thread has the minimum virtual finish time
+//    across all of the fair threads in the tree, and therefore is the "best"
+//    thread to unblock.  When the tree is in this state, selection is O(1).
+// 2) Otherwise, there are deadline threads in the tree.  The tree is searched
+//    to find the first thread whose absolute deadline is in the future,
+//    relative to |now|.  If such a thread exists, then it is the "best" thread
+//    to run right now and it is selected.  When the tree is in this state,
+//    selection is O(log).
+// 3) If there are no threads whose deadlines are in the future, the pointer to
+//    the thread with the minimum relative deadline in the tree is chosen,
+//    simply by fetching the best-in-subtree pointer maintained in |root()|.
+//    While this operation is O(1), when the tree is this state, the over all
+//    achieved order was O(log) because of the search which needed to happen
+//    during step 2.
+//
+// Insert and remove order for the tree should be:
+// 1) Insertions into the tree are always O(log).
+// 2) Unlike a typical WAVL tree, removals of a specific thread from the tree
+//    are O(log) instead of being amortized constant.  This is because of the
+//    cost of restoring the augmented invariant after removal, which involves
+//    walking from the point of removal up to the root of the tree.
+//
+// Finally:
+// Please note that it is possible for the dynamic ordering defined above choose
+// a deadline thread which is not currently eligible to run as the choice for
+// "best thread".  This is because the scheduler does not currently demand that
+// the absolute deadline of a thread be equal to when its period ends and its
+// timeslice is eligible for refresh.
+//
+// While it is possible to account for this behavior as well, doing so is not
+// without cost (both in WaitQueue object size and code complexity). This
+// behavior is no different from the previous priority-based-ordering's
+// behavior, where ineligible deadline threads could also be chosen.  The
+// ability to specify a period different from a relative deadline is currently
+// rarely used in the system, and we are moving in a direction of removing it
+// entirely.  If the concept needs to be re-introduced at a later date, this
+// data structure could be adjusted later on to order threads in phase 2 based
+// on the earliest absolute deadline the could possible have based on earliest
+// time that their period could be refreshed, and their relative deadline
+// parameter.
 class WaitQueueCollection {
+ private:
+  // fwd decls
+  struct BlockedThreadTreeTraits;
+  struct MinRelativeDeadlineTraits;
+
  public:
+  using Key = ktl::pair<uint64_t, uintptr_t>;
+
+  // Encapsulation of all the per-thread state for the WaitQueueCollection data structure.
+  class ThreadState {
+   public:
+    ThreadState() = default;
+
+    ~ThreadState();
+
+    // Disallow copying.
+    ThreadState(const ThreadState&) = delete;
+    ThreadState& operator=(const ThreadState&) = delete;
+
+    bool InWaitQueue() const { return blocked_threads_tree_node_.InContainer(); }
+
+    zx_status_t BlockedStatus() const TA_REQ(thread_lock) { return blocked_status_; }
+
+    void Block(Interruptible interruptible, zx_status_t status) TA_REQ(thread_lock);
+
+    void UnblockIfInterruptible(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
+
+    void Unsleep(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
+    void UnsleepIfInterruptible(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
+
+    void UpdatePriorityIfBlocked(Thread* thread, int priority, PropagatePI propagate)
+        TA_REQ(thread_lock);
+
+    void AssertNoOwnedWaitQueues() const TA_REQ(thread_lock) {
+      DEBUG_ASSERT(owned_wait_queues_.is_empty());
+    }
+
+    void AssertNotBlocked() const TA_REQ(thread_lock) {
+      DEBUG_ASSERT(blocking_wait_queue_ == nullptr);
+      DEBUG_ASSERT(!InWaitQueue());
+    }
+
+   private:
+    // WaitQueues, WaitQueueCollections, and their List types, can
+    // directly manipulate the contents of the per-thread state, for now.
+    friend class OwnedWaitQueue;
+    friend class WaitQueue;
+    friend class WaitQueueCollection;
+    friend struct WaitQueueCollection::BlockedThreadTreeTraits;
+    friend struct WaitQueueCollection::MinRelativeDeadlineTraits;
+
+    // If blocked, a pointer to the WaitQueue the Thread is on.
+    WaitQueue* blocking_wait_queue_ TA_GUARDED(thread_lock) = nullptr;
+
+    // A list of the WaitQueues currently owned by this Thread.
+    fbl::DoublyLinkedList<OwnedWaitQueue*> owned_wait_queues_ TA_GUARDED(thread_lock);
+
+    // Node state for existing in WaitQueueCollection::threads_
+    fbl::WAVLTreeNodeState<Thread*> blocked_threads_tree_node_;
+
+    // Primary key used for determining our position in the collection of
+    // blocked threads. Pre-computed during insert in order to save a time
+    // during insert, rebalance, and search operations.
+    uint64_t blocked_threads_tree_sort_key_{0};
+
+    // State variable holding the pointer to the thread in our subtree with the
+    // minimum relative deadline (if any).
+    Thread* subtree_min_rel_deadline_thread_{nullptr};
+
+    // Return code if woken up abnormally from suspend, sleep, or block.
+    zx_status_t blocked_status_ = ZX_OK;
+
+    // Dumping routines are allowed to see inside us.
+    friend void dump_thread_locked(Thread* t, bool full_dump);
+
+    // Are we allowed to be interrupted on the current thing we're blocked/sleeping on?
+    Interruptible interruptible_ = Interruptible::No;
+  };
+
   constexpr WaitQueueCollection() {}
 
   // The number of threads currently in the collection.
-  uint32_t Count() const TA_REQ(thread_lock) { return count_; }
+  uint32_t Count() const TA_REQ(thread_lock) { return static_cast<uint32_t>(threads_.size()); }
 
   // Peek at the first Thread in the collection.
-  Thread* Peek() TA_REQ(thread_lock);
-  const Thread* Peek() const TA_REQ(thread_lock);
+  Thread* Peek(zx_time_t now) TA_REQ(thread_lock);
+  const Thread* Peek(zx_time_t now) const TA_REQ(thread_lock) {
+    return const_cast<WaitQueueCollection*>(this)->Peek(now);
+  }
 
   // Add the Thread into its sorted location in the collection.
   void Insert(Thread* thread) TA_REQ(thread_lock);
@@ -191,30 +282,36 @@ class WaitQueueCollection {
   // Remove the Thread from the collection.
   void Remove(Thread* thread) TA_REQ(thread_lock);
 
-  // This function enumerates the collection in a fashion which allows us to
-  // remove the threads in question as they are presented to our injected
-  // function for consideration.
-  //
-  // Callable should be a lambda which takes a Thread* for consideration and
-  // returns a bool.  If it returns true, iteration continues, otherwise it
-  // immediately stops.
-  //
-  // Because this needs to see Thread internals, it is declared here and
-  // defined after the Thread definition in thread.h.
-  template <typename Callable>
-  void ForeachThread(const Callable& visit_thread) TA_REQ(thread_lock);
-
-  // When WAIT_QUEUE_VALIDATION is set, many wait queue operations check that the internals of this
-  // data structure are correct, via this method.
-  void Validate() const TA_REQ(thread_lock);
-
   // Disallow copying.
   WaitQueueCollection(const WaitQueueCollection&) = delete;
   WaitQueueCollection& operator=(const WaitQueueCollection&) = delete;
 
  private:
-  int count_ = 0;
-  WaitQueueHeads heads_;
+  friend class WaitQueue;  // TODO(johngro): remove this when WaitQueue::BlockedPriority goes away.
+  static constexpr uint64_t kFairThreadSortKeyBit = uint64_t{1} << 63;
+
+  struct BlockedThreadTreeTraits {
+    static Key GetKey(const Thread& thread);
+    static bool LessThan(Key a, Key b) { return a < b; }
+    static bool EqualTo(Key a, Key b) { return a == b; }
+    static fbl::WAVLTreeNodeState<Thread*>& node_state(Thread& thread);
+  };
+
+  struct MinRelativeDeadlineTraits {
+    // WAVLTreeBestNodeObserver template API
+    using ValueType = Thread*;
+    static ValueType GetValue(const Thread& node);
+    static ValueType GetSubtreeBest(const Thread& node);
+    static bool Compare(ValueType a, ValueType b);
+    static void AssignBest(Thread& node, ValueType val);
+    static void ResetBest(Thread& target);
+  };
+
+  using BlockedThreadTree = fbl::WAVLTree<Key, Thread*, BlockedThreadTreeTraits,
+                                          fbl::DefaultObjectTag, BlockedThreadTreeTraits,
+                                          fbl::WAVLTreeBestNodeObserver<MinRelativeDeadlineTraits>>;
+
+  BlockedThreadTree threads_;
 };
 
 // NOTE: must be inside critical section when using these
@@ -253,8 +350,8 @@ class WaitQueue {
 
   // Returns the current highest priority blocked thread on this wait queue, or
   // nullptr if no threads are blocked.
-  Thread* Peek() TA_REQ(thread_lock);
-  const Thread* Peek() const TA_REQ(thread_lock);
+  Thread* Peek(zx_time_t now) TA_REQ(thread_lock) { return collection_.Peek(now); }
+  const Thread* Peek(zx_time_t now) const TA_REQ(thread_lock) { return collection_.Peek(now); }
 
   // Release one or more threads from the wait queue.
   // wait_queue_error = what WaitQueue::Block() should return for the blocking thread.
@@ -844,6 +941,19 @@ struct Thread {
   };
   using List = fbl::DoublyLinkedListCustomTraits<Thread*, ThreadListTrait>;
 
+  // Traits for the temporary unblock list, used to batch-unblock threads.
+  //
+  // TODO(johngro): look into options for optimizing this.  It should be
+  // possible to share node storage with that used for wait queues (since a
+  // thread needs to have been removed from a wait queue before being sent to
+  // Scheduler::Unblock).
+  struct UnblockListTrait {
+    static fbl::DoublyLinkedListNodeState<Thread*>& node_state(Thread& thread) {
+      return thread.unblock_list_node_;
+    }
+  };
+  using UnblockList = fbl::DoublyLinkedListCustomTraits<Thread*, UnblockListTrait>;
+
   // Stats for a thread's runtime.
   class RuntimeStats {
    public:
@@ -996,8 +1106,8 @@ struct Thread {
   SchedulerState& scheduler_state() { return scheduler_state_; }
   const SchedulerState& scheduler_state() const { return scheduler_state_; }
 
-  WaitQueueState& wait_queue_state() { return wait_queue_state_; }
-  const WaitQueueState& wait_queue_state() const { return wait_queue_state_; }
+  WaitQueueCollection::ThreadState& wait_queue_state() { return wait_queue_state_; }
+  const WaitQueueCollection::ThreadState& wait_queue_state() const { return wait_queue_state_; }
 
 #if WITH_LOCK_DEP
   lockdep::ThreadLockState& lock_state() { return lock_state_; }
@@ -1086,6 +1196,16 @@ struct Thread {
   __NO_RETURN void ExitLocked(int retcode) TA_REQ(thread_lock);
 
  private:
+  struct MigrateListTrait {
+    static fbl::DoublyLinkedListNodeState<Thread*>& node_state(Thread& thread) {
+      return thread.migrate_list_node_;
+    }
+  };
+  using MigrateList = fbl::DoublyLinkedListCustomTraits<Thread*, MigrateListTrait>;
+
+  // The global list of threads with migrate functions.
+  static MigrateList migrate_list_ TA_GUARDED(thread_lock);
+
   Canary canary_;
 
   // These fields are among the most active in the thread. They are grouped
@@ -1093,7 +1213,7 @@ struct Thread {
   unsigned int flags_;
   ktl::atomic<unsigned int> signals_;
   SchedulerState scheduler_state_;
-  WaitQueueState wait_queue_state_;
+  WaitQueueCollection::ThreadState wait_queue_state_;
   TaskState task_state_;
   PreemptionState preemption_state_;
   MemoryAllocationState memory_allocation_state_;
@@ -1156,21 +1276,15 @@ struct Thread {
   // the migrate function has been called with Before but not yet with After.
   bool migrate_pending_;
 
-  // Used to track threads that have set |migrate_fn_|. This is used to migrate threads before a CPU
-  // is taken offline.
+  // Used to track threads that have set |migrate_fn_|. This is used to migrate
+  // threads before a CPU is taken offline.
   fbl::DoublyLinkedListNodeState<Thread*> migrate_list_node_ TA_GUARDED(thread_lock);
 
+  // Node storage for existing on the global thread list.
   fbl::DoublyLinkedListNodeState<Thread*> thread_list_node_ TA_GUARDED(thread_lock);
 
-  struct MigrateListTrait {
-    static fbl::DoublyLinkedListNodeState<Thread*>& node_state(Thread& thread) {
-      return thread.migrate_list_node_;
-    }
-  };
-  using MigrateList = fbl::DoublyLinkedListCustomTraits<Thread*, MigrateListTrait>;
-
-  // The global list of threads with migrate functions.
-  static MigrateList migrate_list_ TA_GUARDED(thread_lock);
+  // Node storage for existing on the temporary batch unblock list.
+  fbl::DoublyLinkedListNodeState<Thread*> unblock_list_node_ TA_GUARDED(thread_lock);
 };
 
 // For the moment, the arch-specific current thread implementations need to come here, after the
@@ -1249,96 +1363,65 @@ class ScopedMemoryAllocationDisabled {
   DISALLOW_COPY_ASSIGN_AND_MOVE(ScopedMemoryAllocationDisabled);
 };
 
-// These come last, after the definitions of both Thread and WaitQueue.
-template <typename Callable>
-void WaitQueueCollection::ForeachThread(const Callable& visit_thread) TA_REQ(thread_lock) {
-  auto consider_queue = [&visit_thread](Thread* queue_head) TA_REQ(thread_lock) -> bool {
-    // So, this is a bit tricky.  We need to visit each node in a
-    // wait_queue priority level in a way which permits our visit_thread
-    // function to remove the thread that we are visiting.
-    //
-    // Each priority level starts with a queue head which has a list of
-    // more threads which exist at that priority level, but the queue
-    // head itself is not a member of this list, so some special care
-    // must be taken.
-    //
-    // Start with the queue_head and look up the next thread (if any) at
-    // the priority level.  Visit the thread, and if (after visiting the
-    // thread), the next thread has become the new queue_head, update
-    // queue_head and keep going.
-    //
-    // If we advance past the queue head, but still have threads to
-    // consider, switch to a more standard enumeration of the queue
-    // attached to the queue_head.  We know at this point in time that
-    // the queue_head can no longer change out from under us.
-    //
-    DEBUG_ASSERT(queue_head != nullptr);
-    Thread* next;
-
-    while (true) {
-      next = nullptr;
-      if (!queue_head->wait_queue_state().sublist_.is_empty()) {
-        next = &queue_head->wait_queue_state().sublist_.front();
-      }
-
-      if (!visit_thread(queue_head)) {
-        return false;
-      }
-
-      // Have we run out of things to visit?
-      if (!next) {
-        return true;
-      }
-
-      // If next is not the new queue head, stop.
-      if (!next->wait_queue_state().IsHead()) {
-        break;
-      }
-
-      // Next is the new queue head.  Update and keep going.
-      queue_head = next;
-    }
-
-    // If we made it this far, then we must still have a valid next.
-    DEBUG_ASSERT(next);
-    do {
-      Thread* t = next;
-      auto iter = queue_head->wait_queue_state().sublist_.make_iterator(*t);
-      ++iter;
-      if (iter == queue_head->wait_queue_state().sublist_.end()) {
-        next = nullptr;
-      } else {
-        next = &*iter;
-      }
-
-      if (!visit_thread(t)) {
-        return false;
-      }
-    } while (next != nullptr);
-
-    return true;
-  };
-
-  Thread* last_queue_head = nullptr;
-
-  for (Thread& queue_head : heads_) {
-    if ((last_queue_head != nullptr) && !consider_queue(last_queue_head)) {
-      return;
-    }
-    last_queue_head = &queue_head;
-  }
-
-  if (last_queue_head != nullptr) {
-    consider_queue(last_queue_head);
-  }
+// WaitQueue collection trait implementations.  While typically these would be
+// implemented in-band in the trait class itself, these definitions must come
+// last, after the definition Thread.  This is because the traits (defined in
+// WaitQueueCollection) need to understand the layout of Thread in order to be
+// able to access both scheduler state and wait queue state variables.
+inline WaitQueueCollection::Key WaitQueueCollection::BlockedThreadTreeTraits::GetKey(
+    const Thread& thread) {
+  // TODO(johngro): consider extending FBL to support a "MultiWAVLTree"
+  // implementation which would allow for nodes with identical keys, breaking
+  // ties (under the hood) using pointer value.  This way, we would not need to
+  // manifest our own pointer in GetKey or in our key type.
+  return {thread.wait_queue_state().blocked_threads_tree_sort_key_,
+          reinterpret_cast<uintptr_t>(&thread)};
 }
 
-inline WaitQueueHeadsTrait::NodeState& WaitQueueHeadsTrait::node_state(Thread& thread) {
-  return thread.wait_queue_state().heads_node_;
+inline fbl::WAVLTreeNodeState<Thread*>& WaitQueueCollection::BlockedThreadTreeTraits::node_state(
+    Thread& thread) {
+  return thread.wait_queue_state().blocked_threads_tree_node_;
 }
 
-inline WaitQueueSublistTrait::NodeState& WaitQueueSublistTrait::node_state(Thread& thread) {
-  return thread.wait_queue_state().sublist_node_;
+inline Thread* WaitQueueCollection::MinRelativeDeadlineTraits::GetValue(const Thread& thread) {
+  // TODO(johngro), consider pre-computing this value so it is just a fetch
+  // instead of a branch.
+  return (thread.scheduler_state().discipline() == SchedDiscipline::Fair)
+             ? nullptr
+             : const_cast<Thread*>(&thread);
+}
+
+inline Thread* WaitQueueCollection::MinRelativeDeadlineTraits::GetSubtreeBest(
+    const Thread& thread) {
+  return thread.wait_queue_state().subtree_min_rel_deadline_thread_;
+}
+
+inline bool WaitQueueCollection::MinRelativeDeadlineTraits::Compare(Thread* a, Thread* b) {
+  // The thread pointer value of a non-deadline thread is null, an non-deadline
+  // threads are always the worst choice when choosing the thread with the
+  // minimum relative deadline.
+  // clang-format off
+  if (a == nullptr) { return false; }
+  if (b == nullptr) { return true; }
+  const SchedDuration a_deadline = a->scheduler_state().deadline().deadline_ns;
+  const SchedDuration b_deadline = b->scheduler_state().deadline().deadline_ns;
+  return (a_deadline < b_deadline) || ((a_deadline == b_deadline) && (a < b));
+  // clang-format on
+}
+
+inline void WaitQueueCollection::MinRelativeDeadlineTraits::AssignBest(Thread& thread,
+                                                                       Thread* val) {
+  thread.wait_queue_state().subtree_min_rel_deadline_thread_ = val;
+}
+
+inline void WaitQueueCollection::MinRelativeDeadlineTraits::ResetBest(Thread& thread) {
+  // In a debug build, zero out the subtree best as we leave the collection.
+  // This can help to find bugs by allowing us to assert that the value is zero
+  // during insertion, however it is not strictly needed in a production build
+  // and can be skipped.
+#ifdef DEBUG_ASSERT_IMPLEMENTED
+  thread.wait_queue_state().subtree_min_rel_deadline_thread_ = nullptr;
+#endif
 }
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_H_

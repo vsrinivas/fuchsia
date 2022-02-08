@@ -62,7 +62,7 @@ inline zx_status_t WaitQueue::BlockEtcPreamble(const Deadline& deadline, uint si
     }
   }
 
-  WaitQueueState& state = current_thread->wait_queue_state();
+  WaitQueueCollection::ThreadState& state = current_thread->wait_queue_state();
 
   state.interruptible_ = interruptible;
 

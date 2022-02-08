@@ -188,8 +188,8 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // well as WakeAndRequeue.  Doing so allows us to preserve common code, and
   // to defer the PI pressure recalculations until the point at which all of
   // the queue manipulations have taken place.
-  void WakeThreadsInternal(uint32_t wake_count, Thread** out_new_owner, Hook on_thread_wake_hook)
-      TA_REQ(thread_lock);
+  void WakeThreadsInternal(uint32_t wake_count, Thread** out_new_owner, zx_time_t now,
+                           Hook on_thread_wake_hook) TA_REQ(thread_lock);
 
   Thread* owner_ TA_GUARDED(thread_lock) = nullptr;
 };

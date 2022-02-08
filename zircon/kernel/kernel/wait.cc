@@ -45,41 +45,8 @@ static inline void WqTraceDepth(const WaitQueueCollection* collection, uint32_t 
       ((_queue)->magic_ == kMagic) || ((_queue)->magic_ == OwnedWaitQueue::kOwnedMagic), \
       "magic 0x%08x", ((_queue)->magic_));
 
-// Wait queues are building blocks that other locking primitives use to
-// handle blocking threads.
-//
-// Implemented as a simple structure that contains a count of the number of threads
-// blocked and a list of Threads acting as individual queue heads, one per priority.
-
-// +----------------+
-// |                |
-// |   WaitQueue    |
-// |                |
-// +-------+--------+
-//         |
-//         |
-//   +-----v-------+    +-------------+   +-------------+
-//   |             +---->             +--->             |
-//   |   Thread    |    |   Thread    |   |   Thread    |
-//   |   pri 31    |    |   pri 17    |   |   pri 8     |
-//   |             <----+             <---+             |
-//   +---+----^----+    +-------------+   +----+---^----+
-//       |    |                                |   |
-//   +---v----+----+                      +----v---+----+
-//   |             |                      |             |
-//   |   Thread    |                      |   Thread    |
-//   |   pri 31    |                      |   pri 8     |
-//   |             |                      |             |
-//   +---+----^----+                      +-------------+
-//       |    |
-//   +---v----+----+
-//   |             |
-//   |   Thread    |
-//   |   pri 31    |
-//   |             |
-//   +-------------+
-//
-
+// Wait queues are building blocks that other locking primitives use to handle
+// blocking threads.
 void WaitQueue::TimeoutHandler(Timer* timer, zx_time_t now, void* arg) {
   Thread* thread = (Thread*)arg;
 
@@ -120,111 +87,117 @@ void WaitQueue::Dequeue(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_l
   t->wait_queue_state().blocking_wait_queue_ = nullptr;
 }
 
-Thread* WaitQueueCollection::Peek() {
-  if (heads_.is_empty()) {
-    return nullptr;
-  }
-  return &heads_.front();
-}
+Thread* WaitQueueCollection::Peek(zx_time_t signed_now) {
+  // Find the "best" thread in the queue to run at time |now|.  See the comments
+  // in thread.h, immediately above the definition of WaitQueueCollection for
+  // details of how the data structure and this algorithm work.
 
-const Thread* WaitQueueCollection::Peek() const {
-  if (heads_.is_empty()) {
+  // If the collection is empty, there is nothing to do.
+  if (threads_.is_empty()) {
     return nullptr;
   }
-  return &heads_.front();
+
+  // If the front of the collection has a key with the fair thread bit set in
+  // it, then there are no deadline threads in the collection, and the front of
+  // the queue is the proper choice.
+  Thread& front = threads_.front();
+  const uint64_t front_key = front.wait_queue_state().blocked_threads_tree_sort_key_;
+
+  if ((front_key & kFairThreadSortKeyBit) != 0) {
+    // Front of the queue is a fair thread, which means that there are no
+    // deadline threads in the queue.  This thread is our best choice.
+    return &front;
+  }
+
+  // Looks like we have deadline threads waiting in the queue.  Is the absolute
+  // deadline of the front of the queue in the future?  If so, then this is our
+  // best choice.
+  //
+  // TODO(johngro): Is it actually worth this optimistic check, or would it be
+  // better to simply do the search every time?
+  DEBUG_ASSERT(signed_now >= 0);
+  const uint64_t now = static_cast<uint64_t>(signed_now);
+  if (front_key > now) {
+    return &front;
+  }
+
+  // Actually search the tree for the deadline thread with the smallest relative
+  // deadline which is in the future relative to now.
+  auto best_deadline = threads_.upper_bound({now, 0});
+  if (best_deadline.IsValid()) {
+    return &*best_deadline;
+  }
+
+  // Looks like we have deadline threads, but all of their deadlines have
+  // expired.  Choose the thread with the minimum relative deadline in the tree.
+  Thread* min_relative = threads_.root()->wait_queue_state().subtree_min_rel_deadline_thread_;
+  DEBUG_ASSERT(min_relative != nullptr);
+  return min_relative;
 }
 
 void WaitQueueCollection::Insert(Thread* thread) {
-  // Regardless of the state of the collection, the count goes up one.
-  ++count_;
-  WqTraceDepth(this, count_);
+  WqTraceDepth(this, Count() + 1);
 
-  if (unlikely(!heads_.is_empty())) {
-    const int pri = thread->scheduler_state().effective_priority();
+  auto& wq_state = thread->wait_queue_state();
+  DEBUG_ASSERT(wq_state.blocked_threads_tree_sort_key_ == 0);
+  DEBUG_ASSERT(wq_state.subtree_min_rel_deadline_thread_ == nullptr);
 
-    // Walk through the sorted list of wait queue heads.
-    for (Thread& head : heads_) {
-      if (pri > head.scheduler_state().effective_priority()) {
-        // Insert ourself here as a new queue head, before |head|.
-        heads_.insert(head, thread);
-        return;
-      } else if (head.scheduler_state().effective_priority() == pri) {
-        // Same priority, add ourself to the tail of this queue.
-        head.wait_queue_state().sublist_.push_back(thread);
-        return;
-      }
-    }
+  // Pre-compute our sort key so that it does not have to be done every time we
+  // need to compare our node against another node while we exist in the tree.
+  //
+  // See the comments in thread.h, immediately above the definition of
+  // WaitQueueCollection for details of why we compute the key in this fashion.
+  static_assert(SchedTime::Format::FractionalBits == 0,
+                "WaitQueueCollection assumes that the raw_value() of a SchedTime is always a whole "
+                "number of nanoseconds");
+  static_assert(SchedDuration::Format::FractionalBits == 0,
+                "WaitQueueCollection assumes that the raw_value() of a SchedDuration is always a "
+                "whole number of nanoseconds");
+
+  const auto& sched_state = thread->scheduler_state();
+  if (sched_state.discipline() == SchedDiscipline::Fair) {
+    // Statically assert that the offset we are going to add to a fair thread's
+    // start time to form its virtual start time can never be the equivalent of
+    // something more than ~1 year.  If the resolution of SchedWeight becomes
+    // too fine, it could drive the sum of the thread's virtual start time into
+    // saturation for low weight threads, making the key useless for sorting.
+    // By putting a limit of 1 year on the offset, we know that the
+    // current_time() of the system would need to be greater than 2^63
+    // nanoseconds minus one year, or about 291 years, before this can happen.
+    constexpr SchedWeight kMinPosWeight{ffl::FromRatio<int64_t>(1, SchedWeight::Format::Power)};
+    constexpr SchedDuration OneYear{SchedMs(zx_duration_t(1) * 86400 * 365245)};
+    static_assert(OneYear >= (Scheduler::kDefaultTargetLatency / kMinPosWeight),
+                  "SchedWeight resolution is too fine");
+
+    SchedTime key =
+        sched_state.start_time() + (Scheduler::kDefaultTargetLatency / sched_state.fair().weight);
+    wq_state.blocked_threads_tree_sort_key_ =
+        static_cast<uint64_t>(key.raw_value()) | kFairThreadSortKeyBit;
+  } else {
+    wq_state.blocked_threads_tree_sort_key_ =
+        static_cast<uint64_t>(sched_state.finish_time().raw_value());
   }
 
-  // We're the first thread, or we walked off the end, so add ourself
-  // as a new queue head at the end.
-  heads_.push_back(thread);
+  threads_.insert(thread);
 }
 
 void WaitQueueCollection::Remove(Thread* thread) {
-  // Either way, the count goes down one.
-  --count_;
-  WqTraceDepth(this, count_);
+  WqTraceDepth(this, Count() - 1);
+  threads_.erase(*thread);
 
-  if (!thread->wait_queue_state().IsHead()) {
-    // We're just in a queue, not a head.
-    thread->wait_queue_state().sublist_node_.RemoveFromContainer<WaitQueueSublistTrait>();
-  } else {
-    // We're the head of a queue.
-    if (thread->wait_queue_state().sublist_.is_empty()) {
-      // If there's no new queue head, the only work we have to do is
-      // removing |thread| from the heads list.
-      heads_.erase(*thread);
-    } else {
-      // To migrate to the new queue head, we need to:
-      // - update the sublist for this priority, by removing |newhead|.
-      // - move the sublist from |thread| to |newhead|.
-      // - replace |thread| with |newhead| in the heads list.
-
-      // Remove the newhead from its position in the sublist.
-      Thread* newhead = thread->wait_queue_state().sublist_.pop_front();
-
-      // Move the sublist from |thread| to |newhead|.
-      newhead->wait_queue_state().sublist_ = ktl::move(thread->wait_queue_state().sublist_);
-
-      // Patch in the new head into the queue head list.
-      heads_.replace(*thread, newhead);
-    }
-  }
-}
-
-void WaitQueueCollection::Validate() const {
-  // Validate that the queue is sorted properly
-  const Thread* last_head = nullptr;
-  for (const Thread& head : heads_) {
-    head.canary().Assert();
-
-    // Validate that the queue heads are sorted high to low priority.
-    if (last_head) {
-      DEBUG_ASSERT_MSG(last_head->scheduler_state().effective_priority() >
-                           head.scheduler_state().effective_priority(),
-                       "%p:%d  %p:%d", last_head, last_head->scheduler_state().effective_priority(),
-                       &head, head.scheduler_state().effective_priority());
-    }
-
-    // Walk any threads linked to this head, validating that they're the same priority.
-    for (const Thread& thread : head.wait_queue_state().sublist_) {
-      thread.canary().Assert();
-      DEBUG_ASSERT_MSG(head.scheduler_state().effective_priority() ==
-                           thread.scheduler_state().effective_priority(),
-                       "%p:%d  %p:%d", &head, head.scheduler_state().effective_priority(), &thread,
-                       thread.scheduler_state().effective_priority());
-    }
-
-    last_head = &head;
-  }
+  // In a debug build, zero out the sort key now that we have left the
+  // collection.  This can help to find bugs by allowing us to assert that the
+  // value is zero during insertion, however it is not strictly needed in a
+  // production build and can be skipped.
+#ifdef DEBUG_ASSERT_IMPLEMENTED
+  auto& wq_state = thread->wait_queue_state();
+  wq_state.blocked_threads_tree_sort_key_ = 0;
+#endif
 }
 
 void WaitQueue::ValidateQueue() TA_REQ(thread_lock) {
   DEBUG_ASSERT_MAGIC_CHECK(this);
   thread_lock.AssertHeld();
-
-  collection_.Validate();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -235,18 +208,25 @@ void WaitQueue::ValidateQueue() TA_REQ(thread_lock) {
 
 // return the numeric priority of the highest priority thread queued
 int WaitQueue::BlockedPriority() const {
-  const Thread* t = Peek();
-  if (!t) {
-    return -1;
+  // TODO(johngro): Remove this, as well as the concept of "priority" from all
+  // of the OwnedWaitQueue and profile inheritance code.  The wait queue
+  // ordering no longer depends on the deprecated concept of priority, and there
+  // is no point in maintaining the system of inheriting the "maximum priority"
+  // during inheritance events.
+  //
+  // Instead, PI will be switched over to inheriting the sum of the weights of
+  // all of the upstream threads, modeling the weight of a deadline thread as
+  // the weight of a "max priority" thread (as is done today).  This will be a
+  // temporary stepping stone on the way to implementing generalize deadline
+  // inheritance, which depends on knowing the minimum relative deadline across
+  // a set of waiting threads, something which is already being maintained using
+  // the WaitQueueCollection's augmented binary tree.
+  int ret = -1;
+  for (const Thread& t : collection_.threads_) {
+    ret = std::max(ret, t.scheduler_state().effective_priority());
   }
-
-  return t->scheduler_state().effective_priority();
+  return ret;
 }
-
-// returns a reference to the highest priority thread queued
-Thread* WaitQueue::Peek() { return collection_.Peek(); }
-
-const Thread* WaitQueue::Peek() const { return collection_.Peek(); }
 
 /**
  * @brief  Block until a wait queue is notified, ignoring existing signals
@@ -322,7 +302,7 @@ bool WaitQueue::WakeOne(zx_status_t wait_queue_error) {
     ValidateQueue();
   }
 
-  t = Peek();
+  t = Peek(current_time());
   if (t) {
     Dequeue(t, wait_queue_error);
     ktrace_ptr(TAG_KWAIT_WAKE, this, 0, 0);
@@ -395,11 +375,18 @@ void WaitQueue::WakeAll(zx_status_t wait_queue_error) {
     return;
   }
 
-  WaitQueueSublist list;
-
   // pop all the threads off the wait queue into the run queue
-  // TODO: optimize with custom pop all routine
-  while ((t = Peek())) {
+  // TODO(johngro): Look into ways to optimize this.  There is no real reason to:
+  //
+  // 1) Remove the threads from the collection in wake order.
+  // 2) Rebalance the tree's wait queue collection during the process of
+  //    removing the nodes.
+  // 3) Have separate node storage in the thread for existing on the unblock
+  //    list.
+  //
+  Thread::UnblockList list;
+  zx_time_t now = current_time();
+  while ((t = Peek(now))) {
     Dequeue(t, wait_queue_error);
     list.push_back(t);
   }
@@ -489,7 +476,7 @@ void WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) 
   // currently at the head of this WaitQueue, then |t|'s old priority is the
   // previous priority of the WaitQueue.  Otherwise, it is the priority of
   // the WaitQueue as it stands before we re-insert |t|.
-  const int old_wq_prio = (Peek() == t) ? old_prio : BlockedPriority();
+  const int old_wq_prio = (Peek(current_time()) == t) ? old_prio : BlockedPriority();
 
   // simple algorithm: remove the thread from the queue and add it back
   // TODO: implement optimal algorithm depending on all the different edge

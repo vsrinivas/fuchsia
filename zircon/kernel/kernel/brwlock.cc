@@ -85,11 +85,12 @@ ResourceOwnership BrwLock<PI>::Wake() {
     wait_.WakeThreads(ktl::numeric_limits<uint32_t>::max(), {cbk, &context});
     return context.ownership;
   } else {
-    Thread* next = wait_.Peek();
+    zx_time_t now = current_time();
+    Thread* next = wait_.Peek(now);
     DEBUG_ASSERT(next != NULL);
     if (next->state() == THREAD_BLOCKED_READ_LOCK) {
       while (!wait_.IsEmpty()) {
-        next = wait_.Peek();
+        next = wait_.Peek(now);
         if (next->state() != THREAD_BLOCKED_READ_LOCK) {
           break;
         }

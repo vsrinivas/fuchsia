@@ -159,7 +159,7 @@ using UniquePtr = ktl::unique_ptr<T, Deleter<T, Allocator>>;
 // The maximum size of the slab control block. Custom allocators may use this
 // constant to compute slab sizes, taking into account the size of the control
 // block and the desired number of objects per slab.
-static constexpr size_t kSlabControlMaxSize = 128;
+static constexpr size_t kSlabControlMaxSize = 144;
 
 // Specialization of ObjectCache for the single slab cache variant. Operations
 // serialize on the main object cache lock, regardless of CPU.

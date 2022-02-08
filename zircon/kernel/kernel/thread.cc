@@ -118,37 +118,38 @@ static void init_thread_lock_state(Thread* t) {
 #endif
 }
 
-void WaitQueueState::Block(Interruptible interruptible, zx_status_t status) {
+void WaitQueueCollection::ThreadState::Block(Interruptible interruptible, zx_status_t status) {
   blocked_status_ = status;
   interruptible_ = interruptible;
   Scheduler::Block();
   interruptible_ = Interruptible::No;
 }
 
-void WaitQueueState::UnblockIfInterruptible(Thread* thread, zx_status_t status) {
+void WaitQueueCollection::ThreadState::UnblockIfInterruptible(Thread* thread, zx_status_t status) {
   if (interruptible_ == Interruptible::Yes) {
     WaitQueue::UnblockThread(thread, status);
   }
 }
 
-void WaitQueueState::Unsleep(Thread* thread, zx_status_t status) {
+void WaitQueueCollection::ThreadState::Unsleep(Thread* thread, zx_status_t status) {
   blocked_status_ = status;
   Scheduler::Unblock(thread);
 }
 
-void WaitQueueState::UnsleepIfInterruptible(Thread* thread, zx_status_t status) {
+void WaitQueueCollection::ThreadState::UnsleepIfInterruptible(Thread* thread, zx_status_t status) {
   if (interruptible_ == Interruptible::Yes) {
     Unsleep(thread, status);
   }
 }
 
-void WaitQueueState::UpdatePriorityIfBlocked(Thread* thread, int priority, PropagatePI propagate) {
+void WaitQueueCollection::ThreadState::UpdatePriorityIfBlocked(Thread* thread, int priority,
+                                                               PropagatePI propagate) {
   if (blocking_wait_queue_) {
     blocking_wait_queue_->PriorityChanged(thread, priority, propagate);
   }
 }
 
-WaitQueueState::~WaitQueueState() {
+WaitQueueCollection::ThreadState::~ThreadState() {
   DEBUG_ASSERT(blocking_wait_queue_ == nullptr);
 
   // owned_wait_queues_ is a fbl:: list of unmanaged pointers.  It will debug

@@ -155,7 +155,7 @@ class Scheduler {
   static void Reschedule() TA_REQ(thread_lock);
   static void RescheduleInternal() TA_REQ(thread_lock);
   static void Unblock(Thread* thread) TA_REQ(thread_lock);
-  static void Unblock(WaitQueueSublist thread_list) TA_REQ(thread_lock);
+  static void Unblock(Thread::UnblockList thread_list) TA_REQ(thread_lock);
   static void UnblockIdle(Thread* idle_thread) TA_REQ(thread_lock);
 
   static void Migrate(Thread* thread) TA_REQ(thread_lock);
