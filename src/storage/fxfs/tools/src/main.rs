@@ -20,9 +20,9 @@ use {
 #[derive(FromArgs, PartialEq, Debug)]
 /// fxfs
 struct TopLevel {
-    /// path to the input file to read or write
+    /// path to the image file file to read or write
     #[argh(option, short = 'i')]
-    input: String,
+    image: String,
     /// whether to run the tool verbosely
     #[argh(switch, short = 'v')]
     verbose: bool,
@@ -79,7 +79,9 @@ async fn main() -> Result<(), Error> {
 
     // TODO(jfsulliv): Add support for side-loaded encryption keys.
     let crypt: Arc<dyn Crypt> = Arc::new(InsecureCrypt::new());
-    let device = DeviceHolder::new(FileBackedDevice::new(std::fs::File::open(args.input)?));
+    let device = DeviceHolder::new(FileBackedDevice::new(
+        std::fs::OpenOptions::new().read(true).write(true).open(args.image)?,
+    ));
 
     match args.subcommand {
         SubCommand::Format(_) => {
