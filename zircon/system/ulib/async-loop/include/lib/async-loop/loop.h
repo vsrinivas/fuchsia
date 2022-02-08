@@ -110,6 +110,12 @@ async_loop_t* async_loop_from_dispatcher(async_dispatcher_t* dispatcher);
 /// The message loop must not currently be running on any threads other than
 /// those started by |async_loop_start_thread()| which this function will join.
 ///
+/// Any tasks still queued when |async_loop_shutdown()| is called will be
+/// immediately completed with the ZX_ERR_CANCELLED status. Callbacks will
+/// called on one of the loop's worker threads (i.e., a thread created by
+/// |async_loop_start_thread()|) if such a thread exists. If no worker threads
+/// have been created, callbacks will be called on the current thread.
+///
 /// Does nothing if already shutting down.
 void async_loop_shutdown(async_loop_t* loop);
 

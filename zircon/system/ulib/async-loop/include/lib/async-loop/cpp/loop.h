@@ -51,6 +51,12 @@ class Loop {
   /// The message loop must not currently be running on any threads other than
   /// those started by |StartThread()| which this function will join.
   ///
+  /// Any tasks still queued when |Shutdown()| is called will be immediately
+  /// completed with the ZX_ERR_CANCELLED status. Callbacks will called on one
+  /// of the loop's worker threads (i.e., a thread created by |StartThread()|)
+  /// if such a thread exists. If no worker threads have been created,
+  /// callbacks will be called by the current thread.
+  ///
   /// Does nothing if already shutting down.
   void Shutdown();
 

@@ -80,6 +80,7 @@ typedef struct async_loop {
 
   _Atomic async_loop_state_t state;
   atomic_uint active_threads;  // number of active dispatch threads
+  atomic_uint worker_threads;  // number of worker threads created with `async_loop_start_thread`
 
   mtx_t lock;                  // guards the lists and the dispatching tasks flag
   bool dispatching_tasks;      // true while the loop is busy dispatching tasks
@@ -156,6 +157,7 @@ zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** 
     return ZX_ERR_NO_MEMORY;
   atomic_init(&loop->state, ASYNC_LOOP_RUNNABLE);
   atomic_init(&loop->active_threads, 0u);
+  atomic_init(&loop->worker_threads, 0u);
 
   loop->dispatcher.ops = (const async_ops_t*)&async_loop_ops;
   loop->config = *config;
@@ -197,6 +199,58 @@ void async_loop_destroy(async_loop_t* loop) {
   free(loop);
 }
 
+// Cancel all pending tasks with the status code ZX_ERR_CANCELED.
+//
+// Used during dispatcher shutdown.
+static void async_loop_cancel_all(async_loop_t* loop) {
+  ZX_DEBUG_ASSERT(loop);
+  ZX_DEBUG_ASSERT(atomic_load_explicit(&loop->state, memory_order_acquire) == ASYNC_LOOP_SHUTDOWN);
+
+  list_node_t* node;
+
+  mtx_lock(&loop->lock);
+  while ((node = list_remove_head(&loop->wait_list))) {
+    mtx_unlock(&loop->lock);
+    async_wait_t* wait = node_to_wait(node);
+    // Since the wait is being canceled, it would make sense to call zx_port_cancel()
+    // here before invoking the callback to ensure that the waited-upon handle is
+    // no longer attached to the port.  However, the port is about to be destroyed
+    // so we can optimize that step away.
+    async_loop_dispatch_wait(loop, wait, ZX_ERR_CANCELED, NULL);
+    mtx_lock(&loop->lock);
+  }
+  while ((node = list_remove_head(&loop->due_list))) {
+    mtx_unlock(&loop->lock);
+    async_task_t* task = node_to_task(node);
+    async_loop_dispatch_task(loop, task, ZX_ERR_CANCELED);
+    mtx_lock(&loop->lock);
+  }
+  while ((node = list_remove_head(&loop->task_list))) {
+    mtx_unlock(&loop->lock);
+    async_task_t* task = node_to_task(node);
+    async_loop_dispatch_task(loop, task, ZX_ERR_CANCELED);
+    mtx_lock(&loop->lock);
+  }
+  while ((node = list_remove_head(&loop->irq_list))) {
+    mtx_unlock(&loop->lock);
+    async_irq_t* task = node_to_irq(node);
+    async_loop_dispatch_irq(loop, task, ZX_ERR_CANCELED, NULL);
+    mtx_lock(&loop->lock);
+  }
+  while ((node = list_remove_head(&loop->paged_vmo_list))) {
+    mtx_unlock(&loop->lock);
+    async_paged_vmo_t* paged_vmo = node_to_paged_vmo(node);
+    // The loop owns the association between the pager and the VMO so when the
+    // loop is shutting down, it is responsible for breaking that association
+    // then notifying the callback that the wait has been canceled.
+    async_loop_cancel_paged_vmo(paged_vmo);
+    async_loop_dispatch_paged_vmo(loop, paged_vmo, ZX_ERR_CANCELED, NULL);
+    mtx_lock(&loop->lock);
+  }
+
+  mtx_unlock(&loop->lock);
+}
+
 void async_loop_shutdown(async_loop_t* loop) {
   ZX_DEBUG_ASSERT(loop);
 
@@ -205,45 +259,18 @@ void async_loop_shutdown(async_loop_t* loop) {
   if (prior_state == ASYNC_LOOP_SHUTDOWN)
     return;
 
+  // Wake all worker threads, and wait for them to finish.
+  //
+  // If there is at least one worker thread present, it will cancel all
+  // pending tasks.
   async_loop_wake_threads(loop);
   async_loop_join_threads(loop);
 
-  list_node_t* node;
-  while ((node = list_remove_head(&loop->wait_list))) {
-    async_wait_t* wait = node_to_wait(node);
-    // Since the wait is being canceled, it would make sense to call zx_port_cancel()
-    // here before invoking the callback to ensure that the waited-upon handle is
-    // no longer attached to the port.  However, the port is about to be destroyed
-    // so we can optimize that step away.
-    async_loop_dispatch_wait(loop, wait, ZX_ERR_CANCELED, NULL);
-  }
-  while ((node = list_remove_head(&loop->due_list))) {
-    async_task_t* task = node_to_task(node);
-    async_loop_dispatch_task(loop, task, ZX_ERR_CANCELED);
-  }
-  while ((node = list_remove_head(&loop->task_list))) {
-    async_task_t* task = node_to_task(node);
-    async_loop_dispatch_task(loop, task, ZX_ERR_CANCELED);
-  }
-  while ((node = list_remove_head(&loop->irq_list))) {
-    async_irq_t* task = node_to_irq(node);
-    async_loop_dispatch_irq(loop, task, ZX_ERR_CANCELED, NULL);
-  }
-  while (true) {
-    mtx_lock(&loop->lock);
-    node = list_remove_head(&loop->paged_vmo_list);
-    mtx_unlock(&loop->lock);
-    if (!node) {
-      break;
-    }
-
-    async_paged_vmo_t* paged_vmo = node_to_paged_vmo(node);
-    // The loop owns the association between the pager and the VMO so when the
-    // loop is shutting down, it is responsible for breaking that association
-    // then notifying the callback that the wait has been canceled.
-    async_loop_cancel_paged_vmo(paged_vmo);
-    async_loop_dispatch_paged_vmo(loop, paged_vmo, ZX_ERR_CANCELED, NULL);
-  }
+  // Cancel any remaining pending tasks on our queues.
+  //
+  // All tasks will have been cancelled by a worker thread, unless there
+  // were none: in this case, we clear them here.
+  async_loop_cancel_all(loop);
 
   if (loop->config.make_default_for_current_thread) {
     ZX_DEBUG_ASSERT(loop->config.default_accessors.getter() == &loop->dispatcher);
@@ -810,6 +837,18 @@ static int async_loop_run_thread(void* data) {
     loop->config.default_accessors.setter(&loop->dispatcher);
   }
   async_loop_run(loop, ZX_TIME_INFINITE, false);
+
+  // Determine if we are the last worker to finish.
+  bool last_worker =
+      atomic_fetch_sub_explicit(&loop->worker_threads, 1u, memory_order_acq_rel) == 1u;
+
+  // If the thread exited due to shutdown and we are the last worker
+  // thread to finish, start clearing out queues.
+  if (last_worker &&
+      atomic_load_explicit(&loop->state, memory_order_acquire) == ASYNC_LOOP_SHUTDOWN) {
+    async_loop_cancel_all(loop);
+  }
+
   return 0;
 }
 
@@ -832,6 +871,7 @@ zx_status_t async_loop_start_thread(async_loop_t* loop, const char* name, thrd_t
   }
 
   mtx_lock(&loop->lock);
+  atomic_fetch_add_explicit(&loop->worker_threads, 1u, memory_order_acq_rel);
   list_add_tail(&loop->thread_list, &rec->node);
   mtx_unlock(&loop->lock);
 

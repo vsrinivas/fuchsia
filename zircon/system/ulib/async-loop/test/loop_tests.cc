@@ -5,6 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/paged_vmo.h>
+#include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
@@ -1349,6 +1350,54 @@ TEST(Loop, ThreadsReceiversRunConcurrently) {
     // Ensure that we actually processed many packets concurrently on different threads.
     EXPECT_NE(1u, measure.max_threads(), "packets handled concurrently");
   }
+}
+
+// Ensure that tasks are cancelled using a worker thread if one is available.
+//
+// This ensures that thread-hostile callbacks don't get run on the wrong thread.
+TEST(Loop, ShutdownOnWorkerThreads) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+  // Start a worker thread.
+  thrd_t worker;
+  loop.StartThread("loop_tests_thread", &worker);
+
+  // Post a task that will never be executed.
+  bool callback_called = false;
+  async::Task task([&worker, &callback_called](async_dispatcher_t* dispatcher, async::Task* task,
+                                               zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_CANCELED, "Unexpected status: %s", zx_status_get_string(status));
+    EXPECT_TRUE(thrd_equal(thrd_current(), worker), "Callback called on incorrect thread");
+    callback_called = true;
+  });
+  task.PostDelayed(loop.dispatcher(), zx::duration::infinite());
+
+  // Shut down the loop, and ensure the callback was called on the other thread.
+  loop.Shutdown();
+  EXPECT_TRUE(callback_called);
+}
+
+// Ensure that tasks are cancelled correctly when no worker threads are available.
+TEST(Loop, ShutdownNoWorkerThreads) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  std::optional<std::thread> shutdown_thread;
+
+  // Post a task that will never be executed.
+  bool callback_called = false;
+  async::Task task([&shutdown_thread, &callback_called](async_dispatcher_t* dispatcher,
+                                                        async::Task* task, zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_CANCELED, "Unexpected status: %s", zx_status_get_string(status));
+    EXPECT_EQ(std::this_thread::get_id(), shutdown_thread->get_id(),
+              "Callback called on incorrect thread");
+    callback_called = true;
+  });
+  task.PostDelayed(loop.dispatcher(), zx::duration::infinite());
+
+  // Shut down the loop, and ensure the callback was called on the thread calling `Shutdown`.
+  shutdown_thread.emplace([&loop] { loop.Shutdown(); });
+  shutdown_thread->join();
+
+  EXPECT_TRUE(callback_called);
 }
 
 }  // namespace
