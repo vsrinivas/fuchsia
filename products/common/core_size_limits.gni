@@ -55,10 +55,40 @@ size_checker_input = {
       creep_limit = 19660  # 0.019 MiB
     },
     {
-      component = "Connectivity"
-      src = [ "src/connectivity" ]
-      limit = 15233840  # 14.528 MiB
-      creep_limit = 75072  # 0.072 MiB
+      component = "Connectivity/Bluetooth"
+      src = [ "src/connectivity/bluetooth" ]
+      limit = 2314207  # 2.207 MiB
+      creep_limit = 75497  # 0.072 MiB
+    },
+    {
+      component = "Connectivity/Location"
+      src = [ "src/connectivity/location" ]
+      limit = 253755  # 0.242 MiB
+      creep_limit = 20971  # 0.020 MiB
+    },
+    {
+      component = "Connectivity/Management"
+      src = [ "src/connectivity/management" ]
+      limit = 476053  # 0.454 MiB
+      creep_limit = 20971  # 0.020 MiB
+    },
+    {
+      component = "Connectivity/Network"
+      src = [ "src/connectivity/network" ]
+      limit = 8338276  # 7.952 MiB
+      creep_limit = 75497  # 0.072 MiB
+    },
+    {
+      component = "Connectivity/Overnet"
+      src = [ "src/connectivity/overnet" ]
+      limit = 1236271  # 1.179 MiB
+      creep_limit = 75497  # 0.072 MiB
+    },
+    {
+      component = "Connectivity/Wlan"
+      src = [ "src/connectivity/wlan" ]
+      limit = 2615148  # 2.494 MiB
+      creep_limit = 75497  # 0.072 MiB
     },
     {
       component = "Diagnostics"
