@@ -6,6 +6,7 @@ use {
     crate::{client::types as client_types, util::pseudo_energy::*},
     fuchsia_zircon as zx,
     log::error,
+    std::collections::VecDeque,
 };
 
 // Number of previous RSSI measurements to exponentially weigh into average.
@@ -47,21 +48,46 @@ impl SignalData {
     }
 }
 
-/// Data points related to a particular connection
+/// Data points related to historical connection
 #[derive(Clone, Debug)]
-pub struct ConnectionData {
+pub struct PastConnectionData {
     /// Time at which connect was first attempted
-    pub time: zx::Time,
-    /// Seconds to connect
+    pub connection_attempt_time: zx::Time,
+    /// Duration from connection attempt to success
     pub time_to_connect: zx::Duration,
-    /// Time from connection to disconnect
-    pub connection_duration: zx::Duration,
+    /// Time at which the connection was ended
+    pub disconnect_time: zx::Time,
     /// Cause of disconnect or failure to connect
     pub disconnect_reason: client_types::DisconnectReason,
     /// Final signal strength measure before disconnect
     pub signal_data_at_disconnect: SignalData,
     /// Average phy rate over connection duration
-    pub average_tx_rate: u16,
+    pub average_tx_rate: u32,
+}
+
+/// Aggregated information about the current BSS's connection quality, used for evaluation.
+pub struct BssQualityData<'a> {
+    pub signal_data: SignalData,
+    pub channel: client_types::WlanChan,
+    // TX and RX rate, respectively.
+    pub phy_rates: (u32, u32),
+    // Connection data of past successful connections to this BSS.
+    pub past_connections_list: &'a VecDeque<PastConnectionData>,
+}
+
+impl<'a> BssQualityData<'a> {
+    pub fn new(
+        signal_data: SignalData,
+        channel: client_types::WlanChan,
+        past_connections_list: &'a VecDeque<PastConnectionData>,
+    ) -> Self {
+        BssQualityData {
+            signal_data: signal_data,
+            channel: channel,
+            phy_rates: (0, 0),
+            past_connections_list: past_connections_list,
+        }
+    }
 }
 
 #[cfg(test)]
