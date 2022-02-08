@@ -10,10 +10,11 @@ use {
             AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource, RuntimeConfig,
         },
     },
-    cm_moniker::InstancedExtendedMoniker,
     fuchsia_zircon_status as zx,
     log::{error, warn},
-    moniker::{AbsoluteMoniker, ChildMonikerBase, RelativeMoniker, RelativeMonikerBase},
+    moniker::{
+        AbsoluteMoniker, ChildMonikerBase, ExtendedMoniker, RelativeMoniker, RelativeMonikerBase,
+    },
     std::sync::{Arc, Weak},
     thiserror::Error,
 };
@@ -43,14 +44,14 @@ pub enum PolicyError {
     #[error("security policy disallows \"{cap}\" from \"{source_moniker}\" being used at \"{target_moniker}\"")]
     CapabilityUseDisallowed {
         cap: String,
-        source_moniker: InstancedExtendedMoniker,
+        source_moniker: ExtendedMoniker,
         target_moniker: AbsoluteMoniker,
     },
 
     #[error("debug security policy disallows \"{cap}\" from \"{source_moniker}\" being routed from environment \"{env_moniker}:{env_name}\" to \"{target_moniker}\"")]
     DebugCapabilityUseDisallowed {
         cap: String,
-        source_moniker: InstancedExtendedMoniker,
+        source_moniker: ExtendedMoniker,
         env_moniker: AbsoluteMoniker,
         env_name: String,
         target_moniker: AbsoluteMoniker,
@@ -72,7 +73,7 @@ impl PolicyError {
 
     fn capability_use_disallowed(
         cap: impl Into<String>,
-        source_moniker: &InstancedExtendedMoniker,
+        source_moniker: &ExtendedMoniker,
         target_moniker: &AbsoluteMoniker,
     ) -> Self {
         PolicyError::CapabilityUseDisallowed {
@@ -84,7 +85,7 @@ impl PolicyError {
 
     fn debug_capability_use_disallowed(
         cap: impl Into<String>,
-        source_moniker: &InstancedExtendedMoniker,
+        source_moniker: &ExtendedMoniker,
         env_moniker: &AbsoluteMoniker,
         env_name: impl Into<String>,
         target_moniker: &AbsoluteMoniker,
@@ -130,7 +131,7 @@ impl GlobalPolicyChecker {
     {
         Ok(match &capability_source {
             CapabilitySourceInterface::Namespace { capability, .. } => CapabilityAllowlistKey {
-                source_moniker: InstancedExtendedMoniker::ComponentManager,
+                source_moniker: ExtendedMoniker::ComponentManager,
                 source_name: capability
                     .source_name()
                     .ok_or(PolicyError::InvalidCapabilitySource)?
@@ -140,8 +141,8 @@ impl GlobalPolicyChecker {
             },
             CapabilitySourceInterface::Component { capability, component } => {
                 CapabilityAllowlistKey {
-                    source_moniker: InstancedExtendedMoniker::ComponentInstance(
-                        component.instanced_moniker.clone(),
+                    source_moniker: ExtendedMoniker::ComponentInstance(
+                        component.abs_moniker.clone(),
                     ),
                     source_name: capability
                         .source_name()
@@ -152,15 +153,15 @@ impl GlobalPolicyChecker {
                 }
             }
             CapabilitySourceInterface::Builtin { capability, .. } => CapabilityAllowlistKey {
-                source_moniker: InstancedExtendedMoniker::ComponentManager,
+                source_moniker: ExtendedMoniker::ComponentManager,
                 source_name: capability.source_name().clone(),
                 source: CapabilityAllowlistSource::Self_,
                 capability: capability.type_name(),
             },
             CapabilitySourceInterface::Framework { capability, component } => {
                 CapabilityAllowlistKey {
-                    source_moniker: InstancedExtendedMoniker::ComponentInstance(
-                        component.instanced_moniker.clone(),
+                    source_moniker: ExtendedMoniker::ComponentInstance(
+                        component.abs_moniker.clone(),
                     ),
                     source_name: capability.source_name().clone(),
                     source: CapabilityAllowlistSource::Framework,
@@ -169,8 +170,8 @@ impl GlobalPolicyChecker {
             }
             CapabilitySourceInterface::Capability { source_capability, component } => {
                 CapabilityAllowlistKey {
-                    source_moniker: InstancedExtendedMoniker::ComponentInstance(
-                        component.instanced_moniker.clone(),
+                    source_moniker: ExtendedMoniker::ComponentInstance(
+                        component.abs_moniker.clone(),
                     ),
                     source_name: source_capability
                         .source_name()
@@ -182,8 +183,8 @@ impl GlobalPolicyChecker {
             }
             CapabilitySourceInterface::Collection { capability, component, .. } => {
                 CapabilityAllowlistKey {
-                    source_moniker: InstancedExtendedMoniker::ComponentInstance(
-                        component.instanced_moniker.clone(),
+                    source_moniker: ExtendedMoniker::ComponentInstance(
+                        component.abs_moniker.clone(),
                     ),
                     source_name: capability.source_name().clone(),
                     source: CapabilityAllowlistSource::Self_,

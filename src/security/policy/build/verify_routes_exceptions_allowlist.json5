@@ -30,14 +30,12 @@
                                                         {
                                                             name: "bootstrap",
                                                             collection: null,
-                                                            instance: 0,
-                                                            rep: "bootstrap:0",
+                                                            rep: "bootstrap",
                                                         },
                                                         {
                                                             name: "fshost",
                                                             collection: null,
-                                                            instance: 0,
-                                                            rep: "fshost:0",
+                                                            rep: "fshost",
                                                         },
                                                     ],
                                                 },
@@ -56,7 +54,7 @@
                                 },
                             },
                         },
-                        message: "security policy disallows \"build-info\" from \"/bootstrap:0/fshost:0\" being used at \"/bootstrap\"",
+                        message: "security policy disallows \"build-info\" from \"/bootstrap/fshost\" being used at \"/bootstrap\"",
                     },
                 },
                 {
@@ -75,14 +73,12 @@
                                                         {
                                                             name: "bootstrap",
                                                             collection: null,
-                                                            instance: 0,
-                                                            rep: "bootstrap:0",
+                                                            rep: "bootstrap",
                                                         },
                                                         {
                                                             name: "fshost",
                                                             collection: null,
-                                                            instance: 0,
-                                                            rep: "fshost:0",
+                                                            rep: "fshost",
                                                         },
                                                     ],
                                                 },
@@ -101,7 +97,7 @@
                                 },
                             },
                         },
-                        message: "security policy disallows \"deprecated-misc-storage\" from \"/bootstrap:0/fshost:0\" being used at \"/bootstrap\"",
+                        message: "security policy disallows \"deprecated-misc-storage\" from \"/bootstrap/fshost\" being used at \"/bootstrap\"",
                     },
                 },
                 {
@@ -120,14 +116,12 @@
                                                         {
                                                             name: "bootstrap",
                                                             collection: null,
-                                                            instance: 0,
-                                                            rep: "bootstrap:0",
+                                                            rep: "bootstrap",
                                                         },
                                                         {
                                                             name: "fshost",
                                                             collection: null,
-                                                            instance: 0,
-                                                            rep: "fshost:0",
+                                                            rep: "fshost",
                                                         },
                                                     ],
                                                 },
@@ -151,7 +145,7 @@
                                 },
                             },
                         },
-                        message: "security policy disallows \"build-info\" from \"/bootstrap:0/fshost:0\" being used at \"/bootstrap/fshost\"",
+                        message: "security policy disallows \"build-info\" from \"/bootstrap/fshost\" being used at \"/bootstrap/fshost\"",
                     },
                 },
             ],
@@ -280,14 +274,12 @@
                                                     {
                                                         "name": "core",
                                                         "collection": null,
-                                                        "instance": 0,
-                                                        "rep": "core:0"
+                                                        "rep": "core"
                                                     },
                                                     {
                                                         "name": "pkg-resolver",
                                                         "collection": null,
-                                                        "instance": 0,
-                                                        "rep": "pkg-resolver:0"
+                                                        "rep": "pkg-resolver"
                                                     }
                                                     ]
                                                 }
@@ -311,7 +303,7 @@
                                 }
                             }
                         },
-                        "message": "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/bootstrap/console-launcher\""
+                        "message": "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core/pkg-resolver\" being used at \"/bootstrap/console-launcher\""
                     }
                 },
                 {
@@ -330,14 +322,12 @@
                                                         {
                                                             name: "core",
                                                             collection: null,
-                                                            instance: 0,
-                                                            rep: "core:0",
+                                                            rep: "core",
                                                         },
                                                         {
                                                             name: "pkg-resolver",
                                                             collection: null,
-                                                            instance: 0,
-                                                            rep: "pkg-resolver:0",
+                                                            rep: "pkg-resolver",
                                                         },
                                                     ],
                                                 },
@@ -361,7 +351,7 @@
                                 },
                             },
                         },
-                        message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/bootstrap/driver_manager\"",
+                        message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core/pkg-resolver\" being used at \"/bootstrap/driver_manager\"",
                     },
                 },
                 {
@@ -380,14 +370,12 @@
                                                     {
                                                         "name": "core",
                                                         "collection": null,
-                                                        "instance": 0,
-                                                        "rep": "core:0"
+                                                        "rep": "core"
                                                     },
                                                     {
                                                         "name": "pkg-resolver",
                                                         "collection": null,
-                                                        "instance": 0,
-                                                        "rep": "pkg-resolver:0"
+                                                        "rep": "pkg-resolver"
                                                     }
                                                     ]
                                                 }
@@ -411,7 +399,7 @@
                                 }
                             }
                         },
-                        "message": "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/bootstrap/netsvc\""
+                        "message": "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core/pkg-resolver\" being used at \"/bootstrap/netsvc\""
                     }
                 },
                 {
@@ -428,15 +416,13 @@
                                                     path: [
                                                         {
                                                             collection: null,
-                                                            instance: 0,
                                                             name: "core",
-                                                            rep: "core:0",
+                                                            rep: "core",
                                                         },
                                                         {
                                                             collection: null,
-                                                            instance: 0,
                                                             name: "pkg-resolver",
-                                                            rep: "pkg-resolver:0",
+                                                            rep: "pkg-resolver",
                                                         },
                                                     ],
                                                 },
@@ -455,7 +441,7 @@
                                 },
                             },
                         },
-                        message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/core\"",
+                        message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core/pkg-resolver\" being used at \"/core\"",
                     },
                     using_node: "/core",
                 },
@@ -626,15 +612,13 @@
                                                     path: [
                                                         {
                                                             collection: null,
-                                                            instance: 0,
                                                             name: "core",
-                                                            rep: "core:0",
+                                                            rep: "core",
                                                         },
                                                         {
                                                             collection: null,
-                                                            instance: 0,
                                                             name: "pkg-cache",
-                                                            rep: "pkg-cache:0",
+                                                            rep: "pkg-cache",
                                                         },
                                                     ],
                                                 },
@@ -658,7 +642,7 @@
                                 },
                             },
                         },
-                        message: "security policy disallows \"fuchsia.pkg.PackageCache\" from \"/core:0/pkg-cache:0\" being used at \"/core/pkg-cache\"",
+                        message: "security policy disallows \"fuchsia.pkg.PackageCache\" from \"/core/pkg-cache\" being used at \"/core/pkg-cache\"",
                     },
                     using_node: "/core/pkg-cache",
                 },
@@ -676,15 +660,13 @@
                                                     path: [
                                                         {
                                                             collection: null,
-                                                            instance: 0,
                                                             name: "core",
-                                                            rep: "core:0",
+                                                            rep: "core",
                                                         },
                                                         {
                                                             collection: null,
-                                                            instance: 0,
                                                             name: "pkg-resolver",
-                                                            rep: "pkg-resolver:0",
+                                                            rep: "pkg-resolver",
                                                         },
                                                     ],
                                                 },
@@ -708,7 +690,7 @@
                                 },
                             },
                         },
-                        message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/core/pkg-resolver\"",
+                        message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core/pkg-resolver\" being used at \"/core/pkg-resolver\"",
                     },
                     using_node: "/core/pkg-resolver",
                 },
@@ -726,15 +708,13 @@
                                                     path: [
                                                         {
                                                             collection: null,
-                                                            instance: 0,
                                                             name: "core",
-                                                            rep: "core:0",
+                                                            rep: "core",
                                                         },
                                                         {
                                                             collection: null,
-                                                            instance: 0,
                                                             name: "pkg-cache",
-                                                            rep: "pkg-cache:0",
+                                                            rep: "pkg-cache",
                                                         },
                                                     ],
                                                 },
@@ -758,7 +738,7 @@
                                 },
                             },
                         },
-                        message: "security policy disallows \"fuchsia.pkg.RetainedPackages\" from \"/core:0/pkg-cache:0\" being used at \"/core/pkg-cache\"",
+                        message: "security policy disallows \"fuchsia.pkg.RetainedPackages\" from \"/core/pkg-cache\" being used at \"/core/pkg-cache\"",
                     },
                     using_node: "/core/pkg-cache",
                 },

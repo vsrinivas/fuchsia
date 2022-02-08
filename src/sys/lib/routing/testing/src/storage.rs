@@ -7,12 +7,12 @@ use {
         component_id_index::make_index_file, generate_storage_path, CheckUse, ExpectedResult,
         RoutingTestModel, RoutingTestModelBuilder,
     },
-    cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker, InstancedRelativeMoniker},
+    cm_moniker::InstancedRelativeMoniker,
     cm_rust::*,
     cm_rust_testing::{ComponentDeclBuilder, DirectoryDeclBuilder},
     component_id_index::gen_instance_id,
     fidl_fuchsia_component_decl as fdecl, fuchsia_zircon_status as zx_status,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMonikerBase},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, RelativeMonikerBase},
     routing::{
         config::{CapabilityAllowlistKey, CapabilityAllowlistSource},
         rights::{READ_RIGHTS, WRITE_RIGHTS},
@@ -1236,9 +1236,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
         builder.set_namespace_capabilities(namespace_capabilities);
         builder.add_capability_policy(
             CapabilityAllowlistKey {
-                source_moniker: InstancedExtendedMoniker::ComponentInstance(
-                    InstancedAbsoluteMoniker::root(),
-                ),
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
                 source_name: CapabilityName::from("cache"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Storage,

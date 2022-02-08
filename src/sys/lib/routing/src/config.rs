@@ -4,7 +4,6 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    cm_moniker::InstancedExtendedMoniker,
     cm_rust::{CapabilityName, CapabilityTypeName, FidlIntoNative},
     cm_types::{Name, Url},
     fidl::encoding::decode_persistent,
@@ -14,7 +13,7 @@ use {
         CapabilityPolicyAllowlists, DebugRegistrationPolicyAllowlists, LogDestination,
         OutDirContents, RealmBuilderResolverAndRunner,
     },
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, MonikerError},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, MonikerError},
     std::{
         collections::{HashMap, HashSet},
         convert::TryFrom,
@@ -195,7 +194,7 @@ pub enum CapabilityAllowlistSource {
 /// whether a capability exists in the policy map or not.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct CapabilityAllowlistKey {
-    pub source_moniker: InstancedExtendedMoniker,
+    pub source_moniker: ExtendedMoniker,
     pub source_name: CapabilityName,
     pub source: CapabilityAllowlistSource,
     pub capability: CapabilityTypeName,
@@ -412,7 +411,7 @@ fn parse_capability_policy(
         if let Some(allowlist) = capability_policy.allowlist {
             let mut policies = HashMap::new();
             for e in allowlist.into_iter() {
-                let source_moniker = InstancedExtendedMoniker::parse_string_without_instances(
+                let source_moniker = ExtendedMoniker::parse_string_without_instances(
                     e.source_moniker
                         .as_ref()
                         .ok_or(Error::new(PolicyConfigError::EmptySourceMoniker))?,
@@ -484,7 +483,7 @@ fn parse_debug_capability_policy(
             let mut policies: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>> =
                 HashMap::new();
             for e in allowlist.into_iter() {
-                let source_moniker = InstancedExtendedMoniker::parse_string_without_instances(
+                let source_moniker = ExtendedMoniker::parse_string_without_instances(
                     e.source_moniker
                         .as_ref()
                         .ok_or(Error::new(PolicyConfigError::EmptySourceMoniker))?,
@@ -574,8 +573,8 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, assert_matches::assert_matches, cm_moniker::InstancedAbsoluteMoniker,
-        cm_types::ParseError, fidl_fuchsia_io2 as fio2, std::path::PathBuf, tempfile::TempDir,
+        super::*, assert_matches::assert_matches, cm_types::ParseError, fidl_fuchsia_io2 as fio2,
+        std::path::PathBuf, tempfile::TempDir,
     };
 
     const FOO_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx";
@@ -801,7 +800,7 @@ mod tests {
                     },
                     capability_policy: HashMap::from_iter(vec![
                         (CapabilityAllowlistKey {
-                            source_moniker: InstancedExtendedMoniker::ComponentManager,
+                            source_moniker: ExtendedMoniker::ComponentManager,
                             source_name: CapabilityName::from("fuchsia.kernel.RootResource"),
                             source: CapabilityAllowlistSource::Self_,
                             capability: CapabilityTypeName::Protocol,
@@ -813,7 +812,7 @@ mod tests {
                         ].iter().cloned())
                         ),
                         (CapabilityAllowlistKey {
-                            source_moniker: InstancedExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
+                            source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo", "bar"])),
                             source_name: CapabilityName::from("running"),
                             source: CapabilityAllowlistSource::Framework,
                             capability: CapabilityTypeName::Event,
@@ -826,7 +825,7 @@ mod tests {
                     ].iter().cloned()),
                     debug_capability_policy: HashMap::from_iter(vec![
                         (CapabilityAllowlistKey {
-                            source_moniker: InstancedExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"])),
+                            source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo", "bar", "baz"])),
                             source_name: CapabilityName::from("fuchsia.foo.bar"),
                             source: CapabilityAllowlistSource::Self_,
                             capability: CapabilityTypeName::Protocol,
@@ -838,7 +837,7 @@ mod tests {
                         ].iter().cloned())
                         ),
                         (CapabilityAllowlistKey {
-                            source_moniker: InstancedExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
+                            source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo", "bar"])),
                             source_name: CapabilityName::from("fuchsia.foo.baz"),
                             source: CapabilityAllowlistSource::Self_,
                             capability: CapabilityTypeName::Protocol,
