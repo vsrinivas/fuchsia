@@ -366,7 +366,6 @@ void CodecAdapterH264Multi::CoreCodecAddBuffer(CodecPort port, const CodecBuffer
     buffer->CacheFlush(0, buffer->size());
   }
 
-
   all_output_buffers_.push_back(buffer);
 }
 
@@ -988,7 +987,6 @@ std::optional<H264MultiDecoder::DataInput> CodecAdapterH264Multi::ParseVideo(
     const CodecBuffer* buffer, fit::deferred_callback* return_input_packet, const uint8_t* data,
     uint32_t length) {
   if (is_avcc_) {
-    ZX_DEBUG_ASSERT(!buffer);
     return ParseVideoAvcc(data, length);
     // ~return_input_packet
   } else {

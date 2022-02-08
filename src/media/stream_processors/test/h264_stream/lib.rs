@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{self, ensure};
 use byteorder::{BigEndian, WriteBytesExt};
 use fidl::encoding::Decodable;
 use fidl_fuchsia_media::FormatDetails;
@@ -108,10 +109,108 @@ impl H264SeiItuT35 {
     }
 }
 
+/// Represents an AVCC stream.
+pub struct H264AVCCStream {
+    // NAL units with 4-byte length prefixes but no start codes.
+    nal_units: Vec<(H264NalKind, Vec<u8>)>,
+    oob_data: Vec<u8>,
+}
+
+impl H264AVCCStream {
+    pub fn from_annexb_stream(annexb: H264Stream) -> Result<Self> {
+        let mut oob_data = Vec::new();
+
+        let mut found_pps = false;
+        for nal in annexb.nal_iter() {
+            if nal.kind == H264NalKind::SPS {
+                let without_start = remove_nal_start(nal.data);
+                ensure!(oob_data.is_empty(), "Too many SPS NAL units");
+                let profile = without_start[1];
+                let profile_compatibility = without_start[2];
+                let level = without_start[3];
+                let nalu_size_minus1 = 3;
+                let num_sps_nals = 1;
+                oob_data.extend(&[
+                    1,
+                    profile,
+                    profile_compatibility,
+                    level,
+                    0xfc | nalu_size_minus1, // reserved | nalu length size
+                    0xe0 | num_sps_nals,     // reserved | Num  SPS nals
+                ]);
+
+                oob_data.extend((without_start.len() as u16).to_be_bytes());
+                oob_data.extend(without_start);
+            } else if nal.kind == H264NalKind::PPS {
+                ensure!(!found_pps, "Too many PPS NAL units");
+                found_pps = true;
+                let without_start = remove_nal_start(nal.data);
+                let num_pps_nals = 1;
+                oob_data.push(num_pps_nals);
+                oob_data.extend((without_start.len() as u16).to_be_bytes());
+                oob_data.extend(without_start);
+            }
+        }
+
+        let nal_units = annexb
+            .nal_iter()
+            .filter_map(|nal_unit| {
+                match nal_unit.kind {
+                    H264NalKind::SPS | H264NalKind::PPS => return None,
+                    _ => (),
+                }
+                let without_start = remove_nal_start(nal_unit.data);
+                let mut chunk_data = Vec::new();
+                chunk_data.extend((without_start.len() as u32).to_be_bytes());
+                chunk_data.extend(without_start);
+                Some((nal_unit.kind, chunk_data))
+            })
+            .collect();
+        Ok(Self { nal_units, oob_data })
+    }
+}
+
+impl ElementaryStream for H264AVCCStream {
+    fn format_details(&self, version_ordinal: u64) -> FormatDetails {
+        FormatDetails {
+            format_details_version_ordinal: Some(version_ordinal),
+            mime_type: Some(String::from("video/h264")),
+            oob_bytes: Some(self.oob_data.clone()),
+            ..<FormatDetails as Decodable>::new_empty()
+        }
+    }
+
+    fn is_access_units(&self) -> bool {
+        true
+    }
+
+    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
+        Box::new(self.nal_units.iter().map(|chunk| ElementaryStreamChunk {
+            start_access_unit: true,
+            known_end_access_unit: true,
+            data: chunk.1.clone(),
+            significance: match chunk.0 {
+                H264NalKind::IDR | H264NalKind::NonIDR => {
+                    Significance::Video(VideoSignificance::Picture)
+                }
+                _ => Significance::Video(VideoSignificance::NotPicture),
+            },
+            timestamp: None,
+        }))
+    }
+}
+
 #[derive(Debug)]
 pub struct H264Nal<'a> {
     pub kind: H264NalKind,
     pub data: &'a [u8],
+}
+
+// Returns the NAL unit with a 3-byte or 4-byte start code removed.
+fn remove_nal_start<'a>(input: &'a [u8]) -> &'a [u8] {
+    let start_len = if input[2] == 1 { 3 } else { 4 };
+    assert!(input[start_len - 1] == 1);
+    &input[start_len..]
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

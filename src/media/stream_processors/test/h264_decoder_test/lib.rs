@@ -243,3 +243,40 @@ fn bear_with_gaps() -> Result<(), anyhow::Error> {
         fuchsia_async::TestExecutor::new()?.run_singlethreaded(spec.run())
     })
 }
+
+#[test]
+fn test_bear_avcc() -> std::result::Result<(), ::anyhow::Error> {
+    with_large_stack(|| {
+        *LOGGER;
+
+        let stream = Rc::new(TimestampedStream {
+            source: H264AVCCStream::from_annexb_stream(H264Stream::from_file(BEAR_TEST_FILE)?)?,
+            timestamps: 0..,
+        });
+
+        let frame_count_validator = Rc::new(OutputPacketCountValidator {
+            expected_output_packet_count: stream.video_frame_count(),
+        });
+
+        let hash_validator = Rc::new(VideoFrameHasher { expected_digest: BEAR_DIGEST.clone() });
+
+        let spec = TestSpec {
+            cases: vec![TestCase {
+                name: "Simple bear test run with AVCC",
+                stream: stream.clone(),
+                validators: vec![
+                    Rc::new(TerminatesWithValidator {
+                        expected_terminal_output: Output::Eos { stream_lifetime_ordinal: 1 },
+                    }),
+                    frame_count_validator.clone(),
+                    hash_validator.clone(),
+                ],
+                stream_options: None,
+            }],
+            relation: CaseRelation::Serial,
+            stream_processor_factory: Rc::new(DecoderFactory),
+        };
+
+        fuchsia_async::TestExecutor::new()?.run_singlethreaded(spec.run())
+    })
+}
