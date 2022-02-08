@@ -27,7 +27,7 @@ async fn expose_pkgfs_ctl_validation_missing_file() {
         let () = blobfs
             .root_dir_proxy()
             .unwrap()
-            .unlink(&hash, fidl_fuchsia_io2::UnlinkOptions::EMPTY)
+            .unlink(&hash, fidl_fuchsia_io::UnlinkOptions::EMPTY)
             .await
             .unwrap()
             .unwrap();

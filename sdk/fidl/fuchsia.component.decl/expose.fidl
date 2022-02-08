@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.component.decl;
 
-using fuchsia.io2;
+using fuchsia.io;
 
 /// Declares a capability exposed to either a component's containing realm or to the framework.
 /// For example, a legacy service exposed by the component at runtime.
@@ -79,7 +79,7 @@ type ExposeDirectory = table {
 
     /// The maximum rights that can be set by a component using this directory,
     /// required iff `source == self`.
-    5: rights fuchsia.io2.Rights;
+    5: rights fuchsia.io.Rights;
 
     /// The subdirectory of this directory to expose instead of the root. Optional.
     6: subdir string:MAX_PATH_LENGTH;

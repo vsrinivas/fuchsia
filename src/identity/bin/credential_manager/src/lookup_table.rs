@@ -237,7 +237,7 @@ impl LookupTable for PersistentLookupTable {
 #[cfg(test)]
 mod test {
     use {
-        super::*, crate::label_generator::TEST_LABEL, fidl_fuchsia_io2::UnlinkOptions,
+        super::*, crate::label_generator::TEST_LABEL, fidl_fuchsia_io::UnlinkOptions,
         tempfile::TempDir,
     };
 

@@ -7,7 +7,7 @@ use {
     crate::*,
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl_fuchsia_io2::UnlinkOptions,
+    fidl_fuchsia_io::UnlinkOptions,
     fuchsia_async as fasync,
     fuchsia_merkle::Hash,
     fuchsia_pkg::{OpenRights, PackageDirectory},

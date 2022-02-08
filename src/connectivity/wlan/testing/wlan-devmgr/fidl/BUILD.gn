@@ -8,8 +8,5 @@ fidl("devmgr") {
   name = "fuchsia.wlan.devmgr"
   sources = [ "devmgr.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.io2",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.io" ]
 }

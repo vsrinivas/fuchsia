@@ -59,10 +59,11 @@ void Vnode::UpdateModified() {
 
 #ifdef __Fuchsia__
   // Notify current vnode.
-  CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask::kModify);
+  CheckInotifyFilterAndNotify(fuchsia_io::wire::InotifyWatchMask::kModify);
   // Notify all parent vnodes.
   for (auto parent = dnode_parent_; parent != nullptr; parent = parent->GetParent()) {
-    parent->AcquireVnode()->CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask::kModify);
+    parent->AcquireVnode()->CheckInotifyFilterAndNotify(
+        fuchsia_io::wire::InotifyWatchMask::kModify);
   }
 #endif
 }

@@ -13,7 +13,7 @@ rustc_library("cm_rust") {
     "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
     "//src/lib/from-enum",
     "//src/sys/lib/cm_fidl_validator",

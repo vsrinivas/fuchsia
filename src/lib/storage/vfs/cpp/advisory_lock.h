@@ -19,7 +19,7 @@ namespace fs {
 namespace internal {
 
 void advisory_lock(zx_koid_t owner, fbl::RefPtr<fs::Vnode> vnode, bool range_ok,
-                   ::fuchsia_io2::wire::AdvisoryLockRequest& request,
+                   ::fuchsia_io::wire::AdvisoryLockRequest& request,
                    fit::callback<void(zx_status_t status)> callback);
 
 }  // namespace internal

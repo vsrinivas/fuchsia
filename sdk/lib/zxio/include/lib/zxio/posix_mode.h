@@ -13,7 +13,7 @@ __BEGIN_CDECLS
 
 // These are defined in zxio today because the "mode" field in
 // |fuchsia.io/NodeAttributes| is POSIX, whereas the "protocols" and "abilities"
-// field in |zxio_node_attributes_t| aligns with |fuchsia.io2|.
+// field in |zxio_node_attributes_t| aligns with |fuchsia.io|.
 
 uint32_t zxio_get_posix_mode(zxio_node_protocols_t protocols, zxio_abilities_t abilities);
 

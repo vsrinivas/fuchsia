@@ -2731,8 +2731,8 @@ mod serve_write_blob_tests {
         GetFlags,
         SetFlags,
         GetBuffer,
-        // New API that references fuchsia.io2. Not strictly necessary to verify all possible
-        // ordinals (which is the space of a u64 anyway).
+        // New API. Not strictly necessary to verify all possible ordinals (which is the space of a
+        // u64 anyway).
         // AdvisoryLock
 
         // Always allowed.

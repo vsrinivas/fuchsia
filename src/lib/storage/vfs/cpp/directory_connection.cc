@@ -6,7 +6,6 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zircon-internal/debug.h>
@@ -32,7 +31,6 @@
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
 namespace fio = fuchsia_io;
-namespace fio2 = fuchsia_io2;
 
 namespace fs {
 
@@ -67,7 +65,7 @@ void OpenAt(FuchsiaVfs* vfs, const fbl::RefPtr<Vnode>& parent,
 
 // Performs a path walk and adds inotify filter to the obtained vnode.
 void AddInotifyFilterAt(FuchsiaVfs* vfs, const fbl::RefPtr<Vnode>& parent, std::string_view path,
-                        fio2::wire::InotifyWatchMask filter, uint32_t watch_descriptor,
+                        fio::wire::InotifyWatchMask filter, uint32_t watch_descriptor,
                         zx::socket socket) {
   // TODO Not handling remote handoff currently.
   vfs->TraversePathFetchVnode(parent, path).visit([&](auto&& result) {
@@ -290,10 +288,9 @@ void DirectoryConnection::Unlink(UnlinkRequestView request, UnlinkCompleter::Syn
   }
   zx_status_t status =
       vfs()->Unlink(vnode(), name_str,
-                    request->options.has_flags()
-                        ? static_cast<bool>((request->options.flags() &
-                                             fuchsia_io2::wire::UnlinkFlags::kMustBeDirectory))
-                        : false);
+                    request->options.has_flags() &&
+                        static_cast<bool>((request->options.flags() &
+                                           fuchsia_io::wire::UnlinkFlags::kMustBeDirectory)));
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {

@@ -7,7 +7,7 @@ use vfs::directory::entry::DirectoryEntry;
 use {
     anyhow::Error,
     fidl::endpoints::{Proxy, ServerEnd},
-    fidl_fuchsia_driver_test as fdt, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_driver_test as fdt, fidl_fuchsia_io as fio,
     fuchsia_component_test::new::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
@@ -71,19 +71,19 @@ async fn create_realm(
         .add_route(
             Route::new()
                 .capability(
-                    Capability::directory("pkgfs-delayed").path("/pkgfs").rights(fio2::RX_STAR_DIR),
+                    Capability::directory("pkgfs-delayed").path("/pkgfs").rights(fio::RX_STAR_DIR),
                 )
                 .capability(
                     Capability::directory("pkgfs-packages-delayed")
                         .path("/pkgfs/packages")
-                        .rights(fio2::R_STAR_DIR),
+                        .rights(fio::R_STAR_DIR),
                 )
                 .capability(
                     Capability::directory("system-delayed")
                         .path("/system")
-                        .rights(fio2::RX_STAR_DIR),
+                        .rights(fio::RX_STAR_DIR),
                 )
-                .capability(Capability::directory("boot").path("/boot").rights(fio2::R_STAR_DIR))
+                .capability(Capability::directory("boot").path("/boot").rights(fio::R_STAR_DIR))
                 .from(&fake_filesystem)
                 .to(&driver_manager),
         )

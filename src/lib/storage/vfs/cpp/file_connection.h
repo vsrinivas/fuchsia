@@ -60,7 +60,7 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
                         GetBackingMemoryCompleter::Sync& completer) final;
 
   //
-  // |fuchsia.io2/AdvisoryLocking| operations.
+  // |fuchsia.io/AdvisoryLocking| operations.
   //
 
   void AdvisoryLock(fidl::WireServer<fuchsia_io::File>::AdvisoryLockRequestView request,

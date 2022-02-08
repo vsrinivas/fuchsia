@@ -264,7 +264,7 @@ TEST(CreateWithInfo, Pipe) {
 
   zx::socket socket0, socket1;
   ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
-  fuchsia_io::wire::Pipe pipe = {.socket = std::move(socket0)};
+  fuchsia_io::wire::PipeObject pipe = {.socket = std::move(socket0)};
   auto node_info = fuchsia_io::wire::NodeInfo::WithPipe(std::move(pipe));
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {

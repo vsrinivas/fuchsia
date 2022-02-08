@@ -1,11 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.io2;
+library fuchsia.io;
 
 /// Auxiliary data for the connector representation of a node, used for
 /// protocol discovery and connection.
 ///
 /// It supports connecting to arbitrary protocols exported by the filesystem
-/// server at a path, including ones that do not compose [`fuchsia.io2/Node`].
+/// server at a path, including ones that do not compose [`Node2`].
 type ConnectorInfo = table {};

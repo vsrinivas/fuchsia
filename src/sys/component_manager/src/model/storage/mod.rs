@@ -425,7 +425,7 @@ mod tests {
         cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::*,
         cm_rust_testing::ComponentDeclBuilder,
-        component_id_index, fidl_fuchsia_io2 as fio2,
+        component_id_index, fidl_fuchsia_io as fio,
         moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         rand::{self, distributions::Alphanumeric, Rng},
         std::{
@@ -451,7 +451,7 @@ mod tests {
                         source: ExposeSource::Self_,
                         target_name: "data".try_into().unwrap(),
                         target: ExposeTarget::Parent,
-                        rights: Some(fio2::Operations::CONNECT),
+                        rights: Some(fio::Operations::CONNECT),
                         subdir: None,
                     }))
                     .build(),
@@ -541,7 +541,7 @@ mod tests {
                         source: ExposeSource::Self_,
                         target_name: "data".try_into().unwrap(),
                         target: ExposeTarget::Parent,
-                        rights: Some(fio2::Operations::CONNECT),
+                        rights: Some(fio::Operations::CONNECT),
                         subdir: None,
                     }))
                     .build(),
@@ -665,7 +665,7 @@ mod tests {
                         source: ExposeSource::Self_,
                         target_name: "data".try_into().unwrap(),
                         target: ExposeTarget::Parent,
-                        rights: Some(fio2::Operations::CONNECT),
+                        rights: Some(fio::Operations::CONNECT),
                         subdir: None,
                     }))
                     .build(),
@@ -792,7 +792,7 @@ mod tests {
                         source: ExposeSource::Self_,
                         target_name: "data".try_into().unwrap(),
                         target: ExposeTarget::Parent,
-                        rights: Some(fio2::Operations::CONNECT),
+                        rights: Some(fio::Operations::CONNECT),
                         subdir: None,
                     }))
                     .build(),

@@ -7,7 +7,8 @@ use {
     async_trait::async_trait,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io::{
-        NodeMarker, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        NodeMarker, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, RX_STAR_DIR,
+        R_STAR_DIR,
     },
     fidl_fuchsia_sys2::*,
     fuchsia_component_test::new::{
@@ -106,20 +107,16 @@ impl TestEnvBuilder {
         builder
             .add_route(
                 Route::new()
-                    .capability(
-                        Capability::directory("blob")
-                            .path("/blob")
-                            .rights(fidl_fuchsia_io2::RX_STAR_DIR),
-                    )
+                    .capability(Capability::directory("blob").path("/blob").rights(RX_STAR_DIR))
                     .capability(
                         Capability::directory("pkgfs-packages-delayed")
                             .path("/pkgfs-packages")
-                            .rights(fidl_fuchsia_io2::RX_STAR_DIR),
+                            .rights(RX_STAR_DIR),
                     )
                     .capability(
                         Capability::directory("minfs-delayed")
                             .path("/minfs-delayed")
-                            .rights(fidl_fuchsia_io2::R_STAR_DIR),
+                            .rights(R_STAR_DIR),
                     )
                     .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
                     .from(&local_mocks)

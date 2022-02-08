@@ -6,7 +6,6 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/cpp/vector.h>
@@ -22,7 +21,6 @@
 #include "private.h"
 
 namespace fio = fuchsia_io;
-namespace fio2 = fuchsia_io2;
 
 namespace {
 
@@ -134,7 +132,13 @@ class DirentIteratorImpl {
       case DT_REG:
         return ZXIO_NODE_PROTOCOL_FILE;
       case DT_SOCK:
-        return ZXIO_NODE_PROTOCOL_POSIX_SOCKET;
+        // TODO(jamesr): Switch to Directory2/Enumerate and remove this code.
+        //
+        // This points to the POSIX dirent data structure used by the io1
+        // directory enumeration protocol not being sufficient to fully describe
+        // the protocol(s) understood on a node. The io2 enumeration API lists
+        // the protocols understood by each node.
+        return ZXIO_NODE_PROTOCOL_STREAM_SOCKET;
       default:
         return ZXIO_NODE_PROTOCOL_NONE;
     }
@@ -223,7 +227,8 @@ zxio_node_protocols_t ToZxioNodeProtocols(uint32_t mode) {
       // i.e. same as getting a protocol we do not understand.
       return ZXIO_NODE_PROTOCOL_NONE;
     case S_IFSOCK:
-      return ZXIO_NODE_PROTOCOL_POSIX_SOCKET;
+      // TODO(jamesr): Could also be datagram or raw. How important is this?
+      return ZXIO_NODE_PROTOCOL_STREAM_SOCKET;
     default:
       return ZXIO_NODE_PROTOCOL_NONE;
   }
@@ -242,19 +247,22 @@ uint32_t ToIo1ModeFileType(zxio_node_protocols_t protocols) {
   if (protocols & ZXIO_NODE_PROTOCOL_MEMORY) {
     return S_IFREG;
   }
-  if (protocols & ZXIO_NODE_PROTOCOL_POSIX_SOCKET) {
-    return S_IFSOCK;
-  }
   if (protocols & ZXIO_NODE_PROTOCOL_PIPE) {
     return S_IFIFO;
+  }
+  if (protocols & ZXIO_NODE_PROTOCOL_STREAM_SOCKET) {
+    return S_IFSOCK;
+  }
+  if (protocols & ZXIO_NODE_PROTOCOL_DATAGRAM_SOCKET) {
+    return S_IFSOCK;
+  }
+  if (protocols & ZXIO_NODE_PROTOCOL_RAW_SOCKET) {
+    return S_IFSOCK;
   }
   if (protocols & ZXIO_NODE_PROTOCOL_DEVICE) {
     return S_IFBLK;
   }
   if (protocols & ZXIO_NODE_PROTOCOL_TTY) {
-    return S_IFCHR;
-  }
-  if (protocols & ZXIO_NODE_PROTOCOL_DEBUGLOG) {
     return S_IFCHR;
   }
   if (protocols & ZXIO_NODE_PROTOCOL_CONNECTOR) {
@@ -516,26 +524,26 @@ zx_status_t zxio_remote_attr_set(zxio_t* io, const zxio_node_attributes_t* attr)
 }
 
 zx_status_t zxio_common_advisory_lock(zx::unowned_channel control, advisory_lock_req* req) {
-  fuchsia_io2::wire::AdvisoryLockType lock_type;
+  fuchsia_io::wire::AdvisoryLockType lock_type;
   switch (req->type) {
     case ADVISORY_LOCK_SHARED:
-      lock_type = fuchsia_io2::wire::AdvisoryLockType::kRead;
+      lock_type = fuchsia_io::wire::AdvisoryLockType::kRead;
       break;
     case ADVISORY_LOCK_EXCLUSIVE:
-      lock_type = fuchsia_io2::wire::AdvisoryLockType::kWrite;
+      lock_type = fuchsia_io::wire::AdvisoryLockType::kWrite;
       break;
     case ADVISORY_LOCK_UNLOCK:
-      lock_type = fuchsia_io2::wire::AdvisoryLockType::kUnlock;
+      lock_type = fuchsia_io::wire::AdvisoryLockType::kUnlock;
       break;
     default:
       return ZX_ERR_INTERNAL;
   }
   fidl::Arena allocator;
-  fuchsia_io2::wire::AdvisoryLockRequest lock_req;
+  fuchsia_io::wire::AdvisoryLockRequest lock_req;
   lock_req.Allocate(allocator);
   lock_req.set_type(lock_type);
   lock_req.set_wait(req->wait);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::AdvisoryLocking>(control))
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::AdvisoryLocking>(control))
                     ->AdvisoryLock(std::move(lock_req));
   if (!result.ok()) {
     return result.status();
@@ -818,7 +826,7 @@ zx_status_t zxio_remote_add_inotify_filter(zxio_t* io, const char* path, size_t 
                                            uint32_t mask, uint32_t watch_descriptor,
                                            zx_handle_t socket_handle) {
   Remote rio(io);
-  fio2::wire::InotifyWatchMask inotify_mask = static_cast<fio2::wire::InotifyWatchMask>(mask);
+  fio::wire::InotifyWatchMask inotify_mask = static_cast<fio::wire::InotifyWatchMask>(mask);
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
                     ->AddInotifyFilter(fidl::StringView::FromExternal(path, path_len), inotify_mask,
                                        watch_descriptor, zx::socket(socket_handle));
@@ -828,8 +836,8 @@ zx_status_t zxio_remote_add_inotify_filter(zxio_t* io, const char* path, size_t 
 zx_status_t zxio_remote_unlink(zxio_t* io, const char* name, size_t name_len, int flags) {
   Remote rio(io);
   fidl::Arena allocator;
-  fuchsia_io2::wire::UnlinkOptions options(allocator);
-  auto io_flags = fuchsia_io2::wire::UnlinkFlags::kMustBeDirectory;
+  fuchsia_io::wire::UnlinkOptions options(allocator);
+  auto io_flags = fuchsia_io::wire::UnlinkFlags::kMustBeDirectory;
   if (flags & AT_REMOVEDIR) {
     options.set_flags(fidl::ObjectView<decltype(io_flags)>::FromExternal(&io_flags));
   }
@@ -1173,20 +1181,20 @@ void zxio_file_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* 
 
   zx_signals_t zx_signals = ZX_SIGNAL_NONE;
   if (zxio_signals & ZXIO_SIGNAL_READABLE) {
-    zx_signals |= fio::wire::kFileSignalReadable;
+    zx_signals |= static_cast<zx_signals_t>(fio::wire::FileSignal::kReadable);
   }
   if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
-    zx_signals |= fio::wire::kFileSignalWritable;
+    zx_signals |= static_cast<zx_signals_t>(fio::wire::FileSignal::kWritable);
   }
   *out_zx_signals = zx_signals;
 }
 
 void zxio_file_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals) {
   zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
-  if (zx_signals & fio::wire::kFileSignalReadable) {
+  if (zx_signals & static_cast<zx_signals_t>(fio::wire::FileSignal::kReadable)) {
     zxio_signals |= ZXIO_SIGNAL_READABLE;
   }
-  if (zx_signals & fio::wire::kFileSignalWritable) {
+  if (zx_signals & static_cast<zx_signals_t>(fio::wire::FileSignal::kWritable)) {
     zxio_signals |= ZXIO_SIGNAL_WRITABLE;
   }
   *out_zxio_signals = zxio_signals;

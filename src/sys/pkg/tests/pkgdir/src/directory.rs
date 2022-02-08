@@ -8,7 +8,7 @@ use {
     fidl::{endpoints::create_proxy, AsHandleRef},
     fidl_fuchsia_io::{
         ConnectorInfo, DirectoryInfo, DirectoryObject, DirectoryProxy, FileInfo, FileObject,
-        NodeEvent, NodeInfo, NodeMarker, NodeProxy, Representation, Service,
+        NodeEvent, NodeInfo, NodeMarker, NodeProxy, Representation, Service, UnlinkOptions,
         CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
         MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
@@ -16,7 +16,6 @@ use {
         OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_io2::UnlinkOptions,
     files_async::{DirEntry, DirentKind},
     fuchsia_zircon as zx,
     futures::{future::Future, StreamExt},

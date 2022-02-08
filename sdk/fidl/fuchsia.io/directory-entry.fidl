@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.io2;
+library fuchsia.io;
 
 /// Information about an immediate child node of a directory.
 ///
@@ -17,7 +17,7 @@ type DirectoryEntry = table {
     /// Describes the kinds of operations supported by the node.
     3: abilities Abilities;
 
-    /// An ID for the node. See [`fuchsia.io2/Id`].
+    /// An ID for the node. See [`Id`].
     /// This `id` should be unique among all entries of a directory.
     4: id Id;
 };

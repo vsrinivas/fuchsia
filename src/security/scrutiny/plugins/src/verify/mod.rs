@@ -124,7 +124,7 @@ mod tests {
         fidl::encoding::encode_persistent_with_context,
         fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_internal as component_internal,
-        fidl_fuchsia_io2::Operations,
+        fidl_fuchsia_io::Operations,
         maplit::hashset,
         moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         routing::{

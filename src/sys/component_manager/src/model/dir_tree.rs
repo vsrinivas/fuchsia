@@ -175,9 +175,10 @@ mod tests {
             UseDirectoryDecl, UseProtocolDecl, UseSource, UseStorageDecl,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
+        fidl_fuchsia_io as fio,
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
         fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-        fidl_fuchsia_io2 as fio2, fuchsia_zircon as zx,
+        fuchsia_zircon as zx,
         std::{
             convert::{TryFrom, TryInto},
             sync::Weak,
@@ -196,7 +197,7 @@ mod tests {
                     source: UseSource::Parent,
                     source_name: "baz-dir".into(),
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
-                    rights: fio2::Operations::CONNECT,
+                    rights: fio::Operations::CONNECT,
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }),
@@ -270,7 +271,7 @@ mod tests {
                     source_name: "baz-dir".into(),
                     target_name: "hippo-dir".into(),
                     target: ExposeTarget::Parent,
-                    rights: Some(fio2::Operations::CONNECT),
+                    rights: Some(fio::Operations::CONNECT),
                     subdir: None,
                 }),
                 ExposeDecl::Directory(ExposeDirectoryDecl {
@@ -278,7 +279,7 @@ mod tests {
                     source_name: "foo-dir".into(),
                     target_name: "bar-dir".into(),
                     target: ExposeTarget::Parent,
-                    rights: Some(fio2::Operations::CONNECT),
+                    rights: Some(fio::Operations::CONNECT),
                     subdir: None,
                 }),
                 ExposeDecl::Protocol(ExposeProtocolDecl {

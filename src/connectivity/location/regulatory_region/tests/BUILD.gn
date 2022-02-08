@@ -9,7 +9,7 @@ rustc_test("test") {
   name = "regulatory_region_integration_test"
   edition = "2018"
   deps = [
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",

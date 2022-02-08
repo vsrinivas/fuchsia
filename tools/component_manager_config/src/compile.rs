@@ -523,7 +523,7 @@ mod tests {
     use super::*;
     use {
         assert_matches::assert_matches, fidl::encoding::decode_persistent,
-        fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io2 as fio2, std::io::Read,
+        fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, std::io::Read,
         tempfile::TempDir,
     };
 
@@ -708,7 +708,7 @@ mod tests {
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("bar_dir".into()),
                         source_path: Some("/bar".into()),
-                        rights: Some(fio2::Operations::CONNECT),
+                        rights: Some(fio::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                 ]),
@@ -721,7 +721,7 @@ mod tests {
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("foo_dir".into()),
                         source_path: None,
-                        rights: Some(fio2::Operations::CONNECT),
+                        rights: Some(fio::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                     fdecl::Capability::Service(fdecl::Service {

@@ -16,12 +16,10 @@
 #ifdef __Fuchsia__
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fidl/fuchsia.io2/cpp/wire.h>
 
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
 namespace fio = fuchsia_io;
-namespace fio2 = fuchsia_io2;
 
 #endif  // __Fuchsia__
 
@@ -150,7 +148,7 @@ VnodeProtocol Vnode::Negotiate(VnodeProtocolSet protocols) const {
 }
 
 #ifdef __Fuchsia__
-zx_status_t Vnode::InsertInotifyFilter(fio2::wire::InotifyWatchMask filter,
+zx_status_t Vnode::InsertInotifyFilter(fio::wire::InotifyWatchMask filter,
                                        uint32_t watch_descriptor, zx::socket socket) {
   // TODO add basic checks for filter and watch_descriptor.
   std::lock_guard lock_access(gInotifyLock);
@@ -171,7 +169,7 @@ zx_status_t Vnode::InsertInotifyFilter(fio2::wire::InotifyWatchMask filter,
   return ZX_OK;
 }
 
-zx_status_t Vnode::CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask event) {
+zx_status_t Vnode::CheckInotifyFilterAndNotify(fio::wire::InotifyWatchMask event) {
   std::lock_guard lock(gInotifyLock);
   auto inotify_filter_list = gInotifyMap.find(this);
   if (inotify_filter_list == gInotifyMap.end()) {
@@ -185,11 +183,11 @@ zx_status_t Vnode::CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask even
     incoming_event &= static_cast<uint32_t>(iter->filter_);
     if (incoming_event) {
       // filter found, we need to send event on the socket.
-      fio2::wire::InotifyEvent inotify_event{.watch_descriptor = iter->watch_descriptor_,
-                                             .mask = event,
-                                             .cookie = 0,
-                                             .len = 0,
-                                             .filename = {}};
+      fio::wire::InotifyEvent inotify_event{.watch_descriptor = iter->watch_descriptor_,
+                                            .mask = event,
+                                            .cookie = 0,
+                                            .len = 0,
+                                            .filename = {}};
       size_t actual;
       zx_status_t status = iter->socket_.write(0, &inotify_event, sizeof(inotify_event), &actual);
       if (status != ZX_OK) {
@@ -215,7 +213,7 @@ zx_status_t Vnode::Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redire
   }
 #ifdef __Fuchsia__
   // Traverse the inotify list for open event filter and send event back to clients.
-  CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask::kOpen);
+  CheckInotifyFilterAndNotify(fio::wire::InotifyWatchMask::kOpen);
 #endif
   return ZX_OK;
 }
@@ -239,7 +237,7 @@ zx_status_t Vnode::Close() {
   }
 #ifdef __Fuchsia__
   // Traverse the inotify list for close event filter and send event back to clients.
-  CheckInotifyFilterAndNotify(fuchsia_io2::wire::kCloseAll);
+  CheckInotifyFilterAndNotify(fuchsia_io::wire::kCloseAll);
 #endif
   return CloseNode();
 }

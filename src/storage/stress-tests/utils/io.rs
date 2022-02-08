@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_io::{DirectoryProxy, FileProxy, SeekOrigin, CLONE_FLAG_SAME_RIGHTS},
-    fidl_fuchsia_io2::UnlinkOptions,
+    fidl_fuchsia_io::{
+        DirectoryProxy, FileProxy, SeekOrigin, UnlinkOptions, CLONE_FLAG_SAME_RIGHTS,
+    },
     fuchsia_zircon::{Event, Status},
     io_util::{directory::*, file::*, node::OpenError},
     log::debug,

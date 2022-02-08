@@ -17,7 +17,6 @@
 
 #if defined(__Fuchsia__)
 #include <fidl/fuchsia.io/cpp/wire_test_base.h>
-#include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -91,7 +90,6 @@ using EventBuf = std::array<char, sizeof(inotify_event) + NAME_MAX + 1>;
 
 #if defined(__Fuchsia__)
 namespace fio = fuchsia_io;
-namespace fio2 = fuchsia_io2;
 constexpr char kTmpfsPath[] = "/tmp-inotify";
 
 class Server final : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
@@ -157,7 +155,7 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
 
   bool add_inotify_filter_async_ = false;
   std::optional<zx::socket> inotify_socket_;
-  fio2::wire::InotifyWatchMask filter_;
+  fio::wire::InotifyWatchMask filter_;
 };
 
 #endif  // defined(__Fuchsia__)

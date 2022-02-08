@@ -50,7 +50,6 @@ source_set("common") {
   public_deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",

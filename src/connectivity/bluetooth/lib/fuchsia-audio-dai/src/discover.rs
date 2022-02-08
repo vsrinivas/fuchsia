@@ -34,7 +34,7 @@ async fn find_devices_internal(
 mod tests {
     use {
         anyhow::Error,
-        fidl_fuchsia_io2 as fio2, fuchsia,
+        fidl_fuchsia_io as fio, fuchsia,
         fuchsia_component_test::new::{
             Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Route,
         },
@@ -101,7 +101,7 @@ mod tests {
                     .capability(
                         Capability::directory("dev-dai")
                             .path(DAI_DEVICE_DIR)
-                            .rights(fio2::RW_STAR_DIR),
+                            .rights(fio::RW_STAR_DIR),
                     )
                     .from(&mock_dev)
                     .to(&mock_client),

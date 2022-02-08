@@ -364,7 +364,7 @@ TEST_F(CreateFileWithOnOpenTest, File) {
 TEST_F(CreateTest, Pipe) {
   zx::socket socket0, socket1;
   ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
-  fuchsia_io::wire::Pipe pipe = {.socket = std::move(socket0)};
+  fuchsia_io::wire::PipeObject pipe = {.socket = std::move(socket0)};
   node_server().set_describe_function(
       [pipe = std::move(pipe)](DescribeRequestView request,
                                DescribeCompleter::Sync& completer) mutable {
@@ -446,7 +446,7 @@ TEST(CreateWithTypeWrapperTest, Pipe) {
 TEST_F(CreateWithOnOpenTest, Pipe) {
   zx::socket socket0, socket1;
   ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
-  fuchsia_io::wire::Pipe pipe = {.socket = std::move(socket0)};
+  fuchsia_io::wire::PipeObject pipe = {.socket = std::move(socket0)};
   auto node_info = fuchsia_io::wire::NodeInfo::WithPipe(std::move(pipe));
 
   SendOnOpenEvent(std::move(node_info));

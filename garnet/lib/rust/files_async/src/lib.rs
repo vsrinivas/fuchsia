@@ -7,8 +7,10 @@
 //! Safe wrappers for enumerating `fuchsia.io.Directory` contents.
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy, MAX_BUF, MODE_TYPE_DIRECTORY},
-    fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
+    fidl_fuchsia_io::{
+        self as fio, DirectoryMarker, DirectoryProxy, UnlinkFlags, UnlinkOptions, MAX_BUF,
+        MODE_TYPE_DIRECTORY,
+    },
     fuchsia_async::{Duration, DurationExt, TimeoutExt},
     fuchsia_zircon_status as zx_status,
     futures::future::BoxFuture,

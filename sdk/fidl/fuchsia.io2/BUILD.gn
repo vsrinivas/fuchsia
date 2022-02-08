@@ -7,29 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.io2") {
   sdk_category = "partner"
   api = "fuchsia.io2.api"
-  sources = [
-    "connection-info.fidl",
-    "connection-options.fidl",
-    "connector.fidl",
-    "debuglog.fidl",
-    "deprecated.fidl",
-    "directory-entry.fidl",
-    "directory-iterator.fidl",
-    "directory-watcher.fidl",
-    "directory.fidl",
-    "file.fidl",
-    "inotify.fidl",
-    "io2.fidl",
-    "locking.fidl",
-    "memory.fidl",
-    "node-attributes.fidl",
-    "node.fidl",
-    "pipe.fidl",
-    "posix-socket.fidl",
-    "rights-abilities.fidl",
-  ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.mem",
-    "//zircon/vdso/zx",
-  ]
+  sources = [ "stub.fidl" ]
+  public_deps = [ "//sdk/fidl/fuchsia.io" ]
 }

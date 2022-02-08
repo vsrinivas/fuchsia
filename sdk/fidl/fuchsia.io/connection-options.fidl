@@ -41,7 +41,7 @@ type ConnectionOptions = table {
     2: protocols NodeProtocols;
 
     /// Requests rights on the new connection according to the specified rules.
-    /// See [`fuchsia.io2/RightsRequest`].
+    /// See [`RightsRequest`].
     ///
     /// ## Rights Hierarchy
     ///
@@ -81,7 +81,7 @@ type ConnectionOptions = table {
     /// which is the intersection of the rights and abilities and indicates the
     /// guaranteed set of available operations.
     ///
-    /// See [`fuchsia.io2/Rights`] and [`fuchsia.io2/Abilities`].
+    /// See [`Rights`] and [`Abilities`].
     ///
     /// ## Implementation Notes
     ///
@@ -165,7 +165,7 @@ type RightsRequest = struct {
     at_least Rights;
 
     /// Controls how the rights on the new connection are computed from
-    /// `at_most` and `at_least`. See [`fuchsia.io2/RightsResolution`].
+    /// `at_most` and `at_least`. See [`RightsResolution`].
     resolution RightsResolution;
 };
 
@@ -180,7 +180,7 @@ type RightsResolution = strict enum : uint32 {
     /// The rights will be determined by the following rules:
     ///
     /// * If the negotiated protocol on the new connection is
-    ///   [`fuchsia.io2/Directory`], the rules from the `MAXIMIZE` case applies.
+    ///   [`Directory`], the rules from the `MAXIMIZE` case applies.
     /// * Otherwise, the rights will be [`RightsRequest.at_least`] if it
     ///   does not exceed rights on the current connection.
     /// * Otherwise, `object_request` should be closed with
@@ -208,7 +208,7 @@ type ConnectionFlags = strict bits : uint64 {
     ///
     /// If both `GET_CONNECTION_INFO` and `CONNECT` are specified, the channel
     /// will receive exactly one [`Node.OnConnectionInfo`] event, after which
-    /// the protocol switches from [`fuchsia.io2/Node`] to the intended protocol.
+    /// the protocol switches from [`Node`] to the intended protocol.
     /// Message sent by the client prior to receiving [`Node.OnConnectionInfo`]
     /// are queued and processed after the protocol switch.
     ///
@@ -223,7 +223,7 @@ type ConnectionFlags = strict bits : uint64 {
     ///
     /// If the node does not support appending, it should result in a
     /// `ZX_ERR_NOT_SUPPORTED` epitaph.
-    /// Currently, only [`fuchsia.io2/NodeProtocols.FILE`] connections
+    /// Currently, only [`NodeProtocols.FILE`] connections
     /// may be configured for appending.
     APPEND = 0x04;
 

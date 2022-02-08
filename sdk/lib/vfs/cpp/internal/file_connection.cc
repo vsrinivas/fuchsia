@@ -77,8 +77,8 @@ void FileConnection::Read2(uint64_t count, Read2Callback callback) {
     if (status != ZX_OK) {
       callback(fpromise::error(status));
     } else {
-      callback(fuchsia::io::File_Read2_Result::WithResponse(
-          fuchsia::io::File_Read2_Response(std::move(data))));
+      callback(fuchsia::io::File2_Read2_Result::WithResponse(
+          fuchsia::io::File2_Read2_Response(std::move(data))));
     }
   });
 }
@@ -99,8 +99,8 @@ void FileConnection::ReadAt2(uint64_t count, uint64_t offset, ReadAt2Callback ca
            if (status != ZX_OK) {
              callback(fpromise::error(status));
            } else {
-             callback(fuchsia::io::File_ReadAt2_Result::WithResponse(
-                 fuchsia::io::File_ReadAt2_Response(std::move(data))));
+             callback(fuchsia::io::File2_ReadAt2_Result::WithResponse(
+                 fuchsia::io::File2_ReadAt2_Response(std::move(data))));
            }
          });
 }
@@ -123,8 +123,8 @@ void FileConnection::Write2(std::vector<uint8_t> data, Write2Callback callback) 
     if (status != ZX_OK) {
       callback(fpromise::error(status));
     } else {
-      callback(
-          fuchsia::io::File_Write2_Result::WithResponse(fuchsia::io::File_Write2_Response(actual)));
+      callback(fuchsia::io::File2_Write2_Result::WithResponse(
+          fuchsia::io::File2_Write2_Response(actual)));
     }
   });
 }
@@ -145,8 +145,8 @@ void FileConnection::WriteAt2(std::vector<uint8_t> data, uint64_t offset,
     if (status != ZX_OK) {
       callback(fpromise::error(status));
     } else {
-      callback(fuchsia::io::File_WriteAt2_Result::WithResponse(
-          fuchsia::io::File_WriteAt2_Response(actual)));
+      callback(fuchsia::io::File2_WriteAt2_Result::WithResponse(
+          fuchsia::io::File2_WriteAt2_Response(actual)));
     }
   });
 }
@@ -185,8 +185,8 @@ void FileConnection::Seek2(fuchsia::io::SeekOrigin origin, int64_t offset, Seek2
          if (status != ZX_OK) {
            callback(fpromise::error(status));
          } else {
-           callback(fuchsia::io::File_Seek2_Result::WithResponse(
-               fuchsia::io::File_Seek2_Response(offset_from_start)));
+           callback(fuchsia::io::File2_Seek2_Result::WithResponse(
+               fuchsia::io::File2_Seek2_Response(offset_from_start)));
          }
        });
 }

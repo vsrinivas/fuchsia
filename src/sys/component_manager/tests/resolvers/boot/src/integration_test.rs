@@ -13,7 +13,7 @@
 //! If the call is successful, then the boot resolver was correctly routed.
 
 use {
-    fidl_fidl_test_components as ftest, fidl_fuchsia_io2 as fio2,
+    fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     futures::prelude::*,
@@ -58,7 +58,7 @@ async fn boot_resolver_can_be_routed_from_component_manager() {
     builder
         .add_route(
             Route::new()
-                .capability(Capability::directory("boot").path("/boot").rights(fio2::R_STAR_DIR))
+                .capability(Capability::directory("boot").path("/boot").rights(fio::R_STAR_DIR))
                 .from(&mock_boot)
                 .to(&component_manager),
         )

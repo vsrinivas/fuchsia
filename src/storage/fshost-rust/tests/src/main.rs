@@ -8,7 +8,7 @@ use {
         events::{Event, EventMode, EventSource, EventSubscription, Stopped},
         matcher::EventMatcher,
     },
-    fidl_fuchsia_boot as fboot, fidl_fuchsia_fshost as fshost, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_boot as fboot, fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
     fidl_fuchsia_logger as flogger,
     fuchsia_component_test::new::{
         Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
@@ -51,7 +51,7 @@ async fn new_realm() -> Result<RealmInstance, Error> {
             Route::new()
                 .capability(Capability::protocol::<fboot::ArgumentsMarker>())
                 .capability(Capability::protocol::<fboot::ItemsMarker>())
-                .capability(Capability::directory("dev").path("/dev").rights(fio2::RW_STAR_DIR))
+                .capability(Capability::directory("dev").path("/dev").rights(fio::RW_STAR_DIR))
                 .from(&mocks)
                 .to(&fshost),
         )

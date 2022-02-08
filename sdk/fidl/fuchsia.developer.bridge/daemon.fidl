@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.developer.bridge;
-using fuchsia.io2;
 using zx;
+using fuchsia.io;
 
 type DaemonError = strict enum {
     TARGET_CACHE_ERROR = 1;
@@ -68,7 +68,7 @@ protocol Daemon {
     /// Again for emphasis: if you are a developer and you are invoking this
     /// function directly, you should reconsider your actions.
     ConnectToProtocol(resource struct {
-        name fuchsia.io2.Name;
+        name fuchsia.io.Name;
         server_end zx.handle:CHANNEL;
     }) -> (struct {}) error DaemonError;
 };

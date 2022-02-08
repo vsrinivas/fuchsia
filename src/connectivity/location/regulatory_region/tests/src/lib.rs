@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     fidl::endpoints::DiscoverableProtocolMarker as _,
-    fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_location_namedplace::{
         RegulatoryRegionConfiguratorMarker, RegulatoryRegionConfiguratorProxy as ConfigProxy,
         RegulatoryRegionWatcherMarker, RegulatoryRegionWatcherProxy as WatcherProxy,
@@ -229,7 +229,7 @@ async fn new_test_context() -> Result<TestContext, Error> {
     builder
         .add_route(
             Route::new()
-                .capability(Capability::directory("hub").rights(fio2::R_STAR_DIR))
+                .capability(Capability::directory("hub").rights(fio::R_STAR_DIR))
                 .from(Ref::framework())
                 .to(Ref::parent()),
         )

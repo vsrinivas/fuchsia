@@ -528,7 +528,7 @@ TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
   }
   {
     zx::event e;
-    fuchsia_io::wire::DirectoryRenameResult x;
+    fuchsia_io::wire::Directory2RenameResult x;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &e));
     client->Rename("", std::move(e), "",
                    [](fidl::WireUnownedResult<fuchsia_io::Directory::Rename>& ret) {

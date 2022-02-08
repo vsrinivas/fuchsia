@@ -508,10 +508,9 @@ mod tests {
         },
         fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRUSR, V_IWUSR, V_TYPE_FILE},
         fidl_fuchsia_io::{
-            self as fio, SeekOrigin, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
-            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            self as fio, SeekOrigin, UnlinkOptions, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
+            OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
-        fidl_fuchsia_io2::UnlinkOptions,
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
         futures::join,

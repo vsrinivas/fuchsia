@@ -11,7 +11,6 @@ fostr_fidl("fuchsia.sys2") {
     "//src/lib/fostr/fidl/fuchsia.component",
     "//src/lib/fostr/fidl/fuchsia.data",
     "//src/lib/fostr/fidl/fuchsia.io",
-    "//src/lib/fostr/fidl/fuchsia.io2",
     "//src/lib/fostr/fidl/fuchsia.mem",
     "//src/lib/fostr/fidl/fuchsia.url",
   ]

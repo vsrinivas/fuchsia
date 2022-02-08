@@ -259,7 +259,7 @@ impl TestCodeBuilder for CppTestCode {
         .capabilities = {{component_testing::Directory {{
           .name = "{}",
           .path = "{}",
-          .rights = fuchsia::io2::RW_STAR_DIR,}}}},
+          .rights = fuchsia::io::RW_STAR_DIR,}}}},
         .source = component_testing::ParentRef(),
         .targets = {{{}}}}})"#,
             dir_name, dir_path, targets_code

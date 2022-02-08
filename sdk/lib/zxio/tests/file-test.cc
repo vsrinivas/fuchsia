@@ -148,7 +148,8 @@ TEST_F(File, WaitForReadable) {
   ASSERT_NO_FAILURES(OpenFile());
 
   zxio_signals_t observed = ZX_SIGNAL_NONE;
-  ASSERT_OK(server->event().signal(ZX_SIGNAL_NONE, fuchsia_io::wire::kFileSignalReadable));
+  ASSERT_OK(server->event().signal(
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fuchsia_io::wire::FileSignal::kReadable)));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_READABLE, observed);
 }
@@ -159,7 +160,8 @@ TEST_F(File, WaitForWritable) {
   ASSERT_NO_FAILURES(OpenFile());
 
   zxio_signals_t observed = ZX_SIGNAL_NONE;
-  ASSERT_OK(server->event().signal(ZX_SIGNAL_NONE, fuchsia_io::wire::kFileSignalWritable));
+  ASSERT_OK(server->event().signal(
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fuchsia_io::wire::FileSignal::kWritable)));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_WRITABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
 }

@@ -48,7 +48,7 @@ on the [kernel command line][kernel-command-line].
 Bootsvc, the next process, is [dynamically linked][dynamic-linking] by userboot.
 This makes it a better home than userboot for complex logic, as it can use
 libraries. Because of this bootsvc runs various FIDL services for its children,
-the most notable of which is bootfs, a [FIDL-based filesystem][fuchsia-io2]
+the most notable of which is bootfs, a [FIDL-based filesystem][fuchsia-io]
 backed by the bootfs image that userboot decompressed.
 
 Aside from hosting various services and the bootfs filesystem, bootsvc’s main
@@ -233,7 +233,7 @@ appmgr.
 [fs-mount]: /docs/concepts/filesystems/filesystems.md#mounting
 [fshost-exposes]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/root/meta/fshost.cml#17
 [fshost-magic-headers]: https://fuchsia.googlesource.com/fuchsia/+/514f9474502cf6cafcd1d5edadfc7164566d4453/zircon/system/ulib/fs-management/mount.cc#155
-[fuchsia-io2]: https://fuchsia.dev/reference/fidl/fuchsia.io2
+[fuchsia-io]: https://fuchsia.dev/reference/fidl/fuchsia.io
 [job]: /docs/reference/kernel_objects/job.md
 [kernel-command-line]: /docs/reference/kernel/kernel_cmdline.md
 [memfs]: /docs/concepts/filesystems/filesystems.md#memfs_an_in-memory_filesystem

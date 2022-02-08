@@ -18,7 +18,6 @@ fidl("fuchsia.sys2") {
     "//sdk/fidl/fuchsia.component.types",
     "//sdk/fidl/fuchsia.data",
     "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.io2",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.url",

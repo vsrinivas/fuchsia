@@ -387,7 +387,7 @@ flexible union Contents {
 };
 
 table ContentsV1 {
-    1: vector<fuchsia.io2.Path>:MAX paths;
+    1: vector<fuchsia.io.Path>:MAX paths;
     2: vector<fuchsia.pkg.BlobId>:MAX hashes;
     3: vector<uint64>:MAX blob_sizes;
     4: uint64 abi_revision;

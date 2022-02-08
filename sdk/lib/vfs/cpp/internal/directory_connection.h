@@ -40,10 +40,10 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
                SetAttrCallback callback) override;
   void Open(uint32_t flags, uint32_t mode, std::string path,
             fidl::InterfaceRequest<fuchsia::io::Node> object) override;
-  void AddInotifyFilter(std::string path, fuchsia::io2::InotifyWatchMask filters,
+  void AddInotifyFilter(std::string path, fuchsia::io::InotifyWatchMask filters,
                         uint32_t watch_descriptor, zx::socket socket,
                         AddInotifyFilterCallback callback) override {}
-  void Unlink(std::string name, fuchsia::io2::UnlinkOptions options,
+  void Unlink(std::string name, fuchsia::io::UnlinkOptions options,
               UnlinkCallback callback) override;
   void ReadDirents(uint64_t max_bytes, ReadDirentsCallback callback) override;
   void Rewind(RewindCallback callback) override;

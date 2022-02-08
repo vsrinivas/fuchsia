@@ -24,7 +24,6 @@ rustc_binary("realm_builder_server_bin") {
     "//sdk/fidl/fuchsia.component.test:fuchsia.component.test-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",

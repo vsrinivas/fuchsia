@@ -8,7 +8,7 @@ use {
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_component_test as ftest,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     fuchsia_component::server as fserver,
     fuchsia_zircon_status as zx_status,
     futures::{future::BoxFuture, join, lock::Mutex, FutureExt, StreamExt, TryStreamExt},
@@ -619,7 +619,7 @@ impl Realm {
             .route_capabilities(
                 vec![ftest::Capability2::Directory(ftest::Directory {
                     name: Some(directory_name),
-                    rights: Some(fio2::R_STAR_DIR),
+                    rights: Some(fio::R_STAR_DIR),
                     path,
                     ..ftest::Directory::EMPTY
                 })],
@@ -1586,7 +1586,7 @@ mod tests {
             create_endpoints, create_proxy, create_proxy_and_stream, create_request_stream,
             ClientEnd,
         },
-        fidl_fuchsia_io2 as fio2, fidl_fuchsia_mem as fmem, fuchsia_async as fasync,
+        fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fuchsia_async as fasync,
         fuchsia_zircon as zx,
         maplit::hashmap,
         std::convert::TryInto,
@@ -2743,7 +2743,7 @@ mod tests {
                     }),
                     ftest::Capability2::Directory(ftest::Directory {
                         name: Some("config-data".to_owned()),
-                        rights: Some(fio2::RW_STAR_DIR),
+                        rights: Some(fio::RW_STAR_DIR),
                         subdir: Some("component".to_owned()),
                         ..ftest::Directory::EMPTY
                     }),
@@ -2827,7 +2827,7 @@ mod tests {
                         target: cm_rust::OfferTarget::static_child("a".to_string()),
                         target_name: "config-data".into(),
                         dependency_type: cm_rust::DependencyType::Strong,
-                        rights: Some(fio2::RW_STAR_DIR),
+                        rights: Some(fio::RW_STAR_DIR),
                         subdir: Some(PathBuf::from("component")),
                     }),
                     cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
@@ -3741,14 +3741,14 @@ mod tests {
             capabilities: vec![cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
                 name: "data".into(),
                 source_path: Some("/data".try_into().unwrap()),
-                rights: fio2::R_STAR_DIR,
+                rights: fio::R_STAR_DIR,
             })],
             exposes: vec![cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
                 source: cm_rust::ExposeSource::Self_,
                 source_name: "data".into(),
                 target: cm_rust::ExposeTarget::Parent,
                 target_name: "data".into(),
-                rights: Some(fio2::R_STAR_DIR),
+                rights: Some(fio::R_STAR_DIR),
                 subdir: None,
             })],
             ..cm_rust::ComponentDecl::default()
@@ -3774,7 +3774,7 @@ mod tests {
                     }),
                     target_name: "data".into(),
                     dependency_type: cm_rust::DependencyType::Strong,
-                    rights: Some(fio2::R_STAR_DIR),
+                    rights: Some(fio::R_STAR_DIR),
                     subdir: None,
                 })],
                 ..cm_rust::ComponentDecl::default()

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.io2/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/event.h>
@@ -19,10 +19,8 @@
 #include "internal.h"
 #include "zxio.h"
 
-namespace fio2 = fuchsia_io2;
-
-#define FDIO_EVENT_READABLE static_cast<zx_signals_t>(fio2::wire::DeviceSignal::kReadable)
-#define FDIO_EVENT_WRITABLE static_cast<zx_signals_t>(fio2::wire::DeviceSignal::kWritable)
+#define FDIO_EVENT_READABLE static_cast<zx_signals_t>(fuchsia_io::wire::DeviceSignal2::kReadable)
+#define FDIO_EVENT_WRITABLE static_cast<zx_signals_t>(fuchsia_io::wire::DeviceSignal2::kWritable)
 
 // An implementation of a POSIX eventfd.
 struct fdio_event_t {

@@ -4,7 +4,7 @@
 
 #include "dirent_iterator.h"
 
-#include <fidl/fuchsia.io2/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/null.h>
@@ -18,22 +18,22 @@
 #include "common_utils.h"
 #include "remote_v2.h"
 
-namespace fio2 = fuchsia_io2;
+namespace fio = fuchsia_io;
 
 namespace {
 
-// Implementation of |zxio_dirent_iterator_t| for |fuchsia.io2|.
+// Implementation of |zxio_dirent_iterator_t| for |fuchsia.io|.
 class DirentIteratorImpl {
  public:
   static zx_status_t Create(zxio_dirent_iterator_t* iterator, zxio_t* directory) {
-    auto iterator_ends = fidl::CreateEndpoints<fio2::DirectoryIterator>();
+    auto iterator_ends = fidl::CreateEndpoints<fio::DirectoryIterator>();
     if (!iterator_ends.is_ok()) {
       return iterator_ends.status_value();
     }
     RemoteV2 dir(directory);
     auto status =
-        fidl::WireCall(fidl::UnownedClientEnd<fio2::Directory>(dir.control()))
-            ->Enumerate(fio2::wire::DirectoryEnumerateOptions(), std::move(iterator_ends->server))
+        fidl::WireCall(fidl::UnownedClientEnd<fio::Directory2>(dir.control()))
+            ->Enumerate(fio::wire::DirectoryEnumerateOptions(), std::move(iterator_ends->server))
             .status();
     if (status != ZX_OK) {
       return status;
@@ -60,7 +60,7 @@ class DirentIteratorImpl {
     const auto& fidl_entry = fidl_entries_[index_];
     index_++;
 
-    if (!fidl_entry.has_name() || fidl_entry.name().size() > fio2::wire::kMaxNameLength) {
+    if (!fidl_entry.has_name() || fidl_entry.name().size() > fio::wire::kMaxNameLength) {
       return ZX_ERR_INVALID_ARGS;
     }
 
@@ -80,7 +80,7 @@ class DirentIteratorImpl {
   }
 
  private:
-  DirentIteratorImpl(zxio_t* io, fidl::WireSyncClient<fio2::DirectoryIterator> iterator)
+  DirentIteratorImpl(zxio_t* io, fidl::WireSyncClient<fio::DirectoryIterator> iterator)
       : io_(reinterpret_cast<zxio_remote_v2_t*>(io)), iterator_(std::move(iterator)) {
     static_assert(offsetof(DirentIteratorImpl, io_) == 0,
                   "zxio_dirent_iterator_t requires first field of implementation to be zxio_t");
@@ -108,11 +108,11 @@ class DirentIteratorImpl {
   // TODO(https://fxbug.dev/85843): Once overlapping request and response is allowed, reduce
   // this allocation to a single channel message size.
   FIDL_ALIGNDECL uint8_t
-      buffer_[fidl::SyncClientMethodBufferSizeInChannel<fio2::DirectoryIterator::GetNext>()];
+      buffer_[fidl::SyncClientMethodBufferSizeInChannel<fio::DirectoryIterator::GetNext>()];
 
-  fidl::VectorView<fio2::wire::DirectoryEntry> fidl_entries_ = {};
+  fidl::VectorView<fio::wire::DirectoryEntry> fidl_entries_ = {};
   uint64_t index_ = 0;
-  fidl::WireSyncClient<fio2::DirectoryIterator> iterator_;
+  fidl::WireSyncClient<fio::DirectoryIterator> iterator_;
 };
 
 static_assert(sizeof(DirentIteratorImpl) <= sizeof(zxio_dirent_iterator_t),

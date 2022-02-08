@@ -17,11 +17,10 @@ TEST(NodeProtocolsToPosixType, Basic) {
   EXPECT_EQ(S_IFDIR, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_DIRECTORY));
   EXPECT_EQ(S_IFREG, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_FILE));
   EXPECT_EQ(S_IFREG, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_MEMORY));
-  EXPECT_EQ(S_IFSOCK, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_POSIX_SOCKET));
+  EXPECT_EQ(S_IFSOCK, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_STREAM_SOCKET));
   EXPECT_EQ(S_IFIFO, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_PIPE));
   EXPECT_EQ(S_IFBLK, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_DEVICE));
   EXPECT_EQ(S_IFCHR, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_TTY));
-  EXPECT_EQ(S_IFCHR, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_DEBUGLOG));
 }
 
 TEST(NodeProtocolsToPosixType, MultiProtocol) {

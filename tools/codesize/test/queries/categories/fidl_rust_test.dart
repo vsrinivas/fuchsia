@@ -31,7 +31,7 @@ void main() {
       pos(r'core::ptr::drop_in_place::<fidl_fuchsia_io::FileRequest>');
       pos(r'core::ptr::drop_in_place::<fidl::error::Error>');
 
-      pos(r'<&fidl_fuchsia_kernel::CpuStats as core::fmt::Debug>::fmt<&fidl_fuchsia_io2::Operations as core::hash::Hash>::hash::<std::collections::hash::map::DefaultHasher>');
+      pos(r'<&fidl_fuchsia_kernel::CpuStats as core::fmt::Debug>::fmt<&fidl_fuchsia_io::Operations as core::hash::Hash>::hash::<std::collections::hash::map::DefaultHasher>');
       pos(r'std::future::poll_with_tls_context::<futures_util::stream::try_stream::try_next::TryNext<fidl_fuchsia_sys2::SystemControllerRequestStream>>');
       pos(r'<&mut fidl_fuchsia_wlan_policy::ClientProviderRequestStream as futures_core::stream::FusedStream>::is_terminated');
       pos(r'<futures_util::stream::try_stream::try_for_each::TryForEach<fidl_fuchsia_devicesettings::DeviceSettingsManagerRequestStream, futures_util::future::ready::Ready<core::result::Result<(), fidl::error::Error>>, device_settings_manager::spawn_device_settings_server::{closure#0}> as core::future::future::Future>::poll');

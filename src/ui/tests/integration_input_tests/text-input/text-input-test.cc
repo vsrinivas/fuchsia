@@ -8,7 +8,7 @@
 #include <fuchsia/fonts/cpp/fidl.h>
 #include <fuchsia/hardware/display/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
-#include <fuchsia/io2/cpp/fidl.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
@@ -60,7 +60,7 @@
 
 namespace {
 
-using fuchsia::io2::Operations;
+using fuchsia::io::Operations;
 using fuchsia::ui::app::CreateView2Args;
 using fuchsia::ui::app::ViewProvider;
 using fuchsia::ui::composition::ChildViewStatus;

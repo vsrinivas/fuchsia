@@ -626,11 +626,11 @@ mod tests {
             close_dir_checked, close_file_checked, open_dir, open_dir_checked, open_file,
             open_file_checked, TestFixture,
         },
+        fidl_fuchsia_io::UnlinkOptions,
         fidl_fuchsia_io::{
             DirectoryProxy, SeekOrigin, MAX_BUF, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
             OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
-        fidl_fuchsia_io2::UnlinkOptions,
         files_async::{DirEntry, DirentKind},
         fuchsia_async as fasync,
         fuchsia_zircon::Status,

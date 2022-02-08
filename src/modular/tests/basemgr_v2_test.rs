@@ -7,8 +7,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_hardware_power_statecontrol as fhpower,
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
-    fidl_fuchsia_io2 as fio2, fidl_fuchsia_modular_internal as fmodular, fidl_fuchsia_sys as fsys,
-    fuchsia_async as fasync,
+    fidl_fuchsia_modular_internal as fmodular, fidl_fuchsia_sys as fsys, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::new::{
         Capability, ChildOptions, ChildRef, LocalComponentHandles, RealmBuilder, Ref, Route,
@@ -96,7 +95,7 @@ impl TestFixture {
                     .capability(
                         Capability::directory("config-data")
                             .path("/config-data")
-                            .rights(fio2::R_STAR_DIR),
+                            .rights(fio::R_STAR_DIR),
                     )
                     .from(&config_data_server)
                     .to(&basemgr),

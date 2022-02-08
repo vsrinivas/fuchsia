@@ -9,7 +9,7 @@
 
 namespace FileTestSuite {
 
-// Common test assertions for fuchsia.io/File and fuchsia.io2/File.
+// Common test assertions for fuchsia.io/File and fuchsia.io/File2.
 
 // When you add a new function to this list, be sure to call it from both the
 // io1 and io2 test suites.

@@ -72,7 +72,7 @@ void DirectoryConnection::Open(uint32_t flags, uint32_t mode, std::string path,
             binding_.dispatcher());
 }
 
-void DirectoryConnection::Unlink(std::string name, fuchsia::io2::UnlinkOptions options,
+void DirectoryConnection::Unlink(std::string name, fuchsia::io::UnlinkOptions options,
                                  UnlinkCallback callback) {
   callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
 }

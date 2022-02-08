@@ -6,7 +6,7 @@ use anyhow::Error;
 use fidl::encoding::decode_persistent;
 use fidl_fuchsia_component_decl::*;
 use fidl_fuchsia_data as fdata;
-use fidl_fuchsia_io2 as fio2;
+use fidl_fuchsia_io as fio;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -220,14 +220,14 @@ fn main() {
                 name: Some("blobfs".to_string()),
                 source_path: Some("/volumes/blobfs".to_string()),
                 rights: Some(
-                    fio2::Operations::CONNECT
-                        | fio2::Operations::READ_BYTES
-                        | fio2::Operations::WRITE_BYTES
-                        | fio2::Operations::GET_ATTRIBUTES
-                        | fio2::Operations::UPDATE_ATTRIBUTES
-                        | fio2::Operations::ENUMERATE
-                        | fio2::Operations::TRAVERSE
-                        | fio2::Operations::MODIFY_DIRECTORY,
+                    fio::Operations::CONNECT
+                        | fio::Operations::READ_BYTES
+                        | fio::Operations::WRITE_BYTES
+                        | fio::Operations::GET_ATTRIBUTES
+                        | fio::Operations::UPDATE_ATTRIBUTES
+                        | fio::Operations::ENUMERATE
+                        | fio::Operations::TRAVERSE
+                        | fio::Operations::MODIFY_DIRECTORY,
                 ),
                 ..Directory::EMPTY
             }),

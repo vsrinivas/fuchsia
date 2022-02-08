@@ -7,7 +7,7 @@ use {
     anyhow::anyhow,
     assert_matches::assert_matches,
     diagnostics_reader::{ArchiveReader, /*ComponentSelector, */ Inspect},
-    fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_paver::{self as paver, PaverRequestStream},
     fidl_fuchsia_pkg::{PackageCacheRequestStream, PackageResolverRequestStream},
     fidl_fuchsia_update::{
@@ -308,7 +308,7 @@ impl TestEnvBuilder {
                     .capability(
                         Capability::directory("config-data")
                             .path("/config/data")
-                            .rights(fio2::R_STAR_DIR),
+                            .rights(fio::R_STAR_DIR),
                     )
                     .capability(Capability::protocol_by_name("fuchsia.paver.Paver"))
                     .capability(Capability::protocol_by_name(
@@ -326,7 +326,7 @@ impl TestEnvBuilder {
                     .capability(
                         Capability::directory("build-info")
                             .path("/config/build-info")
-                            .rights(fio2::R_STAR_DIR),
+                            .rights(fio::R_STAR_DIR),
                     )
                     .capability(Capability::protocol_by_name("fuchsia.ui.activity.Provider"))
                     .capability(Capability::protocol_by_name("fuchsia.feedback.CrashReporter"))
@@ -429,7 +429,7 @@ impl TestEnvBuilder {
                         .capability(
                             Capability::directory("config-data")
                                 .path("/config/data")
-                                .rights(fio2::R_STAR_DIR),
+                                .rights(fio::R_STAR_DIR),
                         )
                         .capability(Capability::protocol_by_name("fuchsia.paver.Paver"))
                         .capability(Capability::protocol_by_name("fuchsia.pkg.PackageCache"))
@@ -440,7 +440,7 @@ impl TestEnvBuilder {
                         .capability(
                             Capability::directory("build-info")
                                 .path("/config/build-info")
-                                .rights(fio2::R_STAR_DIR),
+                                .rights(fio::R_STAR_DIR),
                         )
                         .from(&fake_capabilities)
                         .to(&system_updater),

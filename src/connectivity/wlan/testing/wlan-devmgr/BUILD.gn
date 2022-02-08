@@ -7,7 +7,6 @@ import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
 
 group("wlan_devmgr_deps") {
   deps = [
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//src/connectivity/ethernet/drivers/ethernet",
     "//src/connectivity/wlan/drivers/wlan:wlan_driver",
     "//src/connectivity/wlan/drivers/wlanphy:wlanphy_driver",

@@ -1,13 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.io2;
+library fuchsia.io;
 
 /// DirectoryWatcher transmits messages from a filesystem server about
 /// events happening in the filesystem. Clients can register new watchers
-/// using the [`fuchsia.io2/Directory.Watch`] method, where they can
+/// using the [`fuchsia.io/Directory.Watch`] method, where they can
 /// filter which events they want to receive notifications for.
-protocol DirectoryWatcher {
+protocol DirectoryWatcher2 {
     /// A hanging get to obtain the next batch of events.
     ///
     /// The caller should always use a receiving buffer size as large as the
@@ -23,6 +23,7 @@ protocol DirectoryWatcher {
     /// with a `ZX_ERR_UNAVAILABLE` epitaph.
     /// When the filesystem server is dying, this connection will be closed
     /// with a `ZX_ERR_PEER_CLOSED` epitaph.
+    @selector("fuchsia.io/DirectoryWatcher.GetNext")
     GetNext() -> (struct {
         events vector<DirectoryWatchedEvent>:MAX_DIRECTORY_BATCH_SIZE;
     });
@@ -47,7 +48,7 @@ type DirectoryWatchedEvent = flexible union {
     4: removed Name;
 };
 
-/// Used by [`fuchsia.io2/Directory.Watch`] to indicate the types of events
+/// Used by [`fuchsia.io/Directory.Watch`] to indicate the types of events
 /// interested by a watcher.
 type DirectoryWatchMask = strict bits : uint64 {
     /// Requests transmission of `existing` events.

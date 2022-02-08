@@ -18,7 +18,6 @@ import (
 	"unsafe"
 
 	"fidl/fuchsia/io"
-	"fidl/fuchsia/io2"
 	"fidl/fuchsia/mem"
 
 	"go.fuchsia.dev/fuchsia/src/lib/component"
@@ -164,16 +163,16 @@ func (d *directoryWrapper) Close(fidl.Context) (int32, error) {
 	return int32(errorToZx(err)), nil
 }
 
-func (d *directoryWrapper) Close2(fidl.Context) (io.NodeClose2Result, error) {
+func (d *directoryWrapper) Close2(fidl.Context) (io.Node2Close2Result, error) {
 	status := int32(errorToZx(d.dir.Close()))
 
 	d.cancel()
 	d.clearCookie()
 
 	if status == 0 {
-		return io.NodeClose2ResultWithResponse(io.NodeClose2Response{}), nil
+		return io.Node2Close2ResultWithResponse(io.Node2Close2Response{}), nil
 	} else {
-		return io.NodeClose2ResultWithErr(status), nil
+		return io.Node2Close2ResultWithErr(status), nil
 	}
 }
 
@@ -191,17 +190,17 @@ func (d *directoryWrapper) Sync(fidl.Context) (int32, error) {
 	return int32(errorToZx(d.dir.Sync())), nil
 }
 
-func (d *directoryWrapper) Sync2(fidl.Context) (io.NodeSync2Result, error) {
+func (d *directoryWrapper) Sync2(fidl.Context) (io.Node2Sync2Result, error) {
 	status := int32(errorToZx(d.dir.Sync()))
 	if status == 0 {
-		return io.NodeSync2ResultWithResponse(io.NodeSync2Response{}), nil
+		return io.Node2Sync2ResultWithResponse(io.Node2Sync2Response{}), nil
 	} else {
-		return io.NodeSync2ResultWithErr(status), nil
+		return io.Node2Sync2ResultWithErr(status), nil
 	}
 }
 
-func (d *directoryWrapper) AdvisoryLock(fidl.Context, io2.AdvisoryLockRequest) (io2.AdvisoryLockingAdvisoryLockResult, error) {
-	return io2.AdvisoryLockingAdvisoryLockResultWithErr(int32(zx.ErrNotSupported)), nil
+func (d *directoryWrapper) AdvisoryLock(fidl.Context, io.AdvisoryLockRequest) (io.AdvisoryLockingAdvisoryLockResult, error) {
+	return io.AdvisoryLockingAdvisoryLockResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (d *directoryWrapper) GetAttr(fidl.Context) (int32, io.NodeAttributes, error) {
@@ -225,7 +224,7 @@ func (d *directoryWrapper) SetAttr(_ fidl.Context, flags uint32, attr io.NodeAtt
 	return int32(errorToZx(d.dir.Touch(t, t))), nil
 }
 
-func (d *directoryWrapper) AddInotifyFilter(_ fidl.Context, path string, filters io2.InotifyWatchMask, wd uint32, socket zx.Socket) error {
+func (d *directoryWrapper) AddInotifyFilter(_ fidl.Context, path string, filters io.InotifyWatchMask, wd uint32, socket zx.Socket) error {
 	return nil
 }
 
@@ -284,12 +283,12 @@ func (d *directoryWrapper) Open(_ fidl.Context, inFlags, inMode uint32, path str
 	return nil
 }
 
-func (d *directoryWrapper) Unlink(_ fidl.Context, name string, _ io2.UnlinkOptions) (io.DirectoryUnlinkResult, error) {
+func (d *directoryWrapper) Unlink(_ fidl.Context, name string, _ io.UnlinkOptions) (io.Directory2UnlinkResult, error) {
 	status := int32(errorToZx(d.dir.Unlink(name)))
 	if status == 0 {
-		return io.DirectoryUnlinkResultWithResponse(io.DirectoryUnlinkResponse{}), nil
+		return io.Directory2UnlinkResultWithResponse(io.Directory2UnlinkResponse{}), nil
 	} else {
-		return io.DirectoryUnlinkResultWithErr(status), nil
+		return io.Directory2UnlinkResultWithErr(status), nil
 	}
 }
 
@@ -390,9 +389,9 @@ func renameImpl(d *directoryWrapper, src string, token zx.Handle, dst string) (i
 	return int32(errorToZx(d.dir.Rename(dir.dir, src, dst))), nil
 }
 
-func (d *directoryWrapper) Rename(_ fidl.Context, src string, token zx.Event, dst string) (io.DirectoryRenameResult, error) {
+func (d *directoryWrapper) Rename(_ fidl.Context, src string, token zx.Event, dst string) (io.Directory2RenameResult, error) {
 	result, err := renameImpl(d, src, *token.Handle(), dst)
-	return io.DirectoryRenameResultWithErr(result), err
+	return io.Directory2RenameResultWithErr(result), err
 }
 
 func (d *directoryWrapper) Link(_ fidl.Context, src string, token zx.Handle, dst string) (int32, error) {
@@ -476,15 +475,15 @@ func (f *fileWrapper) Close(fidl.Context) (int32, error) {
 	return int32(errorToZx(err)), nil
 }
 
-func (f *fileWrapper) Close2(fidl.Context) (io.NodeClose2Result, error) {
+func (f *fileWrapper) Close2(fidl.Context) (io.Node2Close2Result, error) {
 	status := int32(errorToZx(f.file.Close()))
 
 	f.cancel()
 
 	if status == 0 {
-		return io.NodeClose2ResultWithResponse(io.NodeClose2Response{}), nil
+		return io.Node2Close2ResultWithResponse(io.Node2Close2Response{}), nil
 	} else {
-		return io.NodeClose2ResultWithErr(status), nil
+		return io.Node2Close2ResultWithErr(status), nil
 	}
 }
 
@@ -504,12 +503,12 @@ func (f *fileWrapper) Sync(fidl.Context) (int32, error) {
 	return int32(errorToZx(f.file.Sync())), nil
 }
 
-func (f *fileWrapper) Sync2(fidl.Context) (io.NodeSync2Result, error) {
+func (f *fileWrapper) Sync2(fidl.Context) (io.Node2Sync2Result, error) {
 	status := int32(errorToZx(f.file.Sync()))
 	if status == 0 {
-		return io.NodeSync2ResultWithResponse(io.NodeSync2Response{}), nil
+		return io.Node2Sync2ResultWithResponse(io.Node2Sync2Response{}), nil
 	} else {
-		return io.NodeSync2ResultWithErr(status), nil
+		return io.Node2Sync2ResultWithErr(status), nil
 	}
 }
 
@@ -546,13 +545,13 @@ func (f *fileWrapper) Read(_ fidl.Context, count uint64) (int32, []uint8, error)
 	return int32(zx.ErrOk), buf[:r], nil
 }
 
-func (f *fileWrapper) Read2(_ fidl.Context, count uint64) (io.FileRead2Result, error) {
+func (f *fileWrapper) Read2(_ fidl.Context, count uint64) (io.File2Read2Result, error) {
 	buf := make([]byte, count)
 	r, err := f.file.Read(buf, 0, fs.WhenceFromCurrent)
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
-		return io.FileRead2ResultWithErr(int32(zxErr)), nil
+		return io.File2Read2ResultWithErr(int32(zxErr)), nil
 	}
-	return io.FileRead2ResultWithResponse(io.FileRead2Response{Data: buf[:r]}), nil
+	return io.File2Read2ResultWithResponse(io.File2Read2Response{Data: buf[:r]}), nil
 }
 
 func (f *fileWrapper) ReadAt(_ fidl.Context, count, offset uint64) (int32, []uint8, error) {
@@ -564,13 +563,13 @@ func (f *fileWrapper) ReadAt(_ fidl.Context, count, offset uint64) (int32, []uin
 	return int32(zx.ErrOk), buf[:r], nil
 }
 
-func (f *fileWrapper) ReadAt2(_ fidl.Context, count, offset uint64) (io.FileReadAt2Result, error) {
+func (f *fileWrapper) ReadAt2(_ fidl.Context, count, offset uint64) (io.File2ReadAt2Result, error) {
 	buf := make([]byte, count)
 	r, err := f.file.Read(buf, int64(offset), fs.WhenceFromStart)
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
-		return io.FileReadAt2ResultWithErr(int32(zxErr)), nil
+		return io.File2ReadAt2ResultWithErr(int32(zxErr)), nil
 	}
-	return io.FileReadAt2ResultWithResponse(io.FileReadAt2Response{Data: buf[:r]}), nil
+	return io.File2ReadAt2ResultWithResponse(io.File2ReadAt2Response{Data: buf[:r]}), nil
 }
 
 func (f *fileWrapper) Write(_ fidl.Context, data []uint8) (int32, uint64, error) {
@@ -578,12 +577,12 @@ func (f *fileWrapper) Write(_ fidl.Context, data []uint8) (int32, uint64, error)
 	return int32(errorToZx(err)), uint64(r), nil
 }
 
-func (f *fileWrapper) Write2(_ fidl.Context, data []uint8) (io.FileWrite2Result, error) {
+func (f *fileWrapper) Write2(_ fidl.Context, data []uint8) (io.File2Write2Result, error) {
 	r, err := f.file.Write(data, 0, fs.WhenceFromCurrent)
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
-		return io.FileWrite2ResultWithErr(int32(zxErr)), nil
+		return io.File2Write2ResultWithErr(int32(zxErr)), nil
 	}
-	return io.FileWrite2ResultWithResponse(io.FileWrite2Response{ActualCount: uint64(r)}), nil
+	return io.File2Write2ResultWithResponse(io.File2Write2Response{ActualCount: uint64(r)}), nil
 }
 
 func (f *fileWrapper) WriteAt(_ fidl.Context, data []uint8, offset uint64) (int32, uint64, error) {
@@ -591,12 +590,12 @@ func (f *fileWrapper) WriteAt(_ fidl.Context, data []uint8, offset uint64) (int3
 	return int32(errorToZx(err)), uint64(r), nil
 }
 
-func (f *fileWrapper) WriteAt2(_ fidl.Context, data []uint8, offset uint64) (io.FileWriteAt2Result, error) {
+func (f *fileWrapper) WriteAt2(_ fidl.Context, data []uint8, offset uint64) (io.File2WriteAt2Result, error) {
 	r, err := f.file.Write(data, int64(offset), fs.WhenceFromStart)
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
-		return io.FileWriteAt2ResultWithErr(int32(zxErr)), nil
+		return io.File2WriteAt2ResultWithErr(int32(zxErr)), nil
 	}
-	return io.FileWriteAt2ResultWithResponse(io.FileWriteAt2Response{ActualCount: uint64(r)}), nil
+	return io.File2WriteAt2ResultWithResponse(io.File2WriteAt2Response{ActualCount: uint64(r)}), nil
 }
 
 func (f *fileWrapper) Seek(_ fidl.Context, offset int64, start io.SeekOrigin) (int32, uint64, error) {
@@ -604,24 +603,24 @@ func (f *fileWrapper) Seek(_ fidl.Context, offset int64, start io.SeekOrigin) (i
 	return int32(errorToZx(err)), uint64(r), nil
 }
 
-func (f *fileWrapper) Seek2(_ fidl.Context, origin io.SeekOrigin, offset int64) (io.FileSeek2Result, error) {
+func (f *fileWrapper) Seek2(_ fidl.Context, origin io.SeekOrigin, offset int64) (io.File2Seek2Result, error) {
 	r, err := f.file.Seek(offset, int(origin))
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
-		return io.FileSeek2ResultWithErr(int32(zxErr)), nil
+		return io.File2Seek2ResultWithErr(int32(zxErr)), nil
 	}
-	return io.FileSeek2ResultWithResponse(io.FileSeek2Response{OffsetFromStart: uint64(r)}), nil
+	return io.File2Seek2ResultWithResponse(io.File2Seek2Response{OffsetFromStart: uint64(r)}), nil
 }
 
 func (f *fileWrapper) Truncate(_ fidl.Context, length uint64) (int32, error) {
 	return int32(errorToZx(f.file.Truncate(length))), nil
 }
 
-func (f *fileWrapper) Resize(_ fidl.Context, length uint64) (io.FileResizeResult, error) {
+func (f *fileWrapper) Resize(_ fidl.Context, length uint64) (io.File2ResizeResult, error) {
 	status := int32(errorToZx(f.file.Truncate(length)))
 	if status == 0 {
-		return io.FileResizeResultWithResponse(io.FileResizeResponse{}), nil
+		return io.File2ResizeResultWithResponse(io.File2ResizeResponse{}), nil
 	} else {
-		return io.FileResizeResultWithErr(status), nil
+		return io.File2ResizeResultWithErr(status), nil
 	}
 }
 
@@ -638,8 +637,8 @@ func (f *fileWrapper) NodeGetFlags(ctx fidl.Context) (int32, uint32, error) {
 	return f.getFlagsInternal(ctx)
 }
 
-func (f *fileWrapper) AdvisoryLock(ctx fidl.Context, req io2.AdvisoryLockRequest) (io2.AdvisoryLockingAdvisoryLockResult, error) {
-	return io2.AdvisoryLockingAdvisoryLockResultWithErr(int32(zx.ErrNotSupported)), nil
+func (f *fileWrapper) AdvisoryLock(ctx fidl.Context, req io.AdvisoryLockRequest) (io.AdvisoryLockingAdvisoryLockResult, error) {
+	return io.AdvisoryLockingAdvisoryLockResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 // NodeSetFlags is a transitional method, and if it's unimplemented the current behavior
@@ -668,15 +667,15 @@ func (f *fileWrapper) GetBuffer(_ fidl.Context, flags uint32) (int32, *mem.Buffe
 	return int32(zx.ErrNotSupported), nil, nil
 }
 
-func (f *fileWrapper) GetBackingMemory(_ fidl.Context, flags io.VmoFlags) (io.FileGetBackingMemoryResult, error) {
+func (f *fileWrapper) GetBackingMemory(_ fidl.Context, flags io.VmoFlags) (io.File2GetBackingMemoryResult, error) {
 	if file, ok := f.file.(fs.FileWithGetBuffer); ok {
 		buf, err := file.GetBuffer(uint32(flags))
 		if zxErr := errorToZx(err); zxErr != zx.ErrOk {
-			return io.FileGetBackingMemoryResultWithErr(int32(zxErr)), nil
+			return io.File2GetBackingMemoryResultWithErr(int32(zxErr)), nil
 		}
-		return io.FileGetBackingMemoryResultWithResponse(io.FileGetBackingMemoryResponse{Vmo: buf.Vmo}), nil
+		return io.File2GetBackingMemoryResultWithResponse(io.File2GetBackingMemoryResponse{Vmo: buf.Vmo}), nil
 	}
-	return io.FileGetBackingMemoryResultWithErr(int32(zx.ErrNotSupported)), nil
+	return io.File2GetBackingMemoryResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 // TODO(smklein): Calibrate thinfs flags with standard C library flags to make conversion smoother

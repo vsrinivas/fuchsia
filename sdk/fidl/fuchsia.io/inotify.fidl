@@ -1,7 +1,7 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.io2;
+library fuchsia.io;
 
 /// Inotifier implements the linux Inotify functionality.
 /// It provides a mechanism for monitoring filesystem
@@ -12,7 +12,7 @@ library fuchsia.io2;
 protocol Inotifier {};
 
 /// Used by InotifyAddWatch to indicate the server the events to be watched on.
-/// Also used by [`fuchsia.io2/Node.Inotify`] to indicate the types of events
+/// Also used by [`Node.Inotify`] to indicate the types of events
 /// that occured on server side, to be notified to clients. See InotifyEvent.
 type InotifyWatchMask = strict bits : uint32 {
     // Events to watch in inotify

@@ -12,7 +12,6 @@ use {
     fidl_fuchsia_io::{
         self as fio, DirectoryMarker, DirectoryObject, DirectoryProxy, NodeInfo, NodeMarker,
     },
-    fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy},
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::new::{
@@ -105,7 +104,7 @@ impl TestEnvBuilder {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::directory("usb").path("/usb").rights(fio2::R_STAR_DIR))
+                    .capability(Capability::directory("usb").path("/usb").rights(fio::R_STAR_DIR))
                     .from(&usb_mock)
                     .to(&component_under_test),
             )

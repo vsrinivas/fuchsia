@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 /// # Library Overview
 ///
-library fuchsia.io2;
+library fuchsia.io;
 
 using zx;
 

@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
     fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata,
     fidl_fuchsia_examples_services as fex_services, fidl_fuchsia_io as fio,
-    fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_component_test::{
         error::Error as RealmBuilderError,
@@ -1142,7 +1142,7 @@ async fn route_required_fields_for_local_component() {
         let res = builder
             .add_route(
                 Route::new()
-                    .capability(Capability::directory("2").rights(fio2::RX_STAR_DIR))
+                    .capability(Capability::directory("2").rights(fio::RX_STAR_DIR))
                     .from(from.clone())
                     .to(to.clone()),
             )

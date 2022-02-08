@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 library fuchsia.component.decl;
 
-using fuchsia.io2;
 using fuchsia.data;
+using fuchsia.io;
 
 /// Declares a capability offered by a component to one of its children, which
 /// may have been offered by the component's containing realm, the component
@@ -99,7 +99,7 @@ type OfferDirectory = table {
 
     /// The maximum rights that can be set by a component using this directory,
     /// required iff `source == self`.
-    5: rights fuchsia.io2.Rights;
+    5: rights fuchsia.io.Rights;
 
     /// The subdirectory of this directory to offer instead of the root. Optional.
     6: subdir string:MAX_PATH_LENGTH;

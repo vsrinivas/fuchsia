@@ -7,7 +7,6 @@
 
 #include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
-#include <fuchsia/io2/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/namespace.h>
 #include <lib/sys/cpp/outgoing_directory.h>
@@ -51,7 +50,7 @@ struct Directory final {
   cpp17::optional<std::string_view> as = cpp17::nullopt;
   cpp17::optional<DependencyType> type = cpp17::nullopt;
   cpp17::optional<std::string_view> subdir = cpp17::nullopt;
-  cpp17::optional<fuchsia::io2::Operations> rights = cpp17::nullopt;
+  cpp17::optional<fuchsia::io::Operations> rights = cpp17::nullopt;
   cpp17::optional<std::string_view> path = cpp17::nullopt;
 };
 

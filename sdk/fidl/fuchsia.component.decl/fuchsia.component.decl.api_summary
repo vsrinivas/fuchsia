@@ -78,7 +78,7 @@ enum/member fuchsia.component.decl/DependencyType.WEAK 2
 enum/member fuchsia.component.decl/DependencyType.WEAK_FOR_MIGRATION 3
 strict enum fuchsia.component.decl/DependencyType uint32
 table/member fuchsia.component.decl/Directory.name string:100
-table/member fuchsia.component.decl/Directory.rights fuchsia.io2/Operations
+table/member fuchsia.component.decl/Directory.rights fuchsia.io/Operations
 table/member fuchsia.component.decl/Directory.source_path string:1024
 table fuchsia.component.decl/Directory
 enum/member fuchsia.component.decl/Durability.PERSISTENT 1
@@ -109,7 +109,7 @@ union/member fuchsia.component.decl/Expose.resolver fuchsia.component.decl/Expos
 union/member fuchsia.component.decl/Expose.runner fuchsia.component.decl/ExposeRunner
 union/member fuchsia.component.decl/Expose.service fuchsia.component.decl/ExposeService
 flexible union fuchsia.component.decl/Expose
-table/member fuchsia.component.decl/ExposeDirectory.rights fuchsia.io2/Operations
+table/member fuchsia.component.decl/ExposeDirectory.rights fuchsia.io/Operations
 table/member fuchsia.component.decl/ExposeDirectory.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/ExposeDirectory.source_name string:100
 table/member fuchsia.component.decl/ExposeDirectory.subdir string:1024
@@ -155,7 +155,7 @@ union/member fuchsia.component.decl/Offer.service fuchsia.component.decl/OfferSe
 union/member fuchsia.component.decl/Offer.storage fuchsia.component.decl/OfferStorage
 flexible union fuchsia.component.decl/Offer
 table/member fuchsia.component.decl/OfferDirectory.dependency_type fuchsia.component.decl/DependencyType
-table/member fuchsia.component.decl/OfferDirectory.rights fuchsia.io2/Operations
+table/member fuchsia.component.decl/OfferDirectory.rights fuchsia.io/Operations
 table/member fuchsia.component.decl/OfferDirectory.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/OfferDirectory.source_name string:100
 table/member fuchsia.component.decl/OfferDirectory.subdir string:1024
@@ -251,7 +251,7 @@ union/member fuchsia.component.decl/Use.service fuchsia.component.decl/UseServic
 union/member fuchsia.component.decl/Use.storage fuchsia.component.decl/UseStorage
 flexible union fuchsia.component.decl/Use
 table/member fuchsia.component.decl/UseDirectory.dependency_type fuchsia.component.decl/DependencyType
-table/member fuchsia.component.decl/UseDirectory.rights fuchsia.io2/Operations
+table/member fuchsia.component.decl/UseDirectory.rights fuchsia.io/Operations
 table/member fuchsia.component.decl/UseDirectory.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/UseDirectory.source_name string:100
 table/member fuchsia.component.decl/UseDirectory.subdir string:1024

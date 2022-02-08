@@ -11,7 +11,7 @@ use {
     },
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
-    fidl_fuchsia_io2 as fio2, fidl_fuchsia_mem as fmem, fuchsia_async as fasync,
+    fidl_fuchsia_mem as fmem, fuchsia_async as fasync,
     fuchsia_component::client as fclient,
     fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex},
@@ -316,7 +316,7 @@ pub struct DirectoryCapability {
     name: String,
     as_: Option<String>,
     type_: fdecl::DependencyType,
-    rights: Option<fio2::Operations>,
+    rights: Option<fio::Operations>,
     subdir: Option<String>,
     path: Option<String>,
 }
@@ -336,7 +336,7 @@ impl DirectoryCapability {
     }
 
     /// The rights the target will be allowed to use when accessing the directory.
-    pub fn rights(mut self, rights: fio2::Operations) -> Self {
+    pub fn rights(mut self, rights: fio::Operations) -> Self {
         self.rights = Some(rights);
         self
     }
@@ -788,7 +788,7 @@ impl RealmBuilder {
         component_manager_realm
             .add_route(
                 Route::new()
-                    .capability(Capability::directory("hub").path("/hub").rights(fio2::RW_STAR_DIR))
+                    .capability(Capability::directory("hub").path("/hub").rights(fio::RW_STAR_DIR))
                     .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
                     .from(Ref::child("component_manager"))
                     .to(Ref::parent()),
@@ -1369,12 +1369,12 @@ mod tests {
             },
         );
         assert_eq!(
-            Capability::directory("test").rights(fio2::RX_STAR_DIR),
+            Capability::directory("test").rights(fio::RX_STAR_DIR),
             DirectoryCapability {
                 name: "test".to_string(),
                 as_: None,
                 type_: fdecl::DependencyType::Strong,
-                rights: Some(fio2::RX_STAR_DIR),
+                rights: Some(fio::RX_STAR_DIR),
                 subdir: None,
                 path: None,
             },

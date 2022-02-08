@@ -129,7 +129,7 @@ routed throughout the system. Directory rights are applied as follows:
     from the `expose` source if not present.
 
 The `rights` field can contain any combination of the following
-[`fuchsia.io2.Rights`][fidl-io2-rights] tokens:
+[`fuchsia.io.Rights`][fidl-io-rights] tokens:
 
 ```json5
 rights: [
@@ -267,7 +267,7 @@ Fuchsia supports the following framework directories:
 [glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
 [capability-routing]: /docs/concepts/components/v2/capabilities/README.md#routing
 [doc-hub]: /docs/concepts/components/v2/hub.md
-[fidl-io2-rights]: /sdk/fidl/fuchsia.io2/rights-abilities.fidl
+[fidl-io-rights]: /sdk/fidl/fuchsia.io/rights-abilities.fidl
 [manifest-capabilities]: https://fuchsia.dev/reference/cml#capabilities
 [manifest-expose]: https://fuchsia.dev/reference/cml#expose
 [manifest-offer]: https://fuchsia.dev/reference/cml#offer

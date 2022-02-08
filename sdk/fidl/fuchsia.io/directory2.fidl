@@ -1,13 +1,14 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.io2;
+library fuchsia.io;
 
 using zx;
 
-/// A [`fuchsia.io2/Node`] that is capable of containing other nodes.
-protocol Directory {
-    compose Node;
+/// A [`Node2`] that is capable of containing other nodes.
+protocol Directory2 {
+    compose Node2;
+    compose AdvisoryLocking;
 
     /// Opens or creates a new node relative to this directory node.
     ///
@@ -15,13 +16,13 @@ protocol Directory {
     ///   If `path` contains multiple segments, then the directory is traversed,
     ///   one segment at a time, relative to the directory represented by this
     ///   connection.
-    ///   See [`fuchsia.io2/Path`] for what constitutes a valid path.
+    ///   See [`Path`] for what constitutes a valid path.
     ///   To open another connection to the current directory, use
-    ///   [`fuchsia.io2/Node.Reopen`] instead.
+    ///   [`Node2.Reopen`] instead.
     /// + `mode` controls whether to open existing/create new etc.
     /// + `options` additional options applicable to both `Open` and `Reopen`,
     ///   including negotiating protocol and restricting rights.
-    ///   See [`fuchsia.io2/ConnectionOptions`].
+    ///   See [`ConnectionOptions`].
     /// + `object_request` is the server end of a channel created for the new
     ///   connection. The caller may proceed to send messages on the
     ///   corresponding client end right away.
@@ -36,7 +37,9 @@ protocol Directory {
     /// * error `ZX_ERR_ACCESS_DENIED` if the requested rights exceeds
     ///   what is allowed.
     /// * error `ZX_ERR_BAD_PATH` if `path` is invalid.
-    Open(resource struct {
+    @transitional
+    @selector("fuchsia.io/Directory.Open")
+    Open2(resource struct {
         path Path;
         mode OpenMode;
         options ConnectionOptions;
@@ -62,14 +65,8 @@ protocol Directory {
     ///   have a different server end of the socket and there will be a single client end per
     ///   inotify instance on inotify init.
     ///
-    /// + `controller` is the server end of a channel and is per filter in the vnode so that
-    ///   we can remove the specific inotify filter when the controller is closed by the server
-    ///   or the client.
-    ///
-    ///   Errors are presented as an epitaph on the `controller` channel.
-    /// * error `ZX_ERR_ACCESS_DENIED` if the requested rights exceeds
-    ///   what is allowed.
-    /// * error `ZX_ERR_BAD_PATH` if `path` is invalid.
+    // TODO(tamird): why does this specify "io1"?
+    @selector("fuchsia.io1/Directory.AddInotifyFilter")
     AddInotifyFilter(resource struct {
         path Path;
         filter InotifyWatchMask;
@@ -101,6 +98,7 @@ protocol Directory {
     ///
     /// * [`Rights.ENUMERATE`]
     /// * [`Rights.MODIFY_DIRECTORY`]
+    @selector("fuchsia.io/Directory.Unlink")
     Unlink(struct {
         name Name;
         options UnlinkOptions;
@@ -111,6 +109,8 @@ protocol Directory {
     ///
     /// This method requires the [`Rights.ENUMERATE`] right. If this right is
     /// absent, `iterator` will be closed with a `ZX_ERR_ACCESS_DENIED` epitaph.
+    @transitional
+    @selector("fuchsia.io/Directory.Enumerate")
     Enumerate(resource struct {
         options DirectoryEnumerateOptions;
         iterator server_end:DirectoryIterator;
@@ -120,7 +120,7 @@ protocol Directory {
     /// by `dst_parent_token`.
     ///
     /// `src` and `dst` must be valid node names.
-    /// See [`fuchsia.io2/Name`] for what constitutes a valid name.
+    /// See [`Name`] for what constitutes a valid name.
     ///
     /// This method requires the following rights on both the current
     /// connection, and the connection identified by `dst_parent_token`:
@@ -129,6 +129,7 @@ protocol Directory {
     /// * [`Rights.MODIFY_DIRECTORY`]
     ///
     /// * error `ZX_ERR_INVALID_ARGS` if `src` or `dst` is invalid.
+    @selector("fuchsia.io/Directory.Rename")
     Rename(resource struct {
         src Name;
         dst_parent_token Token;
@@ -141,7 +142,7 @@ protocol Directory {
     /// Directories cannot be linked, to prevent reference cycles.
     ///
     /// `src` and `dst` must be valid node names.
-    /// See [`fuchsia.io2/Name`] for what constitutes a valid name.
+    /// See [`Name`] for what constitutes a valid name.
     ///
     /// This method requires the following rights on both the current
     /// connection, and the connection identified by `dst_parent_token`:
@@ -151,7 +152,9 @@ protocol Directory {
     ///
     /// * error `ZX_ERR_INVALID_ARGS` if `src` or `dst` is invalid.
     /// * error `ZX_ERR_INVALID_ARGS` if `src` is a directory.
-    Link(resource struct {
+    @transitional
+    @selector("fuchsia.io/Directory.Link")
+    Link2(resource struct {
         src Name;
         dst_parent_token Token;
         dst Name;
@@ -164,10 +167,12 @@ protocol Directory {
     ///
     /// This method requires the [`Rights.ENUMERATE`] right. If this right is
     /// absent, `watcher` will be closed with a `ZX_ERR_ACCESS_DENIED` epitaph.
-    Watch(resource struct {
+    @transitional
+    @selector("fuchsia.io/Directory.Watch")
+    Watch2(resource struct {
         mask DirectoryWatchMask;
         options DirectoryWatchOptions;
-        watcher server_end:DirectoryWatcher;
+        watcher server_end:DirectoryWatcher2;
     });
 };
 
@@ -194,7 +199,7 @@ type OpenMode = strict enum : uint32 {
 
 /// Auxiliary data for the directory representation of a node.
 /// The selection of this variant in [`Representation`] implies that the
-/// connection speaks the [`fuchsia.io2/Directory`] protocol.
+/// connection speaks the [`Directory`] protocol.
 type DirectoryInfo = table {};
 
 /// Options for [`Directory.Unlink`].

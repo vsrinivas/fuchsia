@@ -46,7 +46,7 @@ use {
         RunnerRegistration, ServiceDecl, SourceName, StorageDecl, StorageDirectorySource, UseDecl,
         UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource, UseStorageDecl,
     },
-    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
     from_enum::FromEnum,
     moniker::{AbsoluteMoniker, ChildMoniker, RelativeMonikerBase},
     std::{
@@ -449,7 +449,7 @@ pub struct DirectoryState {
 }
 
 impl DirectoryState {
-    fn new(operations: fio2::Operations, subdir: Option<PathBuf>) -> Self {
+    fn new(operations: fio::Operations, subdir: Option<PathBuf>) -> Self {
         DirectoryState {
             rights: WalkState::at(operations.into()),
             subdir: subdir.unwrap_or_else(PathBuf::new),
@@ -464,7 +464,7 @@ impl DirectoryState {
 
     fn advance(
         &mut self,
-        rights: Option<fio2::Operations>,
+        rights: Option<fio::Operations>,
         subdir: Option<PathBuf>,
     ) -> Result<(), RoutingError> {
         self.rights = self.rights.advance(rights.map(Rights::from))?;
@@ -475,7 +475,7 @@ impl DirectoryState {
 
     fn finalize(
         &mut self,
-        rights: fio2::Operations,
+        rights: fio::Operations,
         subdir: Option<PathBuf>,
     ) -> Result<(), RoutingError> {
         self.rights = self.rights.finalize(Some(rights.into()))?;

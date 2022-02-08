@@ -48,7 +48,7 @@ In the Fuchsia tree, frequently used FIDL crates are often aliased to
 a shorter name for brevity, like so:
 
 ```rust
-use fidl_fuchsia_io2 as fio2;
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_data as fdata;
 ```
 

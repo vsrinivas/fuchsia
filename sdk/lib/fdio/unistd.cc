@@ -1626,15 +1626,17 @@ struct dirent* readdir(DIR* dir) {
         return DT_REG;
       if (protocols & ZXIO_NODE_PROTOCOL_MEMORY)
         return DT_REG;
-      if (protocols & ZXIO_NODE_PROTOCOL_POSIX_SOCKET)
-        return DT_SOCK;
       if (protocols & ZXIO_NODE_PROTOCOL_PIPE)
         return DT_FIFO;
+      if (protocols & ZXIO_NODE_PROTOCOL_STREAM_SOCKET)
+        return DT_SOCK;
+      if (protocols & ZXIO_NODE_PROTOCOL_DATAGRAM_SOCKET)
+        return DT_SOCK;
+      if (protocols & ZXIO_NODE_PROTOCOL_RAW_SOCKET)
+        return DT_SOCK;
       if (protocols & ZXIO_NODE_PROTOCOL_DEVICE)
         return DT_BLK;
       if (protocols & ZXIO_NODE_PROTOCOL_TTY)
-        return DT_CHR;
-      if (protocols & ZXIO_NODE_PROTOCOL_DEBUGLOG)
         return DT_CHR;
       // There is no good analogue for FIDL services in POSIX land.
       if (protocols & ZXIO_NODE_PROTOCOL_CONNECTOR)

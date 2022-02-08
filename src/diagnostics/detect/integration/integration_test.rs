@@ -30,7 +30,7 @@ use {
     fake_crash_reporter::FakeCrashReporter,
     fake_crash_reporting_product_register::FakeCrashReportingProductRegister,
     fidl_fuchsia_diagnostics as diagnostics, fidl_fuchsia_feedback as fcrash,
-    fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_io as fio,
     fuchsia_component::server::*,
     fuchsia_component_test::new::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
@@ -277,7 +277,7 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
         .unwrap();
 
     // Forward mocks to detect
-    let rights = fio2::R_STAR_DIR;
+    let rights = fio::R_STAR_DIR;
     builder
         .add_route(
             Route::new()

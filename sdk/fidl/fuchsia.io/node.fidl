@@ -31,7 +31,9 @@ type NodeInfo = strict resource union {
 
     /// The connection composes [`Directory`].
     3: directory @generated_name("DirectoryObject") struct {};
-    4: pipe resource struct {
+
+    /// The connection composes [`Pipe`].
+    4: pipe @generated_name("PipeObject") resource struct {
         socket zx.handle:SOCKET;
     };
 
@@ -147,8 +149,15 @@ type FilesystemInfo = struct {
     name array<int8, MAX_FS_NAME_BUFFER>;
 };
 
-/// Node defines the minimal interface for entities which can be accessed in a filesystem.
 protocol Node {
+    compose Node1;
+    compose Node2;
+};
+
+/// Node defines the minimal interface for entities which can be accessed in a filesystem.
+protocol Node1 {
+    compose Node2;
+
     /// This message should never be sent or received.
     ///
     /// This declaration exists to let keep the Rust bindings compiling as we add and remove
@@ -185,24 +194,6 @@ protocol Node {
         object server_end:Node;
     });
 
-    /// Creates another connection to the same node.
-    ///
-    /// + `options` options applicable to both `Open` and `Reopen`,
-    ///   including negotiating protocol and restricting rights.
-    ///   See [`fuchsia.io2/ConnectionOptions`].
-    /// + `object_request` is the server end of a channel created for the new
-    ///   connection. The caller may proceed to send messages on the
-    ///   corresponding client end right away.
-    ///
-    /// For files, the cloned connection and the original connection have
-    /// independent seek offsets.
-    @transitional
-    @selector("fuchsia.io/Node.Reopen")
-    Reopen(resource struct {
-        options ConnectionOptions;
-        object_request zx.handle:CHANNEL;
-    });
-
     /// Terminates connection with object.
     ///
     /// This method does not require any rights.
@@ -211,12 +202,6 @@ protocol Node {
         s zx.status;
     });
 
-    /// Terminates connection with object.
-    ///
-    /// This method does not require any rights.
-    @selector("fuchsia.io/Node.Close")
-    Close2() -> (struct {}) error zx.status;
-
     /// Returns extra information about the type of the object.
     /// If the `Describe` operation fails, the connection is closed.
     ///
@@ -224,28 +209,6 @@ protocol Node {
     @selector("fuchsia.io1/Node.Describe")
     Describe() -> (resource struct {
         info NodeInfo;
-    });
-
-    /// Returns extra connection information and auxiliary handles.
-    ///
-    /// + `query` specifies the fields in `ConnectionInfo` that the caller is
-    ///   interested in.
-    /// - `info` see [`fuchsia.io2/ConnectionInfo`] for details on the fields.
-    ///
-    /// When all known bits in `query` are set, the return value matches
-    /// the one from [`OnConnectionInfo`], as if the caller requested that event
-    /// using [`ConnectionFlags.GET_CONNECTION_INFO`].
-    ///
-    /// If the `Describe` operation fails, the connection is closed with the
-    /// associated error.
-    ///
-    /// This method does not require any rights.
-    @transitional
-    @selector("fuchsia.io/Node.Describe")
-    Describe2(struct {
-        query ConnectionInfoQuery;
-    }) -> (resource struct {
-        info ConnectionInfo;
     });
 
     /// An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
@@ -259,20 +222,6 @@ protocol Node {
         info NodeInfo:optional;
     });
 
-    /// An event produced eagerly by the server if requested by
-    /// [`ConnectionFlags.GET_CONNECTION_INFO`]. This event will be the
-    /// first message from the server, and is sent exactly once.
-    ///
-    /// - `info` See [`fuchsia.io2/ConnectionInfo`] for details on the fields.
-    ///   All members should be present.
-    ///
-    /// Different from [`fuchsia.io/OnOpen`], an error during open/reopen is
-    /// always manifested as an epitaph.
-    @selector("fuchsia.io/Node.OnConnectionInfo")
-    -> OnConnectionInfo(resource struct {
-        info ConnectionInfo;
-    });
-
     /// Synchronizes updates to the node to the underlying media, if it exists.
     ///
     /// This method does not require any rights.
@@ -280,19 +229,6 @@ protocol Node {
     Sync() -> (struct {
         s zx.status;
     });
-
-    /// Synchronizes updates to the node to the underlying media, if it exists.
-    ///
-    /// This method will return when the filesystem server has flushed the
-    /// relevant updates to the underlying media, but does not guarantee the
-    /// underlying media has persisted the information, nor that any information
-    /// is committed to hardware. Clients may use `Sync` to ensure ordering
-    /// between operations.
-    ///
-    /// This method does not require any rights.
-    @transitional
-    @selector("fuchsia.io/Node.Sync")
-    Sync2() -> (struct {}) error zx.status;
 
     /// Acquires information about the node.
     ///
@@ -302,24 +238,6 @@ protocol Node {
         s zx.status;
         attributes NodeAttributes;
     });
-
-    /// Acquires information about the node.
-    ///
-    /// The attributes of a node should be stable, independent of the
-    /// specific protocol used to access it.
-    ///
-    /// + `query` a bit-mask specifying which attributes to fetch. The server
-    ///   should not return more than necessary.
-    /// - `attributes` the returned attributes.
-    ///
-    /// This method requires the [`Rights.GET_ATTRIBUTES`] right.
-    @transitional
-    @selector("fuchsia.io/Node.GetAttributes")
-    GetAttributes(struct {
-        query NodeAttributesQuery;
-    }) -> (struct {
-        attributes NodeAttributes2;
-    }) error zx.status;
 
     /// Updates information about the node.
     /// `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
@@ -333,18 +251,6 @@ protocol Node {
     }) -> (struct {
         s zx.status;
     });
-
-    /// Updates information about the node.
-    ///
-    /// + `attributes` the presence of a table field in `attributes` indicates
-    /// the intent to update the corresponding attribute.
-    ///
-    /// This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    @transitional
-    @selector("fuchsia.io/Node.UpdateAttributes")
-    UpdateAttributes(struct {
-        attributes NodeAttributes2;
-    }) -> (struct {}) error zx.status;
 
     /// Acquires the `Directory.Open` rights and flags used to access this file.
     ///

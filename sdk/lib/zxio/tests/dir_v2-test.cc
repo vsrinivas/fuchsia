@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.io2/cpp/wire.h>
-#include <fidl/fuchsia.io2/cpp/wire_test_base.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
@@ -21,9 +21,9 @@
 
 namespace {
 
-namespace fio2 = fuchsia_io2;
+namespace fio = fuchsia_io;
 
-class TestServerBase : public fidl::testing::WireTestBase<fio2::Directory> {
+class TestServerBase : public fidl::testing::WireTestBase<fio::Directory2> {
  public:
   TestServerBase() = default;
   virtual ~TestServerBase() = default;
@@ -34,8 +34,9 @@ class TestServerBase : public fidl::testing::WireTestBase<fio2::Directory> {
   }
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
     num_close_.fetch_add(1);
+    completer.ReplySuccess();
     completer.Close(ZX_OK);
   }
 
@@ -78,7 +79,7 @@ class DirV2 : public zxtest::Test {
 
  protected:
   zxio_storage_t dir_;
-  fidl::ServerEnd<fio2::Directory> server_end_;
+  fidl::ServerEnd<fio::Directory2> server_end_;
   std::unique_ptr<TestServerBase> server_;
   std::unique_ptr<async::Loop> loop_;
 };
@@ -87,30 +88,30 @@ TEST_F(DirV2, Enumerate) {
   class TestServer : public TestServerBase {
    public:
     void Enumerate(EnumerateRequestView request, EnumerateCompleter::Sync& completer) override {
-      class IteratorServer : public fidl::WireServer<fio2::DirectoryIterator> {
+      class IteratorServer : public fidl::WireServer<fio::DirectoryIterator> {
        public:
         explicit IteratorServer(sync_completion_t* completion) : completion_(completion) {}
 
         // Sends a different entry every time.
         void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) override {
           fidl::Arena allocator;
-          fidl::VectorView<fio2::wire::DirectoryEntry> entry(allocator, 1);
+          fidl::VectorView<fio::wire::DirectoryEntry> entry(allocator, 1);
           entry[0].Allocate(allocator);
           switch (count_) {
             case 0:
               entry[0].set_name(allocator, fidl::StringView("zero"));
-              entry[0].set_protocols(allocator, fio2::wire::NodeProtocols::kDirectory);
-              entry[0].set_abilities(allocator, fio2::wire::Operations::kEnumerate);
+              entry[0].set_protocols(allocator, fio::wire::NodeProtocols::kDirectory);
+              entry[0].set_abilities(allocator, fio::wire::Operations::kEnumerate);
               entry[0].set_id(allocator, 0);
               break;
             case 1:
               entry[0].set_name(allocator, fidl::StringView("one"));
-              entry[0].set_protocols(allocator, fio2::wire::NodeProtocols::kFile);
-              entry[0].set_abilities(allocator, fio2::wire::Operations::kReadBytes);
+              entry[0].set_protocols(allocator, fio::wire::NodeProtocols::kFile);
+              entry[0].set_abilities(allocator, fio::wire::Operations::kReadBytes);
               entry[0].set_id(allocator, 1);
               break;
             default:
-              completer.ReplySuccess(fidl::VectorView<fio2::wire::DirectoryEntry>());
+              completer.ReplySuccess(fidl::VectorView<fio::wire::DirectoryEntry>());
               return;
           }
           count_++;

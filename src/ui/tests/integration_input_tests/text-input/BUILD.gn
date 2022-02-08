@@ -52,7 +52,6 @@ executable("text-input-test-bin") {
     "//sdk/fidl/fuchsia.fonts",
     "//sdk/fidl/fuchsia.hardware.display",
     "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.io2",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.memorypressure",
     "//sdk/fidl/fuchsia.net.interfaces",

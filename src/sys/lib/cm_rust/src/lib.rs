@@ -8,7 +8,7 @@ use {
         CapabilityDeclCommon, ExposeDeclCommon, FidlDecl, OfferDeclCommon, UseDeclCommon,
     },
     cm_types, fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2, fidl_fuchsia_process as fprocess,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_process as fprocess,
     from_enum::FromEnum,
     lazy_static::lazy_static,
     std::collections::HashMap,
@@ -245,11 +245,11 @@ pub struct UseDirectoryDecl {
     #[cfg_attr(
         feature = "serde",
         serde(
-            deserialize_with = "serde_ext::deserialize_fio2_operations",
-            serialize_with = "serde_ext::serialize_fio2_operations"
+            deserialize_with = "serde_ext::deserialize_fio_operations",
+            serialize_with = "serde_ext::serialize_fio_operations"
         )
     )]
-    pub rights: fio2::Operations,
+    pub rights: fio::Operations,
 
     pub subdir: Option<PathBuf>,
     pub dependency_type: DependencyType,
@@ -363,11 +363,11 @@ pub struct OfferDirectoryDecl {
     #[cfg_attr(
         feature = "serde",
         serde(
-            deserialize_with = "serde_ext::deserialize_opt_fio2_operations",
-            serialize_with = "serde_ext::serialize_opt_fio2_operations"
+            deserialize_with = "serde_ext::deserialize_opt_fio_operations",
+            serialize_with = "serde_ext::serialize_opt_fio_operations"
         )
     )]
-    pub rights: Option<fio2::Operations>,
+    pub rights: Option<fio::Operations>,
 
     pub subdir: Option<PathBuf>,
 }
@@ -558,11 +558,11 @@ pub struct ExposeDirectoryDecl {
     #[cfg_attr(
         feature = "serde",
         serde(
-            deserialize_with = "serde_ext::deserialize_opt_fio2_operations",
-            serialize_with = "serde_ext::serialize_opt_fio2_operations"
+            deserialize_with = "serde_ext::deserialize_opt_fio_operations",
+            serialize_with = "serde_ext::serialize_opt_fio_operations"
         )
     )]
-    pub rights: Option<fio2::Operations>,
+    pub rights: Option<fio::Operations>,
 
     pub subdir: Option<PathBuf>,
 }
@@ -644,11 +644,11 @@ pub struct DirectoryDecl {
     #[cfg_attr(
         feature = "serde",
         serde(
-            deserialize_with = "serde_ext::deserialize_fio2_operations",
-            serialize_with = "serde_ext::serialize_fio2_operations"
+            deserialize_with = "serde_ext::deserialize_fio_operations",
+            serialize_with = "serde_ext::serialize_fio_operations"
         )
     )]
-    pub rights: fio2::Operations,
+    pub rights: fio::Operations,
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -1200,7 +1200,7 @@ fidl_translations_identical!(fdecl::StartupMode);
 fidl_translations_identical!(fdecl::OnTerminate);
 fidl_translations_identical!(fdecl::Durability);
 fidl_translations_identical!(fdata::Dictionary);
-fidl_translations_identical!(fio2::Operations);
+fidl_translations_identical!(fio::Operations);
 fidl_translations_identical!(fdecl::EnvironmentExtends);
 fidl_translations_identical!(fdecl::StorageId);
 fidl_translations_identical!(Vec<fprocess::HandleInfo>);
@@ -1995,7 +1995,7 @@ mod tests {
                         source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
                         source_name: Some("dir".to_string()),
                         target_path: Some("/data".to_string()),
-                        rights: Some(fio2::Operations::CONNECT),
+                        rights: Some(fio::Operations::CONNECT),
                         subdir: Some("foo/bar".to_string()),
                         ..fdecl::UseDirectory::EMPTY
                     }),
@@ -2046,7 +2046,7 @@ mod tests {
                         source_name: Some("dir".to_string()),
                         target_name: Some("data".to_string()),
                         target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
-                        rights: Some(fio2::Operations::CONNECT),
+                        rights: Some(fio::Operations::CONNECT),
                         subdir: Some("foo/bar".to_string()),
                         ..fdecl::ExposeDirectory::EMPTY
                     }),
@@ -2112,7 +2112,7 @@ mod tests {
                             fdecl::CollectionRef { name: "modular".to_string() }
                         )),
                         target_name: Some("data".to_string()),
-                        rights: Some(fio2::Operations::CONNECT),
+                        rights: Some(fio::Operations::CONNECT),
                         subdir: None,
                         dependency_type: Some(fdecl::DependencyType::Strong),
                         ..fdecl::OfferDirectory::EMPTY
@@ -2211,7 +2211,7 @@ mod tests {
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("data".to_string()),
                         source_path: Some("/data".to_string()),
-                        rights: Some(fio2::Operations::CONNECT),
+                        rights: Some(fio::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                     fdecl::Capability::Storage(fdecl::Storage {
@@ -2390,7 +2390,7 @@ mod tests {
                             source: UseSource::Framework,
                             source_name: "dir".try_into().unwrap(),
                             target_path: "/data".try_into().unwrap(),
-                            rights: fio2::Operations::CONNECT,
+                            rights: fio::Operations::CONNECT,
                             subdir: Some("foo/bar".into()),
                         }),
                         UseDecl::Storage(UseStorageDecl {
@@ -2422,7 +2422,7 @@ mod tests {
                             source_name: "dir".try_into().unwrap(),
                             target_name: "data".try_into().unwrap(),
                             target: ExposeTarget::Parent,
-                            rights: Some(fio2::Operations::CONNECT),
+                            rights: Some(fio::Operations::CONNECT),
                             subdir: Some("foo/bar".into()),
                         }),
                         ExposeDecl::Runner(ExposeRunnerDecl {
@@ -2463,7 +2463,7 @@ mod tests {
                             source_name: "dir".try_into().unwrap(),
                             target: OfferTarget::Collection("modular".to_string()),
                             target_name: "data".try_into().unwrap(),
-                            rights: Some(fio2::Operations::CONNECT),
+                            rights: Some(fio::Operations::CONNECT),
                             subdir: None,
                             dependency_type: DependencyType::Strong,
                         }),
@@ -2518,7 +2518,7 @@ mod tests {
                         CapabilityDecl::Directory(DirectoryDecl {
                             name: "data".into(),
                             source_path: Some("/data".try_into().unwrap()),
-                            rights: fio2::Operations::CONNECT,
+                            rights: fio::Operations::CONNECT,
                         }),
                         CapabilityDecl::Storage(StorageDecl {
                             name: "cache".into(),

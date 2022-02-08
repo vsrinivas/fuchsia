@@ -69,7 +69,7 @@ class RustFidlCategory extends CodeCategory implements SomeFidlCategory {
 
     // <&fidl_fuchsia_kernel::CpuStats as core::fmt::Debug>::fmt
     // <
-    //     &fidl_fuchsia_io2::Operations as core::hash::Hash
+    //     &fidl_fuchsia_io::Operations as core::hash::Hash
     // >::hash::<std::collections::hash::map::DefaultHasher>
     RegExp(r'^<&fidl_[a-z0-9_]+::.* as core::(fmt|hash).*>::(fmt|hash)'),
 

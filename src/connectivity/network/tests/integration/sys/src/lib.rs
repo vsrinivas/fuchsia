@@ -6,7 +6,6 @@
 
 use fidl::endpoints::{DiscoverableProtocolMarker as _, Proxy as _};
 use fidl_fuchsia_io as fio;
-use fidl_fuchsia_io2 as fio2;
 use fidl_fuchsia_logger as flogger;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_component::server::ServiceFs;
@@ -119,7 +118,7 @@ async fn start_with_cache_no_space() {
                 .capability(
                     Capability::directory(CACHE_DIR_NAME)
                         .path(CACHE_DIR_PATH)
-                        .rights(fio2::RW_STAR_DIR),
+                        .rights(fio::RW_STAR_DIR),
                 )
                 .from(&mock_cache)
                 .to(&netstack),
@@ -141,7 +140,7 @@ async fn start_with_cache_no_space() {
         source: cm_rust::UseSource::Parent,
         source_name: CACHE_DIR_NAME.try_into().expect("failed to convert string to path"),
         target_path: CACHE_DIR_PATH.try_into().expect("failed to convert string to path"),
-        rights: fio2::RW_STAR_DIR,
+        rights: fio::RW_STAR_DIR,
         subdir: None,
     }));
 
@@ -170,7 +169,7 @@ async fn start_with_cache_no_space() {
                 _ => None,
             })
             .expect("failed to find diagnostics capability");
-    *rights = fio2::R_STAR_DIR;
+    *rights = fio::R_STAR_DIR;
     let () = builder
         .replace_component_decl(&netstack, netstack_decl)
         .await
@@ -181,7 +180,7 @@ async fn start_with_cache_no_space() {
                 .capability(
                     Capability::directory(DIAGNOSTICS_DIR_NAME)
                         .path(DIAGNOSTICS_DIR_PATH)
-                        .rights(fio2::R_STAR_DIR),
+                        .rights(fio::R_STAR_DIR),
                 )
                 .from(&netstack)
                 .to(Ref::parent()),

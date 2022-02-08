@@ -5,8 +5,7 @@
 //! Typesafe wrappers around the /pkgfs/ctl filesystem.
 
 use {
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, DirectoryRequestStream},
-    fidl_fuchsia_io2::UnlinkOptions,
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, DirectoryRequestStream, UnlinkOptions},
     fuchsia_zircon::Status,
     thiserror::Error,
 };

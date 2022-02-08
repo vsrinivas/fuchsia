@@ -573,7 +573,7 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, assert_matches::assert_matches, cm_types::ParseError, fidl_fuchsia_io2 as fio2,
+        super::*, assert_matches::assert_matches, cm_types::ParseError, fidl_fuchsia_io as fio,
         std::path::PathBuf, tempfile::TempDir,
     };
 
@@ -755,7 +755,7 @@ mod tests {
                     fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("bar_dir".into()),
                         source_path: Some("/bar".into()),
-                        rights: Some(fio2::Operations::CONNECT),
+                        rights: Some(fio::Operations::CONNECT),
                         ..fdecl::Directory::EMPTY
                     }),
                 ]),
@@ -862,7 +862,7 @@ mod tests {
                     cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
                         name: "bar_dir".into(),
                         source_path: Some("/bar".parse().unwrap()),
-                        rights: fio2::Operations::CONNECT,
+                        rights: fio::Operations::CONNECT,
                     }),
                 ],
                 builtin_capabilities: vec![

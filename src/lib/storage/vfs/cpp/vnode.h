@@ -34,14 +34,11 @@
 
 #ifdef __Fuchsia__
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/file-lock/file-lock.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <lib/zx/stream.h>
 #include <zircon/device/vfs.h>
-
-namespace fio2 = fuchsia_io2;
 #endif  // __Fuchsia__
 
 namespace fs {
@@ -252,8 +249,9 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // methods on the vnode. Other errors are considered fatal and will terminate the connection.
   virtual zx_status_t CreateStream(uint32_t stream_options, zx::stream* out_stream);
 
-  zx_status_t InsertInotifyFilter(fio2::wire::InotifyWatchMask filter, uint32_t watch_descriptor,
-                                  zx::socket socket) __TA_EXCLUDES(gInotifyLock);
+  zx_status_t InsertInotifyFilter(fuchsia_io::wire::InotifyWatchMask filter,
+                                  uint32_t watch_descriptor, zx::socket socket)
+      __TA_EXCLUDES(gInotifyLock);
 #endif
 
   // Closes the vnode. Will be called once for each successful Open().
@@ -397,7 +395,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual void SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote);
 
   // Check existing inotify watches and issue inotify events.
-  zx_status_t CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask event)
+  zx_status_t CheckInotifyFilterAndNotify(fuchsia_io::wire::InotifyWatchMask event)
       __TA_EXCLUDES(gInotifyLock);
 #endif  // __Fuchsia__
 
@@ -479,10 +477,10 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   static std::mutex gLockAccess;
   static std::map<const Vnode*, std::shared_ptr<file_lock::FileLock>> gLockMap;
   struct InotifyFilter {
-    fio2::wire::InotifyWatchMask filter_;
+    fuchsia_io::wire::InotifyWatchMask filter_;
     uint32_t watch_descriptor_;
     zx::socket socket_;
-    InotifyFilter(fio2::wire::InotifyWatchMask filter, uint32_t wd, zx::socket socket)
+    InotifyFilter(fuchsia_io::wire::InotifyWatchMask filter, uint32_t wd, zx::socket socket)
         : filter_{filter}, watch_descriptor_{wd} {
       socket_ = std::move(socket);
     }

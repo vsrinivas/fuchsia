@@ -14,7 +14,7 @@ use {
         ConfigurationProxy, HostWatcherMarker, HostWatcherProxy,
     },
     fidl_fuchsia_device::{NameProviderMarker, NameProviderRequestStream},
-    fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_stash::SecureStoreMarker,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::new::{
@@ -254,7 +254,7 @@ async fn bt_init_component_topology() {
     builder
         .add_route(
             Route::new()
-                .capability(Capability::directory("dev").path("/dev").rights(fio2::RW_STAR_DIR))
+                .capability(Capability::directory("dev").path("/dev").rights(fio::RW_STAR_DIR))
                 .from(&mock_dev)
                 .to(&bt_init),
         )

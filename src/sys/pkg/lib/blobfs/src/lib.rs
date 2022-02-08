@@ -10,9 +10,8 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, DirectoryRequestStream, FileObject, FileProxy, NodeInfo,
-        NodeMarker,
+        NodeMarker, UnlinkOptions,
     },
-    fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_hash::{Hash, ParseHashError},
     fuchsia_syslog::fx_log_warn,
     fuchsia_zircon::{self as zx, AsHandleRef as _, Status},

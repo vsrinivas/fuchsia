@@ -1,0 +1,21 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.io;
+
+using zx;
+
+/// The connection composes [`fuchsia.posix.socket/DatagramSocket`].
+type DatagramSocketInfo = resource table {
+    1: event zx.handle:EVENTPAIR;
+};
+
+/// The connection composes [`fuchsia.posix.socket/StreamSocket`].
+type StreamSocketInfo = resource table {
+    1: socket zx.handle:SOCKET;
+};
+
+/// The connection composes [`fuchsia.posix.socket.raw/Socket`].
+type RawSocketInfo = resource table {
+    1: event zx.handle:EVENTPAIR;
+};

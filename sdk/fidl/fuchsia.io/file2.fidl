@@ -1,9 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.io2;
+library fuchsia.io;
 
-using fuchsia.mem;
 using zx;
 
 // TODO: We should run some experiments to see what's the optimum value, or
@@ -15,10 +14,10 @@ const MAX_TRANSFER_SIZE uint64 = 8192;
 /// The byte vector type used for read/write operations.
 alias Transfer = bytes:MAX_TRANSFER_SIZE;
 
-/// A [`fuchsia.io2/Node`] which contains a sequence of bytes of definite
+/// A [`Node2`] which contains a sequence of bytes of definite
 /// length.
-protocol File {
-    compose Node;
+protocol File2 {
+    compose Node2;
     compose AdvisoryLocking;
 
     /// Moves the offset at which the next invocation of [`Read`] or [`Write`]
@@ -30,7 +29,9 @@ protocol File {
     ///   of the file.
     ///
     /// This method does not require any rights.
-    Seek(struct {
+    @transitional
+    @selector("fuchsia.io/File.Seek")
+    Seek2(struct {
         origin SeekOrigin;
         offset int64;
     }) -> (struct {
@@ -55,7 +56,9 @@ protocol File {
     /// This method requires the [`Rights.READ_BYTES`] right.
     ///
     /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_TRANSFER_SIZE`.
-    Read(struct {
+    @transitional
+    @selector("fuchsia.io/File.Read")
+    Read2(struct {
         count uint64;
     }) -> (struct {
         data Transfer;
@@ -82,7 +85,9 @@ protocol File {
     ///   is still updated if in append mode.
     ///
     /// This method requires the [`Rights.WRITE_BYTES`] right.
-    Write(struct {
+    @transitional
+    @selector("fuchsia.io/File.Write")
+    Write2(struct {
         data Transfer;
     }) -> (struct {
         actual_count uint64;
@@ -105,7 +110,9 @@ protocol File {
     /// This method requires the [`Rights.READ_BYTES`] right.
     ///
     /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_TRANSFER_SIZE`.
-    ReadAt(struct {
+    @transitional
+    @selector("fuchsia.io/File.ReadAt")
+    ReadAt2(struct {
         count uint64;
         offset uint64;
     }) -> (struct {
@@ -131,7 +138,9 @@ protocol File {
     ///   ensuring write access without mutating the file.
     ///
     /// This method requires the [`Rights.WRITE_BYTES`] right.
-    WriteAt(struct {
+    @transitional
+    @selector("fuchsia.io/File.WriteAt")
+    WriteAt2(struct {
         data Transfer;
         offset uint64;
     }) -> (struct {
@@ -146,15 +155,17 @@ protocol File {
     /// as if it was zeroed.
     ///
     /// This method requires the [`Rights.WRITE_BYTES`] right.
+    @transitional
+    @selector("fuchsia.io/File.Resize")
     Resize(struct {
         length uint64;
     }) -> (struct {}) error zx.status;
 
-    /// Acquires a [`fuchsia.mem/Range`] representing this file, if
+    /// Acquires a [`zx.handle:VMO`] representing this file, if
     /// there is one, with the requested access rights.
     ///
     /// + request `flags` a [`VmoFlags`] indicating the desired mode of access.
-    /// - response `buffer` the requested [`fuchsia.mem/Range`].
+    /// - response `vmo` the requested [`zx.handle:VMO`].
     /// * error a [`zx.status`] value indicating the failure.
     ///
     /// This method requires the following rights:
@@ -162,10 +173,12 @@ protocol File {
     /// * [`Rights.READ_BYTES`] if `flags` includes [`VmoFlags.READ`].
     /// * [`Rights.WRITE_BYTES`] if `flags` includes [`VmoFlags.WRITE`].
     /// * [`Rights.EXECUTE`] if `flags` includes [`VmoFlags.EXECUTE`].
-    GetMemRange(struct {
+    @transitional
+    @selector("fuchsia.io/File.GetBackingMemory")
+    GetBackingMemory(struct {
         flags VmoFlags;
     }) -> (resource struct {
-        buffer fuchsia.mem.Range;
+        vmo zx.handle:VMO;
     }) error zx.status;
 };
 
@@ -211,7 +224,7 @@ type VmoFlags = strict bits : uint64 {
 
 /// Auxiliary data for the file representation of a node.
 /// The selection of this variant in [`Representation`] implies that the
-/// connection speaks the [`fuchsia.io2/File`] protocol.
+/// connection speaks the [`File`] protocol.
 type FileInfo = resource table {
     /// An optional event which transmits information about an object's
     /// readability or writability. This event relays information about the
@@ -237,7 +250,7 @@ type FileInfo = resource table {
     ///
     /// Reading and writing the file using the stream object can be up to 20x
     /// faster than reading and writing the file using the Read and Write
-    /// operations in the [`fuchsia.io2/File`] protocol.
+    /// operations in the [`File`] protocol.
     3: stream zx.handle:STREAM;
 };
 

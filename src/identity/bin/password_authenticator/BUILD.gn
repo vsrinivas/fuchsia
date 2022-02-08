@@ -20,7 +20,6 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//src/identity/lib/identity_common",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -98,7 +97,6 @@ fidl("test.identity") {
     "//sdk/fidl/fuchsia.hardware.block",
     "//sdk/fidl/fuchsia.hardware.block.partition",
     "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.io2",
     "//sdk/fidl/fuchsia.mem",
   ]
 }

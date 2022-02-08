@@ -65,7 +65,7 @@ class DirectoryConnection final : public Connection,
                        QueryFilesystemCompleter::Sync& completer) final;
 
   //
-  // |fuchsia.io2/AdvisoryLocking| operations.
+  // |fuchsia.io/AdvisoryLocking| operations.
   //
 
   void AdvisoryLock(AdvisoryLockRequestView request, AdvisoryLockCompleter::Sync& _completer) final;

@@ -197,7 +197,7 @@ impl TestCodeBuilder for RustTestCode {
             capability: Capability::directory(
                 "{}",
                 "{}",
-                fio2::RW_STAR_DIR),
+                fio::RW_STAR_DIR),
             source: RouteEndpoint::above_root(),
             targets: vec![
                 {}

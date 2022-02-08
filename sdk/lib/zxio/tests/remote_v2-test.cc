@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.io2/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -19,9 +19,9 @@
 
 namespace {
 
-namespace fio2 = fuchsia_io2;
+namespace fio = fuchsia_io;
 
-class TestServerBase : public fidl::WireServer<fio2::Node> {
+class TestServerBase : public fidl::WireServer<fio::Node2> {
  public:
   TestServerBase() = default;
   virtual ~TestServerBase() = default;
@@ -31,16 +31,17 @@ class TestServerBase : public fidl::WireServer<fio2::Node> {
   }
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
     num_close_.fetch_add(1);
+    completer.ReplySuccess();
     completer.Close(ZX_OK);
   }
 
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {
+  void GetToken2(GetToken2RequestView request, GetToken2Completer::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -54,7 +55,7 @@ class TestServerBase : public fidl::WireServer<fio2::Node> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
+  void Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -99,7 +100,7 @@ class RemoteV2 : public zxtest::Test {
 
  protected:
   zxio_storage_t remote_;
-  fidl::ServerEnd<fio2::Node> control_server_;
+  fidl::ServerEnd<fio::Node2> control_server_;
   zx::eventpair eventpair_on_server_;
   zx::eventpair eventpair_to_client_;
   std::unique_ptr<TestServerBase> server_;
@@ -113,14 +114,14 @@ TEST_F(RemoteV2, GetAttributes) {
    public:
     void GetAttributes(GetAttributesRequestView request,
                        GetAttributesCompleter::Sync& completer) override {
-      EXPECT_EQ(request->query, fio2::wire::NodeAttributesQuery::kMask);
+      EXPECT_EQ(request->query, fio::wire::NodeAttributesQuery::kMask);
       uint64_t content_size = kContentSize;
       uint64_t id = kId;
 
       fidl::Arena allocator;
-      fio2::wire::NodeAttributes nodes_attributes(allocator);
+      fio::wire::NodeAttributes2 nodes_attributes(allocator);
       nodes_attributes.set_content_size(allocator, content_size)
-          .set_protocols(allocator, fio2::wire::NodeProtocols::kFile)
+          .set_protocols(allocator, fio::wire::NodeProtocols::kFile)
           .set_id(allocator, id);
       completer.ReplySuccess(std::move(nodes_attributes));
     }
@@ -215,7 +216,7 @@ TEST_F(RemoteV2, WaitForReadable) {
   ASSERT_NO_FAILURES(StartServer<TestServerBase>());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_OK(eventpair_on_server_.signal_peer(
-      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::wire::DeviceSignal::kReadable)));
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio::wire::DeviceSignal2::kReadable)));
   ASSERT_OK(zxio_wait_one(&remote_.io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_READABLE, observed);
 }
@@ -224,7 +225,7 @@ TEST_F(RemoteV2, WaitForWritable) {
   ASSERT_NO_FAILURES(StartServer<TestServerBase>());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_OK(eventpair_on_server_.signal_peer(
-      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio2::wire::DeviceSignal::kWritable)));
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio::wire::DeviceSignal2::kWritable)));
   ASSERT_OK(zxio_wait_one(&remote_.io, ZXIO_SIGNAL_WRITABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
 }

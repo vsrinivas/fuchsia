@@ -1,24 +1,26 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.io2;
+library fuchsia.io;
 
 using zx;
 
 /// Node defines the minimal protocol for entities which can be accessed
 /// in a filesystem.
-protocol Node {
+protocol Node2 {
     /// Creates another connection to the same node.
     ///
     /// + `options` options applicable to both `Open` and `Reopen`,
     ///   including negotiating protocol and restricting rights.
-    ///   See [`fuchsia.io2/ConnectionOptions`].
+    ///   See [`ConnectionOptions`].
     /// + `object_request` is the server end of a channel created for the new
     ///   connection. The caller may proceed to send messages on the
     ///   corresponding client end right away.
     ///
     /// For files, the cloned connection and the original connection have
     /// independent seek offsets.
+    @transitional
+    @selector("fuchsia.io/Node.Reopen")
     Reopen(resource struct {
         options ConnectionOptions;
         object_request zx.handle:CHANNEL;
@@ -34,13 +36,14 @@ protocol Node {
     /// to calling `Close` without monitoring the status epitaph.
     ///
     /// This method does not require any rights.
-    Close();
+    @selector("fuchsia.io/Node.Close")
+    Close2() -> (struct {}) error zx.status;
 
     /// Returns extra connection information and auxiliary handles.
     ///
     /// + `query` specifies the fields in `ConnectionInfo` that the caller is
     ///   interested in.
-    /// - `info` see [`fuchsia.io2/ConnectionInfo`] for details on the fields.
+    /// - `info` see [`ConnectionInfo`] for details on the fields.
     ///
     /// When all known bits in `query` are set, the return value matches
     /// the one from [`OnConnectionInfo`], as if the caller requested that event
@@ -50,7 +53,9 @@ protocol Node {
     /// associated error.
     ///
     /// This method does not require any rights.
-    Describe(struct {
+    @transitional
+    @selector("fuchsia.io/Node.Describe")
+    Describe2(struct {
         query ConnectionInfoQuery;
     }) -> (resource struct {
         info ConnectionInfo;
@@ -60,11 +65,12 @@ protocol Node {
     /// [`ConnectionFlags.GET_CONNECTION_INFO`]. This event will be the
     /// first message from the server, and is sent exactly once.
     ///
-    /// - `info` See [`fuchsia.io2/ConnectionInfo`] for details on the fields.
+    /// - `info` See [`ConnectionInfo`] for details on the fields.
     ///   All members should be present.
     ///
     /// Different from [`fuchsia.io/OnOpen`], an error during open/reopen is
     /// always manifested as an epitaph.
+    @selector("fuchsia.io/Node.OnConnectionInfo")
     -> OnConnectionInfo(resource struct {
         info ConnectionInfo;
     });
@@ -74,7 +80,9 @@ protocol Node {
     ///
     /// This method does not require any rights. Note that the token identifies
     /// the connection, hence carries the rights information on this connection.
-    GetToken() -> (resource struct {
+    @transitional
+    @selector("fuchsia.io/Node.GetToken")
+    GetToken2() -> (resource struct {
         token Token;
     }) error zx.status;
 
@@ -88,10 +96,12 @@ protocol Node {
     /// - `attributes` the returned attributes.
     ///
     /// This method requires the [`Rights.GET_ATTRIBUTES`] right.
+    @transitional
+    @selector("fuchsia.io/Node.GetAttributes")
     GetAttributes(struct {
         query NodeAttributesQuery;
     }) -> (struct {
-        attributes NodeAttributes;
+        attributes NodeAttributes2;
     }) error zx.status;
 
     /// Updates information about the node.
@@ -100,8 +110,10 @@ protocol Node {
     /// the intent to update the corresponding attribute.
     ///
     /// This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
+    @transitional
+    @selector("fuchsia.io/Node.UpdateAttributes")
     UpdateAttributes(struct {
-        attributes NodeAttributes;
+        attributes NodeAttributes2;
     }) -> (struct {}) error zx.status;
 
     /// Synchronizes updates to the node to the underlying media, if it exists.
@@ -113,5 +125,7 @@ protocol Node {
     /// between operations.
     ///
     /// This method does not require any rights.
-    Sync() -> (struct {}) error zx.status;
+    @transitional
+    @selector("fuchsia.io/Node.Sync")
+    Sync2() -> (struct {}) error zx.status;
 };

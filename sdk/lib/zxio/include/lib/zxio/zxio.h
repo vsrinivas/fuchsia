@@ -382,7 +382,7 @@ ZXIO_EXPORT zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags, uint3
 // The |watch_descriptor| is the unique ID used to identify the watch filters
 // by the the client.
 //
-// See fuchsia.io/io2 for the available |mask|.
+// See fuchsia.io/io for the available |mask|.
 ZXIO_EXPORT zx_status_t zxio_add_inotify_filter(zxio_t* io, const char* path, size_t path_len,
                                                 uint32_t mask, uint32_t watch_descriptor,
                                                 zx_handle_t socket);

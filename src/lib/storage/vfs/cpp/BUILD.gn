@@ -103,7 +103,6 @@ static_library("cpp") {
     public_deps += [
       "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-      "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
       "//sdk/lib/file-lock:cpp",
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/fidl-async:fidl-async-cpp",
@@ -121,7 +120,6 @@ static_library("cpp") {
     deps += [
       "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_c",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-      "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
       "//sdk/fidl/fuchsia.mem:fuchsia.mem_llcpp",
       "//sdk/lib/fdio",
       "//sdk/lib/fit",
@@ -202,7 +200,6 @@ test("fs-vnode-test") {
   deps = [
     ":test_support",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async",
@@ -237,7 +234,6 @@ test("fs-connection-test") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
@@ -262,7 +258,6 @@ test("fs-inotify-test") {
   deps = [
     ":inotify_test_base",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",

@@ -8,7 +8,7 @@
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/component/runner/cpp/fidl.h>
 #include <fuchsia/component/test/cpp/fidl.h>
-#include <fuchsia/io2/cpp/fidl.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/sys/component/cpp/testing/internal/local_component_runner.h>

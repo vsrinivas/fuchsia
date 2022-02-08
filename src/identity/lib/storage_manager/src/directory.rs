@@ -7,8 +7,9 @@ use account_common::{AccountManagerError, ResultExt};
 use anyhow::format_err;
 use async_trait::async_trait;
 use fidl_fuchsia_identity_account::Error as ApiError;
-use fidl_fuchsia_io::{DirectoryProxy, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
-use fidl_fuchsia_io2::UnlinkOptions;
+use fidl_fuchsia_io::{
+    DirectoryProxy, UnlinkOptions, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+};
 use files_async::{DirEntry, DirentKind};
 use futures::lock::Mutex;
 use lazy_static::lazy_static;

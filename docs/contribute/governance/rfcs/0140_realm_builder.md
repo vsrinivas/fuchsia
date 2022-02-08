@@ -495,7 +495,7 @@ type RouteCapabilityDirectory = table {
     1: name fuchsia.component.name;
     2: as fuchsia.component.name; // optional
     3: type_ fuchsia.component.decl.DependencyType; // optional
-    4: rights fuchsia.io2.Rights; // optional
+    4: rights fuchsia.io.Rights; // optional
     5: subdir string:fuchsia.component.MAX_PATH_LENGTH; // optional
 };
 ```

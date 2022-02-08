@@ -118,7 +118,7 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   fcd::wire::OfferDirectory compat_dir(arena);
   compat_dir.set_source_name(arena, "fuchsia.driver.compat.Service");
   compat_dir.set_target_name(arena, "fuchsia.driver.compat.Service");
-  compat_dir.set_rights(arena, fuchsia_io2::wire::kRwStarDir);
+  compat_dir.set_rights(arena, fuchsia_io::wire::kRwStarDir);
   compat_dir.set_subdir(arena, fidl::StringView::FromExternal(device->name_));
   compat_dir.set_dependency_type(fcd::wire::DependencyType::kStrong);
 

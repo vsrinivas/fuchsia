@@ -8,7 +8,6 @@
 #include <fuchsia/component/test/cpp/fidl.h>
 #include <fuchsia/data/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
-#include <fuchsia/io2/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/dispatcher.h>
@@ -44,7 +43,7 @@ using namespace component_testing::internal;
 
 namespace fctest = fuchsia::component::test;
 namespace fcdecl = fuchsia::component::decl;
-namespace fio2 = fuchsia::io2;
+namespace fio = fuchsia::io;
 
 /*
  * Tests for |component_testing::internal::LocalComponentRunner| and
@@ -255,12 +254,12 @@ INSTANTIATE_TEST_SUITE_P(
                       .as = "bar",
                       .type = fcdecl::DependencyType::WEAK,
                       .subdir = "baz",
-                      .rights = fio2::Operations::EXECUTE,
+                      .rights = fio::Operations::EXECUTE,
                       .path = "/foo/bar/baz"},
             component::tests::CreateFidlDirectoryCapability(/*name=*/"foo", /*as=*/"bar",
                                                             /*type=*/fcdecl::DependencyType::WEAK,
                                                             /*subdir=*/"baz",
-                                                            /*rights=*/fio2::Operations::EXECUTE,
+                                                            /*rights=*/fio::Operations::EXECUTE,
                                                             /*path=*/"/foo/bar/baz"))));
 
 class ConvertTest : public testing::Test {};

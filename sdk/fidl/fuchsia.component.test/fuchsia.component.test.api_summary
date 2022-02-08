@@ -18,7 +18,7 @@ table fuchsia.component.test/ChildOptions
 table/member fuchsia.component.test/Directory.as string:100
 table/member fuchsia.component.test/Directory.name string:100
 table/member fuchsia.component.test/Directory.path string:1024
-table/member fuchsia.component.test/Directory.rights fuchsia.io2/Operations
+table/member fuchsia.component.test/Directory.rights fuchsia.io/Operations
 table/member fuchsia.component.test/Directory.subdir string:1024
 table/member fuchsia.component.test/Directory.type fuchsia.component.decl/DependencyType
 table fuchsia.component.test/Directory

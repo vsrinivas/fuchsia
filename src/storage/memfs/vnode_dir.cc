@@ -120,7 +120,7 @@ zx_status_t VnodeDir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<f
   *out = std::move(vn);
 
 #ifdef __Fuchsia__
-  CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask::kCreate);
+  CheckInotifyFilterAndNotify(fuchsia_io::wire::InotifyWatchMask::kCreate);
 #endif
   return ZX_OK;
 }

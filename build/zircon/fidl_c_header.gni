@@ -7,7 +7,6 @@
 allowed_libraries = [
   "fuchsia.debugdata",
   "fuchsia.io",
-  "fuchsia.io2",
   "fuchsia.mem",
   "zx",
 ]

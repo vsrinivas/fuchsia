@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io2/cpp/fidl.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/driver_test_realm/realm_builder/cpp/lib.h>
 #include <lib/fdio/fd.h>
@@ -35,7 +35,7 @@ void Setup(component_testing::RealmBuilder& realm_builder) {
                                .source = {ChildRef{"driver_test_realm"}},
                                .targets = {ParentRef()}});
   realm_builder.AddRoute(
-      Route{.capabilities = {Directory{.name = "dev", .rights = fuchsia::io2::RW_STAR_DIR}},
+      Route{.capabilities = {Directory{.name = "dev", .rights = fuchsia::io::RW_STAR_DIR}},
             .source = {ChildRef{"driver_test_realm"}},
             .targets = {ParentRef()}});
 }

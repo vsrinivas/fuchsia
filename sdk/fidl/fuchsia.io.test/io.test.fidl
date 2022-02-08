@@ -170,13 +170,13 @@ protocol Io2Harness {
     ///
     /// This connection should have the following rights:
     ///
-    ///     * [`fuchsia.io2/Rights.CONNECT`].
-    ///     * [`fuchsia.io2/Rights.ENUMERATE`].
-    ///     * [`fuchsia.io2/Rights.TRAVERSE`].
-    ///     * [`fuchsia.io2/Rights.READ_BYTES`].
-    ///     * [`fuchsia.io2/Rights.WRITE_BYTES`].
-    ///     * [`fuchsia.io2/Rights.GET_ATTRIBUTES`].
-    ///     * [`fuchsia.io2/Rights.UPDATE_ATTRIBUTES`].
+    ///     * [`fuchsia.io/Rights.CONNECT`].
+    ///     * [`fuchsia.io/Rights.ENUMERATE`].
+    ///     * [`fuchsia.io/Rights.TRAVERSE`].
+    ///     * [`fuchsia.io/Rights.READ_BYTES`].
+    ///     * [`fuchsia.io/Rights.WRITE_BYTES`].
+    ///     * [`fuchsia.io/Rights.GET_ATTRIBUTES`].
+    ///     * [`fuchsia.io/Rights.UPDATE_ATTRIBUTES`].
     ///
     GetEmptyDirectory(resource struct {
         directory_request zx.handle:CHANNEL;

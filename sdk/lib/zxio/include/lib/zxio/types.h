@@ -124,7 +124,7 @@ typedef uint32_t zxio_object_type_t;
 // File and directory access ---------------------------------------------------
 
 // The set of supported representations of a node.
-// Refer to |fuchsia.io2/NodeProtocols| for the documentation of each item.
+// Refer to |fuchsia.io/NodeProtocols| for the documentation of each item.
 typedef uint64_t zxio_node_protocols_t;
 
 #define ZXIO_NODE_PROTOCOL_NONE ((zxio_node_protocols_t)0ul)
@@ -133,21 +133,23 @@ typedef uint64_t zxio_node_protocols_t;
 #define ZXIO_NODE_PROTOCOL_DIRECTORY ((zxio_node_protocols_t)1ul << 1)
 #define ZXIO_NODE_PROTOCOL_FILE ((zxio_node_protocols_t)1ul << 2)
 #define ZXIO_NODE_PROTOCOL_MEMORY ((zxio_node_protocols_t)1ul << 3)
-#define ZXIO_NODE_PROTOCOL_POSIX_SOCKET ((zxio_node_protocols_t)1ul << 4)
-#define ZXIO_NODE_PROTOCOL_PIPE ((zxio_node_protocols_t)1ul << 5)
-#define ZXIO_NODE_PROTOCOL_DEBUGLOG ((zxio_node_protocols_t)1ul << 6)
+#define ZXIO_NODE_PROTOCOL_PIPE ((zxio_node_protocols_t)1ul << 4)
+#define ZXIO_NODE_PROTOCOL_DATAGRAM_SOCKET ((zxio_node_protocols_t)1ul << 5)
+#define ZXIO_NODE_PROTOCOL_STREAM_SOCKET ((zxio_node_protocols_t)1ul << 6)
+#define ZXIO_NODE_PROTOCOL_RAW_SOCKET ((zxio_node_protocols_t)1ul << 7)
 #define ZXIO_NODE_PROTOCOL_DEVICE ((zxio_node_protocols_t)0x10000000ul)
 #define ZXIO_NODE_PROTOCOL_TTY ((zxio_node_protocols_t)0x20000000ul)
 
-#define ZXIO_NODE_PROTOCOL_ALL                                                             \
-  (ZXIO_NODE_PROTOCOL_CONNECTOR | ZXIO_NODE_PROTOCOL_DIRECTORY | ZXIO_NODE_PROTOCOL_FILE | \
-   ZXIO_NODE_PROTOCOL_MEMORY | ZXIO_NODE_PROTOCOL_POSIX_SOCKET | ZXIO_NODE_PROTOCOL_PIPE | \
-   ZXIO_NODE_PROTOCOL_DEBUGLOG | ZXIO_NODE_PROTOCOL_DEVICE | ZXIO_NODE_PROTOCOL_TTY)
+#define ZXIO_NODE_PROTOCOL_ALL                                                                    \
+  (ZXIO_NODE_PROTOCOL_CONNECTOR | ZXIO_NODE_PROTOCOL_DIRECTORY | ZXIO_NODE_PROTOCOL_FILE |        \
+   ZXIO_NODE_PROTOCOL_MEMORY | ZXIO_NODE_PROTOCOL_PIPE | ZXIO_NODE_PROTOCOL_DATAGRAM_SOCKET |     \
+   ZXIO_NODE_PROTOCOL_STREAM_SOCKET | ZXIO_NODE_PROTOCOL_RAW_SOCKET | ZXIO_NODE_PROTOCOL_DEVICE | \
+   ZXIO_NODE_PROTOCOL_TTY)
 
 typedef uint64_t zxio_id_t;
 
 // The kinds of operations behind |zxio_rights_t| and |zxio_abilities_t|.
-// Refer to |fuchsia.io2/Operations| for the documentation of each item.
+// Refer to |fuchsia.io/Operations| for the documentation of each item.
 typedef uint64_t zxio_operations_t;
 
 #define ZXIO_OPERATION_NONE ((zxio_operations_t)0ul)

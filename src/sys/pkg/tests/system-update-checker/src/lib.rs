@@ -6,7 +6,7 @@
 use {
     anyhow::anyhow,
     assert_matches::assert_matches,
-    fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_paver::{self as paver, PaverRequestStream},
     fidl_fuchsia_pkg::ResolveError,
     fidl_fuchsia_space::ErrorCode,
@@ -220,12 +220,12 @@ impl TestEnvBuilder {
                     .capability(
                         Capability::directory("pkgfs-system")
                             .path("/pkgfs/system")
-                            .rights(fio2::R_STAR_DIR),
+                            .rights(fio::R_STAR_DIR),
                     )
                     .capability(
                         Capability::directory("deprecated-misc-storage")
                             .path("/misc")
-                            .rights(fio2::RW_STAR_DIR),
+                            .rights(fio::RW_STAR_DIR),
                     )
                     .from(&fake_capabilities)
                     .to(&system_update_checker),

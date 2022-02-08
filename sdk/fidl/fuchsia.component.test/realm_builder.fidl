@@ -11,7 +11,6 @@ using fuchsia.component.types;
 using fuchsia.data;
 using fuchsia.mem;
 using fuchsia.io;
-using fuchsia.io2;
 using fuchsia.url;
 
 // The Realm Builder Server will include a local component's name in its
@@ -166,7 +165,7 @@ type Directory = table {
     4: subdir string:fuchsia.component.MAX_PATH_LENGTH; // optional
 
     // the following fields are required if `to` contains a local component
-    5: rights fuchsia.io2.Rights;
+    5: rights fuchsia.io.Rights;
     6: path string:fuchsia.component.MAX_PATH_LENGTH;
 };
 

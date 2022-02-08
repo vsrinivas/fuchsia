@@ -5,7 +5,6 @@
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/event.h>
 #include <lib/zx/process.h>
@@ -296,7 +295,7 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
 
 zx_status_t FuchsiaVfs::AddInotifyFilterToVnode(fbl::RefPtr<Vnode> vnode,
                                                 const fbl::RefPtr<Vnode>& parent_vnode,
-                                                fuchsia_io2::wire::InotifyWatchMask filter,
+                                                fuchsia_io::wire::InotifyWatchMask filter,
                                                 uint32_t watch_descriptor, zx::socket socket) {
   // TODO we need parent vnode for inotify events when a directory is being watched for events on
   // its directory entries.

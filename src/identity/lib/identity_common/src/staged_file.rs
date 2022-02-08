@@ -4,9 +4,9 @@
 
 use {
     fidl_fuchsia_io::{
-        DirectoryProxy, FileProxy, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryProxy, FileProxy, UnlinkOptions, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_zircon as zx,
     log::warn,
     rand::{thread_rng, Rng},

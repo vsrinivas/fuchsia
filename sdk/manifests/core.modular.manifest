@@ -61,7 +61,6 @@ sdk://fidl/fuchsia.input.virtualkeyboard
 sdk://fidl/fuchsia.inspect
 sdk://fidl/fuchsia.intl
 sdk://fidl/fuchsia.io
-sdk://fidl/fuchsia.io2
 sdk://fidl/fuchsia.kernel
 sdk://fidl/fuchsia.ldsvc
 sdk://fidl/fuchsia.legacymetrics

@@ -11,7 +11,7 @@ namespace tests {
 
 namespace fctest = fuchsia::component::test;
 namespace fcdecl = fuchsia::component::decl;
-namespace fio2 = fuchsia::io2;
+namespace fio = fuchsia::io;
 
 std::shared_ptr<fctest::ChildOptions> CreateFidlChildOptions(fcdecl::StartupMode startup_mode,
                                                              std::string environment) {
@@ -66,7 +66,7 @@ std::shared_ptr<fctest::Capability2> CreateFidlServiceCapability(std::string nam
 std::shared_ptr<fctest::Capability2> CreateFidlDirectoryCapability(std::string name, std::string as,
                                                                    fcdecl::DependencyType type,
                                                                    std::string subdir,
-                                                                   fio2::Operations rights,
+                                                                   fio::Operations rights,
                                                                    std::string path) {
   fctest::Directory capability;
   capability.set_name(std::move(name));

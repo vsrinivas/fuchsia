@@ -8,9 +8,7 @@ use {
         endpoints::{create_endpoints, create_proxy, ProtocolMarker, Proxy},
         AsHandleRef,
     },
-    fidl_fuchsia_io as io,
-    fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
-    fidl_fuchsia_io_test as io_test, fidl_fuchsia_mem,
+    fidl_fuchsia_io as io, fidl_fuchsia_io_test as io_test, fidl_fuchsia_mem,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_zircon as zx,
     futures::StreamExt,
@@ -1532,7 +1530,7 @@ async fn unlink_file_with_sufficient_rights() {
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
 
         src_dir
-            .unlink("file.txt", UnlinkOptions::EMPTY)
+            .unlink("file.txt", io::UnlinkOptions::EMPTY)
             .await
             .expect("unlink fidl failed")
             .expect("unlink failed");
@@ -1558,7 +1556,7 @@ async fn unlink_file_with_insufficient_rights() {
 
         assert_eq!(
             src_dir
-                .unlink("file.txt", UnlinkOptions::EMPTY)
+                .unlink("file.txt", io::UnlinkOptions::EMPTY)
                 .await
                 .expect("unlink fidl failed")
                 .expect_err("unlink succeeded"),
@@ -1583,7 +1581,7 @@ async fn unlink_directory_with_sufficient_rights() {
         // Re-open dir with flags being tested.
         let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
 
-        dir.unlink("src", UnlinkOptions::EMPTY)
+        dir.unlink("src", io::UnlinkOptions::EMPTY)
             .await
             .expect("unlink fidl failed")
             .expect("unlink failed");
@@ -1604,7 +1602,7 @@ async fn unlink_directory_with_insufficient_rights() {
         let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
 
         assert_eq!(
-            dir.unlink("src", UnlinkOptions::EMPTY)
+            dir.unlink("src", io::UnlinkOptions::EMPTY)
                 .await
                 .expect("unlink fidl failed")
                 .expect_err("unlink succeeded"),
@@ -1624,8 +1622,10 @@ async fn unlink_must_be_directory() {
     let root = root_directory(vec![directory("dir", vec![]), file("file", vec![])]);
     let test_dir = harness.get_directory(root, harness.dir_rights.all());
 
-    let must_be_directory =
-        UnlinkOptions { flags: Some(UnlinkFlags::MUST_BE_DIRECTORY), ..UnlinkOptions::EMPTY };
+    let must_be_directory = io::UnlinkOptions {
+        flags: Some(io::UnlinkFlags::MUST_BE_DIRECTORY),
+        ..io::UnlinkOptions::EMPTY
+    };
     test_dir
         .unlink("dir", must_be_directory.clone())
         .await

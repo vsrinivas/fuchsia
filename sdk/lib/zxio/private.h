@@ -10,6 +10,7 @@
 #include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
 #include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/extensions.h>
@@ -163,12 +164,12 @@ static_assert(sizeof(zxio_remote_t) <= sizeof(zxio_storage_t),
 
 // remote v2 -------------------------------------------------------------------
 
-// A |zxio_t| backend that uses the |fuchsia.io2/Node| protocol.
+// A |zxio_t| backend that uses the |fuchsia.io/Node2| protocol.
 //
-// The |control| handle is a channel that implements the |fuchsia.io2/Node|. The
-// |observer| handle is an optional object used with some |fuchsia.io2/Node|
+// The |control| handle is a channel that implements the |fuchsia.io/Node2|. The
+// |observer| handle is an optional object used with some |fuchsia.io/Node2|
 // servers. The |stream| handle is an optional stream object associated with the
-// file. See fuchsia.io2/FileInfo for additional documentation.
+// file. See fuchsia.io/FileInfo for additional documentation.
 //
 // Will eventually be an implementation detail of zxio once fdio completes its
 // transition to the zxio backend.

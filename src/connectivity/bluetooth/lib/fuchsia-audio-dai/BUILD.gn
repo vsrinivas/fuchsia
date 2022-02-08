@@ -35,7 +35,6 @@ rustc_library("fuchsia-audio-dai") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//src/connectivity/bluetooth/testing/realmbuilder-mock-helpers",
     "//src/lib/async-utils",
     "//src/lib/fuchsia",

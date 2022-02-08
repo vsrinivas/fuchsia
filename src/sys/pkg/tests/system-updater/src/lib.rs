@@ -7,7 +7,7 @@ use {
     self::SystemUpdaterInteraction::*,
     anyhow::{anyhow, Context as _, Error},
     assert_matches::assert_matches,
-    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_io2 as fio2, fidl_fuchsia_paver as paver,
+    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_io as fio, fidl_fuchsia_paver as paver,
     fidl_fuchsia_pkg::{BlobIdIteratorProxy, PackageResolverRequestStream},
     fidl_fuchsia_update_installer::{InstallerMarker, InstallerProxy},
     fidl_fuchsia_update_installer_ext::{
@@ -332,7 +332,7 @@ impl TestEnvBuilder {
                     .capability(
                         Capability::directory("build-info")
                             .path("/config/build-info")
-                            .rights(fio2::R_STAR_DIR),
+                            .rights(fio::R_STAR_DIR),
                     )
                     .from(&fake_capabilities)
                     .to(&system_updater),
@@ -345,7 +345,7 @@ impl TestEnvBuilder {
                 .add_route(
                     Route::new()
                         .capability(
-                            Capability::directory("data").path("/data").rights(fio2::RW_STAR_DIR),
+                            Capability::directory("data").path("/data").rights(fio::RW_STAR_DIR),
                         )
                         .from(&fake_capabilities)
                         .to(&system_updater),

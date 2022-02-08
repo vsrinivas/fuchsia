@@ -11,7 +11,7 @@ use {
         Program, ResolverRegistration, RightsClause, RunnerRegistration, Use, UseFromRef,
     },
     cm_types::{self as cm, Name},
-    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     serde_json::{Map, Value},
     sha2::{Digest, Sha256},
     std::collections::{BTreeMap, HashSet},
@@ -900,7 +900,7 @@ fn extract_offer_subdir(in_obj: &Offer) -> Option<cm::RelativePath> {
     in_obj.subdir.clone()
 }
 
-fn extract_expose_rights(in_obj: &Expose) -> Result<Option<fio2::Operations>, Error> {
+fn extract_expose_rights(in_obj: &Expose) -> Result<Option<fio::Operations>, Error> {
     match in_obj.rights.as_ref() {
         Some(rights_tokens) => {
             let mut rights = Vec::new();
@@ -913,7 +913,7 @@ fn extract_expose_rights(in_obj: &Expose) -> Result<Option<fio2::Operations>, Er
                 ));
             }
             let mut seen_rights = HashSet::with_capacity(rights.len());
-            let mut operations: fio2::Operations = fio2::Operations::empty();
+            let mut operations: fio::Operations = fio::Operations::empty();
             for right in rights.iter() {
                 if seen_rights.contains(&right) {
                     return Err(Error::duplicate_rights(
@@ -981,7 +981,7 @@ fn extract_all_expose_sources(
         .collect()
 }
 
-fn extract_offer_rights(in_obj: &Offer) -> Result<Option<fio2::Operations>, Error> {
+fn extract_offer_rights(in_obj: &Offer) -> Result<Option<fio::Operations>, Error> {
     match in_obj.rights.as_ref() {
         Some(rights_tokens) => {
             let mut rights = Vec::new();
@@ -992,7 +992,7 @@ fn extract_offer_rights(in_obj: &Offer) -> Result<Option<fio2::Operations>, Erro
                 return Err(Error::missing_rights("Rights provided to offer are not well formed."));
             }
             let mut seen_rights = HashSet::with_capacity(rights.len());
-            let mut operations: fio2::Operations = fio2::Operations::empty();
+            let mut operations: fio::Operations = fio::Operations::empty();
             for right in rights.iter() {
                 if seen_rights.contains(&right) {
                     return Err(Error::duplicate_rights(
@@ -1325,7 +1325,7 @@ pub fn translate_capabilities(
     Ok(out_capabilities)
 }
 
-pub fn extract_required_rights<T>(in_obj: &T, keyword: &str) -> Result<fio2::Operations, Error>
+pub fn extract_required_rights<T>(in_obj: &T, keyword: &str) -> Result<fio::Operations, Error>
 where
     T: RightsClause,
 {
@@ -1342,7 +1342,7 @@ where
                 )));
             }
             let mut seen_rights = HashSet::with_capacity(rights.len());
-            let mut operations: fio2::Operations = fio2::Operations::empty();
+            let mut operations: fio::Operations = fio::Operations::empty();
             for right in rights.iter() {
                 if seen_rights.contains(&right) {
                     return Err(Error::duplicate_rights(format!(
@@ -1402,7 +1402,7 @@ mod tests {
             ResolverRegistration, RightsClause, RunnerRegistration, Use, UseFromRef,
         },
         cm_types::{self as cm, Name},
-        fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
+        fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
         serde_json::{json, Map, Value},
         std::collections::HashSet,
         std::convert::Into,
@@ -1606,7 +1606,7 @@ mod tests {
                             source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             source_name: Some("assets".to_string()),
                             target_path: Some("/data/assets".to_string()),
-                            rights: Some(fio2::Operations::READ_BYTES),
+                            rights: Some(fio::Operations::READ_BYTES),
                             subdir: None,
                             ..fdecl::UseDirectory::EMPTY
                         }
@@ -1617,7 +1617,7 @@ mod tests {
                             source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             source_name: Some("config".to_string()),
                             target_path: Some("/data/config".to_string()),
-                            rights: Some(fio2::Operations::READ_BYTES),
+                            rights: Some(fio::Operations::READ_BYTES),
                             subdir: Some("fonts".to_string()),
                             ..fdecl::UseDirectory::EMPTY
                         }
@@ -1835,9 +1835,9 @@ mod tests {
                             target: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
                             target_name: Some("blob".to_string()),
                             rights: Some(
-                                fio2::Operations::CONNECT | fio2::Operations::ENUMERATE |
-                                fio2::Operations::TRAVERSE | fio2::Operations::READ_BYTES |
-                                fio2::Operations::GET_ATTRIBUTES
+                                fio::Operations::CONNECT | fio::Operations::ENUMERATE |
+                                fio::Operations::TRAVERSE | fio::Operations::READ_BYTES |
+                                fio::Operations::GET_ATTRIBUTES
                             ),
                             subdir: None,
                             ..fdecl::ExposeDirectory::EMPTY
@@ -1975,9 +1975,9 @@ mod tests {
                         fdecl::Directory {
                             name: Some("blob".to_string()),
                             source_path: Some("/volumes/blobfs/blob".to_string()),
-                            rights: Some(fio2::Operations::CONNECT | fio2::Operations::ENUMERATE |
-                                fio2::Operations::TRAVERSE | fio2::Operations::READ_BYTES |
-                                fio2::Operations::GET_ATTRIBUTES
+                            rights: Some(fio::Operations::CONNECT | fio::Operations::ENUMERATE |
+                                fio::Operations::TRAVERSE | fio::Operations::READ_BYTES |
+                                fio::Operations::GET_ATTRIBUTES
                             ),
                             ..fdecl::Directory::EMPTY
                         }
@@ -2749,7 +2749,7 @@ mod tests {
                         fdecl::Directory {
                             name: Some("mydirectory".to_string()),
                             source_path: Some("/directory".to_string()),
-                            rights: Some(fio2::Operations::CONNECT),
+                            rights: Some(fio::Operations::CONNECT),
                             ..fdecl::Directory::EMPTY
                         }
                     ),
@@ -3165,9 +3165,9 @@ mod tests {
                             target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             target_name: Some("blobfs".to_string()),
                             rights: Some(
-                                fio2::Operations::CONNECT | fio2::Operations::ENUMERATE |
-                                fio2::Operations::TRAVERSE | fio2::Operations::READ_BYTES |
-                                fio2::Operations::GET_ATTRIBUTES
+                                fio::Operations::CONNECT | fio::Operations::ENUMERATE |
+                                fio::Operations::TRAVERSE | fio::Operations::READ_BYTES |
+                                fio::Operations::GET_ATTRIBUTES
                             ),
                             subdir: None,
                             ..fdecl::ExposeDirectory::EMPTY
@@ -3212,9 +3212,9 @@ mod tests {
                         fdecl::Directory {
                             name: Some("blobfs".to_string()),
                             source_path: Some("/volumes/blobfs".to_string()),
-                            rights: Some(fio2::Operations::CONNECT | fio2::Operations::ENUMERATE |
-                                fio2::Operations::TRAVERSE | fio2::Operations::READ_BYTES |
-                                fio2::Operations::GET_ATTRIBUTES
+                            rights: Some(fio::Operations::CONNECT | fio::Operations::ENUMERATE |
+                                fio::Operations::TRAVERSE | fio::Operations::READ_BYTES |
+                                fio::Operations::GET_ATTRIBUTES
                             ),
                             ..fdecl::Directory::EMPTY
                         }

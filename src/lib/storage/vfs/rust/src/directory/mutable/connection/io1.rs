@@ -30,9 +30,9 @@ use {
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeAttributes,
-        NodeInfo, NodeMarker, OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
+        NodeInfo, NodeMarker, UnlinkFlags, UnlinkOptions, OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE,
+        OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
     fuchsia_zircon::Status,
     futures::{channel::oneshot, future::BoxFuture},
     std::sync::Arc,

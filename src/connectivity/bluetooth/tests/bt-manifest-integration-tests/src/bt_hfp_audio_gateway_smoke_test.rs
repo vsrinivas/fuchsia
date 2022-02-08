@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest},
     fidl_fuchsia_bluetooth_hfp::{HfpMarker, HfpProxy},
     fidl_fuchsia_bluetooth_hfp_test::{HfpTestMarker, HfpTestProxy},
-    fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, AudioDeviceEnumeratorRequestStream},
     fuchsia_audio_dai::test::mock_dai_dev_with_io_devices,
     fuchsia_component::server::ServiceFs,
@@ -184,7 +184,7 @@ async fn hfp_audio_gateway_v2_capability_routing() {
                 .capability(
                     Capability::directory("dev-dai")
                         .path("/dev/class/dai")
-                        .rights(fio2::RW_STAR_DIR),
+                        .rights(fio::RW_STAR_DIR),
                 )
                 .from(&mock_dev)
                 .to(&hfp),

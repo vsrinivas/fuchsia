@@ -7,7 +7,6 @@
 
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fidl/fuchsia.io2/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/io.h>
 #include <lib/fit/function.h>
@@ -110,7 +109,7 @@ class FuchsiaVfs : public Vfs {
 
   // Adds a inotify filter to the vnode.
   zx_status_t AddInotifyFilterToVnode(fbl::RefPtr<Vnode> vnode, const fbl::RefPtr<Vnode>& parent,
-                                      fuchsia_io2::wire::InotifyWatchMask filter,
+                                      fuchsia_io::wire::InotifyWatchMask filter,
                                       uint32_t watch_descriptor, zx::socket socket)
       __TA_EXCLUDES(vfs_lock_);
 

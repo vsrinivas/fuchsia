@@ -22,7 +22,6 @@ test("memfs-inotify-test") {
   sources = [ "memfs-inotify-tests.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",

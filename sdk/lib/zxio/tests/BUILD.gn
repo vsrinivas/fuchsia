@@ -48,7 +48,6 @@ test("zxio") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/zxio",

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 library fuchsia.component.decl;
 
-using fuchsia.io2;
 using fuchsia.data;
+using fuchsia.io;
 
 /// Declares a capability used by a component, which was offered to it.
 type Use = flexible union {
@@ -93,7 +93,7 @@ type UseDirectory = table {
     3: target_path string:MAX_PATH_LENGTH;
 
     /// The rights required by the component to use this directory.
-    4: rights fuchsia.io2.Rights;
+    4: rights fuchsia.io.Rights;
 
     /// The subdirectory of this directory to use instead of the root. Optional.
     5: subdir string:MAX_PATH_LENGTH;

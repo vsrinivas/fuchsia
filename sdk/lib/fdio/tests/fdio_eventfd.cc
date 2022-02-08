@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fidl/fuchsia.io2/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/unsafe.h>
 #include <poll.h>
 #include <sys/eventfd.h>
@@ -23,9 +23,9 @@ TEST(EventFDTest, WaitBeginTest) {
   ASSERT_NE(io, nullptr);
 
   constexpr auto kSignalReadable =
-      static_cast<zx_signals_t>(fuchsia_io2::wire::DeviceSignal::kReadable);
+      static_cast<zx_signals_t>(fuchsia_io::wire::DeviceSignal2::kReadable);
   constexpr auto kSignalWritable =
-      static_cast<zx_signals_t>(fuchsia_io2::wire::DeviceSignal::kWritable);
+      static_cast<zx_signals_t>(fuchsia_io::wire::DeviceSignal2::kWritable);
 
   {
     uint32_t events = 0;

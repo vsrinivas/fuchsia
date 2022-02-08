@@ -27,7 +27,7 @@ rustc_test("integration-test-bin") {
   testonly = true
   deps = [
     "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",

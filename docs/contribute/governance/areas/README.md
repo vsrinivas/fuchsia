@@ -255,9 +255,9 @@ System](#view-system) to identify component views.
 {% if area.name == "Storage" %}
 Storage is a combination of the following APIs:
 
-* [fuchsia.io](/sdk/fidl/fuchsia.io/) and [fuchsia.io2](/sdk/fidl/fuchsia.io/)
+* [fuchsia.io](/sdk/fidl/fuchsia.io/)
 
-  These libraries are the common way for service discovery, filesystem access,
+  Describes the common means of service discovery, filesystem access,
   and capability sharing on Fuchsia.
 
   They are used primarily for client interaction with the filesystem, where a

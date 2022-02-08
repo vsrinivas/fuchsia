@@ -534,7 +534,7 @@ mod test {
         .capabilities = {component_testing::Directory {
           .name = "config-data",
           .path = "/config/data",
-          .rights = fuchsia::io2::RW_STAR_DIR,}},
+          .rights = fuchsia::io::RW_STAR_DIR,}},
         .source = component_testing::ParentRef(),
         .targets = {component_testing::ChildRef{"foo_bar"}, }})"#;
         assert_eq!(create_realm_impl, expect_realm_snippets);
@@ -603,7 +603,7 @@ mod test {
             capability: Capability::directory(
                 "config-data",
                 "/config/data",
-                fio2::RW_STAR_DIR),
+                fio::RW_STAR_DIR),
             source: RouteEndpoint::above_root(),
             targets: vec![
                 RouteEndpoint::component("foo_bar"),

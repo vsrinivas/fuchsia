@@ -593,12 +593,12 @@ where
                     .capability(
                         Capability::directory("pkgfs")
                             .path("/pkgfs")
-                            .rights(fidl_fuchsia_io2::RW_STAR_DIR),
+                            .rights(fidl_fuchsia_io::RW_STAR_DIR),
                     )
                     .capability(
                         Capability::directory("blob")
                             .path("/blob")
-                            .rights(fidl_fuchsia_io2::RW_STAR_DIR),
+                            .rights(fidl_fuchsia_io::RW_STAR_DIR),
                     )
                     .from(&service_reflector)
                     .to(&pkg_cache),
@@ -613,7 +613,7 @@ where
                     .capability(
                         Capability::directory("usb")
                             .path("/usb")
-                            .rights(fidl_fuchsia_io2::RW_STAR_DIR),
+                            .rights(fidl_fuchsia_io::RW_STAR_DIR),
                     )
                     .from(&service_reflector)
                     .to(&local_mirror),
@@ -627,12 +627,12 @@ where
                     .capability(
                         Capability::directory("config-data")
                             .path("/config/data")
-                            .rights(fidl_fuchsia_io2::R_STAR_DIR),
+                            .rights(fidl_fuchsia_io::R_STAR_DIR),
                     )
                     .capability(
                         Capability::directory("root-ssl-certificates")
                             .path("/config/ssl")
-                            .rights(fidl_fuchsia_io2::R_STAR_DIR),
+                            .rights(fidl_fuchsia_io::R_STAR_DIR),
                     )
                     .from(&service_reflector)
                     .to(&pkg_resolver_wrapper),
@@ -647,7 +647,7 @@ where
                     .capability(
                         Capability::directory("data")
                             .path("/data")
-                            .rights(fidl_fuchsia_io2::RW_STAR_DIR),
+                            .rights(fidl_fuchsia_io::RW_STAR_DIR),
                     )
                     .from(&service_reflector)
                     .to(&pkg_resolver_wrapper),

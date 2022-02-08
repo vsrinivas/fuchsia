@@ -275,7 +275,7 @@ void AgentContextImpl::ConnectToService(
         //    Use as a fallback to (a) for legacy reasons (see fxbug.dev/43008)
         //
         // NOTE:
-        //  * Some implementations of fuchsia.io2.Directory do not correctly implement
+        //  * Some implementations of fuchsia.io.Directory do not correctly implement
         //    ReadDirents() (example: fxbug.dev/55769). The resulting behavior is that
         //    |agent_outgoing_services_| is incomplete.
         //  * Relying on |agent_.is_bound()| to decide to connect to the agent's outgoing

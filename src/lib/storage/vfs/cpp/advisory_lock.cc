@@ -4,14 +4,12 @@
 
 #include "src/lib/storage/vfs/cpp/advisory_lock.h"
 
-#include <lib/fidl/llcpp/object_view.h>
-
 namespace fs {
 
 namespace internal {
 
 void advisory_lock(zx_koid_t owner, fbl::RefPtr<fs::Vnode> vnode, bool range_ok,
-                   ::fuchsia_io2::wire::AdvisoryLockRequest& request,
+                   ::fuchsia_io::wire::AdvisoryLockRequest& request,
                    fit::callback<void(zx_status_t status)> callback) {
   if (owner == ZX_KOID_INVALID) {
     callback(ZX_ERR_INTERNAL);
@@ -23,13 +21,13 @@ void advisory_lock(zx_koid_t owner, fbl::RefPtr<fs::Vnode> vnode, bool range_ok,
   }
   file_lock::LockType lock_type;
   switch (request.type()) {
-    case fuchsia_io2::wire::AdvisoryLockType::kRead:
+    case fuchsia_io::wire::AdvisoryLockType::kRead:
       lock_type = file_lock::LockType::READ;
       break;
-    case fuchsia_io2::wire::AdvisoryLockType::kWrite:
+    case fuchsia_io::wire::AdvisoryLockType::kWrite:
       lock_type = file_lock::LockType::WRITE;
       break;
-    case fuchsia_io2::wire::AdvisoryLockType::kUnlock:
+    case fuchsia_io::wire::AdvisoryLockType::kUnlock:
       lock_type = file_lock::LockType::UNLOCK;
       break;
   }
@@ -46,7 +44,7 @@ void advisory_lock(zx_koid_t owner, fbl::RefPtr<fs::Vnode> vnode, bool range_ok,
     callback(ZX_ERR_INTERNAL);
     return;
   }
-  bool wait = request.has_wait() ? request.wait() : false;
+  bool wait = request.has_wait() && request.wait();
   file_lock::LockRequest req(lock_type, wait);
   lock->Lock(owner, req, callback);
 }

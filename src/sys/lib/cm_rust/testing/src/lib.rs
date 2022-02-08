@@ -5,8 +5,7 @@
 use {
     anyhow::{Context, Error},
     cm_rust::{ComponentDecl, FidlIntoNative},
-    cml, fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata,
-    fidl_fuchsia_io2 as fio2,
+    cml, fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     routing::rights::READ_RIGHTS,
 };
 
@@ -401,7 +400,7 @@ impl DirectoryDeclBuilder {
     }
 
     /// Sets the rights.
-    pub fn rights(mut self, rights: fio2::Operations) -> Self {
+    pub fn rights(mut self, rights: fio::Operations) -> Self {
         self.0.rights = rights;
         self
     }

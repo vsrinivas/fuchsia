@@ -5,7 +5,6 @@
 use {
     crate::{error::RightsRoutingError, walk_state::WalkStateUnit},
     fidl_fuchsia_io::{self as fio},
-    fidl_fuchsia_io2::{self as fio2},
     lazy_static::lazy_static,
     std::convert::From,
 };
@@ -14,43 +13,43 @@ lazy_static! {
     // TODO: const initialization of bitflag types with bitwise-or is not supported in FIDL. Change
     // when supported.
     /// All rights corresponding to r*.
-    pub static ref READ_RIGHTS: fio2::Operations =
-        fio2::Operations::CONNECT
-        | fio2::Operations::ENUMERATE
-        | fio2::Operations::TRAVERSE
-        | fio2::Operations::READ_BYTES
-        | fio2::Operations::GET_ATTRIBUTES;
+    pub static ref READ_RIGHTS: fio::Operations =
+        fio::Operations::CONNECT
+        | fio::Operations::ENUMERATE
+        | fio::Operations::TRAVERSE
+        | fio::Operations::READ_BYTES
+        | fio::Operations::GET_ATTRIBUTES;
     /// All rights corresponding to w*.
-    pub static ref WRITE_RIGHTS: fio2::Operations =
-        fio2::Operations::CONNECT
-        | fio2::Operations::ENUMERATE
-        | fio2::Operations::TRAVERSE
-        | fio2::Operations::WRITE_BYTES
-        | fio2::Operations::MODIFY_DIRECTORY
-        | fio2::Operations::UPDATE_ATTRIBUTES;
+    pub static ref WRITE_RIGHTS: fio::Operations =
+        fio::Operations::CONNECT
+        | fio::Operations::ENUMERATE
+        | fio::Operations::TRAVERSE
+        | fio::Operations::WRITE_BYTES
+        | fio::Operations::MODIFY_DIRECTORY
+        | fio::Operations::UPDATE_ATTRIBUTES;
 
-    /// All the fio2 rights required to represent fio::OPEN_RIGHT_READABLE.
-    static ref LEGACY_READABLE_RIGHTS: fio2::Operations =
-        fio2::Operations::READ_BYTES
-        | fio2::Operations::GET_ATTRIBUTES
-        | fio2::Operations::TRAVERSE
-        | fio2::Operations::ENUMERATE;
-    /// All the fio2 rights required to represent fio::OPEN_RIGHT_WRITABLE.
-    static ref LEGACY_WRITABLE_RIGHTS: fio2::Operations =
-        fio2::Operations::WRITE_BYTES
-        | fio2::Operations::UPDATE_ATTRIBUTES
-        | fio2::Operations::MODIFY_DIRECTORY;
-    /// All the fio2 rights required to represent fio::OPEN_RIGHT_EXECUTABLE.
-    static ref LEGACY_EXECUTABLE_RIGHTS: fio2::Operations = fio2::Operations::EXECUTE;
+    /// All the fio rights required to represent fio::OPEN_RIGHT_READABLE.
+    static ref LEGACY_READABLE_RIGHTS: fio::Operations =
+        fio::Operations::READ_BYTES
+        | fio::Operations::GET_ATTRIBUTES
+        | fio::Operations::TRAVERSE
+        | fio::Operations::ENUMERATE;
+    /// All the fio rights required to represent fio::OPEN_RIGHT_WRITABLE.
+    static ref LEGACY_WRITABLE_RIGHTS: fio::Operations =
+        fio::Operations::WRITE_BYTES
+        | fio::Operations::UPDATE_ATTRIBUTES
+        | fio::Operations::MODIFY_DIRECTORY;
+    /// All the fio rights required to represent fio::OPEN_RIGHT_EXECUTABLE.
+    static ref LEGACY_EXECUTABLE_RIGHTS: fio::Operations = fio::Operations::EXECUTE;
 }
 
 /// Opaque rights type to define new traits like PartialOrd on.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Rights(fio2::Operations);
+pub struct Rights(fio::Operations);
 
 impl Rights {
-    /// Converts fuchsia.io2 directory rights to fuchsia.io compatible rights. This will be removed
-    /// once fuchsia.io2 is supported by component manager.
+    /// Converts new fuchsia.io directory rights to legacy fuchsia.io compatible rights. This will
+    /// be remove once new rights are supported by component manager.
     pub fn into_legacy(&self) -> u32 {
         let mut flags: u32 = 0;
         let rights = self.0;
@@ -62,7 +61,7 @@ impl Rights {
         if rights.intersects(*LEGACY_WRITABLE_RIGHTS) {
             flags |= fio::OPEN_RIGHT_WRITABLE;
         }
-        if rights.contains(fio2::Operations::EXECUTE) {
+        if rights.contains(fio::Operations::EXECUTE) {
             flags |= fio::OPEN_RIGHT_EXECUTABLE;
         }
         // Since there is no direct translation for connect in CV1 we must explicitly define it
@@ -70,16 +69,16 @@ impl Rights {
         //
         // TODO(fxbug.dev/60673): Is this correct? ReadBytes | Connect seems like it should translate to
         // READABLE | WRITABLE, not empty rights.
-        if flags == 0 && rights.contains(fio2::Operations::CONNECT) {
+        if flags == 0 && rights.contains(fio::Operations::CONNECT) {
             flags |= fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
         }
         flags
     }
 }
 
-/// Allows creating rights from fio2::Operations.
-impl From<fio2::Operations> for Rights {
-    fn from(operations: fio2::Operations) -> Self {
+/// Allows creating rights from fio::Operations.
+impl From<fio::Operations> for Rights {
+    fn from(operations: fio::Operations) -> Self {
         Rights(operations)
     }
 }
@@ -111,24 +110,24 @@ mod tests {
     #[test]
     fn validate_next() {
         assert_matches!(
-            Rights::from(fio2::Operations::empty())
+            Rights::from(fio::Operations::empty())
                 .validate_next(&Rights::from(*LEGACY_READABLE_RIGHTS)),
             Ok(())
         );
         assert_matches!(
-            Rights::from(fio2::Operations::READ_BYTES | fio2::Operations::GET_ATTRIBUTES)
+            Rights::from(fio::Operations::READ_BYTES | fio::Operations::GET_ATTRIBUTES)
                 .validate_next(&Rights::from(*LEGACY_READABLE_RIGHTS)),
             Ok(())
         );
         assert_matches!(
             Rights::from(Rights::from(*LEGACY_READABLE_RIGHTS)).validate_next(&Rights::from(
-                fio2::Operations::READ_BYTES | fio2::Operations::GET_ATTRIBUTES
+                fio::Operations::READ_BYTES | fio::Operations::GET_ATTRIBUTES
             )),
             Err(RightsRoutingError::Invalid)
         );
         assert_matches!(
-            Rights::from(fio2::Operations::WRITE_BYTES).validate_next(&Rights::from(
-                fio2::Operations::READ_BYTES | fio2::Operations::GET_ATTRIBUTES
+            Rights::from(fio::Operations::WRITE_BYTES).validate_next(&Rights::from(
+                fio::Operations::READ_BYTES | fio::Operations::GET_ATTRIBUTES
             )),
             Err(RightsRoutingError::Invalid)
         );
@@ -154,31 +153,28 @@ mod tests {
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE
         );
         assert_eq!(
-            Rights::from(fio2::Operations::READ_BYTES).into_legacy(),
+            Rights::from(fio::Operations::READ_BYTES).into_legacy(),
             fio::OPEN_RIGHT_READABLE
         );
         assert_eq!(
-            Rights::from(fio2::Operations::GET_ATTRIBUTES).into_legacy(),
+            Rights::from(fio::Operations::GET_ATTRIBUTES).into_legacy(),
+            fio::OPEN_RIGHT_READABLE
+        );
+        assert_eq!(Rights::from(fio::Operations::TRAVERSE).into_legacy(), fio::OPEN_RIGHT_READABLE);
+        assert_eq!(
+            Rights::from(fio::Operations::ENUMERATE).into_legacy(),
             fio::OPEN_RIGHT_READABLE
         );
         assert_eq!(
-            Rights::from(fio2::Operations::TRAVERSE).into_legacy(),
-            fio::OPEN_RIGHT_READABLE
-        );
-        assert_eq!(
-            Rights::from(fio2::Operations::ENUMERATE).into_legacy(),
-            fio::OPEN_RIGHT_READABLE
-        );
-        assert_eq!(
-            Rights::from(fio2::Operations::WRITE_BYTES).into_legacy(),
+            Rights::from(fio::Operations::WRITE_BYTES).into_legacy(),
             fio::OPEN_RIGHT_WRITABLE
         );
         assert_eq!(
-            Rights::from(fio2::Operations::UPDATE_ATTRIBUTES).into_legacy(),
+            Rights::from(fio::Operations::UPDATE_ATTRIBUTES).into_legacy(),
             fio::OPEN_RIGHT_WRITABLE
         );
         assert_eq!(
-            Rights::from(fio2::Operations::MODIFY_DIRECTORY).into_legacy(),
+            Rights::from(fio::Operations::MODIFY_DIRECTORY).into_legacy(),
             fio::OPEN_RIGHT_WRITABLE
         );
     }

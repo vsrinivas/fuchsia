@@ -12,9 +12,8 @@ use {
     fidl_fuchsia_cobalt::CobaltEvent,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, OPEN_RIGHT_EXECUTABLE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, RW_STAR_DIR,
     },
-    fidl_fuchsia_io2::RW_STAR_DIR,
     fidl_fuchsia_pkg::{
         BlobIdIteratorMarker, BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker,
         NeededBlobsProxy, PackageCacheMarker, PackageCacheProxy, RetainedPackagesMarker,

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.component.decl;
 
-using fuchsia.io2;
+using fuchsia.io;
 
 /// Declares a capability defined by this component.
 type Capability = flexible union {
@@ -52,7 +52,7 @@ type Directory = table {
     2: source_path string:MAX_PATH_LENGTH;
 
     /// The maximum rights that can be set by a component using this directory.
-    3: rights fuchsia.io2.Rights;
+    3: rights fuchsia.io.Rights;
 };
 
 /// Declares a storage capability backed by a directory from which data, cache,

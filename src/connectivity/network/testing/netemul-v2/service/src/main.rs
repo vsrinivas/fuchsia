@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, Context as _},
     fidl::endpoints::{DiscoverableProtocolMarker, ServerEnd},
     fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
-    fidl_fuchsia_io2 as fio2, fidl_fuchsia_logger as flogger, fidl_fuchsia_net_tun as fnet_tun,
+    fidl_fuchsia_logger as flogger, fidl_fuchsia_net_tun as fnet_tun,
     fidl_fuchsia_netemul::{
         self as fnetemul, ChildDef, ChildUses, ManagedRealmMarker, ManagedRealmRequest,
         RealmOptions, SandboxRequest, SandboxRequestStream,
@@ -444,7 +444,7 @@ async fn create_realm_instance(
     let () = builder
         .add_route(
             Route::new()
-                .capability(Capability::directory(HUB).rights(fio2::R_STAR_DIR))
+                .capability(Capability::directory(HUB).rights(fio::R_STAR_DIR))
                 .from(Ref::framework())
                 .to(Ref::parent()),
         )
@@ -453,7 +453,7 @@ async fn create_realm_instance(
         let mut capability = Capability::directory(DEVFS)
             // TODO(https://fxbug.dev/77059): remove write permissions once they
             // are no longer required to connect to services.
-            .rights(fio2::RW_STAR_DIR)
+            .rights(fio::RW_STAR_DIR)
             .path(DEVFS_PATH)
             .as_(capability_name);
         if let Some(subdir) = subdir {
@@ -896,7 +896,7 @@ async fn setup_network_realm(sandbox_name: impl std::fmt::Display) -> Result<Rea
     let () = builder
         .add_route(
             Route::new()
-                .capability(Capability::directory(DEVFS).path(DEVFS_PATH).rights(fio2::R_STAR_DIR))
+                .capability(Capability::directory(DEVFS).path(DEVFS_PATH).rights(fio::R_STAR_DIR))
                 .capability(Capability::protocol::<fidl_fuchsia_driver_test::RealmMarker>())
                 .from(Ref::child(fuchsia_driver_test::COMPONENT_NAME))
                 .to(&network_context_child),

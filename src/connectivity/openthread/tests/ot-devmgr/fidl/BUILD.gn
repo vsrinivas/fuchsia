@@ -7,8 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("devmgr") {
   name = "fuchsia.openthread.devmgr"
   sources = [ "devmgr.test.fidl" ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.io2",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.io" ]
 }

@@ -108,11 +108,11 @@ class Integration : public testing::Test {
                            .source = ChildRef{kCodecFactoryName},
                            .targets = {ParentRef()}});
     builder.AddLocalChild(kMockGpuName, &mock_gpu_);
-    auto dir_rights =
-        fuchsia::io2::Operations::CONNECT | fuchsia::io2::Operations::READ_BYTES |
-        fuchsia::io2::Operations::WRITE_BYTES | fuchsia::io2::Operations::ENUMERATE |
-        fuchsia::io2::Operations::TRAVERSE | fuchsia::io2::Operations::GET_ATTRIBUTES |
-        fuchsia::io2::Operations::MODIFY_DIRECTORY | fuchsia::io2::Operations::UPDATE_ATTRIBUTES;
+    auto dir_rights = fuchsia::io::Operations::CONNECT | fuchsia::io::Operations::READ_BYTES |
+                      fuchsia::io::Operations::WRITE_BYTES | fuchsia::io::Operations::ENUMERATE |
+                      fuchsia::io::Operations::TRAVERSE | fuchsia::io::Operations::GET_ATTRIBUTES |
+                      fuchsia::io::Operations::MODIFY_DIRECTORY |
+                      fuchsia::io::Operations::UPDATE_ATTRIBUTES;
 
     builder.AddRoute(Route{
         .capabilities = {Directory{.name = "dev-gpu", .rights = dir_rights, .path = "/dev-gpu"}},
