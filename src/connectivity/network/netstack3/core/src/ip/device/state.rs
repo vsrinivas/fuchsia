@@ -330,6 +330,17 @@ impl AddressState {
     }
 }
 
+/// Configuration for a temporary IPv6 address assigned via SLAAC.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct TemporarySlaacConfig<Instant> {
+    /// The time at which the address is no longer valid.
+    pub(crate) valid_until: Instant,
+    /// The per-address DESYNC_FACTOR specified in RFC 8981 Section 3.4.
+    pub(crate) desync_factor: Duration,
+    /// The time at which the address was created.
+    pub(crate) creation_time: Instant,
+}
+
 /// Configuration for an IPv6 address assigned via SLAAC.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum SlaacConfig<Instant> {
@@ -341,14 +352,7 @@ pub(crate) enum SlaacConfig<Instant> {
     /// The address is a temporary address, as specified by [RFC 8981].
     ///
     /// [RFC 8981]: https://tools.ietf.org/html/rfc8981
-    Temporary {
-        /// The time at which the address is no longer valid.
-        valid_until: Instant,
-        /// The per-address DESYNC_FACTOR specified in RFC 8981 Section 3.4.
-        desync_factor: Duration,
-        /// The time at which the address was created.
-        creation_time: Instant,
-    },
+    Temporary(TemporarySlaacConfig<Instant>),
 }
 
 /// The configuration for an IPv6 address.

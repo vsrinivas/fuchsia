@@ -61,7 +61,9 @@ use crate::{
         DeviceIdContext,
     },
     error::ExistsError,
-    ip::device::state::{AddrConfig, AddrConfigType, AddressState, IpDeviceState, SlaacConfig},
+    ip::device::state::{
+        AddrConfig, AddrConfigType, AddressState, IpDeviceState, SlaacConfig, TemporarySlaacConfig,
+    },
     Instant,
 };
 
@@ -474,9 +476,11 @@ pub(crate) trait NdpContext<D: LinkDevice>:
             .expect("address is not configured via SLAAC on this device");
         match slaac_config {
             SlaacConfig::Static { valid_until: v } => *v = Some(valid_until),
-            SlaacConfig::Temporary { valid_until: v, desync_factor: _, creation_time: _ } => {
-                *v = valid_until
-            }
+            SlaacConfig::Temporary(TemporarySlaacConfig {
+                valid_until: v,
+                desync_factor: _,
+                creation_time: _,
+            }) => *v = valid_until,
         };
     }
 
@@ -1555,11 +1559,11 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
             }
             // Select valid_for and preferred_until according to RFC 8981
             // Section 3.4.
-            SlaacConfig::Temporary {
+            SlaacConfig::Temporary(TemporarySlaacConfig {
                 valid_until: entry_valid_until,
                 creation_time,
                 desync_factor,
-            } => {
+            }) => {
                 match ctx.get_state_with(device_id).config.get_temporary_address_configuration() {
                     // Since it's possible to change NDP configuration for a
                     // device during runtime, we can end up here, with a
@@ -1742,11 +1746,7 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
                         // if the Valid Lifetime is not 0, form an address [...]"
                         **slaac_type == SlaacType::Static
                     }
-                    AddrConfig::Slaac(SlaacConfig::Temporary {
-                        valid_until: _,
-                        creation_time: _,
-                        desync_factor: _,
-                    }) => {
+                    AddrConfig::Slaac(SlaacConfig::Temporary(_)) => {
                         // From RFC 8981 Section 3.4.3: "If the host has not
                         // configured any temporary address for the corresponding
                         // prefix, the host SHOULD create a new temporary address
@@ -1851,7 +1851,11 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
                 (
                     valid_until,
                     preferred_until,
-                    SlaacConfig::Temporary { desync_factor, valid_until, creation_time: now },
+                    SlaacConfig::Temporary(TemporarySlaacConfig {
+                        desync_factor,
+                        valid_until,
+                        creation_time: now,
+                    }),
                     address,
                 )
             }
@@ -6187,7 +6191,10 @@ mod tests {
                 assert_eq!(valid_until, Some(prefix1_valid_until))
             });
             assert_matches!(temporary_address, (_addr,
-                SlaacConfig::Temporary { valid_until, creation_time, desync_factor: _ }) => {
+                SlaacConfig::Temporary(TemporarySlaacConfig {
+                    valid_until,
+                    creation_time,
+                    desync_factor: _ })) => {
                     assert_eq!(creation_time, now);
                     assert_eq!(valid_until, prefix1_valid_until);
             });
@@ -6216,7 +6223,7 @@ mod tests {
                 assert_eq!(valid_until, Some(prefix1_valid_until));
             });
             assert_matches!(temporary_address,
-            (addr, SlaacConfig::Temporary { valid_until, creation_time, desync_factor: _ }) => {
+            (addr, SlaacConfig::Temporary(TemporarySlaacConfig { valid_until, creation_time, desync_factor: _ })) => {
                 assert_eq!(addr, prefix_1_temporary);
                 assert_eq!(creation_time, now);
                 assert_eq!(valid_until, prefix1_valid_until);
@@ -6239,7 +6246,8 @@ mod tests {
                 assert_eq!(valid_until, Some(prefix2_valid_until))
             });
             assert_matches!(temporary_address,
-            (_, SlaacConfig::Temporary { valid_until, creation_time, desync_factor: _ }) => {
+            (_, SlaacConfig::Temporary(TemporarySlaacConfig {
+                valid_until, creation_time, desync_factor: _ })) => {
                 assert_eq!(creation_time, now);
                 assert_eq!(valid_until, prefix2_valid_until);
             });
@@ -6307,11 +6315,11 @@ mod tests {
                 .iter_global_ipv6_addrs()
                 .filter_map(|entry| match entry.config {
                     AddrConfig::Slaac(SlaacConfig::Static { .. }) => None,
-                    AddrConfig::Slaac(SlaacConfig::Temporary {
+                    AddrConfig::Slaac(SlaacConfig::Temporary(TemporarySlaacConfig {
                         creation_time: _,
                         desync_factor: _,
                         valid_until,
-                    }) => Some((entry.addr_sub(), entry.state, valid_until)),
+                    })) => Some((entry.addr_sub(), entry.state, valid_until)),
                     AddrConfig::Manual => None,
                 })
                 .collect::<Vec<_>>();
@@ -6858,11 +6866,11 @@ mod tests {
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
         let entry_valid_until = match entry.config {
             AddrConfig::Slaac(SlaacConfig::Static { valid_until }) => valid_until,
-            AddrConfig::Slaac(SlaacConfig::Temporary {
+            AddrConfig::Slaac(SlaacConfig::Temporary(TemporarySlaacConfig {
                 valid_until,
                 desync_factor: _,
                 creation_time: _,
-            }) => Some(valid_until),
+            })) => Some(valid_until),
             AddrConfig::Manual => None,
         };
         assert_eq!(entry_valid_until, Some(valid_until));
@@ -7117,11 +7125,11 @@ mod tests {
         let entry =
             get_slaac_address_entry(&ctx, device.try_into().unwrap(), expected_addr_sub).unwrap();
         let desync_factor = match entry.config {
-            AddrConfig::Slaac(SlaacConfig::Temporary {
+            AddrConfig::Slaac(SlaacConfig::Temporary(TemporarySlaacConfig {
                 desync_factor,
                 creation_time: _,
                 valid_until: _,
-            }) => desync_factor,
+            })) => desync_factor,
             AddrConfig::Slaac(SlaacConfig::Static { valid_until: _ }) => {
                 unreachable!("temporary address")
             }
