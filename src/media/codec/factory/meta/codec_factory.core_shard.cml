@@ -24,6 +24,13 @@
             subdir: "class/media-codec",
         },
         {
+            directory: "dev",
+            from: "parent",
+            as: "dev-gpu",
+            to: "#codec_factory",
+            subdir: "class/gpu",
+        },
+        {
             protocol: "fuchsia.cobalt.LoggerFactory",
             from: "#cobalt",
             to: "#codec_factory",

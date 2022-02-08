@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_CODEC_FACTORY_CODEC_FACTORY_APP_H_
 #define SRC_MEDIA_CODEC_FACTORY_CODEC_FACTORY_APP_H_
 
+#include <fuchsia/gpu/magma/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -32,6 +33,9 @@ class CodecFactoryApp {
   [[nodiscard]] const fuchsia::mediacodec::CodecFactoryPtr* FindHwCodec(
       fit::function<bool(const fuchsia::mediacodec::CodecDescription&)> is_match);
 
+  [[nodiscard]] const std::optional<std::string> FindHwIsolate(
+      fit::function<bool(const fuchsia::mediacodec::CodecDescription&)> is_match);
+
   [[nodiscard]] std::vector<fuchsia::mediacodec::CodecDescription> MakeCodecList() const;
 
   [[nodiscard]] async_dispatcher_t* dispatcher() { return dispatcher_; }
@@ -43,20 +47,29 @@ class CodecFactoryApp {
   struct CodecListEntry {
     fuchsia::mediacodec::CodecDescription description;
 
+    std::string component_url;
+
     // When a HW-accelerated CodecFactory supports more than one sort of codec,
     // the CodecFactory will have multiple entries that share the CodecFactory
     // via the shared_ptr<> here.  The relevant entries co-own the
     // CodecFactoryPtr, and a shared_ptr<> ref is only transiently held by any
     // other code (not posted; not sent across threads).
     std::shared_ptr<fuchsia::mediacodec::CodecFactoryPtr> factory;
+
+    std::shared_ptr<fuchsia::gpu::magma::DevicePtr> magma_device;
   };
 
+  void DiscoverMagmaCodecDriversAndListenForMoreAsync();
   void DiscoverMediaCodecDriversAndListenForMoreAsync();
 
   void PublishService();
   void PostDiscoveryQueueProcessing();
   void ProcessDiscoveryQueue();
   bool IsV2();
+  void IdledCodecDiscovery();
+  // Remove a magma codec from the discovery queue and codec lists and ensure
+  // the discovery queue is processed correctly.
+  void TeardownMagmaCodec(std::shared_ptr<fuchsia::gpu::magma::DevicePtr> magma_device);
 
   [[nodiscard]] std::string GetBoardName();
 
@@ -109,6 +122,7 @@ class CodecFactoryApp {
   std::list<std::unique_ptr<CodecListEntry>> hw_codecs_;
 
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
+  std::unique_ptr<fsl::DeviceWatcher> gpu_device_watcher_;
 
   // This queue is to ensure we process discovered devices in the order
   // discovered, so that devices discovered later take priority over devices
@@ -129,6 +143,10 @@ class CodecFactoryApp {
     // itself.
     std::shared_ptr<fuchsia::mediacodec::CodecFactoryPtr> codec_factory;
 
+    std::shared_ptr<fuchsia::gpu::magma::DevicePtr> magma_device;
+
+    std::string component_url;
+
     // Purely as FYI for log output.
     std::string device_path;
   };
@@ -137,6 +155,8 @@ class CodecFactoryApp {
 
   sys::OutgoingDirectory outgoing_codec_aux_service_directory_parent_;
   vfs::PseudoDir* outgoing_codec_aux_service_directory_ = nullptr;
+
+  uint32_t num_codec_discoveries_in_flight_{};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CodecFactoryApp);
 };

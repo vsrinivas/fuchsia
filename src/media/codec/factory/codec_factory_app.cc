@@ -17,6 +17,7 @@
 #include <random>
 
 #include "codec_factory_impl.h"
+#include "codec_isolate.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/sys/cpp/component_context.h"
@@ -25,6 +26,7 @@
 namespace {
 
 constexpr char kDeviceClass[] = "/dev/class/media-codec";
+constexpr char kGpuDeviceClass[] = "/dev/class/gpu";
 const char* kLogTag = "CodecFactoryApp";
 const char kRealmSvc[] = "fuchsia.component.Realm";
 
@@ -60,6 +62,7 @@ CodecFactoryApp::CodecFactoryApp(async_dispatcher_t* dispatcher)
   // Else codec_factory won't be able to provide what codecs expect to be able to rely on.
   ZX_ASSERT(status == ZX_OK);
 
+  DiscoverMagmaCodecDriversAndListenForMoreAsync();
   DiscoverMediaCodecDriversAndListenForMoreAsync();
 }
 
@@ -138,10 +141,40 @@ const fuchsia::mediacodec::CodecFactoryPtr* CodecFactoryApp::FindHwCodec(
   if (iter == hw_codecs_.end()) {
     return nullptr;
   }
+  // HW codecs are connected to using factory, not by launching a component using the URL.
+  if (!(*iter)->component_url.empty())
+    return nullptr;
   return (*iter)->factory.get();
 }
 
+const std::optional<std::string> CodecFactoryApp::FindHwIsolate(
+    fit::function<bool(const fuchsia::mediacodec::CodecDescription&)> is_match) {
+  auto iter = std::find_if(hw_codecs_.begin(), hw_codecs_.end(),
+                           [&is_match](const std::unique_ptr<CodecListEntry>& entry) -> bool {
+                             return is_match(entry->description);
+                           });
+  if (iter == hw_codecs_.end()) {
+    return {};
+  }
+  if ((*iter)->component_url.empty()) {
+    return {};
+  }
+  return (*iter)->component_url;
+}
+
+void CodecFactoryApp::IdledCodecDiscovery() {
+  ZX_ASSERT(num_codec_discoveries_in_flight_ >= 1);
+  if (--num_codec_discoveries_in_flight_ == 0) {
+    // The idle_callback indicates that all pre-existing devices have been
+    // seen, and by the time this item reaches the front of the discovery
+    // queue, all pre-existing devices have all been processed.
+    device_discovery_queue_.emplace_back(std::make_unique<DeviceDiscoveryEntry>());
+    PostDiscoveryQueueProcessing();
+  }
+}
+
 void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
+  num_codec_discoveries_in_flight_++;
   // We use fsl::DeviceWatcher::CreateWithIdleCallback() instead of fsl::DeviceWatcher::Create()
   // because the CodecFactory service is started on demand, and we don't want to start serving
   // CodecFactory until we've discovered and processed all existing media-codec devices.  That way,
@@ -234,9 +267,6 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
             [this, discovery_entry = discovery_entry.get()](
                 std::vector<fuchsia::mediacodec::CodecDescription> codec_list) {
               discovery_entry->driver_codec_list = fidl::VectorPtr(codec_list);
-              // In case discovery_entry is the first item which is now ready to
-              // process, process the discovery queue.
-              PostDiscoveryQueueProcessing();
 
               // We're no longer interested in OnCodecList events from the
               // driver's CodecFactory, should the driver send any more. Sending
@@ -244,19 +274,123 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
               // since we don't want the old lambda that touches
               // driver_codec_list (this lambda).
               discovery_entry->codec_factory->events().OnCodecList = nullptr;
+              // In case discovery_entry is the first item which is now ready to
+              // process, process the discovery queue.
+              PostDiscoveryQueueProcessing();
             };
 
         discovery_entry->codec_factory->Bind(std::move(client_factory_channel), dispatcher());
 
         device_discovery_queue_.emplace_back(std::move(discovery_entry));
       },
-      [this] {
-        // The idle_callback indicates that all pre-existing devices have been
-        // seen, and by the time this item reaches the front of the discovery
-        // queue, all pre-existing devices have all been processed.
-        device_discovery_queue_.emplace_back(std::make_unique<DeviceDiscoveryEntry>());
-        PostDiscoveryQueueProcessing();
+      [this] { IdledCodecDiscovery(); });
+}
+
+void CodecFactoryApp::TeardownMagmaCodec(
+    std::shared_ptr<fuchsia::gpu::magma::DevicePtr> magma_device) {
+  // Any given magma device won't be in both lists, but will be in one or
+  // the other by the time this error handler runs.
+  device_discovery_queue_.remove_if(
+      [magma_device](const std::unique_ptr<DeviceDiscoveryEntry>& entry) {
+        return magma_device.get() == entry->magma_device.get();
       });
+
+  hw_codecs_.remove_if([magma_device](const std::unique_ptr<CodecListEntry>& entry) {
+    return magma_device.get() == entry->magma_device.get();
+  });
+
+  // Perhaps the removed discovery item was the first item in the
+  // list; maybe now the new first item in the list can be
+  // processed.
+  PostDiscoveryQueueProcessing();
+}
+
+void CodecFactoryApp::DiscoverMagmaCodecDriversAndListenForMoreAsync() {
+  if (!IsV2()) {
+    // Magma codec components can only be launched as V2.
+    return;
+  }
+  num_codec_discoveries_in_flight_++;
+  gpu_device_watcher_ = fsl::DeviceWatcher::CreateWithIdleCallback(
+      kGpuDeviceClass,
+      [this](int dir_fd, std::string filename) {
+        std::string device_path = std::string(kGpuDeviceClass) + "/" + filename;
+        auto magma_device = std::make_shared<fuchsia::gpu::magma::DevicePtr>();
+        zx_status_t status = fdio_service_connect(
+            device_path.c_str(), magma_device->NewRequest().TakeChannel().release());
+        if (status != ZX_OK) {
+          FX_LOGS(ERROR) << "Failed to connect to device by filename -"
+                         << " status: " << status << " device_path: " << device_path;
+          return;
+        }
+        auto discovery_entry = std::make_unique<DeviceDiscoveryEntry>();
+        discovery_entry->device_path = device_path;
+        discovery_entry->magma_device = magma_device;
+        discovery_entry->magma_device->set_error_handler(
+            [this, device_path, magma_device](zx_status_t status) {
+              TeardownMagmaCodec(magma_device);
+            });
+        (*magma_device)
+            ->GetIcdList([this, discovery_entry = discovery_entry.get(), magma_device,
+                          device_path](std::vector<fuchsia::gpu::magma::IcdInfo> icd_infos) {
+              bool found_media_icd = false;
+              for (auto& icd_entry : icd_infos) {
+                if (!icd_entry.has_flags() || !icd_entry.has_component_url())
+                  continue;
+                if (!(icd_entry.flags() &
+                      fuchsia::gpu::magma::IcdFlags::SUPPORTS_MEDIA_CODEC_FACTORY)) {
+                  continue;
+                }
+                discovery_entry->component_url = icd_entry.component_url();
+                ForwardToIsolate(
+                    icd_entry.component_url(), true, IsolateType::kMagma, startup_context_.get(),
+                    [this, magma_device, device_path](fuchsia::mediacodec::CodecFactoryPtr ptr) {
+                      auto it = std::find_if(
+                          device_discovery_queue_.begin(), device_discovery_queue_.end(),
+                          [magma_device](const std::unique_ptr<DeviceDiscoveryEntry>& entry) {
+                            return magma_device.get() == entry->magma_device.get();
+                          });
+                      if (it == device_discovery_queue_.end()) {
+                        // Device was removed from the queue due to the magma error handler running.
+                        return;
+                      }
+                      auto discovery_entry = it->get();
+
+                      discovery_entry->codec_factory =
+                          std::make_shared<fuchsia::mediacodec::CodecFactoryPtr>();
+                      discovery_entry->codec_factory->Bind(ptr.Unbind());
+                      discovery_entry->codec_factory->set_error_handler(
+                          [this, device_path, magma_device](zx_status_t status) {
+                            TeardownMagmaCodec(magma_device);
+                          });
+                      discovery_entry->codec_factory->events().OnCodecList =
+                          [this, discovery_entry](
+                              std::vector<fuchsia::mediacodec::CodecDescription> codec_list) {
+                            discovery_entry->driver_codec_list = fidl::VectorPtr(codec_list);
+
+                            // We're no longer interested in OnCodecList events from the
+                            // driver's CodecFactory, should the driver send any more. Sending
+                            // more is not legal, but disconnect this event just in case,
+                            // since we don't want the old lambda that touches
+                            // driver_codec_list (this lambda).
+                            discovery_entry->codec_factory->events().OnCodecList = nullptr;
+                            // In case discovery_entry is the first item which is now ready to
+                            // process, process the discovery queue.
+                            PostDiscoveryQueueProcessing();
+                          };
+                    },
+                    [this, magma_device]() { TeardownMagmaCodec(magma_device); });
+                found_media_icd = true;
+                // Only support a single codec factory per magma device.
+                break;
+              }
+              if (!found_media_icd) {
+                TeardownMagmaCodec(magma_device);
+              }
+            });
+        device_discovery_queue_.emplace_back(std::move(discovery_entry));
+      },
+      [this] { IdledCodecDiscovery(); });
 }
 
 void CodecFactoryApp::PostDiscoveryQueueProcessing() {
@@ -308,7 +442,7 @@ void CodecFactoryApp::ProcessDiscoveryQueue() {
   // happens quite early.
   while (!device_discovery_queue_.empty()) {
     std::unique_ptr<DeviceDiscoveryEntry>& front = device_discovery_queue_.front();
-    if (!front->codec_factory) {
+    if (!front->codec_factory && !front->magma_device) {
       // All pre-existing devices have been processed.
       //
       // Now the CodecFactory can begin serving (shortly).
@@ -326,6 +460,11 @@ void CodecFactoryApp::ProcessDiscoveryQueue() {
       // when the first item is potentially ready.
       return;
     }
+    if (!front->component_url.empty()) {
+      // If there's a component URL then a new instance will be launched for every codec, so
+      // codec_factory won't be used anymore.
+      front->codec_factory = {};
+    }
     FX_DCHECK(front->driver_codec_list.has_value());
 
     for (auto& codec_description : front->driver_codec_list.value()) {
@@ -334,11 +473,14 @@ void CodecFactoryApp::ProcessDiscoveryQueue() {
                             ? "decoder"
                             : "encoder")
                     << ", mime_type: " << codec_description.mime_type
-                    << ", device_path: " << front->device_path;
+                    << ", device_path: " << front->device_path
+                    << ", component url: " << front->component_url;
       hw_codecs_.emplace_front(std::make_unique<CodecListEntry>(CodecListEntry{
           .description = std::move(codec_description),
+          .component_url = front->component_url,
           // shared_ptr<>
           .factory = front->codec_factory,
+          .magma_device = front->magma_device,
       }));
     }
 

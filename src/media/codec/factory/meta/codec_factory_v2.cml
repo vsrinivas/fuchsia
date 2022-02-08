@@ -2,14 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
     program: {
-        runner: "elf",
         binary: "bin/codec_factory",
     },
     collections: [
         {
             name: "sw-codecs",
+
+            // every component started in this collection will self-destruct when
+            // it exits
+            durability: "single_run",
+        },
+        {
+            name: "magma-codecs",
 
             // every component started in this collection will self-destruct when
             // it exits
@@ -24,6 +33,11 @@
             directory: "dev-mediacodec",
             rights: [ "rw*" ],
             path: "/dev/class/media-codec",
+        },
+        {
+            directory: "dev-gpu",
+            rights: [ "rw*" ],
+            path: "/dev/class/gpu",
         },
         {
             protocol: [
@@ -45,7 +59,15 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: "#sw-codecs",
+            to: [
+                "#magma-codecs",
+                "#sw-codecs",
+            ],
+        },
+        {
+            directory: "dev-gpu",
+            from: "parent",
+            to: "#magma-codecs",
         },
     ],
     expose: [

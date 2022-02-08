@@ -1,0 +1,25 @@
+{
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        binary: "bin/fake_codec_factory",
+    },
+    capabilities: [
+        { protocol: "fuchsia.mediacodec.CodecFactory" },
+    ],
+    use: [
+        {
+            directory: "dev-gpu",
+            rights: [ "rw*" ],
+            path: "/dev/class/gpu",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.mediacodec.CodecFactory",
+            from: "self",
+        },
+    ],
+}

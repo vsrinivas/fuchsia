@@ -18,6 +18,7 @@
 
 #include <algorithm>
 
+#include "codec_isolate.h"
 #include "lib/zx/eventpair.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -124,116 +125,6 @@ std::optional<std::string> FindDecoder(const std::string& mime_type, bool is_v2)
   return {is_v2 ? decoder->isolate_url_v2 : decoder->isolate_url};
 }
 
-void ForwardToIsolate(std::string component_url, bool is_v2,
-                      sys::ComponentContext* component_context,
-                      fit::function<void(fuchsia::mediacodec::CodecFactoryPtr)> connect_func) {
-  if (is_v2) {
-    fuchsia::component::decl::Child isolate;
-    uint64_t rand_num;
-    zx_cprng_draw(&rand_num, sizeof rand_num);
-    std::string msg = fxl::StringPrintf("isolate-%" PRIu64 "", rand_num);
-    isolate.set_name(msg);
-    isolate.set_url(component_url);
-    isolate.set_startup(fuchsia::component::decl::StartupMode::LAZY);
-    isolate.set_on_terminate(fuchsia::component::decl::OnTerminate::NONE);
-
-    fuchsia::component::decl::CollectionRef collection{.name = "sw-codecs"};
-    fuchsia::component::RealmPtr realm_svc;
-
-    fuchsia::component::CreateChildArgs child_args;
-    child_args.set_numbered_handles(std::vector<fuchsia::process::HandleInfo>());
-
-    component_context->svc()->Connect(realm_svc.NewRequest());
-    realm_svc.set_error_handler([](zx_status_t err) {
-      FX_LOGS(WARNING) << "FIDL error using fuchsia.component.Realm protocol: " << err;
-    });
-
-    realm_svc->CreateChild(
-        collection, std::move(isolate), std::move(child_args),
-        [realm_svc = std::move(realm_svc), connect_func = std::move(connect_func),
-         msg = std::move(msg)](fuchsia::component::Realm_CreateChild_Result res) mutable {
-          if (res.is_err()) {
-            FX_LOGS(WARNING) << "Isolate creation request failed for " << msg;
-            return;
-          }
-          fidl::InterfaceHandle<fuchsia::io::Directory> exposed_dir;
-
-          fuchsia::component::decl::ChildRef child = fuchsia::component::decl::ChildRef{
-              .name = msg,
-              .collection = "sw-codecs",
-          };
-          realm_svc->OpenExposedDir(
-              child, exposed_dir.NewRequest(),
-              [realm_svc = std::move(realm_svc), exposed_dir = std::move(exposed_dir),
-               connect_func = std::move(connect_func)](
-                  fuchsia::component::Realm_OpenExposedDir_Result res) mutable {
-                if (res.is_err()) {
-                  FX_LOGS(WARNING) << "OpenExposedDir on isolate failed";
-                  return;
-                }
-
-                fuchsia::mediacodec::CodecFactoryPtr factory_delegate;
-                auto delegate_req = factory_delegate.NewRequest();
-                sys::ServiceDirectory child_services(std::move(exposed_dir));
-                zx_status_t connect_res = child_services.Connect(
-                    std::move(delegate_req),
-                    // TODO(dustingreen): Might be helpful (for debugging maybe)
-                    // to change this name to distinguish these delegate
-                    // CodecFactory(s) from the main CodecFactory service.
-                    fuchsia::mediacodec::CodecFactory::Name_);
-                if (connect_res == ZX_OK) {
-                  connect_func(std::move(factory_delegate));
-                } else {
-                  FX_LOGS(WARNING)
-                      << "Connection to isolate services failed with error code: " << connect_res;
-                }
-              });
-        });
-  } else {
-    fuchsia::sys::ComponentControllerPtr component_controller;
-    fidl::InterfaceHandle<fuchsia::io::Directory> directory;
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = component_url;
-    launch_info.directory_request = directory.NewRequest().TakeChannel();
-    fuchsia::sys::LauncherPtr launcher;
-    component_context->svc()->Connect(launcher.NewRequest());
-    launcher->CreateComponent(std::move(launch_info), component_controller.NewRequest());
-    sys::ServiceDirectory services(std::move(directory));
-    component_controller.set_error_handler([component_url](zx_status_t status) {
-      FX_LOGS(ERROR) << "app_controller_ error connecting to CodecFactoryImpl of " << component_url;
-    });
-    fuchsia::mediacodec::CodecFactoryPtr factory_delegate;
-    services.Connect(factory_delegate.NewRequest(),
-                     // TODO(dustingreen): Might be helpful (for debugging maybe) to change
-                     // this name to distinguish these delegate CodecFactory(s) from the main
-                     // CodecFactory service.
-                     fuchsia::mediacodec::CodecFactory::Name_);
-
-    // Forward the request to the factory_delegate_ as-is.  This avoids conversion
-    // to command-line parameters and back, and avoids creating a separate
-    // interface definition for the delegated call.  The downside is potential
-    // confusion re. why we have several implementations of CodecFactory, but we
-    // can comment why.  The presently-running implementation is the main
-    // implementation that clients use directly.
-
-    // Dropping factory_delegate in here is ok; messages will be received in order
-    // by the peer before they see the PEER_CLOSED event.
-    connect_func(std::move(factory_delegate));
-
-    // We don't want to be forced to keep component_controller around.  When using
-    // an isolate, we trust that the ComponentController will kill the app if we
-    // crash before this point, as this process crashing will kill the server side
-    // of the component_controller.  If we crash after this point, we trust that
-    // the isolate will receive the CreateDecoder() message sent just above, and
-    // will either exit on failure to create the Codec server-side, or will exit
-    // later when the client side of the Codec channel closes, or will exit later
-    // when the Codec fails asynchronously in whatever way. Essentially the Codec
-    // channel owns the isolate at this point, and we trust the isolate to exit
-    // when the Codec channel closes.
-    component_controller->Detach();
-  }
-}
-
 }  // namespace
 
 // TODO(dustingreen): Currently we assume, potentially incorrectly, that clients
@@ -291,12 +182,13 @@ void CodecFactoryImpl::CreateDecoder(
   // We don't have any need to bind the codec_request locally to this process.
   // Instead, we find where to delegate the request to.
 
+  std::optional<std::string> hw_isolate;
+  IsolateType isolate_type = IsolateType::kSw;
   if (!params.has_require_sw() || !params.require_sw()) {
     // First, try to find a hw-accelerated codec to satisfy the request.
     auto mime_type = params.input_details().mime_type();
     const fuchsia::mediacodec::CodecFactoryPtr* factory = app_->FindHwCodec(
-        [mime_type = std::move(mime_type)](
-            const fuchsia::mediacodec::CodecDescription& hw_codec_description) -> bool {
+        [&mime_type](const fuchsia::mediacodec::CodecDescription& hw_codec_description) -> bool {
           // TODO(dustingreen): pay attention to the bool constraints of the
           // params vs. the hw_codec_description bools.  For the moment we just
           // match the codec_type, mime_type.
@@ -316,18 +208,33 @@ void CodecFactoryImpl::CreateDecoder(
       (*factory)->CreateDecoder(std::move(params), std::move(decoder));
       return;
     }
+    hw_isolate = app_->FindHwIsolate(
+        [&mime_type](const fuchsia::mediacodec::CodecDescription& hw_codec_description) -> bool {
+          // TODO(dustingreen): pay attention to the bool constraints of the
+          // params vs. the hw_codec_description bools.  For the moment we just
+          // match the codec_type, mime_type.
+          constexpr fuchsia::mediacodec::CodecType codec_type =
+              fuchsia::mediacodec::CodecType::DECODER;
+          return (codec_type == hw_codec_description.codec_type) &&
+                 (mime_type == hw_codec_description.mime_type);
+        });
+    if (hw_isolate) {
+      isolate_type = IsolateType::kMagma;
+    }
   }
 
   // This is outside the above if on purpose, in case the client specifies both require_hw and
   // require_sw, in which case we should fail.
-  if (params.has_require_hw() && params.require_hw()) {
+  if (!hw_isolate && params.has_require_hw() && params.require_hw()) {
     FX_LOGS(WARNING) << "require_hw, but no matching HW decoder factory found ("
                      << params.input_details().mime_type() << "); closing";
     // TODO(dustingreen): Send epitaph when possible.
     return;
   }
 
-  auto maybe_decoder_isolate_url = FindDecoder(params.input_details().mime_type(), is_v2_);
+  auto maybe_decoder_isolate_url = hw_isolate;
+  if (!maybe_decoder_isolate_url)
+    maybe_decoder_isolate_url = FindDecoder(params.input_details().mime_type(), is_v2_);
 
   if (!maybe_decoder_isolate_url) {
     FX_LOGS(WARNING) << "No decoder supports " << params.input_details().mime_type();
@@ -336,21 +243,23 @@ void CodecFactoryImpl::CreateDecoder(
 
   FX_LOGS(INFO) << "CreateDecoder() found SW decoder for: " << params.input_details().mime_type();
 
-  ForwardToIsolate(*maybe_decoder_isolate_url, is_v2_, component_context_,
-                   [self = self_, params = std::move(params), decoder = std::move(decoder)](
-                       fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
-                     // Forward the request to the factory_delegate_ as-is. This
-                     // avoids conversion to command-line parameters and back,
-                     // and avoids creating a separate interface definition for
-                     // the delegated call.  The downside is potential confusion
-                     // re. why we have several implementations of CodecFactory,
-                     // but we can comment why.  The presently-running
-                     // implementation is the main implementation that clients
-                     // use directly.
-                     self->AttachLifetimeTrackingEventpairDownstream(&factory_delegate);
-                     factory_delegate->CreateDecoder(std::move(params), std::move(decoder));
-                     ZX_DEBUG_ASSERT(self->lifetime_tracking_.empty());
-                   });
+  ForwardToIsolate(
+      *maybe_decoder_isolate_url, is_v2_, isolate_type, component_context_,
+      [self = self_, params = std::move(params), decoder = std::move(decoder)](
+          fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
+        // Forward the request to the factory_delegate_ as-is. This
+        // avoids conversion to command-line parameters and back,
+        // and avoids creating a separate interface definition for
+        // the delegated call.  The downside is potential confusion
+        // re. why we have several implementations of CodecFactory,
+        // but we can comment why.  The presently-running
+        // implementation is the main implementation that clients
+        // use directly.
+        self->AttachLifetimeTrackingEventpairDownstream(&factory_delegate);
+        factory_delegate->CreateDecoder(std::move(params), std::move(decoder));
+        ZX_DEBUG_ASSERT(self->lifetime_tracking_.empty());
+      },
+      []() {});
 }
 
 void CodecFactoryImpl::CreateEncoder(
@@ -410,14 +319,15 @@ void CodecFactoryImpl::CreateEncoder(
     return;
   }
 
-  ForwardToIsolate(*maybe_encoder_isolate_url, is_v2_, component_context_,
-                   [self = self_, encoder_params = std::move(encoder_params),
-                    encoder_request = std::move(encoder_request)](
-                       fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
-                     self->AttachLifetimeTrackingEventpairDownstream(&factory_delegate);
-                     factory_delegate->CreateEncoder(std::move(encoder_params),
-                                                     std::move(encoder_request));
-                   });
+  ForwardToIsolate(
+      *maybe_encoder_isolate_url, is_v2_, IsolateType::kSw, component_context_,
+      [self = self_, encoder_params = std::move(encoder_params),
+       encoder_request = std::move(encoder_request)](
+          fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
+        self->AttachLifetimeTrackingEventpairDownstream(&factory_delegate);
+        factory_delegate->CreateEncoder(std::move(encoder_params), std::move(encoder_request));
+      },
+      []() {});
 }
 
 void CodecFactoryImpl::AttachLifetimeTracking(zx::eventpair codec_end) {

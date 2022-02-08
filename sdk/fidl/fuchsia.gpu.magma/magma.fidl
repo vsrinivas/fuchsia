@@ -37,6 +37,8 @@ const MAX_ICD_COUNT uint64 = 8;
 type IcdFlags = flexible bits : uint32 {
     SUPPORTS_VULKAN = 1;
     SUPPORTS_OPENCL = 2;
+    // Exposes the fuchsia.mediacodec.CodecFactory FIDL interface.
+    SUPPORTS_MEDIA_CODEC_FACTORY = 4;
 };
 
 /// Information about an ICD implementation that can be used with a Magma device.

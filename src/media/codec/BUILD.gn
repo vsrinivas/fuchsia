@@ -44,6 +44,7 @@ group("tests") {
     "//src/media/codec/examples:vp9_decoder_fuzzer_tests",
     "//src/media/codec/factory:codec_detect_hw_decode_test",
     "//src/media/codec/factory:codec_detect_hw_decode_test_v2",
+    "//src/media/codec/factory:codec_factory_integration_test",
   ]
 }
 

@@ -25,5 +25,11 @@
             to: "#codec-factory",
             rights: [ "rw*" ],
         },
+        {
+            directory: "dev-gpu",
+            from: "parent",
+            to: "#codec-factory",
+            rights: [ "rw*" ],
+        },
     ],
 }
