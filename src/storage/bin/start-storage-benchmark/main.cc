@@ -44,7 +44,7 @@ zx::status<std::unique_ptr<RunningFilesystem>> StartFilesystem(const CommandLine
     return fvm_client.take_error();
   }
 
-  auto fvm_volume = FvmVolume::Create(*fvm_client, 50lu * 1024 * 1024);
+  auto fvm_volume = FvmVolume::Create(*fvm_client, options.partition_size);
   if (fvm_volume.is_error()) {
     return fvm_volume.take_error();
   }
