@@ -16,12 +16,12 @@ executable("bin") {
     "atomics.cc",
     "example.cc",
     "filesystem.cc",
+    "main.cc",
     "malloc.cc",
     "memcpy.cc",
     "null.cc",
     "pthreads.cc",
     "random_memcpy.cc",
-    "test_runner.cc",
   ]
   if (is_fuchsia) {
     sources += [
