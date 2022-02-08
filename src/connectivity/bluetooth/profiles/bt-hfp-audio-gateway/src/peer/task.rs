@@ -113,7 +113,8 @@ impl PeerTask {
             handler: None,
             network: NetworkInformation::EMPTY,
             network_updates: empty().right_stream(),
-            // TODO (fxbug.dev/74667): Retrieve battery status from Fuchsia power service
+            // Default to a battery level of 5 (max). This will be updated when we receive
+            // a battery information update.
             battery_level: 5,
             calls: Calls::new(None),
             gain_control: GainControl::new()?,
@@ -1481,7 +1482,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
         // The battery level that will be reported by the peer.
-        let expected_level = 79;
+        let expected_level = 4;
 
         // Pass in the client end connected to the call manager
         let result = exec.run_singlethreaded(sender.send(PeerRequest::Handle(proxy)));
@@ -1513,6 +1514,36 @@ mod tests {
 
         // Since we (the AG) received a valid HF indicator, we expect to send an OK back to the peer.
         expect_peer_ready(&mut exec, &mut remote, Some(serialize_at_response(at::Response::Ok)));
+    }
+
+    #[fuchsia::test]
+    fn local_battery_level_change_initiates_phone_status_procedure() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        // Setup the peer task with the specified SlcState to enable the battery level indicator on
+        // both the HF and the AG.
+        let mut hf_indicators = HfIndicators::default();
+        hf_indicators.enable_indicators(vec![at::BluetoothHFIndicator::BatteryLevel]);
+        let ag_indicator_events_reporting = AgIndicatorsReporting::new_enabled();
+        let state =
+            SlcState { hf_indicators, ag_indicator_events_reporting, ..SlcState::default() };
+        let (connection, mut remote) = create_and_initialize_slc(state);
+        let (peer, mut sender, receiver, _profile) = setup_peer_task(Some(connection));
+
+        // Run the PeerTask.
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
+
+        // Receive a local update from the Fuchsia Battery Manager about a battery level change.
+        let request = PeerRequest::BatteryLevel(3);
+        let send_request_fut = sender.send(request);
+        let (send_result, run_fut) = run_while(&mut exec, run_fut, send_request_fut);
+        assert_matches!(send_result, Ok(()));
+
+        // We expect the peer (HF) to receive the PhoneStatus update AT command.
+        let expected_ciev = vec![AgIndicator::BatteryLevel(3).into()];
+        let ((), _run_fut) =
+            run_while(&mut exec, run_fut, expect_data_received_by_peer(&mut remote, expected_ciev));
     }
 
     #[fuchsia::test]

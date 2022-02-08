@@ -20,6 +20,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers",
+    "//src/connectivity/bluetooth/lib/battery-client",
     "//src/connectivity/bluetooth/lib/bt-rfcomm",
     "//src/connectivity/bluetooth/lib/fuchsia-audio-dai",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
@@ -52,7 +53,9 @@ rustc_binary("bin") {
 
   test_deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
+    "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers:async-test-helpers",
+    "//src/connectivity/bluetooth/testing/test-battery-manager",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:proptest",
   ]

@@ -86,7 +86,7 @@ pub trait Peer: Future<Output = PeerId> + Unpin + Send {
 
     /// Provide the `Peer` with the battery level of this device.
     /// `level` should be a value between 0-5 inclusive.
-    async fn battery_level(&mut self, level: u8);
+    async fn report_battery_level(&mut self, level: u8);
 
     /// Set the behavior used when connecting to remote peers.
     async fn set_connection_behavior(&mut self, behavior: ConnectionBehavior);
@@ -212,7 +212,7 @@ impl Peer for PeerImpl {
         Ok(server_end)
     }
 
-    async fn battery_level(&mut self, level: u8) {
+    async fn report_battery_level(&mut self, level: u8) {
         let _ = self.queue.try_send_fut(PeerRequest::BatteryLevel(level)).await;
     }
 
@@ -287,7 +287,7 @@ pub(crate) mod fake {
             unimplemented!("Not needed for any currently written tests");
         }
 
-        async fn battery_level(&mut self, level: u8) {
+        async fn report_battery_level(&mut self, level: u8) {
             self.expect_send_request(PeerRequest::BatteryLevel(level)).await;
         }
 

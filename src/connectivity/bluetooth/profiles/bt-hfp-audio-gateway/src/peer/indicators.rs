@@ -19,6 +19,11 @@ pub(crate) const SIGNAL_INDICATOR_INDEX: usize = 5;
 pub(crate) const ROAM_INDICATOR_INDEX: usize = 6;
 pub(crate) const BATT_CHG_INDICATOR_INDEX: usize = 7;
 
+/// The battchg indicator values range from [0, 5].
+/// See HFP v1.8 Section 4.34.2.
+const MIN_BATTERY_INDICATOR_VALUE: u8 = 0;
+const MAX_BATTERY_INDICATOR_VALUE: u8 = 5;
+
 /// The supported HF indicators.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum HfIndicator {
@@ -47,15 +52,11 @@ impl<T: Clone + Copy + Debug> Default for Indicator<T> {
 pub struct HfIndicators {
     /// The Enhanced Safety HF indicator. There are only two potential values (enabled, disabled).
     enhanced_safety: Indicator<bool>,
-    /// The Battery Level HF indicator. Can be any integer value between [0, 100].
+    /// The Battery Level HF indicator. Can be any integer value between [0, 5].
     battery_level: Indicator<u8>,
 }
 
 impl HfIndicators {
-    /// The Maximum Battery Level value for the `battery_level` indicator.
-    /// Defined in HFP v1.8 Section 4.35.
-    const MAX_BATTERY_LEVEL: u8 = 100;
-
     #[cfg(test)]
     pub fn enhanced_safety_enabled(&self) -> bool {
         self.enhanced_safety.enabled
@@ -96,7 +97,9 @@ impl HfIndicators {
                 HfIndicator::EnhancedSafety(v)
             }
             at::BluetoothHFIndicator::BatteryLevel if self.battery_level.enabled => {
-                if value < 0 || value > Self::MAX_BATTERY_LEVEL.into() {
+                if value < MIN_BATTERY_INDICATOR_VALUE.into()
+                    || value > MAX_BATTERY_INDICATOR_VALUE.into()
+                {
                     return Err(());
                 }
                 let v = value as u8;
@@ -208,6 +211,21 @@ impl From<AgIndicator> for AgUpdate {
     fn from(src: AgIndicator) -> Self {
         Self::PhoneStatusIndicator(src)
     }
+}
+
+/// Returns the indicator battery level from the provided battery `level_percent`.
+/// Indicator battery levels range from [0, MAX_BATTERY_INDICATOR_VALUE].
+pub fn battery_level_to_indicator_value(level_percent: u8) -> u8 {
+    // In practice, this will never happen because the battery-client clamps the percentage to the
+    // range [0, 100].
+    if level_percent >= 100 {
+        warn!("Received level_percent greater than 100: {:?}", level_percent);
+        return MAX_BATTERY_INDICATOR_VALUE;
+    }
+
+    // This returns a scaled indicator value in the range [0, MAX_BATTERY_INDICATOR_VALUE].
+    let indicator_float: f32 = level_percent as f32 / 100.0 * MAX_BATTERY_INDICATOR_VALUE as f32;
+    indicator_float.round() as u8
 }
 
 /// The current AG Indicators Reporting status with the active/inactive status of each
@@ -340,7 +358,7 @@ mod tests {
                 .update_indicator_value(at::BluetoothHFIndicator::BatteryLevel, battery_too_low),
             Err(())
         );
-        let battery_too_high = 1243;
+        let battery_too_high = 10;
         assert_matches!(
             hf_indicators
                 .update_indicator_value(at::BluetoothHFIndicator::BatteryLevel, battery_too_high),
@@ -366,7 +384,7 @@ mod tests {
         // Default is no indicators set. Therefore any updates are errors.
         let mut hf_indicators = HfIndicators::default();
 
-        let valid_battery = 32;
+        let valid_battery = 3;
         assert_matches!(
             hf_indicators
                 .update_indicator_value(at::BluetoothHFIndicator::BatteryLevel, valid_battery),
@@ -396,11 +414,11 @@ mod tests {
             at::BluetoothHFIndicator::EnhancedSafety,
         ]);
 
-        let valid_battery = 83;
+        let valid_battery = 5;
         assert_matches!(
             hf_indicators
                 .update_indicator_value(at::BluetoothHFIndicator::BatteryLevel, valid_battery),
-            Ok(HfIndicator::BatteryLevel(83))
+            Ok(HfIndicator::BatteryLevel(5))
         );
         assert_eq!(hf_indicators.battery_level.value, Some(valid_battery as u8));
 
@@ -520,5 +538,32 @@ mod tests {
         assert!(status.indicator_enabled(&AgIndicator::CallHeld(0)));
         assert!(!status.indicator_enabled(&AgIndicator::Roam(0)));
         assert!(!status.indicator_enabled(&AgIndicator::BatteryLevel(0)));
+    }
+
+    #[test]
+    fn level_percent_to_indicator_value() {
+        let level_percent = 0;
+        assert_eq!(battery_level_to_indicator_value(level_percent), 0);
+        let level_percent = 24;
+        assert_eq!(battery_level_to_indicator_value(level_percent), 1);
+        let level_percent = 30;
+        assert_eq!(battery_level_to_indicator_value(level_percent), 2);
+        let level_percent = 40;
+        assert_eq!(battery_level_to_indicator_value(level_percent), 2);
+        let level_percent = 50;
+        assert_eq!(battery_level_to_indicator_value(level_percent), 3);
+        let level_percent = 60;
+        assert_eq!(battery_level_to_indicator_value(level_percent), 3);
+        let level_percent = 70;
+        assert_eq!(battery_level_to_indicator_value(level_percent), 4);
+        let level_percent = 80;
+        assert_eq!(battery_level_to_indicator_value(level_percent), 4);
+        let level_percent = 90;
+        assert_eq!(battery_level_to_indicator_value(level_percent), 5);
+        let level_percent = 100;
+        assert_eq!(battery_level_to_indicator_value(level_percent), 5);
+        // While unexpected, the conversion is still resilient and returns the max.
+        let level_percent = 110;
+        assert_eq!(battery_level_to_indicator_value(level_percent), 5);
     }
 }

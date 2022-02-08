@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use at_commands as at;
+use tracing::debug;
 
 use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 use crate::peer::{service_level_connection::SlcState, update::AgUpdate};
@@ -47,6 +48,7 @@ impl Procedure for PhoneStatusProcedure {
                 if state.ag_indicator_events_reporting.indicator_enabled(&status) {
                     AgUpdate::PhoneStatusIndicator(status).into()
                 } else {
+                    debug!("PhoneStatus indicator {:?} disabled. Will not send to peer", status);
                     ProcedureRequest::None
                 }
             }

@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    async_helpers::maybe_stream::MaybeStream,
     async_utils::stream::FutureMap,
+    battery_client::{BatteryClient, BatteryClientError, BatteryInfo},
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::{CallManagerProxy, PeerHandlerMarker},
@@ -28,7 +30,7 @@ use crate::{
     config::AudioGatewayFeatureSupport,
     error::Error,
     inspect::{CallManagerInspect, HfpInspect},
-    peer::{ConnectionBehavior, Peer, PeerImpl},
+    peer::{indicators::battery_level_to_indicator_value, ConnectionBehavior, Peer, PeerImpl},
 };
 
 pub enum Event {
@@ -56,6 +58,9 @@ pub struct Hfp {
     connection_behavior: ConnectionBehavior,
     /// A shared audio controller, to start and route audio devices for peers.
     audio: Arc<Mutex<Box<dyn AudioControl>>>,
+    /// Provides Hfp with battery updates from the `fuchsia.power.BatteryManager` protocol - these
+    /// are battery updates about the local (Fuchsia) device.
+    battery_client: MaybeStream<BatteryClient>,
     internal_events_rx: Receiver<Event>,
     internal_events_tx: Sender<Event>,
     inspect_node: HfpInspect,
@@ -76,6 +81,7 @@ impl Hfp {
     pub fn new(
         profile_client: ProfileClient,
         profile_svc: bredr::ProfileProxy,
+        battery_client: Option<BatteryClient>,
         audio: impl AudioControl + 'static,
         call_manager_registration: Receiver<CallManagerProxy>,
         config: AudioGatewayFeatureSupport,
@@ -93,6 +99,7 @@ impl Hfp {
             test_requests,
             connection_behavior: ConnectionBehavior::default(),
             audio: Arc::new(Mutex::new(Box::new(audio))),
+            battery_client: battery_client.into(),
             internal_events_rx,
             internal_events_tx,
             inspect_node: Default::default(),
@@ -116,10 +123,15 @@ impl Hfp {
                     self.handle_new_call_manager(manager).await?;
                 }
                 request = self.test_requests.select_next_some() => {
-                    self.handle_test_request(request).await?;
+                    self.handle_test_request(request).await;
                 }
                 removed = self.peers.next() => {
                     let _ = removed.map(|id| debug!("Peer removed: {}", id));
+                }
+                battery_info = self.battery_client.next() => {
+                    if let Some(info) = battery_info {
+                        self.handle_battery_client_update(info).await;
+                    }
                 }
                 event = self.internal_events_rx.select_next_some() => {
                     self.handle_internal_event(event).await;
@@ -140,17 +152,35 @@ impl Hfp {
         }
     }
 
-    async fn handle_test_request(
+    async fn handle_battery_client_update(
         &mut self,
-        request: hfp_test::HfpTestRequest,
-    ) -> Result<(), Error> {
+        update: Result<BatteryInfo, BatteryClientError>,
+    ) {
+        let update = match update {
+            Err(e) => {
+                info!("Error in battery client: {:?}", e);
+                return;
+            }
+            Ok(update) => update,
+        };
+
+        if let Some(level_percent) = update.level() {
+            self.report_battery_level(battery_level_to_indicator_value(level_percent)).await;
+        }
+    }
+
+    async fn report_battery_level(&mut self, battery_level: u8) {
+        for peer in self.peers.inner().values_mut() {
+            peer.report_battery_level(battery_level).await;
+        }
+    }
+
+    async fn handle_test_request(&mut self, request: hfp_test::HfpTestRequest) {
         info!("Handling test request: {:?}", request);
         use hfp_test::HfpTestRequest::*;
         match request {
             BatteryIndicator { level, .. } => {
-                for peer in self.peers.inner().values_mut() {
-                    peer.battery_level(level).await;
-                }
+                self.report_battery_level(level).await;
             }
             SetConnectionBehavior { behavior, .. } => {
                 let behavior = behavior.into();
@@ -160,7 +190,6 @@ impl Hfp {
                 self.connection_behavior = behavior;
             }
         }
-        Ok(())
     }
 
     /// Handle a single `ProfileEvent` from `profile`.
@@ -285,34 +314,37 @@ impl CallManager {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::{
-            peer::{fake::PeerFake, ConnectionBehavior, PeerRequest},
-            profile::test_server::{setup_profile_and_test_server, LocalProfileTestServer},
-        },
-        async_test_helpers::run_while,
-        async_utils::PollExt,
-        fidl::endpoints::{create_proxy, create_proxy_and_stream},
-        fidl_fuchsia_bluetooth as bt,
-        fidl_fuchsia_bluetooth_hfp::{
-            CallManagerMarker, CallManagerRequest, CallManagerRequestStream,
-        },
-        fuchsia_async as fasync,
-        futures::{channel::mpsc, SinkExt, TryStreamExt},
-    };
-
+    use super::*;
     use crate::audio::TestAudioControl;
+    use crate::{
+        peer::{fake::PeerFake, ConnectionBehavior, PeerRequest},
+        profile::test_server::{setup_profile_and_test_server, LocalProfileTestServer},
+    };
+    use assert_matches::assert_matches;
+    use async_test_helpers::run_while;
+    use async_utils::PollExt;
     use bt_rfcomm::{profile::build_rfcomm_protocol, ServerChannel};
+    use fidl::endpoints::{create_proxy, create_proxy_and_stream};
+    use fidl_fuchsia_bluetooth as bt;
     use fidl_fuchsia_bluetooth_bredr as bredr;
+    use fidl_fuchsia_bluetooth_hfp::{
+        CallManagerMarker, CallManagerRequest, CallManagerRequestStream,
+    };
+    use fidl_fuchsia_power as fpower;
+    use fuchsia_async as fasync;
     use fuchsia_bluetooth::types::Uuid;
     use fuchsia_inspect::assert_data_tree;
     use fuchsia_zircon as zx;
+    use futures::{pin_mut, SinkExt, TryStreamExt};
     use std::convert::TryFrom;
+    use test_battery_manager::TestBatteryManager;
 
     #[fuchsia::test(allow_stalls = false)]
     async fn profile_error_propagates_error_from_hfp_run() {
         let (profile, profile_svc, server) = setup_profile_and_test_server();
+        let (battery_client, _test_battery_manager) =
+            TestBatteryManager::make_battery_client_with_test_manager().await;
+
         // dropping the server is expected to produce an error from Hfp::run
         drop(server);
 
@@ -322,6 +354,7 @@ mod tests {
         let hfp = Hfp::new(
             profile,
             profile_svc,
+            Some(battery_client),
             TestAudioControl::default(),
             rx1,
             AudioGatewayFeatureSupport::default(),
@@ -337,6 +370,8 @@ mod tests {
     #[fuchsia::test(allow_stalls = false)]
     async fn new_profile_event_initiates_connections_to_profile_and_call_manager() {
         let (profile, profile_svc, server) = setup_profile_and_test_server();
+        let (battery_client, _test_battery_manager) =
+            TestBatteryManager::make_battery_client_with_test_manager().await;
         let (proxy, stream) = create_proxy_and_stream::<CallManagerMarker>().unwrap();
 
         let (mut sender, receiver) = mpsc::channel(1);
@@ -349,6 +384,7 @@ mod tests {
         let hfp = Hfp::new(
             profile,
             profile_svc,
+            Some(battery_client),
             TestAudioControl::default(),
             receiver,
             AudioGatewayFeatureSupport::default(),
@@ -375,6 +411,9 @@ mod tests {
     fn peer_connected_only_after_connection_success() {
         let mut exec = fuchsia_async::TestExecutor::new().unwrap();
         let (profile, profile_svc, server) = setup_profile_and_test_server();
+        let setup_fut = TestBatteryManager::make_battery_client_with_test_manager();
+        pin_mut!(setup_fut);
+        let (battery_client, _test_mgr) = exec.run_singlethreaded(&mut setup_fut);
         let (proxy, stream) = create_proxy_and_stream::<CallManagerMarker>().unwrap();
 
         let (mut sender, receiver) = mpsc::channel(1);
@@ -387,6 +426,7 @@ mod tests {
         let hfp = Hfp::new(
             profile,
             profile_svc,
+            Some(battery_client),
             TestAudioControl::default(),
             receiver,
             AudioGatewayFeatureSupport::default(),
@@ -431,6 +471,8 @@ mod tests {
     async fn peer_then_first_manager_connected_works() {
         let (profile, profile_svc, server) = setup_profile_and_test_server();
         let (proxy, stream) = create_proxy_and_stream::<CallManagerMarker>().unwrap();
+        let (battery_client, _test_battery_manager) =
+            TestBatteryManager::make_battery_client_with_test_manager().await;
 
         let (mut sender, receiver) = mpsc::channel(1);
 
@@ -441,6 +483,7 @@ mod tests {
         let hfp = Hfp::new(
             profile,
             profile_svc,
+            Some(battery_client),
             TestAudioControl::default(),
             receiver,
             AudioGatewayFeatureSupport::default(),
@@ -467,6 +510,7 @@ mod tests {
     // #[fuchsia::test]
     // async fn manager_disconnect_and_new_connection_works() {
     //     let (profile, profile_svc, server) = setup_profile_and_test_server();
+    //     let (battery_client, _test_battery_manager) = TestBatteryManager::make_battery_client_with_test_manager().await;
     //     let (proxy, stream) =
     //         create_proxy_and_stream::<CallManagerMarker>().unwrap();
 
@@ -480,6 +524,7 @@ mod tests {
     //     let hfp = Hfp::new(
     //         profile,
     //         profile_svc,
+    //         Some(battery_client),
     //         TestAudioControl::default(),
     //         receiver,
     //         AudioGatewayFeatureSupport::default(),
@@ -515,6 +560,9 @@ mod tests {
     fn new_profile_from_audio_gateway_is_ignored() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (profile, profile_svc, mut server) = setup_profile_and_test_server();
+        let setup_fut = TestBatteryManager::make_battery_client_with_test_manager();
+        pin_mut!(setup_fut);
+        let (battery_client, _test_mgr) = exec.run_singlethreaded(&mut setup_fut);
         let (proxy, mut stream) = create_proxy_and_stream::<CallManagerMarker>().unwrap();
 
         let (mut sender, receiver) = mpsc::channel(1);
@@ -527,6 +575,7 @@ mod tests {
         let hfp = Hfp::new(
             profile,
             profile_svc,
+            Some(battery_client),
             TestAudioControl::default(),
             receiver,
             AudioGatewayFeatureSupport::default(),
@@ -639,8 +688,10 @@ mod tests {
     }
 
     #[fuchsia::test(allow_stalls = false)]
-    async fn battery_level_request_is_propagated() {
+    async fn battery_level_test_request_is_propagated() {
         let (profile, profile_svc, _server) = setup_profile_and_test_server();
+        let (battery_client, _test_battery_manager) =
+            TestBatteryManager::make_battery_client_with_test_manager().await;
         let (_call_mgr_tx, call_mgr_rx) = mpsc::channel(1);
         let (mut test_tx, test_rx) = mpsc::channel(1);
 
@@ -649,6 +700,7 @@ mod tests {
         let mut hfp = Hfp::new(
             profile,
             profile_svc,
+            Some(battery_client),
             TestAudioControl::default(),
             call_mgr_rx,
             AudioGatewayFeatureSupport::default(),
@@ -674,12 +726,63 @@ mod tests {
         // Check that the expected request was passed into the peer via `hfp`.
         let peer_request =
             peer_receiver.receiver.next().await.expect("Peer received the BatteryLevel request");
-        assert_matches::assert_matches!(peer_request, PeerRequest::BatteryLevel(1));
+        assert_matches!(peer_request, PeerRequest::BatteryLevel(1));
+    }
+
+    #[fuchsia::test]
+    fn battery_client_update_is_propagated_to_peer() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (profile, profile_svc, _server) = setup_profile_and_test_server();
+        let setup_fut = TestBatteryManager::make_battery_client_with_test_manager();
+        pin_mut!(setup_fut);
+        let (battery_client, test_battery_manager) = exec.run_singlethreaded(&mut setup_fut);
+
+        let (_sender, receiver) = mpsc::channel(1);
+
+        let (_tx, rx) = mpsc::channel(1);
+
+        // Run hfp in a background task since we are testing that the profile server observes the
+        // expected behavior when interacting with hfp.
+        let mut hfp = Hfp::new(
+            profile,
+            profile_svc,
+            Some(battery_client),
+            TestAudioControl::default(),
+            receiver,
+            AudioGatewayFeatureSupport::default(),
+            rx,
+        );
+
+        let id = PeerId(123);
+        let (mut peer_receiver, peer) = PeerFake::new(id);
+        let _ = hfp.peers.insert(id, Box::new(peer));
+
+        let hfp_fut = hfp.run();
+        futures::pin_mut!(hfp_fut);
+
+        // Make a battery update via the TestBatteryManager.
+        let update = fpower::BatteryInfo {
+            status: Some(fpower::BatteryStatus::Ok),
+            level_status: Some(fpower::LevelStatus::Low),
+            level_percent: Some(88f32),
+            ..fpower::BatteryInfo::EMPTY
+        };
+        let update_fut = test_battery_manager.send_update(update);
+        pin_mut!(update_fut);
+        let (res, hfp_fut) = run_while(&mut exec, hfp_fut, update_fut);
+        assert_matches!(res, Ok(_));
+
+        // Check that the battery update was passed into the peer via `hfp`.
+        let peer_receive_fut = peer_receiver.receiver.next();
+        let (peer_request, _hfp_fut) = run_while(&mut exec, hfp_fut, peer_receive_fut);
+        assert_matches!(peer_request, Some(PeerRequest::BatteryLevel(_)));
     }
 
     #[fuchsia::test(allow_stalls = false)]
     async fn connection_behavior_request_is_propagated() {
         let (profile, profile_svc, _server) = setup_profile_and_test_server();
+        let (battery_client, _test_battery_manager) =
+            TestBatteryManager::make_battery_client_with_test_manager().await;
         let (_call_mgr_tx, call_mgr_rx) = mpsc::channel(1);
         let (mut test_tx, test_rx) = mpsc::channel(1);
 
@@ -688,6 +791,7 @@ mod tests {
         let mut hfp = Hfp::new(
             profile,
             profile_svc,
+            Some(battery_client),
             TestAudioControl::default(),
             call_mgr_rx,
             AudioGatewayFeatureSupport::default(),
@@ -720,7 +824,7 @@ mod tests {
             .next()
             .await
             .expect("Peer received the ConnectionBehavior request");
-        assert_matches::assert_matches!(
+        assert_matches!(
             peer_request,
             PeerRequest::Behavior(ConnectionBehavior { autoconnect: false })
         );
@@ -732,12 +836,15 @@ mod tests {
         assert_data_tree!(inspector, root: {});
 
         let (profile, profile_svc, _server) = setup_profile_and_test_server();
+        let (battery_client, _test_battery_manager) =
+            TestBatteryManager::make_battery_client_with_test_manager().await;
         let (_tx, rx1) = mpsc::channel(1);
         let (_, rx2) = mpsc::channel(1);
 
         let mut hfp = Hfp::new(
             profile,
             profile_svc,
+            Some(battery_client),
             TestAudioControl::default(),
             rx1,
             AudioGatewayFeatureSupport::default(),

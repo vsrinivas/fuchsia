@@ -5,6 +5,7 @@
 
 use {
     anyhow::{format_err, Error},
+    battery_client::BatteryClient,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect_derive::Inspect,
     futures::{channel::mpsc, future, pin_mut},
@@ -42,6 +43,16 @@ async fn main() -> Result<(), Error> {
     debug!(?feature_support, "Starting HFP Audio Gateway");
     let (profile_client, profile_svc) = register_audio_gateway(feature_support)?;
 
+    // Power integration is optional - the HFP component will function even power integration is
+    // unavailable.
+    let battery_client = match BatteryClient::create() {
+        Err(e) => {
+            info!("Power integration unavailable: {:?}", e);
+            None
+        }
+        Ok(batt) => Some(batt),
+    };
+
     let (call_manager_sender, call_manager_receiver) = mpsc::channel(1);
     let (test_request_sender, test_request_receiver) = mpsc::channel(1);
 
@@ -56,6 +67,7 @@ async fn main() -> Result<(), Error> {
     let mut hfp = Hfp::new(
         profile_client,
         profile_svc,
+        battery_client,
         audio,
         call_manager_receiver,
         feature_support,

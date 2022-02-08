@@ -1028,6 +1028,37 @@
                     },
                 },
                 {
+                    // `BatteryManager` is not present in all products.
+                    using_node: "/core/bt-hfp-audio-gateway",
+                    capability: "fuchsia.power.BatteryManager",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    use_from_parent_not_found: {
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "core",
+                                                    collection: null,
+                                                    rep: "core",
+                                                },
+                                                {
+                                                    name: "bt-hfp-audio-gateway",
+                                                    collection: null,
+                                                    rep: "bt-hfp-audio-gateway",
+                                                },
+                                            ]
+                                        },
+                                        "capability_id": "fuchsia.power.BatteryManager"
+                                    }
+                                },
+                            },
+                        },
+                        "message": "A `use from parent` declaration was found at `/core/bt-hfp-audio-gateway` for `fuchsia.power.BatteryManager`, but no matching `offer` declaration was found in the parent"
+                    },
+                },
+                {
                     using_node: "/core/vulkan_loader",
                     capability: "fuchsia.memorypressure.Provider",
                     error: {
