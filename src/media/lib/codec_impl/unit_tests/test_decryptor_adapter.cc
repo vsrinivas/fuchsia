@@ -87,10 +87,9 @@ auto CreateInputFormatDetails(const std::string& scheme, const std::vector<uint8
   return details;
 }
 
-const std::map<std::string, std::string> kServices = {
-    {"fuchsia.sysmem.Allocator",
-     "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"},
-};
+const std::map<std::string, std::string> kServices = {};
+
+const std::vector<std::string> kGlobalServices = {"fuchsia.sysmem.Allocator"};
 
 class FakeDecryptorAdapter : public DecryptorAdapter {
  public:
@@ -177,6 +176,11 @@ class DecryptorAdapterTest : public gtest::TestWithEnvironmentFixture {
       fuchsia::sys::LaunchInfo launch_info;
       launch_info.url = url;
       services->AddServiceWithLaunchInfo(std::move(launch_info), service_name);
+    }
+
+    for (const auto& service : kGlobalServices) {
+      const zx_status_t is_ok = services->AllowParentService(service);
+      EXPECT_EQ(is_ok, ZX_OK);
     }
 
     constexpr char kEnvironment[] = "DecryptorAdapterTest";
