@@ -87,16 +87,16 @@ pub(crate) struct TimerDispatcher<T: Hash + Eq> {
     futures_sender: Option<mpsc::UnboundedSender<InternalFut<T>>>,
 }
 
+impl<T: Hash + Eq> Default for TimerDispatcher<T> {
+    fn default() -> TimerDispatcher<T> {
+        TimerDispatcher { timers: Default::default(), next_id: 0, futures_sender: None }
+    }
+}
+
 impl<T> TimerDispatcher<T>
 where
     T: Hash + Debug + Eq + Clone + Send + Sync + Unpin + 'static,
 {
-    /// Creates a new `TimerDispatcher` that sends [`TimerEvent`]s over
-    /// `sender`.
-    pub(crate) fn new() -> Self {
-        Self { timers: HashMap::new(), next_id: 0, futures_sender: None }
-    }
-
     /// Spawns a [`TimerContext`] that will observe events on this
     /// `TimerDispatcher` through its [`TimerHandler`].
     ///
@@ -337,7 +337,7 @@ mod tests {
         fn new() -> (Self, mpsc::UnboundedReceiver<usize>) {
             let (fired, receiver) = mpsc::unbounded();
             let inner =
-                Arc::new(Mutex::new(TimerData { dispatcher: TestDispatcher::new(), fired }));
+                Arc::new(Mutex::new(TimerData { dispatcher: TestDispatcher::default(), fired }));
             inner.try_lock().unwrap().dispatcher.spawn(Self(inner.clone()));
             (Self(inner), receiver)
         }

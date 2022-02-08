@@ -45,12 +45,12 @@ use net_types::ip::{Ip, IpAddress};
 use net_types::{MulticastAddr, SpecifiedAddress as _};
 use rand::Rng;
 
-use crate::context::RngStateContext;
-use crate::data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashMap, RemoveResult};
-use crate::device::link::LinkDevice;
-use crate::device::DeviceIdContext;
-use crate::Instant;
-use crate::InstantContext;
+use crate::{
+    context::RngContext,
+    data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashMap, RemoveResult},
+    ip::IpDeviceIdContext,
+    Instant, InstantContext,
+};
 
 /// The result of joining a multicast group.
 ///
@@ -219,7 +219,7 @@ impl<A: IpAddress, T> MulticastGroupSet<A, T> {
 /// An implementation of a Group Management Protocol (GMP) such as the Internet
 /// Group Management Protocol, Version 2 (IGMPv2) for IPv4 or the Multicast
 /// Listener Discovery (MLD) protocol for IPv6.
-pub(crate) trait GmpHandler<D: LinkDevice, I: Ip>: DeviceIdContext<D> {
+pub(crate) trait GmpHandler<I: Ip>: IpDeviceIdContext {
     /// Joins the given multicast group.
     fn gmp_join_group(
         &mut self,
@@ -774,40 +774,52 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
 /// Provides common functionality for GMP context implementations.
 ///
 /// This trait implements portions of a group management protocol.
-trait GmpContext<D: LinkDevice, I: Ip, PS: ProtocolSpecific>: DeviceIdContext<D> {
+trait GmpContext<I: Ip, PS: ProtocolSpecific>: IpDeviceIdContext + RngContext + InstantContext {
     type Err;
+    type GroupState: From<GmpStateMachine<Self::Instant, PS>>
+        + Into<GmpStateMachine<Self::Instant, PS>>;
 
     fn run_actions(
         &mut self,
-        device: <Self as DeviceIdContext<D>>::DeviceId,
+        device: Self::DeviceId,
         actions: Actions<PS>,
         addr: MulticastAddr<I::Addr>,
     );
 
     fn not_a_member_err(addr: I::Addr) -> Self::Err;
+
+    fn get_state_mut_and_rng(
+        &mut self,
+        device: Self::DeviceId,
+    ) -> (&mut MulticastGroupSet<I::Addr, Self::GroupState>, &mut Self::Rng);
+
+    fn get_state_mut(
+        &mut self,
+        device: Self::DeviceId,
+    ) -> &mut MulticastGroupSet<I::Addr, Self::GroupState> {
+        let (state, _rng) = self.get_state_mut_and_rng(device);
+        state
+    }
 }
 
 trait GmpMessage<I: Ip> {
     fn group_addr(&self) -> I::Addr;
 }
 
-fn handle_gmp_message<D, I, PS, GS, Msg, C, F>(
+fn handle_gmp_message<I, PS, Msg, C, F>(
     ctx: &mut C,
     device: C::DeviceId,
     body: &Msg,
     handler: F,
 ) -> Result<(), C::Err>
 where
-    C: GmpContext<D, I, PS>
-        + DeviceIdContext<D>
-        + RngStateContext<MulticastGroupSet<I::Addr, GS>, <C as DeviceIdContext<D>>::DeviceId>,
-    D: LinkDevice,
+    C: GmpContext<I, PS>,
     I: Ip,
     PS: ProtocolSpecific,
     Msg: GmpMessage<I>,
-    F: Fn(&mut C::Rng, &mut GS) -> Actions<PS>,
+    F: Fn(&mut C::Rng, &mut C::GroupState) -> Actions<PS>,
 {
-    let (state, rng) = ctx.get_state_rng_with(device);
+    let (state, rng) = ctx.get_state_mut_and_rng(device);
     let group_addr = body.group_addr();
     if !group_addr.is_specified() {
         let addr_and_actions = state
@@ -830,45 +842,35 @@ where
     Err(C::not_a_member_err(group_addr))
 }
 
-fn gmp_join_group<C, D, I, PS, GS>(
+fn gmp_join_group<C, I, PS>(
     ctx: &mut C,
     device: C::DeviceId,
     group_addr: MulticastAddr<I::Addr>,
 ) -> GroupJoinResult
 where
-    C: GmpContext<D, I, PS>
-        + DeviceIdContext<D>
-        + InstantContext
-        + RngStateContext<MulticastGroupSet<I::Addr, GS>, <C as DeviceIdContext<D>>::DeviceId>,
-    D: LinkDevice,
+    C: GmpContext<I, PS> + InstantContext,
     PS: ProtocolSpecific + Default,
     PS::Config: Default,
     I: Ip,
-    GS: From<GmpStateMachine<<C as InstantContext>::Instant, PS>>,
 {
     let now = ctx.now();
-    let (state, rng) = ctx.get_state_rng_with(device);
+    let (state, rng) = ctx.get_state_mut_and_rng(device);
     state
         .join_group_gmp(group_addr, rng, now)
         .map(|actions| ctx.run_actions(device, actions, group_addr))
 }
 
-fn gmp_leave_group<C, D, I, PS, GS>(
+fn gmp_leave_group<C, I, PS>(
     ctx: &mut C,
     device: C::DeviceId,
     group_addr: MulticastAddr<I::Addr>,
 ) -> GroupLeaveResult
 where
-    C: GmpContext<D, I, PS>
-        + DeviceIdContext<D>
-        + InstantContext
-        + RngStateContext<MulticastGroupSet<I::Addr, GS>, <C as DeviceIdContext<D>>::DeviceId>,
-    D: LinkDevice,
+    C: GmpContext<I, PS> + InstantContext,
     PS: ProtocolSpecific,
     I: Ip,
-    GmpStateMachine<<C as InstantContext>::Instant, PS>: From<GS>,
 {
-    ctx.get_state_mut_with(device)
+    ctx.get_state_mut(device)
         .leave_group_gmp(group_addr)
         .map(|actions| ctx.run_actions(device, actions, group_addr))
 }

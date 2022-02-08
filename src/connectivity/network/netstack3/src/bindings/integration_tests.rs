@@ -90,7 +90,7 @@ pub(crate) struct TestDispatcher {
 
 impl TestDispatcher {
     fn new() -> Self {
-        Self { disp: BindingsDispatcher::new(), status_changed_signal: None }
+        Self { disp: BindingsDispatcher::default(), status_changed_signal: None }
     }
 
     /// Shorthand method to get a [`DeviceInfo`] from the device's bindings
@@ -398,9 +398,10 @@ impl TestStack {
         let mut config = NdpConfiguration::default();
         config.set_max_router_solicitations(None);
         builder.device_builder().set_default_ndp_config(config);
-        let mut config = Ipv6DeviceConfiguration::default();
-        config.set_dad_transmits(None);
-        builder.device_builder().set_default_ipv6_config(config);
+        builder.device_builder().set_default_ipv6_config(Ipv6DeviceConfiguration {
+            dad_transmits: None,
+            ip_config: Default::default(),
+        });
         let ctx = TestContext::new(builder);
         TestStack { ctx, endpoint_ids: HashMap::new() }
     }

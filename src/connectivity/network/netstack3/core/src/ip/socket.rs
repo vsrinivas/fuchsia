@@ -1206,7 +1206,7 @@ pub(crate) mod testutil {
             for ip in local_ips {
                 // Users of this utility don't care about subnet prefix length,
                 // so just pick a reasonable one.
-                device_state.add_addr(AddrSubnet::new(ip.get(), 32).unwrap());
+                device_state.add_addr(AddrSubnet::new(ip.get(), 32).unwrap()).expect("add address");
             }
             DummyIpSocketCtx::with_device_state(device_state, remote_ips)
         }
@@ -1220,13 +1220,15 @@ pub(crate) mod testutil {
         ) -> DummyIpSocketCtx<Ipv6> {
             let mut device_state = IpDeviceState::default();
             for ip in local_ips {
-                device_state.add_addr(Ipv6AddressEntry::new(
-                    // Users of this utility don't care about subnet prefix
-                    // length, so just pick a reasonable one.
-                    AddrSubnet::new(ip.get(), 128).unwrap(),
-                    AddressState::Assigned,
-                    AddrConfig::Manual,
-                ));
+                device_state
+                    .add_addr(Ipv6AddressEntry::new(
+                        // Users of this utility don't care about subnet prefix
+                        // length, so just pick a reasonable one.
+                        AddrSubnet::new(ip.get(), 128).unwrap(),
+                        AddressState::Assigned,
+                        AddrConfig::Manual,
+                    ))
+                    .expect("add address");
             }
             DummyIpSocketCtx::with_device_state(device_state, remote_ips)
         }

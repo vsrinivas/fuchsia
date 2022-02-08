@@ -19,8 +19,8 @@ use net_types::ip::{
     UnicastOrMulticastIpv6Addr,
 };
 use net_types::{
-    BroadcastAddress, LinkLocalUnicastAddr, MulticastAddr, MulticastAddress, SpecifiedAddr,
-    UnicastAddr, UnicastAddress, Witness,
+    BroadcastAddress, MulticastAddr, MulticastAddress, SpecifiedAddr, UnicastAddr, UnicastAddress,
+    Witness,
 };
 use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
 use packet_formats::arp::{peek_arp_types, ArpHardwareType, ArpNetworkType};
@@ -30,31 +30,22 @@ use packet_formats::ethernet::{
 use packet_formats::icmp::ndp::{options::NdpOptionBuilder, NeighborSolicitation};
 use specialize_ip_macro::specialize_ip_address;
 
-#[cfg(test)]
-use crate::Ctx;
 use crate::{
     assert_empty,
-    context::{DualStateContext, FrameContext, StateContext, TimerHandler},
+    context::{FrameContext, StateContext},
     data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult},
     device::{
         arp::{self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpState, ArpTimerId},
         link::LinkDevice,
         ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId},
-        BufferIpLinkDeviceContext, DadTimerId, DeviceIdContext, FrameDestination,
+        BufferIpLinkDeviceContext, DadTimerId, DeviceIdContext, EthernetDeviceId, FrameDestination,
         IpLinkDeviceContext, RecvIpFrameMeta,
     },
-    error::NotFoundError,
-    ip::{
-        device::state::{
-            AddrConfig, AddrConfigType, AddressError, AddressState, IpDeviceState,
-            Ipv6AddressEntry, Ipv6DeviceConfiguration, Ipv6DeviceState,
-        },
-        gmp::{
-            igmp::{IgmpContext, IgmpGroupState, IgmpPacketMetadata, IgmpTimerId},
-            mld::{MldContext, MldFrameMetadata, MldGroupState, MldReportDelay},
-            GmpHandler, GroupJoinResult, GroupLeaveResult, MulticastGroupSet,
-        },
+    error::{ExistsError, NotFoundError},
+    ip::device::state::{
+        AddrConfig, AddrConfigType, AddressState, IpDeviceState, Ipv6AddressEntry,
     },
+    Ctx, EventDispatcher,
 };
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
@@ -72,134 +63,108 @@ impl From<Mac> for FrameDestination {
     }
 }
 
-/// A shorthand for `IpLinkDeviceContext` with all of the appropriate type arguments
-/// fixed to their Ethernet values.
+/// The execution context for an Ethernet device.
 pub(crate) trait EthernetIpLinkDeviceContext:
     IpLinkDeviceContext<
     EthernetLinkDevice,
     EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
 >
 {
+    /// Adds an IP address to the device.
+    // TODO(https://fxbug.dev/72378): Remove this method once NDP operates at
+    // L3.
+    fn add_ip_addr_subnet<A: IpAddress>(
+        &mut self,
+        device_id: Self::DeviceId,
+        addr_sub: AddrSubnet<A>,
+        config: AddrConfig<Self::Instant>,
+    ) -> Result<(), ExistsError>;
+
+    /// Removes an IP address from the device.
+    // TODO(https://fxbug.dev/72378): Remove this method once NDP operates at
+    // L3.
+    fn del_ip_addr<A: IpAddress>(
+        &mut self,
+        device_id: Self::DeviceId,
+        addr: &A,
+    ) -> Result<(), NotFoundError>;
+
+    /// Joins an IP multicast group.
+    // TODO(https://fxbug.dev/72378): Remove this method once NDP operates at
+    // L3.
+    fn join_ip_multicast<A: IpAddress>(
+        &mut self,
+        device_id: Self::DeviceId,
+        multicast_addr: MulticastAddr<A>,
+    );
+
+    /// Leaves an IP multicast group.
+    // TODO(https://fxbug.dev/72378): Remove this method once NDP operates at
+    // L3.
+    fn leave_ip_multicast<A: IpAddress>(
+        &mut self,
+        device_id: Self::DeviceId,
+        multicast_addr: MulticastAddr<A>,
+    );
 }
 
-impl<
-        C: IpLinkDeviceContext<
-            EthernetLinkDevice,
-            EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-        >,
-    > EthernetIpLinkDeviceContext for C
-{
+impl<D: EventDispatcher> EthernetIpLinkDeviceContext for Ctx<D> {
+    fn add_ip_addr_subnet<A: IpAddress>(
+        &mut self,
+        device_id: EthernetDeviceId,
+        addr_sub: AddrSubnet<A>,
+        config: AddrConfig<D::Instant>,
+    ) -> Result<(), ExistsError> {
+        crate::ip::device::add_ip_addr_subnet(self, device_id.into(), addr_sub, config)
+    }
+
+    fn del_ip_addr<A: IpAddress>(
+        &mut self,
+        device_id: EthernetDeviceId,
+        addr: &A,
+    ) -> Result<(), NotFoundError> {
+        crate::ip::device::del_ip_addr(self, device_id.into(), addr)
+    }
+
+    fn join_ip_multicast<A: IpAddress>(
+        &mut self,
+        device_id: Self::DeviceId,
+        multicast_addr: MulticastAddr<A>,
+    ) {
+        crate::ip::device::join_ip_multicast(self, device_id.into(), multicast_addr)
+    }
+
+    fn leave_ip_multicast<A: IpAddress>(
+        &mut self,
+        device_id: Self::DeviceId,
+        multicast_addr: MulticastAddr<A>,
+    ) {
+        crate::ip::device::leave_ip_multicast(self, device_id.into(), multicast_addr)
+    }
 }
 
 /// A shorthand for `BufferIpLinkDeviceContext` with all of the appropriate type
 /// arguments fixed to their Ethernet values.
 pub(super) trait BufferEthernetIpLinkDeviceContext<B: BufferMut>:
-    BufferIpLinkDeviceContext<
-    EthernetLinkDevice,
-    EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    B,
->
+    EthernetIpLinkDeviceContext
+    + BufferIpLinkDeviceContext<
+        EthernetLinkDevice,
+        EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+        B,
+    >
 {
 }
 
 impl<
         B: BufferMut,
-        C: BufferIpLinkDeviceContext<
-            EthernetLinkDevice,
-            EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-            B,
-        >,
+        C: EthernetIpLinkDeviceContext
+            + BufferIpLinkDeviceContext<
+                EthernetLinkDevice,
+                EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+                B,
+            >,
     > BufferEthernetIpLinkDeviceContext<B> for C
 {
-}
-
-impl<C: EthernetIpLinkDeviceContext>
-    DualStateContext<MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>, C::Rng, C::DeviceId>
-    for C
-{
-    fn get_states_with(
-        &self,
-        device: C::DeviceId,
-        _id1: (),
-    ) -> (&MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>, &C::Rng) {
-        let (state, rng) = self.get_states_with(device, ());
-        (&state.ip.ipv4.ip_state.multicast_groups, rng)
-    }
-
-    fn get_states_mut_with(
-        &mut self,
-        device: C::DeviceId,
-        _id1: (),
-    ) -> (&mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>, &mut C::Rng) {
-        let (state, rng) = self.get_states_mut_with(device, ());
-        (&mut state.ip.ipv4.ip_state.multicast_groups, rng)
-    }
-}
-
-impl<C: EthernetIpLinkDeviceContext>
-    DualStateContext<MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>, C::Rng, C::DeviceId>
-    for C
-{
-    fn get_states_with(
-        &self,
-        device: C::DeviceId,
-        _id1: (),
-    ) -> (&MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>, &C::Rng) {
-        let (state, rng) = self.get_states_with(device, ());
-        (&state.ip.ipv6.ip_state.multicast_groups, rng)
-    }
-
-    fn get_states_mut_with(
-        &mut self,
-        device: C::DeviceId,
-        _id1: (),
-    ) -> (&mut MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>, &mut C::Rng) {
-        let (state, rng) = self.get_states_mut_with(device, ());
-        (&mut state.ip.ipv6.ip_state.multicast_groups, rng)
-    }
-}
-
-impl<C: EthernetIpLinkDeviceContext> FrameContext<EmptyBuf, IgmpPacketMetadata<C::DeviceId>> for C {
-    fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
-        &mut self,
-        meta: IgmpPacketMetadata<C::DeviceId>,
-        body: S,
-    ) -> Result<(), S> {
-        send_ip_frame(self, meta.device, meta.dst_ip.into_specified(), body)
-    }
-}
-
-impl<C: EthernetIpLinkDeviceContext> FrameContext<EmptyBuf, MldFrameMetadata<C::DeviceId>> for C {
-    fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
-        &mut self,
-        meta: MldFrameMetadata<C::DeviceId>,
-        body: S,
-    ) -> Result<(), S> {
-        send_ip_frame(self, meta.device, meta.dst_ip.into_specified(), body)
-    }
-}
-
-impl<C: EthernetIpLinkDeviceContext> IgmpContext<EthernetLinkDevice> for C {
-    fn get_ip_addr_subnet(&self, device: C::DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
-        self.get_state_with(device).ip.ipv4.ip_state.iter_addrs().next().cloned()
-    }
-
-    fn igmp_enabled(&self, device: C::DeviceId) -> bool {
-        self.get_state_with(device).ip.ipv4.ip_state.gmp_enabled()
-    }
-}
-
-impl<C: EthernetIpLinkDeviceContext> MldContext<EthernetLinkDevice> for C {
-    fn get_ipv6_link_local_addr(
-        &self,
-        device: C::DeviceId,
-    ) -> Option<LinkLocalUnicastAddr<Ipv6Addr>> {
-        get_ipv6_link_local_addr(self, device)
-    }
-
-    fn mld_enabled(&self, device: C::DeviceId) -> bool {
-        self.get_state_with(device).ip.ipv6.ip_state.gmp_enabled()
-    }
 }
 
 /// Builder for [`EthernetDeviceState`].
@@ -344,8 +309,6 @@ pub(crate) enum EthernetTimerId<D> {
     Arp(ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>),
     Ndp(NdpTimerId<EthernetLinkDevice, D>),
     Dad(DadTimerId<EthernetLinkDevice, D>),
-    Igmp(IgmpTimerId<EthernetLinkDevice, D>),
-    Mld(MldReportDelay<EthernetLinkDevice, D>),
 }
 
 impl<D> From<ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>> for EthernetTimerId<D> {
@@ -366,18 +329,6 @@ impl<D> From<DadTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
     }
 }
 
-impl<D> From<IgmpTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
-    fn from(id: IgmpTimerId<EthernetLinkDevice, D>) -> EthernetTimerId<D> {
-        EthernetTimerId::Igmp(id)
-    }
-}
-
-impl<D> From<MldReportDelay<EthernetLinkDevice, D>> for EthernetTimerId<D> {
-    fn from(id: MldReportDelay<EthernetLinkDevice, D>) -> EthernetTimerId<D> {
-        EthernetTimerId::Mld(id)
-    }
-}
-
 /// Handle an Ethernet timer firing.
 pub(super) fn handle_timer<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
@@ -389,8 +340,6 @@ pub(super) fn handle_timer<C: EthernetIpLinkDeviceContext>(
         EthernetTimerId::Dad(DadTimerId { device_id, addr, _marker }) => {
             do_duplicate_address_detection(ctx, device_id, addr)
         }
-        EthernetTimerId::Igmp(id) => TimerHandler::handle_timer(ctx, id),
-        EthernetTimerId::Mld(id) => TimerHandler::handle_timer(ctx, id),
     }
 }
 
@@ -418,20 +367,6 @@ impl_timer_context!(
     EthernetTimerId::Dad(id),
     id
 );
-impl_timer_context!(
-    DeviceIdContext<EthernetLinkDevice>,
-    EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    IgmpTimerId<EthernetLinkDevice, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    EthernetTimerId::Igmp(id),
-    id
-);
-impl_timer_context!(
-    DeviceIdContext<EthernetLinkDevice>,
-    EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    MldReportDelay<EthernetLinkDevice, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    EthernetTimerId::Mld(id),
-    id
-);
 
 /// Initialize a device.
 ///
@@ -455,7 +390,7 @@ pub(super) fn initialize_device<C: EthernetIpLinkDeviceContext>(
     // Join the MAC-derived link-local address. Mark it as configured by SLAAC
     // and not set to expire.
     let addr_sub = state.link.mac.to_ipv6_link_local().to_witness();
-    add_ip_addr_subnet_inner(ctx, device_id, addr_sub, AddrConfig::SLAAC_LINK_LOCAL).expect(
+    ctx.add_ip_addr_subnet(device_id, addr_sub, AddrConfig::SLAAC_LINK_LOCAL).expect(
         "internal invariant violated: uninitialized device already had IP address assigned",
     );
 }
@@ -604,86 +539,12 @@ pub(super) fn set_promiscuous_mode<C: EthernetIpLinkDeviceContext>(
     ctx.get_state_mut_with(device_id).link.promiscuous_mode = enabled;
 }
 
-/// Adds an IP address and associated subnet to this device.
-///
-/// For IPv6, this function also joins the solicited-node multicast group and
-/// begins performing Duplicate Address Detection (DAD).
-pub(super) fn add_ip_addr_subnet<C: EthernetIpLinkDeviceContext, A: IpAddress>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    addr_sub: AddrSubnet<A>,
-) -> Result<(), AddressError> {
-    // Add the IP address and mark it as a manually added address.
-    add_ip_addr_subnet_inner(ctx, device_id, addr_sub, AddrConfig::Manual)
-}
-
-/// Adds an IP address and associated subnet to this device.
-///
-/// `config` is the way this address is being configured. See [`AddrConfig`]
-/// for more details.
-///
-/// For IPv6, this function also joins the solicited-node multicast group and
-/// begins performing Duplicate Address Detection (DAD).
-///
-/// # Panics
-///
-/// `add_ip_addr_subnet_inner` panics if `A = Ipv4Addr` and `config != AddrConfig::Manual`.
-#[specialize_ip_address]
-fn add_ip_addr_subnet_inner<C: EthernetIpLinkDeviceContext, A: IpAddress>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    addr_sub: AddrSubnet<A>,
-    config: AddrConfig<C::Instant>,
-) -> Result<(), AddressError> {
-    #[ipv4addr]
-    {
-        assert_eq!(config, AddrConfig::Manual);
-    }
-
-    let addr = addr_sub.addr().get();
-
-    let state = &mut ctx.get_state_mut_with(device_id).ip;
-
-    #[ipv4addr]
-    let exists = state.ipv4.ip_state.iter_addrs().any(|a| a.addr().get() == addr);
-    #[ipv6addr]
-    let exists = state.ipv6.ip_state.iter_addrs().any(|a| a.addr_sub().addr().get() == addr);
-
-    if exists {
-        return Err(AddressError::AlreadyExists);
-    }
-
-    #[ipv4addr]
-    state.ipv4.ip_state.add_addr(addr_sub);
-
-    #[ipv6addr]
-    {
-        // First, join the solicited-node multicast group.
-        join_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
-
-        let state = &mut ctx.get_state_mut_with(device_id).ip;
-
-        let addr_sub = addr_sub.to_unicast();
-        let Ipv6DeviceState { ref mut ip_state, config: Ipv6DeviceConfiguration { dad_transmits } } =
-            state.ipv6;
-        let () = ip_state.add_addr(Ipv6AddressEntry::new(
-            addr_sub,
-            AddressState::Tentative { dad_transmits_remaining: dad_transmits },
-            config,
-        ));
-
-        let () = do_duplicate_address_detection(ctx, device_id, addr_sub.addr());
-    }
-
-    Ok(())
-}
-
 /// Do duplicate address detection.
 ///
 /// # Panics
 ///
 /// Panics if tentative state for the address is not found.
-fn do_duplicate_address_detection<C: EthernetIpLinkDeviceContext>(
+pub(super) fn do_duplicate_address_detection<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr: UnicastAddr<Ipv6Addr>,
@@ -732,86 +593,6 @@ fn do_duplicate_address_detection<C: EthernetIpLinkDeviceContext>(
             );
         }
     }
-}
-
-/// Removes an IP address and associated subnet from this device.
-///
-/// # Panics
-///
-/// Panics if `addr` is a link-local address.
-// TODO(ghanan): Use a witness type to guarantee non-link-local-ness for `addr`.
-pub(super) fn del_ip_addr<C: EthernetIpLinkDeviceContext, A: IpAddress>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    addr: &SpecifiedAddr<A>,
-) -> Result<(), NotFoundError> {
-    del_ip_addr_inner(ctx, device_id, &addr.get(), None)
-}
-
-/// Removes an IP address and associated subnet from this device.
-///
-/// If `config_type` is provided, then only an address of that
-/// configuration type will be removed.
-///
-/// # Panics
-///
-/// `del_ip_addr_inner` panics if `A = Ipv4Addr` and `config_type != None`.
-fn del_ip_addr_inner<C: EthernetIpLinkDeviceContext, A: IpAddress>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    addr: &A,
-    config_type: Option<AddrConfigType>,
-) -> Result<(), NotFoundError> {
-    let state = &mut ctx.get_state_mut_with(device_id).ip;
-
-    match addr.clone().into() {
-        IpAddr::V4(addr) => {
-            assert_eq!(config_type, None);
-            state.ipv4.ip_state.remove_addr(&addr)
-        }
-        IpAddr::V6(addr) => {
-            let res = state.ipv6.ip_state.remove_addr(&addr);
-            match res {
-                Ok(()) => {
-                    // TODO(https://fxbug.dev/69196): Give `addr` the type
-                    // `UnicastAddr<Ipv6Addr>` for IPv6 instead of doing this
-                    // dynamic check here and statically guarantee only unicast
-                    // addresses are added for IPv6.
-                    if let Some(addr) = UnicastAddr::new(addr) {
-                        let _: Option<C::Instant> = ctx.cancel_timer(
-                            DadTimerId { device_id, addr, _marker: core::marker::PhantomData }
-                                .into(),
-                        );
-
-                        // Leave the the solicited-node multicast group.
-                        leave_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
-                    }
-                }
-                Err(NotFoundError) => {}
-            }
-            res
-        }
-    }
-}
-
-/// Get a (non-tentative) IPv6 link-local address associated with this device.
-///
-/// No guarantee is made that two calls to this function will return the same
-/// link-local address if multiple are available.
-///
-/// Returns `None` if `device_id` does not have a non-tentative link-local
-/// address.
-pub(super) fn get_ipv6_link_local_addr<C: EthernetIpLinkDeviceContext>(
-    ctx: &C,
-    device_id: C::DeviceId,
-) -> Option<LinkLocalUnicastAddr<Ipv6Addr>> {
-    ctx.get_state_with(device_id).ip.ipv6.ip_state.iter_addrs().find_map(|a| {
-        if a.state.is_assigned() {
-            LinkLocalUnicastAddr::new(a.addr_sub().addr())
-        } else {
-            None
-        }
-    })
 }
 
 /// Add `device_id` to a link multicast group `multicast_addr`.
@@ -869,7 +650,7 @@ pub(super) fn join_link_multicast<C: EthernetIpLinkDeviceContext>(
 /// # Panics
 ///
 /// If `device_id` is not in the multicast group `multicast_addr`.
-fn leave_link_multicast<C: EthernetIpLinkDeviceContext>(
+pub(super) fn leave_link_multicast<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
     device_id: C::DeviceId,
     multicast_addr: MulticastAddr<Mac>,
@@ -895,105 +676,6 @@ fn leave_link_multicast<C: EthernetIpLinkDeviceContext>(
                 multicast_addr,
             );
         }
-    }
-}
-
-/// Add `device_id` to a multicast group `multicast_addr`.
-///
-/// Calling `join_ip_multicast` with the same `device_id` and `multicast_addr`
-/// is completely safe. A counter will be kept for the number of times
-/// `join_ip_multicast` has been called with the same `device_id` and
-/// `multicast_addr` pair. To completely leave a multicast group,
-/// [`leave_ip_multicast`] must be called the same number of times
-/// `join_ip_multicast` has been called for the same `device_id` and
-/// `multicast_addr` pair. The first time `join_ip_multicast` is called for a
-/// new `device` and `multicast_addr` pair, the device will actually join the
-/// multicast group.
-///
-/// `join_ip_multicast` is different from [`join_link_multicast`] as
-/// `join_ip_multicast` joins an L3 multicast group, whereas
-/// `join_link_multicast` joins an L2 multicast group.
-#[specialize_ip_address]
-pub(super) fn join_ip_multicast<C: EthernetIpLinkDeviceContext, A: IpAddress>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    multicast_addr: MulticastAddr<A>,
-) {
-    #[ipv4addr]
-    let res = <C as GmpHandler<_, Ipv4>>::gmp_join_group(ctx, device_id, multicast_addr);
-
-    #[ipv6addr]
-    let res = <C as GmpHandler<_, Ipv6>>::gmp_join_group(ctx, device_id, multicast_addr);
-
-    match res {
-        GroupJoinResult::Joined(()) => {
-            let mac = MulticastAddr::from(&multicast_addr);
-
-            trace!(
-                "ethernet::join_ip_multicast: joining IP multicast {:?} and MAC multicast {:?}",
-                multicast_addr,
-                mac
-            );
-
-            join_link_multicast(ctx, device_id, mac);
-        }
-        GroupJoinResult::AlreadyMember => trace!(
-            "ethernet::join_ip_multicast: already joinined IP multicast {:?}",
-            multicast_addr,
-        ),
-    }
-}
-
-/// Remove `device_id` from a multicast group `multicast_addr`.
-///
-/// `leave_ip_multicast` will attempt to remove `device_id` from a multicast
-/// group `multicast_addr`. `device_id` may have "joined" the same multicast
-/// address multiple times, so `device_id` will only leave the multicast group
-/// once `leave_ip_multicast` has been called for each corresponding
-/// [`join_ip_multicast`]. That is, if `join_ip_multicast` gets called 3 times
-/// and `leave_ip_multicast` gets called two times (after all 3
-/// `join_ip_multicast` calls), `device_id` will still be in the multicast group
-/// until the next (final) call to `leave_ip_multicast`.
-///
-/// `leave_ip_multicast` is different from [`leave_link_multicast`] as
-/// `leave_ip_multicast` leaves an L3 multicast group, whereas
-/// `leave_link_multicast` leaves an L2 multicast group.
-///
-/// # Panics
-///
-/// If `device_id` is not currently in the multicast group `multicast_addr`.
-#[specialize_ip_address]
-pub(super) fn leave_ip_multicast<C: EthernetIpLinkDeviceContext, A: IpAddress>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    multicast_addr: MulticastAddr<A>,
-) {
-    #[ipv4addr]
-    let res = <C as GmpHandler<_, Ipv4>>::gmp_leave_group(ctx, device_id, multicast_addr);
-
-    #[ipv6addr]
-    let res = <C as GmpHandler<_, Ipv6>>::gmp_leave_group(ctx, device_id, multicast_addr);
-
-    match res {
-        GroupLeaveResult::Left(()) => {
-            let mac = MulticastAddr::from(&multicast_addr);
-
-            trace!(
-                "ethernet::leave_ip_multicast: leaving IP multicast {} and MAC multicast {}",
-                multicast_addr,
-                mac
-            );
-
-            leave_link_multicast(ctx, device_id, mac);
-        }
-        GroupLeaveResult::StillMember => trace!(
-            "ethernet::leave_ip_multicast: not leaving IP multicast {} as there are still listeners for it",
-            multicast_addr,
-        ),
-        GroupLeaveResult::NotMember => panic!(
-            "attempted to leave IP multicast group we were not a member of: {}",
-            multicast_addr,
-        ),
     }
 }
 
@@ -1066,8 +748,7 @@ pub(super) fn set_routing_enabled<C: EthernetIpLinkDeviceContext, I: Ip>(
                 if ip_routing {
                     // Now that `device` is a router, join the all-routers multicast
                     // group.
-                    join_ip_multicast(
-                        ctx,
+                    ctx.join_ip_multicast(
                         device_id,
                         Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
                     );
@@ -1086,8 +767,7 @@ pub(super) fn set_routing_enabled<C: EthernetIpLinkDeviceContext, I: Ip>(
                 if ip_routing {
                     // Now that `device` is a host, leave the all-routers multicast
                     // group.
-                    leave_ip_multicast(
-                        ctx,
+                    ctx.leave_ip_multicast(
                         device_id,
                         Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
                     );
@@ -1142,14 +822,6 @@ pub(super) fn insert_ndp_table_entry<C: EthernetIpLinkDeviceContext>(
     mac: Mac,
 ) {
     <C as NdpHandler<_>>::insert_static_neighbor(ctx, device_id, addr, mac)
-}
-
-pub(super) fn set_ipv6_configuration<C: EthernetIpLinkDeviceContext>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    config: Ipv6DeviceConfiguration,
-) {
-    ctx.get_state_mut_with(device_id).ip.ipv6.config = config;
 }
 
 /// Deinitializes and cleans up state for ethernet devices
@@ -1308,7 +980,8 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
     }
 
     fn duplicate_address_detected(&mut self, device_id: C::DeviceId, addr: UnicastAddr<Ipv6Addr>) {
-        let () = del_ip_addr_inner(self, device_id, &addr.get(), None)
+        let () = self
+            .del_ip_addr(device_id, &addr.get())
             .expect("expected to delete an address we are performing DAD on");
 
         // TODO: we need to pick a different address depending on what flow we
@@ -1340,15 +1013,14 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
         device_id: Self::DeviceId,
         addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
         valid_until: Self::Instant,
-    ) -> Result<(), AddressError> {
+    ) -> Result<(), ExistsError> {
         trace!(
             "ethernet::add_slaac_addr_sub: adding address {:?} on device {:?}",
             addr_sub,
             device_id
         );
 
-        add_ip_addr_subnet_inner(
-            self,
+        self.add_ip_addr_subnet(
             device_id,
             addr_sub.to_witness(),
             AddrConfig::new_slaac_global(valid_until),
@@ -1410,7 +1082,7 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
         // `unwrap` will panic if `addr` is not an address configured via SLAAC
         // on `device_id`.
-        del_ip_addr_inner(self, device_id, &addr.get(), Some(AddrConfigType::Slaac)).unwrap();
+        self.del_ip_addr(device_id, &addr.get()).unwrap();
     }
 
     fn is_router(&self) -> bool {
@@ -1507,7 +1179,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        context::testutil::DummyInstant,
+        context::{testutil::DummyInstant, DualStateContext},
         device::{
             arp::ArpHandler, set_routing_enabled, testutil::DeviceTestIpExt, DeviceId,
             DeviceIdInner, EthernetDeviceId, IpLinkDeviceState,
@@ -1568,6 +1240,41 @@ mod tests {
         ) {
             let (state, rng) = self.get_states_mut_with((), ());
             (&mut state.state, rng)
+        }
+    }
+
+    impl EthernetIpLinkDeviceContext for DummyCtx {
+        fn add_ip_addr_subnet<A: IpAddress>(
+            &mut self,
+            _device_id: DummyDeviceId,
+            _addr_sub: AddrSubnet<A>,
+            _config: AddrConfig<DummyInstant>,
+        ) -> Result<(), ExistsError> {
+            unimplemented!()
+        }
+
+        fn del_ip_addr<A: IpAddress>(
+            &mut self,
+            _device_id: DummyDeviceId,
+            _addr: &A,
+        ) -> Result<(), NotFoundError> {
+            unimplemented!()
+        }
+
+        fn join_ip_multicast<A: IpAddress>(
+            &mut self,
+            _device_id: DummyDeviceId,
+            _multicast_addr: MulticastAddr<A>,
+        ) {
+            unimplemented!()
+        }
+
+        fn leave_ip_multicast<A: IpAddress>(
+            &mut self,
+            _device_id: DummyDeviceId,
+            _multicast_addr: MulticastAddr<A>,
+        ) {
+            unimplemented!()
         }
     }
 
@@ -1733,12 +1440,16 @@ mod tests {
         }
 
         // Will panic if we do not initialize.
-        let _ =
-            crate::device::send_ip_frame(&mut ctx, device, config.remote_ip, Buf::new(bytes, ..));
+        let _ = crate::ip::device::send_ip_frame(
+            &mut ctx,
+            device,
+            config.remote_ip,
+            Buf::new(bytes, ..),
+        );
     }
 
     #[ip_test]
-    #[should_panic(expected = "assertion failed: is_device_usable(&ctx.state, device)")]
+    #[should_panic(expected = "assertion failed: is_device_usable")]
     fn test_send_frame_uninitialized<I: Ip>() {
         test_send_ip_frame::<I>(false);
     }
@@ -1862,7 +1573,7 @@ mod tests {
         ndp_config.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(None);
+        ipv6_config.dad_transmits = None;
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut builder = DummyEventDispatcherBuilder::from_config(config.clone());
         add_arp_or_ndp_table_entry(&mut builder, device_builder_id, src_ip.get(), src_mac);
@@ -2044,7 +1755,7 @@ mod tests {
         // Add ip2 again (ip2 already exists)
         assert_eq!(
             crate::device::add_ip_addr_subnet(&mut ctx, device, as2).unwrap_err(),
-            AddressError::AlreadyExists
+            ExistsError,
         );
         assert!(!contains_addr(&ctx, device, ip1));
         assert!(contains_addr(&ctx, device, ip2));
@@ -2058,7 +1769,7 @@ mod tests {
                 AddrSubnet::new(ip2.get(), prefix - 1).unwrap()
             )
             .unwrap_err(),
-            AddressError::AlreadyExists
+            ExistsError,
         );
         assert!(!contains_addr(&ctx, device, ip1));
         assert!(contains_addr(&ctx, device, ip2));
@@ -2288,7 +1999,7 @@ mod tests {
             DeviceIdInner::Ethernet(device).into()
         );
 
-        initialize_device(&mut ctx, device);
+        crate::device::initialize_device(&mut ctx, device.into());
         // Verify that there is a single assigned address.
         assert_eq!(
             ctx.state
@@ -2305,9 +2016,9 @@ mod tests {
                 .collect::<Vec<_>>(),
             [config.local_mac.to_ipv6_link_local().addr().get()]
         );
-        add_ip_addr_subnet(
+        crate::device::add_ip_addr_subnet(
             &mut ctx,
-            device,
+            device.into(),
             AddrSubnet::new(Ipv6::LINK_LOCAL_UNICAST_SUBNET.network(), 128).unwrap(),
         )
         .unwrap();

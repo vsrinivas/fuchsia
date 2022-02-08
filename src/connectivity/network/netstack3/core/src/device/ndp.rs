@@ -53,9 +53,8 @@ use crate::{
         link::{LinkAddress, LinkDevice},
         DeviceIdContext,
     },
-    ip::device::state::{
-        AddrConfig, AddrConfigType, AddressError, AddressState, IpDeviceState, SlaacConfig,
-    },
+    error::ExistsError,
+    ip::device::state::{AddrConfig, AddrConfigType, AddressState, IpDeviceState, SlaacConfig},
     Instant,
 };
 
@@ -404,7 +403,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
         device_id: Self::DeviceId,
         addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
         valid_until: Self::Instant,
-    ) -> Result<(), AddressError>;
+    ) -> Result<(), ExistsError>;
 
     /// Deprecate the use of an address previously configured via SLAAC.
     ///
@@ -2856,7 +2855,7 @@ mod tests {
         ndp_config.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(None);
+        ipv6_config.dad_transmits = None;
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
         let dev_id = ctx.state.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
@@ -2864,7 +2863,7 @@ mod tests {
 
         // Enable DAD.
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(NonZeroU8::new(3));
+        ipv6_config.dad_transmits = NonZeroU8::new(3);
         crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
@@ -2907,7 +2906,7 @@ mod tests {
         );
 
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(NonZeroU8::new(3));
+        ipv6_config.dad_transmits = NonZeroU8::new(3);
         crate::device::set_ipv6_configuration(net.context("local"), device_id, ipv6_config.clone());
         crate::device::set_ipv6_configuration(net.context("remote"), device_id, ipv6_config);
 
@@ -2965,7 +2964,7 @@ mod tests {
         crate::device::set_ndp_configuration(&mut ctx, dev_id, ndp_config)
             .expect("error setting NDP configuuration");
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(NonZeroU8::new(3));
+        ipv6_config.dad_transmits = NonZeroU8::new(3);
         crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
 
         // Add an IP.
@@ -3048,7 +3047,7 @@ mod tests {
         crate::device::set_ndp_configuration(&mut ctx, dev_id, ndp_config)
             .expect("error setting NDP configuuration");
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(NonZeroU8::new(3));
+        ipv6_config.dad_transmits = NonZeroU8::new(3);
         crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
 
         assert_empty(ctx.dispatcher.frames_sent());
@@ -3966,7 +3965,7 @@ mod tests {
 
         let mut stack_builder = StackStateBuilder::default();
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(None);
+        ipv6_config.dad_transmits = None;
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
 
@@ -4061,7 +4060,7 @@ mod tests {
 
         let mut stack_builder = StackStateBuilder::default();
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(None);
+        ipv6_config.dad_transmits = None;
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
         ndp_config.set_max_router_solicitations(NonZeroU8::new(2));
@@ -4130,7 +4129,7 @@ mod tests {
         let mut state_builder = StackStateBuilder::default();
         let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(false);
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(None);
+        ipv6_config.dad_transmits = None;
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
@@ -4187,7 +4186,7 @@ mod tests {
         let mut state_builder = StackStateBuilder::default();
         let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(None);
+        ipv6_config.dad_transmits = None;
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
@@ -4294,7 +4293,7 @@ mod tests {
         // Enable DAD for the device.
         const DUP_ADDR_DETECT_TRANSMITS: u8 = 3;
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS));
+        ipv6_config.dad_transmits = NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS);
         crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config.clone());
 
         // Updating the IP should start the DAD process.
@@ -4330,7 +4329,7 @@ mod tests {
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
         // Disable DAD during DAD.
-        ipv6_config.set_dad_transmits(None);
+        ipv6_config.dad_transmits = None;
         crate::device::set_ipv6_configuration(&mut ctx, device, ipv6_config.clone());
         let expected_timer_id = dad_timer_id(
             device.try_into().expect("expected ethernet ID"),
@@ -4756,7 +4755,7 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(None);
+        ipv6_config.dad_transmits = None;
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut ndp_config = NdpConfiguration::default();
         ndp_config.set_max_router_solicitations(None);

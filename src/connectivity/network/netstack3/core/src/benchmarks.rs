@@ -155,7 +155,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     ndp_config.set_max_router_solicitations(None);
     state_builder.device_builder().set_default_ndp_config(ndp_config);
     let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
-    ipv6_config.set_dad_transmits(None);
+    ipv6_config.dad_transmits = None;
     state_builder.device_builder().set_default_ipv6_config(ipv6_config);
 
     let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)

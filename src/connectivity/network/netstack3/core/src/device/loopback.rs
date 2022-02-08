@@ -4,26 +4,14 @@
 
 //! The loopback device.
 
-use alloc::vec::Vec;
-use core::convert::Infallible as Never;
-use net_types::{
-    ip::{AddrSubnet, AddrSubnetEither, IpAddr, IpAddress},
-    SpecifiedAddr, Witness as _,
-};
-use packet::{Buf, BufferMut, SerializeError, Serializer};
-
 use crate::{
     device::{DeviceIdInner, FrameDestination},
-    error::NotFoundError,
-    ip::device::state::{
-        AddrConfig, AddressError, AddressState, AssignedAddress as _, IpDeviceState,
-        IpDeviceStateIpExt, Ipv6AddressEntry, Ipv6DeviceConfiguration, Ipv6DeviceState,
-    },
     BufferDispatcher, Ctx, EventDispatcher,
 };
-
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub(crate) struct LoopbackDeviceId;
+use alloc::vec::Vec;
+use core::convert::Infallible as Never;
+use net_types::{ip::IpAddress, SpecifiedAddr};
+use packet::{Buf, BufferMut, SerializeError, Serializer};
 
 pub(super) struct LoopbackDeviceState {
     mtu: u32,
@@ -58,62 +46,6 @@ pub(super) fn send_ip_frame<
         frame,
     );
     Ok(())
-}
-
-pub(super) fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Ctx<D>,
-    addr_sub: AddrSubnet<A>,
-) -> Result<(), AddressError> {
-    fn inner<Instant, I: IpDeviceStateIpExt<Instant>>(
-        ip_state: &mut IpDeviceState<Instant, I>,
-        addr: I::AssignedAddress,
-    ) -> Result<(), AddressError> {
-        if ip_state.iter_addrs().any(|a| a.addr() == addr.addr()) {
-            return Err(AddressError::AlreadyExists);
-        }
-
-        ip_state.add_addr(addr);
-        Ok(())
-    }
-
-    let state = &mut ctx.state.device.loopback.as_mut().unwrap().device;
-    match addr_sub.into() {
-        AddrSubnetEither::V4(addr_sub) => inner(&mut state.ip.ipv4.ip_state, addr_sub),
-        AddrSubnetEither::V6(addr_sub) => {
-            let Ipv6DeviceState {
-                ref mut ip_state,
-                config: Ipv6DeviceConfiguration { dad_transmits },
-            } = state.ip.ipv6;
-            assert_eq!(
-                dad_transmits, None,
-                "TODO(https://fxbug.dev/72378): loopback does not handle DAD yet"
-            );
-
-            let addr_sub = addr_sub.to_unicast();
-            inner(
-                ip_state,
-                Ipv6AddressEntry::new(addr_sub, AddressState::Assigned, AddrConfig::Manual),
-            )
-        }
-    }
-}
-
-pub(super) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
-    ctx: &mut Ctx<D>,
-    addr: &SpecifiedAddr<A>,
-) -> Result<(), NotFoundError> {
-    let state = &mut ctx.state.device.loopback.as_mut().unwrap().device;
-    match addr.get().to_ip_addr() {
-        IpAddr::V4(addr) => state.ip.ipv4.ip_state.remove_addr(&addr),
-        IpAddr::V6(addr) => state.ip.ipv6.ip_state.remove_addr(&addr),
-    }
-}
-
-pub(super) fn set_ipv6_configuration<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
-    config: Ipv6DeviceConfiguration,
-) {
-    ctx.state.device.loopback.as_mut().unwrap().device.ip.ipv6.config = config;
 }
 
 /// Gets the MTU associated with this device.

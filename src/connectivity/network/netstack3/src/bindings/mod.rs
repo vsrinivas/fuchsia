@@ -24,6 +24,7 @@ mod util;
 use std::convert::TryFrom as _;
 use std::future::Future;
 use std::num::NonZeroU16;
+use std::ops::DerefMut as _;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -52,10 +53,11 @@ use net_types::ip::{AddrSubnet, AddrSubnetEither, Ip, Ipv4, Ipv6};
 use netstack3_core::{
     add_ip_addr_subnet, add_route,
     context::{InstantContext, RngContext, TimerContext},
-    handle_timer, icmp, initialize_device, remove_device, set_ipv6_configuration, BufferUdpContext,
-    Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IpExt,
-    IpSockCreationError, Ipv6DeviceConfiguration, StackStateBuilder, TimerId, UdpConnId,
-    UdpContext, UdpListenerId,
+    handle_timer, icmp, initialize_device, remove_device, set_ipv4_configuration,
+    set_ipv6_configuration, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest,
+    EntryEither, EventDispatcher, IpDeviceConfiguration, IpExt, IpSockCreationError,
+    Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, TimerId, UdpConnId, UdpContext,
+    UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -95,24 +97,13 @@ type UdpSockets = socket::datagram::SocketCollectionPair<socket::datagram::Udp>;
 /// Implementation of some traits required by [`EventDispatcher`] may be in this
 /// crate's submodules, closer to where the implementation logic makes more
 /// sense.
+#[derive(Default)]
 pub(crate) struct BindingsDispatcher {
     devices: Devices,
     timers: timers::TimerDispatcher<TimerId>,
     rng: OsRng,
     icmp_echo_sockets: IcmpEchoSockets,
     udp_sockets: UdpSockets,
-}
-
-impl BindingsDispatcher {
-    fn new() -> Self {
-        BindingsDispatcher {
-            devices: Devices::default(),
-            timers: timers::TimerDispatcher::new(),
-            rng: Default::default(),
-            icmp_echo_sockets: Default::default(),
-            udp_sockets: Default::default(),
-        }
-    }
 }
 
 impl AsRef<Devices> for BindingsDispatcher {
@@ -538,6 +529,7 @@ where
 ///
 /// Provides the entry point for creating a netstack to be served as a
 /// component.
+#[derive(Default)]
 pub struct Netstack {
     ctx: Arc<Mutex<Ctx<BindingsDispatcher>>>,
 }
@@ -588,80 +580,114 @@ impl<D: DiscoverableProtocolMarker, S: RequestStream<Protocol = D>> RequestStrea
 }
 
 impl Netstack {
-    /// Creates a new netstack with default options.
-    pub fn new() -> Self {
-        Self::new_with_builder(StackStateBuilder::default())
-    }
-
-    /// Creates a new netstack with the provided core state builder.
-    pub fn new_with_builder(builder: StackStateBuilder) -> Self {
-        let mut ctx = Ctx::new(builder.build(), BindingsDispatcher::new());
-        let Ctx { state, dispatcher } = &mut ctx;
-
-        // Add and initialize the loopback device with loopback IPv4 and IPv6
-        // addresses and routes.
-        let loopback =
-            state.add_loopback_device(DEFAULT_LOOPBACK_MTU).expect("error adding loopback device");
-        let devices: &mut Devices = dispatcher.as_mut();
-        let _binding_id: u64 = devices
-            .add_active_device(
-                loopback,
-                DeviceSpecificInfo::Loopback(LoopbackInfo {
-                    common_info: CommonInfo { mtu: DEFAULT_LOOPBACK_MTU, admin_enabled: true },
-                }),
-            )
-            .expect("error adding loopback device");
-
-        initialize_device(&mut ctx, loopback);
-        let mut ipv6_config = Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(None);
-        set_ipv6_configuration(&mut ctx, loopback, ipv6_config);
-        add_ip_addr_subnet(
-            &mut ctx,
-            loopback,
-            AddrSubnetEither::V4(
-                AddrSubnet::from_witness(Ipv4::LOOPBACK_ADDRESS, Ipv4::LOOPBACK_SUBNET.prefix())
-                    .expect("error creating IPv4 loopback AddrSub"),
-            ),
-        )
-        .expect("error adding IPv4 loopback address");
-        add_route(
-            &mut ctx,
-            EntryEither::new(Ipv4::LOOPBACK_SUBNET.into(), EntryDest::Local { device: loopback })
-                .expect("error creating IPv4 route entry"),
-        )
-        .expect("error adding IPv4 loopback on-link subnet route");
-        add_ip_addr_subnet(
-            &mut ctx,
-            loopback,
-            AddrSubnetEither::V6(
-                AddrSubnet::from_witness(Ipv6::LOOPBACK_ADDRESS, Ipv6::LOOPBACK_SUBNET.prefix())
-                    .expect("error creating IPv6 loopback AddrSub"),
-            ),
-        )
-        .expect("error adding IPv6 loopback address");
-        add_route(
-            &mut ctx,
-            EntryEither::new(Ipv6::LOOPBACK_SUBNET.into(), EntryDest::Local { device: loopback })
-                .expect("error creating IPv6 route entry"),
-        )
-        .expect("error adding IPv6 loopback on-link subnet route");
-
-        Netstack { ctx: Arc::new(Mutex::new(ctx)) }
-    }
-
-    /// Starts servicing timers.
-    async fn spawn_timers(&self) {
-        self.lock().await.dispatcher.timers.spawn(self.clone());
-    }
-
     /// Consumes the netstack and starts serving all the FIDL services it
     /// implements to the outgoing service directory.
     pub async fn serve(self) -> Result<(), anyhow::Error> {
         use anyhow::Context as _;
 
         debug!("Serving netstack");
-        self.spawn_timers().await;
+
+        {
+            let mut ctx = self.lock().await;
+            let ctx = ctx.deref_mut();
+
+            // Add and initialize the loopback interface with the IPv4 and IPv6
+            // loopback addresses and on-link routes to the loopback subnets.
+            let Ctx {
+                state,
+                dispatcher:
+                    BindingsDispatcher {
+                        devices,
+                        timers: _,
+                        rng: _,
+                        icmp_echo_sockets: _,
+                        udp_sockets: _,
+                    },
+            } = ctx;
+            let loopback = state
+                .add_loopback_device(DEFAULT_LOOPBACK_MTU)
+                .expect("error adding loopback device");
+            let _binding_id: u64 = devices
+                .add_active_device(
+                    loopback,
+                    DeviceSpecificInfo::Loopback(LoopbackInfo {
+                        common_info: CommonInfo { mtu: DEFAULT_LOOPBACK_MTU, admin_enabled: true },
+                    }),
+                )
+                .expect("error adding loopback device");
+            initialize_device(ctx, loopback);
+            // Don't need DAD and IGMP/MLD on loopback.
+            set_ipv4_configuration(
+                ctx,
+                loopback,
+                Ipv4DeviceConfiguration { ip_config: IpDeviceConfiguration { gmp_enabled: false } },
+            );
+            set_ipv6_configuration(
+                ctx,
+                loopback,
+                Ipv6DeviceConfiguration {
+                    dad_transmits: None,
+                    ip_config: IpDeviceConfiguration { gmp_enabled: false },
+                },
+            );
+            add_ip_addr_subnet(
+                ctx,
+                loopback,
+                AddrSubnetEither::V4(
+                    AddrSubnet::from_witness(
+                        Ipv4::LOOPBACK_ADDRESS,
+                        Ipv4::LOOPBACK_SUBNET.prefix(),
+                    )
+                    .expect("error creating IPv4 loopback AddrSub"),
+                ),
+            )
+            .expect("error adding IPv4 loopback address");
+            add_route(
+                ctx,
+                EntryEither::new(
+                    Ipv4::LOOPBACK_SUBNET.into(),
+                    EntryDest::Local { device: loopback },
+                )
+                .expect("error creating IPv4 route entry"),
+            )
+            .expect("error adding IPv4 loopback on-link subnet route");
+            add_ip_addr_subnet(
+                ctx,
+                loopback,
+                AddrSubnetEither::V6(
+                    AddrSubnet::from_witness(
+                        Ipv6::LOOPBACK_ADDRESS,
+                        Ipv6::LOOPBACK_SUBNET.prefix(),
+                    )
+                    .expect("error creating IPv6 loopback AddrSub"),
+                ),
+            )
+            .expect("error adding IPv6 loopback address");
+            add_route(
+                ctx,
+                EntryEither::new(
+                    Ipv6::LOOPBACK_SUBNET.into(),
+                    EntryDest::Local { device: loopback },
+                )
+                .expect("error creating IPv6 route entry"),
+            )
+            .expect("error adding IPv6 loopback on-link subnet route");
+
+            // Start servicing timers.
+            let Ctx {
+                state: _,
+                dispatcher:
+                    BindingsDispatcher {
+                        devices: _,
+                        timers,
+                        rng: _,
+                        icmp_echo_sockets: _,
+                        udp_sockets: _,
+                    },
+            } = ctx;
+            timers.spawn(self.clone());
+        }
+
         let mut fs = ServiceFs::new_local();
         let _: &mut ServiceFsDir<'_, _> = fs
             .dir("svc")

@@ -17,6 +17,6 @@ fn main() -> Result<(), anyhow::Error> {
 
     let mut executor = fuchsia_async::LocalExecutor::new()?;
 
-    let eventloop = Netstack::new();
+    let eventloop = Netstack::default();
     executor.run_singlethreaded(eventloop.serve())
 }

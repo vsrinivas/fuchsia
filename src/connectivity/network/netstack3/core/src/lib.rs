@@ -55,14 +55,15 @@ use log::trace;
 pub use crate::data_structures::{Entry, IdMap, IdMapCollection, IdMapCollectionKey};
 pub use crate::device::ndp::NdpConfiguration;
 pub use crate::device::{
-    initialize_device, receive_frame, remove_device, set_ipv6_configuration, DeviceId,
-    DeviceLayerEventDispatcher,
+    initialize_device, receive_frame, remove_device, set_ipv4_configuration,
+    set_ipv6_configuration, DeviceId, DeviceLayerEventDispatcher,
 };
 pub use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
 pub use crate::ip::socket::{IpSockCreationError, IpSockSendError, IpSockUnroutableError};
 pub use crate::ip::{
-    device::state::Ipv6DeviceConfiguration, icmp, EntryDest, EntryDestEither, EntryEither, IpExt,
-    Ipv4StateBuilder, Ipv6StateBuilder, TransportIpContext,
+    device::state::{IpDeviceConfiguration, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration},
+    icmp, EntryDest, EntryDestEither, EntryEither, IpExt, Ipv4StateBuilder, Ipv6StateBuilder,
+    TransportIpContext,
 };
 pub use crate::transport::udp::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
@@ -84,7 +85,7 @@ use packet::{Buf, BufferMut, EmptyBuf};
 use crate::context::{InstantContext, RngContext, TimerContext};
 use crate::device::{DeviceLayerState, DeviceLayerTimerId, DeviceStateBuilder};
 use crate::ip::icmp::{BufferIcmpContext, IcmpContext};
-use crate::ip::{IpLayerTimerId, Ipv4State, Ipv6State};
+use crate::ip::{device::IpDeviceTimerId, IpLayerTimerId, Ipv4State, Ipv6State};
 use crate::transport::{TransportLayerState, TransportLayerTimerId};
 
 /// Map an expression over either version of one or more addresses.
@@ -274,6 +275,8 @@ enum TimerIdInner {
     _TransportLayer(TransportLayerTimerId),
     /// A timer event in the IP layer.
     IpLayer(IpLayerTimerId),
+    /// A timer event for an IP device.
+    IpDevice(IpDeviceTimerId<DeviceId>),
     /// A no-op timer event (used for tests)
     #[cfg(test)]
     Nop(usize),
@@ -285,7 +288,14 @@ impl From<DeviceLayerTimerId> for TimerId {
     }
 }
 
+impl From<IpDeviceTimerId<DeviceId>> for TimerId {
+    fn from(id: IpDeviceTimerId<DeviceId>) -> TimerId {
+        TimerId(TimerIdInner::IpDevice(id))
+    }
+}
+
 impl_timer_context!(TimerId, DeviceLayerTimerId, TimerId(TimerIdInner::DeviceLayer(id)), id);
+impl_timer_context!(TimerId, IpDeviceTimerId<DeviceId>, TimerId(TimerIdInner::IpDevice(id)), id);
 
 /// Handle a generic timer event.
 pub fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: TimerId) {
@@ -300,6 +310,9 @@ pub fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: TimerId) {
         }
         TimerId(TimerIdInner::IpLayer(x)) => {
             ip::handle_timer(ctx, x);
+        }
+        TimerId(TimerIdInner::IpDevice(x)) => {
+            ip::device::handle_timer(ctx, x);
         }
         #[cfg(test)]
         TimerId(TimerIdInner::Nop(_)) => {

@@ -502,7 +502,7 @@ impl DummyEventDispatcherBuilder {
         ndp_config.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(None);
+        ipv6_config.dad_transmits = None;
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
 
         f(&mut stack_builder);

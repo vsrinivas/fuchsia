@@ -7,8 +7,6 @@
 use packet_formats::error::*;
 use thiserror::Error;
 
-use crate::ip::device::state::AddressError;
-
 /// Results returned from many functions in the netstack.
 pub type Result<T> = core::result::Result<T, NetstackError>;
 
@@ -43,15 +41,6 @@ pub enum NetstackError {
     #[error("MTU exceeded")]
     Mtu,
     // Add error types here as we add more to the stack.
-}
-
-impl From<AddressError> for NetstackError {
-    fn from(error: AddressError) -> Self {
-        match error {
-            AddressError::AlreadyExists => Self::Exists,
-            AddressError::NotFound => Self::NotFound,
-        }
-    }
 }
 
 /// Error when something is not supported.

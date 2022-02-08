@@ -72,19 +72,12 @@ pub(crate) struct IpDeviceState<Instant, I: IpDeviceStateIpExt<Instant>> {
     ///
     /// IPv6 addresses may be tentative (performing NDP's Duplicate Address
     /// Detection).
+    ///
+    /// Does not contain any duplicates.
     addrs: Vec<I::AssignedAddress>,
 
     /// Multicast groups this device has joined.
     pub multicast_groups: MulticastGroupSet<I::Addr, I::GmpState>,
-
-    /// Is a Group Messaging Protocol (GMP) enabled for this device?
-    ///
-    /// If `gmp_enabled` is false, multicast groups will still be added to
-    /// `multicast_groups`, but we will not inform the network of our membership
-    /// in those groups using a GMP.
-    ///
-    /// Default: `false`.
-    gmp_enabled: bool,
 
     /// The default TTL (IPv4) or hop limit (IPv6) for outbound packets sent
     /// over this device.
@@ -114,7 +107,6 @@ impl<Instant, I: IpDeviceStateIpExt<Instant>> Default for IpDeviceState<Instant,
         IpDeviceState {
             addrs: Vec::default(),
             multicast_groups: MulticastGroupSet::default(),
-            gmp_enabled: false,
             default_hop_limit: I::DEFAULT_HOP_LIMIT,
             routing_enabled: false,
         }
@@ -145,8 +137,15 @@ impl<Instant, I: IpDeviceStateIpExt<Instant>> IpDeviceState<Instant, I> {
     }
 
     /// Adds an IP address to this interface.
-    pub(crate) fn add_addr(&mut self, addr: I::AssignedAddress) {
-        self.addrs.push(addr);
+    pub(crate) fn add_addr(
+        &mut self,
+        addr: I::AssignedAddress,
+    ) -> Result<(), crate::error::ExistsError> {
+        if self.iter_addrs().any(|a| a.addr() == addr.addr()) {
+            return Err(crate::error::ExistsError);
+        }
+
+        Ok(self.addrs.push(addr))
     }
 
     /// Removes the address.
@@ -163,15 +162,6 @@ impl<Instant, I: IpDeviceStateIpExt<Instant>> IpDeviceState<Instant, I> {
         let _entry: I::AssignedAddress = self.addrs.remove(index);
         Ok(())
     }
-
-    /// Is a Group Messaging Protocol (GMP) enabled for this device?
-    ///
-    /// If a GMP is not enabled, multicast groups will still be added to
-    /// `multicast_groups`, but we will not inform the network of our membership
-    /// in those groups using a GMP.
-    pub(crate) fn gmp_enabled(&self) -> bool {
-        self.gmp_enabled
-    }
 }
 
 impl<Instant: crate::Instant> IpDeviceState<Instant, Ipv6> {
@@ -187,11 +177,44 @@ impl<Instant: crate::Instant> IpDeviceState<Instant, Ipv6> {
 /// The state common to all IPv4 devices.
 pub(crate) struct Ipv4DeviceState<I: Instant> {
     pub(crate) ip_state: IpDeviceState<I, Ipv4>,
+    pub(super) config: Ipv4DeviceConfiguration,
 }
 
 impl<I: Instant> Default for Ipv4DeviceState<I> {
     fn default() -> Ipv4DeviceState<I> {
-        Ipv4DeviceState { ip_state: Default::default() }
+        Ipv4DeviceState { ip_state: Default::default(), config: Default::default() }
+    }
+}
+
+/// Configurations common to all IP devices.
+#[derive(Clone)]
+pub struct IpDeviceConfiguration {
+    /// Is a Group Messaging Protocol (GMP) enabled for this device?
+    ///
+    /// If `gmp_enabled` is false, multicast groups will still be added to
+    /// `multicast_groups`, but we will not inform the network of our membership
+    /// in those groups using a GMP.
+    ///
+    /// Default: `false`.
+    pub gmp_enabled: bool,
+}
+
+impl Default for IpDeviceConfiguration {
+    fn default() -> IpDeviceConfiguration {
+        IpDeviceConfiguration { gmp_enabled: false }
+    }
+}
+
+/// Configuration common to all IPv4 devices.
+#[derive(Clone)]
+pub struct Ipv4DeviceConfiguration {
+    /// The configuration common to all IP devices.
+    pub ip_config: IpDeviceConfiguration,
+}
+
+impl Default for Ipv4DeviceConfiguration {
+    fn default() -> Ipv4DeviceConfiguration {
+        Ipv4DeviceConfiguration { ip_config: Default::default() }
     }
 }
 
@@ -204,25 +227,17 @@ pub struct Ipv6DeviceConfiguration {
     /// A value of `None` means DAD will not be performed on the interface.
     ///
     /// [RFC 4862 section 5.1]: https://datatracker.ietf.org/doc/html/rfc4862#section-5.1
-    pub(crate) dad_transmits: Option<NonZeroU8>,
-}
+    pub dad_transmits: Option<NonZeroU8>,
 
-impl Ipv6DeviceConfiguration {
-    /// Sets the value for NDP's DupAddrDetectTransmits parameter as defined by
-    /// [RFC 4862 section 5.1].
-    ///
-    /// A value of `None` means DAD will not be performed on the interface.
-    ///
-    /// [RFC 4862 section 5.1]: https://datatracker.ietf.org/doc/html/rfc4862#section-5.1
-    pub fn set_dad_transmits(&mut self, v: Option<NonZeroU8>) {
-        self.dad_transmits = v;
-    }
+    /// The configuration common to all IP devices.
+    pub ip_config: IpDeviceConfiguration,
 }
 
 impl Default for Ipv6DeviceConfiguration {
     fn default() -> Ipv6DeviceConfiguration {
         Ipv6DeviceConfiguration {
             dad_transmits: NonZeroU8::new(crate::device::ndp::DUP_ADDR_DETECT_TRANSMITS),
+            ip_config: Default::default(),
         }
     }
 }
@@ -406,9 +421,52 @@ impl<Instant: Copy> Ipv6AddressEntry<Instant> {
     }
 }
 
-/// Possible return values during an erroneous interface address change operation.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum AddressError {
-    AlreadyExists,
-    NotFound,
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::{error::ExistsError, testutil::DummyInstant};
+
+    #[test]
+    fn test_add_addr_ipv4() {
+        const ADDRESS: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
+        const PREFIX_LEN: u8 = 8;
+
+        let mut ipv4 = IpDeviceState::<DummyInstant, Ipv4>::default();
+
+        assert_eq!(ipv4.add_addr(AddrSubnet::new(ADDRESS, PREFIX_LEN).unwrap()), Ok(()));
+        // Adding the same address with different prefix should fail.
+        assert_eq!(
+            ipv4.add_addr(AddrSubnet::new(ADDRESS, PREFIX_LEN + 1).unwrap()),
+            Err(ExistsError)
+        );
+    }
+
+    #[test]
+    fn test_add_addr_ipv6() {
+        const ADDRESS: Ipv6Addr =
+            Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6]);
+        const PREFIX_LEN: u8 = 8;
+
+        let mut ipv6 = IpDeviceState::<DummyInstant, Ipv6>::default();
+
+        assert_eq!(
+            ipv6.add_addr(Ipv6AddressEntry::new(
+                AddrSubnet::new(ADDRESS, PREFIX_LEN).unwrap(),
+                AddressState::Tentative { dad_transmits_remaining: None },
+                AddrConfig::Slaac(SlaacConfig { valid_until: None }),
+            )),
+            Ok(())
+        );
+        // Adding the same address with different prefix and configuration
+        // should fail.
+        assert_eq!(
+            ipv6.add_addr(Ipv6AddressEntry::new(
+                AddrSubnet::new(ADDRESS, PREFIX_LEN + 1).unwrap(),
+                AddressState::Assigned,
+                AddrConfig::Manual,
+            )),
+            Err(ExistsError)
+        );
+    }
 }

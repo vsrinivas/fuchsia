@@ -954,7 +954,7 @@ impl<
         C: InnerIcmpv6Context
             + InnerBufferIcmpContext<Ipv6, B>
             + PmtuHandler<Ipv6>
-            + MldPacketHandler<(), <C as IpDeviceIdContext>::DeviceId>
+            + MldPacketHandler<<C as IpDeviceIdContext>::DeviceId>
             + NdpPacketHandler<<C as IpDeviceIdContext>::DeviceId>,
     > BufferIpTransportContext<Ipv6, B, C> for IcmpIpTransportContext
 {
@@ -3194,7 +3194,7 @@ mod tests {
         }
     }
 
-    impl MldPacketHandler<(), DummyDeviceId> for Dummyv6Ctx {
+    impl MldPacketHandler<DummyDeviceId> for Dummyv6Ctx {
         fn receive_mld_packet<B: ByteSlice>(
             &mut self,
             _device: DummyDeviceId,

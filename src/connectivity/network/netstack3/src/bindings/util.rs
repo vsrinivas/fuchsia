@@ -500,7 +500,7 @@ mod tests {
         fn new() -> Self {
             // we need a valid context to be able to create DeviceIds, so
             // we just create it, get the device id and then destroy everything
-            let netstack = Netstack::new();
+            let netstack = Netstack::default();
             let core =
                 netstack.ctx.try_lock().unwrap().state.add_ethernet_device(
                     UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap(),

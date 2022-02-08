@@ -17,12 +17,12 @@ use core::marker::PhantomData;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr};
 #[cfg(test)]
-use net_types::Witness as _;
-use net_types::{MulticastAddr, SpecifiedAddr, UnicastAddr};
+use net_types::ip::Ipv4Addr;
+use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv6, Ipv6Addr, Ipv6SourceAddr};
+use net_types::{MulticastAddr, SpecifiedAddr, UnicastAddr, Witness as _};
 use packet::{Buf, BufferMut, EmptyBuf, Serializer};
-use packet_formats::icmp::{mld::MldPacket, ndp::NdpPacket};
+use packet_formats::icmp::ndp::NdpPacket;
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
@@ -44,10 +44,12 @@ use crate::{
     error::{ExistsError, NotFoundError, NotSupportedError},
     ip::{
         device::{
-            state::{AddressError, DualStackIpDeviceState, Ipv6DeviceConfiguration},
-            IpDeviceContext,
+            state::{
+                AddrConfig, AddressState, DualStackIpDeviceState, Ipv4DeviceConfiguration,
+                Ipv6AddressEntry, Ipv6DeviceConfiguration,
+            },
+            BufferIpDeviceContext, IpDeviceContext,
         },
-        gmp::{igmp::IgmpPacketHandler, mld::MldPacketHandler},
         socket::IpSockUpdate,
     },
     BufferDispatcher, Ctx, EventDispatcher, Instant, StackState,
@@ -190,6 +192,20 @@ impl<D: EventDispatcher> IpDeviceContext for Ctx<D> {
         }
     }
 
+    fn get_ip_device_state_mut_and_rng(
+        &mut self,
+        device: DeviceId,
+    ) -> (&mut DualStackIpDeviceState<Self::Instant>, &mut D::Rng) {
+        let state = match device.inner() {
+            DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
+                &mut self.state.device.ethernet.get_mut(id).unwrap().device.ip
+            }
+            DeviceIdInner::Loopback => &mut self.state.device.loopback.as_mut().unwrap().device.ip,
+        };
+
+        (state, self.dispatcher.rng_mut())
+    }
+
     fn iter_devices(&self) -> Box<dyn Iterator<Item = DeviceId> + '_> {
         let DeviceLayerState { ethernet, loopback, default_ndp_config: _, default_ipv6_config: _ } =
             &self.state.device;
@@ -210,6 +226,100 @@ impl<D: EventDispatcher> IpDeviceContext for Ctx<D> {
         match device_id.inner() {
             DeviceIdInner::Ethernet(id) => self::ethernet::get_mtu(self, id),
             DeviceIdInner::Loopback => self::loopback::get_mtu(self),
+        }
+    }
+
+    fn join_link_multicast_group<A: IpAddress>(
+        &mut self,
+        device_id: Self::DeviceId,
+        multicast_addr: MulticastAddr<A>,
+    ) {
+        match device_id.inner() {
+            DeviceIdInner::Ethernet(id) => {
+                self::ethernet::join_link_multicast(self, id, MulticastAddr::from(&multicast_addr))
+            }
+            DeviceIdInner::Loopback => {}
+        }
+    }
+
+    fn leave_link_multicast_group<A: IpAddress>(
+        &mut self,
+        device_id: Self::DeviceId,
+        multicast_addr: MulticastAddr<A>,
+    ) {
+        match device_id.inner() {
+            DeviceIdInner::Ethernet(id) => {
+                self::ethernet::leave_link_multicast(self, id, MulticastAddr::from(&multicast_addr))
+            }
+            DeviceIdInner::Loopback => {}
+        }
+    }
+
+    fn start_duplicate_address_detection(
+        &mut self,
+        device_id: Self::DeviceId,
+        addr: UnicastAddr<Ipv6Addr>,
+    ) {
+        match device_id.inner() {
+            DeviceIdInner::Ethernet(id) => {
+                self::ethernet::do_duplicate_address_detection(self, id, addr)
+            }
+            DeviceIdInner::Loopback => {
+                let Ipv6AddressEntry { addr_sub: _, state, config: _ } = self
+                    .get_ip_device_state_mut(device_id)
+                    .ipv6
+                    .ip_state
+                    .iter_addrs_mut()
+                    .find(|e| e.addr_sub().addr() == addr)
+                    .expect("should find an address we are performing DAD on");
+                match state {
+                    AddressState::Tentative { dad_transmits_remaining } => {
+                        assert_eq!(
+                            dad_transmits_remaining, &None,
+                            "TODO(https://fxbug.dev/72378): loopback does not handle DAD yet"
+                        );
+                    }
+                    AddressState::Assigned | AddressState::Deprecated => {
+                        panic!("expected address to be tentative")
+                    }
+                }
+
+                *state = AddressState::Assigned;
+            }
+        }
+    }
+    fn stop_duplicate_address_detection(
+        &mut self,
+        device_id: Self::DeviceId,
+        addr: UnicastAddr<Ipv6Addr>,
+    ) {
+        match device_id.inner() {
+            DeviceIdInner::Ethernet(id) => {
+                let _: Option<D::Instant> = self.cancel_timer(EthernetTimerId::Dad(DadTimerId {
+                    device_id: id,
+                    addr,
+                    _marker: core::marker::PhantomData,
+                }));
+            }
+            DeviceIdInner::Loopback => {}
+        }
+    }
+}
+impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpDeviceContext<B> for Ctx<D> {
+    fn send_ip_frame<S: Serializer<Buffer = B>, A: IpAddress>(
+        &mut self,
+        device: DeviceId,
+        local_addr: SpecifiedAddr<A>,
+        body: S,
+    ) -> Result<(), S> {
+        // `device` must not be uninitialized.
+        assert!(is_device_usable(&self.state, device));
+
+        match device.inner() {
+            DeviceIdInner::Ethernet(id) => {
+                self::ethernet::send_ip_frame(self, id, local_addr, body)
+            }
+            DeviceIdInner::Loopback => self::loopback::send_ip_frame(self, local_addr, body),
         }
     }
 }
@@ -493,7 +603,8 @@ impl<B: BufferMut, D: BufferDispatcher<B>, A: IpAddress> FrameContext<B, IpFrame
         meta: IpFrameMeta<A, DeviceId>,
         body: S,
     ) -> Result<(), S> {
-        send_ip_frame(self, meta.device, meta.local_addr, body)
+        let IpFrameMeta { device, local_addr } = meta;
+        BufferIpDeviceContext::send_ip_frame(self, device, local_addr, body)
     }
 }
 
@@ -617,35 +728,6 @@ pub fn remove_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId) -> 
     }
 }
 
-/// Send an IP packet in a device layer frame.
-///
-/// `send_ip_frame` accepts a device ID, a local IP address, and a
-/// serializer. It computes the routing information, serializes
-/// the serializer, and sends the resulting buffer in a new device
-/// layer frame.
-///
-/// # Panics
-///
-/// Panics if `device` is not initialized.
-pub(crate) fn send_ip_frame<B: BufferMut, D: BufferDispatcher<B>, A, S>(
-    ctx: &mut Ctx<D>,
-    device: DeviceId,
-    local_addr: SpecifiedAddr<A>,
-    body: S,
-) -> Result<(), S>
-where
-    A: IpAddress,
-    S: Serializer<Buffer = B>,
-{
-    // `device` must not be uninitialized.
-    assert!(is_device_usable(&ctx.state, device));
-
-    match device.inner() {
-        DeviceIdInner::Ethernet(id) => self::ethernet::send_ip_frame(ctx, id, local_addr, body),
-        DeviceIdInner::Loopback => self::loopback::send_ip_frame(ctx, local_addr, body),
-    }
-}
-
 /// Receive a device layer frame from the network.
 ///
 /// # Panics
@@ -692,16 +774,13 @@ pub fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Ctx<D>,
     device: DeviceId,
     addr_sub: AddrSubnet<A>,
-) -> Result<(), AddressError> {
+) -> Result<(), ExistsError> {
     // `device` must be initialized.
     assert!(is_device_initialized(&ctx.state, device));
 
     trace!("add_ip_addr_subnet: adding addr {:?} to device {:?}", addr_sub, device);
 
-    let res = match device.inner() {
-        DeviceIdInner::Ethernet(id) => self::ethernet::add_ip_addr_subnet(ctx, id, addr_sub),
-        DeviceIdInner::Loopback => self::loopback::add_ip_addr_subnet(ctx, addr_sub),
-    };
+    let res = crate::ip::device::add_ip_addr_subnet(ctx, device, addr_sub, AddrConfig::Manual);
 
     if res.is_ok() {
         #[ipv4addr]
@@ -729,10 +808,7 @@ pub fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
 
     trace!("del_ip_addr: removing addr {:?} from device {:?}", addr, device);
 
-    let res = match device.inner() {
-        DeviceIdInner::Ethernet(id) => self::ethernet::del_ip_addr(ctx, id, addr),
-        DeviceIdInner::Loopback => self::loopback::del_ip_addr(ctx, addr),
-    };
+    let res = crate::ip::device::del_ip_addr(ctx, device, &addr.get()).map_err(Into::into);
 
     if res.is_ok() {
         #[ipv4addr]
@@ -769,12 +845,7 @@ pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
 
     trace!("join_ip_multicast: device {:?} joining multicast {:?}", device, multicast_addr);
 
-    match device.inner() {
-        DeviceIdInner::Ethernet(id) => self::ethernet::join_ip_multicast(ctx, id, multicast_addr),
-        DeviceIdInner::Loopback => {
-            unimplemented!("TODO(https://fxbug.dev/72378): Support multicast on loopback")
-        }
-    }
+    crate::ip::device::join_ip_multicast(ctx, device, multicast_addr)
 }
 
 /// Attempt to remove `device` from a multicast group `multicast_addr`.
@@ -804,12 +875,7 @@ pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
 
     trace!("join_ip_multicast: device {:?} leaving multicast {:?}", device, multicast_addr);
 
-    match device.inner() {
-        DeviceIdInner::Ethernet(id) => self::ethernet::leave_ip_multicast(ctx, id, multicast_addr),
-        DeviceIdInner::Loopback => {
-            unimplemented!("TODO(https://fxbug.dev/72378): Support multicast on loopback")
-        }
-    }
+    crate::ip::device::leave_ip_multicast(ctx, device, multicast_addr)
 }
 
 /// Get a reference to the common device state for a `device`.
@@ -964,16 +1030,22 @@ pub fn set_ndp_configuration<D: EventDispatcher>(
     }
 }
 
+/// Updates the IPv4 Configuration for a `device`.
+pub fn set_ipv4_configuration<D: EventDispatcher>(
+    ctx: &mut Ctx<D>,
+    device: DeviceId,
+    config: Ipv4DeviceConfiguration,
+) {
+    crate::ip::device::set_ipv4_configuration(ctx, device, config)
+}
+
 /// Updates the IPv6 Configuration for a `device`.
 pub fn set_ipv6_configuration<D: EventDispatcher>(
     ctx: &mut Ctx<D>,
     device: DeviceId,
     config: Ipv6DeviceConfiguration,
 ) {
-    match device.inner() {
-        DeviceIdInner::Ethernet(id) => ethernet::set_ipv6_configuration(ctx, id, config),
-        DeviceIdInner::Loopback => loopback::set_ipv6_configuration(ctx, config),
-    }
+    crate::ip::device::set_ipv6_configuration(ctx, device, config)
 }
 
 /// An address that may be "tentative" in that it has not yet passed duplicate
@@ -1004,50 +1076,6 @@ impl<D: EventDispatcher> NdpPacketHandler<DeviceId> for Ctx<D> {
             }
             DeviceIdInner::Loopback => {
                 unimplemented!("TODO(https://fxbug.dev/72378): Handle NDP on loopback")
-            }
-        }
-    }
-}
-
-/// This implementation of `IgmpPacketHandler` is consumed by IPv4.
-impl<B: BufferMut, D: BufferDispatcher<B>> IgmpPacketHandler<(), DeviceId, B> for Ctx<D> {
-    fn receive_igmp_packet(
-        &mut self,
-        device: DeviceId,
-        src_ip: Ipv4Addr,
-        dst_ip: SpecifiedAddr<Ipv4Addr>,
-        buffer: B,
-    ) {
-        match device.inner() {
-            DeviceIdInner::Ethernet(id) => {
-                IgmpPacketHandler::<EthernetLinkDevice, _, _>::receive_igmp_packet(
-                    self, id, src_ip, dst_ip, buffer,
-                );
-            }
-            DeviceIdInner::Loopback => {
-                unimplemented!("TODO(https://fxbug.dev/72378): Handle IGMP on loopback")
-            }
-        }
-    }
-}
-
-/// This implementation of `MldPacketHandler` is consumed by ICMPv6.
-impl<D: EventDispatcher> MldPacketHandler<(), DeviceId> for Ctx<D> {
-    fn receive_mld_packet<B: ByteSlice>(
-        &mut self,
-        device: DeviceId,
-        src_ip: Ipv6SourceAddr,
-        dst_ip: SpecifiedAddr<Ipv6Addr>,
-        packet: MldPacket<B>,
-    ) {
-        match device.inner() {
-            DeviceIdInner::Ethernet(id) => {
-                MldPacketHandler::<EthernetLinkDevice, _>::receive_mld_packet(
-                    self, id, src_ip, dst_ip, packet,
-                );
-            }
-            DeviceIdInner::Loopback => {
-                unimplemented!("TODO(https://fxbug.dev/72378): Handle MLD on loopback")
             }
         }
     }

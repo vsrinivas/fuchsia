@@ -624,7 +624,7 @@ fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
             )
         }
         Ipv4Proto::Igmp => {
-            IgmpPacketHandler::<(), _, _>::receive_igmp_packet(
+            IgmpPacketHandler::<_, _>::receive_igmp_packet(
                 ctx,
                 device.expect("IGMP messages should come from a device"),
                 src_ip,
@@ -1054,7 +1054,7 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 packet.set_ttl(ttl - 1);
                 let _: (Ipv4Addr, Ipv4Addr, Ipv4Proto, ParseMetadata) =
                     drop_packet_and_undo_parse!(packet, buffer);
-                match crate::device::send_ip_frame(ctx, dst.device, dst.next_hop, buffer) {
+                match crate::ip::device::send_ip_frame(ctx, dst.device, dst.next_hop, buffer) {
                     Ok(()) => (),
                     Err(b) => {
                         let _: B = b;
@@ -1311,7 +1311,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 let (_, _, proto, meta): (Ipv6Addr, Ipv6Addr, _, _) =
                     drop_packet_and_undo_parse!(packet, buffer);
                 if let Err(buffer) =
-                    crate::device::send_ip_frame(ctx, dst.device, dst.next_hop, buffer)
+                    crate::ip::device::send_ip_frame(ctx, dst.device, dst.next_hop, buffer)
                 {
                     // TODO(https://fxbug.dev/86247): Encode the MTU error more
                     // obviously in the type system.
@@ -1695,10 +1695,11 @@ pub(crate) fn send_ip_packet_from_device<
 
     if let Some(mtu) = mtu {
         let body = body.with_mtu(mtu as usize);
-        crate::device::send_ip_frame(ctx, device, next_hop, body)
+        crate::ip::device::send_ip_frame(ctx, device, next_hop, body)
             .map_err(|ser| ser.into_inner().into_inner())
     } else {
-        crate::device::send_ip_frame(ctx, device, next_hop, body).map_err(|ser| ser.into_inner())
+        crate::ip::device::send_ip_frame(ctx, device, next_hop, body)
+            .map_err(|ser| ser.into_inner())
     }
 }
 
@@ -2589,7 +2590,7 @@ mod tests {
         ndp_config.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(None);
+        ipv6_config.dad_transmits = None;
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let device = DeviceId::new_ethernet(0);
         let mut alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap())
@@ -2664,7 +2665,7 @@ mod tests {
         ndp_config.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
-        ipv6_config.set_dad_transmits(None);
+        ipv6_config.dad_transmits = None;
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut dispatcher_builder = DummyEventDispatcherBuilder::from_config(dummy_config.clone());
         let extra_ip = UnicastAddr::new(Ipv6Addr::from_bytes([
