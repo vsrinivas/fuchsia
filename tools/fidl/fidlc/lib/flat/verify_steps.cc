@@ -10,7 +10,7 @@
 namespace fidl::flat {
 
 void VerifyResourcenessStep::RunImpl() {
-  for (const Decl* decl : library_->declaration_order_) {
+  for (const Decl* decl : library()->declaration_order) {
     VerifyDecl(decl);
   }
 }
@@ -164,23 +164,22 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
 }
 
 void VerifyAttributesStep::RunImpl() {
-  library_->TraverseElements([&](Element* element) { VerifyAttributes(element); });
+  library()->TraverseElements([&](Element* element) { VerifyAttributes(element); });
 }
 
 void VerifyAttributesStep::VerifyAttributes(const Element* element) {
   for (const auto& attribute : element->attributes->attributes) {
-    const AttributeSchema& schema =
-        library_->all_libraries_->RetrieveAttributeSchema(reporter(), attribute.get());
+    const AttributeSchema& schema = all_libraries()->RetrieveAttributeSchema(attribute.get());
     schema.Validate(reporter(), attribute.get(), element);
   }
 }
 
 void VerifyDependenciesStep::RunImpl() {
-  library_->dependencies_.VerifyAllDependenciesWereUsed(*library_, reporter());
+  library()->dependencies.VerifyAllDependenciesWereUsed(*library(), reporter());
 }
 
 void VerifyInlineSizeStep::RunImpl() {
-  for (const Decl* decl : library_->declaration_order_) {
+  for (const Decl* decl : library()->declaration_order) {
     if (decl->kind == Decl::Kind::kStruct) {
       auto struct_decl = static_cast<const Struct*>(decl);
       if (struct_decl->typeshape(WireFormat::kV1NoEe).inline_size >= 65536) {

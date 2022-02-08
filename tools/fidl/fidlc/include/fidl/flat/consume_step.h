@@ -5,24 +5,15 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_CONSUME_STEP_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_CONSUME_STEP_H_
 
-#include <memory>
-
-#include "fidl/flat/step_base.h"
-#include "fidl/raw_ast.h"
+#include "fidl/flat/compiler.h"
 
 namespace fidl::flat {
 
-class NamingContext;
-
-struct AttributeList;
-struct TypeConstructor;
-struct LiteralConstant;
-
 // We run a separate ConsumeStep for each file in the library.
-class ConsumeStep : public StepBase {
+class ConsumeStep : public Compiler::Step {
  public:
-  explicit ConsumeStep(Library* library, std::unique_ptr<raw::File> file)
-      : StepBase(library), file_(std::move(file)) {}
+  explicit ConsumeStep(Compiler* compiler, std::unique_ptr<raw::File> file)
+      : Step(compiler), file_(std::move(file)) {}
 
  private:
   void RunImpl() override;

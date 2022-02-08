@@ -5,16 +5,15 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VERIFY_STEPS_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VERIFY_STEPS_H_
 
-#include "fidl/flat/step_base.h"
-#include "fidl/types.h"
+#include "fidl/flat/compiler.h"
 
 namespace fidl::flat {
 
 struct Element;
 
-class VerifyResourcenessStep : public StepBase {
+class VerifyResourcenessStep : public Compiler::Step {
  public:
-  using StepBase::StepBase;
+  using Step::Step;
 
  private:
   void RunImpl() override;
@@ -32,26 +31,26 @@ class VerifyResourcenessStep : public StepBase {
   std::map<const Decl*, std::optional<types::Resourceness>> effective_resourceness_;
 };
 
-class VerifyAttributesStep : public StepBase {
+class VerifyAttributesStep : public Compiler::Step {
  public:
-  using StepBase::StepBase;
+  using Step::Step;
 
  private:
   void RunImpl() override;
   void VerifyAttributes(const Element* element);
 };
 
-class VerifyInlineSizeStep : public StepBase {
+class VerifyInlineSizeStep : public Compiler::Step {
  public:
-  using StepBase::StepBase;
+  using Step::Step;
 
  private:
   void RunImpl() override;
 };
 
-class VerifyDependenciesStep : public StepBase {
+class VerifyDependenciesStep : public Compiler::Step {
  public:
-  using StepBase::StepBase;
+  using Step::Step;
 
  private:
   void RunImpl() override;

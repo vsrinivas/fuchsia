@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "coded_ast.h"
+#include "flat/compiler.h"
 #include "flat_ast.h"
 
 namespace fidl {
@@ -18,7 +19,7 @@ namespace fidl {
 class CodedTypesGenerator {
  public:
   explicit CodedTypesGenerator(const flat::Libraries* all_libraries)
-      : target_library_decl_order_(all_libraries->target_library()->declaration_order()),
+      : target_library_decl_order_(all_libraries->target_library()->declaration_order),
         all_libraries_decl_order_(all_libraries->DeclarationOrder()) {}
 
   void CompileCodedTypes();

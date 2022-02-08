@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_
 #define ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_
 
+#include <fidl/flat/compiler.h>
 #include <fidl/flat_ast.h>
 #include <fidl/json_generator.h>
 #include <fidl/lexer.h>
@@ -28,10 +29,9 @@ static std::unique_ptr<fidl::SourceFile> MakeSourceFile(const std::string& filen
 
 class SharedAmongstLibraries {
  public:
-  SharedAmongstLibraries() : typespace(fidl::flat::Typespace::RootTypes(&reporter)) {}
+  SharedAmongstLibraries() : all_libraries(&reporter) {}
 
   fidl::Reporter reporter;
-  fidl::flat::Typespace typespace;
   fidl::flat::Libraries all_libraries;
   std::vector<std::unique_ptr<fidl::SourceFile>> all_sources_of_all_libraries;
 };
@@ -67,13 +67,9 @@ class TestLibrary final {
                        fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
       : reporter_(&shared->reporter),
         experimental_flags_(experimental_flags),
-        typespace_(&shared->typespace),
         all_libraries_(&shared->all_libraries),
         all_sources_of_all_libraries_(&shared->all_sources_of_all_libraries),
-        owned_library_(std::make_unique<fidl::flat::Library>(all_libraries_, reporter_, typespace_,
-                                                             GetGeneratedOrdinal64ForTesting,
-                                                             experimental_flags_)),
-        library_(owned_library_.get()) {}
+        library_(nullptr) {}
 
   explicit TestLibrary(const std::string& raw_source_code,
                        fidl::ExperimentalFlags experimental_flags = fidl::ExperimentalFlags())
@@ -116,18 +112,23 @@ class TestLibrary final {
   // Compiles the library. Must have compiled all dependencies first, using the
   // same SharedAmongstLibraries object for all of them.
   bool Compile() {
+    fidl::flat::Compiler compiler(all_libraries_, GetGeneratedOrdinal64ForTesting,
+                                  experimental_flags_);
     for (auto source_file : all_sources_) {
       fidl::Lexer lexer(*source_file, reporter_);
       fidl::Parser parser(&lexer, reporter_, experimental_flags_);
       auto ast = parser.Parse();
       if (!parser.Success())
         return false;
-      if (!library_->ConsumeFile(std::move(ast)))
+      if (!compiler.ConsumeFile(std::move(ast)))
         return false;
     }
-    if (!library_->Compile())
+
+    auto library = compiler.Compile();
+    if (!library)
       return false;
-    return all_libraries_->Insert(std::move(owned_library_));
+    library_ = library.get();
+    return all_libraries_->Insert(std::move(library));
   }
 
   // TODO(pascallouis): remove, this does not use a library.
@@ -178,7 +179,7 @@ class TestLibrary final {
   }
 
   const fidl::flat::Bits* LookupBits(std::string_view name) {
-    for (const auto& bits_decl : library_->bits_declarations_) {
+    for (const auto& bits_decl : library_->bits_declarations) {
       if (bits_decl->GetName() == name) {
         return bits_decl.get();
       }
@@ -187,7 +188,7 @@ class TestLibrary final {
   }
 
   const fidl::flat::Const* LookupConstant(std::string_view name) {
-    for (const auto& const_decl : library_->const_declarations_) {
+    for (const auto& const_decl : library_->const_declarations) {
       if (const_decl->GetName() == name) {
         return const_decl.get();
       }
@@ -196,7 +197,7 @@ class TestLibrary final {
   }
 
   const fidl::flat::Enum* LookupEnum(std::string_view name) {
-    for (const auto& enum_decl : library_->enum_declarations_) {
+    for (const auto& enum_decl : library_->enum_declarations) {
       if (enum_decl->GetName() == name) {
         return enum_decl.get();
       }
@@ -205,7 +206,7 @@ class TestLibrary final {
   }
 
   const fidl::flat::Resource* LookupResource(std::string_view name) {
-    for (const auto& resource_decl : library_->resource_declarations_) {
+    for (const auto& resource_decl : library_->resource_declarations) {
       if (resource_decl->GetName() == name) {
         return resource_decl.get();
       }
@@ -214,7 +215,7 @@ class TestLibrary final {
   }
 
   const fidl::flat::Service* LookupService(std::string_view name) {
-    for (const auto& service_decl : library_->service_declarations_) {
+    for (const auto& service_decl : library_->service_declarations) {
       if (service_decl->GetName() == name) {
         return service_decl.get();
       }
@@ -223,7 +224,7 @@ class TestLibrary final {
   }
 
   const fidl::flat::Struct* LookupStruct(std::string_view name) {
-    for (const auto& struct_decl : library_->struct_declarations_) {
+    for (const auto& struct_decl : library_->struct_declarations) {
       if (struct_decl->GetName() == name) {
         return struct_decl.get();
       }
@@ -232,7 +233,7 @@ class TestLibrary final {
   }
 
   const fidl::flat::Table* LookupTable(std::string_view name) {
-    for (const auto& table_decl : library_->table_declarations_) {
+    for (const auto& table_decl : library_->table_declarations) {
       if (table_decl->GetName() == name) {
         return table_decl.get();
       }
@@ -241,7 +242,7 @@ class TestLibrary final {
   }
 
   const fidl::flat::TypeAlias* LookupTypeAlias(std::string_view name) {
-    for (const auto& type_alias_decl : library_->type_alias_declarations_) {
+    for (const auto& type_alias_decl : library_->type_alias_declarations) {
       if (type_alias_decl->GetName() == name) {
         return type_alias_decl.get();
       }
@@ -250,7 +251,7 @@ class TestLibrary final {
   }
 
   const fidl::flat::Union* LookupUnion(std::string_view name) {
-    for (const auto& union_decl : library_->union_declarations_) {
+    for (const auto& union_decl : library_->union_declarations) {
       if (union_decl->GetName() == name) {
         return union_decl.get();
       }
@@ -259,7 +260,7 @@ class TestLibrary final {
   }
 
   const fidl::flat::Protocol* LookupProtocol(std::string_view name) {
-    for (const auto& protocol_decl : library_->protocol_declarations_) {
+    for (const auto& protocol_decl : library_->protocol_declarations) {
       if (protocol_decl->GetName() == name) {
         return protocol_decl.get();
       }
@@ -269,7 +270,10 @@ class TestLibrary final {
 
   void set_warnings_as_errors(bool value) { reporter_->set_warnings_as_errors(value); }
 
-  fidl::flat::Library* library() const { return library_; }
+  fidl::flat::Library* library() const {
+    assert(library_ && "must compile successfully before accessing library");
+    return library_;
+  }
   const fidl::flat::Libraries* all_libraries() const { return all_libraries_; }
   fidl::Reporter* reporter() { return reporter_; }
   const fidl::flat::AttributeList* attributes() { return library_->attributes.get(); }
@@ -300,14 +304,14 @@ class TestLibrary final {
   const std::vector<std::string>& lints() const { return lints_; }
 
   std::vector<const fidl::flat::Decl*> declaration_order() const {
-    return library_->declaration_order();
+    return library_->declaration_order;
   }
 
   SharedAmongstLibraries* OwnedShared() {
     // Assume that the only good reason to obtain the owned shared is if it is
     // actually being used by the TestLibrary
-    assert(typespace_ == &owned_shared_.typespace &&
-           "typespaces don't match - are you sure this TestLibrary is using owned_shared_?");
+    assert(all_libraries_ == &owned_shared_.all_libraries &&
+           "all_libraries don't match - are you sure this TestLibrary is using owned_shared_?");
     return &owned_shared_;
   }
 
@@ -318,11 +322,9 @@ class TestLibrary final {
   fidl::Reporter* reporter_;
   std::vector<std::string> lints_;
   fidl::ExperimentalFlags experimental_flags_;
-  fidl::flat::Typespace* typespace_;
   fidl::flat::Libraries* all_libraries_;
   std::vector<std::unique_ptr<fidl::SourceFile>>* all_sources_of_all_libraries_;
   std::vector<fidl::SourceFile*> all_sources_;
-  std::unique_ptr<fidl::flat::Library> owned_library_;
   fidl::flat::Library* library_;
 };
 

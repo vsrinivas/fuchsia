@@ -27,28 +27,23 @@ static std::string MakeSquiggle(std::string_view surrounding_line, int column) {
 }
 
 // static
-std::string Reporter::Format(std::string_view qualifier, std::optional<SourceSpan> span,
-                             std::string_view message, bool color) {
+std::string Reporter::Format(std::string_view qualifier, SourceSpan span, std::string_view message,
+                             bool color) {
+  assert(span.valid() && "diagnostic span must be valid");
+
   const std::string_view bold = color ? "\033[1m" : "";
   const std::string_view bold_red = color ? "\033[1;31m" : "";
   const std::string_view bold_green = color ? "\033[1;32m" : "";
   const std::string_view reset = color ? "\033[0m" : "";
 
-  if (!span) {
-    std::stringstream error;
-    error << bold_red << qualifier << ": " << reset;
-    error << bold << message << reset;
-    return error.str();
-  }
-
   SourceFile::Position position;
-  std::string surrounding_line = std::string(span->SourceLine(&position));
+  std::string surrounding_line = std::string(span.SourceLine(&position));
   assert(surrounding_line.find('\n') == std::string::npos &&
          "A single line should not contain a newline character");
 
   std::string squiggle = MakeSquiggle(surrounding_line, position.column);
-  assert(!span->data().empty() && "span should not be empty");
-  squiggle += std::string(span->data().size() - 1, '~');
+  assert(!span.data().empty() && "span should not be empty");
+  squiggle += std::string(span.data().size() - 1, '~');
 
   // Some tokens (like string literals) can span multiple lines. Truncate the
   // string to just one line at most.
@@ -64,7 +59,7 @@ std::string Reporter::Format(std::string_view qualifier, std::optional<SourceSpa
   std::stringstream error;
   // Many editors and IDEs recognize errors in the form of
   // filename:linenumber:column: error: descriptive-test-here\n
-  error << bold << span->position_str() << ": " << reset;
+  error << bold << span.position_str() << ": " << reset;
   error << bold_red << qualifier << ": " << reset;
   error << bold << message << reset;
   error << '\n' << surrounding_line << '\n';

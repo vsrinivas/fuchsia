@@ -102,4 +102,12 @@ protocol Foo {
   ASSERT_COMPILED(library);
 }
 
+TEST(FlatAstTests, BadMultipleLibrariesSameName) {
+  SharedAmongstLibraries shared;
+  TestLibrary library1("one.fidl", "library example;", &shared);
+  ASSERT_COMPILED(library1);
+  TestLibrary library2("two.fidl", "library example;", &shared);
+  ASSERT_ERRORED_DURING_COMPILE(library2, fidl::ErrMultipleLibrariesWithSameName);
+}
+
 }  // namespace

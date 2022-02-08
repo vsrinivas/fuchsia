@@ -258,9 +258,9 @@ void SortStep::RunImpl() {
   std::map<const Decl*, std::set<const Decl*, CmpDeclName>, CmpDeclName> dependencies;
   // |inverse_dependencies| records the decls that depend on each decl.
   std::map<const Decl*, std::vector<const Decl*>, CmpDeclName> inverse_dependencies;
-  for (const auto& [key, decl] : library_->declarations_) {
+  for (const auto& [key, decl] : library()->declarations) {
     // Only process decls from the current library.
-    if (decl->name.library() != library_) {
+    if (decl->name.library() != library()) {
       continue;
     }
     auto deps = CalcDependencies(decl).get();
@@ -283,7 +283,7 @@ void SortStep::RunImpl() {
     auto decl = decls_without_deps.back();
     decls_without_deps.pop_back();
     assert(dependencies[decl].empty());
-    library_->declaration_order_.push_back(decl);
+    library()->declaration_order.push_back(decl);
 
     // Since this decl is now declared, remove it from the set of undeclared
     // dependencies for every other decl that depends on it.
@@ -298,7 +298,7 @@ void SortStep::RunImpl() {
     }
   }
 
-  if (library_->declaration_order_.size() != dependencies.size()) {
+  if (library()->declaration_order.size() != dependencies.size()) {
     // We didn't visit all the edges! There was a cycle.
 
     // Find a cycle to use as an example in the error message.  We start from

@@ -820,34 +820,34 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
   EmitObjectKey("declarations");
   GenerateObject([&]() {
     int count = 0;
-    for (const auto& decl : library->bits_declarations_)
+    for (const auto& decl : library->bits_declarations)
       GenerateDeclarationsEntry(count++, decl->name, "bits");
 
-    for (const auto& decl : library->const_declarations_)
+    for (const auto& decl : library->const_declarations)
       GenerateDeclarationsEntry(count++, decl->name, "const");
 
-    for (const auto& decl : library->enum_declarations_)
+    for (const auto& decl : library->enum_declarations)
       GenerateDeclarationsEntry(count++, decl->name, "enum");
 
-    for (const auto& decl : library->resource_declarations_)
+    for (const auto& decl : library->resource_declarations)
       GenerateDeclarationsEntry(count++, decl->name, "experimental_resource");
 
-    for (const auto& decl : library->protocol_declarations_)
+    for (const auto& decl : library->protocol_declarations)
       GenerateDeclarationsEntry(count++, decl->name, "interface");
 
-    for (const auto& decl : library->service_declarations_)
+    for (const auto& decl : library->service_declarations)
       GenerateDeclarationsEntry(count++, decl->name, "service");
 
-    for (const auto& decl : library->struct_declarations_)
+    for (const auto& decl : library->struct_declarations)
       GenerateDeclarationsEntry(count++, decl->name, "struct");
 
-    for (const auto& decl : library->table_declarations_)
+    for (const auto& decl : library->table_declarations)
       GenerateDeclarationsEntry(count++, decl->name, "table");
 
-    for (const auto& decl : library->union_declarations_)
+    for (const auto& decl : library->union_declarations)
       GenerateDeclarationsEntry(count++, decl->name, "union");
 
-    for (const auto& decl : library->type_alias_declarations_)
+    for (const auto& decl : library->type_alias_declarations)
       GenerateDeclarationsEntry(count++, decl->name, "type_alias");
   });
 }
@@ -876,34 +876,34 @@ void JSONGenerator::GenerateExternalDeclarationsMember(const flat::Library* libr
   EmitObjectKey("declarations");
   GenerateObject([&]() {
     int count = 0;
-    for (const auto& decl : library->bits_declarations_)
+    for (const auto& decl : library->bits_declarations)
       GenerateExternalDeclarationsEntry(count++, decl->name, "bits", std::nullopt);
 
-    for (const auto& decl : library->const_declarations_)
+    for (const auto& decl : library->const_declarations)
       GenerateExternalDeclarationsEntry(count++, decl->name, "const", std::nullopt);
 
-    for (const auto& decl : library->enum_declarations_)
+    for (const auto& decl : library->enum_declarations)
       GenerateExternalDeclarationsEntry(count++, decl->name, "enum", std::nullopt);
 
-    for (const auto& decl : library->resource_declarations_)
+    for (const auto& decl : library->resource_declarations)
       GenerateExternalDeclarationsEntry(count++, decl->name, "experimental_resource", std::nullopt);
 
-    for (const auto& decl : library->protocol_declarations_)
+    for (const auto& decl : library->protocol_declarations)
       GenerateExternalDeclarationsEntry(count++, decl->name, "interface", std::nullopt);
 
-    for (const auto& decl : library->service_declarations_)
+    for (const auto& decl : library->service_declarations)
       GenerateExternalDeclarationsEntry(count++, decl->name, "service", std::nullopt);
 
-    for (const auto& decl : library->struct_declarations_)
+    for (const auto& decl : library->struct_declarations)
       GenerateExternalDeclarationsEntry(count++, decl->name, "struct", decl->resourceness);
 
-    for (const auto& decl : library->table_declarations_)
+    for (const auto& decl : library->table_declarations)
       GenerateExternalDeclarationsEntry(count++, decl->name, "table", decl->resourceness);
 
-    for (const auto& decl : library->union_declarations_)
+    for (const auto& decl : library->union_declarations)
       GenerateExternalDeclarationsEntry(count++, decl->name, "union", decl->resourceness);
 
-    for (const auto& decl : library->type_alias_declarations_)
+    for (const auto& decl : library->type_alias_declarations)
       GenerateExternalDeclarationsEntry(count++, decl->name, "type_alias", std::nullopt);
   });
 }
@@ -920,7 +920,7 @@ std::vector<const flat::Struct*> ExternalStructs(const flat::Library* library) {
   };
   std::set<const flat::Struct*, decltype(ordering)> external_structs(ordering);
 
-  for (const auto& protocol : library->protocol_declarations_) {
+  for (const auto& protocol : library->protocol_declarations) {
     for (const auto method_with_info : protocol->all_methods) {
       const auto& method = method_with_info.method;
       if (method->maybe_request) {
@@ -990,23 +990,23 @@ std::ostringstream JSONGenerator::Produce() {
     EmitObjectKey("library_dependencies");
     GenerateArray(library_->DirectAndComposedDependencies());
 
-    GenerateObjectMember("bits_declarations", library_->bits_declarations_);
-    GenerateObjectMember("const_declarations", library_->const_declarations_);
-    GenerateObjectMember("enum_declarations", library_->enum_declarations_);
-    GenerateObjectMember("experimental_resource_declarations", library_->resource_declarations_);
-    GenerateObjectMember("interface_declarations", library_->protocol_declarations_);
-    GenerateObjectMember("service_declarations", library_->service_declarations_);
-    GenerateObjectMember("struct_declarations", library_->struct_declarations_);
+    GenerateObjectMember("bits_declarations", library_->bits_declarations);
+    GenerateObjectMember("const_declarations", library_->const_declarations);
+    GenerateObjectMember("enum_declarations", library_->enum_declarations);
+    GenerateObjectMember("experimental_resource_declarations", library_->resource_declarations);
+    GenerateObjectMember("interface_declarations", library_->protocol_declarations);
+    GenerateObjectMember("service_declarations", library_->service_declarations);
+    GenerateObjectMember("struct_declarations", library_->struct_declarations);
     GenerateObjectMember("external_struct_declarations", ExternalStructs(library_));
-    GenerateObjectMember("table_declarations", library_->table_declarations_);
-    GenerateObjectMember("union_declarations", library_->union_declarations_);
-    GenerateObjectMember("type_alias_declarations", library_->type_alias_declarations_);
+    GenerateObjectMember("table_declarations", library_->table_declarations);
+    GenerateObjectMember("union_declarations", library_->union_declarations);
+    GenerateObjectMember("type_alias_declarations", library_->type_alias_declarations);
 
     // The library's declaration_order_ contains all the declarations for all
     // transitive dependencies. The backend only needs the declaration order
     // for this specific library.
     std::vector<std::string> declaration_order;
-    for (const flat::Decl* decl : library_->declaration_order()) {
+    for (const flat::Decl* decl : library_->declaration_order) {
       declaration_order.push_back(NameFlatName(decl->name));
     }
     GenerateObjectMember("declaration_order", declaration_order);

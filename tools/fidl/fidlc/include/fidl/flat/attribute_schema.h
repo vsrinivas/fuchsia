@@ -40,6 +40,9 @@ class AttributeArgSchema {
   const Optionality optionality_;
 };
 
+// Use transparent comparator std::less<> to allow std::string_view lookups.
+using AttributeSchemaMap = std::map<std::string, AttributeSchema, std::less<>>;
+
 // AttributeSchema defines a schema for attributes. This includes the allowed
 // placement (e.g. on a method, on a struct), names and schemas for arguments,
 // and an optional constraint validator.
@@ -80,6 +83,9 @@ class AttributeSchema {
   // Validates the attribute's placement and constraints. Must call
   // `ResolveArgs` first.
   void Validate(Reporter* reporter, const Attribute* attribute, const Element* element) const;
+
+  // Returns attribute schemas for FIDL's officially recognized attributes.
+  static AttributeSchemaMap OfficialAttributes();
 
  private:
   enum class Kind {

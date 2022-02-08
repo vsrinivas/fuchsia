@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/flat/compile_step.h>
+#include <fidl/flat/type_resolver.h>
 #include <fidl/flat_ast.h>
 #include <fidl/types.h>
 #include <fidl/virtual_source_file.h>
@@ -14,76 +15,43 @@
 
 namespace fidl::flat {
 
-namespace {
+TEST(TypesTests, GoodRootTypes) {
+  TestLibrary library(R"FIDL(
+library example;
 
-// TODO(fxbug.dev/90281): Reconsider this approach.
-bool TypespaceCreate(Library* library, Typespace* typespace, Reporter* reporter, const Name& name,
-                     const Type** out_type) {
-  LayoutInvocation invocation;
-  CompileStep compile_step(library, reporter);
-  return typespace->Create(LibraryMediator(library, &compile_step, reporter), name,
-                           std::make_unique<LayoutParameterList>(),
-                           std::make_unique<TypeConstraints>(), out_type, &invocation,
-                           std::nullopt);
-}
-
-void CheckPrimitiveType(Library* library, Typespace* typespace, const char* name,
-                        types::PrimitiveSubtype subtype) {
-  ASSERT_NOT_NULL(typespace);
-
-  Reporter reporter;
-  VirtualSourceFile placeholder{"placeholder"};
-  auto the_type_name = Name::CreateSourced(library, placeholder.AddLine(name));
-  const Type* the_type;
-  ASSERT_TRUE(TypespaceCreate(library, typespace, &reporter, the_type_name, &the_type));
-  ASSERT_NOT_NULL(the_type, "%s", name);
-  auto the_type_p = static_cast<const PrimitiveType*>(the_type);
-  ASSERT_EQ(the_type_p->subtype, subtype, "%s", name);
-  ASSERT_EQ(reporter.errors().size(), 0);
-  ASSERT_EQ(reporter.warnings().size(), 0);
-}
-
-}  // namespace
-
-// Tests that we can look up root types with global names, i.e. those absent
-// of any libraries.
-TEST(TypesTests, GoodRootTypesWithNoLibraryInLookup) {
-  Typespace typespace = Typespace::RootTypes(nullptr);
-  Library* library = nullptr;
-
-  CheckPrimitiveType(library, &typespace, "bool", types::PrimitiveSubtype::kBool);
-  CheckPrimitiveType(library, &typespace, "int8", types::PrimitiveSubtype::kInt8);
-  CheckPrimitiveType(library, &typespace, "int16", types::PrimitiveSubtype::kInt16);
-  CheckPrimitiveType(library, &typespace, "int32", types::PrimitiveSubtype::kInt32);
-  CheckPrimitiveType(library, &typespace, "int64", types::PrimitiveSubtype::kInt64);
-  CheckPrimitiveType(library, &typespace, "uint8", types::PrimitiveSubtype::kUint8);
-  CheckPrimitiveType(library, &typespace, "uint16", types::PrimitiveSubtype::kUint16);
-  CheckPrimitiveType(library, &typespace, "uint32", types::PrimitiveSubtype::kUint32);
-  CheckPrimitiveType(library, &typespace, "uint64", types::PrimitiveSubtype::kUint64);
-  CheckPrimitiveType(library, &typespace, "float32", types::PrimitiveSubtype::kFloat32);
-  CheckPrimitiveType(library, &typespace, "float64", types::PrimitiveSubtype::kFloat64);
-}
-
-// Tests that we can look up root types with local names, i.e. those within
-// the context of a library.
-TEST(TypesTests, GoodRootTypesWithSomeLibraryInLookup) {
-  Typespace typespace = Typespace::RootTypes(nullptr);
-
-  TestLibrary library("library fidl.test;");
+const b bool = false;
+const i8 int8 = 0;
+const i16 int16 = 0;
+const i32 int32 = 0;
+const i64 int64 = 0;
+const u8 uint8 = 0;
+const u16 uint16 = 0;
+const u32 uint32 = 0;
+const u64 uint64 = 0;
+const f32 float32 = 0;
+const f64 float64 = 0;
+)FIDL");
   ASSERT_TRUE(library.Compile());
-  auto library_ptr = library.library();
 
-  CheckPrimitiveType(library_ptr, &typespace, "bool", types::PrimitiveSubtype::kBool);
-  CheckPrimitiveType(library_ptr, &typespace, "int8", types::PrimitiveSubtype::kInt8);
-  CheckPrimitiveType(library_ptr, &typespace, "int16", types::PrimitiveSubtype::kInt16);
-  CheckPrimitiveType(library_ptr, &typespace, "int32", types::PrimitiveSubtype::kInt32);
-  CheckPrimitiveType(library_ptr, &typespace, "int64", types::PrimitiveSubtype::kInt64);
-  CheckPrimitiveType(library_ptr, &typespace, "uint8", types::PrimitiveSubtype::kUint8);
-  CheckPrimitiveType(library_ptr, &typespace, "uint16", types::PrimitiveSubtype::kUint16);
-  CheckPrimitiveType(library_ptr, &typespace, "uint32", types::PrimitiveSubtype::kUint32);
-  CheckPrimitiveType(library_ptr, &typespace, "uint64", types::PrimitiveSubtype::kUint64);
-  CheckPrimitiveType(library_ptr, &typespace, "float32", types::PrimitiveSubtype::kFloat32);
-  CheckPrimitiveType(library_ptr, &typespace, "float64", types::PrimitiveSubtype::kFloat64);
+  auto subtype = [&](const char* const_name) -> std::optional<types::PrimitiveSubtype> {
+    auto type = library.LookupConstant(const_name)->value->type;
+    if (type->kind == Type::Kind::kPrimitive) {
+      return static_cast<const PrimitiveType*>(type)->subtype;
+    }
+    return std::nullopt;
+  };
+
+  EXPECT_EQ(subtype("b"), types::PrimitiveSubtype::kBool);
+  EXPECT_EQ(subtype("i8"), types::PrimitiveSubtype::kInt8);
+  EXPECT_EQ(subtype("i16"), types::PrimitiveSubtype::kInt16);
+  EXPECT_EQ(subtype("i32"), types::PrimitiveSubtype::kInt32);
+  EXPECT_EQ(subtype("i64"), types::PrimitiveSubtype::kInt64);
+  EXPECT_EQ(subtype("u8"), types::PrimitiveSubtype::kUint8);
+  EXPECT_EQ(subtype("u16"), types::PrimitiveSubtype::kUint16);
+  EXPECT_EQ(subtype("u32"), types::PrimitiveSubtype::kUint32);
+  EXPECT_EQ(subtype("u64"), types::PrimitiveSubtype::kUint64);
+  EXPECT_EQ(subtype("f32"), types::PrimitiveSubtype::kFloat32);
+  EXPECT_EQ(subtype("f64"), types::PrimitiveSubtype::kFloat64);
 }
 
 // Check that fidl's types.h and zircon/types.h's handle subtype

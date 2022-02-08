@@ -83,6 +83,8 @@ constexpr ErrorDef<flat::Name, std::string_view> ErrDeclNameConflictsWithLibrary
     "library under a different name.");
 constexpr ErrorDef ErrFilesDisagreeOnLibraryName(
     "Two files in the library disagree about the name of the library");
+constexpr ErrorDef<std::vector<std::string_view>> ErrMultipleLibrariesWithSameName(
+    "There are multiple libraries named '{}'");
 constexpr ErrorDef<std::vector<std::string_view>> ErrDuplicateLibraryImport(
     "Library {} already imported. Did you require it twice?");
 constexpr ErrorDef<std::vector<std::string_view>> ErrConflictingLibraryImport(

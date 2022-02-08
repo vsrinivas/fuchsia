@@ -15,7 +15,7 @@
 
 namespace fidl::flat {
 
-class LibraryMediator;
+class TypeResolver;
 class TypeTemplate;
 
 struct Decl;
@@ -100,9 +100,8 @@ struct Type : public Object {
   // still tied to TypeTemplates. As we fully separate out the constraints and
   // layout parameter (TypeTemplate::Create) code, we'll be able to remove this
   // extraneous parameter.
-  virtual bool ApplyConstraints(const flat::LibraryMediator& lib,
-                                const TypeConstraints& constraints,
-                                const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+  virtual bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
+                                const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                                 LayoutInvocation* out_params) const = 0;
 };
 
@@ -124,8 +123,8 @@ struct ArrayType final : public Type {
         .Compare(*element_type, *o.element_type);
   }
 
-  bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
-                        const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+  bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
+                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 
@@ -135,8 +134,7 @@ struct VectorBaseType {
   // only need to worry about setting the element type on out_args.
   // We can't abstract away only the element type resolution process, because not
   // all vector based type templates return a VectorType (the exception being StringTypeTemplate).
-  static bool ResolveSizeAndNullability(const LibraryMediator& lib,
-                                        const TypeConstraints& constraints,
+  static bool ResolveSizeAndNullability(TypeResolver* resolver, const TypeConstraints& constraints,
                                         const TypeTemplate* layout, LayoutInvocation* out_params);
 
   const static Size kMaxSize;
@@ -165,8 +163,8 @@ struct VectorType final : public Type, public VectorBaseType {
         .Compare(*element_type, *o.element_type);
   }
 
-  bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
-                        const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+  bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
+                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 
@@ -185,8 +183,8 @@ struct StringType final : public Type, public VectorBaseType {
     return Type::Compare(o).Compare(max_size->value, o.max_size->value);
   }
 
-  bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
-                        const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+  bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
+                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 
@@ -215,18 +213,16 @@ struct HandleType final : public Type {
 
   Comparison Compare(const Type& other) const override {
     const auto& other_handle_type = *static_cast<const HandleType*>(&other);
-    auto rights_val =
-        static_cast<const flat::NumericConstantValue<types::RightsWrappedType>*>(rights);
-    auto other_rights_val =
-        static_cast<const flat::NumericConstantValue<types::RightsWrappedType>*>(
-            other_handle_type.rights);
+    auto rights_val = static_cast<const NumericConstantValue<types::RightsWrappedType>*>(rights);
+    auto other_rights_val = static_cast<const NumericConstantValue<types::RightsWrappedType>*>(
+        other_handle_type.rights);
     return Type::Compare(other_handle_type)
         .Compare(subtype, other_handle_type.subtype)
         .Compare(*rights_val, *other_rights_val);
   }
 
-  bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
-                        const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+  bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
+                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 
   const static HandleRights kSameRights;
@@ -245,8 +241,8 @@ struct PrimitiveType final : public Type {
     return Type::Compare(o).Compare(subtype, o.subtype);
   }
 
-  bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
-                        const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+  bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
+                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 
  private:
@@ -268,8 +264,8 @@ struct IdentifierType final : public Type {
     return Type::Compare(o).Compare(name, o.name);
   }
 
-  bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
-                        const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+  bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
+                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 
@@ -305,8 +301,8 @@ struct TransportSideType final : public Type {
         .Compare(protocol_decl, o.protocol_decl);
   }
 
-  bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
-                        const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+  bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
+                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 
@@ -325,8 +321,8 @@ struct BoxType final : public Type {
     return Type::Compare(o).Compare(name, o.name).Compare(boxed_type, o.boxed_type);
   }
 
-  bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
-                        const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+  bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
+                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 
@@ -334,8 +330,8 @@ struct UntypedNumericType final : public Type {
   explicit UntypedNumericType(const Name& name)
       : Type(name, Kind::kUntypedNumeric, types::Nullability::kNonnullable) {}
   std::any AcceptAny(VisitorAny* visitor) const override;
-  bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
-                        const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+  bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
+                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 

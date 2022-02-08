@@ -5,34 +5,24 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_COMPILE_STEP_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_COMPILE_STEP_H_
 
-#include <lib/fit/function.h>
-
-#include <cstdint>
-#include <memory>
-#include <optional>
-
-#include "fidl/flat/step_base.h"
-#include "fidl/flat/types.h"
-#include "fidl/flat/values.h"
-#include "fidl/flat_ast.h"
-#include "fidl/source_span.h"
+#include "fidl/flat/compiler.h"
 
 namespace fidl::flat {
 
 // We run one main CompileStep for the whole library. Some attributes are
 // compiled before that via the CompileAttributeEarly method. To avoid kicking
 // off other compilations, these attributes only allow literal arguments.
-class CompileStep : public StepBase {
+class CompileStep : public Compiler::Step {
  public:
-  using StepBase::StepBase;
+  using Step::Step;
 
-  friend class LibraryMediator;
   friend class AttributeSchema;
   friend class AttributeArgSchema;
+  friend class TypeResolver;
 
   // Compiles an attribute early, before the main CompileStep has started. The
   // attribute must support this (see AttributeSchema::CanCompileEarly).
-  static void CompileAttributeEarly(Library* library, Attribute* attribute);
+  static void CompileAttributeEarly(Compiler* compiler, Attribute* attribute);
 
  private:
   void RunImpl() override;
@@ -67,7 +57,7 @@ class CompileStep : public StepBase {
                                  std::optional<const Type*> opt_type);
   bool ResolveLiteralConstant(LiteralConstant* literal_constant,
                               std::optional<const Type*> opt_type);
-  bool ResolveAsOptional(Constant* constant) const;
+  bool ResolveAsOptional(Constant* constant);
   template <typename NumericType>
   bool ResolveLiteralConstantKindNumericLiteral(LiteralConstant* literal_constant,
                                                 const Type* type);

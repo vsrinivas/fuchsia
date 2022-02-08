@@ -269,8 +269,7 @@ std::vector<std::string> FormatFindings(const Findings& findings, bool enable_co
   for (auto& finding : findings) {
     std::stringstream ss;
     PrintFinding(ss, finding);
-    auto warning =
-        Reporter::Format("warning", std::make_optional(finding.span()), ss.str(), enable_color);
+    auto warning = Reporter::Format("warning", finding.span(), ss.str(), enable_color);
     lint.push_back(warning);
   }
   return lint;

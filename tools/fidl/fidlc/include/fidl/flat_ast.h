@@ -20,37 +20,29 @@
 #include <string_view>
 #include <vector>
 
-#include "experimental_flags.h"
 #include "flat/attributes.h"
 #include "flat/name.h"
 #include "flat/object.h"
 #include "flat/types.h"
-#include "flat/typespace.h"
 #include "flat/values.h"
 #include "ordinals.h"
 #include "reporter.h"
 #include "type_shape.h"
 #include "types.h"
-#include "virtual_source_file.h"
 
 namespace fidl::raw {
 
-class File;
 class Identifier;
 class Ordinal64;
-class SourceElement;
 
 }  // namespace fidl::raw
 
 namespace fidl::flat {
 
-using utils::identity_t;
-
-class Typespace;
 struct Decl;
-class Library;
-class CompileStep;
+struct Library;
 class AttributeSchema;
+class Typespace;
 
 bool HasSimpleLayout(const Decl* decl);
 
@@ -337,13 +329,6 @@ struct TypeConstraints {
 
   std::vector<std::unique_ptr<Constant>> items;
   const std::optional<SourceSpan> span;
-};
-
-struct Using final {
-  Using(Name name, const PrimitiveType* type) : name(std::move(name)), type(type) {}
-
-  const Name name;
-  const PrimitiveType* type;
 };
 
 // Const represents the _declaration_ of a constant. (For the _use_, see
@@ -735,80 +720,6 @@ struct TypeAlias final : public Decl {
   std::unique_ptr<TypeConstructor> partial_type_ctor;
 };
 
-// Wrapper class around a Library to provide specific methods to TypeTemplates.
-// Unlike making a direct friend relationship, this approach:
-// 1. avoids having to declare every TypeTemplate subclass as a friend
-// 2. only exposes the methods that are needed from the Library to the TypeTemplate.
-class LibraryMediator : private ReporterMixin {
- public:
-  explicit LibraryMediator(Library* library, CompileStep* compile_step, Reporter* reporter)
-      : ReporterMixin(reporter), library_(library), compile_step_(compile_step) {}
-
-  using ReporterMixin::Fail;
-
-  // Top level methods for resolving layout parameters. These are used by
-  // TypeTemplates.
-  bool ResolveParamAsType(const flat::TypeTemplate* layout,
-                          const std::unique_ptr<LayoutParameter>& param,
-                          const Type** out_type) const;
-  bool ResolveParamAsSize(const flat::TypeTemplate* layout,
-                          const std::unique_ptr<LayoutParameter>& param,
-                          const Size** out_size) const;
-
-  // Top level methods for resolving constraints. These are used by Types
-  enum class ConstraintKind {
-    kHandleSubtype,
-    kHandleRights,
-    kSize,
-    kNullability,
-    kProtocol,
-  };
-
-  struct ResolvedConstraint {
-    ConstraintKind kind;
-
-    union Value {
-      uint32_t handle_subtype;
-      const HandleRights* handle_rights;
-      const Size* size;
-      // Storing a value for nullability is redundant, since there's only one possible value - if we
-      // resolved to optional, then the caller knows that the resulting value is
-      // types::Nullability::kNullable.
-      const Protocol* protocol_decl;
-    } value;
-  };
-
-  // Convenience method to iterate through the possible interpretations, returning the first one
-  // that succeeds. This is valid because the interpretations are mutually exclusive, since a Name
-  // can only ever refer to one kind of thing.
-  bool ResolveConstraintAs(Constant* constraint, const std::vector<ConstraintKind>& interpretations,
-                           Resource* resource_decl, ResolvedConstraint* out) const;
-
-  // These methods forward their implementation to the library_. They are used
-  // by the top level methods above
-  bool ResolveType(TypeConstructor* type) const;
-  bool ResolveSizeBound(Constant* size_constant, const Size** out_size) const;
-  bool ResolveAsOptional(Constant* constant) const;
-  bool ResolveAsHandleSubtype(Resource* resource, Constant* constant, uint32_t* out_obj_type) const;
-  bool ResolveAsHandleRights(Resource* resource, Constant* constant,
-                             const HandleRights** out_rights) const;
-  bool ResolveAsProtocol(const Constant* size_constant, const Protocol** out_decl) const;
-  Decl* LookupDeclByName(Name::Key name) const;
-
-  // Used specifically in TypeAliasTypeTemplates to recursively compile the next
-  // type alias.
-  void CompileDecl(Decl* decl) const;
-
-  // Use in TypeAliasTypeTemplates to check for decl cycles before trying to
-  // compile the next type alias and to get the cycle to use in the error
-  // report.
-  std::optional<std::vector<const Decl*>> GetDeclCycle(const Decl* decl) const;
-
- private:
-  Library* library_;
-  CompileStep* compile_step_;
-};
-
 // This class is used to manage a library's set of direct dependencies, i.e.
 // those imported with "using" statements.
 class Dependencies {
@@ -839,7 +750,7 @@ class Dependencies {
   void VerifyAllDependenciesWereUsed(const Library& for_library, Reporter* reporter);
 
   // Returns all the dependencies.
-  const std::set<Library*>& dependencies() const { return dependencies_aggregate_; }
+  const std::set<Library*>& all() const { return dependencies_aggregate_; }
 
  private:
   // A reference to a library, derived from a "using" statement.
@@ -867,98 +778,13 @@ class Dependencies {
 
 struct LibraryComparator;
 
-// This class manages a set of libraries along with data structures that are
-// common to all of them (e.g. attribute schemas). The libraries must be
-// inserted in order: first the dependencies (with each one only depending on
-// those that came before it), and lastly the target library.
-class Libraries {
- public:
-  Libraries();
-  Libraries(const Libraries&) = delete;
-  // These must be defined in the source file because AttributeSchema (used in
-  // attribute_schemas_) is only forward declared at this point.
-  ~Libraries();
-  Libraries(Libraries&&) noexcept;
+struct Library final : public Element {
+  Library() : Element(Element::Kind::kLibrary, std::make_unique<AttributeList>()) {}
 
-  // Insert |library|. It must only depend on already-inserted libraries.
-  bool Insert(std::unique_ptr<Library> library);
-
-  // Lookup a library by its |library_name|, or returns null if none is found.
-  Library* Lookup(const std::vector<std::string_view>& library_name) const;
-
-  // Removes a library that was inserted before.
-  //
-  // TODO(fxbug.dev/90838): This is only needed to filter out the zx library,
-  // and should be deleted once that is no longer necessary.
-  void Remove(const Library* library);
-
-  // Returns the target library, or null if none have been inserted.
-  const Library* target_library() const {
-    return libraries_.empty() ? nullptr : libraries_.back().get();
-  }
-
-  // Returns libraries that were inserted but never used, i.e. that do not occur
-  // in the target libary's dependency tree. Must have inserted at least one.
-  std::set<const Library*, LibraryComparator> Unused() const;
-
-  // Returns decls from all libraries in a topologically sorted order, i.e.
-  // later decls only depend on earlier ones.
-  std::vector<const Decl*> DeclarationOrder() const;
-
-  // Registers a new attribute schema under the given name, and returns it.
-  AttributeSchema& AddAttributeSchema(std::string name);
-
-  // Gets the schema for an attribute. For unrecognized attributes, returns
-  // AttributeSchema::kUserDefined. If warn_on_typo is true, reports a warning
-  // if the attribute appears to be a typo for an official attribute.
-  const AttributeSchema& RetrieveAttributeSchema(Reporter* reporter, const Attribute* attribute,
-                                                 bool warn_on_typo = false) const;
-
- private:
-  std::vector<std::unique_ptr<Library>> libraries_;
-  std::map<std::vector<std::string_view>, Library*> libraries_by_name_;
-  // Use transparent comparator std::less<> to allow std::string_view lookups.
-  std::map<std::string, AttributeSchema, std::less<>> attribute_schemas_;
-};
-
-class Library : public Element, private ReporterMixin {
-  friend class StepBase;
-  friend class ConsumeStep;
-  friend class SortStep;
-  friend class CompileStep;
-  friend class VerifyResourcenessStep;
-  friend class VerifyAttributesStep;
-  friend class VerifyInlineSizeStep;
-  friend class VerifyDependenciesStep;
-  friend class LibraryMediator;
-
- public:
-  Library(const Libraries* all_libraries, Reporter* reporter, Typespace* typespace,
-          ordinals::MethodHasher method_hasher, ExperimentalFlags experimental_flags)
-      : Element(Element::Kind::kLibrary, std::make_unique<AttributeList>()),
-        ReporterMixin(reporter),
-        all_libraries_(all_libraries),
-        typespace_(typespace),
-        method_hasher_(std::move(method_hasher)),
-        experimental_flags_(experimental_flags) {}
-
-  // Must be called once for each file in the library.
-  bool ConsumeFile(std::unique_ptr<raw::File> file);
-  // Must be called once after all files are consumed.
-  bool Compile();
-
-  const std::vector<std::string_view>& name() const { return library_name_; }
-
-  // Returns this library's direct dependencies (from "using" statements).
-  const std::set<Library*>& dependencies() const;
-  // Like dependencies(), but also includes indirect dependencies that come from
-  // protocol composition, i.e. what would need to be imported if the composed
-  // methods were copied and pasted into the protocol.
+  // Like the `dependencies` field, but also includes indirect dependencies that
+  // come from protocol composition, i.e. what would need to be imported if the
+  // composed methods were copied and pasted into the protocol.
   std::set<const Library*, LibraryComparator> DirectAndComposedDependencies() const;
-
-  // Returns this library's decls in a topologically sorted order, i.e. later
-  // decls only depend on earlier ones.
-  const std::vector<const Decl*>& declaration_order() const { return declaration_order_; }
 
   // Returns nullptr when the |name| cannot be resolved to a
   // Name. Otherwise it returns the declaration.
@@ -968,47 +794,34 @@ class Library : public Element, private ReporterMixin {
   // Runs it on the library itself, on all Decls, and on all their members.
   void TraverseElements(const fit::function<void(Element*)>& fn);
 
-  // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
-  // one that is not scoped, it is just text. An anonymous name is one that
-  // is guaranteed to be unique within the library, and a derived name is one
-  // that is library scoped but derived from the concatenated components using
-  // underscores as delimiters.
-  SourceSpan GeneratedSimpleName(std::string_view name);
+  std::vector<std::string_view> name;
+  // There is no unique SourceSpan for a library's name since it can be declared
+  // in multiple files, but we store an arbitrary one to use in error messages.
+  SourceSpan arbitrary_name_span;
+  Dependencies dependencies;
+  // Maps decl names to decls, which are owned by the vectors below.
+  std::map<Name::Key, Decl*> declarations;
+  // Contains the same decls as `declarations`, but in a topologically sorted
+  // order, i.e. later decls only depend on earlier ones. Populated by SortStep.
+  std::vector<const Decl*> declaration_order;
 
-  // TODO(fxbug.dev/91604): Make these private.
-  std::vector<std::unique_ptr<Bits>> bits_declarations_;
-  std::vector<std::unique_ptr<Const>> const_declarations_;
-  std::vector<std::unique_ptr<Enum>> enum_declarations_;
-  std::vector<std::unique_ptr<Protocol>> protocol_declarations_;
-  std::vector<std::unique_ptr<Resource>> resource_declarations_;
-  std::vector<std::unique_ptr<Service>> service_declarations_;
-  std::vector<std::unique_ptr<Struct>> struct_declarations_;
-  std::vector<std::unique_ptr<Table>> table_declarations_;
-  std::vector<std::unique_ptr<Union>> union_declarations_;
-  std::vector<std::unique_ptr<TypeAlias>> type_alias_declarations_;
-
- private:
-  std::vector<std::string_view> library_name_;
-  // All decls here are owned by the various foo_declarations_ of this library
-  // or one of its transitive dependencies.
-  std::map<Name::Key, Decl*> declarations_;
-  // Contains the decls from declarations_, but only those belonging to this
-  // library, sorted by the SortStep.
-  std::vector<const Decl*> declaration_order_;
-
-  Dependencies dependencies_;
-  const Libraries* all_libraries_;
-  Typespace* typespace_;
-  const ordinals::MethodHasher method_hasher_;
-  const ExperimentalFlags experimental_flags_;
-  VirtualSourceFile generated_source_file_{"generated"};
+  std::vector<std::unique_ptr<Bits>> bits_declarations;
+  std::vector<std::unique_ptr<Const>> const_declarations;
+  std::vector<std::unique_ptr<Enum>> enum_declarations;
+  std::vector<std::unique_ptr<Protocol>> protocol_declarations;
+  std::vector<std::unique_ptr<Resource>> resource_declarations;
+  std::vector<std::unique_ptr<Service>> service_declarations;
+  std::vector<std::unique_ptr<Struct>> struct_declarations;
+  std::vector<std::unique_ptr<Table>> table_declarations;
+  std::vector<std::unique_ptr<TypeAlias>> type_alias_declarations;
+  std::vector<std::unique_ptr<Union>> union_declarations;
 };
 
 struct LibraryComparator {
   bool operator()(const flat::Library* lhs, const flat::Library* rhs) const {
-    assert(!lhs->name().empty());
-    assert(!rhs->name().empty());
-    return lhs->name() < rhs->name();
+    assert(!lhs->name.empty());
+    assert(!rhs->name.empty());
+    return lhs->name < rhs->name;
   }
 };
 

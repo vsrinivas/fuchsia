@@ -5,8 +5,7 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_SORT_STEP_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_SORT_STEP_H_
 
-#include "fidl/flat/name.h"
-#include "fidl/flat/step_base.h"
+#include "fidl/flat/compiler.h"
 
 namespace fidl::flat {
 
@@ -19,9 +18,9 @@ namespace fidl::flat {
 // fidlgenlib whe needed. We would still have to detect cycles, but this can be
 // done in CompileStep recursion, e.g. compiling the TypeConstructor layout
 // if it does not have the "optional" constraint (currently it is never done).
-class SortStep : public StepBase {
+class SortStep : public Compiler::Step {
  public:
-  using StepBase::StepBase;
+  using Step::Step;
 
  private:
   void RunImpl() override;

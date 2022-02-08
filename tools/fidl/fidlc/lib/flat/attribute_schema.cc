@@ -172,7 +172,7 @@ void AttributeSchema::ResolveArgs(CompileStep* step, Attribute* attribute) const
       step->Fail(ErrAttributeArgNotNamed, attribute->span, anon_arg);
       return;
     }
-    anon_arg->name = step->library_->GeneratedSimpleName(arg_schemas_.begin()->first);
+    anon_arg->name = step->generated_source_file()->AddLine(arg_schemas_.begin()->first);
   } else if (arg_schemas_.size() == 1 && attribute->args.size() == 1) {
     step->Fail(ErrAttributeArgMustNotBeNamed, attribute->span);
   }
@@ -263,7 +263,7 @@ void AttributeSchema::ResolveArgsWithoutSchema(CompileStep* step, Attribute* att
   // For attributes with a single, anonymous argument like `@foo("bar")`, assign
   // a default name so that arguments are always named after compilation.
   if (auto anon_arg = attribute->GetStandaloneAnonymousArg()) {
-    anon_arg->name = step->library_->GeneratedSimpleName(AttributeArg::kDefaultAnonymousName);
+    anon_arg->name = step->generated_source_file()->AddLine(AttributeArg::kDefaultAnonymousName);
   }
 
   // Try resolving each argument as string or bool. We don't allow numerics
@@ -302,6 +302,433 @@ void AttributeSchema::ResolveArgsWithoutSchema(CompileStep* step, Attribute* att
       __builtin_unreachable();
     }
   }
+}
+
+static const std::set<std::pair<std::string, std::string_view>> allowed_simple_unions{{
+    {"fuchsia.io", "NodeInfo"},
+}};
+
+static bool IsSimple(const Type* type, Reporter* reporter) {
+  auto depth = fidl::OldWireFormatDepth(type);
+  switch (type->kind) {
+    case Type::Kind::kVector: {
+      auto vector_type = static_cast<const VectorType*>(type);
+      if (*vector_type->element_count == Size::Max())
+        return false;
+      switch (vector_type->element_type->kind) {
+        case Type::Kind::kHandle:
+        case Type::Kind::kTransportSide:
+        case Type::Kind::kPrimitive:
+          return true;
+        case Type::Kind::kArray:
+        case Type::Kind::kVector:
+        case Type::Kind::kString:
+        case Type::Kind::kIdentifier:
+        case Type::Kind::kBox:
+          return false;
+        case Type::Kind::kUntypedNumeric:
+          assert(false && "compiler bug: should not have untyped numeric here");
+          return false;
+      }
+    }
+    case Type::Kind::kString: {
+      auto string_type = static_cast<const StringType*>(type);
+      return *string_type->max_size < Size::Max();
+    }
+    case Type::Kind::kArray:
+    case Type::Kind::kHandle:
+    case Type::Kind::kTransportSide:
+    case Type::Kind::kPrimitive:
+      return depth == 0u;
+    case Type::Kind::kIdentifier: {
+      auto identifier_type = static_cast<const IdentifierType*>(type);
+      if (identifier_type->type_decl->kind == Decl::Kind::kUnion) {
+        auto name = identifier_type->type_decl->name;
+        auto union_name = std::make_pair<const std::string&, const std::string_view&>(
+            LibraryName(name.library(), "."), name.decl_name());
+        if (allowed_simple_unions.find(union_name) == allowed_simple_unions.end()) {
+          // Any unions not in the allow-list are treated as non-simple.
+          return reporter->Fail(ErrUnionCannotBeSimple, name.span().value(), name);
+        }
+      }
+      // TODO(fxbug.dev/70186): This only applies to nullable structs, which should
+      // be handled as box.
+      switch (identifier_type->nullability) {
+        case types::Nullability::kNullable:
+          // If the identifier is nullable, then we can handle a depth of 1
+          // because the secondary object is directly accessible.
+          return depth <= 1u;
+        case types::Nullability::kNonnullable:
+          return depth == 0u;
+      }
+    }
+    case Type::Kind::kBox:
+      // we can handle a depth of 1 because the secondary object is directly accessible.
+      return depth <= 1u;
+    case Type::Kind::kUntypedNumeric:
+      assert(false && "compiler bug: should not have untyped numeric here");
+      return false;
+  }
+}
+
+static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
+                                   const Element* element) {
+  assert(element);
+  bool ok = true;
+  switch (element->kind) {
+    case Element::Kind::kProtocol: {
+      auto protocol = static_cast<const Protocol*>(element);
+      for (const auto& method_with_info : protocol->all_methods) {
+        auto* method = method_with_info.method;
+        if (!SimpleLayoutConstraint(reporter, attr, method)) {
+          ok = false;
+        }
+      }
+      break;
+    }
+    case Element::Kind::kProtocolMethod: {
+      auto method = static_cast<const Protocol::Method*>(element);
+      if (method->maybe_request) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        if (!SimpleLayoutConstraint(reporter, attr, as_struct)) {
+          ok = false;
+        }
+      }
+      if (method->maybe_response) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        if (!SimpleLayoutConstraint(reporter, attr, as_struct)) {
+          ok = false;
+        }
+      }
+      break;
+    }
+    case Element::Kind::kStruct: {
+      auto struct_decl = static_cast<const Struct*>(element);
+      for (const auto& member : struct_decl->members) {
+        if (!IsSimple(member.type_ctor->type, reporter)) {
+          reporter->Fail(ErrMemberMustBeSimple, member.name, member.name.data());
+          ok = false;
+        }
+      }
+      break;
+    }
+    default:
+      assert(false && "unexpected kind");
+  }
+  return ok;
+}
+
+static bool ParseBound(Reporter* reporter, const Attribute* attribute, std::string_view input,
+                       uint32_t* out_value) {
+  auto result = utils::ParseNumeric(input, out_value, 10);
+  switch (result) {
+    case utils::ParseNumericResult::kOutOfBounds:
+      reporter->Fail(ErrBoundIsTooBig, attribute->span, attribute, input);
+      return false;
+    case utils::ParseNumericResult::kMalformed: {
+      reporter->Fail(ErrUnableToParseBound, attribute->span, attribute, input);
+      return false;
+    }
+    case utils::ParseNumericResult::kSuccess:
+      return true;
+  }
+}
+
+static bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
+                               const Element* element) {
+  assert(element);
+  auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
+
+  uint32_t bound;
+  if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
+    return false;
+  uint32_t max_bytes = std::numeric_limits<uint32_t>::max();
+  switch (element->kind) {
+    case Element::Kind::kProtocol: {
+      auto protocol = static_cast<const Protocol*>(element);
+      bool ok = true;
+      for (const auto& method_with_info : protocol->all_methods) {
+        auto* method = method_with_info.method;
+        if (!MaxBytesConstraint(reporter, attribute, method)) {
+          ok = false;
+        }
+      }
+      return ok;
+    }
+    case Element::Kind::kProtocolMethod: {
+      auto method = static_cast<const Protocol::Method*>(element);
+      bool ok = true;
+      if (method->maybe_request) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        if (!MaxBytesConstraint(reporter, attribute, as_struct)) {
+          ok = false;
+        }
+      }
+      if (method->maybe_response) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        if (!MaxBytesConstraint(reporter, attribute, as_struct)) {
+          ok = false;
+        }
+      }
+      return ok;
+    }
+    case Element::Kind::kStruct: {
+      auto struct_decl = static_cast<const Struct*>(element);
+      max_bytes = struct_decl->typeshape(WireFormat::kV1NoEe).inline_size +
+                  struct_decl->typeshape(WireFormat::kV1NoEe).max_out_of_line;
+      break;
+    }
+    case Element::Kind::kTable: {
+      auto table_decl = static_cast<const Table*>(element);
+      max_bytes = table_decl->typeshape(WireFormat::kV1NoEe).inline_size +
+                  table_decl->typeshape(WireFormat::kV1NoEe).max_out_of_line;
+      break;
+    }
+    case Element::Kind::kUnion: {
+      auto union_decl = static_cast<const Union*>(element);
+      max_bytes = union_decl->typeshape(WireFormat::kV1NoEe).inline_size +
+                  union_decl->typeshape(WireFormat::kV1NoEe).max_out_of_line;
+      break;
+    }
+    default:
+      assert(false && "unexpected kind");
+      return false;
+  }
+  if (max_bytes > bound) {
+    reporter->Fail(ErrTooManyBytes, attribute->span, bound, max_bytes);
+    return false;
+  }
+  return true;
+}
+
+static bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
+                                 const Element* element) {
+  assert(element);
+  auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
+
+  uint32_t bound;
+  if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
+    return false;
+  uint32_t max_handles = std::numeric_limits<uint32_t>::max();
+  switch (element->kind) {
+    case Element::Kind::kProtocol: {
+      auto protocol = static_cast<const Protocol*>(element);
+      bool ok = true;
+      for (const auto& method_with_info : protocol->all_methods) {
+        auto* method = method_with_info.method;
+        if (!MaxHandlesConstraint(reporter, attribute, method)) {
+          ok = false;
+        }
+      }
+      return ok;
+    }
+    case Element::Kind::kProtocolMethod: {
+      auto method = static_cast<const Protocol::Method*>(element);
+      bool ok = true;
+      if (method->maybe_request) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        if (!MaxHandlesConstraint(reporter, attribute, as_struct)) {
+          ok = false;
+        }
+      }
+      if (method->maybe_response) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        if (!MaxHandlesConstraint(reporter, attribute, as_struct)) {
+          ok = false;
+        }
+      }
+      return ok;
+    }
+    case Element::Kind::kStruct: {
+      auto struct_decl = static_cast<const Struct*>(element);
+      max_handles = struct_decl->typeshape(WireFormat::kV1NoEe).max_handles;
+      break;
+    }
+    case Element::Kind::kTable: {
+      auto table_decl = static_cast<const Table*>(element);
+      max_handles = table_decl->typeshape(WireFormat::kV1NoEe).max_handles;
+      break;
+    }
+    case Element::Kind::kUnion: {
+      auto union_decl = static_cast<const Union*>(element);
+      max_handles = union_decl->typeshape(WireFormat::kV1NoEe).max_handles;
+      break;
+    }
+    default:
+      assert(false && "unexpected kind");
+      return false;
+  }
+  if (max_handles > bound) {
+    reporter->Fail(ErrTooManyHandles, attribute->span, bound, max_handles);
+    return false;
+  }
+  return true;
+}
+
+static bool ResultShapeConstraint(Reporter* reporter, const Attribute* attribute,
+                                  const Element* element) {
+  assert(element);
+  assert(element->kind == Element::Kind::kUnion);
+  auto union_decl = static_cast<const Union*>(element);
+  assert(union_decl->members.size() == 2);
+  auto& error_member = union_decl->members.at(1);
+  assert(error_member.maybe_used && "must have an error member");
+  auto error_type = error_member.maybe_used->type_ctor->type;
+
+  const PrimitiveType* error_primitive = nullptr;
+  if (error_type->kind == Type::Kind::kPrimitive) {
+    error_primitive = static_cast<const PrimitiveType*>(error_type);
+  } else if (error_type->kind == Type::Kind::kIdentifier) {
+    auto identifier_type = static_cast<const IdentifierType*>(error_type);
+    if (identifier_type->type_decl->kind == Decl::Kind::kEnum) {
+      auto error_enum = static_cast<const Enum*>(identifier_type->type_decl);
+      assert(error_enum->subtype_ctor->type->kind == Type::Kind::kPrimitive);
+      error_primitive = static_cast<const PrimitiveType*>(error_enum->subtype_ctor->type);
+    }
+  }
+
+  if (!error_primitive || (error_primitive->subtype != types::PrimitiveSubtype::kInt32 &&
+                           error_primitive->subtype != types::PrimitiveSubtype::kUint32)) {
+    reporter->Fail(ErrInvalidErrorType, union_decl->name.span().value());
+    return false;
+  }
+
+  return true;
+}
+
+static std::string Trim(std::string s) {
+  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
+            return !utils::IsWhitespace(static_cast<char>(ch));
+          }));
+  s.erase(std::find_if(s.rbegin(), s.rend(),
+                       [](int ch) { return !utils::IsWhitespace(static_cast<char>(ch)); })
+              .base(),
+          s.end());
+  return s;
+}
+
+static bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
+                                const Element* element) {
+  assert(element);
+  assert(element->kind == Element::Kind::kProtocol);
+
+  // function-local static pointer to non-trivially-destructible type
+  // is allowed by styleguide
+  static const auto kValidTransports = new std::set<std::string>{
+      "Banjo",
+      "Channel",
+      "Driver",
+      "Syscall",
+  };
+
+  auto arg = attribute->GetArg(AttributeArg::kDefaultAnonymousName);
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg->value->Value());
+
+  // Parse comma separated transports
+  const std::string& value = arg_value.MakeContents();
+  std::string::size_type prev_pos = 0;
+  std::string::size_type pos;
+  std::vector<std::string> transports;
+  while ((pos = value.find(',', prev_pos)) != std::string::npos) {
+    transports.emplace_back(Trim(value.substr(prev_pos, pos - prev_pos)));
+    prev_pos = pos + 1;
+  }
+  transports.emplace_back(Trim(value.substr(prev_pos)));
+
+  // Validate that they're ok
+  for (const auto& transport : transports) {
+    if (kValidTransports->count(transport) == 0) {
+      reporter->Fail(ErrInvalidTransportType, attribute->span, transport, *kValidTransports);
+      return false;
+    }
+  }
+  return true;
+}
+
+// static
+AttributeSchemaMap AttributeSchema::OfficialAttributes() {
+  AttributeSchemaMap map;
+  map["discoverable"].RestrictTo({
+      Element::Kind::kProtocol,
+  });
+  map[std::string(Attribute::kDocCommentName)].AddArg(
+      AttributeArgSchema(ConstantValue::Kind::kString));
+  map["layout"].Deprecate();
+  map["for_deprecated_c_bindings"]
+      .RestrictTo({
+          Element::Kind::kProtocol,
+          Element::Kind::kStruct,
+      })
+      .Constrain(SimpleLayoutConstraint);
+  map["generated_name"]
+      .RestrictToAnonymousLayouts()
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
+      .CompileEarly();
+  map["max_bytes"]
+      .RestrictTo({
+          Element::Kind::kProtocol,
+          Element::Kind::kProtocolMethod,
+          Element::Kind::kStruct,
+          Element::Kind::kTable,
+          Element::Kind::kUnion,
+      })
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
+      .Constrain(MaxBytesConstraint);
+  map["max_handles"]
+      .RestrictTo({
+          Element::Kind::kProtocol,
+          Element::Kind::kProtocolMethod,
+          Element::Kind::kStruct,
+          Element::Kind::kTable,
+          Element::Kind::kUnion,
+      })
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
+      .Constrain(MaxHandlesConstraint);
+  map["result"]
+      .RestrictTo({
+          Element::Kind::kUnion,
+      })
+      .Constrain(ResultShapeConstraint);
+  map["selector"]
+      .RestrictTo({
+          Element::Kind::kProtocolMethod,
+      })
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
+      .UseEarly();
+  map["transitional"]
+      .RestrictTo({
+          Element::Kind::kProtocolMethod,
+      })
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString,
+                                 AttributeArgSchema::Optionality::kOptional));
+  map["transport"]
+      .RestrictTo({
+          Element::Kind::kProtocol,
+      })
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString))
+      .Constrain(TransportConstraint);
+  map["unknown"].RestrictTo({Element::Kind::kEnumMember});
+  return map;
 }
 
 }  // namespace fidl::flat

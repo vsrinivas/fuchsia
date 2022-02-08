@@ -74,8 +74,8 @@ class Reporter {
   // line, column, diagnostic kind, and the full line where the span occurs,
   // with the span indicated by an ASCII "squiggle" below it. Optionally adds
   // color via ANSI escape codes.
-  static std::string Format(std::string_view qualifier, std::optional<SourceSpan> span,
-                            std::string_view message, bool color);
+  static std::string Format(std::string_view qualifier, SourceSpan span, std::string_view message,
+                            bool color);
 
  private:
   void AddError(std::unique_ptr<Diagnostic> error);

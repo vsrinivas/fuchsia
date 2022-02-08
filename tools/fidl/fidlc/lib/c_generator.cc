@@ -806,9 +806,9 @@ void CGenerator::GeneratePrologues() {
   // Dependencies are in pointer order... change to a deterministic
   // ordering prior to output.
   std::set<std::string> add_includes;
-  for (const auto& dep_library : library_->dependencies()) {
+  for (const auto& dep_library : library_->dependencies.all()) {
     assert(dep_library != library_ && "dependencies should not include self");
-    add_includes.insert(NameLibraryCHeader(dep_library->name()));
+    add_includes.insert(NameLibraryCHeader(dep_library->name));
   }
   for (const auto& include : add_includes) {
     EmitIncludeHeader(&file_, "<" + include + ">");
@@ -1685,17 +1685,17 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
 std::ostringstream CGenerator::ProduceHeader() {
   GeneratePrologues();
 
-  std::map<const flat::Decl*, NamedBits> named_bits = NameBits(library_->bits_declarations_);
-  std::map<const flat::Decl*, NamedConst> named_consts = NameConsts(library_->const_declarations_);
-  std::map<const flat::Decl*, NamedEnum> named_enums = NameEnums(library_->enum_declarations_);
+  std::map<const flat::Decl*, NamedBits> named_bits = NameBits(library_->bits_declarations);
+  std::map<const flat::Decl*, NamedConst> named_consts = NameConsts(library_->const_declarations);
+  std::map<const flat::Decl*, NamedEnum> named_enums = NameEnums(library_->enum_declarations);
   std::map<const flat::Decl*, NamedProtocol> named_protocols =
-      NameProtocols(library_->protocol_declarations_);
+      NameProtocols(library_->protocol_declarations);
   std::map<const flat::Decl*, NamedStruct> named_structs =
-      NameStructs(library_->struct_declarations_, library_->protocol_declarations_);
+      NameStructs(library_->struct_declarations, library_->protocol_declarations);
 
   file_ << "\n// Forward declarations\n\n";
 
-  for (const auto* decl : library_->declaration_order()) {
+  for (const auto* decl : library_->declaration_order) {
     if (!DeclAllowed(decl)) {
       continue;
     }
@@ -1755,7 +1755,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 
   file_ << "\n// Extern declarations\n\n";
 
-  for (const auto* decl : library_->declaration_order()) {
+  for (const auto* decl : library_->declaration_order) {
     if (!DeclAllowed(decl)) {
       continue;
     }
@@ -1784,7 +1784,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 
   file_ << "\n// Declarations\n\n";
 
-  for (const auto* decl : library_->declaration_order()) {
+  for (const auto* decl : library_->declaration_order) {
     if (!DeclAllowed(decl)) {
       continue;
     }
@@ -1839,7 +1839,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 
   file_ << "\n// Simple bindings \n\n";
 
-  for (const auto* decl : library_->declaration_order()) {
+  for (const auto* decl : library_->declaration_order) {
     switch (decl->kind) {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
@@ -1879,13 +1879,13 @@ std::ostringstream CGenerator::ProduceClient() {
   EmitIncludeHeader(&file_, "<string.h>");
   EmitIncludeHeader(&file_, "<zircon/assert.h>");
   EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
-  EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");
+  EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name) + ">");
   EmitBlank(&file_);
 
   std::map<const flat::Decl*, NamedProtocol> named_protocols =
-      NameProtocols(library_->protocol_declarations_);
+      NameProtocols(library_->protocol_declarations);
 
-  for (const auto* decl : library_->declaration_order()) {
+  for (const auto* decl : library_->declaration_order) {
     switch (decl->kind) {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
@@ -1922,13 +1922,13 @@ std::ostringstream CGenerator::ProduceServer() {
   EmitIncludeHeader(&file_, "<string.h>");
   EmitIncludeHeader(&file_, "<zircon/assert.h>");
   EmitIncludeHeader(&file_, "<zircon/syscalls.h>");
-  EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name()) + ">");
+  EmitIncludeHeader(&file_, "<" + NameLibraryCHeader(library_->name) + ">");
   EmitBlank(&file_);
 
   std::map<const flat::Decl*, NamedProtocol> named_protocols =
-      NameProtocols(library_->protocol_declarations_);
+      NameProtocols(library_->protocol_declarations);
 
-  for (const auto* decl : library_->declaration_order()) {
+  for (const auto* decl : library_->declaration_order) {
     switch (decl->kind) {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:

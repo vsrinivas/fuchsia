@@ -35,10 +35,16 @@
     EXPECT_ERR(library_ref.errors()[1], (err1));                 \
   }
 
-#define ASSERT_ERR(actual_err, err_def, ...) \
-  ASSERT_STREQ(actual_err->def.msg.data(), err_def.msg.data(), ##__VA_ARGS__)
+#define ASSERT_ERR(actual_err, err_def, ...)                                     \
+  {                                                                              \
+    ASSERT_STREQ(actual_err->def.msg.data(), err_def.msg.data(), ##__VA_ARGS__); \
+    ASSERT_TRUE(actual_err->span.valid());                                       \
+  }
 
-#define EXPECT_ERR(actual_err, err_def, ...) \
-  EXPECT_STREQ(actual_err->def.msg.data(), err_def.msg.data(), ##__VA_ARGS__)
+#define EXPECT_ERR(actual_err, err_def, ...)                                     \
+  {                                                                              \
+    EXPECT_STREQ(actual_err->def.msg.data(), err_def.msg.data(), ##__VA_ARGS__); \
+    EXPECT_TRUE(actual_err->span.valid());                                       \
+  }
 
 #endif  // ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_ERROR_TEST_H_

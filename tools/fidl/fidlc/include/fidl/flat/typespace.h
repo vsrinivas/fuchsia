@@ -13,7 +13,7 @@ namespace fidl::flat {
 
 constexpr uint32_t kHandleSameRights = 0x80000000;  // ZX_HANDLE_SAME_RIGHTS
 
-class LibraryMediator;
+class TypeResolver;
 class Typespace;
 
 struct LayoutInvocation;
@@ -44,7 +44,7 @@ class TypeTemplate : protected ReporterMixin {
     const SourceSpan& ParametersSpan() const;
   };
 
-  virtual bool Create(const LibraryMediator& lib, const ParamsAndConstraints& args,
+  virtual bool Create(TypeResolver* resolver, const ParamsAndConstraints& args,
                       std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const = 0;
 
   bool HasGeneratedName() const;
@@ -70,7 +70,7 @@ class Typespace : private ReporterMixin {
  public:
   explicit Typespace(Reporter* reporter) : ReporterMixin(reporter) {}
 
-  bool Create(const LibraryMediator& lib, const flat::Name& name,
+  bool Create(TypeResolver* resolver, const flat::Name& name,
               const std::unique_ptr<LayoutParameterList>& parameters,
               const std::unique_ptr<TypeConstraints>& constraints, const Type** out_type,
               LayoutInvocation* out_params, const std::optional<SourceSpan>& type_ctor_span);
@@ -104,7 +104,7 @@ class Typespace : private ReporterMixin {
 
   const TypeTemplate* LookupTemplate(const flat::Name& name) const;
 
-  bool CreateNotOwned(const LibraryMediator& lib, const flat::Name& name,
+  bool CreateNotOwned(TypeResolver* resolver, const flat::Name& name,
                       const std::unique_ptr<LayoutParameterList>& parameters,
                       const std::unique_ptr<TypeConstraints>& constraints,
                       std::unique_ptr<Type>* out_type, LayoutInvocation* out_params,
@@ -134,7 +134,7 @@ class ArrayTypeTemplate final : public TypeTemplate {
   ArrayTypeTemplate(Typespace* typespace, Reporter* reporter)
       : TypeTemplate(Name::CreateIntrinsic("array"), typespace, reporter) {}
 
-  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
+  bool Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override;
 };
 
@@ -144,7 +144,7 @@ class BytesTypeTemplate final : public TypeTemplate {
       : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, reporter),
         uint8_type_(kUint8Type) {}
 
-  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
+  bool Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override;
 
  private:
@@ -160,7 +160,7 @@ class VectorTypeTemplate final : public TypeTemplate {
   VectorTypeTemplate(Typespace* typespace, Reporter* reporter)
       : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, reporter) {}
 
-  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
+  bool Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override;
 };
 
@@ -169,7 +169,7 @@ class StringTypeTemplate final : public TypeTemplate {
   StringTypeTemplate(Typespace* typespace, Reporter* reporter)
       : TypeTemplate(Name::CreateIntrinsic("string"), typespace, reporter) {}
 
-  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
+  bool Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override;
 };
 
@@ -178,7 +178,7 @@ class HandleTypeTemplate final : public TypeTemplate {
   HandleTypeTemplate(Name name, Typespace* typespace, Reporter* reporter, Resource* resource_decl_)
       : TypeTemplate(std::move(name), typespace, reporter), resource_decl_(resource_decl_) {}
 
-  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
+  bool Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override;
 
  private:
@@ -197,7 +197,7 @@ class TransportSideTypeTemplate final : public TypeTemplate {
         end_(end),
         protocol_transport_(protocol_transport) {}
 
-  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
+  bool Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override;
 
  private:
@@ -210,7 +210,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
   TypeDeclTypeTemplate(Name name, Typespace* typespace, Reporter* reporter, TypeDecl* type_decl)
       : TypeTemplate(std::move(name), typespace, reporter), type_decl_(type_decl) {}
 
-  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
+  bool Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override;
 
  private:
@@ -222,7 +222,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
   TypeAliasTypeTemplate(Name name, Typespace* typespace, Reporter* reporter, TypeAlias* decl)
       : TypeTemplate(std::move(name), typespace, reporter), decl_(decl) {}
 
-  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
+  bool Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override;
 
  private:
@@ -234,7 +234,7 @@ class BoxTypeTemplate final : public TypeTemplate {
   BoxTypeTemplate(Typespace* typespace, Reporter* reporter)
       : TypeTemplate(Name::CreateIntrinsic("box"), typespace, reporter) {}
 
-  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
+  bool Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override;
 };
 
@@ -245,7 +245,7 @@ class PrimitiveTypeTemplate : public TypeTemplate {
       : TypeTemplate(Name::CreateIntrinsic(std::move(name)), typespace, reporter),
         subtype_(subtype) {}
 
-  bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
+  bool Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override;
 
  private:

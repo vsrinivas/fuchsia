@@ -4,26 +4,27 @@
 
 #include "fidl/flat/typespace.h"
 
+#include "fidl/flat/type_resolver.h"
 #include "fidl/flat_ast.h"
 
 namespace fidl::flat {
 
 constexpr std::string_view kChannelTransport = "Channel";
 
-bool Typespace::Create(const LibraryMediator& lib, const flat::Name& name,
+bool Typespace::Create(TypeResolver* resolver, const flat::Name& name,
                        const std::unique_ptr<LayoutParameterList>& parameters,
                        const std::unique_ptr<TypeConstraints>& constraints, const Type** out_type,
                        LayoutInvocation* out_params,
                        const std::optional<SourceSpan>& type_ctor_span) {
   std::unique_ptr<Type> type;
-  if (!CreateNotOwned(lib, name, parameters, constraints, &type, out_params, type_ctor_span))
+  if (!CreateNotOwned(resolver, name, parameters, constraints, &type, out_params, type_ctor_span))
     return false;
   types_.push_back(std::move(type));
   *out_type = types_.back().get();
   return true;
 }
 
-bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& name,
+bool Typespace::CreateNotOwned(TypeResolver* resolver, const flat::Name& name,
                                const std::unique_ptr<LayoutParameterList>& parameters,
                                const std::unique_ptr<TypeConstraints>& constraints,
                                std::unique_ptr<Type>* out_type, LayoutInvocation* out_params,
@@ -40,7 +41,8 @@ bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& nam
     return Fail(ErrAnonymousNameReference, name.span().value(), name);
   }
   return type_template->Create(
-      lib, {.parameters = parameters, .constraints = constraints, .type_ctor_span = type_ctor_span},
+      resolver,
+      {.parameters = parameters, .constraints = constraints, .type_ctor_span = type_ctor_span},
       out_type, out_params);
 }
 
@@ -182,82 +184,77 @@ const UntypedNumericType Typespace::kUntypedNumericType =
 const StringType Typespace::kUnboundedStringType = StringType(
     Typespace::kStringTypeName, &VectorBaseType::kMaxSize, types::Nullability::kNonnullable);
 
-bool ArrayTypeTemplate::Create(const LibraryMediator& lib,
-                               const ParamsAndConstraints& unresolved_args,
+bool ArrayTypeTemplate::Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
                                std::unique_ptr<Type>* out_type,
                                LayoutInvocation* out_params) const {
   if (!EnsureNumberOfLayoutParams(unresolved_args, 2))
     return false;
 
   const Type* element_type = nullptr;
-  if (!lib.ResolveParamAsType(this, unresolved_args.parameters->items[0], &element_type))
+  if (!resolver->ResolveParamAsType(this, unresolved_args.parameters->items[0], &element_type))
     return false;
   out_params->element_type_resolved = element_type;
   out_params->element_type_raw = unresolved_args.parameters->items[0]->AsTypeCtor();
 
   const Size* size = nullptr;
-  if (!lib.ResolveParamAsSize(this, unresolved_args.parameters->items[1], &size))
+  if (!resolver->ResolveParamAsSize(this, unresolved_args.parameters->items[1], &size))
     return false;
   out_params->size_resolved = size;
   out_params->size_raw = unresolved_args.parameters->items[1]->AsConstant();
 
   ArrayType type(name_, element_type, size);
-  return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
+  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
 }
 
-bool BytesTypeTemplate::Create(const LibraryMediator& lib,
-                               const ParamsAndConstraints& unresolved_args,
+bool BytesTypeTemplate::Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
                                std::unique_ptr<Type>* out_type,
                                LayoutInvocation* out_params) const {
   if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
     return false;
 
   VectorType type(name_, &uint8_type_);
-  return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
+  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
 }
 
-bool VectorTypeTemplate::Create(const LibraryMediator& lib,
-                                const ParamsAndConstraints& unresolved_args,
+bool VectorTypeTemplate::Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
                                 std::unique_ptr<Type>* out_type,
                                 LayoutInvocation* out_params) const {
   if (!EnsureNumberOfLayoutParams(unresolved_args, 1))
     return false;
 
   const Type* element_type = nullptr;
-  if (!lib.ResolveParamAsType(this, unresolved_args.parameters->items[0], &element_type))
+  if (!resolver->ResolveParamAsType(this, unresolved_args.parameters->items[0], &element_type))
     return false;
   out_params->element_type_resolved = element_type;
   out_params->element_type_raw = unresolved_args.parameters->items[0]->AsTypeCtor();
 
   VectorType type(name_, element_type);
-  return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
+  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
 }
 
-bool StringTypeTemplate::Create(const LibraryMediator& lib,
-                                const ParamsAndConstraints& unresolved_args,
+bool StringTypeTemplate::Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
                                 std::unique_ptr<Type>* out_type,
                                 LayoutInvocation* out_params) const {
   if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
     return false;
 
   StringType type(name_);
-  return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
+  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
 }
 
 const HandleRights HandleType::kSameRights = HandleRights(kHandleSameRights);
 
-bool HandleTypeTemplate::Create(const LibraryMediator& lib,
-                                const ParamsAndConstraints& unresolved_args,
+bool HandleTypeTemplate::Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
                                 std::unique_ptr<Type>* out_type,
                                 LayoutInvocation* out_params) const {
   if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
     return false;
 
   HandleType type(name_, resource_decl_);
-  return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
+  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
 }
 
-bool TransportSideTypeTemplate::Create(const LibraryMediator& lib,
+bool TransportSideTypeTemplate::Create(TypeResolver* resolver,
                                        const ParamsAndConstraints& unresolved_args,
                                        std::unique_ptr<Type>* out_type,
                                        LayoutInvocation* out_params) const {
@@ -265,10 +262,10 @@ bool TransportSideTypeTemplate::Create(const LibraryMediator& lib,
     return false;
 
   TransportSideType type(name_, end_, protocol_transport_);
-  return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
+  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
 }
 
-bool TypeDeclTypeTemplate::Create(const LibraryMediator& lib,
+bool TypeDeclTypeTemplate::Create(TypeResolver* resolver,
                                   const ParamsAndConstraints& unresolved_args,
                                   std::unique_ptr<Type>* out_type,
                                   LayoutInvocation* out_params) const {
@@ -276,7 +273,7 @@ bool TypeDeclTypeTemplate::Create(const LibraryMediator& lib,
     if (type_decl_->compiling) {
       type_decl_->recursive = true;
     } else {
-      lib.CompileDecl(type_decl_);
+      resolver->CompileDecl(type_decl_);
     }
   }
 
@@ -284,17 +281,17 @@ bool TypeDeclTypeTemplate::Create(const LibraryMediator& lib,
     return false;
 
   IdentifierType type(name_, type_decl_);
-  return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
+  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
 }
 
-bool TypeAliasTypeTemplate::Create(const LibraryMediator& lib,
+bool TypeAliasTypeTemplate::Create(TypeResolver* resolver,
                                    const ParamsAndConstraints& unresolved_args,
                                    std::unique_ptr<Type>* out_type,
                                    LayoutInvocation* out_params) const {
-  if (auto cycle = lib.GetDeclCycle(decl_); cycle) {
+  if (auto cycle = resolver->GetDeclCycle(decl_); cycle) {
     return Fail(ErrIncludeCycle, decl_->name.span().value(), cycle.value());
   }
-  lib.CompileDecl(decl_);
+  resolver->CompileDecl(decl_);
 
   if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
     return false;
@@ -305,7 +302,7 @@ bool TypeAliasTypeTemplate::Create(const LibraryMediator& lib,
     return false;
   const auto& aliased_type = decl_->partial_type_ctor->type;
   out_params->from_type_alias = decl_;
-  return aliased_type->ApplyConstraints(lib, *unresolved_args.constraints, this, out_type,
+  return aliased_type->ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type,
                                         out_params);
 }
 
@@ -316,14 +313,13 @@ static bool IsStruct(const Type* boxed_type) {
   return static_cast<const IdentifierType*>(boxed_type)->type_decl->kind == Decl::Kind::kStruct;
 }
 
-bool BoxTypeTemplate::Create(const LibraryMediator& lib,
-                             const ParamsAndConstraints& unresolved_args,
+bool BoxTypeTemplate::Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
                              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const {
   if (!EnsureNumberOfLayoutParams(unresolved_args, 1))
     return false;
 
   const Type* boxed_type = nullptr;
-  if (!lib.ResolveParamAsType(this, unresolved_args.parameters->items[0], &boxed_type))
+  if (!resolver->ResolveParamAsType(this, unresolved_args.parameters->items[0], &boxed_type))
     return false;
   if (!IsStruct(boxed_type))
     return Fail(ErrCannotBeBoxed, unresolved_args.parameters->items[0]->span, boxed_type->name);
@@ -346,10 +342,10 @@ bool BoxTypeTemplate::Create(const LibraryMediator& lib,
   out_params->boxed_type_raw = unresolved_args.parameters->items[0]->AsTypeCtor();
 
   BoxType type(name_, boxed_type);
-  return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
+  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
 }
 
-bool PrimitiveTypeTemplate::Create(const LibraryMediator& lib,
+bool PrimitiveTypeTemplate::Create(TypeResolver* resolver,
                                    const ParamsAndConstraints& unresolved_args,
                                    std::unique_ptr<Type>* out_type,
                                    LayoutInvocation* out_params) const {
@@ -359,7 +355,7 @@ bool PrimitiveTypeTemplate::Create(const LibraryMediator& lib,
   // TODO(fxbug.dev/76219): Should instead use the static const types provided
   // on Typespace, e.g. Typespace::kBoolType.
   PrimitiveType type(name_, subtype_);
-  return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
+  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
 }
 
 }  // namespace fidl::flat

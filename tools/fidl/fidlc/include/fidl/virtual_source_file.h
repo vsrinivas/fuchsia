@@ -16,11 +16,10 @@
 
 namespace fidl {
 
+// TODO(fxbug.dev/8027): Remove this class.
 class VirtualSourceFile : public SourceFile {
  public:
   explicit VirtualSourceFile(std::string filename) : SourceFile(std::move(filename), "") {}
-
-  virtual ~VirtualSourceFile() = default;
 
   std::string_view LineContaining(std::string_view view, Position* position_out) const override;
 

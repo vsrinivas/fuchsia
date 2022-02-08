@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fidl/c_generator.h>
 #include <fidl/experimental_flags.h>
+#include <fidl/flat/compiler.h>
 #include <fidl/flat_ast.h>
 #include <fidl/json_generator.h>
 #include <fidl/json_schema.h>
@@ -253,14 +254,14 @@ enum struct Behavior {
 };
 
 bool Parse(const fidl::SourceFile& source_file, fidl::Reporter* reporter,
-           fidl::flat::Library* library, const fidl::ExperimentalFlags& experimental_flags) {
+           fidl::flat::Compiler* compiler, const fidl::ExperimentalFlags& experimental_flags) {
   fidl::Lexer lexer(source_file, reporter);
   fidl::Parser parser(&lexer, reporter, experimental_flags);
   auto ast = parser.Parse();
   if (!parser.Success()) {
     return false;
   }
-  if (!library->ConsumeFile(std::move(ast))) {
+  if (!compiler->ConsumeFile(std::move(ast))) {
     return false;
   }
   return true;
@@ -295,9 +296,9 @@ void Write(const std::ostringstream& output_stream, const std::string file_path)
 
 // TODO(pascallouis): remove forward declaration, this was only introduced to
 // reduce diff size while breaking things up.
-int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::string library_name,
-            std::string dep_file_path, const std::vector<std::string>& source_list,
-            std::vector<std::pair<Behavior, std::string>> outputs,
+int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_file_path,
+            const std::vector<std::string>& source_list,
+            const std::vector<std::pair<Behavior, std::string>>& outputs,
             const std::vector<fidl::SourceManager>& source_managers,
             fidl::ExperimentalFlags experimental_flags);
 
@@ -391,9 +392,8 @@ int main(int argc, char* argv[]) {
   // Ready. Set. Go.
   fidl::Reporter reporter;
   reporter.set_warnings_as_errors(warnings_as_errors);
-  auto typespace = fidl::flat::Typespace::RootTypes(&reporter);
-  auto status = compile(&reporter, &typespace, library_name, dep_file_path, source_list,
-                        std::move(outputs), source_managers, std::move(experimental_flags));
+  auto status = compile(&reporter, library_name, dep_file_path, source_list, outputs,
+                        source_managers, experimental_flags);
   if (format == "json") {
     reporter.PrintReportsJson();
   } else {
@@ -403,30 +403,26 @@ int main(int argc, char* argv[]) {
   return status;
 }
 
-int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::string library_name,
-            std::string dep_file_path, const std::vector<std::string>& source_list,
-            std::vector<std::pair<Behavior, std::string>> outputs,
+int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_file_path,
+            const std::vector<std::string>& source_list,
+            const std::vector<std::pair<Behavior, std::string>>& outputs,
             const std::vector<fidl::SourceManager>& source_managers,
             fidl::ExperimentalFlags experimental_flags) {
-  fidl::flat::Libraries all_libraries;
+  fidl::flat::Libraries all_libraries(reporter);
   for (const auto& source_manager : source_managers) {
     if (source_manager.sources().empty()) {
       continue;
     }
-    auto library = std::make_unique<fidl::flat::Library>(&all_libraries, reporter, typespace,
-                                                         fidl::ordinals::GetGeneratedOrdinal64,
-                                                         experimental_flags);
+    fidl::flat::Compiler compiler(&all_libraries, fidl::ordinals::GetGeneratedOrdinal64,
+                                  experimental_flags);
     for (const auto& source_file : source_manager.sources()) {
-      if (!Parse(*source_file, reporter, library.get(), experimental_flags)) {
+      if (!Parse(*source_file, reporter, &compiler, experimental_flags)) {
         return 1;
       }
     }
-    if (!library->Compile()) {
+    auto library = compiler.Compile();
+    if (!library || !all_libraries.Insert(std::move(library))) {
       return 1;
-    }
-    auto library_name = fidl::NameLibrary(library->name());
-    if (!all_libraries.Insert(std::move(library))) {
-      Fail("Multiple libraries with the same name: '%s'\n", library_name.c_str());
     }
   }
   const fidl::flat::Library* target_library = all_libraries.target_library();
@@ -453,14 +449,14 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
       } else {
         message.append(", ");
       }
-      message.append(fidl::NameLibrary(library->name()));
+      message.append(fidl::NameLibrary(library->name));
     }
     message.append("\n");
     Fail(message.data());
   }
 
   // Verify that the produced library's name matches the expected name.
-  std::string produced_name = fidl::NameLibrary(target_library->name());
+  std::string produced_name = fidl::NameLibrary(target_library->name);
   if (!library_name.empty() && produced_name != library_name) {
     Fail("Generated library '%s' did not match --name argument: %s\n", produced_name.data(),
          library_name.data());
@@ -482,7 +478,7 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
       dep_file_contents << "\n";
     }
 
-    Write(std::move(dep_file_contents), dep_file_path);
+    Write(dep_file_contents, dep_file_path);
   }
 
   // We recompile dependencies, and only emit output for the target library.

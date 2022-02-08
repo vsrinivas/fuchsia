@@ -16,16 +16,17 @@ void ConsumeStep::RunImpl() {
   for (const auto& part : file_->library_decl->path->components) {
     new_name.push_back(part->span().data());
   }
-  if (!library_->library_name_.empty()) {
-    if (new_name != library_->library_name_) {
+  if (!library()->name.empty()) {
+    if (new_name != library()->name) {
       Fail(ErrFilesDisagreeOnLibraryName, file_->library_decl->path->components[0]->span());
       return;
     }
   } else {
-    library_->library_name_ = new_name;
+    library()->name = new_name;
+    library()->arbitrary_name_span = file_->library_decl->span();
   }
 
-  ConsumeAttributeList(std::move(file_->library_decl->attributes), &library_->attributes);
+  ConsumeAttributeList(std::move(file_->library_decl->attributes), &library()->attributes);
 
   for (auto& using_directive : std::move(file_->using_list)) {
     ConsumeUsing(std::move(using_directive));
@@ -59,7 +60,7 @@ std::optional<Name> ConsumeStep::CompileCompoundIdentifier(
 
   // First try resolving the identifier in the library.
   if (components.size() == 1) {
-    return Name::CreateSourced(library_, decl_name);
+    return Name::CreateSourced(library(), decl_name);
   }
 
   std::vector<std::string_view> library_name;
@@ -68,7 +69,7 @@ std::optional<Name> ConsumeStep::CompileCompoundIdentifier(
   }
 
   auto filename = compound_identifier->span().source_file().filename();
-  if (auto dep_library = library_->dependencies_.LookupAndMarkUsed(filename, library_name)) {
+  if (auto dep_library = library()->dependencies.LookupAndMarkUsed(filename, library_name)) {
     return Name::CreateSourced(dep_library, decl_name);
   }
 
@@ -78,13 +79,13 @@ std::optional<Name> ConsumeStep::CompileCompoundIdentifier(
   SourceSpan member_decl_name = components.rbegin()[1]->span();
 
   if (components.size() == 2) {
-    return Name::CreateSourced(library_, member_decl_name, std::string(member_name.data()));
+    return Name::CreateSourced(library(), member_decl_name, std::string(member_name.data()));
   }
 
   std::vector<std::string_view> member_library_name(library_name);
   member_library_name.pop_back();
 
-  if (auto dep_library = library_->dependencies_.LookupAndMarkUsed(filename, member_library_name)) {
+  if (auto dep_library = library()->dependencies.LookupAndMarkUsed(filename, member_library_name)) {
     return Name::CreateSourced(dep_library, member_decl_name, std::string(member_name.data()));
   }
 
@@ -106,40 +107,40 @@ Decl* ConsumeStep::RegisterDecl(std::unique_ptr<Decl> decl) {
   auto kind = decl_ptr->kind;
   switch (kind) {
     case Decl::Kind::kBits:
-      StoreDecl(decl_ptr, &library_->bits_declarations_);
+      StoreDecl(decl_ptr, &library()->bits_declarations);
       break;
     case Decl::Kind::kConst:
-      StoreDecl(decl_ptr, &library_->const_declarations_);
+      StoreDecl(decl_ptr, &library()->const_declarations);
       break;
     case Decl::Kind::kEnum:
-      StoreDecl(decl_ptr, &library_->enum_declarations_);
+      StoreDecl(decl_ptr, &library()->enum_declarations);
       break;
     case Decl::Kind::kProtocol:
-      StoreDecl(decl_ptr, &library_->protocol_declarations_);
+      StoreDecl(decl_ptr, &library()->protocol_declarations);
       break;
     case Decl::Kind::kResource:
-      StoreDecl(decl_ptr, &library_->resource_declarations_);
+      StoreDecl(decl_ptr, &library()->resource_declarations);
       break;
     case Decl::Kind::kService:
-      StoreDecl(decl_ptr, &library_->service_declarations_);
+      StoreDecl(decl_ptr, &library()->service_declarations);
       break;
     case Decl::Kind::kStruct:
-      StoreDecl(decl_ptr, &library_->struct_declarations_);
+      StoreDecl(decl_ptr, &library()->struct_declarations);
       break;
     case Decl::Kind::kTable:
-      StoreDecl(decl_ptr, &library_->table_declarations_);
+      StoreDecl(decl_ptr, &library()->table_declarations);
       break;
     case Decl::Kind::kTypeAlias:
-      StoreDecl(decl_ptr, &library_->type_alias_declarations_);
+      StoreDecl(decl_ptr, &library()->type_alias_declarations);
       break;
     case Decl::Kind::kUnion:
-      StoreDecl(decl_ptr, &library_->union_declarations_);
+      StoreDecl(decl_ptr, &library()->union_declarations);
       break;
   }  // switch
 
   const Name& name = decl_ptr->name;
   {
-    const auto it = library_->declarations_.emplace(name, decl_ptr);
+    const auto it = library()->declarations.emplace(name, decl_ptr);
     if (!it.second) {
       const auto previous_name = it.first->second->name;
       Fail(ErrNameCollision, name.span().value(), name, previous_name.span().value());
@@ -159,12 +160,12 @@ Decl* ConsumeStep::RegisterDecl(std::unique_ptr<Decl> decl) {
   }
 
   if (name.span()) {
-    if (library_->dependencies_.Contains(name.span()->source_file().filename(),
+    if (library()->dependencies.Contains(name.span()->source_file().filename(),
                                          {name.span()->data()})) {
       Fail(ErrDeclNameConflictsWithLibraryImport, name.span().value(), name);
       return nullptr;
     }
-    if (library_->dependencies_.Contains(name.span()->source_file().filename(),
+    if (library()->dependencies.Contains(name.span()->source_file().filename(),
                                          {canonical_decl_name})) {
       Fail(ErrDeclNameConflictsWithLibraryImportCanonical, name.span().value(), name,
            canonical_decl_name);
@@ -172,7 +173,6 @@ Decl* ConsumeStep::RegisterDecl(std::unique_ptr<Decl> decl) {
     }
   }
 
-  Typespace* typespace = library_->typespace_;
   switch (kind) {
     case Decl::Kind::kBits:
     case Decl::Kind::kEnum:
@@ -183,22 +183,22 @@ Decl* ConsumeStep::RegisterDecl(std::unique_ptr<Decl> decl) {
     case Decl::Kind::kProtocol: {
       auto type_decl = static_cast<TypeDecl*>(decl_ptr);
       auto type_template =
-          std::make_unique<TypeDeclTypeTemplate>(name, typespace, reporter(), type_decl);
-      typespace->AddTemplate(std::move(type_template));
+          std::make_unique<TypeDeclTypeTemplate>(name, typespace(), reporter(), type_decl);
+      typespace()->AddTemplate(std::move(type_template));
       break;
     }
     case Decl::Kind::kResource: {
       auto resource_decl = static_cast<Resource*>(decl_ptr);
       auto type_template =
-          std::make_unique<HandleTypeTemplate>(name, typespace, reporter(), resource_decl);
-      typespace->AddTemplate(std::move(type_template));
+          std::make_unique<HandleTypeTemplate>(name, typespace(), reporter(), resource_decl);
+      typespace()->AddTemplate(std::move(type_template));
       break;
     }
     case Decl::Kind::kTypeAlias: {
       auto type_alias_decl = static_cast<TypeAlias*>(decl_ptr);
       auto type_alias_template =
-          std::make_unique<TypeAliasTypeTemplate>(name, typespace, reporter(), type_alias_decl);
-      typespace->AddTemplate(std::move(type_alias_template));
+          std::make_unique<TypeAliasTypeTemplate>(name, typespace(), reporter(), type_alias_decl);
+      typespace()->AddTemplate(std::move(type_alias_template));
       break;
     }
     case Decl::Kind::kConst:
@@ -252,7 +252,7 @@ void ConsumeStep::ConsumeAttribute(std::unique_ptr<raw::Attribute> raw_attribute
       name = raw_attribute->maybe_name->span();
       break;
     case raw::Attribute::Provenance::kDocComment:
-      name = library_->GeneratedSimpleName(Attribute::kDocCommentName);
+      name = generated_source_file()->AddLine(Attribute::kDocCommentName);
       break;
   }
   *out_attribute = std::make_unique<Attribute>(name, std::move(args), raw_attribute->span());
@@ -318,14 +318,14 @@ void ConsumeStep::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
     library_name.push_back(component->span().data());
   }
 
-  Library* dep_library = library_->all_libraries_->Lookup(library_name);
+  Library* dep_library = all_libraries()->Lookup(library_name);
   if (!dep_library) {
     Fail(ErrUnknownLibrary, using_directive->using_path->components[0]->span(), library_name);
     return;
   }
 
   const auto filename = using_directive->span().source_file().filename();
-  const auto result = library_->dependencies_.Register(using_directive->span(), filename,
+  const auto result = library()->dependencies.Register(using_directive->span(), filename,
                                                        dep_library, using_directive->maybe_alias);
   switch (result) {
     case Dependencies::RegisterResult::kSuccess:
@@ -344,8 +344,8 @@ void ConsumeStep::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
   }
 
   // Import declarations, and type aliases of dependent library.
-  const auto& declarations = dep_library->declarations_;
-  library_->declarations_.insert(declarations.begin(), declarations.end());
+  const auto& declarations = dep_library->declarations;
+  library()->declarations.insert(declarations.begin(), declarations.end());
 }
 
 void ConsumeStep::ConsumeAliasDeclaration(
@@ -355,7 +355,7 @@ void ConsumeStep::ConsumeAliasDeclaration(
   std::unique_ptr<AttributeList> attributes;
   ConsumeAttributeList(std::move(alias_declaration->attributes), &attributes);
 
-  auto alias_name = Name::CreateSourced(library_, alias_declaration->alias->span());
+  auto alias_name = Name::CreateSourced(library(), alias_declaration->alias->span());
   std::unique_ptr<TypeConstructor> type_ctor_;
 
   if (!ConsumeTypeConstructor(std::move(alias_declaration->type_ctor),
@@ -369,7 +369,7 @@ void ConsumeStep::ConsumeAliasDeclaration(
 void ConsumeStep::ConsumeConstDeclaration(
     std::unique_ptr<raw::ConstDeclaration> const_declaration) {
   auto span = const_declaration->identifier->span();
-  auto name = Name::CreateSourced(library_, span);
+  auto name = Name::CreateSourced(library(), span);
   std::unique_ptr<AttributeList> attributes;
   ConsumeAttributeList(std::move(const_declaration->attributes), &attributes);
 
@@ -418,11 +418,11 @@ bool ConsumeStep::CreateMethodResult(const std::shared_ptr<NamingContext>& succe
   result_members.push_back(std::move(error_member));
   std::vector<std::unique_ptr<Attribute>> result_attributes;
   result_attributes.emplace_back(
-      std::make_unique<Attribute>(library_->GeneratedSimpleName("result")));
+      std::make_unique<Attribute>(generated_source_file()->AddLine("result")));
 
   // TODO(fxbug.dev/8027): Join spans of response and error constructor for `result_name`.
   auto result_context = err_variant_context->parent();
-  auto result_name = Name::CreateAnonymous(library_, response_span, result_context);
+  auto result_name = Name::CreateAnonymous(library(), response_span, result_context);
   auto union_decl = std::make_unique<Union>(
       std::make_unique<AttributeList>(std::move(result_attributes)), std::move(result_name),
       std::move(result_members), types::Strictness::kStrict, std::nullopt /* resourceness */);
@@ -438,7 +438,7 @@ bool ConsumeStep::CreateMethodResult(const std::shared_ptr<NamingContext>& succe
                                             std::make_unique<AttributeList>()));
 
   const auto& response_context = result_context->parent();
-  const Name response_name = Name::CreateAnonymous(library_, response_span, response_context);
+  const Name response_name = Name::CreateAnonymous(library(), response_span, response_context);
   auto struct_decl = std::make_unique<Struct>(
       /* attributes = */ std::make_unique<AttributeList>(), response_name,
       std::move(response_members),
@@ -453,7 +453,7 @@ bool ConsumeStep::CreateMethodResult(const std::shared_ptr<NamingContext>& succe
 
 void ConsumeStep::ConsumeProtocolDeclaration(
     std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
-  auto protocol_name = Name::CreateSourced(library_, protocol_declaration->identifier->span());
+  auto protocol_name = Name::CreateSourced(library(), protocol_declaration->identifier->span());
   auto protocol_context = NamingContext::Create(protocol_name.span().value());
 
   std::vector<Protocol::ComposedProtocol> composed_protocols;
@@ -519,14 +519,14 @@ void ConsumeStep::ConsumeProtocolDeclaration(
         // The naming scheme for the result type and the success variant in a response
         // with an error type predates the design of the anonymous name flattening
         // algorithm, and we therefore they are overridden to be backwards compatible.
-        result_context = response_context->EnterMember(library_->GeneratedSimpleName("result"));
+        result_context = response_context->EnterMember(generated_source_file()->AddLine("result"));
         result_context->set_name_override(
             utils::StringJoin({protocol_name.decl_name(), method_name.data(), "Result"}, "_"));
         success_variant_context =
-            result_context->EnterMember(library_->GeneratedSimpleName("response"));
+            result_context->EnterMember(generated_source_file()->AddLine("response"));
         success_variant_context->set_name_override(
             utils::StringJoin({protocol_name.decl_name(), method_name.data(), "Response"}, "_"));
-        err_variant_context = result_context->EnterMember(library_->GeneratedSimpleName("err"));
+        err_variant_context = result_context->EnterMember(generated_source_file()->AddLine("err"));
         err_variant_context->set_name_override(
             utils::StringJoin({protocol_name.decl_name(), method_name.data(), "Error"}, "_"));
       }
@@ -595,7 +595,7 @@ bool ConsumeStep::ConsumeParameterList(const SourceSpan method_name,
 
 void ConsumeStep::ConsumeResourceDeclaration(
     std::unique_ptr<raw::ResourceDeclaration> resource_declaration) {
-  auto name = Name::CreateSourced(library_, resource_declaration->identifier->span());
+  auto name = Name::CreateSourced(library(), resource_declaration->identifier->span());
   std::vector<Resource::Property> properties;
   for (auto& property : resource_declaration->properties) {
     std::unique_ptr<AttributeList> attributes;
@@ -626,7 +626,7 @@ void ConsumeStep::ConsumeResourceDeclaration(
 }
 
 void ConsumeStep::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
-  auto name = Name::CreateSourced(library_, service_decl->identifier->span());
+  auto name = Name::CreateSourced(library(), service_decl->identifier->span());
   auto context = NamingContext::Create(name);
   std::vector<Service::Member> members;
   for (auto& member : service_decl->members) {
@@ -652,7 +652,7 @@ void ConsumeStep::MaybeOverrideName(AttributeList& attributes, NamingContext* co
   if (attr == nullptr)
     return;
 
-  CompileStep::CompileAttributeEarly(library_, attr);
+  CompileStep::CompileAttributeEarly(compiler(), attr);
   const auto* arg = attr->GetArg(AttributeArg::kDefaultAnonymousName);
   if (arg == nullptr || !arg->value->IsResolved()) {
     return;
@@ -711,7 +711,7 @@ bool ConsumeStep::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
   }
 
   Decl* decl = RegisterDecl(
-      std::make_unique<T>(std::move(attributes), context->ToName(library_, layout->span()),
+      std::make_unique<T>(std::move(attributes), context->ToName(library(), layout->span()),
                           std::move(subtype_ctor), std::move(members), strictness));
   if (out_decl) {
     *out_decl = decl;
@@ -756,7 +756,7 @@ bool ConsumeStep::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
     resourceness = layout->modifiers->maybe_resourceness.value_or(types::Resourceness::kValue);
 
   Decl* decl = RegisterDecl(std::make_unique<T>(std::move(attributes),
-                                                context->ToName(library_, layout->span()),
+                                                context->ToName(library(), layout->span()),
                                                 std::move(members), strictness, resourceness));
   if (out_decl) {
     *out_decl = decl;
@@ -798,7 +798,7 @@ bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
     resourceness = layout->modifiers->maybe_resourceness.value_or(types::Resourceness::kValue);
 
   Decl* decl = RegisterDecl(std::make_unique<Struct>(std::move(attributes),
-                                                     context->ToName(library_, layout->span()),
+                                                     context->ToName(library(), layout->span()),
                                                      std::move(members), resourceness));
   if (out_decl) {
     *out_decl = decl;
@@ -914,7 +914,7 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
 
     if (out_type_ctor) {
       *out_type_ctor = std::make_unique<TypeConstructor>(
-          context->ToName(library_, raw_type_ctor->layout_ref->span()),
+          context->ToName(library(), raw_type_ctor->layout_ref->span()),
           std::make_unique<LayoutParameterList>(std::move(params), params_span),
           std::make_unique<TypeConstraints>(std::move(constraints), constraints_span),
           raw_type_ctor->span());
@@ -944,7 +944,7 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
 }
 
 void ConsumeStep::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
-  auto name = Name::CreateSourced(library_, type_decl->identifier->span());
+  auto name = Name::CreateSourced(library(), type_decl->identifier->span());
   auto& layout_ref = type_decl->type_ctor->layout_ref;
   // TODO(fxbug.dev/7807)
   if (layout_ref->kind == raw::LayoutReference::Kind::kNamed) {

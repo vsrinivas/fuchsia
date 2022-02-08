@@ -9,6 +9,7 @@
 
 #include "fidl/diagnostics.h"
 #include "fidl/flat/attribute_schema.h"
+#include "fidl/flat/type_resolver.h"
 #include "fidl/flat_ast.h"
 #include "fidl/names.h"
 #include "fidl/ordinals.h"
@@ -19,9 +20,9 @@ namespace fidl::flat {
 constexpr size_t kMaxTableOrdinals = 64;
 
 void CompileStep::RunImpl() {
-  CompileAttributeList(library_->attributes.get());
+  CompileAttributeList(library()->attributes.get());
 
-  for (auto& [name, decl] : library_->declarations_) {
+  for (auto& [name, decl] : library()->declarations) {
     CompileDecl(decl);
   }
 }
@@ -304,7 +305,7 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
            "Compiler bug: resolving identifier constant to non-const-able type!");
   }
 
-  auto decl = library_->LookupDeclByName(identifier_constant->name.memberless_key());
+  auto decl = library()->LookupDeclByName(identifier_constant->name.memberless_key());
   if (!decl)
     return false;
   CompileDecl(decl);
@@ -546,10 +547,10 @@ const Type* CompileStep::InferType(Constant* constant) {
         case raw::Literal::Kind::kString: {
           auto string_literal = static_cast<const raw::StringLiteral*>(literal);
           auto inferred_size = utils::string_literal_length(string_literal->span().data());
-          auto inferred_type = std::make_unique<StringType>(
-              Typespace::kUnboundedStringType.name, library_->typespace_->InternSize(inferred_size),
-              types::Nullability::kNonnullable);
-          return library_->typespace_->Intern(std::move(inferred_type));
+          auto inferred_type = std::make_unique<StringType>(Typespace::kUnboundedStringType.name,
+                                                            typespace()->InternSize(inferred_size),
+                                                            types::Nullability::kNonnullable);
+          return typespace()->Intern(std::move(inferred_type));
         }
         case raw::Literal::Kind::kNumeric:
           return &Typespace::kUntypedNumericType;
@@ -571,7 +572,7 @@ const Type* CompileStep::InferType(Constant* constant) {
   }
 }
 
-bool CompileStep::ResolveAsOptional(Constant* constant) const {
+bool CompileStep::ResolveAsOptional(Constant* constant) {
   assert(constant);
 
   if (constant->kind != Constant::Kind::kIdentifier)
@@ -582,7 +583,7 @@ bool CompileStep::ResolveAsOptional(Constant* constant) const {
   // Note that as we improve scoping rules, we would need to allow `fidl.optional`
   // to be the FQN for the `optional` constant.
   auto identifier_constant = static_cast<IdentifierConstant*>(constant);
-  auto decl = library_->LookupDeclByName(identifier_constant->name.memberless_key());
+  auto decl = library()->LookupDeclByName(identifier_constant->name.memberless_key());
   if (decl)
     return false;
 
@@ -632,9 +633,8 @@ void CompileStep::CompileAttribute(Attribute* attribute, bool early) {
     }
   }
 
-  const AttributeSchema& schema =
-      library_->all_libraries_->RetrieveAttributeSchema(reporter(), attribute,
-                                                        /* warn_on_typo = */ true);
+  const AttributeSchema& schema = all_libraries()->RetrieveAttributeSchema(attribute,
+                                                                           /*warn_on_typo=*/true);
   if (early) {
     assert(schema.CanCompileEarly() && "attribute is not allowed to be compiled early");
   }
@@ -643,8 +643,8 @@ void CompileStep::CompileAttribute(Attribute* attribute, bool early) {
 }
 
 // static
-void CompileStep::CompileAttributeEarly(Library* library, Attribute* attribute) {
-  CompileStep(library).CompileAttribute(attribute, /* early = */ true);
+void CompileStep::CompileAttributeEarly(Compiler* compiler, Attribute* attribute) {
+  CompileStep(compiler).CompileAttribute(attribute, /* early = */ true);
 }
 
 const Type* CompileStep::UnderlyingType(const Type* type) {
@@ -652,7 +652,7 @@ const Type* CompileStep::UnderlyingType(const Type* type) {
     return type;
   }
   auto identifier_type = static_cast<const IdentifierType*>(type);
-  Decl* decl = library_->LookupDeclByName(identifier_type->name);
+  Decl* decl = library()->LookupDeclByName(identifier_type->name);
   // This is only reachable via ResolveOrOperatorConstant, which is always
   // called from ResolveConstant only after resolving the left and right sides.
   // That process should force declaration of the constant, which should fail
@@ -930,7 +930,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
                                                                   auto Visitor) -> void {
     for (const auto& composed_protocol : protocol->composed_protocols) {
       auto name = composed_protocol.name;
-      auto decl = library_->LookupDeclByName(name);
+      auto decl = library()->LookupDeclByName(name);
       // TODO(fxbug.dev/7926): Special handling here should not be required, we
       // should first rely on creating the types representing composed
       // protocols.
@@ -997,7 +997,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
   for (const auto& composed_protocol : protocol_declaration->composed_protocols) {
     CompileAttributeList(composed_protocol.attributes.get());
     auto span = composed_protocol.name.span().value();
-    auto decl = library_->LookupDeclByName(composed_protocol.name);
+    auto decl = library()->LookupDeclByName(composed_protocol.name);
     if (!decl) {
       Fail(ErrUnknownType, span, composed_protocol.name);
       continue;
@@ -1022,13 +1022,13 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
       continue;
     }
     // TODO(fxbug.dev/77623): Remove.
-    auto library_name = library_->library_name_;
+    auto library_name = library()->name;
     if (library_name.size() == 2 && library_name[0] == "fuchsia" && library_name[1] == "io" &&
         selector.find("/") == selector.npos) {
       Fail(ErrFuchsiaIoExplicitOrdinals, method.name);
       continue;
     }
-    method.generated_ordinal64 = std::make_unique<raw::Ordinal64>(library_->method_hasher_(
+    method.generated_ordinal64 = std::make_unique<raw::Ordinal64>(method_hasher()(
         library_name, protocol_declaration->name.decl_name(), selector, *method.identifier));
   }
 
@@ -1087,7 +1087,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
     if (method.maybe_request != nullptr) {
       const Name name = method.maybe_request->name;
       CompileTypeConstructor(method.maybe_request.get());
-      Decl* decl = library_->LookupDeclByName(name);
+      Decl* decl = library()->LookupDeclByName(name);
       if (!method.maybe_request->type || !decl) {
         Fail(ErrUnknownType, name.span().value(), name);
         continue;
@@ -1099,7 +1099,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
     if (method.maybe_response != nullptr) {
       const Name name = method.maybe_response->name;
       CompileTypeConstructor(method.maybe_response.get());
-      Decl* decl = library_->LookupDeclByName(name);
+      Decl* decl = library()->LookupDeclByName(name);
       if (!method.maybe_response->type || !decl) {
         Fail(ErrUnknownType, name.span().value(), name);
         continue;
@@ -1333,9 +1333,10 @@ void CompileStep::CompileTypeConstructor(TypeConstructor* type_ctor) {
   if (type_ctor->type != nullptr) {
     return;
   }
-  if (!library_->typespace_->Create(LibraryMediator(library_, this, reporter()), type_ctor->name,
-                                    type_ctor->parameters, type_ctor->constraints, &type_ctor->type,
-                                    &type_ctor->resolved_params, type_ctor->span)) {
+  TypeResolver resolver(this);
+  if (!typespace()->Create(&resolver, type_ctor->name, type_ctor->parameters,
+                           type_ctor->constraints, &type_ctor->type, &type_ctor->resolved_params,
+                           type_ctor->span)) {
     return;
   }
 
@@ -1379,7 +1380,7 @@ bool CompileStep::ResolveHandleRightsConstant(Resource* resource, Constant* cons
     return false;
   }
 
-  Decl* rights_decl = library_->LookupDeclByName(rights_property->type_ctor->name);
+  Decl* rights_decl = library()->LookupDeclByName(rights_property->type_ctor->name);
   if (!rights_decl || rights_decl->kind != Decl::Kind::kBits) {
     return false;
   }
@@ -1417,7 +1418,7 @@ bool CompileStep::ResolveHandleSubtypeIdentifier(Resource* resource, Constant* c
     return false;
   }
 
-  Decl* subtype_decl = library_->LookupDeclByName(subtype_property->type_ctor->name);
+  Decl* subtype_decl = library()->LookupDeclByName(subtype_property->type_ctor->name);
   if (!subtype_decl || subtype_decl->kind != Decl::Kind::kEnum) {
     return false;
   }
@@ -1449,7 +1450,7 @@ bool CompileStep::ResolveSizeBound(Constant* size_constant, const Size** out_siz
   if (!ResolveConstant(size_constant, &Typespace::kUint32Type)) {
     if (size_constant->kind == Constant::Kind::kIdentifier) {
       auto name = static_cast<IdentifierConstant*>(size_constant)->name;
-      if (name.library() == library_ && name.decl_name() == "MAX" && !name.member_name()) {
+      if (name.library() == library() && name.decl_name() == "MAX" && !name.member_name()) {
         size_constant->ResolveTo(std::make_unique<Size>(Size::Max()), &Typespace::kUint32Type);
       }
     }

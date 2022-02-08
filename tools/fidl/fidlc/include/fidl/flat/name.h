@@ -18,7 +18,7 @@
 namespace fidl::flat {
 
 class Name;
-class Library;
+struct Library;
 
 // A NamingContext is a list of names, from least specific to most specific, which
 // identifies the use of a layout. For example, for the FIDL:

@@ -61,8 +61,8 @@ TEST(DirectDependenciesTests, GoodDirectDepsSimple) {
     auto deps = lib.library()->DirectAndComposedDependencies();
     ASSERT_EQ(deps.size(), 2);
     auto iter = deps.cbegin();
-    EXPECT_EQ(fidl::NameLibrary((*iter++)->name()), "dep1");
-    EXPECT_EQ(fidl::NameLibrary((*iter++)->name()), "dep2");
+    EXPECT_EQ(fidl::NameLibrary((*iter++)->name), "dep1");
+    EXPECT_EQ(fidl::NameLibrary((*iter++)->name), "dep2");
   }
 }
 
@@ -105,7 +105,7 @@ protocol CapturesDependencyThroughCompose {
   auto deps = lib.library()->DirectAndComposedDependencies();
   ASSERT_EQ(deps.size(), 1);
   auto iter = deps.cbegin();
-  EXPECT_EQ(fidl::NameLibrary((*iter++)->name()), "dep1");
+  EXPECT_EQ(fidl::NameLibrary((*iter++)->name), "dep1");
 }
 
 }  // namespace
