@@ -32,7 +32,6 @@ fuchsia_component_manifest("manifest") {
 
 fuchsia_structured_config_rust_lib("config_lib") {
   testonly = true
-  with_inspect = true
   name = "receiver_config"
   cm_target = ":manifest"
 }

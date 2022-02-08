@@ -112,3 +112,90 @@ cpp_elf_config_lib::Config cpp_elf_config_lib::Config::from_args() noexcept {
 
   return c;
 }
+void cpp_elf_config_lib::Config::record_to_inspect(
+    sys::ComponentInspector* inspector) {
+  inspect::Node inspect_config = inspector->root().CreateChild("config");
+  inspect_config.CreateBool("my_flag", this->my_flag, inspector);
+  inspect_config.CreateInt("my_int16", this->my_int16, inspector);
+  inspect_config.CreateInt("my_int32", this->my_int32, inspector);
+  inspect_config.CreateInt("my_int64", this->my_int64, inspector);
+  inspect_config.CreateInt("my_int8", this->my_int8, inspector);
+  inspect_config.CreateString("my_string", this->my_string, inspector);
+  inspect_config.CreateUint("my_uint16", this->my_uint16, inspector);
+  inspect_config.CreateUint("my_uint32", this->my_uint32, inspector);
+  inspect_config.CreateUint("my_uint64", this->my_uint64, inspector);
+  inspect_config.CreateUint("my_uint8", this->my_uint8, inspector);
+
+  auto my_vector_of_flag = inspect_config.CreateUintArray(
+      "my_vector_of_flag", this->my_vector_of_flag.size());
+  for (size_t i = 0; i < this->my_vector_of_flag.size(); i++) {
+    my_vector_of_flag.Set(i, this->my_vector_of_flag[i]);
+  }
+  inspector->emplace(std::move(my_vector_of_flag));
+
+  auto my_vector_of_int16 = inspect_config.CreateIntArray(
+      "my_vector_of_int16", this->my_vector_of_int16.size());
+  for (size_t i = 0; i < this->my_vector_of_int16.size(); i++) {
+    my_vector_of_int16.Set(i, this->my_vector_of_int16[i]);
+  }
+  inspector->emplace(std::move(my_vector_of_int16));
+
+  auto my_vector_of_int32 = inspect_config.CreateIntArray(
+      "my_vector_of_int32", this->my_vector_of_int32.size());
+  for (size_t i = 0; i < this->my_vector_of_int32.size(); i++) {
+    my_vector_of_int32.Set(i, this->my_vector_of_int32[i]);
+  }
+  inspector->emplace(std::move(my_vector_of_int32));
+
+  auto my_vector_of_int64 = inspect_config.CreateIntArray(
+      "my_vector_of_int64", this->my_vector_of_int64.size());
+  for (size_t i = 0; i < this->my_vector_of_int64.size(); i++) {
+    my_vector_of_int64.Set(i, this->my_vector_of_int64[i]);
+  }
+  inspector->emplace(std::move(my_vector_of_int64));
+
+  auto my_vector_of_int8 = inspect_config.CreateIntArray(
+      "my_vector_of_int8", this->my_vector_of_int8.size());
+  for (size_t i = 0; i < this->my_vector_of_int8.size(); i++) {
+    my_vector_of_int8.Set(i, this->my_vector_of_int8[i]);
+  }
+  inspector->emplace(std::move(my_vector_of_int8));
+
+  auto my_vector_of_string = inspect_config.CreateStringArray(
+      "my_vector_of_string", this->my_vector_of_string.size());
+  for (size_t i = 0; i < this->my_vector_of_string.size(); i++) {
+    auto ref = std::string_view(this->my_vector_of_string[i].data());
+    my_vector_of_string.Set(i, ref);
+  }
+  inspector->emplace(std::move(my_vector_of_string));
+
+  auto my_vector_of_uint16 = inspect_config.CreateUintArray(
+      "my_vector_of_uint16", this->my_vector_of_uint16.size());
+  for (size_t i = 0; i < this->my_vector_of_uint16.size(); i++) {
+    my_vector_of_uint16.Set(i, this->my_vector_of_uint16[i]);
+  }
+  inspector->emplace(std::move(my_vector_of_uint16));
+
+  auto my_vector_of_uint32 = inspect_config.CreateUintArray(
+      "my_vector_of_uint32", this->my_vector_of_uint32.size());
+  for (size_t i = 0; i < this->my_vector_of_uint32.size(); i++) {
+    my_vector_of_uint32.Set(i, this->my_vector_of_uint32[i]);
+  }
+  inspector->emplace(std::move(my_vector_of_uint32));
+
+  auto my_vector_of_uint64 = inspect_config.CreateUintArray(
+      "my_vector_of_uint64", this->my_vector_of_uint64.size());
+  for (size_t i = 0; i < this->my_vector_of_uint64.size(); i++) {
+    my_vector_of_uint64.Set(i, this->my_vector_of_uint64[i]);
+  }
+  inspector->emplace(std::move(my_vector_of_uint64));
+
+  auto my_vector_of_uint8 = inspect_config.CreateUintArray(
+      "my_vector_of_uint8", this->my_vector_of_uint8.size());
+  for (size_t i = 0; i < this->my_vector_of_uint8.size(); i++) {
+    my_vector_of_uint8.Set(i, this->my_vector_of_uint8[i]);
+  }
+  inspector->emplace(std::move(my_vector_of_uint8));
+
+  inspector->emplace(std::move(inspect_config));
+}

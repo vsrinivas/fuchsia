@@ -13,7 +13,6 @@ use syn::parse_str;
 pub fn create_rust_wrapper(
     config_decl: &ConfigDecl,
     fidl_library_name: String,
-    with_inspect: bool,
 ) -> Result<String, SourceGenError> {
     let fidl_library_name =
         format!("fidl_{}", fidl_library_name.replace('.', "_").to_ascii_lowercase());
@@ -58,28 +57,10 @@ pub fn create_rust_wrapper(
         inspect_uses.push(quote!(ArrayProperty))
     }
 
-    let (inspect_uses, record_to_inspect) = if with_inspect {
-        (
-            quote! {
-                use fuchsia_inspect::{#(#inspect_uses),*};
-            },
-            quote! {
-                pub fn record_to_inspect(self, root_node: &Node)->Self{
-                    root_node.record_child("config", |inspector_node| {
-                        #(#record_to_inspect_ops)*
-                    });
-                    self
-                }
-            },
-        )
-    } else {
-        (quote!(), quote!())
-    };
-
     let stream = quote! {
         use #fidl_library_name::Config as FidlConfig;
         use fidl::encoding::decode_persistent;
-        #inspect_uses
+        use fuchsia_inspect::{#(#inspect_uses),*};
         use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
         use fuchsia_zircon as zx;
 
@@ -113,7 +94,12 @@ pub fn create_rust_wrapper(
                 }
             }
 
-            #record_to_inspect
+            pub fn record_to_inspect(self, root_node: &Node)->Self{
+                root_node.record_child("config", |inspector_node| {
+                    #(#record_to_inspect_ops)*
+                });
+                self
+            }
         }
     };
 

@@ -186,7 +186,7 @@ server_mode_ bool;
         assert_eq!(observed_fidl_src, expected_fidl_src);
 
         let actual_rust_src =
-            rust::create_rust_wrapper(&decl, "cf.sc.internal".to_string(), true).unwrap();
+            rust::create_rust_wrapper(&decl, "cf.sc.internal".to_string()).unwrap();
 
         let expected_rust_src = quote! {
             use fidl_cf_sc_internal::Config as FidlConfig;

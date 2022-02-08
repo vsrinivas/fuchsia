@@ -14,7 +14,6 @@ pub fn create_cpp_elf_wrapper(
     config_decl: &ConfigDecl,
     cpp_namespace: String,
     fidl_library_name: String,
-    with_inspect: bool,
 ) -> Result<CppSource, SourceGenError> {
     let cpp_namespace = cpp_namespace.replace('.', "_").replace('-', "_").to_ascii_lowercase();
     let header_guard = fidl_library_name.replace('.', "_").to_ascii_uppercase();
@@ -38,24 +37,6 @@ pub fn create_cpp_elf_wrapper(
 
     let declarations = declarations.join("\n");
     let conversions = conversions.join(",\n");
-    let (record_to_inspect, record_to_inspect_h, inspect_includes) = if with_inspect {
-        (
-            format!(
-                r#"
-void {cpp_namespace}::Config::record_to_inspect(sys::ComponentInspector  * inspector) {{
-    inspect::Node inspect_config = inspector->root().CreateChild("config");
-    {}
-    inspector->emplace(std::move(inspect_config));
-}}
-        "#,
-                record_to_inspect_ops.join("\n")
-            ),
-            "void record_to_inspect(sys::ComponentInspector * inspector);".to_string(),
-            "#include <lib/sys/inspect/cpp/component.h>".to_string(),
-        )
-    } else {
-        ("".to_string(), "".to_string(), "".to_string())
-    };
 
     // TODO(http://fxbug.dev/93026): Use a templating library instead of the format macro.
     let h_source = format!(
@@ -66,7 +47,7 @@ void {cpp_namespace}::Config::record_to_inspect(sys::ComponentInspector  * inspe
 #include <string>
 #include <vector>
 
-{inspect_includes}
+#include <lib/sys/inspect/cpp/component.h>
 
 namespace {cpp_namespace} {{
 struct Config {{
@@ -74,7 +55,7 @@ struct Config {{
 
 static Config from_args() noexcept;
 
-{record_to_inspect_h}
+void record_to_inspect(sys::ComponentInspector * inspector);
 }};
 }}
 
@@ -172,8 +153,13 @@ std::vector<std::string> from_vector_string_view(fidl::VectorView<fidl::StringVi
 
     return c;
 }}
-{record_to_inspect}
-"#
+void {cpp_namespace}::Config::record_to_inspect(sys::ComponentInspector  * inspector) {{
+    inspect::Node inspect_config = inspector->root().CreateChild("config");
+    {}
+    inspector->emplace(std::move(inspect_config));
+}}
+"#,
+        record_to_inspect_ops.join("\n")
     );
     return Ok(CppSource { cc_source, h_source });
 }
