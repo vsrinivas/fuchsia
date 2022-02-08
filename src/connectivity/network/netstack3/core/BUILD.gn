@@ -108,10 +108,6 @@ config("fuzz") {
     "--cfg=fuzz",
     "--cfg=test",
   ]
-  # Trace logging is turned off by default so that the fuzzer can run faster,
-  # but can be enabled (for example, when reproducing a failure) by uncommenting
-  # the following line:
-  # rustflags += ["--cfg=fuzz_logging"]
 }
 
 rustc_fuzzer("fuzz-single-device") {
@@ -123,11 +119,20 @@ rustc_fuzzer("fuzz-single-device") {
            "//src/connectivity/lib/net-types",
            "//src/connectivity/lib/fuzz-util",
            "//src/lib/network/packet",
-           "//src/lib/syslog/rust:syslog",
            "//third_party/rust_crates:arbitrary",
            "//third_party/rust_crates:log",
            "//third_party/rust_crates:lazy_static",
          ]
+
+  features = [
+    # Logging is turned off by default so that the fuzzer can run faster. It can
+    # be enabled to be included in the output the fuzzer prints (only on
+    # failure) by enabling any of the following features. Enabling multiple is
+    # equivalent to enabling the most verbose.
+    #   "log_trace"
+    #   "log_debug"
+    #   "log_info"
+  ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
   configs -= [ "//build/config/rust:no_features" ]

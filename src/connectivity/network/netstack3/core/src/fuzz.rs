@@ -24,25 +24,18 @@ use packet_formats::{
     udp::UdpPacketBuilder,
 };
 
-fn initialize_logging() {
-    #[cfg(fuzz_logging)]
-    {
-        static LOGGER_ONCE: core::sync::atomic::AtomicBool =
-            core::sync::atomic::AtomicBool::new(true);
-
-        // This function gets called on every fuzz iteration, but we only need to set up logging the
-        // first time.
-        if LOGGER_ONCE.swap(false, core::sync::atomic::Ordering::AcqRel) {
-            fuchsia_syslog::init().expect("couldn't initialize logging");
-            log::info!("trace logs enabled");
-            fuchsia_syslog::set_severity(fuchsia_syslog::levels::TRACE);
-        };
-    }
-}
-
 mod print_on_panic {
     use lazy_static::lazy_static;
-    use std::sync::Mutex;
+    use log::{Log, Metadata, Record};
+    use std::{
+        fmt::{self, Display, Formatter},
+        sync::Mutex,
+    };
+
+    lazy_static! {
+        pub static ref PRINT_ON_PANIC: PrintOnPanicLog = PrintOnPanicLog::new();
+        static ref PRINT_ON_PANIC_LOGGER: PrintOnPanicLogger = PrintOnPanicLogger;
+    }
 
     /// A simple log whose contents get printed to stdout on panic.
     ///
@@ -58,13 +51,8 @@ mod print_on_panic {
             std::panic::set_hook(Box::new(move |panic_info| {
                 let Self(mutex): &PrintOnPanicLog = &PRINT_ON_PANIC;
                 let dispatched = std::mem::take(&mut *mutex.lock().unwrap());
-                if dispatched.is_empty() {
-                    println!("Processed: [none]");
-                } else {
-                    println!("Processed {} items", dispatched.len());
-                    for o in dispatched.into_iter() {
-                        println!("{}", o);
-                    }
+                for o in dispatched.into_iter() {
+                    println!("{}", o);
                 }
 
                 // Resume panicking normally.
@@ -74,7 +62,7 @@ mod print_on_panic {
         }
 
         /// Adds an entry to the log.
-        pub fn record<T: std::fmt::Display>(&self, t: &T) {
+        fn record<T: Display>(&self, t: &T) {
             let Self(mutex) = self;
             mutex.lock().unwrap().push(t.to_string());
         }
@@ -86,8 +74,59 @@ mod print_on_panic {
         }
     }
 
-    lazy_static! {
-        pub static ref PRINT_ON_PANIC: PrintOnPanicLog = PrintOnPanicLog::new();
+    struct PrintOnPanicLogger;
+
+    impl Log for PrintOnPanicLogger {
+        fn enabled(&self, _metadata: &Metadata<'_>) -> bool {
+            true
+        }
+
+        fn log(&self, record: &Record<'_>) {
+            struct DisplayRecord<'a, 'b>(&'a Record<'b>);
+            impl<'a, 'b> Display for DisplayRecord<'a, 'b> {
+                fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+                    let Self(record) = self;
+                    write!(
+                        f,
+                        "[{}][{}] {}",
+                        record.module_path().unwrap_or("_unknown_"),
+                        record.level(),
+                        record.args()
+                    )
+                }
+            }
+            PRINT_ON_PANIC.record(&DisplayRecord(record));
+        }
+
+        fn flush(&self) {}
+    }
+
+    /// Initializes the [`log`] crate so that all logs at or above the given
+    /// severity level get written to [`PRINT_ON_PANIC`].
+    ///
+    /// When
+    pub fn initialize_logging() {
+        #[cfg(any(feature = "log_trace", feature = "log_debug", feature = "log_info"))]
+        {
+            const MAX_LOG_LEVEL: log::LevelFilter = if cfg!(feature = "log_trace") {
+                log::LevelFilter::Trace
+            } else if cfg!(feature = "log_debug") {
+                log::LevelFilter::Debug
+            } else {
+                log::LevelFilter::Info
+            };
+            static LOGGER_ONCE: core::sync::atomic::AtomicBool =
+                core::sync::atomic::AtomicBool::new(true);
+
+            // This function gets called on every fuzz iteration, but we only need to set up logging the
+            // first time.
+            if LOGGER_ONCE.swap(false, core::sync::atomic::Ordering::AcqRel) {
+                let logger: &PrintOnPanicLogger = &PRINT_ON_PANIC_LOGGER;
+                log::set_logger(logger).expect("logging setup failed");
+                println!("Saving {:?} logs in case of panic", MAX_LOG_LEVEL);
+                log::set_max_level(MAX_LOG_LEVEL);
+            };
+        }
     }
 }
 
@@ -203,15 +242,15 @@ pub(crate) struct FuzzInput {
 impl std::fmt::Display for FuzzAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FuzzAction::ReceiveFrame(ArbitraryFrame { frame_type, buf, description }) => f
-                .write_fmt(format_args!(
-                    "Send {:?} frame with {} total bytes: {}",
-                    frame_type,
-                    buf.len(),
-                    description
-                )),
+            FuzzAction::ReceiveFrame(ArbitraryFrame { frame_type, buf, description }) => write!(
+                f,
+                "Send {:?} frame with {} total bytes: {}",
+                frame_type,
+                buf.len(),
+                description
+            ),
             FuzzAction::AdvanceTime(SmallDuration(duration)) => {
-                f.write_fmt(format_args!("Advance time by {:?}", duration))
+                write!(f, "Advance time by {:?}", duration)
             }
         }
     }
@@ -231,7 +270,15 @@ fn arbitrary_packet<B: NestedPacketBuilder + std::fmt::Debug>(
         constraints.max_body_len(),
     );
 
-    let description = format!("{:?} with body length {}", builder, body_len);
+    // Generate a description that is used for logging. If logging is disabled,
+    // the value here will never be printed. `String::new()` does not allocate,
+    // so use that to save CPU and memory when the value would otherwise be
+    // thrown away.
+    let description = if log::log_enabled!(log::Level::Info) {
+        format!("{:?} with body length {}", builder, body_len)
+    } else {
+        String::new()
+    };
 
     let mut buffer = vec![0; body_len + constraints.header_len() + constraints.footer_len()];
     u.fill_buffer(&mut buffer[constraints.header_len()..(constraints.header_len() + body_len)])?;
@@ -262,7 +309,7 @@ fn dispatch(ctx: &mut Ctx<DummyEventDispatcher>, device_id: DeviceId, action: Fu
 
 #[::fuzz::fuzz]
 pub(crate) fn single_device_arbitrary_packets(input: FuzzInput) {
-    initialize_logging();
+    print_on_panic::initialize_logging();
 
     let mut ctx = Ctx::with_default_state(DummyEventDispatcher::default());
     let FuzzInput { actions } = input;
@@ -271,8 +318,9 @@ pub(crate) fn single_device_arbitrary_packets(input: FuzzInput) {
         .add_ethernet_device(UnicastAddr::new(net_mac!("10:20:30:40:50:60")).unwrap(), 1500);
     crate::initialize_device(&mut ctx, device_id);
 
+    log::info!("Processing {} actions", actions.len());
     for action in actions {
-        print_on_panic::PRINT_ON_PANIC.record(&action);
+        log::info!("{}", action);
         dispatch(&mut ctx, device_id, action);
     }
 
