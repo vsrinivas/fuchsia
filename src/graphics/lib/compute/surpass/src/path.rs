@@ -63,26 +63,26 @@ fn eval_cubic(t: f32, points: &[WeightedPoint; 4]) -> WeightedPoint {
         t,
         lerp(
             t,
-            lerp(t, points[0].point.x * points[0].weight, points[1].point.x * points[1].weight),
-            lerp(t, points[1].point.x * points[1].weight, points[2].point.x * points[2].weight),
+            lerp(t, points[0].point.x, points[1].point.x),
+            lerp(t, points[1].point.x, points[2].point.x),
         ),
         lerp(
             t,
-            lerp(t, points[1].point.x * points[1].weight, points[2].point.x * points[2].weight),
-            lerp(t, points[2].point.x * points[2].weight, points[3].point.x * points[3].weight),
+            lerp(t, points[1].point.x, points[2].point.x),
+            lerp(t, points[2].point.x, points[3].point.x),
         ),
     );
     let y = lerp(
         t,
         lerp(
             t,
-            lerp(t, points[0].point.y * points[0].weight, points[1].point.y * points[1].weight),
-            lerp(t, points[1].point.y * points[1].weight, points[2].point.y * points[2].weight),
+            lerp(t, points[0].point.y, points[1].point.y),
+            lerp(t, points[1].point.y, points[2].point.y),
         ),
         lerp(
             t,
-            lerp(t, points[1].point.y * points[1].weight, points[2].point.y * points[2].weight),
-            lerp(t, points[2].point.y * points[2].weight, points[3].point.y * points[3].weight),
+            lerp(t, points[1].point.y, points[2].point.y),
+            lerp(t, points[2].point.y, points[3].point.y),
         ),
     );
     let weight = lerp(
@@ -297,7 +297,7 @@ impl Primitives {
         const PIXEL_ACCURACY_RECIP: f32 = 1.0 / MAX_ERROR;
 
         let p0 = points[0].applied();
-        let p1 = points[1].point;
+        let p1 = points[1].applied();
         let p2 = points[2].applied();
 
         let a = p1 - p0;
@@ -374,8 +374,8 @@ impl Primitives {
         const MAX_CUBIC_ERROR_SQUARED: f32 = (36.0 * 36.0 / 3.0) * MAX_ERROR * MAX_ERROR;
 
         let p0 = points[0].applied();
-        let p1 = points[1].point;
-        let p2 = points[2].point;
+        let p1 = points[1].applied();
+        let p2 = points[2].applied();
 
         let dx = p2.x.mul_add(3.0, -p0.x) - p1.x.mul_add(3.0, -p1.x);
         let dy = p2.y.mul_add(3.0, -p0.y) - p1.y.mul_add(3.0, -p1.y);
@@ -469,16 +469,8 @@ impl Primitives {
         );
         let w_recip = weight.recip();
 
-        let x = lerp(
-            t,
-            lerp(t, self.x[i0] * self.weight[i0], self.x[i1] * self.weight[i1]),
-            lerp(t, self.x[i1] * self.weight[i1], self.x[i2] * self.weight[i2]),
-        ) * w_recip;
-        let y = lerp(
-            t,
-            lerp(t, self.y[i0] * self.weight[i0], self.y[i1] * self.weight[i1]),
-            lerp(t, self.y[i1] * self.weight[i1], self.y[i2] * self.weight[i2]),
-        ) * w_recip;
+        let x = lerp(t, lerp(t, self.x[i0], self.x[i1]), lerp(t, self.x[i1], self.x[i2])) * w_recip;
+        let y = lerp(t, lerp(t, self.y[i0], self.y[i1]), lerp(t, self.y[i1], self.y[i2])) * w_recip;
 
         Point::new(x, y)
     }
@@ -871,8 +863,8 @@ impl PathBuilder {
         {
             let mut inner = self.inner.borrow_mut();
 
-            inner.x.push(p1.x);
-            inner.y.push(p1.y);
+            inner.x.push(p1.x * weight);
+            inner.y.push(p1.y * weight);
             inner.weight.push(weight);
 
             inner.x.push(p2.x);
@@ -897,12 +889,12 @@ impl PathBuilder {
         {
             let mut inner = self.inner.borrow_mut();
 
-            inner.x.push(p1.x);
-            inner.y.push(p1.y);
+            inner.x.push(p1.x * w1);
+            inner.y.push(p1.y * w1);
             inner.weight.push(w1);
 
-            inner.x.push(p2.x);
-            inner.y.push(p2.y);
+            inner.x.push(p2.x * w2);
+            inner.y.push(p2.y * w2);
             inner.weight.push(w2);
 
             inner.x.push(p3.x);
@@ -1100,10 +1092,11 @@ mod tests {
     #[test]
     fn rat_quad() {
         let mut primitives = Primitives::default();
+        let weight = 10.0;
 
         primitives.push_quad([
             WeightedPoint { point: Point::new(0.0, 0.0), weight: 1.0 },
-            WeightedPoint { point: Point::new(1.0, 2.0), weight: 10.0 },
+            WeightedPoint { point: Point::new(1.0 * weight, 2.0 * weight), weight },
             WeightedPoint { point: Point::new(2.0, 0.0), weight: 1.0 },
         ]);
 
@@ -1113,6 +1106,8 @@ mod tests {
 
         let points: Vec<_> =
             lines.x.iter().zip(lines.y.iter()).map(|(&x, &y)| Point::new(x, y)).collect();
+
+        assert!((points[2].x - 1.0).abs() <= 0.001);
 
         let distances: Vec<_> =
             points.windows(2).map(|window| (window[1] - window[0]).len()).collect();
@@ -1180,11 +1175,12 @@ mod tests {
     #[test]
     fn rat_cubic_high() {
         let mut primitives = Primitives::default();
+        let weight = 10.0;
 
         primitives.push_cubic([
             WeightedPoint { point: Point::new(0.0, 0.0), weight: 1.0 },
-            WeightedPoint { point: Point::new(5.0, 3.0), weight: 10.0 },
-            WeightedPoint { point: Point::new(-1.0, 3.0), weight: 10.0 },
+            WeightedPoint { point: Point::new(5.0 * weight, 3.0 * weight), weight },
+            WeightedPoint { point: Point::new(-1.0 * weight, 3.0 * weight), weight },
             WeightedPoint { point: Point::new(4.0, 0.0), weight: 1.0 },
         ]);
 
@@ -1196,11 +1192,12 @@ mod tests {
     #[test]
     fn rat_cubic_low() {
         let mut primitives = Primitives::default();
+        let weight = 0.5;
 
         primitives.push_cubic([
             WeightedPoint { point: Point::new(0.0, 0.0), weight: 1.0 },
-            WeightedPoint { point: Point::new(5.0, 3.0), weight: 0.5 },
-            WeightedPoint { point: Point::new(-1.0, 3.0), weight: 0.5 },
+            WeightedPoint { point: Point::new(5.0 * weight, 3.0 * weight), weight },
+            WeightedPoint { point: Point::new(-1.0 * weight, 3.0 * weight), weight },
             WeightedPoint { point: Point::new(4.0, 0.0), weight: 1.0 },
         ]);
 
@@ -1324,28 +1321,29 @@ mod tests {
     fn circle() {
         let mut primitives = Primitives::default();
         let radius = 50.0;
+        let weight = 2.0f32.sqrt() / 2.0;
 
         primitives.push_quad([
             WeightedPoint { point: Point::new(radius, 0.0), weight: 1.0 },
-            WeightedPoint { point: Point::new(0.0, 0.0), weight: 2.0f32.sqrt() * 0.5 },
+            WeightedPoint { point: Point::new(0.0, 0.0), weight },
             WeightedPoint { point: Point::new(0.0, radius), weight: 1.0 },
         ]);
         primitives.push_quad([
             WeightedPoint { point: Point::new(0.0, radius), weight: 1.0 },
-            WeightedPoint { point: Point::new(0.0, 2.0 * radius), weight: 2.0f32.sqrt() * 0.5 },
+            WeightedPoint { point: Point::new(0.0, 2.0 * radius * weight), weight },
             WeightedPoint { point: Point::new(radius, 2.0 * radius), weight: 1.0 },
         ]);
         primitives.push_quad([
             WeightedPoint { point: Point::new(radius, 2.0 * radius), weight: 1.0 },
             WeightedPoint {
-                point: Point::new(2.0 * radius, 2.0 * radius),
-                weight: 2.0f32.sqrt() * 0.5,
+                point: Point::new(2.0 * radius * weight, 2.0 * radius * weight),
+                weight,
             },
             WeightedPoint { point: Point::new(2.0 * radius, radius), weight: 1.0 },
         ]);
         primitives.push_quad([
             WeightedPoint { point: Point::new(2.0 * radius, radius), weight: 1.0 },
-            WeightedPoint { point: Point::new(2.0 * radius, 0.0), weight: 2.0f32.sqrt() * 0.5 },
+            WeightedPoint { point: Point::new(2.0 * radius * weight, 0.0), weight },
             WeightedPoint { point: Point::new(radius, 0.0), weight: 1.0 },
         ]);
 
@@ -1392,10 +1390,12 @@ mod tests {
         assert_eq!(layer_ids[layer_ids.len() - 1], None);
 
         for (&x, &y) in x.iter().zip(y.iter()) {
-            assert!((Point::new(x, y).len() - 10.0).abs() <= 0.1);
+            assert!((Point::new(x, y).len() - radius).abs() <= 0.1);
         }
 
-        let translated_path = path.transform(&[1.0, 0.0, 5.0, 0.0, 1.0, 20.0, 0.0, 0.0, 1.0]);
+        let dx = 5.0;
+        let dy = 20.0;
+        let translated_path = path.transform(&[1.0, 0.0, dx, 0.0, 1.0, dy, 0.0, 0.0, 1.0]);
 
         x.clear();
         y.clear();
@@ -1403,10 +1403,11 @@ mod tests {
         translated_path.push_lines_to(&mut x, &mut y, 0, &mut layer_ids);
 
         for (&x, &y) in x.iter().zip(y.iter()) {
-            assert!((Point::new(x - 5.0, y - 20.0).len() - 10.0).abs() <= 0.1);
+            assert!((Point::new(x - dx, y - dy).len() - radius).abs() <= 0.1);
         }
 
-        let scaled_path = path.transform(&[2.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 1.0]);
+        let s = 2.0;
+        let scaled_path = path.transform(&[s, 0.0, 0.0, 0.0, s, 0.0, 0.0, 0.0, 1.0]);
 
         x.clear();
         y.clear();
@@ -1414,11 +1415,69 @@ mod tests {
         scaled_path.push_lines_to(&mut x, &mut y, 0, &mut layer_ids);
 
         for (&x, &y) in x.iter().zip(y.iter()) {
-            assert!((Point::new(x, y).len() - 20.0).abs() <= 0.1);
+            assert!((Point::new(x, y).len() - s * radius).abs() <= 0.1);
         }
 
         let scaled_len = x.len();
 
         assert!(scaled_len > orig_len);
+    }
+
+    #[test]
+    fn perspective_transform_path() {
+        let weight = 2.0f32.sqrt() / 2.0;
+        let radius = 10.0;
+        let translation = 1000.0;
+
+        let mut builder = PathBuilder::new();
+
+        builder.move_to(Point::new(radius + translation, 0.0));
+        builder.rat_quad_to(
+            Point::new(radius + translation, -radius),
+            Point::new(translation, -radius),
+            weight,
+        );
+        builder.rat_quad_to(
+            Point::new(-radius + translation, -radius),
+            Point::new(-radius + translation, 0.0),
+            weight,
+        );
+        builder.rat_quad_to(
+            Point::new(-radius + translation, radius),
+            Point::new(translation, radius),
+            weight,
+        );
+        builder.rat_quad_to(
+            Point::new(radius + translation, radius),
+            Point::new(radius + translation, 0.0),
+            weight,
+        );
+
+        let path = builder.build().transform(&[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.001, 0.0, 1.0]);
+
+        let mut x = Vec::new();
+        let mut y = Vec::new();
+        let mut layer_ids = Vec::new();
+
+        path.push_lines_to(&mut x, &mut y, 1, &mut layer_ids);
+
+        let mut points: Vec<_> = x.iter().zip(y.iter()).map(|(&x, &y)| Point::new(x, y)).collect();
+        points.pop(); // Remove duplicate point.
+
+        let half_len = points.len() / 2;
+
+        let min = (0..half_len)
+            .into_iter()
+            .map(|i| (points[i] - points[(i + half_len) % points.len()]).len())
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
+        let max = (0..half_len)
+            .into_iter()
+            .map(|i| (points[i] - points[(i + half_len) % points.len()]).len())
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap();
+
+        assert!((min - radius / 2.0).abs() <= 0.2);
+        assert!((max - radius).abs() <= 0.2);
     }
 }
