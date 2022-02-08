@@ -13,7 +13,10 @@ config("include") {
 source_set("lib") {
   sources = [ "fastboot.cc" ]
   public_configs = [ ":include" ]
-  public_deps = [ "//zircon/system/ulib/zxc" ]
+  public_deps = [
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zxc",
+  ]
   deps = [
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",

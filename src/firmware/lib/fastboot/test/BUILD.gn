@@ -15,6 +15,7 @@ test("fastboot-test") {
   include_dirs = [ "../include" ]
   deps = [
     "..:lib",
+    "//src/lib/fxl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

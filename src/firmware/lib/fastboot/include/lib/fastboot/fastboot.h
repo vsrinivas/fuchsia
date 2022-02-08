@@ -5,6 +5,7 @@
 #ifndef SRC_FIRMWARE_LIB_FASTBOOT_INCLUDE_LIB_FASTBOOT_FASTBOOT_H_
 #define SRC_FIRMWARE_LIB_FASTBOOT_INCLUDE_LIB_FASTBOOT_FASTBOOT_H_
 
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/status.h>
 #include <stddef.h>
 #include <zircon/status.h>
@@ -71,9 +72,14 @@ class __EXPORT Fastboot {
 
   State state_ = State::kCommand;
   size_t max_download_size_;
+  size_t remaining_download_ = 0;
+  fzl::OwnedVmoMapper download_vmo_mapper_;
 
   zx::status<> GetVar(const std::string &command, Transport *transport);
   zx::status<std::string> GetVarMaxDownloadSize(const std::vector<std::string_view> &, Transport *);
+  zx::status<> Download(const std::string &command, Transport *sender);
+
+  void ClearDownload();
 
   struct CommandEntry {
     const char *name;
@@ -84,13 +90,13 @@ class __EXPORT Fastboot {
       std::unordered_map<std::string, zx::status<std::string> (Fastboot::*)(
                                           const std::vector<std::string_view> &, Transport *)>;
 
-  // A static table of fastboot variable name to method mapping.
-  static const VariableHashTable kVariableTable;
-
   // A static table of command name to method mapping.
   static const std::vector<CommandEntry> GetCommandTable();
 
+  // A static table of fastboot variable name to method mapping.
   static const VariableHashTable &GetVariableTable();
+
+  friend class FastbootDownloadTest;
 };
 
 }  // namespace fastboot
