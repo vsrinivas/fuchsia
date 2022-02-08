@@ -326,7 +326,7 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 	ifs := nicInfo.Context.(*ifState)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	impl := adminAddressStateProviderImpl{
+	impl := &adminAddressStateProviderImpl{
 		ready:        make(chan struct{}, 1),
 		cancelServe:  cancel,
 		protocolAddr: protocolAddr,
@@ -382,7 +382,7 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 		case zx.ErrOk:
 			impl.mu.state = initialAddressAssignmentState(protocolAddr, online)
 			_ = syslog.DebugTf(addressStateProviderName, "initial state for %+v: %s", protocolAddr, impl.mu.state)
-			ifs.addressStateProviders.mu.providers[addr] = &impl
+			ifs.addressStateProviders.mu.providers[addr] = impl
 			return 0
 		case zx.ErrInvalidArgs:
 			return admin.AddressRemovalReasonInvalid
@@ -408,27 +408,30 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 	}
 
 	go func() {
-		component.Serve(ctx, &admin.AddressStateProviderWithCtxStub{Impl: &impl}, request.Channel, component.ServeOptions{
+		component.Serve(ctx, &admin.AddressStateProviderWithCtxStub{Impl: impl}, request.Channel, component.ServeOptions{
 			Concurrent: true,
 			OnError: func(err error) {
 				_ = syslog.WarnTf(addressStateProviderName, "address state provider for %s: %s", addr, err)
 			},
 		})
 
-		if pi, ok := func() (*adminAddressStateProviderImpl, bool) {
+		if pi := func() *adminAddressStateProviderImpl {
 			ifs.addressStateProviders.mu.Lock()
 			defer ifs.addressStateProviders.mu.Unlock()
 
 			// The impl may have already been removed due to address removal.
-			pi, ok := ifs.addressStateProviders.mu.providers[addr]
-			if ok {
-				// Removing the address will also attempt to delete from
-				// the address state providers map, so delete from it and unlock
-				// immediately to avoid lock ordering and deadlock issues.
+			// Removing the address will also attempt to delete from
+			// the address state providers map, so delete from it and unlock
+			// immediately to avoid lock ordering and deadlock issues. We must proceed
+			// with address removal only if this impl is the one stored in the map.
+			// A new address state provider may have won the race here and could be
+			// trying to assign the address again.
+			if pi, ok := ifs.addressStateProviders.mu.providers[addr]; ok && pi == impl {
 				delete(ifs.addressStateProviders.mu.providers, addr)
+				return pi
 			}
-			return pi, ok
-		}(); ok {
+			return nil
+		}(); pi != nil {
 			pi.mu.Lock()
 			remove := !pi.mu.detached
 			pi.mu.Unlock()
