@@ -85,6 +85,15 @@
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",
                 "fuchsia.kernel.RootJob",
+            ],
+            from: "#driver-manager-support",
+            to: [ "#boot-drivers" ],
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
+                "fuchsia.kernel.RootJob",
                 "fuchsia.power.manager.DriverManagerRegistration",
             ],
             from: "#driver-manager-support",
