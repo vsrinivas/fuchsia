@@ -350,8 +350,18 @@ template("sdk") {
     forward_variables_from(invoker, [ "testonly" ])
 
     public_deps = [ ":$export_target_name" ]
+
+    # The copy target needs to be in public deps so that targets can dep on
+    # $target_name, and list the file that's output from the copy as an input.
+    public_deps += [ ":$copy_target_name" ]
+
     if (build_sdk_archives) {
       public_deps += [ ":$archive_target_name" ]
     }
+
+    # TODO(fxbug.dev/93205): Block all metadata traversals such as the following:
+    # metadata = {
+    #   expect_includes_barrier = []
+    # }
   }
 }

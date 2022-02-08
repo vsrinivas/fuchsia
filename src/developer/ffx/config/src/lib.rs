@@ -50,7 +50,7 @@ pub use paths::default_env_path;
 
 const SDK_TYPE_IN_TREE: &str = "in-tree";
 const SDK_NOT_FOUND_HELP: &str = "\
-SDK directory could not be found. Please set with 
+SDK directory could not be found. Please set with
 `ffx sdk set root <PATH_TO_SDK_DIR>`\n
 If you are developing in the fuchsia tree, ensure \
 that you are running the `ffx` command (in $FUCHSIA_DIR/.jiri_root) or `fx ffx`, not a built binary.
@@ -265,7 +265,8 @@ pub async fn get_sdk() -> Result<sdk::Sdk> {
     match (get("sdk.root").await, get("sdk.type").await.unwrap_or("".to_string())) {
         (Ok(manifest), sdk_type) => {
             if sdk_type == SDK_TYPE_IN_TREE {
-                sdk::Sdk::from_build_dir(manifest)
+                let module_manifest: Option<String> = get("sdk.module").await.ok();
+                sdk::Sdk::from_build_dir(manifest, module_manifest)
             } else {
                 sdk::Sdk::from_sdk_dir(manifest)
             }
