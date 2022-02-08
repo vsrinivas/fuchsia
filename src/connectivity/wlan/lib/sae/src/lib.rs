@@ -18,16 +18,12 @@ use {
     boringssl::{Bignum, EcGroupId},
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     hmac_utils::{HmacUtils, HmacUtilsImpl},
-    ieee80211::MacAddr,
+    ieee80211::{MacAddr, Ssid},
     log::warn,
     mundane::hash::Sha256,
+    num::FromPrimitive,
     wlan_common::ie::rsn::akm::{self, Akm, AKM_PSK, AKM_SAE},
 };
-
-/// IEEE Std 802.11-2016, 12.4.4.1
-/// Elliptic curve group 19 is the default supported group -- all SAE peers must support it, and in
-/// practice it is generally used.
-pub const DEFAULT_GROUP_ID: u16 = 19;
 
 /// Maximum number of incorrect frames sent before SAE fails.
 const MAX_RETRIES_PER_EXCHANGE: u16 = 30;
@@ -37,6 +33,19 @@ const MAX_RETRIES_PER_EXCHANGE: u16 = 30;
 pub struct Key {
     pub pmk: Vec<u8>,
     pub pmkid: Vec<u8>,
+}
+
+/// IEEE Std 802.11-2020 9.4.2.241
+/// Method used to generate the PWE from a password.
+#[derive(Debug, Clone, PartialEq)]
+pub enum PweMethod {
+    /// IEEE Std 802.11-2020, 12.4.4.2.2/12.4.4.3.2
+    /// Generate the PWE using the looping hunt-and-peck method.
+    Loop = 0,
+
+    /// IEEE Std 802.11-2020, 12.4.4.2.3/12.4.4.3.3
+    /// Generate the PWE using the direct hashing method, hash-to-curve or hash-to-element.
+    Direct = 1,
 }
 
 /// Types of timeout that are used by SAE handshakes. Duration and scheduling of these timeouts
@@ -146,7 +155,10 @@ pub trait SaeHandshake: Send {
 pub fn new_sae_handshake(
     group_id: u16,
     akm: Akm,
+    pwe_method: PweMethod,
+    ssid: Ssid,
     password: Vec<u8>,
+    password_id: Option<Vec<u8>>,
     mac: MacAddr,
     peer_mac: MacAddr,
 ) -> Result<Box<dyn SaeHandshake>, Error> {
@@ -154,8 +166,8 @@ pub fn new_sae_handshake(
         akm::SAE | akm::FT_SAE => (),
         _ => bail!("Cannot construct SAE handshake with AKM {:?}", akm),
     };
-    let (hmac, group_constructor) = match group_id {
-        DEFAULT_GROUP_ID => {
+    let (hmac, group_constructor) = match EcGroupId::from_u16(group_id) {
+        Some(EcGroupId::P256) => {
             // IEEE 802.11-2020 12.4.2
             // Group 19 has a 256-bit prime length, thus we use SHA256.
             let hmac = Box::new(HmacUtilsImpl::<Sha256>::new());
@@ -175,7 +187,15 @@ pub fn new_sae_handshake(
     };
     Ok(Box::new(state::SaeHandshakeImpl::new(
         group_constructor,
-        internal::SaeParameters { hmac, password, sta_a_mac: mac, sta_b_mac: peer_mac },
+        internal::SaeParameters {
+            hmac,
+            pwe_method,
+            ssid,
+            password,
+            password_id,
+            sta_a_mac: mac,
+            sta_b_mac: peer_mac,
+        },
     )?))
 }
 
@@ -186,6 +206,7 @@ pub fn join_sae_handshake(
     sink: &mut SaeUpdateSink,
     first_frame: &AuthFrameRx,
     akm: Akm,
+    ssid: Ssid,
     password: Vec<u8>,
     mac: MacAddr,
     peer_mac: MacAddr,
@@ -193,7 +214,16 @@ pub fn join_sae_handshake(
     let parsed_frame = frame::parse(first_frame)?;
     match parsed_frame {
         frame::ParseSuccess::Commit(commit) => {
-            let mut handshake = new_sae_handshake(commit.group_id, akm, password, mac, peer_mac)?;
+            let mut handshake = new_sae_handshake(
+                commit.group_id,
+                akm,
+                PweMethod::Loop,
+                ssid,
+                password,
+                None,
+                mac,
+                peer_mac,
+            )?;
             handshake.handle_commit(sink, &commit);
             Ok(handshake)
         }
@@ -261,9 +291,14 @@ mod internal {
 
     pub struct SaeParameters {
         pub hmac: Box<dyn HmacUtils + Send>,
-        // IEEE 802.11-2016 12.4.3
+        pub pwe_method: PweMethod,
+        // IEEE Std 802.11-2020 12.4.4.2.3/12.4.4.3.3: The SSID is needed to generate a password
+        // seed.
+        pub ssid: Ssid,
+        // IEEE Std 802.11-2020 12.4.3
         pub password: Vec<u8>,
-        // IEEE 802.11-2016 12.4.4.2.2: The two MacAddrs are needed for generating a password seed.
+        pub password_id: Option<Vec<u8>>,
+        // IEEE Std 802.11-2016 12.4.4.2.2: The MacAddrs are needed to generate a password seed.
         pub sta_a_mac: MacAddr,
         pub sta_b_mac: MacAddr,
     }
@@ -273,10 +308,12 @@ mod internal {
 mod tests {
     use {
         super::{internal::*, *},
+        std::convert::TryFrom,
         wlan_common::assert_variant,
     };
 
     // IEEE 802.11-2016 Annex J.10 SAE test vector
+    const TEST_SSID: &'static str = "SSID not in 802.11-2016";
     const TEST_PWD: &'static str = "thisisreallysecret";
     const TEST_STA_A: MacAddr = [0x7b, 0x88, 0x56, 0x20, 0x2d, 0x8d];
     const TEST_STA_B: MacAddr = [0xe2, 0x47, 0x1c, 0x0a, 0x5a, 0xcb];
@@ -284,7 +321,16 @@ mod tests {
     #[test]
     fn bad_akm() {
         let akm = AKM_PSK;
-        let res = new_sae_handshake(19, akm, Vec::from(TEST_PWD), TEST_STA_A, TEST_STA_B);
+        let res = new_sae_handshake(
+            19,
+            akm,
+            PweMethod::Loop,
+            Ssid::try_from(TEST_SSID).unwrap(),
+            Vec::from(TEST_PWD),
+            None, // Not required for PweMethod::Loop
+            TEST_STA_A,
+            TEST_STA_B,
+        );
         assert!(res.is_err());
         assert!(format!("{}", res.err().unwrap())
             .contains("Cannot construct SAE handshake with AKM 00-0F-AC:2"));
@@ -293,7 +339,16 @@ mod tests {
     #[test]
     fn bad_fcg() {
         let akm = AKM_SAE;
-        let res = new_sae_handshake(200, akm, Vec::from(TEST_PWD), TEST_STA_A, TEST_STA_B);
+        let res = new_sae_handshake(
+            200,
+            akm,
+            PweMethod::Loop,
+            Ssid::try_from(TEST_SSID).unwrap(),
+            Vec::from(TEST_PWD),
+            None, // Not required for PweMethod::Loop
+            TEST_STA_A,
+            TEST_STA_B,
+        );
         assert!(res.is_err());
         assert!(format!("{}", res.err().unwrap()).contains("Unsupported SAE group id: 200"));
     }
@@ -366,11 +421,28 @@ mod tests {
     impl TestHandshake {
         fn new() -> Self {
             let akm = AKM_SAE;
-            let mut sta1 =
-                new_sae_handshake(19, akm.clone(), Vec::from(TEST_PWD), TEST_STA_A, TEST_STA_B)
-                    .unwrap();
-            let mut sta2 =
-                new_sae_handshake(19, akm, Vec::from(TEST_PWD), TEST_STA_B, TEST_STA_A).unwrap();
+            let mut sta1 = new_sae_handshake(
+                19,
+                akm.clone(),
+                PweMethod::Loop,
+                Ssid::try_from(TEST_SSID).unwrap(),
+                Vec::from(TEST_PWD),
+                None, // Not required for PweMethod::Loop
+                TEST_STA_A,
+                TEST_STA_B,
+            )
+            .unwrap();
+            let mut sta2 = new_sae_handshake(
+                19,
+                akm,
+                PweMethod::Loop,
+                Ssid::try_from(TEST_SSID).unwrap(),
+                Vec::from(TEST_PWD),
+                None, // Not required for PweMethod::Loop
+                TEST_STA_B,
+                TEST_STA_A,
+            )
+            .unwrap();
             Self { sta1, sta2 }
         }
 
@@ -434,11 +506,28 @@ mod tests {
     #[test]
     fn password_mismatch() {
         let akm = AKM_SAE;
-        let mut sta1 =
-            new_sae_handshake(19, akm.clone(), Vec::from(TEST_PWD), TEST_STA_A, TEST_STA_B)
-                .unwrap();
-        let mut sta2 =
-            new_sae_handshake(19, akm, Vec::from("other_pwd"), TEST_STA_B, TEST_STA_A).unwrap();
+        let mut sta1 = new_sae_handshake(
+            19,
+            akm.clone(),
+            PweMethod::Loop,
+            Ssid::try_from(TEST_SSID).unwrap(),
+            Vec::from(TEST_PWD),
+            None, // Not required for PweMethod::Loop
+            TEST_STA_A,
+            TEST_STA_B,
+        )
+        .unwrap();
+        let mut sta2 = new_sae_handshake(
+            19,
+            akm,
+            PweMethod::Loop,
+            Ssid::try_from(TEST_SSID).unwrap(),
+            Vec::from("other_pwd"),
+            None, // Not required for PweMethod::Loop
+            TEST_STA_B,
+            TEST_STA_A,
+        )
+        .unwrap();
         let mut handshake = TestHandshake { sta1, sta2 };
 
         let commit1 = handshake.sta1_init();
@@ -642,7 +731,6 @@ mod tests {
         assert_variant!(sink.remove(0), SaeUpdate::Reject(RejectReason::TooManyRetries));
     }
 
-    #[test]
     fn completed_exchange_fails_after_retries() {
         let mut handshake = TestHandshake::new();
         let mut commit1 = handshake.sta1_init();

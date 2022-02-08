@@ -220,6 +220,7 @@ pub fn mock_psk_supplicant() -> (MockSupplicant, MockSupplicantController) {
 
 pub fn mock_sae_supplicant() -> (MockSupplicant, MockSupplicantController) {
     let config = auth::Config::Sae {
+        ssid: MOCK_SSID.clone(),
         password: MOCK_PASS.as_bytes().to_vec(),
         mac: [0xaa; 6],
         peer_mac: [0xbb; 6],

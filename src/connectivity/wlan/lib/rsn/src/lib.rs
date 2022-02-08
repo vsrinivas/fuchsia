@@ -33,6 +33,7 @@ use {
     },
     eapol,
     fidl_fuchsia_wlan_mlme::{EapolResultCode, SaeFrame},
+    ieee80211::Ssid,
     log::warn,
     std::sync::{Arc, Mutex},
     wlan_common::ie::{
@@ -250,6 +251,7 @@ impl Authenticator {
         nonce_rdr: Arc<nonce::NonceReader>,
         gtk_provider: Arc<Mutex<gtk::GtkProvider>>,
         igtk_provider: Arc<Mutex<igtk::IgtkProvider>>,
+        ssid: Ssid,
         password: Vec<u8>,
         s_addr: [u8; 6],
         s_protection: ProtectionInfo,
@@ -258,7 +260,7 @@ impl Authenticator {
     ) -> Result<Authenticator, anyhow::Error> {
         let negotiated_protection = NegotiatedProtection::from_protection(&s_protection)?;
         let auth_cfg =
-            auth::Config::Sae { password, mac: a_addr.clone(), peer_mac: s_addr.clone() };
+            auth::Config::Sae { ssid, password, mac: a_addr.clone(), peer_mac: s_addr.clone() };
         let auth_method = auth::Method::from_config(auth_cfg.clone())?;
 
         let esssa = EssSa::new(

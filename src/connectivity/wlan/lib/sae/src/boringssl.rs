@@ -16,8 +16,8 @@ use {
         EC_GROUP_new_by_curve_name, EC_POINT_add, EC_POINT_free,
         EC_POINT_get_affine_coordinates_GFp, EC_POINT_invert, EC_POINT_is_at_infinity,
         EC_POINT_mul, EC_POINT_new, EC_POINT_set_affine_coordinates_GFp, ERR_get_error,
-        ERR_reason_error_string, NID_X9_62_prime256v1, OPENSSL_free, BIGNUM, BN_CTX, EC_GROUP,
-        EC_POINT,
+        ERR_reason_error_string, NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1, OPENSSL_free,
+        BIGNUM, BN_CTX, EC_GROUP, EC_POINT,
     },
     num_derive::{FromPrimitive, ToPrimitive},
     std::{cmp::Ordering, convert::TryInto, ffi::CString, fmt, ptr::NonNull},
@@ -319,15 +319,19 @@ impl fmt::Debug for Bignum {
 }
 
 /// Supported elliptic curve groups.
-#[derive(Clone, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive)]
 pub enum EcGroupId {
     P256 = 19,
+    P384 = 20,
+    P521 = 21,
 }
 
 impl EcGroupId {
     fn nid(&self) -> u32 {
         match self {
             EcGroupId::P256 => NID_X9_62_prime256v1,
+            EcGroupId::P384 => NID_secp384r1,
+            EcGroupId::P521 => NID_secp521r1,
         }
     }
 }

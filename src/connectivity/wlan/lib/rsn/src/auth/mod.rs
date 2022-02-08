@@ -4,19 +4,25 @@
 
 pub mod psk;
 
-use crate::{
-    key::exchange::Key,
-    rsna::{AuthStatus, Dot11VerifiedKeyFrame, SecAssocUpdate, UpdateSink},
-    Error,
+use {
+    crate::{
+        key::exchange::Key,
+        rsna::{AuthStatus, Dot11VerifiedKeyFrame, SecAssocUpdate, UpdateSink},
+        Error,
+    },
+    anyhow,
+    fidl_fuchsia_wlan_mlme::SaeFrame,
+    ieee80211::{MacAddr, Ssid},
+    log::warn,
+    wlan_common::ie::rsn::akm::AKM_SAE,
+    wlan_sae as sae,
+    zerocopy::ByteSlice,
 };
 
-use anyhow;
-use fidl_fuchsia_wlan_mlme::SaeFrame;
-use ieee80211::MacAddr;
-use log::warn;
-use wlan_common::ie::rsn::akm::AKM_SAE;
-use wlan_sae as sae;
-use zerocopy::ByteSlice;
+/// IEEE Std 802.11-2016, 12.4.4.1
+/// Elliptic curve group 19 is the default supported group -- all SAE peers must support it, and in
+/// practice it is generally used.
+const DEFAULT_GROUP_ID: u16 = 19;
 
 #[derive(Error, Debug)]
 pub enum AuthError {
@@ -38,7 +44,7 @@ pub struct SaeData {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Config {
     ComputedPsk(psk::Psk),
-    Sae { password: Vec<u8>, mac: MacAddr, peer_mac: MacAddr },
+    Sae { ssid: Ssid, password: Vec<u8>, mac: MacAddr, peer_mac: MacAddr },
     DriverSae { password: Vec<u8> },
 }
 
@@ -86,11 +92,15 @@ impl Method {
     pub fn from_config(cfg: Config) -> Result<Method, AuthError> {
         match cfg {
             Config::ComputedPsk(psk) => Ok(Method::Psk(psk)),
-            Config::Sae { password, mac, peer_mac } => {
+            Config::Sae { ssid, password, mac, peer_mac } => {
+                // TODO(fxbug.dev/91949): Use PweMethod::Direct here for SAE Hash-to-Element.
                 let handshake = sae::new_sae_handshake(
-                    sae::DEFAULT_GROUP_ID,
+                    DEFAULT_GROUP_ID,
                     AKM_SAE,
+                    wlan_sae::PweMethod::Loop,
+                    ssid,
                     password,
+                    None, // Not required for PweMethod::Loop
                     mac,
                     peer_mac.clone(),
                 )

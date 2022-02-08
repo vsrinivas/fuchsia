@@ -8,8 +8,8 @@ use {
         frame::{write_commit, write_confirm},
         internal::FiniteCyclicGroup,
         internal::SaeParameters,
-        AntiCloggingTokenMsg, CommitMsg, ConfirmMsg, Key, RejectReason, SaeHandshake, SaeUpdate,
-        SaeUpdateSink, Timeout,
+        AntiCloggingTokenMsg, CommitMsg, ConfirmMsg, Key, PweMethod, RejectReason, SaeHandshake,
+        SaeUpdate, SaeUpdateSink, Timeout,
     },
     anyhow::{bail, format_err, Error},
     log::{error, warn},
@@ -729,13 +729,18 @@ mod test {
             hmac_utils::HmacUtilsImpl,
         },
         hex::FromHex,
-        ieee80211::MacAddr,
+        ieee80211::{MacAddr, Ssid},
         mundane::hash::Sha256,
+        std::convert::TryFrom,
         wlan_common::assert_variant,
     };
 
-    // IEEE 802.11-18/1104r0: "New Test Vectors for SAE" provides all of these values.
+    // IEEE Std 802.11-18/1104r0: "New Test Vectors for SAE" provides all of these values.
+    // TEST_PWD is slightly modified by concatenating the password identifier field; IEEE Std
+    // 802.11-2020 specifies that a password identifier may not be used with PWE generation by
+    // looping.
     const TEST_GROUP: EcGroupId = EcGroupId::P256;
+    const TEST_SSID: &'static str = "SSID in from 802.11-18/r1104r0";
     const TEST_PWD: &'static str = "mekmitasdigoatpsk4internet";
     const TEST_STA_A: MacAddr = [0x82, 0x7b, 0x91, 0x9d, 0xd4, 0xb9];
     const TEST_RAND_A: &'static str =
@@ -762,7 +767,10 @@ mod test {
     fn make_ecc_config() -> SaeConfiguration<<ecc::Group as FiniteCyclicGroup>::Element> {
         let params = SaeParameters {
             hmac: Box::new(HmacUtilsImpl::<Sha256>::new()),
+            pwe_method: PweMethod::Loop,
+            ssid: Ssid::try_from(TEST_SSID).unwrap(),
             password: Vec::from(TEST_PWD),
+            password_id: None, // Cannot be used with PweMethod::Loop
             sta_a_mac: TEST_STA_A,
             sta_b_mac: TEST_STA_B,
         };

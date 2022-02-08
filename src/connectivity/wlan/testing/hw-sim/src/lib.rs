@@ -378,7 +378,11 @@ pub fn create_deprecated_wpa1_psk_authenticator(
     .expect("creating authenticator")
 }
 
-pub fn create_wpa3_authenticator(bssid: &Bssid, passphrase: &str) -> wlan_rsn::Authenticator {
+pub fn create_wpa3_authenticator(
+    bssid: &Bssid,
+    ssid: &Ssid,
+    passphrase: &str,
+) -> wlan_rsn::Authenticator {
     let nonce_rdr = wlan_rsn::nonce::NonceReader::new(&bssid.0).expect("creating nonce reader");
     let gtk_provider = wlan_rsn::GtkProvider::new(CIPHER_CCMP_128).expect("creating gtk provider");
     let igtk_provider =
@@ -390,6 +394,7 @@ pub fn create_wpa3_authenticator(bssid: &Bssid, passphrase: &str) -> wlan_rsn::A
         nonce_rdr,
         std::sync::Arc::new(std::sync::Mutex::new(gtk_provider)),
         std::sync::Arc::new(std::sync::Mutex::new(igtk_provider)),
+        ssid.clone(),
         password,
         CLIENT_MAC_ADDR,
         s_rsne,
@@ -741,7 +746,7 @@ async fn connect_with_security_type(
     // Validate the connect request.
     let (mut authenticator, mut update_sink, protection) = match security_type {
         fidl_policy::SecurityType::Wpa3 => (
-            passphrase.map(|p| create_wpa3_authenticator(bssid, p)),
+            passphrase.map(|p| create_wpa3_authenticator(bssid, ssid, p)),
             Some(wlan_rsn::rsna::UpdateSink::default()),
             Protection::Wpa3Personal,
         ),

@@ -193,6 +193,7 @@ fn get_wpa3_auth_config(
     }
     match selected_feature {
         Some(DriverFeature::SaeSmeAuth) => Ok(auth::Config::Sae {
+            ssid: bss.ssid.clone(),
             password,
             mac: device_info.sta_addr.clone(),
             peer_mac: bss.bssid.0,

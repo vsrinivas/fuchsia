@@ -87,6 +87,7 @@ pub fn get_wpa3_supplicant() -> Supplicant {
     Supplicant::new_wpa_personal(
         nonce_rdr,
         auth::Config::Sae {
+            ssid: Ssid::try_from("ThisIsASSID").unwrap(),
             password: "ThisIsAPassword".as_bytes().to_vec(),
             mac: test_util::S_ADDR,
             peer_mac: test_util::A_ADDR,
@@ -105,11 +106,13 @@ pub fn get_wpa3_authenticator() -> Authenticator {
     let igtk_provider =
         IgtkProvider::new(DEFAULT_GROUP_MGMT_CIPHER).expect("error creating IgtkProvider");
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
+    let ssid = Ssid::try_from("ThisIsASSID").unwrap();
     let password = "ThisIsAPassword".as_bytes().to_vec();
     Authenticator::new_wpa3(
         nonce_rdr,
         Arc::new(Mutex::new(gtk_provider)),
         Arc::new(Mutex::new(igtk_provider)),
+        ssid,
         password,
         test_util::S_ADDR,
         ProtectionInfo::Rsne(fake_wpa3_s_rsne()),
