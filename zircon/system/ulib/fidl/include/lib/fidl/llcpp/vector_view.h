@@ -18,19 +18,22 @@ class LayoutChecker;
 
 namespace fidl {
 
-// VectorView is the representation of a FIDL vector in LLCPP.
+// VectorView is the representation of a FIDL vector in wire domain objects.
 //
 // VectorViews provide limited functionality to access and set fields of the
-// vector and other objects like fidl::Array or std::vector must be used to
-// construct it.
+// vector and other methods like fidl::Arena, std::array, or std::vector must be
+// used to construct it.
 //
 // VectorView's layout and data format must match fidl_vector_t as it will be
 // reinterpret_casted into fidl_vector_t during linearization.
 //
 // Example:
-// uint32_t arr[5] = { 1, 2, 3 };
-// SomeLLCPPObject obj;
-// obj.set_vec_field(VectorView(vv));
+//
+//     uint32_t arr[5] = { 1, 2, 3 };
+//     fuchsia_some_lib::wire::SomeFidlObject obj;
+//     // Sets the field to a vector view borrowing from |arr|.
+//     obj.set_vec_field(fidl::VectorView<uint32_t>::FromExternal(arr));
+//
 template <typename T>
 class VectorView {
   template <typename>
@@ -39,9 +42,9 @@ class VectorView {
  public:
   using elem_type = T;
 
-  VectorView() {}
+  VectorView() = default;
 
-  // Allocates a vector using an arena.
+  // Allocates a vector using an arena. |T| is default constructed.
   VectorView(AnyArena& allocator, size_t count)
       : count_(count), data_(allocator.AllocateVector<T>(count)) {}
   VectorView(AnyArena& allocator, size_t initial_count, size_t capacity)

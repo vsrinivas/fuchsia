@@ -322,7 +322,6 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       completer.Reply(std::move(request->value));
     } else {
       EchoClientApp app(request->forward_to_server);
-      wire::VectorsStruct out_value;
       auto result = app.EchoVectors(std::move(request->value), "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.FormatDescription().c_str());

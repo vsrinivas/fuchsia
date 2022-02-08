@@ -3,22 +3,39 @@
 This document provides an overview of the tools available to manage memory when
 using the LLCPP bindings.
 
-## Memory ownership {#memory-ownership}
+The domain objects from the LLCPP bindings, termed "wire types", are tightly
+coupled to the memory layout of the FIDL wire format used by the current
+application for performance. Convenience wrappers and accessors are provided,
+but they do not attempt to encapsulate the structure of the underlying wire
+format. Understanding the layout of the [FIDL wire format][fidl-wire-format]
+would greatly assist in interacting with wire types. In particular, wire types
+do not own their out-of-line children, as defined by the FIDL wire format.
 
-LLCPP keeps references to objects using:
+LLCPP keeps unowned references to objects using:
 
-*   `fidl::StringView` for a string.
-*   `fidl::VectorView` for a vector of objects.
-*   `fidl::ObjectView` for a reference to an object.
-*   `MyMethodRequestView` for a reference to a `MyMethod` request message. This
-    definition is scoped to the containing `fidl::WireServer<Protocol>` class.
+* For a string, `fidl::StringView`.
+* For a vector of objects, `fidl::VectorView`.
+* For an out-of-line object, `fidl::ObjectView`.
+* For a table named `Foo`, a `Foo` class that wraps a vector view, referencing
+  a collection of envelope headers represented by a `fidl::WireTableFrame<Foo>`,
+  which in turn references the fields of the table.
+* For a union named `Foo`, a `Foo` class that stores the ordinal and an envelope
+  header, which references out-of-line fields.
+* For a `MyMethod` request message, a `MyMethodRequestView` that wraps a pointer
+  to the request. This definition is scoped to the containing
+  `fidl::WireServer<Protocol>` class.
 
 These are non-owning views that only keep a reference and do not manage the
 object lifetime. The lifetime of the objects must be managed externally. That
 means that the referenced objects must outlive the views.
 
-In particular, LLCPP generated types do not own their out-of-line children, as
-defined by the FIDL wire format.
+Conceptually speaking, it helps to think of wire tables and unions as pointers.
+For example, just as `T* my_pointer;` creates an invalid pointer that must be
+initialized before use, default constructing a wire table and union also leads
+to an invalid object (except for the purpose of sending an empty table/absent
+union), and in the case of tables, one must subsequently initialize them with
+a valid table frame using arenas or providing a
+`fidl::ObjectView<fidl::WireTableFrame<SomeTable>>` directly.
 
 ### fidl::StringView
 
@@ -117,7 +134,7 @@ client_->MakeMove(args, [](fidl::WireResponse<TicTacToe::MakeMove>* response) {
 
 ## Creating LLCPP views and objects
 
-### Create LLCPP objects using the Arena
+### Create LLCPP objects using `fidl::Arena`
 
 The FIDL arena (`fidl::Arena`) can allocate LLCPP objects. It
 manages the lifetime of the allocated LLCPP objects (it owns the objects). As
@@ -142,6 +159,10 @@ The standard pattern for using the arena is:
 *   Send the allocated objects by making a FIDL method call or making a reply
     via a completer.
 *   Leave the function; everything is deallocated.
+
+Example for a table, which is more subtle than other types since it requires
+allocating a separate data structure, `fidl::WireTableFrame<SomeTable>`, to keep
+track of field metadata, in addition to the fields themselves:
 
 Example:
 
@@ -183,3 +204,6 @@ A `StringView` can also be created directly from string literals without using
 ```c++
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="stringview-assign" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
+
+<!-- xrefs -->
+[fidl-wire-format]: /docs/reference/fidl/language/wire-format/README.md

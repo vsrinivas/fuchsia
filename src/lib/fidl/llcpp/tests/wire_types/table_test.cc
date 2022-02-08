@@ -64,7 +64,13 @@ TEST(Table, TableVectorOfStruct) {
   ASSERT_EQ(table.vector_of_struct()[1].x, 42);
 }
 
-TEST(Table, EmptyTable) {
+TEST(Table, EmptyTableWithoutFrame) {
+  namespace test = test_types;
+  test::wire::SampleEmptyTable table;
+  ASSERT_TRUE(table.IsEmpty());
+}
+
+TEST(Table, EmptyTableWithFrame) {
   namespace test = test_types;
   fidl::Arena allocator;
   test::wire::SampleEmptyTable table(allocator);
@@ -90,6 +96,14 @@ TEST(Table, ManualFrame) {
   EXPECT_EQ(table.x(), 42);
   EXPECT_EQ(table.y(), 100);
 }
+
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+TEST(Table, CrashWhenSettingFieldWithoutFrameOrArena) {
+  namespace test = test_types;
+  test::wire::SampleTable table;
+  ASSERT_DEATH({ table.set_x(42); }, "");
+}
+#endif
 
 TEST(Table, Getters) {
   namespace test = test_types;

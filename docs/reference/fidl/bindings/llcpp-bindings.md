@@ -11,7 +11,7 @@ library fuchsia.examples;
 [Protocol types](#protocols) are generated in the `fuchsia_examples` namespace.
 [Domain objects](#type-definitions) for this library are generated in the
 `fuchsia_examples::wire` namespace, and [test scaffolding](#test-scaffolding)
-is generated in the `fuchsia::examples::testing` namespace.
+is generated in the `fidl::testing` namespace.
 
 Generated type names are transformed to follow the
 [Google C++ style guide][cpp-style].
@@ -256,7 +256,7 @@ definition. Reserved fields do not have any generated code.
   set_string_value(fidl::ObjectView<fidl::StringView>&& value)`: Setter
   methods for each variant. These setters will overwrite the previously selected
   member, if any.
-* `Tag which() const`: returns the current [tag][union-lexicon] of the
+* `Tag Which() const`: returns the current [tag][union-lexicon] of the
   `JsonValue`. Calling this method without first setting the variant leads to an
   assertion error.
 
@@ -308,29 +308,26 @@ fields unset.
 * `const uint8_t& age() const` and `const fidl::StringView& name() const`:
   Read-only field accessor methods. Calling these methods without first setting
   the field leads to an assertion error.
-* `uint8_t& mutable_age()` and `fidl::StringView& mutable_name()`: Mutable field accessor
-  methods. Calling these methods without first setting the variant leads to an
-  assertion error.
-* `void set_age(::fidl::ObjectView<uint8>)`: set age an already allocated value.
-* `void set_age(::fidl::AnyArena&, uint8_t)`: set age with the given value. The allocator is
-  used to allocate the storage.
-* `void set_age(std::nullptr_t)`: unset age.
+* `void set_age(uint8_t)`: set age by inlining it into the table frame.
+* `void clear_age()`: unset age.
 * `void set_name(::fidl::ObjectView<::fidl::StringView>)`: set name with an already allocated value.
 * `void set_name(::fidl::AnyArena&, ::fidl::AnyArena&, std::string_view)`: set name with the
   given value. The storage for the storage of the value (StringView) and the storage of the string
   are allocated using the two allocators. The same allocator should be given to the two allocator
   arguments.
-* `void set_name(std::nullptr_t)`: unset name.
+* `void clear_name()`: unset name.
 
-In order to build a table, one additional class is generated: `User::Frame`.
+In order to build a table, one additional class is generated:
+`fidl::WireTableFrame<User>`.
 
-`User::Frame` is a container for the table's internal storage, and is allocated
-separately from the builder because LLCPP maintains the object layout of the
-underlying wire format. It is only use internally by `User(::fidl::AnyArena&)`.
+`fidl::WireTableFrame<User>` is a container for the table's internal storage,
+and is allocated separately from the builder because LLCPP maintains the object
+layout of the underlying wire format. It is only use internally by
+`User(::fidl::AnyArena&)`.
 
-`User::Frame` has the following methods:
+`fidl::WireTableFrame<User>` has the following methods:
 
-* `Frame()`: Default constructor.
+* `WireTableFrame()`: Default constructor.
 
 Example usage:
 
@@ -450,14 +447,10 @@ For this example, the following types are generated:
 * `fidl::WireRequest<TicTacToe::StartGame>`
 * `fidl::WireRequest<TicTacToe::MakeMove>`
 * `fidl::WireResponse<TicTacToe::MakeMove>`
-* `fidl::WireResponse<TicTacToe::OnOpponentMove>`
+* `fidl::WireEvent<TicTacToe::OnOpponentMove>`
 
-The naming scheme for requests is `[Method]Request`, and the naming scheme for
-both responses and events is `[Method]Response`.
-
-Any empty request, response, or event is aliased to `fidl::AnyZeroArgMessage`,
-which is a type representing an empty message, instead of having a new type
-generated.
+The naming scheme for requests is `[Method]Request`. The naming scheme for
+responses is `[Method]Response`. The naming scheme for events is `[Method]Event`.
 
 ### Client {#client}
 
@@ -507,7 +500,7 @@ class EventHandler : public fidl::WireAsyncEventHandler<TicTacToe> {
  public:
   EventHandler() = default;
 
-  void OnOpponentMove(fidl::WireResponse<OnOpponentMove>* event) override {
+  void OnOpponentMove(fidl::WireEvent<OnOpponentMove>* event) override {
     /* ... */
   }
 
@@ -694,7 +687,7 @@ This allows code such as:
 
 ```cpp
 fidl::WireResult result = client.sync()->MakeMove(0, 0);
-auto response = result.Unwrap();
+auto* response = result.Unwrap();
 bool success = response->success;
 ```
 
@@ -736,10 +729,10 @@ corresponding to the method calls defined in the FIDL protocol. Users implement
 a `TicTacToe` server by providing a concrete implementation of
 `fidl::WireServer<TicTacToe>`, which has the following pure virtual methods:
 
-* `virtual void StartGame(StartGameRequestView request, StartGameCompleter::Sync
-  _completer)`
-* `virtual void MakeMove(MakeMoveRequestView request, MakeMoveCompleter::Sync
-  _completer)`
+* `virtual void StartGame(StartGameRequestView request, StartGameCompleter::Sync&
+  completer)`
+* `virtual void MakeMove(MakeMoveRequestView request, MakeMoveCompleter::Sync&
+  completer)`
 
 Refer to the [example LLCPP server][llcpp-server-example] for how to bind and
 set up a server implementation.
@@ -888,14 +881,14 @@ When using a `fidl::WireClient`, events can be handled asynchronously by passing
 the class a `fidl::WireAsyncEventHandler<TicTacToe>*`. The
 `WireAsyncEventHandler` class has the following members:
 
-* `virtual void OnOpponentMove(fidl::WireResponse<OnOpponentMove>* event) {}`:
+* `virtual void OnOpponentMove(fidl::WireEvent<OnOpponentMove>* event) {}`:
   handler for the OnOpponentMove event (one method per event).
 
 * `virtual on_fidl_error(::fidl::UnbindInfo info) {}`: method called when the
   client encounters a terminal error.
 
 To be able to handle events and errors, a class that inherits from
-`AsyncEventHandler` must be defined.
+`fidl::WireAsyncEventHandler<TicTacToe>` must be defined.
 
 #### Sync client {#sync-event-handlers}
 
@@ -906,7 +899,7 @@ a `HandleOneEvent` function and passing it a
 `WireSyncEventHandler` is a class that contains a pure virtual method for each
 event. In this example, it consists of the following member:
 
-* `virtual void OnOpponentMove(fidl::WireResponse<TicTacToe::OnOpponentMove>*
+* `virtual void OnOpponentMove(fidl::WireEvent<TicTacToe::OnOpponentMove>*
   event) = 0`: The handle for the OnOpponentMove event.
 * `virtual zx_status_t Unknown() { return ZX_ERR_NOT_SUPPORTED; }`: The status
   to be returned by `HandleOneEvent` if an unknown event is found. This method
@@ -943,30 +936,37 @@ provided (instead of the pure virtual).
 
 #### Server
 
+`fidl::WireSendEvent` is used to send events from the server side. There are two
+overloads:
+
+* `fidl::WireSendEvent(const fidl::ServerBindingRef<Protocol>& binding_ref)`
+  to send events over a server binding reference.
+* `fidl::WireSendEvent(const fidl::ServerEnd<Protocol>& endpoint)`
+  to send events over an endpoint.
+
 ##### Sending events using a server binding object {#bound-event-sending}
 
-When binding a server implementation to a channel, calling `fidl::BindServer`
-will return a `fidl::ServerBindingRef<Protocol>`, which is the means by which you
-may interact safely with a server binding. This class allows access to an event
-sender interface through the following operators:
+When binding a server implementation to a channel, `fidl::BindServer` returns a
+`fidl::ServerBindingRef<Protocol>`, which is the means by which you may interact
+safely with a server binding.
 
-```c++
-typename Protocol::EventSender* get() const;
-typename Protocol::EventSender* operator->() const;
-typename Protocol::EventSender& operator*() const;
-```
+Calling `fidl::WireSendEvent` with a binding reference returns an interface to
+send events.
 
-where `Protocol` is a template parameter.
-
-The `EventSender` class contains managed and caller-allocated methods for
-sending each event. As a concrete example, `TicTacToe::EventSender` provides the
+The event sender interface contains methods for sending each event. As a
+concrete example, the event sender interface for `TicTacToe` provides the
 following methods:
 
-* `zx_status_t OnOpponentMove(GameState new_state)`: Managed flavor.
-* `zx_status_t OnOpponentMove(fidl::BufferSpan _buffer, GameState new_state)`:
-  Caller allocated flavor.
+* `fidl::Result OnOpponentMove(GameState new_state)`: Managed flavor.
+
+Calling `.buffer(...)` returns a similar interface for the caller-allocating
+flavor, allocating encoding buffers from the memory resource passed to
+`.buffer`, analogous to the [client API](#client) as well as the [server
+completers](#server-completers).
 
 ##### Sending events with a ServerEnd object
+
+A server endpoint by itself is represented by `fidl::ServerEnd<Protocol>`.
 
 [Sending events using a server binding object](#bound-event-sending) is the
 standard approach to sending events while the server endpoint is bound to an
@@ -974,33 +974,9 @@ implementation. However, there may be occasions which call for sending events
 on a `fidl::ServerEnd<TicTacToe>` object directly, without setting up a server
 binding.
 
-The `TicTacToe` class contains an `EventSender` which provides methods for
-sending events on a channel. The `EventSender` may be constructed from a
-`fidl::ServerEnd<TicTacToe>`. Each event sending method has managed and
-caller-allocating variants, analogous to the [client API](#client) as well as
-the [server completers](#server-completers).
-
-The event sender methods are:
-
-```c++
-class TicTacToe::EventSender {
- public:
-  EventSender(fidl::ServerEnd<TicTacToe> server_end);
-
-  zx_status_t SendOnOpponentMoveEvent(
-      GameState new_state);
-  zx_status_t SendOnOpponentMoveEvent(
-      fidl::BufferSpan _buffer, GameState new_state);
-
-  const fidl::ServerEnd<TicTacToe>& server_end() const;
-  fidl::ServerEnd<TicTacToe>& server_end();
-};
-```
-
-`EventSender` consumes the server endpoint upon construction, to ensure that the
-channel stays alive while events are being written. After sending events, the
-user may deconstruct the `EventSender` by extracting the server endpoint via
-`server_end()`.
+`fidl::WireSendEvent` takes a constant reference to `fidl::ServerEnd<Protocol>`.
+It does not support `zx::unowned_channel`, to reduce the chances of using an
+endpoint after the handle has been closed elsewhere.
 
 ### Results {#protocols-results}
 
@@ -1097,87 +1073,10 @@ A protocol annotated with the
 attribute causes the FIDL toolchain to generate an additional `static const char
 Name[]` field on the protocol class, containing the full protocol name.
 
-## Explicit encoding and decoding {#encoding-decoding}
+## Persistence, and standalone use of the FIDL wire format
 
-FIDL messages are automatically encoded when they are sent and decoded when they
-are received.
-
-However, some use cases like persistence need to explicitly encode or decode a
-table or struct.
-
-This section describes how to explicitly use the encoding and the decoding.
-
-### Encoding
-
-When an object is allocated and initialized,
-`fidl::OwnedEncodedMessage<FidlType>` can be used to encode it. For example:
-
-```c++
-void Encode(::fuchsia_examples::User& user) {
-  ::fidl::OwnedEncodedMessage<::fuchsia_examples::User> encoded(&user);
-  if (!encoded.ok()) {
-    // Do something about the error.
-    return;
-  }
-  fidl_outgoing_msg_t* message = encoded.GetOutgoingMessage().message();
-  // Do something with the data referenced by message.
-}
-```
-
-At this point, the table `user` is encoded within `encoded`. The following
-methods are available on an encoded FIDL type:
-
-* `bool encoded.ok()`
-* `zx_status_t encoded.status()`
-* `const char* encoded.error_message()`
-* `::fidl::OutgoingMessage& encoded.GetOutgoingMessage()`
-
-`::fidl::OutgoingMessage` is defined in
-[/zircon/system/ulib/fidl/include/lib/fidl/llcpp/message.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/message.h).
-
-### Decoding
-
-Once an object has been encoded (and eventually stored somewhere),
-`fidl::DecodedMessage<FidlType>` can be used to decode it. For example:
-
-```c++
-void UseEncodedUser(std::vector<uint8_t> buffer) {
-  fidl::DecodedMessage<::fuchsia_examples::User> decoded(
-      buffer.data(), static_cast<uint32_t>(buffer.size()));
-  if (!decoded.ok()) {
-    // Display an error.
-    return;
-  }
-  ::fuchsia_examples::User* user = decoded.PrimaryObject();
-  // Do something with the table (user).
-}
-```
-
-When an object is decoded, the following methods are available on a decoded FIDL
-type:
-
-* `bool decoded.ok()`
-* `zx_status_t decoded.status()`
-* `const char* decoded.error_message()`
-* `FidlType* decoded.PrimaryObject()`
-* `void decoded.ReleasePrimaryObject()`
-
-The FIDL type is the type used by the templated class (in the example above:
-`::fuchsia_examples::User`).
-
-The primary object is decoded in place within the provided buffer. This is also
-the case of all the secondary objects. That means that the provided buffer must
-be kept alive while the decoded value is used.
-
-For FIDL types that allow handles, the handles can be specified during
-construction after the bytes (the same way bytes are specified).
-
-### Persistence
-
-Persistence is not officially supported by LLCPP. However, explicit encoding and
-decoding can be used to store FIDL values by encoding a value and then writing
-it and by reading a value and then decoding it. In that case, the values can't
-use any handle.
+Standalone use of the FIDL wire format, such as encoding and decoding individual
+FIDL domain objects, are not yet supported (fxbug.dev/82681).
 
 ## Test scaffolding {#test-scaffolding}
 
@@ -1185,21 +1084,22 @@ The FIDL toolchain also generates a file suffixed with  `_test_base.h` that
 contains convenience code for testing FIDL server implementations. This file
 contains a class for each protocol that provides stub implementations for each
 of the class’s methods, making it possible to implement only the methods that
-are used during testing. These classes are generated into a `testing` namespace
-that is inside of the generated library’s namespace (e.g. for library
-`games.tictactoe`, these classes are generated into
-`games::tictactoe::testing`).
+are used during testing. These classes template specializations of
+`fidl::testing::WireTestBase<Protocol>` where `Protocol` is the FIDL protocol
+that is stubbed (e.g. for protocol `games.tictactoe/TicTacToe`, the test base is
+`fidl::testing::WireTestBase<games_tictactoe::TicTacToe>`).
 
-For the same `TicTacToe` protocol listed above, the FIDL toolchain generates a
-`TicTacToe_TestBase` class that subclasses `TicTacToe` (see
-[Protocols](#protocols)), offering the following methods:
+For the same `TicTacToe` protocol listed above, generated test base subclasses
+`fidl::WireServer<TicTacToe>` (see [Protocols](#protocols)), offering the
+following methods:
 
-* `virtual ~TicTacToe_TestBase() {}`: Destructor.
-* `virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0`:
-  Pure virtual method that is overridden to define behavior for unimplemented methods.
+* `virtual ~WireTestBase() {}`: Destructor.
+* `virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase&
+  completer) = 0`: Pure virtual method that is overridden to define behavior for
+  unimplemented methods.
 
-`TicTacToe_TestBase` provides an implementation for the virtual protocol
-methods `StartGame` and `MakeMove`, which are implemented to just call
+The test base provides an implementation for the virtual protocol methods
+`StartGame` and `MakeMove`, which are implemented to just call
 `NotImplemented_("StartGame", completer)` and `NotImplemented_("MakeMove",
 completer)`, respectively.
 
