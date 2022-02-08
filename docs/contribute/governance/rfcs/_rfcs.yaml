@@ -1942,6 +1942,7 @@
   status: ''
   reviewers: [ 'pascallouis@google.com', 'yifeit@google.com', 'mkember@google.com']
   submitted: '2021-11-19'
+  reviewed: '2022-01-22'
 
 - name: 'RFC-0150'
   title: 'Update opt-out'
