@@ -392,9 +392,9 @@ if (zircon_toolchain == false) {
 
   if (is_fuchsia) {
     default_common_binary_configs += [
+      "//build/config:auto_var_init",
       "//build/config:icf",
       "//build/config:thread_safety_annotations",
-      "//build/config/fuchsia:auto_var_init",
       "//build/config/fuchsia:large_rust_stack",
       "//build/config/rust:panic_abort",
       "//build/config/rust:v0_symbol_mangling",
@@ -459,6 +459,7 @@ if (zircon_toolchain == false) {
     "//build/config:default_linker_gc",
     "//build/config:default_optimize",
     "//build/config:default_warnings",
+    "//build/config:auto_var_init",
     "//build/config:language",
     "//build/config:no_exceptions",
     "//build/config:no_rtti",
@@ -472,7 +473,6 @@ if (zircon_toolchain == false) {
     "//build/config/zircon:default_icf",
     "//build/config/zircon:default_include_dirs",
     "//build/config/zircon:default_template_backtrace_limit",
-    "//build/config/zircon:auto_var_init",
   ]
 
   default_shared_library_configs = default_common_binary_configs

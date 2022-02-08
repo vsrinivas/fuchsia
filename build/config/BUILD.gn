@@ -1206,6 +1206,13 @@ config("all_source") {
   defines = [ "_ALL_SOURCE" ]
 }
 
+config("auto_var_init") {
+  if (!is_gcc) {
+    # Automatically initialize variables with a pattern.
+    cflags = [ "-ftrivial-auto-var-init=pattern" ]
+  }
+}
+
 config("thread_safety_annotations") {
   if (!is_gcc) {
     cflags = [ "-Wthread-safety" ]
