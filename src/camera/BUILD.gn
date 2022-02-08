@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/core/build/core_shard.gni")
+
 group("camera") {
   testonly = true
   deps = [
@@ -46,4 +48,10 @@ group("tools") {
     "//src/camera/bin/benchmark",
     "//src/camera/bin/sensor_cli",
   ]
+}
+
+# The camera service is not relevant to all configurations, so products
+# that require it should include this shard to expose its protocols.
+core_shard("camera_core_shard") {
+  shard_file = "meta/camera.core_shard.cml"
 }
