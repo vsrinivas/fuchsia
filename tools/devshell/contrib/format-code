@@ -207,6 +207,7 @@ GIT_FILTER=(
   ":(top,exclude)third_party/rust_crates/forks"
   ":(top,exclude)third_party/rust_crates/mirrors"
   ":(top,exclude)third_party/rust_crates/vendor"
+  ":(exclude)*/goldens/*"
 )
 
 get_git_files() {
