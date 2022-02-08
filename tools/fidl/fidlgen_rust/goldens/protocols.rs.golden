@@ -75,7 +75,7 @@ impl ObjType {
     }
 
     #[inline]
-    pub fn into_primitive(self) -> u32 {
+    pub const fn into_primitive(self) -> u32 {
         self as u32
     }
 
@@ -117,7 +117,7 @@ impl ErrorEnum {
     }
 
     #[inline]
-    pub fn into_primitive(self) -> u32 {
+    pub const fn into_primitive(self) -> u32 {
         self as u32
     }
 

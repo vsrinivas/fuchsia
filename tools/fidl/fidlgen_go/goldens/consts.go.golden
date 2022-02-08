@@ -23,9 +23,9 @@ const (
 	EnumTrue          EnumType = EnumTypeTrue
 	EnumPrimitiveTrue int32    = EnumTypeTrue
 	BitsVal           BitsType = BitsTypeValue
-	BitsPrimitiveVal  int32    = BitsTypeValue
+	BitsPrimitiveVal  uint32   = BitsTypeValue
 	BitsTrue          BitsType = BitsTypeTrue
-	BitsPrimitiveTrue int32    = BitsTypeTrue
+	BitsPrimitiveTrue uint32   = BitsTypeTrue
 )
 
 var _ _bindings.Enum = EnumType(0)

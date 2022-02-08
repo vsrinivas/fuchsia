@@ -109,7 +109,6 @@ fidl_testdata_info = [
       "fidlgen_hlcpp",
       "fidlgen_libfuzzer",
       "fidlgen_llcpp",
-      "fidlgen_rust",
 
       # TODO(fxbug.dev/62763): Fix undefined_identifier errors.
       "fidlgen_dart",

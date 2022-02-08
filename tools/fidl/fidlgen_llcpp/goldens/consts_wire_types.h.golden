@@ -59,9 +59,9 @@ constexpr ::test_consts::wire::BitsType kBitsVal =
 constexpr ::test_consts::wire::BitsType kBitsTrue =
     ::test_consts::wire::BitsType::kTrue;
 
-constexpr int32_t kBitsPrimitiveVal = ::test_consts::wire::BitsType::kValue;
+constexpr uint32_t kBitsPrimitiveVal = ::test_consts::wire::BitsType::kValue;
 
-constexpr int32_t kBitsPrimitiveTrue = ::test_consts::wire::BitsType::kTrue;
+constexpr uint32_t kBitsPrimitiveTrue = ::test_consts::wire::BitsType::kTrue;
 
 constexpr uint16_t kAnswerInBinary = 42u;
 

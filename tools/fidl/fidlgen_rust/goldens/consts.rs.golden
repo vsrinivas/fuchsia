@@ -78,19 +78,19 @@ pub const CONVERSION_FACTOR: f64 = 1.41421;
 
 pub const ENUM_VAL: EnumType = EnumType::Value;
 
-pub const ENUM_PRIMITIVE_VAL: i32 = EnumType::Value;
+pub const ENUM_PRIMITIVE_VAL: i32 = EnumType::Value.into_primitive();
 
 pub const ENUM_TRUE: EnumType = EnumType::True_;
 
-pub const ENUM_PRIMITIVE_TRUE: i32 = EnumType::True_;
+pub const ENUM_PRIMITIVE_TRUE: i32 = EnumType::True_.into_primitive();
 
-pub const BITS_VAL: BitsType = BitsType::Value;
+pub const BITS_VAL: BitsType = BitsType::VALUE;
 
-pub const BITS_PRIMITIVE_VAL: i32 = BitsType::Value;
+pub const BITS_PRIMITIVE_VAL: u32 = BitsType::VALUE.bits;
 
-pub const BITS_TRUE: BitsType = BitsType::True_;
+pub const BITS_TRUE: BitsType = BitsType::TRUE_;
 
-pub const BITS_PRIMITIVE_TRUE: i32 = BitsType::True_;
+pub const BITS_PRIMITIVE_TRUE: u32 = BitsType::TRUE_.bits;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(i32)]
@@ -110,7 +110,7 @@ impl EnumType {
     }
 
     #[inline]
-    pub fn into_primitive(self) -> i32 {
+    pub const fn into_primitive(self) -> i32 {
         self as i32
     }
 

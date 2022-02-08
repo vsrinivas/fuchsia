@@ -25,6 +25,6 @@ type BitsType = strict bits : uint32 {
     true = 2;
 };
 const bitsVal BitsType = BitsType.VALUE;
-const bitsPrimitiveVal int32 = BitsType.VALUE;
+const bitsPrimitiveVal uint32 = BitsType.VALUE;
 const bitsTrue BitsType = BitsType.true;
-const bitsPrimitiveTrue int32 = BitsType.true;
+const bitsPrimitiveTrue uint32 = BitsType.true;

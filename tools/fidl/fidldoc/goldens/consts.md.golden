@@ -160,7 +160,7 @@ Type: <code>uint32</code>
             <td>
                     <code><a class='link' href='#BitsType.true'>BitsType.true</a></code>
                 </td>
-                <td><code>int32</code></td>
+                <td><code>uint32</code></td>
             <td>
 </td>
         </tr>
@@ -169,7 +169,7 @@ Type: <code>uint32</code>
             <td>
                     <code><a class='link' href='#BitsType.VALUE'>BitsType.VALUE</a></code>
                 </td>
-                <td><code>int32</code></td>
+                <td><code>uint32</code></td>
             <td>
 </td>
         </tr>

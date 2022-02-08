@@ -49,7 +49,7 @@ impl {{ .Name }} {
 
 {{ if .IsStrict }}
 	#[inline]
-	pub fn into_primitive(self) -> {{ .Type }} {
+	pub const fn into_primitive(self) -> {{ .Type }} {
 		self as {{ .Type }}
 	}
 
@@ -83,7 +83,7 @@ impl {{ .Name }} {
 	}
 
 	#[inline]
-	pub fn into_primitive(self) -> {{ .Type }} {
+	pub const fn into_primitive(self) -> {{ .Type }} {
 		match self {
 			{{- range .Members }}
 			Self::{{ .Name }} => {{ .Value }},

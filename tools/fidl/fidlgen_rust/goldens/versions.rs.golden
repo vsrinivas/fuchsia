@@ -98,7 +98,7 @@ impl Enum {
     }
 
     #[inline]
-    pub fn into_primitive(self) -> u32 {
+    pub const fn into_primitive(self) -> u32 {
         match self {
             Self::A => 1,
             #[allow(deprecated)]

@@ -553,28 +553,59 @@ func compileLiteral(val fidlgen.Literal, typ fidlgen.Type) string {
 	}
 }
 
+func (c *compiler) identifierConstantDeclType(eci EncodedCompoundIdentifier) fidlgen.DeclType {
+	memberless := fidlgen.ParseCompoundIdentifier(eci)
+	memberless.Member = ""
+	declInfo, ok := c.decls[memberless.Encode()]
+	if !ok {
+		panic(fmt.Sprintf("identifier not in decl map: %s", memberless.Encode()))
+	}
+	return declInfo.Type
+}
+
 func (c *compiler) compileConstant(val fidlgen.Constant, typ fidlgen.Type) string {
 	switch val.Kind {
 	case fidlgen.IdentifierConstant:
+		declType := c.identifierConstantDeclType(val.Identifier)
 		parts := fidlgen.ParseCompoundIdentifier(val.Identifier)
-		if parts.Member == fidlgen.Identifier("") {
-			// Top-level constant.
+		switch declType {
+		case fidlgen.ConstDeclType:
 			parts.Name = fidlgen.Identifier(compileScreamingSnakeIdentifier(parts.Name))
-		} else {
-			// Bits or enum member.
+			return c.compileCompoundIdentifier(parts)
+		case fidlgen.BitsDeclType:
 			parts.Name = fidlgen.Identifier(compileCamelIdentifier(parts.Name))
-			// TODO(fxbug.dev/47034) For bits the member should be SCREAMING_SNAKE_CASE.
+			parts.Member = fidlgen.Identifier(compileScreamingSnakeIdentifier(parts.Member))
+			// TODO(fxbug.dev/93195): For now we assume the primitive type
+			// matches the bits underlying type. If it doesn't the generated
+			// Rust code will not compile.
+			if typ.Kind == fidlgen.PrimitiveType {
+				return fmt.Sprintf("%s.bits", c.compileCompoundIdentifier(parts))
+			}
+			return c.compileCompoundIdentifier(parts)
+		case fidlgen.EnumDeclType:
+			parts.Name = fidlgen.Identifier(compileCamelIdentifier(parts.Name))
 			parts.Member = fidlgen.Identifier(compileCamelIdentifier(parts.Member))
+			// TODO(fxbug.dev/93195): For now we assume the primitive type
+			// matches the enum underlying type. If it doesn't the generated
+			// Rust code will not compile.
+			if typ.Kind == fidlgen.PrimitiveType {
+				return fmt.Sprintf("%s.into_primitive()", c.compileCompoundIdentifier(parts))
+			}
+			return c.compileCompoundIdentifier(parts)
+		default:
+			panic(fmt.Sprintf("unexpected decl type %s", declType))
 		}
-		return c.compileCompoundIdentifier(parts)
 	case fidlgen.LiteralConstant:
 		return compileLiteral(val.Literal, typ)
 	case fidlgen.BinaryOperator:
+		if typ.Kind == fidlgen.PrimitiveType {
+			return val.Value
+		}
 		decl := c.compileType(typ)
 		// from_bits isn't a const function, so from_bits_truncate must be used.
 		return fmt.Sprintf("%s::from_bits_truncate(%s)", decl, val.Value)
 	default:
-		panic(fmt.Sprintf("unknown constant kind: %v", val.Kind))
+		panic(fmt.Sprintf("unknown constant kind: %s", val.Kind))
 	}
 }
 

@@ -689,7 +689,7 @@
       },
       "type": {
         "kind": "primitive",
-        "subtype": "int32",
+        "subtype": "uint32",
         "type_shape_v1": {
           "inline_size": 4,
           "alignment": 4,
@@ -764,7 +764,7 @@
       },
       "type": {
         "kind": "primitive",
-        "subtype": "int32",
+        "subtype": "uint32",
         "type_shape_v1": {
           "inline_size": 4,
           "alignment": 4,

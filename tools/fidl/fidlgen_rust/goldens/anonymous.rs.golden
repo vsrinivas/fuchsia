@@ -135,7 +135,7 @@ impl SomeProtocolSomeMethodError {
     }
 
     #[inline]
-    pub fn into_primitive(self) -> u32 {
+    pub const fn into_primitive(self) -> u32 {
         match self {
             Self::ErrorOne => 1,
             Self::ErrorTwo => 2,
@@ -212,7 +212,7 @@ impl Op {
     }
 
     #[inline]
-    pub fn into_primitive(self) -> u32 {
+    pub const fn into_primitive(self) -> u32 {
         match self {
             Self::Add => 1,
             Self::Mul => 2,
