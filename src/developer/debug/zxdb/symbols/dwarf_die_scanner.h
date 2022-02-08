@@ -65,31 +65,15 @@ class DwarfDieScanner2 {
   // This is used to avoid indexing function-local variables.
   bool is_inside_function() const { return tree_stack_.back().inside_function; }
 
-#if defined(LLVM_USING_OLD_PREBUILT)
-  // When scanning is complete (done() returns true) this object can vend in constant time the
-  // parent indices of a DIE (avoiding LLVM's linear scan). Will return kNoParent for the root.
-  uint32_t GetParentIndex(uint32_t index) const {
-    FX_DCHECK(index < parent_indices_.size());
-    FX_DCHECK(done());  // Can only get parents when done iterating.
-    return parent_indices_[index];
-  }
-#else
   // Return the parent's index of a DIE in constant time. Will return kNoParent for the root.
   uint32_t GetParentIndex(uint32_t index) const;
-#endif
 
  private:
   // Stores the list of parent indices according to the current depth in the tree. At any given
   // point, the parent index of the current node will be tree_stack.back(). inside_function should
   // be set if this node or any parent node is a function.
   struct StackEntry {
-#if defined(LLVM_USING_OLD_PREBUILT)
-    StackEntry(int d, unsigned i, bool f) : depth(d), index(i), inside_function(f) {}
-
-    int depth;
-#else
     StackEntry(unsigned i, bool f) : index(i), inside_function(f) {}
-#endif
 
     unsigned index;
 
@@ -104,10 +88,6 @@ class DwarfDieScanner2 {
   uint32_t die_index_ = 0;
 
   const llvm::DWARFDebugInfoEntry* cur_die_ = nullptr;
-
-#if defined(LLVM_USING_OLD_PREBUILT)
-  std::vector<uint32_t> parent_indices_;
-#endif
 
   std::vector<StackEntry> tree_stack_;
 };

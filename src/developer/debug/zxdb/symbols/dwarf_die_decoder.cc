@@ -75,13 +75,9 @@ void DwarfDieDecoder::AddHighPC(llvm::Optional<HighPC>* output) {
 void DwarfDieDecoder::AddCString(llvm::dwarf::Attribute attribute,
                                  llvm::Optional<const char*>* output) {
   attrs_.emplace_back(attribute, [output](llvm::DWARFUnit*, const llvm::DWARFFormValue& form) {
-#if defined(LLVM_USING_OLD_PREBUILT)
-    *output = form.getAsCString();
-#else
     if (auto res = form.getAsCString(); res) {
       *output = *res;
     }
-#endif
   });
 }
 

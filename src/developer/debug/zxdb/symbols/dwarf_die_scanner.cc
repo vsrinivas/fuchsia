@@ -16,11 +16,6 @@ DwarfDieScanner2::DwarfDieScanner2(llvm::DWARFUnit* unit) : unit_(unit) {
 
   // We prefer not to reallocate and normally the C++ component depth is < 8.
   tree_stack_.reserve(8);
-
-#if defined(LLVM_USING_OLD_PREBUILT)
-  parent_indices_.resize(die_count_);
-  tree_stack_.emplace_back(-1, kNoParent, false);
-#endif
 }
 
 DwarfDieScanner2::~DwarfDieScanner2() = default;
@@ -31,28 +26,11 @@ const llvm::DWARFDebugInfoEntry* DwarfDieScanner2::Prepare() {
 
   cur_die_ = unit_->getDIEAtIndex(die_index_).getDebugInfoEntry();
 
-#if defined(LLVM_USING_OLD_PREBUILT)
-  // LLVM can provide the depth in O(1) time but not the parent.
-  int current_depth = static_cast<int>(cur_die_->getDepth());
-  if (current_depth == tree_stack_.back().depth) {
-    // Common case: depth not changing. Just update the topmost item in the stack to point to the
-    // current node.
-    tree_stack_.back().index = die_index_;
-  } else {
-    // Tree changed. First check for moving up in the tree and pop the stack until we're at the
-    // parent of the current level (this will do nothing when going deeper in the tree), then add
-    // the current level.
-    while (tree_stack_.back().depth >= current_depth)
-      tree_stack_.pop_back();
-    tree_stack_.emplace_back(current_depth, die_index_, false);
-  }
-#else
   uint32_t parent_idx = cur_die_->getParentIdx().getValueOr(kNoParent);
 
   while (!tree_stack_.empty() && tree_stack_.back().index != parent_idx)
     tree_stack_.pop_back();
   tree_stack_.emplace_back(die_index_, false);
-#endif
 
   // Fix up the inside function flag.
   switch (static_cast<DwarfTag>(cur_die_->getTag())) {
@@ -72,12 +50,6 @@ const llvm::DWARFDebugInfoEntry* DwarfDieScanner2::Prepare() {
       break;
   }
 
-#if defined(LLVM_USING_OLD_PREBUILT)
-  // Save parent info. The parent of this node is the one right before the
-  // current one (the last one in the stack).
-  parent_indices_[die_index_] = (tree_stack_.end() - 2)->index;
-#endif
-
   return cur_die_;
 }
 
@@ -87,10 +59,8 @@ void DwarfDieScanner2::Advance() {
   die_index_++;
 }
 
-#if !defined(LLVM_USING_OLD_PREBUILT)
 uint32_t DwarfDieScanner2::GetParentIndex(uint32_t index) const {
   return unit_->getDIEAtIndex(index).getDebugInfoEntry()->getParentIdx().getValueOr(kNoParent);
 }
-#endif
 
 }  // namespace zxdb
