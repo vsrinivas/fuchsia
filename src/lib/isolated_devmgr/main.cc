@@ -157,7 +157,7 @@ int main(int argc, const char** argv) {
       FX_PLOGS(ERROR, status) << "Failed to create channel";
       return ISO_DEV_MGR_RET_ERR;
     }
-    status = fdio_open(ns.c_str(), ZX_FS_RIGHT_READABLE, server.release());
+    status = fdio_open(ns.c_str(), ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE, server.release());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to open namespace " << ns;
       return ISO_DEV_MGR_RET_ERR;
