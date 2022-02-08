@@ -463,6 +463,7 @@ executable("device_tests") {
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.net.virtualization",
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.virtualization.hardware",

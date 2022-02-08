@@ -60,7 +60,25 @@ fuchsia_unittest_package("virtio_sound_unittests") {
   deps = [ ":virtio_sound_bin_test" ]
 }
 
-fuchsia_package_with_single_component("virtio_sound") {
+# TODO(fxbug.dev/72386)
+# CFv2 migration in progress
+# v2 component is being used in device tests
+# v1 component is being used in prod code
+fuchsia_package("virtio_sound") {
+  deps = [
+    ":virtio_sound_v1",
+    ":virtio_sound_v2",
+  ]
+}
+
+fuchsia_component("virtio_sound_v2") {
+  manifest = "../../meta/virtio_sound.cml"
+  deps = [ ":virtio_sound_bin" ]
+  component_name = "virtio_sound"
+}
+
+fuchsia_component("virtio_sound_v1") {
   manifest = "../../meta/virtio_sound.cmx"
   deps = [ ":virtio_sound_bin" ]
+  component_name = "virtio_sound"
 }

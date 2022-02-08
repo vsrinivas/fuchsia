@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 
 #include <array>
 #include <deque>
@@ -16,12 +19,10 @@
 #include <gmock/gmock.h>
 #include <virtio/sound.h>
 
+#include "fuchsia/logger/cpp/fidl.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
-
-static constexpr char kVirtioSoundUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_sound#meta/virtio_sound.cmx";
 
 #define UNEXPECTED_METHOD_CALL ADD_FAILURE() << "unexpected method call " << __func__
 
@@ -256,42 +257,37 @@ class FakeAudioCapturer : public fuchsia::media::AudioCapturer {
   std::deque<Packet> packets_;
 };
 
-class FakeAudio : public fuchsia::media::Audio {
+class FakeAudio : public fuchsia::media::Audio, public component_testing::LocalComponent {
  public:
-  explicit FakeAudio(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+  explicit FakeAudio(async::Loop& loop) : loop_(loop) {}
 
   void CreateAudioRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request) final {
-    renderers_.push_back(std::make_unique<FakeAudioRenderer>(std::move(request), dispatcher_));
+    renderers_.push_back(
+        std::make_unique<FakeAudioRenderer>(std::move(request), loop_.dispatcher()));
   }
   void CreateAudioCapturer(fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request,
                            bool loopback) final {
     EXPECT_FALSE(loopback);
-    capturers_.push_back(std::make_unique<FakeAudioCapturer>(std::move(request), dispatcher_));
+    capturers_.push_back(
+        std::make_unique<FakeAudioCapturer>(std::move(request), loop_.dispatcher()));
   }
 
-  fidl::InterfaceRequestHandler<fuchsia::media::Audio> Handler() {
-    return binding_set_.GetHandler(this, dispatcher_);
+  void Start(std::unique_ptr<component_testing::LocalComponentHandles> handles) override {
+    // This class contains handles to the component's incoming and outgoing capabilities.
+    handles_ = std::move(handles);
+
+    ASSERT_EQ(
+        handles_->outgoing()->AddPublicService(binding_set_.GetHandler(this, loop_.dispatcher())),
+        ZX_OK);
   }
 
-  FakeAudioRenderer* get_audio_renderer(size_t k) {
-    if (k >= renderers_.size()) {
-      return nullptr;
-    }
-    return renderers_[k].get();
-  }
-
-  FakeAudioCapturer* get_audio_capturer(size_t k) {
-    if (k >= capturers_.size()) {
-      return nullptr;
-    }
-    return capturers_[k].get();
-  }
-
- private:
-  async_dispatcher_t* dispatcher_;
-  fidl::BindingSet<fuchsia::media::Audio> binding_set_;
   std::vector<std::unique_ptr<FakeAudioRenderer>> renderers_;
   std::vector<std::unique_ptr<FakeAudioCapturer>> capturers_;
+  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
+
+ private:
+  async::Loop& loop_;
+  fidl::BindingSet<fuchsia::media::Audio> binding_set_;
 };
 
 uint64_t bit(uint64_t n) { return 1ul << n; }
@@ -330,10 +326,12 @@ static constexpr QueueConfig kQueueConfigs[4] = {
     {16, PAGE_SIZE},
 };
 
+constexpr auto kTimeout = zx::sec(20);
+
 template <bool EnableInput>
-class VirtioSoundTestBase : public TestWithDevice {
+class VirtioSoundTestBase : public TestWithDeviceV2 {
  protected:
-  VirtioSoundTestBase() {
+  VirtioSoundTestBase() : audio_service_(loop()) {
     zx_gpaddr_t addr = 0;
     for (int k = 0; k < 4; k++) {
       queue_data_addrs_[k] = addr;
@@ -345,24 +343,56 @@ class VirtioSoundTestBase : public TestWithDevice {
   }
 
   void SetUp() override {
-    // Launch a fake audio service.
-    audio_service_ = std::make_unique<FakeAudio>(dispatcher());
-    std::unique_ptr<sys::testing::EnvironmentServices> env_services = CreateServices();
-    ASSERT_EQ(ZX_OK, env_services->AddService(audio_service_->Handler()));
+    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_sound#meta/virtio_sound.cm";
+    constexpr auto kComponentName = "virtio_sound";
+    constexpr auto kFakeAudio = "fake_audio";
 
-    // Launch a device process.
+    using component_testing::ChildRef;
+    using component_testing::ParentRef;
+    using component_testing::Protocol;
+    using component_testing::RealmBuilder;
+    using component_testing::RealmRoot;
+    using component_testing::Route;    
+
+    auto realm_builder = RealmBuilder::Create();
+    realm_builder.AddChild(kComponentName, kComponentUrl);
+    realm_builder.AddLocalChild(kFakeAudio, &audio_service_);
+
+    realm_builder
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::logger::LogSink::Name_},
+                                Protocol{fuchsia::tracing::provider::Registry::Name_},
+                                Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                            },
+                        .source = ParentRef(),
+                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::media::Audio::Name_},
+                            },
+                        .source = {ChildRef{kFakeAudio}},
+                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::virtualization::hardware::VirtioSound::Name_},
+                            },
+                        .source = ChildRef{kComponentName},
+                        .targets = {ParentRef()}});
+
+    realm_ = std::make_unique<RealmRoot>(realm_builder.Build(dispatcher()));
+
     fuchsia::virtualization::hardware::StartInfo start_info;
-    ASSERT_EQ(ZX_OK,
-              LaunchDevice(kVirtioSoundUrl, phys_mem_size_, &start_info, std::move(env_services)));
+    zx_status_t status = MakeStartInfo(phys_mem_size_, &start_info);
+    ASSERT_EQ(ZX_OK, status);
 
-    // Start device execution.
-    services_->Connect(sound_.NewRequest());
-    RunLoopUntilIdle();
+    sound_ = realm_->ConnectSync<fuchsia::virtualization::hardware::VirtioSound>();
 
     uint32_t features, jacks, streams, chmaps;
     ASSERT_EQ(ZX_OK,
               sound_->Start(std::move(start_info), EnableInput, true /* enable_verbose_logging */,
                             &features, &jacks, &streams, &chmaps));
+
     ASSERT_EQ(features, 0u);
     ASSERT_EQ(jacks, kNumJacks);
     if (EnableInput) {
@@ -382,9 +412,29 @@ class VirtioSoundTestBase : public TestWithDevice {
 
     // Finish negotiating features.
     ASSERT_EQ(ZX_OK, sound_->Ready(0));
+
+    // Wait until virtio_sound has connected to the mock object
+    RunLoopWithTimeoutOrUntil([&]() { return audio_service_.handles_ != nullptr; }, kTimeout);
   }
 
-  FakeAudio& audio_service() { return *audio_service_; }
+  FakeAudioRenderer* get_audio_renderer(size_t k) {
+    if (RunLoopWithTimeoutOrUntil([&]() { return audio_service_.renderers_.size() > k; },
+                                  kTimeout)) {
+      return audio_service_.renderers_[k].get();
+    }
+
+    return nullptr;
+  }
+
+  FakeAudioCapturer* get_audio_capturer(size_t k) {
+    if (RunLoopWithTimeoutOrUntil([&]() { return audio_service_.capturers_.size() > k; },
+                                  kTimeout)) {
+      return audio_service_.capturers_[k].get();
+    }
+
+    return nullptr;
+  }
+
   VirtioQueueFake& controlq() { return *queues_[CONTROLQ]; }
   VirtioQueueFake& eventq() { return *queues_[EVENTQ]; }
   VirtioQueueFake& txq() { return *queues_[TXQ]; }
@@ -414,7 +464,6 @@ class VirtioSoundTestBase : public TestWithDevice {
   WaitForCalls(Server& server, std::set<typename Server::Method> expected_methods) {
     std::unordered_map<typename Server::Method, typename Server::Call> out;
     while (!expected_methods.empty()) {
-      constexpr auto kTimeout = zx::sec(5);
       RunLoopWithTimeoutOrUntil([&server]() { return !server.calls().empty(); }, kTimeout);
       if (server.calls().empty()) {
         std::ostringstream os;
@@ -453,7 +502,6 @@ class VirtioSoundTestBase : public TestWithDevice {
   // FakeAudio{Renderer,Capturer}. On timeout, returns an empty set.
   template <class Server>
   std::deque<typename Server::Packet> WaitForPackets(Server& server, size_t expected_count) {
-    constexpr auto kTimeout = zx::sec(5);
     RunLoopWithTimeoutOrUntil(
         [&server, expected_count]() { return server.packets().size() == expected_count; },
         kTimeout);
@@ -511,8 +559,9 @@ class VirtioSoundTestBase : public TestWithDevice {
   std::array<std::unique_ptr<VirtioQueueFake>, 4> queues_;
   zx_gpaddr_t queue_data_addrs_[4];
   size_t phys_mem_size_;
-  std::unique_ptr<FakeAudio> audio_service_;
+  FakeAudio audio_service_;
   std::unordered_map<VirtioQueueFake*, std::unordered_set<uint32_t>> used_descriptors_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
 using VirtioSoundTest = VirtioSoundTestBase<true>;
@@ -1027,7 +1076,7 @@ void VirtioSoundTestBase<EnableInput>::TestPcmOutputSetParamsAndPrepare(
   }
 
   // Check that an AudioRenderer was created with the appropriate configs.
-  auto renderer = audio_service().get_audio_renderer(0);
+  auto renderer = get_audio_renderer(0);
   ASSERT_TRUE(renderer) << "device did not call CreateAudioRenderer?";
   auto calls = WaitForCalls(*renderer, {
                                            FakeAudioRenderer::Method::SetUsage,
@@ -1115,7 +1164,7 @@ void VirtioSoundTestBase<EnableInput>::TestPcmOutputStateTraversal(size_t render
   }
 
   // Check that an AudioRenderer was created with the appropriate initialization calls.
-  auto renderer = audio_service().get_audio_renderer(renderer_id);
+  auto renderer = get_audio_renderer(renderer_id);
   ASSERT_TRUE(renderer) << "device did not call CreateAudioRenderer?";
   auto calls = WaitForCalls(*renderer, {
                                            FakeAudioRenderer::Method::SetUsage,
@@ -1217,7 +1266,7 @@ TEST_F(VirtioSoundTest, PcmOutputTransitionPrepareRelease) {
   }
 
   // Check that an AudioRenderer was created with the appropriate initialization calls.
-  auto renderer = audio_service().get_audio_renderer(0);
+  auto renderer = get_audio_renderer(0);
   ASSERT_TRUE(renderer) << "device did not call CreateAudioRenderer?";
   auto calls = WaitForCalls(*renderer, {
                                            FakeAudioRenderer::Method::SetUsage,
@@ -1346,7 +1395,7 @@ TEST_F(VirtioSoundTest, PcmOutputXferOne) {
   resp->status = kInvalidStatus;
 
   // Wait for the packet to arrive.
-  auto renderer = audio_service().get_audio_renderer(0);
+  auto renderer = get_audio_renderer(0);
   auto packets = WaitForPackets(*renderer, 1);
   ASSERT_EQ(packets.size(), 1u);
   EXPECT_EQ(packets[0].buffer, kPacket);
@@ -1383,7 +1432,7 @@ TEST_F(VirtioSoundTest, PcmOutputXferMultiple) {
   }
 
   // Wait for the packets to arrive.
-  auto renderer = audio_service().get_audio_renderer(0);
+  auto renderer = get_audio_renderer(0);
   auto packets = WaitForPackets(*renderer, 3);
   ASSERT_EQ(packets.size(), kNumPackets);
   for (size_t k = 0; k < kNumPackets; k++) {
@@ -1433,7 +1482,7 @@ TEST_F(VirtioSoundTest, PcmOutputXferThenRelease) {
   }
 
   // Wait for those packets to arrive.
-  auto renderer = audio_service().get_audio_renderer(0);
+  auto renderer = get_audio_renderer(0);
   auto packets = WaitForPackets(*renderer, kPacketsBeforeRelease);
   ASSERT_EQ(packets.size(), kPacketsBeforeRelease);
   for (size_t k = 0; k < kPacketsBeforeRelease; k++) {
@@ -1528,7 +1577,7 @@ TEST_F(VirtioSoundTest, BadPcmOutputXferBadStreamId) {
                        .Build());
   ASSERT_EQ(ZX_OK, NotifyQueue(TXQ));
   ASSERT_EQ(ZX_OK, WaitOnInterrupt());
-  auto renderer = audio_service().get_audio_renderer(0);
+  auto renderer = get_audio_renderer(0);
   ASSERT_TRUE(renderer);
   EXPECT_EQ(renderer->packets().size(), 0u);
   EXPECT_EQ(resp->status, VIRTIO_SND_S_BAD_MSG);
@@ -1554,7 +1603,7 @@ TEST_F(VirtioSoundTest, BadPcmOutputXferPacketTooBig) {
                        .Build());
   ASSERT_EQ(ZX_OK, NotifyQueue(TXQ));
   ASSERT_EQ(ZX_OK, WaitOnInterrupt());
-  auto renderer = audio_service().get_audio_renderer(0);
+  auto renderer = get_audio_renderer(0);
   ASSERT_TRUE(renderer);
   EXPECT_EQ(renderer->packets().size(), 0u);
   EXPECT_EQ(resp->status, VIRTIO_SND_S_BAD_MSG);
@@ -1581,7 +1630,7 @@ TEST_F(VirtioSoundTest, BadPcmOutputXferPacketNonintegralFrames) {
                        .Build());
   ASSERT_EQ(ZX_OK, NotifyQueue(TXQ));
   ASSERT_EQ(ZX_OK, WaitOnInterrupt());
-  auto renderer = audio_service().get_audio_renderer(0);
+  auto renderer = get_audio_renderer(0);
   ASSERT_TRUE(renderer);
   EXPECT_EQ(renderer->packets().size(), 0u);
   EXPECT_EQ(resp->status, VIRTIO_SND_S_BAD_MSG);
@@ -1626,7 +1675,7 @@ void VirtioSoundTestBase<true>::TestPcmInputSetParamsAndPrepare(
   }
 
   // Check that an AudioCapturer was created with the appropriate configs.
-  auto capturer = audio_service().get_audio_capturer(0);
+  auto capturer = get_audio_capturer(0);
   ASSERT_TRUE(capturer) << "device did not call CreateAudioCapturer?";
   auto calls = WaitForCalls(*capturer, {
                                            FakeAudioCapturer::Method::SetUsage,
@@ -1708,7 +1757,7 @@ void VirtioSoundTestBase<true>::TestPcmInputStateTraversal(size_t capturer_id) {
   }
 
   // Check that an AudioCapturer was created with the appropriate initialization calls.
-  auto capturer = audio_service().get_audio_capturer(capturer_id);
+  auto capturer = get_audio_capturer(capturer_id);
   ASSERT_TRUE(capturer) << "device did not call CreateAudioCapturer?";
   auto calls = WaitForCalls(*capturer, {
                                            FakeAudioCapturer::Method::SetUsage,
@@ -1801,7 +1850,7 @@ TEST_F(VirtioSoundTest, PcmInputTransitionPrepareRelease) {
   }
 
   // Check that an AudioCapturer was created with the appropriate initialization calls.
-  auto capturer = audio_service().get_audio_capturer(0);
+  auto capturer = get_audio_capturer(0);
   ASSERT_TRUE(capturer) << "device did not call CreateAudioCapturer?";
   auto calls = WaitForCalls(*capturer, {
                                            FakeAudioCapturer::Method::SetUsage,
@@ -1893,7 +1942,7 @@ TEST_F(VirtioSoundTest, PcmInputXferOne) {
 
   // The packet should not arrive until after we START.
   RunLoopUntilIdle();
-  auto capturer = audio_service().get_audio_capturer(0);
+  auto capturer = get_audio_capturer(0);
   ASSERT_EQ(capturer->packets().size(), 0u);
 
   {
@@ -1951,7 +2000,7 @@ TEST_F(VirtioSoundTest, PcmInputXferOneAfterStart) {
   ASSERT_EQ(ZX_OK, NotifyQueue(RXQ));
   resp->status = kInvalidStatus;
 
-  auto capturer = audio_service().get_audio_capturer(0);
+  auto capturer = get_audio_capturer(0);
   auto packets = WaitForPackets(*capturer, 1);
   ASSERT_EQ(packets.size(), 1u);
   EXPECT_EQ(resp->status, kInvalidStatus);
@@ -1994,7 +2043,7 @@ TEST_F(VirtioSoundTest, PcmInputXferMultiple) {
 
   // The packet should not arrive until after we START.
   RunLoopUntilIdle();
-  auto capturer = audio_service().get_audio_capturer(0);
+  auto capturer = get_audio_capturer(0);
   ASSERT_EQ(capturer->packets().size(), 0u);
 
   {
@@ -2069,7 +2118,7 @@ TEST_F(VirtioSoundTest, PcmInputXferThenRelease) {
   }
 
   // Wait for those packets to arrive.
-  auto capturer = audio_service().get_audio_capturer(0);
+  auto capturer = get_audio_capturer(0);
   auto packets = WaitForPackets(*capturer, kPacketsBeforeRelease);
   ASSERT_EQ(packets.size(), kPacketsBeforeRelease);
   for (size_t k = 0; k < kPacketsBeforeRelease; k++) {
@@ -2176,7 +2225,7 @@ TEST_F(VirtioSoundTest, BadPcmInputXferBadStreamId) {
                        .Build());
   ASSERT_EQ(ZX_OK, NotifyQueue(RXQ));
   ASSERT_EQ(ZX_OK, WaitOnInterrupt());
-  auto capturer = audio_service().get_audio_capturer(0);
+  auto capturer = get_audio_capturer(0);
   ASSERT_TRUE(capturer);
   EXPECT_EQ(capturer->packets().size(), 0u);
   EXPECT_EQ(resp->status, VIRTIO_SND_S_BAD_MSG);
@@ -2205,7 +2254,7 @@ TEST_F(VirtioSoundTest, BadPcmInputXferPacketTooBig) {
                        .Build());
   ASSERT_EQ(ZX_OK, NotifyQueue(RXQ));
   ASSERT_EQ(ZX_OK, WaitOnInterrupt());
-  auto capturer = audio_service().get_audio_capturer(0);
+  auto capturer = get_audio_capturer(0);
   ASSERT_TRUE(capturer);
   EXPECT_EQ(capturer->packets().size(), 0u);
   EXPECT_EQ(resp->status, VIRTIO_SND_S_BAD_MSG);
@@ -2235,7 +2284,7 @@ TEST_F(VirtioSoundTest, BadPcmInputXferPacketNonintegralFrames) {
                        .Build());
   ASSERT_EQ(ZX_OK, NotifyQueue(RXQ));
   ASSERT_EQ(ZX_OK, WaitOnInterrupt());
-  auto capturer = audio_service().get_audio_capturer(0);
+  auto capturer = get_audio_capturer(0);
   ASSERT_TRUE(capturer);
   EXPECT_EQ(capturer->packets().size(), 0u);
   EXPECT_EQ(resp->status, VIRTIO_SND_S_BAD_MSG);
