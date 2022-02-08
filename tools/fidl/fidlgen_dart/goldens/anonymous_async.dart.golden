@@ -1048,7 +1048,7 @@ class SomeProtocolProxy extends $fidl.AsyncProxy<SomeProtocol>
 
   @override
   $async.Future<BitsMember> someMethod(
-      UnionMember unionMember, TableMember tableMember) async {
+      UnionMember unionMember, TableMember tableMember) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

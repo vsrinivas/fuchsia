@@ -128,7 +128,7 @@ class SuperProxy extends $fidl.AsyncProxy<Super> implements Super {
   }
 
   @override
-  $async.Future<int> foo(String s) async {
+  $async.Future<int> foo(String s) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -279,7 +279,7 @@ class SubProxy extends $fidl.AsyncProxy<Sub> implements Sub {
   }
 
   @override
-  $async.Future<int> foo(String s) async {
+  $async.Future<int> foo(String s) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

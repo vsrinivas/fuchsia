@@ -377,7 +377,7 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
   }
 
   @override
-  $async.Future<int> composedCallWhichMayFail(String s) async {
+  $async.Future<int> composedCallWhichMayFail(String s) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -401,7 +401,7 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
   }
 
   @override
-  $async.Future<int> callWhichMayFail(String s) async {
+  $async.Future<int> callWhichMayFail(String s) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

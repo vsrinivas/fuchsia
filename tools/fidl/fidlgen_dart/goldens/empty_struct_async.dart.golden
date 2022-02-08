@@ -234,7 +234,7 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
   }
 
   @override
-  $async.Future<void> send(Empty e) async {
+  $async.Future<void> send(Empty e) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -259,7 +259,7 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
   $async.Stream<Empty> get receive => _receiveEventStreamController.stream;
 
   @override
-  $async.Future<Empty> sendAndReceive(Empty e) async {
+  $async.Future<Empty> sendAndReceive(Empty e) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

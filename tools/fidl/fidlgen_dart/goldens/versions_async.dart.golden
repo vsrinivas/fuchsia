@@ -479,7 +479,7 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
   }
 
   @override
-  $async.Future<void> foo() async {
+  $async.Future<void> foo() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

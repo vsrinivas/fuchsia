@@ -368,7 +368,7 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
   }
 
   @override
-  $async.Future<FlexibleFoo> requestStrictResponseFlexible(StrictFoo s) async {
+  $async.Future<FlexibleFoo> requestStrictResponseFlexible(StrictFoo s) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -392,7 +392,7 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
   }
 
   @override
-  $async.Future<StrictFoo> requestFlexibleResponseStrict(FlexibleFoo s) async {
+  $async.Future<StrictFoo> requestFlexibleResponseStrict(FlexibleFoo s) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

@@ -1439,7 +1439,7 @@ class WithAndWithoutRequestResponseProxy
   }
 
   @override
-  $async.Future<void> noRequestNoResponse() async {
+  $async.Future<void> noRequestNoResponse() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -1455,7 +1455,7 @@ class WithAndWithoutRequestResponseProxy
   }
 
   @override
-  $async.Future<void> noRequestEmptyResponse() async {
+  $async.Future<void> noRequestEmptyResponse() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -1471,7 +1471,7 @@ class WithAndWithoutRequestResponseProxy
   }
 
   @override
-  $async.Future<String> noRequestWithResponse() async {
+  $async.Future<String> noRequestWithResponse() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -1487,7 +1487,7 @@ class WithAndWithoutRequestResponseProxy
   }
 
   @override
-  $async.Future<void> withRequestNoResponse(String arg) async {
+  $async.Future<void> withRequestNoResponse(String arg) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -1511,7 +1511,7 @@ class WithAndWithoutRequestResponseProxy
   }
 
   @override
-  $async.Future<void> withRequestEmptyResponse(String arg) async {
+  $async.Future<void> withRequestEmptyResponse(String arg) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -1535,7 +1535,7 @@ class WithAndWithoutRequestResponseProxy
   }
 
   @override
-  $async.Future<String> withRequestWithResponse(String arg) async {
+  $async.Future<String> withRequestWithResponse(String arg) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -2037,8 +2037,7 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
   }
 
   @override
-  $async.Future<WithErrorSyntax$ResponseAsStruct$Response>
-      responseAsStruct() async {
+  $async.Future<WithErrorSyntax$ResponseAsStruct$Response> responseAsStruct() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -2054,7 +2053,7 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
   }
 
   @override
-  $async.Future<void> errorAsPrimitive() async {
+  $async.Future<void> errorAsPrimitive() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -2069,7 +2068,7 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
   }
 
   @override
-  $async.Future<void> errorAsEnum() async {
+  $async.Future<void> errorAsEnum() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -2084,7 +2083,7 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
   }
 
   @override
-  $async.Future<$zircon.Handle> handleInResult() async {
+  $async.Future<$zircon.Handle> handleInResult() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -2503,7 +2502,7 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
   }
 
   @override
-  $async.Future<void> methodA(int a, int b) async {
+  $async.Future<void> methodA(int a, int b) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -2532,7 +2531,7 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
       _eventAEventStreamController.stream;
 
   @override
-  $async.Future<int> methodB(int a, int b) async {
+  $async.Future<int> methodB(int a, int b) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -2555,7 +2554,7 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
   }
 
   @override
-  $async.Future<void> takeHandle($zircon.Handle h) async {
+  $async.Future<void> takeHandle($zircon.Handle h) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -2578,7 +2577,7 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
   }
 
   @override
-  $async.Future<$zircon.Socket> mutateSocket($zircon.Socket a) async {
+  $async.Future<$zircon.Socket> mutateSocket($zircon.Socket a) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -2907,7 +2906,7 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
   }
 
   @override
-  $async.Future<int> request(int x) async {
+  $async.Future<int> request(int x) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -2927,7 +2926,7 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
   }
 
   @override
-  $async.Future<void> oneWay(int x) async {
+  $async.Future<void> oneWay(int x) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -3125,7 +3124,7 @@ class DiscoverableProtocolProxy extends $fidl.AsyncProxy<DiscoverableProtocol>
   }
 
   @override
-  $async.Future<void> method() async {
+  $async.Future<void> method() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -3319,7 +3318,7 @@ class HandleRightsProtocolProxy extends $fidl.AsyncProxy<HandleRightsProtocol>
   }
 
   @override
-  $async.Future<void> noResponseMethod($zircon.Socket h) async {
+  $async.Future<void> noResponseMethod($zircon.Socket h) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -3343,7 +3342,7 @@ class HandleRightsProtocolProxy extends $fidl.AsyncProxy<HandleRightsProtocol>
   }
 
   @override
-  $async.Future<$zircon.Socket> responseMethod($zircon.Socket h) async {
+  $async.Future<$zircon.Socket> responseMethod($zircon.Socket h) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -3645,7 +3644,7 @@ class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
 
   @override
   $async.Future<$fidl.InterfaceHandle<DiscoverableProtocol>?> clientEnds(
-      $fidl.InterfaceHandle<DiscoverableProtocol> in$) async {
+      $fidl.InterfaceHandle<DiscoverableProtocol> in$) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -3670,7 +3669,7 @@ class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
 
   @override
   $async.Future<$fidl.InterfaceRequest<DiscoverableProtocol>> serverEnds(
-      $fidl.InterfaceRequest<DiscoverableProtocol>? in$) async {
+      $fidl.InterfaceRequest<DiscoverableProtocol>? in$) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -3694,7 +3693,7 @@ class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
   }
 
   @override
-  $async.Future<ProtocolEnds> structContainingEnds(ProtocolEnds in$) async {
+  $async.Future<ProtocolEnds> structContainingEnds(ProtocolEnds in$) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -3959,7 +3958,7 @@ class ManyParametersProxy extends $fidl.AsyncProxy<ManyParameters>
       bool p12,
       bool p13,
       bool p14,
-      bool p15) async {
+      bool p15) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -4114,7 +4113,7 @@ class MethodWithUnionProxy extends $fidl.AsyncProxy<MethodWithUnion>
   }
 
   @override
-  $async.Future<void> unionMethod(TheUnion u) async {
+  $async.Future<void> unionMethod(TheUnion u) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

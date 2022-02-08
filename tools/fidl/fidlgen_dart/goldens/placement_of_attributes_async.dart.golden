@@ -503,7 +503,7 @@ class ExampleProtocolProxy extends $fidl.AsyncProxy<ExampleProtocol>
   }
 
   @override
-  $async.Future<void> method(lib$test_exampleusing.Empty arg) async {
+  $async.Future<void> method(lib$test_exampleusing.Empty arg) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

@@ -111,7 +111,7 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
   }
 
   @override
-  $async.Future<void> first($fidl.InterfaceRequest<Parent> request) async {
+  $async.Future<void> first($fidl.InterfaceRequest<Parent> request) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -248,7 +248,7 @@ class ChildProxy extends $fidl.AsyncProxy<Child> implements Child {
   }
 
   @override
-  $async.Future<void> first($fidl.InterfaceRequest<Parent> request) async {
+  $async.Future<void> first($fidl.InterfaceRequest<Parent> request) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -269,7 +269,7 @@ class ChildProxy extends $fidl.AsyncProxy<Child> implements Child {
   }
 
   @override
-  $async.Future<void> second($fidl.InterfaceRequest<Parent> request) async {
+  $async.Future<void> second($fidl.InterfaceRequest<Parent> request) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

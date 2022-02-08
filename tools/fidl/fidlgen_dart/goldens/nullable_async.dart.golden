@@ -798,7 +798,7 @@ class SimpleProtocolProxy extends $fidl.AsyncProxy<SimpleProtocol>
   }
 
   @override
-  $async.Future<int> add(int a, int b) async {
+  $async.Future<int> add(int a, int b) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

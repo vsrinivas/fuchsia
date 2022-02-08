@@ -110,7 +110,7 @@ class FirstProtocolProxy extends $fidl.AsyncProxy<FirstProtocol>
   }
 
   @override
-  $async.Future<void> methodOnFirst() async {
+  $async.Future<void> methodOnFirst() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -226,7 +226,7 @@ class SecondProtocolProxy extends $fidl.AsyncProxy<SecondProtocol>
   }
 
   @override
-  $async.Future<void> methodOnSecond() async {
+  $async.Future<void> methodOnSecond() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

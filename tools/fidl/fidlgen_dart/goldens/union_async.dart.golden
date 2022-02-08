@@ -2792,7 +2792,7 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
 
   @override
   $async.Future<StrictBoundedXUnion>
-      strictXUnionHenceResponseMayBeStackAllocated() async {
+      strictXUnionHenceResponseMayBeStackAllocated() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -2809,7 +2809,7 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
 
   @override
   $async.Future<OlderSimpleUnion>
-      flexibleXUnionHenceResponseMustBeHeapAllocated() async {
+      flexibleXUnionHenceResponseMustBeHeapAllocated() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

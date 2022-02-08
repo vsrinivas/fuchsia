@@ -1357,7 +1357,7 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
   }
 
   @override
-  $async.Future<int> onlyDenyCpp(bool a) async {
+  $async.Future<int> onlyDenyCpp(bool a) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -1380,7 +1380,7 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
   }
 
   @override
-  $async.Future<int> onlyDenyGo(bool a) async {
+  $async.Future<int> onlyDenyGo(bool a) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -1403,7 +1403,7 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
   }
 
   @override
-  $async.Future<int> onlyDenyLibfuzzer(bool a) async {
+  $async.Future<int> onlyDenyLibfuzzer(bool a) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -1427,7 +1427,7 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
   }
 
   @override
-  $async.Future<int> onlyDenyRust(bool a) async {
+  $async.Future<int> onlyDenyRust(bool a) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -1450,7 +1450,7 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
   }
 
   @override
-  $async.Future<int> onlyDenySyzkaller(bool a) async {
+  $async.Future<int> onlyDenySyzkaller(bool a) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -1867,7 +1867,7 @@ class ImportsSameNameContextProxy extends $fidl
   }
 
   @override
-  $async.Future<void> unattributed() async {
+  $async.Future<void> unattributed() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
@@ -1883,7 +1883,7 @@ class ImportsSameNameContextProxy extends $fidl
   }
 
   @override
-  $async.Future<void> alwaysAppearsInImportingLibrary() async {
+  $async.Future<void> alwaysAppearsInImportingLibrary() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

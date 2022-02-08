@@ -297,7 +297,7 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
   }
 
   @override
-  $async.Future<int> foo(String s) async {
+  $async.Future<int> foo(String s) {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),

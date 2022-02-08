@@ -125,7 +125,7 @@ class TopProxy extends $fidl.AsyncProxy<Top> implements Top {
   }
 
   @override
-  $async.Future<lib$test_bottom.Foo> getFoo() async {
+  $async.Future<lib$test_bottom.Foo> getFoo() {
     if (!ctrl.isBound) {
       return $async.Future.error(
           $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
