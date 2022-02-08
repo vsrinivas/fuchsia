@@ -316,12 +316,17 @@ dashboards.
 Ongoing work:
 
 *   Performance and reliability improvements to the coverage runtime.
-*   Performance and reliability improvements to the coverage processing
-    pipeline.
-
-Areas for future work:
-
 *   Kernel support for source code coverage from ZBI tests.
+*   Custom coverage dashboards and alerts: build a dashboard for your team.
+
+Upcoming work:
+
+*   Out-of-tree support: coverage outside of Fuchsia CI/CQ.
+
+Future work:
+
+*   Local workflow: run tests locally, produce a coverage report locally.
+*   IDE integration: see a coverage layer inside VS Code.
 
 ## Further reading
 
