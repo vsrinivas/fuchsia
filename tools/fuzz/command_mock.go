@@ -75,6 +75,7 @@ func (c *mockInstanceCmd) getOutput() ([]byte, error) {
 			output = append(filler,
 				fmt.Sprintf("running %v", c.args),
 				corpusLine,
+				"Running: "+corpusPath+"/testcase",
 				"==123==", // pid
 				"MS: ",    // mut
 				"Deadly signal",

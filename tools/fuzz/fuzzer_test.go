@@ -60,15 +60,18 @@ func TestParse(t *testing.T) {
 		t.Fatalf("failed to load fuzzer: %s", err)
 	}
 
-	f.Parse([]string{"arg", "-k1=v1", "-k1=v2", "-k2=v3", "-bad", "--alsobad", "-it=has=two"})
-	if !reflect.DeepEqual(f.args, []string{"arg", "-bad", "--alsobad", "-it=has=two"}) {
+	f.Parse([]string{"arg", "-k1=v1", "-k1=v2", "-k2=v-3", "-bad", "--alsobad", "-k3=has=two"})
+	if !reflect.DeepEqual(f.args, []string{"arg", "-bad", "--alsobad"}) {
 		t.Fatalf("missing arg(s): %s", strings.Join(f.args, " "))
 	}
 	if k1, found := f.options["k1"]; !found || k1 != "v2" {
 		t.Fatalf("expected v2, got %s", k1)
 	}
-	if k2, found := f.options["k2"]; !found || k2 != "v3" {
-		t.Fatalf("expected v3, got %s", k2)
+	if k2, found := f.options["k2"]; !found || k2 != "v-3" {
+		t.Fatalf("expected v-3, got %s", k2)
+	}
+	if k3, found := f.options["k3"]; !found || k3 != "has=two" {
+		t.Fatalf("expected has=two, got %s", k3)
 	}
 }
 
@@ -156,6 +159,10 @@ func TestRun(t *testing.T) {
 
 	if !strings.Contains(out, "tmp/corpus") {
 		t.Fatalf("corpus prefix not rewritten: %q", out)
+	}
+
+	if !strings.Contains(out, "\nRunning: data/corpus/testcase\n") {
+		t.Fatalf("testcase prefix not restored: %q", out)
 	}
 }
 

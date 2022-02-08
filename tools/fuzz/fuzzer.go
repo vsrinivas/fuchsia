@@ -96,7 +96,9 @@ func (f *Fuzzer) AbsPath(relpath string) string {
 // the last 'val' for a given 'key' is used.
 func (f *Fuzzer) Parse(args []string) {
 	f.options = make(map[string]string)
-	re := regexp.MustCompile(`^-([^-=\s]*)=([^-=\s]*)$`)
+	// For reference, see libFuzzer's flag-parsing method (`FlagValue`) in:
+	// https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/fuzzer/FuzzerDriver.cpp
+	re := regexp.MustCompile(`^-([^-=\s]+)=(.*)$`)
 	for _, arg := range args {
 		submatch := re.FindStringSubmatch(arg)
 		if submatch == nil {
@@ -198,7 +200,7 @@ func scanForArtifacts(out io.WriteCloser, in io.ReadCloser,
 	artifactPrefix, hostArtifactDir string) (chan error, chan []string) {
 
 	// Only replace the directory part of the artifactPrefix, which is
-	// guaranteed to be at least "data"
+	// guaranteed to be at least "tmp"
 	artifactDir := path.Dir(artifactPrefix)
 
 	scanErr := make(chan error, 1)
@@ -214,6 +216,7 @@ func scanForArtifacts(out io.WriteCloser, in io.ReadCloser,
 		artifacts := []string{}
 
 		artifactRegex := regexp.MustCompile(`Test unit written to (\S+)`)
+		testcaseRegex := regexp.MustCompile(`^Running: (tmp/.+)`)
 		scanner := bufio.NewScanner(in)
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -223,6 +226,14 @@ func scanForArtifacts(out io.WriteCloser, in io.ReadCloser,
 				if hostArtifactDir != "" {
 					line = strings.Replace(line, artifactDir, hostArtifactDir, 2)
 				}
+			} else if m := testcaseRegex.FindStringSubmatch(line); m != nil {
+				// The ClusterFuzz integration test for the repro workflow
+				// expects to see the path of the passed testcase echoed back
+				// in libFuzzer's output, so we can't leak the fact that we've
+				// translated paths behind the scenes. Since that test is the
+				// only place that relies on this behavior, this rewriting may
+				// possibly be removed in the future if the test changes.
+				line = "Running: data/" + strings.TrimPrefix(m[1], "tmp/")
 			}
 			if _, err := io.WriteString(out, line+"\n"); err != nil {
 				scanErr <- fmt.Errorf("error writing: %s", err)
