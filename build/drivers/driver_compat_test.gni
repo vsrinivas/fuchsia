@@ -1,0 +1,38 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+# This creates two test targets, one test which will run in DFv1
+# and one test which will run in DFv2.
+# The DFv2 target simply has DFV2=1 defined.
+#
+# The DFv1 target name has a "_dfv1" suffix.
+# The DFv2 target name has a "_dfv2" suffix.
+#
+# All variables are passed through to the underlying 'test' templates.
+template("driver_compat_test") {
+  dfv1_name = target_name + "_dfv1"
+  dfv2_name = target_name + "_dfv2"
+
+  test(dfv1_name) {
+    forward_variables_from(invoker, "*", [ "defines" ])
+    defines = []
+    if (defined(invoker.defines)) {
+      defines += invoker.defines
+    }
+  }
+
+  test(dfv2_name) {
+    forward_variables_from(invoker, "*", [ "defines" ])
+    defines = [ "DFV2=1" ]
+    if (defined(invoker.defines)) {
+      defines += invoker.defines
+    }
+  }
+}
+
+set_defaults("driver_compat_test") {
+  configs = default_executable_configs
+}

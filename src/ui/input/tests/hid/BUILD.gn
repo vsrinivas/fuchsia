@@ -3,9 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/drivers/driver_compat_test.gni")
 import("//build/test.gni")
 
-test("hid-driver-test") {
+driver_compat_test("hid-driver-test") {
   sources = [ "hid-driver.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.driver.test",
@@ -23,16 +24,22 @@ test("hid-driver-test") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-fuchsia_unittest_package("hidctl-integration-test") {
+fuchsia_unittest_component("hid-driver-test-dfv1") {
+  deps = [ ":hid-driver-test_dfv1" ]
+}
+
+fuchsia_unittest_component("hid-driver-test-dfv2") {
+  deps = [ ":hid-driver-test_dfv2" ]
+}
+
+fuchsia_test_package("hidctl-integration-test") {
+  test_components = [
+    ":hid-driver-test-dfv1",
+    ":hid-driver-test-dfv2",
+  ]
   deps = [
-    ":hid-driver-test",
     "//src/devices/misc/drivers/test-parent",
     "//src/ui/input/drivers/hid",
     "//src/ui/input/drivers/hid-input-report",

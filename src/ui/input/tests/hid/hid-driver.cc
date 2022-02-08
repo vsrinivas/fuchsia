@@ -26,8 +26,8 @@
 namespace {
 
 class HidDriverTest : public zxtest::Test {
- public:
-  void Start(bool use_dfv2) {
+ protected:
+  void SetUp() override {
     // Create and build the realm.
     auto realm_builder = component_testing::RealmBuilder::Create();
     driver_test_realm::Setup(realm_builder);
@@ -39,10 +39,11 @@ class HidDriverTest : public zxtest::Test {
     fuchsia::driver::test::Realm_Start_Result realm_result;
 
     auto args = fuchsia::driver::test::RealmArgs();
-    if (use_dfv2) {
-      args.set_use_driver_framework_v2(use_dfv2);
-      args.set_root_driver("fuchsia-boot:///#meta/test-parent-sys.cm");
-    }
+#ifdef DFV2
+    args.set_use_driver_framework_v2(true);
+    args.set_root_driver("fuchsia-boot:///#meta/test-parent-sys.cm");
+#endif
+
     ASSERT_EQ(ZX_OK, driver_test_realm->Start(std::move(args), &realm_result));
     ASSERT_FALSE(realm_result.is_err());
 
@@ -65,7 +66,6 @@ class HidDriverTest : public zxtest::Test {
         fidl::WireSyncClient(fidl::ClientEnd<fuchsia_hardware_hidctl::Device>(zx::channel(handle)));
   }
 
- protected:
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fbl::unique_fd dev_fd_;
   fidl::WireSyncClient<fuchsia_hardware_hidctl::Device> hidctl_client_;
@@ -102,9 +102,10 @@ const uint8_t kBootMouseReportDesc[50] = {
     0xC0,        // End Collection
 };
 
+// We cannot test the HID driver directly in DFv2 because it still uses Open() which
+// is not supported.
+#ifndef DFV2
 TEST_F(HidDriverTest, BootMouseTest) {
-  Start(false);
-
   // Create a fake mouse device
   fuchsia_hardware_hidctl::wire::HidCtlConfig config = {};
   config.dev_num = 5;
@@ -131,7 +132,8 @@ TEST_F(HidDriverTest, BootMouseTest) {
   // Open a FIDL channel to the HID device
   zx::channel chan;
   ASSERT_OK(fdio_get_service_handle(fd_device.get(), chan.reset_and_get_address()));
-  auto client = fidl::WireSyncClient<fuchsia_hardware_input::Device>(std::move(chan));
+  auto client =
+      fidl::WireSyncClient(fidl::ClientEnd<fuchsia_hardware_input::Device>(std::move(chan)));
 
   // Get the report event.
   zx::event report_event;
@@ -171,10 +173,9 @@ TEST_F(HidDriverTest, BootMouseTest) {
     }
   }
 }
+#endif
 
 TEST_F(HidDriverTest, BootMouseTestInputReport) {
-  Start(false);
-
   // Create a fake mouse device
   fuchsia_hardware_hidctl::wire::HidCtlConfig config;
   config.dev_num = 5;
@@ -193,62 +194,8 @@ TEST_F(HidDriverTest, BootMouseTestInputReport) {
   ASSERT_OK(status);
   zx::channel chan;
   ASSERT_OK(fdio_get_service_handle(fd_device.get(), chan.reset_and_get_address()));
-  auto client = fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(chan));
-
-  auto reader_endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
-  ASSERT_OK(reader_endpoints.status_value());
-  auto reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
-      std::move(reader_endpoints->client));
-  client->GetInputReportsReader(std::move(reader_endpoints->server));
-
-  // Check the Descriptor.
-  {
-    auto response = client->GetDescriptor();
-    ASSERT_OK(response.status());
-    ASSERT_TRUE(response->descriptor.has_mouse());
-    ASSERT_TRUE(response->descriptor.mouse().has_input());
-    ASSERT_TRUE(response->descriptor.mouse().input().has_movement_x());
-    ASSERT_TRUE(response->descriptor.mouse().input().has_movement_y());
-  }
-
-  // Send a single mouse report
-  hid_boot_mouse_report_t mouse_report = {};
-  mouse_report.rel_x = 50;
-  mouse_report.rel_y = 100;
-  status = hidctl_socket.write(0, &mouse_report, sizeof(mouse_report), nullptr);
-  ASSERT_OK(status);
-
-  // Get the mouse InputReport.
-  auto response = reader->ReadInputReports();
-  ASSERT_OK(response.status());
-  ASSERT_OK(response.status());
-  ASSERT_EQ(1, response->result.response().reports.count());
-  ASSERT_EQ(50, response->result.response().reports[0].mouse().movement_x());
-  ASSERT_EQ(100, response->result.response().reports[0].mouse().movement_y());
-}
-
-TEST_F(HidDriverTest, BootMouseTestInputReport_Dfv2) {
-  Start(true);
-
-  // Create a fake mouse device
-  fuchsia_hardware_hidctl::wire::HidCtlConfig config;
-  config.dev_num = 5;
-  config.boot_device = false;
-  config.dev_class = 0;
-  auto result = hidctl_client_->MakeHidDevice(
-      config, fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(kBootMouseReportDesc),
-                                                      std::size(kBootMouseReportDesc)));
-  ASSERT_OK(result.status());
-  zx::socket hidctl_socket = std::move(result->report_socket);
-
-  // Open the corresponding /dev/class/input/ device
-  fbl::unique_fd fd_device;
-  zx_status_t status =
-      device_watcher::RecursiveWaitForFile(dev_fd_, "class/input-report/000", &fd_device);
-  ASSERT_OK(status);
-  zx::channel chan;
-  ASSERT_OK(fdio_get_service_handle(fd_device.get(), chan.reset_and_get_address()));
-  auto client = fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(chan));
+  auto client =
+      fidl::WireSyncClient(fidl::ClientEnd<fuchsia_input_report::InputDevice>(std::move(chan)));
 
   auto reader_endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
   ASSERT_OK(reader_endpoints.status_value());
