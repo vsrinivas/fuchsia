@@ -292,24 +292,23 @@ class TextInputTest : public gtest::RealLoopFixture {
 // does is forward the values it receives to the functions set by the user.
 class ParentViewportWatcherClient {
  public:
-  // TODO(fxbug.dev/92818): Modify this API so that there is no chance of getting a message between
-  // the Bind call and the calls to Set* methods.
-  explicit ParentViewportWatcherClient(fidl::InterfaceHandle<ParentViewportWatcher> client_end)
-      : client_end_(client_end.Bind()) {
+  struct Callbacks {
+    // Called when GetLayout returns.
+    std::function<void(LayoutInfo info)> on_get_layout{};
+    // Called when GetStatus returns.
+    std::function<void(ParentViewportStatus info)> on_status_info{};
+  };
+  explicit ParentViewportWatcherClient(fidl::InterfaceHandle<ParentViewportWatcher> client_end,
+                                       Callbacks callbacks)
+      // Subtle: callbacks are initialized before a call to Bind, so that we don't
+      // receive messages from the client end before the callbacks are installed.
+      : callbacks_(std::move(callbacks)), client_end_(client_end.Bind()) {
     client_end_.set_error_handler([](zx_status_t status) {
       FX_LOGS(ERROR) << "watcher error: " << zx_status_get_string(status);
     });
     // Kick off hanging get requests now.
     ScheduleGetLayout();
     ScheduleStatusInfo();
-  }
-
-  void SetOnGetLayout(std::function<void(LayoutInfo)> callback) {
-    on_get_layout_ = std::move(callback);
-  }
-
-  void SetOnStatusInfo(std::function<void(ParentViewportStatus)> callback) {
-    on_status_info_ = std::move(callback);
   }
 
  private:
@@ -319,41 +318,43 @@ class ParentViewportWatcherClient {
 
   void ScheduleGetLayout() {
     client_end_->GetLayout([this](LayoutInfo l) {
-      this->on_get_layout_(std::move(l));
+      this->callbacks_.on_get_layout(std::move(l));
       ScheduleGetLayout();
     });
   }
 
   void ScheduleStatusInfo() {
     client_end_->GetStatus([this](ParentViewportStatus s) {
-      this->on_status_info_(s);
+      this->callbacks_.on_status_info(s);
       ScheduleStatusInfo();
     });
   }
+
+  Callbacks callbacks_;
   fidl::InterfacePtr<ParentViewportWatcher> client_end_;
-  std::function<void(LayoutInfo info)> on_get_layout_ = nullptr;
-  std::function<void(ParentViewportStatus info)> on_status_info_ = nullptr;
 };
 
 // A minimal server for fuchsia.ui.composition.ChildViewWatcher.  All it does is
 // forward the values it receives to the functions set by the user.
 class ChildViewWatcherClient {
  public:
-  explicit ChildViewWatcherClient(fidl::InterfaceHandle<ChildViewWatcher> client_end)
-      : client_end_(client_end.Bind()) {
+  struct Callbacks {
+    // Called when GetStatus returns.
+    std::function<void(ChildViewStatus)> on_get_status{};
+    // Called when GetViewRef returns.
+    std::function<void(ViewRef)> on_get_view_ref{};
+  };
+
+  explicit ChildViewWatcherClient(fidl::InterfaceHandle<ChildViewWatcher> client_end,
+                                  Callbacks callbacks)
+      // Subtle: callbacks need to be initialized before a call to Bind, else
+      // we may receive messages before we install the message handlers.
+      : callbacks_(std::move(callbacks)), client_end_(client_end.Bind()) {
     client_end_.set_error_handler([](zx_status_t status) {
       FX_LOGS(ERROR) << "watcher error: " << zx_status_get_string(status);
     });
     ScheduleGetStatus();
     ScheduleGetViewRef();
-  }
-
-  void SetOnGetStatus(std::function<void(ChildViewStatus)> callback) {
-    on_get_status_ = std::move(callback);
-  }
-
-  void SetOnGetViewRef(std::function<void(ViewRef)> callback) {
-    on_get_view_ref_ = std::move(callback);
   }
 
  private:
@@ -363,21 +364,20 @@ class ChildViewWatcherClient {
 
   void ScheduleGetStatus() {
     client_end_->GetStatus([this](ChildViewStatus status) {
-      this->on_get_status_(status);
+      this->callbacks_.on_get_status(status);
       this->ScheduleGetStatus();
     });
   }
 
   void ScheduleGetViewRef() {
     client_end_->GetViewRef([this](ViewRef view_ref) {
-      this->on_get_view_ref_(std::move(view_ref));
+      this->callbacks_.on_get_view_ref(std::move(view_ref));
       this->ScheduleGetViewRef();
     });
   }
 
+  Callbacks callbacks_;
   fidl::InterfacePtr<ChildViewWatcher> client_end_;
-  std::function<void(ChildViewStatus)> on_get_status_ = nullptr;
-  std::function<void(ViewRef)> on_get_view_ref_ = nullptr;
 };
 
 TEST_F(TextInputTest, FlutterTextFieldEntry) {
@@ -415,19 +415,23 @@ TEST_F(TextInputTest, FlutterTextFieldEntry) {
   flatland->CreateView2(std::move(*args.value().mutable_view_creation_token()),
                         std::move(view_identity), {}, parent_watcher.NewRequest());
 
-  ParentViewportWatcherClient parent_watcher_client(std::move(parent_watcher));
-
   std::optional<LayoutInfo> layout_info;
-  parent_watcher_client.SetOnGetLayout([&layout_info](LayoutInfo l) {
-    FX_VLOGS(1) << "OnGetLayout message received.";
-    layout_info = std::move(l);
-  });
-
   std::optional<ParentViewportStatus> status_info;
-  parent_watcher_client.SetOnStatusInfo([&status_info](ParentViewportStatus s) {
-    FX_VLOGS(1) << "SetOnStatusInfo message received.";
-    status_info = s;
-  });
+  ParentViewportWatcherClient parent_watcher_client{
+      std::move(parent_watcher),
+      ParentViewportWatcherClient::Callbacks{
+          .on_get_layout =
+              [&layout_info](LayoutInfo l) {
+                FX_VLOGS(1) << "OnGetLayout message received.";
+                layout_info = std::move(l);
+              },
+          .on_status_info =
+              [&status_info](ParentViewportStatus s) {
+                FX_VLOGS(1) << "SetOnStatusInfo message received.";
+                status_info = s;
+              },
+      },
+  };
 
   // Subtle: OnGetLayout can return before a call to Present is made.
   // OnStatusInfo may not return until after a call to Present is made.
@@ -475,19 +479,24 @@ TEST_F(TextInputTest, FlutterTextFieldEntry) {
   // Now create a viewport (parent side of the scene rendering), and let the flutter app
   // know how to connect its view to our viewport.
 
+  std::optional<ChildViewStatus> child_view_status;
   // This client will catch the events related to the child view that Flatland will
   // report to us.  The client issues the appropriate hanging get requests.
-  ChildViewWatcherClient child_view_watcher_client(std::move(child_view_watcher));
-
-  // The closure we hand to the client here will get called when Flatland decides
-  // to respond to the client's hanging get.  The only task of the closure is to
-  // pull the reported `status` into a variable `child_view_status ` that the tests's
-  // main program flow can use.
-  std::optional<ChildViewStatus> child_view_status;
-  child_view_watcher_client.SetOnGetStatus([&child_view_status](ChildViewStatus status) {
-    FX_VLOGS(1) << "ChildViewStatus received";
-    child_view_status = status;
-  });
+  ChildViewWatcherClient child_view_watcher_client{
+      std::move(child_view_watcher),
+      ChildViewWatcherClient::Callbacks{
+          // The closure we hand to the client here will get called when Flatland decides
+          // to respond to the client's hanging get.  The only task of the closure is to
+          // pull the reported `status` into a variable `child_view_status ` that the tests's
+          // main program flow can use.
+          .on_get_status =
+              [&child_view_status](ChildViewStatus status) {
+                FX_VLOGS(1) << "ChildViewStatus received";
+                child_view_status = status;
+              },
+          .on_get_view_ref = [](ViewRef) {},
+      },
+  };
 
   auto flutter_app_view_provider = realm_->Connect<fuchsia::ui::app::ViewProvider>();
 
