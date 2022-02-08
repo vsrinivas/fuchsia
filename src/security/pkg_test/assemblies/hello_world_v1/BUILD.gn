@@ -24,3 +24,17 @@ fuchsia_package("hello_world-package") {
   package_name = "hello_world"
   deps = [ ":hello_world-component" ]
 }
+
+if (current_toolchain == target_toolchain) {
+  resource("meta_far") {
+    testonly = true
+    data_deps = [ ":hello_world-package" ]
+    sources = [ "$target_out_dir/hello_world-package/meta.far" ]
+    outputs = [ "data/assemblies/v1/hello_world/{{source_file_part}}" ]
+  }
+} else {
+  group("meta_far") {
+    testonly = true
+    public_deps = [ ":meta_far($target_toolchain)" ]
+  }
+}
