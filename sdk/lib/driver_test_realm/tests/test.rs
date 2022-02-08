@@ -81,7 +81,7 @@ async fn test_pkg_dir() -> Result<()> {
     let (pkg, pkg_server) =
         fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()?;
     let pkg_flags = io_util::OPEN_RIGHT_READABLE
-        | io_util::OPEN_RIGHT_WRITABLE
+        | io_util::OPEN_RIGHT_EXECUTABLE
         | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;
     io_util::connect_in_namespace("/pkg", pkg_server.into_channel(), pkg_flags).unwrap();
     let args = fdt::RealmArgs { boot: Some(pkg), ..fdt::RealmArgs::EMPTY };
