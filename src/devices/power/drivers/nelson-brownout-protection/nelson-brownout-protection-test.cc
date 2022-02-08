@@ -71,6 +71,9 @@ class FakeCodec : public audio::SimpleCodecServer, public audio_fidl::SignalProc
     callback(audio_fidl::SignalProcessing_SetProcessingElementState_Result::WithResponse(
         audio_fidl::SignalProcessing_SetProcessingElementState_Response()));
   }
+  void WatchProcessingElementState(
+      uint64_t processing_element_id,
+      audio_fidl::SignalProcessing::WatchProcessingElementStateCallback callback) override {}
   void GetTopologies(audio_fidl::SignalProcessing::GetTopologiesCallback callback) override {
     callback(audio_fidl::SignalProcessing_GetTopologies_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
   }

@@ -172,6 +172,17 @@ protocol SignalProcessing {
         state ProcessingElementState;
     }) -> (struct {}) error zx.status;
 
+    /// Get the processing element state via a hanging get. For a given `processing_element_id`,
+    /// the driver will reply to the first `WatchProcessingElement` sent by the client.
+    /// The driver will not respond to subsequent client `WatchProcessingElement` calls for a
+    /// given `processing_element_id` until any field of the `ProcessingElement` table
+    /// changes from what was most recently reported for that `processing_element_id`.
+    WatchProcessingElementState(struct {
+        processing_element_id uint64;
+    }) -> (struct {
+        state ProcessingElementState;
+    });
+
     /// Returns a vector of supported topologies.
     /// Must return one or more topologies, or ZX_ERR_NOT_SUPORTED.
     /// If more than one topology is returned, then the client may choose any of the topologies from

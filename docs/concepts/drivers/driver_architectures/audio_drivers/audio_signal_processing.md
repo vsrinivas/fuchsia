@@ -68,6 +68,16 @@ configure the PEs based on the parameters exposed by the PE types.
 `GetProcessingElements`. PEs of different types may have different state exposed to clients, the
 `SetProcessingElementState` parameter `state` has a different type depending on the type of PE.
 
+### WatchProcessingElement
+
+`WatchProcessingElement` allows a client to monitor the state of a PE using an id returned by
+`GetProcessingElements`. PEs of different types may have different state exposed to clients, the
+`WatchProcessingElement` parameter `state` has a different type depending on the type of PE.
+
+The `state` of a PE is composed of values that may be changed directly by the client via a call to
+`SetProcessingElement`, or indirectly for instance by a calling `SetProcessingElement` on a
+different PE, or independent of the client for instance due to a plug detect change.
+
 ### GetTopologies
 
 `GetTopologies` allows to optionally get a list of topologies. For instance this method may be

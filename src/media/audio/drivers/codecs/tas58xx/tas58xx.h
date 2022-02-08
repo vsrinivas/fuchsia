@@ -51,6 +51,12 @@ class Tas58xx : public SimpleCodecServer, public fuchsia::hardware::audio::Signa
       uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementState control,
       fuchsia::hardware::audio::SignalProcessing::SetProcessingElementStateCallback callback)
       override;
+  void WatchProcessingElementState(
+      uint64_t processing_element_id,
+      fuchsia::hardware::audio::SignalProcessing::WatchProcessingElementStateCallback callback)
+      override {
+    // TODO(64877): Implement for the signal processing support of this driver.
+  }
   void GetTopologies(
       fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) override;
   void SetTopology(

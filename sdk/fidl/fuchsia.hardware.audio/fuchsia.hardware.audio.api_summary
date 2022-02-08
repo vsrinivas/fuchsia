@@ -229,6 +229,7 @@ protocol/member fuchsia.hardware.audio/SignalProcessing.GetProcessingElements() 
 protocol/member fuchsia.hardware.audio/SignalProcessing.GetTopologies() -> (fuchsia.hardware.audio/SignalProcessing_GetTopologies_Result result)
 protocol/member fuchsia.hardware.audio/SignalProcessing.SetProcessingElementState(uint64 processing_element_id,fuchsia.hardware.audio/ProcessingElementState state) -> (fuchsia.hardware.audio/SignalProcessing_SetProcessingElementState_Result result)
 protocol/member fuchsia.hardware.audio/SignalProcessing.SetTopology(uint64 topology_id) -> (fuchsia.hardware.audio/SignalProcessing_SetTopology_Result result)
+protocol/member fuchsia.hardware.audio/SignalProcessing.WatchProcessingElementState(uint64 processing_element_id) -> (fuchsia.hardware.audio/ProcessingElementState state)
 protocol fuchsia.hardware.audio/SignalProcessing
 protocol/member fuchsia.hardware.audio/SignalProcessingConnector.SignalProcessingConnect(server_end:fuchsia.hardware.audio/SignalProcessing protocol)
 protocol fuchsia.hardware.audio/SignalProcessingConnector

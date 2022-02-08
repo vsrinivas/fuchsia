@@ -67,6 +67,9 @@ class TestCodec : public SimpleCodecServer, public audio_fidl::SignalProcessing 
     callback(audio_fidl::SignalProcessing_SetProcessingElementState_Result::WithResponse(
         audio_fidl::SignalProcessing_SetProcessingElementState_Response()));
   }
+  void WatchProcessingElementState(
+      uint64_t processing_element_id,
+      audio_fidl::SignalProcessing::WatchProcessingElementStateCallback callback) override {}
   void GetTopologies(audio_fidl::SignalProcessing::GetTopologiesCallback callback) override {
     audio_fidl::EdgePair edge;
     edge.processing_element_id_from = kAglPeId;
