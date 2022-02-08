@@ -5,7 +5,7 @@
 // clang-format off
 // This file is used to check symbol information so should not be modified by the formatter.
 
-#include <stddef.h>
+#include <cstddef>
 
 #include "src/developer/debug/zxdb/symbols/test_data/zxdb_symbol_test.h"
 
@@ -126,7 +126,7 @@ struct StructWithEnums {
 };
 EXPORT StructWithEnums GetStructWithEnums() { return StructWithEnums(); }
 
-EXPORT nullptr_t GetNullPtrT(int i) {
+EXPORT std::nullptr_t GetNullPtrT(int i) {
   // The compiler seems to want to strip this unless it does something.
   volatile int dummy __attribute__((unused)) = 0;
   dummy = i;
