@@ -178,15 +178,17 @@ import 'package:foo/foo.dart';
                                 },
                                 capture_output=True,
                                 universal_newlines=True),
+                            # TODO(fxb/93159): Re-enable dart doc generation in //tools/docsgen/BUILD
+                            # after it is known how to incorporate the following dropped flags.
                             mock.call(
                                 [
-                                    os.path.join(prebuilts, 'dartdoc'),
-                                    '--no-validate-links',
-                                    '--auto-include-dependencies',
-                                    '--exclude-packages', 'Dart,logging',
+                                    os.path.join(prebuilts, 'dart'),
+                                    'doc',
+                                    # '--auto-include-dependencies',
+                                    # '--exclude-packages', 'Dart,logging',
                                     '--output',
-                                    os.path.join(out_dir,
-                                                 'dartdoc'), '--format', 'md'
+                                    os.path.join(out_dir, 'dartdoc')
+                                    #  ,'--format', 'md'
                                 ],
                                 cwd=package_dir,
                                 env={"PUB_CACHE": "fakedir"},

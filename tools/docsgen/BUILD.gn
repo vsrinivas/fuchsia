@@ -45,7 +45,7 @@ action("dart_sdk_docs") {
     "//sdk/dart",
     "//analysis_options.yaml",
     "//prebuilt/third_party/dart/${host_platform}/bin/pub",
-    "//prebuilt/third_party/dart/${host_platform}/bin/dartdoc",
+    "//prebuilt/third_party/dart/${host_platform}/bin/dart",
   ]
 
   outputs = [
@@ -295,7 +295,9 @@ build_api_module("generated_docs") {
   testonly = true
   data_keys = [ "generated_docset" ]
   deps = [
-    ":dart_sdk_docs($host_toolchain)",
+    # TODO(fxb/93159): Re-enable dart doc generation after it is known how to
+    # incorporate the dropped flags.
+    # ":dart_sdk_docs($host_toolchain)",
     ":invoke_clidoc($host_toolchain)",
     ":invoke_cmldoc($host_toolchain)",
     ":invoke_fidldoc($host_toolchain)",

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 # This exists to allow for a more complete graph of dart code exposed in
-# the sdk for dartdoc generation.
+# the sdk for dart doc generation.
 # Please also update dart_packages_list below.
 
 dart_package_label = {

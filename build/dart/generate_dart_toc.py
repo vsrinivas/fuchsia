@@ -2,7 +2,7 @@
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file
-"""Generate _toc.yaml for a given dartdoc directory index.json.
+"""Generate _toc.yaml for a given dart doc directory index.json.
 
 This script takes in an index.json representing a dartdoc
 directory and creates a _toc.yaml.
@@ -34,7 +34,7 @@ TYPE_HEADINGS = {
 
 
 def configure_yaml():
-    # TODO: (https://fxbug.dev/83891) 
+    # TODO: (https://fxbug.dev/83891)
     # Reevaluate whether hack described below is required moving forward.
     # yaml.dump by default sorts keys alphabetically, but most of the time we
     # need a specific order. One workaround is by passing sort_keys=False, but
@@ -66,7 +66,7 @@ def build_toc_item(title, path=None, sub_items=None):
 
 
 def build_toc_content(index_file):
-    """Build a TOC hierarchy from a json index produced by Dartdoc.
+    """Build a TOC hierarchy from a json index produced by dart doc.
 
      Args:
       index_file (str) - JSON file which represents dartdoc file.

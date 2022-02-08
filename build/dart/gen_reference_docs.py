@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 """Generate Dart reference docs for one or more Fuchsia packages.
 
-This script uses Dartdoc, which documents a single package. If called with more
+This script uses 'dart doc', which documents a single package. If called with more
 than one package, an intermediary package is generated in order to document all
 the given packages at once; in that case, the --gen-dir argument is required. If
 this behavior is not desired, do not pass more than one package argument.
@@ -153,11 +153,11 @@ def generate_docs(
     Args:
         package_dir: The directory of the package to document.
         out_dir: The output directory for documentation.
-        dart_prebuilt_dir: The directory with dart executables (dartdoc, pub).
-        run_toc: If true, will generate a toc.yaml file to represent dartdocs.
+        dart_prebuilt_dir: The directory with dart executables (pub).
+        run_toc: If true, will generate a toc.yaml file to represent dart docs.
         delete_artifact_files: If true, will delete unused artifacts in output.
-        zipped_result: If true, will zip dartdocs and delete orig. generated docs.
-        
+        zipped_result: If true, will zip dart docs and delete orig. generated docs.
+
     Returns:
         0 if documentation was generated successfully, non-zero otherwise.
     """
@@ -181,19 +181,21 @@ def generate_docs(
         if os.path.exists(pkg_to_docs_path):
             walk_rmtree(pkg_to_docs_path)
 
-        # Run dartdoc.
+        # Run dart doc.
+        # TODO(fxb/93159): Re-enable dart doc generation in //tools/docsgen/BUILD
+        # after it is known how to incorporate the following dropped flags.
         excluded_packages = ['Dart', 'logging']
         process = subprocess.run(
             [
-                os.path.join(dart_prebuilt_dir, 'dartdoc'),
-                '--no-validate-links',
-                '--auto-include-dependencies',
-                '--exclude-packages',
-                ','.join(excluded_packages),
+                os.path.join(dart_prebuilt_dir, 'dart'),
+                'doc',
+                # '--auto-include-dependencies',
+                # '--exclude-packages',
+                # ','.join(excluded_packages),
                 '--output',
                 docs_dir,
-                '--format',
-                'md',
+                # '--format',
+                # 'md',
             ],
             cwd=package_dir,
             env=dict(os.environ, PUB_CACHE=tmpdirname),
@@ -248,7 +250,7 @@ def main():
         '-r',
         '--run-toc',
         action='store_true',
-        help='If set will run generate_toc script on the generated dartdocs.')
+        help='If set will run generate_toc script on the generated dart docs.')
     parser.add_argument(
         '-g',
         '--gen-dir',
@@ -280,7 +282,7 @@ def main():
     if len(args.packages) == 1:
         package_dir = args.packages[0]
     else:
-        # Dartdoc runs over a single package only. Fabricate a package that
+        # `dart doc` runs over a single package only. Fabricate a package that
         # depends on all the other packages and document that one.
         if not args.gen_dir:
             print('ERROR: --gen-dir is required to document multiple packages.')
