@@ -99,7 +99,12 @@ zx_status_t IsolatedDevmgr::Create(Args* args, IsolatedDevmgr* out) {
 
   fuchsia::driver::test::Realm_Start_Result realm_result;
   auto realm_args = fuchsia::driver::test::RealmArgs();
-  realm_args.set_root_driver("fuchsia-boot:///#driver/platform-bus.so");
+  realm_args.set_use_driver_framework_v2(args->use_driver_framework_v2);
+  if (args->use_driver_framework_v2) {
+    realm_args.set_root_driver("fuchsia-boot:///#meta/platform-bus.cm");
+  } else {
+    realm_args.set_root_driver("fuchsia-boot:///#driver/platform-bus.so");
+  }
   realm_args.set_driver_log_level(args->log_level);
   realm_args.set_board_name(std::string(args->board_name.data()));
   realm_args.set_driver_disable(args->driver_disable);

@@ -40,6 +40,8 @@ class IsolatedDevmgr {
     // If this is true then tell fshost not to create a block watcher.
     bool disable_block_watcher = true;
 
+    bool use_driver_framework_v2 = false;
+
     // A board name to appear.
     fbl::String board_name;
     std::vector<std::string> driver_disable;
