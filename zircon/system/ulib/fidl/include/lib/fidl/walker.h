@@ -507,10 +507,12 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
   bool is_inline_bit_set = v2_envelope->flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK;
 
   bool is_inlined;
+  uint32_t type_size;
   if (FidlIsZeroEnvelope(v2_envelope)) {
     is_inlined = false;
   } else if (payload_type != nullptr) {
-    is_inlined = TypeSize<WireFormatVersion>(payload_type) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD;
+    type_size = TypeSize<WireFormatVersion>(payload_type);
+    is_inlined = type_size <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD;
     if (unlikely(VisitorImpl::kValidateEnvelopeInlineBit && is_inlined != is_inline_bit_set)) {
       visitor_->OnError("Invalid inline bit in envelope");
       FIDL_STATUS_GUARD(Status::kConstraintViolationError);
@@ -524,7 +526,7 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
     FIDL_DEPTH_GUARD(obj_depth);
 
     if (payload_type != nullptr) {
-      switch (TypeSize<WireFormatVersion>(payload_type)) {
+      switch (type_size) {
         case 1: {
           auto status = visitor_->VisitInternalPadding(envelope_position, 0xffffff00);
           FIDL_STATUS_GUARD(status);
@@ -563,12 +565,11 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkEnvelopeV2(Position envelope_
     return Result::kContinue;
   }
 
-  if (v2_envelope->num_bytes != 0 || v2_envelope->num_handles != 0) {
+  if (!FidlIsZeroEnvelope(v2_envelope)) {
     OutOfLineDepth obj_depth = INCREASE_DEPTH(depth);
     FIDL_DEPTH_GUARD(obj_depth);
 
-    uint32_t num_bytes = payload_type != nullptr ? TypeSize<WireFormatVersion>(payload_type)
-                                                 : v2_envelope->num_bytes;
+    uint32_t num_bytes = payload_type != nullptr ? type_size : v2_envelope->num_bytes;
     Position obj_position;
     auto status = visitor_->VisitPointer(envelope_position, VisitorImpl::PointeeType::kOther,
                                          PtrTo<void*>(envelope_position), num_bytes,

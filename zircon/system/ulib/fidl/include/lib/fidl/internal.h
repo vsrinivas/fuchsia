@@ -9,6 +9,7 @@
 #include <lib/fidl/coding.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls/object.h>
@@ -191,7 +192,10 @@ static inline bool FidlAddOutOfLine(uint32_t offset, uint32_t size, uint32_t* ou
 }
 
 inline bool FidlIsZeroEnvelope(const fidl_envelope_v2_t* envelope) {
-  return envelope->num_bytes == 0 && envelope->num_handles == 0 && envelope->flags == 0;
+  static_assert(sizeof(*envelope) == sizeof(uint64_t), "");
+  uint64_t uval;
+  memcpy(&uval, envelope, sizeof(*envelope));
+  return uval == 0;
 }
 
 // Checks that the handle meets specified type and rights requirements. If the
