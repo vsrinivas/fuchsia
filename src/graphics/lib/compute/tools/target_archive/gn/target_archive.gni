@@ -83,7 +83,9 @@ template("target_archive") {
   ]
 
   #
-  # Only one data source is supported at this time.
+  # Compile the sources
+  #
+  # For now, only a single `.c` source file makes sense here.
   #
   _struct_sources = []
 
@@ -93,14 +95,42 @@ template("target_archive") {
 
   if (_struct_sources != []) {
     #
-    # Only define these targets if there is a `.c` file
+    # Compile the header structure using using a source set.
+    #
+    # Assumes a single `.c` file.
+    #
+    _data_to_object = _target_archive_name + "_data_to_object"
+
+    source_set(_data_to_object) {
+      sources = invoker.struct_sources
+      if (defined(invoker.defines)) {
+        defines = invoker.defines
+      }
+      if (defined(invoker.struct_include_dirs)) {
+        include_dirs = invoker.struct_include_dirs
+      }
+    }
+
+    #
+    # The source_set() doesn't support get_target_outputs() so we have
+    # construct the names.
+    #
+    # tool("cc") defines its outputs as:
+    #
+    #   [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
     #
     _struct_objects = []
     foreach(_struct_source, _struct_sources) {
-      _struct_objects += [ _target_archive_dir + "/obj/" +
-                           get_path_info(_struct_source, "name") + ".o" ]
+      _struct_object_path = target_out_dir + "/$_data_to_object." +
+                            get_path_info(_struct_source, "file") + ".o"
+      _struct_objects += [ _struct_object_path ]
     }
 
+    #
+    # Name the binary produced by llvm-objcopy.
+    #
+    # For now, assumes a single `.c`, `.o`, and `.bin` file.
+    #
     _data_binaries = []
     foreach(_struct_source, _struct_sources) {
       _data_binaries += [ _target_archive_dir + "/bin/" +
@@ -108,71 +138,18 @@ template("target_archive") {
     }
 
     #
-    # Action: Compile the header structure.
-    #
-    # Expects a single `.c` file.
-    #
-    _data_to_object = _target_archive_name + "_data_to_object"
-
-    toolchain_utils_action(_data_to_object) {
-      # clang
-      utils = [ "cc" ]
-
-      # input dependencies
-      inputs = invoker.struct_sources
-
-      # NOTE: only one data source is supported
-      outputs = [ _struct_objects[0] ]
-
-      # common args
-      args = [ "--compile" ]
-
-      # single `.c` file
-      args += [ rebase_path(_struct_sources[0], root_build_dir) ]
-
-      # NOTE: only a single `.o` file is supported
-      args += [
-        "-o",
-        rebase_path(outputs[0], root_build_dir),
-      ]
-
-      # includes
-      if (defined(invoker.struct_include_dirs)) {
-        foreach(_include_dir, invoker.struct_include_dirs) {
-          args += [
-            "-I",
-            rebase_path(_include_dir, root_build_dir),
-          ]
-        }
-      }
-
-      # defines
-      if (defined(invoker.defines)) {
-        foreach(_define, invoker.defines) {
-          args += [
-            "-D",
-            _define,
-          ]
-        }
-      }
-    }
-
-    #
     # Action: Dump the read-only section of the compiled header
-    # structure.
+    # structure.  The assumption is that this resolves to llvm-objcopy
+    # and not binutils objcopy.
     #
-    _object_to_binary = _target_archive_name + "_object_to_binary"
+    _object_dump_section = "--dump-section=.rodata.header="
 
-    if (host_os == "mac") {
-      _object_dump_section = "--dump-section=__TEXT,__const="
-    } else {
-      _object_dump_section = "--dump-section=.rodata="
-    }
+    _object_to_binary = _target_archive_name + "_object_to_binary"
 
     toolchain_utils_action(_object_to_binary) {
       utils = [ "objcopy" ]
       deps = [ ":${_data_to_object}" ]
-      inputs = get_target_outputs(":${_data_to_object}")
+      inputs = [ _struct_objects[0] ]
       outputs = [ _data_binaries[0] ]
       args = [
         rebase_path(inputs[0]),
@@ -240,9 +217,9 @@ template("target_archive") {
       sources += invoker.binary_sources
     }
 
-    args = [ _target_archive_name ] +
-           rebase_path([ _target_archive_name_part ], root_build_dir) +
-           rebase_path(sources, root_build_dir)
+    args = [ _target_archive_name ] +  #
+           rebase_path([ _target_archive_name_part ], root_build_dir) +  #
+           rebase_path(sources, root_build_dir)  #
   }
 }
 
@@ -330,6 +307,7 @@ template("target_archive_linkable") {
 
   source_set(target_name) {
     public_configs = [ ":${_config}" ]
+    inputs = filter_include(get_target_outputs(":${_internal}"), [ "*.ar" ])
     public = filter_include(get_target_outputs(":${_internal}"), [ "*.h" ])
     sources = filter_include(get_target_outputs(":${_internal}"),
                              [
