@@ -72,12 +72,26 @@ class Dispatcher : public async_dispatcher_t, public fbl::RefCounted<Dispatcher>
   zx_status_t BindIrq(async_irq_t* irq);
   zx_status_t UnbindIrq(async_irq_t* irq);
 
-  // Queue a callback to be invoked by the dispatcher.
-  // Depending on the dispatcher options set and which driver is calling this,
-  // the callback can occur on the current thread or be queued up to run on a dispatcher thread.
+  // Registers a callback with a dispatcher that should not yet be run.
+  // This should be called by the channel if a client has started waiting with a
+  // ChannelRead, but the channel has not yet received a write from its peer.
+  //
+  // Tracking these requests allows the dispatcher to cancel the callback if the
+  // dispatcher is destroyed before any write is received.
+  //
   // Takes ownership of |callback_request|. If the dispatcher is already shutting down,
   // ownership of |callback_request| will be returned to the caller.
-  std::unique_ptr<CallbackRequest> QueueCallback(std::unique_ptr<CallbackRequest> callback_request);
+  std::unique_ptr<driver_runtime::CallbackRequest> RegisterCallbackWithoutQueueing(
+      std::unique_ptr<CallbackRequest> callback_request);
+
+  // Queues a previously registered callback to be invoked by the dispatcher.
+  // Asserts if no such callback is found.
+  // |unowned_callback_request| is used to locate the callback.
+  // |callback_reason| is the status that should be set for the callback.
+  // Depending on the dispatcher options set and which driver is calling this,
+  // the callback can occur on the current thread or be queued up to run on a dispatcher thread.
+  void QueueRegisteredCallback(CallbackRequest* unowned_callback_request,
+                               fdf_status_t callback_reason);
 
   // Removes the callback matching |callback_request| from the queue and returns it.
   // May return nullptr if no such callback is found.
@@ -184,7 +198,13 @@ class Dispatcher : public async_dispatcher_t, public fbl::RefCounted<Dispatcher>
   EventWaiter* event_waiter_;
 
   fbl::Mutex callback_lock_;
-  // Callback requests from channels.
+  // Callback requests that have been registered by channels, but not yet queued.
+  // This occurs when a client has started waiting on a channel, but the channel
+  // has not yet received a write from its peer.
+  fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> registered_callbacks_
+      __TA_GUARDED(&callback_lock_);
+  // Queued callback requests from channels. These are requests that should
+  // be run on the next available thread.
   fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> callback_queue_
       __TA_GUARDED(&callback_lock_);
 

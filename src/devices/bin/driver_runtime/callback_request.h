@@ -28,22 +28,16 @@ class CallbackRequest : public fbl::DoublyLinkedListable<std::unique_ptr<Callbac
  public:
   CallbackRequest() = default;
 
-  // Queues the callback to be invoked by the dispatcher, transferring ownership of |req|.
-  // The dispatcher and callback must previously have been set using |SetCallback|.
-  static void QueueOntoDispatcher(std::unique_ptr<CallbackRequest> req);
-
   // Initializes the callback to be queued.
   // Sets the dispatcher, and the callback that will be called by |Call|.
   // |async_operation| is the async_dispatcher_t operation that this callback request manages.
   void SetCallback(struct fdf_dispatcher* dispatcher, Callback callback,
-                   fdf_status_t callback_reason, void* async_operation = nullptr) {
+                   void* async_operation = nullptr) {
     ZX_ASSERT(!dispatcher_);
     ZX_ASSERT(!callback_);
-    ZX_ASSERT(!reason_);
     ZX_ASSERT(!async_operation_);
     dispatcher_ = dispatcher;
     callback_ = std::move(callback);
-    reason_ = callback_reason;
     if (async_operation) {
       async_operation_ = async_operation;
     }
@@ -51,9 +45,8 @@ class CallbackRequest : public fbl::DoublyLinkedListable<std::unique_ptr<Callbac
 
   // Calls the callback, returning ownership of the request back the original requester,
   void Call(std::unique_ptr<CallbackRequest> callback_request, fdf_status_t status) {
-    ZX_ASSERT(reason_);
     // If no particular callback reason was set, we will use the status provided by the dispatcher.
-    if (*reason_ != ZX_OK) {
+    if (reason_.has_value() && (*reason_ != ZX_OK)) {
       status = *reason_;
     }
     dispatcher_ = nullptr;

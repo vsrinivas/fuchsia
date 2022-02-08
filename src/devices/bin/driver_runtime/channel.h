@@ -18,6 +18,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/devices/bin/driver_runtime/callback_request.h"
+#include "src/devices/bin/driver_runtime/dispatcher.h"
 #include "src/devices/bin/driver_runtime/message_packet.h"
 #include "src/devices/bin/driver_runtime/object.h"
 
@@ -105,22 +106,24 @@ struct Channel : public Object {
                               zx_handle_t* handles, uint32_t num_handles);
 
   // Takes ownership of the transferred |msg| and adds it to the |msg_queue|.
-  // Returns the callback request that should be queued with the dispatcher (outside of the lock),
-  // if any.
+  // Returns whether a callback request should be queued with the dispatcher (outside of the lock).
+  // If true, returns the unowned callback request pointer and ownership of a reference
+  // to the dispatcher, which will enable calling |Dispatcher::QueueRegisteredCallback|.
   // __TA_ASSERT is used here to let the compiler know we are holding the shared lock.
-  std::unique_ptr<CallbackRequest> WriteSelfLocked(MessagePacketOwner msg) __TA_ASSERT(get_lock())
+  bool WriteSelfLocked(MessagePacketOwner msg, CallbackRequest** out_callback_request,
+                       fbl::RefPtr<Dispatcher>* out_dispatcher) __TA_ASSERT(get_lock())
       __TA_REQUIRES(get_lock());
 
   // Called when the other end of the channel is being closed.
   void OnPeerClosed();
 
-  // Returns the callback request that can be queued with the dispatcher.
+  // Returns the callback request that can be registered with the dispatcher.
   // This will assert if the callback request is not available.
-  // Use |IsCallbackRequestQueuedLocked| to check whether the callback
-  // request has already been queued with the dispatcher.
+  // Use |IsWaitAsyncRegisteredLocked| to check whether the callback
+  // request has already been registered with the dispatcher.
   // |callback_reason| is the reason for queueing the callback request.
-  std::unique_ptr<driver_runtime::CallbackRequest> TakeCallbackRequestLocked(
-      fdf_status_t callback_reason) __TA_REQUIRES(get_lock());
+  std::unique_ptr<driver_runtime::CallbackRequest> TakeCallbackRequestLocked()
+      __TA_REQUIRES(get_lock());
 
   // Handles the callback from the dispatcher. Takes ownership of |callback_request|.
   void DispatcherCallback(std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
@@ -130,11 +133,15 @@ struct Channel : public Object {
   // and not yet completed i.e. the read callback has not completed yet.
   bool HasIncompleteWaitAsync() {
     fbl::AutoLock lock(get_lock());
-    return IsWaitAsyncRegisteredLocked() || IsCallbackRequestQueuedLocked() || IsInCallbackLocked();
+    return IsWaitAsyncRegisteredLocked() || IsInCallbackLocked();
   }
 
-  // Returns whether the callback request has been queued with the dispatcher.
-  bool IsCallbackRequestQueuedLocked() __TA_REQUIRES(get_lock()) { return !callback_request_; }
+  // Resets state related to the callback request.
+  // Takes ownership of |callback_request|.
+  // This is used when a callback request is not completed normally.
+  void ResetCallbackRequestStateLocked(std::unique_ptr<CallbackRequest> callback_request)
+      __TA_REQUIRES(get_lock());
+
   // Returns whether a read wait async request has been registered via |WaitAsync|.
   bool IsWaitAsyncRegisteredLocked() __TA_REQUIRES(get_lock()) { return !!dispatcher_; }
   // Whether the channel is currently calling a read callback.
@@ -158,6 +165,8 @@ struct Channel : public Object {
   std::unique_ptr<driver_runtime::CallbackRequest> callback_request_ __TA_GUARDED(get_lock());
   // Used for canceling a queued callback request.
   CallbackRequest* const unowned_callback_request_;
+  // True if the callback request has been registered with the dispatcher but not yet queued.
+  bool callback_request_pending_queue_ __TA_GUARDED(get_lock()) = false;
 
   // This could be potentially be greater than 1 if the user registers a new callback from within
   // a callback, and a new callback is called from a different thread.
@@ -168,7 +177,7 @@ struct Channel : public Object {
 
   // Dispatcher and channel_read registered via |WaitAsync|.
   // These are cleared before calling a read callback.
-  fdf_dispatcher_t* dispatcher_ __TA_GUARDED(get_lock()) = nullptr;
+  fbl::RefPtr<Dispatcher> dispatcher_ __TA_GUARDED(get_lock()) = nullptr;
   fdf_channel_read_t* channel_read_ __TA_GUARDED(get_lock()) = nullptr;
 
   // The next id that can be used to allocate a txid for a call transaction.

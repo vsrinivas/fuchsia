@@ -107,7 +107,9 @@ fdf_status_t Channel::Write(uint32_t options, fdf_arena_t* arena, void* data, ui
   if (status != ZX_OK) {
     return status;
   }
-  std::unique_ptr<CallbackRequest> callback_request;
+  bool queue_callback = false;
+  CallbackRequest* unowned_callback_request = nullptr;
+  fbl::RefPtr<Dispatcher> peer_dispatcher = nullptr;
   {
     fbl::AutoLock lock(get_lock());
     if (!peer_) {
@@ -118,16 +120,20 @@ fdf_status_t Channel::Write(uint32_t options, fdf_arena_t* arena, void* data, ui
     if (!msg) {
       return ZX_ERR_NO_MEMORY;
     }
-    callback_request = peer_->WriteSelfLocked(std::move(msg));
+    queue_callback =
+        peer_->WriteSelfLocked(std::move(msg), &unowned_callback_request, &peer_dispatcher);
   }
   // Queue the callback outside of the lock.
-  if (callback_request) {
-    CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
+  if (queue_callback) {
+    ZX_ASSERT(unowned_callback_request != nullptr);
+    ZX_ASSERT(peer_dispatcher != nullptr);
+    peer_dispatcher->QueueRegisteredCallback(unowned_callback_request, ZX_OK);
   }
   return ZX_OK;
 }
 
-std::unique_ptr<CallbackRequest> Channel::WriteSelfLocked(MessagePacketOwner msg) {
+bool Channel::WriteSelfLocked(MessagePacketOwner msg, CallbackRequest** out_callback_request,
+                              fbl::RefPtr<Dispatcher>* out_dispatcher) {
   if (!waiters_.is_empty()) {
     // If the far side is waiting for replies to messages sent via "call",
     // see if this message has a matching txid to one of the waiters, and if so, deliver it.
@@ -140,22 +146,25 @@ std::unique_ptr<CallbackRequest> Channel::WriteSelfLocked(MessagePacketOwner msg
       if (waiter_txid.value() == txid) {
         waiters_.erase(waiter);
         waiter.DeliverLocked(std::move(msg));
-        return nullptr;
+        return false;
       }
     }
   }
   msg_queue_.push_back(std::move(msg));
   // No dispatcher has been registered yet to handle callback requests.
   if (!dispatcher_) {
-    return nullptr;
+    return false;
   }
 
   // If no read wait_async has been registered, we will not queue
   // the callback request yet.
-  if (!IsCallbackRequestQueuedLocked() && IsWaitAsyncRegisteredLocked()) {
-    return TakeCallbackRequestLocked(ZX_OK);
+  if (IsWaitAsyncRegisteredLocked() && callback_request_pending_queue_) {
+    callback_request_pending_queue_ = false;
+    *out_callback_request = unowned_callback_request_;
+    *out_dispatcher = dispatcher_;
+    return true;
   }
-  return nullptr;
+  return false;
 }
 
 fdf_status_t Channel::Read(uint32_t options, fdf_arena_t** out_arena, void** out_data,
@@ -190,7 +199,8 @@ fdf_status_t Channel::Read(uint32_t options, fdf_arena_t** out_arena, void** out
 
 fdf_status_t Channel::WaitAsync(struct fdf_dispatcher* dispatcher, fdf_channel_read_t* channel_read,
                                 uint32_t options) {
-  std::unique_ptr<driver_runtime::CallbackRequest> callback_request;
+  fbl::RefPtr<Dispatcher> dispatcher_ref;
+  bool queue_callback = false;
   {
     fbl::AutoLock lock(get_lock());
 
@@ -203,19 +213,28 @@ fdf_status_t Channel::WaitAsync(struct fdf_dispatcher* dispatcher, fdf_channel_r
     if (dispatcher_) {
       return ZX_ERR_BAD_STATE;
     }
-    dispatcher_ = dispatcher;
+    dispatcher_ = fbl::RefPtr<Dispatcher>(dispatcher);
     channel_read_ = channel_read;
 
-    // We only queue one callback request at a time.
-    ZX_ASSERT(!IsCallbackRequestQueuedLocked());
-
-    // There might be no messages available yet, in which case we won't queue the request yet.
+    auto callback_request =
+        dispatcher_->RegisterCallbackWithoutQueueing(TakeCallbackRequestLocked());
+    callback_request_pending_queue_ = true;
+    // Registering the callback may fail if the dispatcher is already shutting down,
+    // in which case we need to reset our state.
+    if (callback_request) {
+      dispatcher_ = nullptr;
+      channel_read_ = nullptr;
+      ResetCallbackRequestStateLocked(std::move(callback_request));
+      return ZX_ERR_BAD_STATE;
+    }
+    dispatcher_ref = dispatcher_;
+    // If there are messages available, we should queue the callback now.
     if (!msg_queue_.is_empty()) {
-      callback_request = TakeCallbackRequestLocked(ZX_OK);
+      std::swap(queue_callback, callback_request_pending_queue_);
     }
   }
-  if (callback_request) {
-    CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
+  if (queue_callback) {
+    dispatcher_ref->QueueRegisteredCallback(unowned_callback_request_, ZX_OK);
   }
   return ZX_OK;
 }
@@ -280,7 +299,9 @@ fdf_status_t Channel::Call(uint32_t options, zx_time_t deadline,
   }
 
   MessageWaiter waiter(fbl::RefPtr(this));
-  std::unique_ptr<CallbackRequest> callback_request;
+  bool queue_callback = false;
+  CallbackRequest* unowned_callback_request = nullptr;
+  fbl::RefPtr<Dispatcher> peer_dispatcher;
   {
     fbl::AutoLock lock(get_lock());
     if (!peer_) {
@@ -299,12 +320,16 @@ fdf_status_t Channel::Call(uint32_t options, zx_time_t deadline,
     waiters_.push_back(&waiter);
 
     // Write outbound message to opposing endpoint.
-    callback_request = peer_->WriteSelfLocked(std::move(msg));
+    queue_callback =
+        peer_->WriteSelfLocked(std::move(msg), &unowned_callback_request, &peer_dispatcher);
   }
 
   // Queue any callback outside of the lock.
-  if (callback_request) {
-    CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
+  if (queue_callback) {
+    ZX_ASSERT(unowned_callback_request != nullptr);
+    ZX_ASSERT(peer_dispatcher != nullptr);
+    // Queue to the peer dispatcher, as they are receiving the message.
+    peer_dispatcher->QueueRegisteredCallback(unowned_callback_request, ZX_OK);
   }
 
   // Wait until a message with the same txid is received, or the deadline is reached.
@@ -332,7 +357,7 @@ fdf_status_t Channel::Call(uint32_t options, zx_time_t deadline,
 }
 
 fdf_status_t Channel::CancelWait() {
-  std::unique_ptr<driver_runtime::CallbackRequest> callback_request;
+  fbl::RefPtr<Dispatcher> dispatcher;
   {
     fbl::AutoLock lock(get_lock());
 
@@ -341,35 +366,37 @@ fdf_status_t Channel::CancelWait() {
       return ZX_ERR_NOT_FOUND;
     }
     if (dispatcher_->unsynchronized()) {
+      bool queue_callback = false;
+      // Check if we need to queue the registered callback.
+      std::swap(queue_callback, callback_request_pending_queue_);
       // If the callback has already been queued, try to update the callback status to
       // ZX_ERR_CANCELED. This may fail if the callback is running, or already scheduled to run.
-      if (IsCallbackRequestQueuedLocked()) {
+      if (!queue_callback) {
         bool updated = dispatcher_->SetCallbackReason(unowned_callback_request_, ZX_ERR_CANCELED);
         return updated ? ZX_OK : ZX_ERR_NOT_FOUND;
       }
       // If there were no pending messages we would not yet have queued it to the dispatcher.
-      // Take the callback request so we can queue it outside the lock.
-      callback_request = TakeCallbackRequestLocked(ZX_ERR_CANCELED);
+      // Save the dispatcher so we can queue the request outside the lock.
+      dispatcher = dispatcher_;
 
     } else {
       // For synchronized dispatchers, we always cancel the request synchronously.
       // Since we require |CancelWait| to be called on the dispatcher thread,
       // a callback request could be queued on the dispatcher, but not yet run.
-      if (IsCallbackRequestQueuedLocked()) {
+      if (IsWaitAsyncRegisteredLocked()) {
         ZX_ASSERT(unowned_callback_request_);
-        callback_request = dispatcher_->CancelCallback(*unowned_callback_request_);
+        auto callback_request = dispatcher_->CancelCallback(*unowned_callback_request_);
         // Cancellation should always be successful for synchronized dispatchers.
         ZX_ASSERT(callback_request);
-        callback_request->Reset();
-        callback_request_ = std::move(callback_request);
+        ResetCallbackRequestStateLocked(std::move(callback_request));
       }
       dispatcher_ = nullptr;
       channel_read_ = nullptr;
       return ZX_OK;
     }
   }
-  ZX_ASSERT(callback_request != nullptr);
-  CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
+  ZX_ASSERT(dispatcher != nullptr);
+  dispatcher->QueueRegisteredCallback(unowned_callback_request_, ZX_ERR_CANCELED);
   return ZX_OK;
 }
 
@@ -401,7 +428,8 @@ void Channel::Close() __TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 void Channel::OnPeerClosed() {
-  std::unique_ptr<driver_runtime::CallbackRequest> callback_request;
+  fbl::RefPtr<Dispatcher> dispatcher;
+  bool queue_callback = false;
   {
     fbl::AutoLock lock(get_lock());
     // Abort any waiting Call operations because we've been canceled by reason
@@ -414,18 +442,17 @@ void Channel::OnPeerClosed() {
 
     // If there are no messages queued, but we are waiting for a callback,
     // we should send the peer closed message now.
-    if (msg_queue_.is_empty() && !IsCallbackRequestQueuedLocked() &&
-        IsWaitAsyncRegisteredLocked()) {
-      callback_request = TakeCallbackRequestLocked(ZX_ERR_PEER_CLOSED);
+    if (msg_queue_.is_empty() && IsWaitAsyncRegisteredLocked() && callback_request_pending_queue_) {
+      std::swap(queue_callback, callback_request_pending_queue_);
+      dispatcher = dispatcher_;
     }
   }
-  if (callback_request) {
-    CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
+  if (queue_callback) {
+    dispatcher->QueueRegisteredCallback(unowned_callback_request_, ZX_ERR_PEER_CLOSED);
   }
 }
 
-std::unique_ptr<driver_runtime::CallbackRequest> Channel::TakeCallbackRequestLocked(
-    fdf_status_t callback_reason) {
+std::unique_ptr<driver_runtime::CallbackRequest> Channel::TakeCallbackRequestLocked() {
   ZX_ASSERT(callback_request_);
 
   ZX_ASSERT(!callback_request_->IsPending());
@@ -434,15 +461,24 @@ std::unique_ptr<driver_runtime::CallbackRequest> Channel::TakeCallbackRequestLoc
           std::unique_ptr<driver_runtime::CallbackRequest> callback_request, fdf_status_t status) {
         channel->DispatcherCallback(std::move(callback_request), status);
       };
-  callback_request_->SetCallback(dispatcher_, std::move(callback), callback_reason);
+  callback_request_->SetCallback(static_cast<fdf_dispatcher_t*>(dispatcher_.get()),
+                                 std::move(callback));
   return std::move(callback_request_);
+}
+
+void Channel::ResetCallbackRequestStateLocked(std::unique_ptr<CallbackRequest> callback_request) {
+  ZX_ASSERT(callback_request != nullptr);
+  ZX_ASSERT(!callback_request_);
+  callback_request->Reset();
+  callback_request_ = std::move(callback_request);
+  callback_request_pending_queue_ = false;
 }
 
 void Channel::DispatcherCallback(std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
                                  fdf_status_t status) {
   ZX_ASSERT(!callback_request->IsPending());
 
-  fdf_dispatcher_t* dispatcher = nullptr;
+  fbl::RefPtr<Dispatcher> dispatcher = nullptr;
   fdf_channel_read_t* channel_read = nullptr;
   {
     fbl::AutoLock lock(get_lock());
@@ -463,7 +499,7 @@ void Channel::DispatcherCallback(std::unique_ptr<driver_runtime::CallbackRequest
   ZX_ASSERT(channel_read);
   ZX_ASSERT(channel_read->handler);
 
-  channel_read->handler(dispatcher, channel_read, status);
+  channel_read->handler(static_cast<fdf_dispatcher_t*>(dispatcher.get()), channel_read, status);
   {
     fbl::AutoLock lock(get_lock());
     ZX_ASSERT(num_pending_callbacks_ > 0);

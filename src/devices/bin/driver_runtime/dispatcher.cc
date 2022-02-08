@@ -199,14 +199,15 @@ zx_status_t Dispatcher::PostTask(async_task_t* task) {
   driver_runtime::Callback callback =
       [this, task](std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
                    fdf_status_t status) { task->handler(this, task, status); };
-  callback_request->SetCallback(static_cast<fdf_dispatcher_t*>(this), std::move(callback), ZX_OK,
-                                task);
+  callback_request->SetCallback(static_cast<fdf_dispatcher_t*>(this), std::move(callback), task);
+  CallbackRequest* callback_ptr = callback_request.get();
   // TODO(92878): handle task deadlines.
-  callback_request = QueueCallback(std::move(callback_request));
+  callback_request = RegisterCallbackWithoutQueueing(std::move(callback_request));
   // Dispatcher returned callback request as queueing failed.
   if (callback_request) {
     return ZX_ERR_BAD_STATE;
   }
+  QueueRegisteredCallback(callback_ptr, ZX_OK);
   return ZX_OK;
 }
 
@@ -235,15 +236,32 @@ zx_status_t Dispatcher::UnbindIrq(async_irq_t* irq) {
   return async_unbind_irq(process_shared_dispatcher_, irq);
 }
 
-std::unique_ptr<driver_runtime::CallbackRequest> Dispatcher::QueueCallback(
+std::unique_ptr<driver_runtime::CallbackRequest> Dispatcher::RegisterCallbackWithoutQueueing(
     std::unique_ptr<driver_runtime::CallbackRequest> callback_request) {
+  fbl::AutoLock lock(&callback_lock_);
+  if (shutting_down_) {
+    return callback_request;
+  }
+  registered_callbacks_.push_back(std::move(callback_request));
+  return nullptr;
+}
+
+void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* request,
+                                         fdf_status_t callback_reason) {
   // Whether we want to call the callback now, or queue it to be run on the async loop.
   bool direct_call = false;
+  std::unique_ptr<driver_runtime::CallbackRequest> callback_request;
   {
     fbl::AutoLock lock(&callback_lock_);
     if (shutting_down_) {
-      return callback_request;
+      return;
     }
+    callback_request = registered_callbacks_.erase(*request);
+    // The callback request should only be removed if queued, or on shutting down,
+    // which we checked earlier.
+    ZX_ASSERT(callback_request != nullptr);
+    callback_request->SetCallbackReason(callback_reason);
+
     // Synchronous dispatchers do not allow parallel callbacks.
     // Blocking dispatchers are required to queue all callbacks onto the async loop.
     if (unsynchronized_ || (!dispatching_sync_ && !allow_sync_calls_)) {
@@ -258,32 +276,30 @@ std::unique_ptr<driver_runtime::CallbackRequest> Dispatcher::QueueCallback(
         dispatching_sync_ = true;
       }
     }
-  }
-  if (direct_call) {
-    DispatchCallback(std::move(callback_request));
-
-    fbl::AutoLock lock(&callback_lock_);
-    dispatching_sync_ = false;
-    if (!callback_queue_.is_empty() && !event_waiter_->signaled() && !shutting_down_) {
-      event_waiter_->signal();
+    if (!direct_call) {
+      callback_queue_.push_back(std::move(callback_request));
+      if (!event_waiter_->signaled()) {
+        event_waiter_->signal();
+      }
+      return;
     }
-    return nullptr;
   }
+  DispatchCallback(std::move(callback_request));
 
   fbl::AutoLock lock(&callback_lock_);
-  if (shutting_down_) {
-    return callback_request;
-  }
-  callback_queue_.push_back(std::move(callback_request));
-  if (!event_waiter_->signaled()) {
+  dispatching_sync_ = false;
+  if (!callback_queue_.is_empty() && !event_waiter_->signaled() && !shutting_down_) {
     event_waiter_->signal();
   }
-  return nullptr;
 }
 
 std::unique_ptr<CallbackRequest> Dispatcher::CancelCallback(CallbackRequest& callback_request) {
   fbl::AutoLock lock(&callback_lock_);
-  return callback_queue_.erase(callback_request);
+  auto req = callback_queue_.erase(callback_request);
+  if (req) {
+    return req;
+  }
+  return registered_callbacks_.erase(callback_request);
 }
 
 bool Dispatcher::SetCallbackReason(CallbackRequest* callback_to_update,
