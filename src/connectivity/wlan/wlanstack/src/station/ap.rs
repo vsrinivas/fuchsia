@@ -114,7 +114,7 @@ async fn start(sme: &Mutex<Sme>, config: fidl_sme::ApConfig) -> fidl_sme::StartA
     let sme_config = ap_sme::Config {
         ssid: Ssid::from_bytes_unchecked(config.ssid),
         password: config.password,
-        radio_cfg: RadioConfig::from_fidl(config.radio_cfg),
+        radio_cfg: RadioConfig::from(config.radio_cfg),
     };
 
     let receiver = sme.lock().unwrap().on_start_command(sme_config);
@@ -136,7 +136,6 @@ async fn start(sme: &Mutex<Sme>, config: fidl_sme::ApConfig) -> fidl_sme::StartA
             error!("Invalid arguments for AP start: {}", e);
             fidl_sme::StartApResultCode::InvalidArguments
         }
-        ap_sme::StartResult::DfsUnsupported => fidl_sme::StartApResultCode::DfsUnsupported,
     }
 }
 

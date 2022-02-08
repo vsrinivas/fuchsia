@@ -14,10 +14,8 @@ use remote_client::*;
 
 use {
     crate::{
-        mlme_event_name,
-        phy_selection::{derive_phy_cbw_for_ap, get_device_band_info},
-        responder::Responder,
-        MlmeRequest, MlmeSink,
+        mlme_event_name, phy_selection::get_device_band_info, responder::Responder, MlmeRequest,
+        MlmeSink,
     },
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
@@ -27,8 +25,8 @@ use {
     log::{debug, error, info, warn},
     std::collections::HashMap,
     wlan_common::{
-        channel::{Channel, Phy},
-        ie::{rsn::rsne::Rsne, SupportedRate},
+        channel::{Cbw, Channel, Phy},
+        ie::{parse_ht_capabilities, rsn::rsne::Rsne, ChanWidthSet, SupportedRate},
         mac,
         timer::{self, EventId, TimedEvent, Timer},
         RadioConfig,
@@ -114,7 +112,6 @@ pub enum StartResult {
     Canceled,
     TimedOut,
     InvalidArguments(String),
-    DfsUnsupported,
     PreviousStartInProgress,
     AlreadyStarted,
     InternalError,
@@ -136,18 +133,26 @@ impl ApSme {
         let (responder, receiver) = Responder::new();
         self.state = self.state.take().map(|state| match state {
             State::Idle { mut ctx } => {
-                if let Err(result) = validate_config(&config) {
-                    responder.respond(result);
-                    return State::Idle { ctx };
-                }
-
-                let op_result = adapt_operation(&ctx.device_info, &config.radio_cfg);
-                let op = match op_result {
-                    Err(e) => {
-                        responder.respond(e);
+                let band_cap = match get_device_band_info(
+                    &ctx.device_info,
+                    config.radio_cfg.channel.primary,
+                ) {
+                    None => {
+                        responder.respond(StartResult::InvalidArguments(format!(
+                            "Device has not band capabilities for channel {}",
+                            config.radio_cfg.channel.primary,
+                        )));
                         return State::Idle { ctx };
                     }
-                    Ok(o) => o,
+                    Some(bc) => bc,
+                };
+
+                let op_radio_cfg = match validate_radio_cfg(&band_cap, &config.radio_cfg) {
+                    Err(result) => {
+                        responder.respond(result);
+                        return State::Idle { ctx };
+                    }
+                    Ok(op_radio_cfg) => op_radio_cfg,
                 };
 
                 let rsn_cfg_result = create_rsn_cfg(&config.ssid, &config.password[..]);
@@ -157,17 +162,6 @@ impl ApSme {
                         return State::Idle { ctx };
                     }
                     Ok(rsn_cfg) => rsn_cfg,
-                };
-
-                let band_cap = match get_device_band_info(&ctx.device_info, op.channel.primary) {
-                    None => {
-                        responder.respond(StartResult::InvalidArguments(format!(
-                            "band info for channel {} not found",
-                            op.channel
-                        )));
-                        return State::Idle { ctx };
-                    }
-                    Some(band_cap) => band_cap,
                 };
 
                 let capabilities = mac::CapabilityInfo(band_cap.capability_info)
@@ -181,7 +175,7 @@ impl ApSme {
                     .with_privacy(rsn_cfg.is_some());
 
                 let req = create_start_request(
-                    &op,
+                    &op_radio_cfg,
                     &config.ssid,
                     rsn_cfg.as_ref(),
                     capabilities,
@@ -203,7 +197,7 @@ impl ApSme {
                     start_responder: responder,
                     stop_responders: vec![],
                     start_timeout,
-                    op_radio_cfg: op,
+                    op_radio_cfg,
                 }
             }
             s @ State::Starting { .. } => {
@@ -300,30 +294,6 @@ fn send_stop_req(ctx: &mut Context, stop_req: fidl_mlme::StopRequest) -> EventId
     let stop_timeout = ctx.timer.schedule(event);
     ctx.mlme_sink.send(MlmeRequest::Stop(stop_req.clone()));
     stop_timeout
-}
-
-/// Adapt user-providing operation condition to underlying device capabilities.
-fn adapt_operation(
-    device_info: &DeviceInfo,
-    usr_cfg: &RadioConfig,
-) -> Result<OpRadioConfig, StartResult> {
-    // TODO(porce): .expect() may go way, if wlantool absorbs the default value,
-    // eg. CBW20 in HT. But doing so would hinder later control from WLANCFG.
-    if usr_cfg.phy.is_none() || usr_cfg.cbw.is_none() || usr_cfg.primary_channel.is_none() {
-        return Err(StartResult::InvalidArguments(format!(
-            "Incomplete user config: {:?}",
-            usr_cfg
-        )));
-    }
-
-    let phy = usr_cfg.phy.unwrap();
-    let channel = Channel::new(usr_cfg.primary_channel.unwrap(), usr_cfg.cbw.unwrap());
-    if !channel.is_valid_in_us() {
-        return Err(StartResult::InvalidArguments(format!("Invalid channel: {}", channel)));
-    }
-
-    let (phy_adapted, cbw_adapted) = derive_phy_cbw_for_ap(device_info, &phy, &channel);
-    Ok(OpRadioConfig { phy: phy_adapted, channel: Channel::new(channel.primary, cbw_adapted) })
 }
 
 impl super::Station for ApSme {
@@ -508,19 +478,101 @@ impl super::Station for ApSme {
     }
 }
 
-fn validate_config(config: &Config) -> Result<(), StartResult> {
-    let rc = &config.radio_cfg;
-    if rc.phy.is_none() || rc.cbw.is_none() || rc.primary_channel.is_none() {
-        return Err(StartResult::InvalidArguments("Invalid radio config".to_string()));
+/// Validate the channel, PHY type, bandwidth, and band capabilities, in that order.
+fn validate_radio_cfg(
+    band_cap: &fidl_mlme::BandCapabilities,
+    radio_cfg: &RadioConfig,
+) -> Result<OpRadioConfig, StartResult> {
+    let channel = radio_cfg.channel;
+    // TODO(fxbug.dev/93171): We shouldn't expect to only start an AP in the US. The regulatory
+    // enforcement for the channel should apply at a lower layer.
+    if !channel.is_valid_in_us() {
+        return Err(StartResult::InvalidArguments(format!("Invalid US channel {}", channel)));
     }
-    let c = Channel::new(rc.primary_channel.unwrap(), config.radio_cfg.cbw.unwrap());
-    if !c.is_valid_in_us() {
-        Err(StartResult::InvalidArguments("Invalid channel".to_string()))
-    } else if c.is_dfs() {
-        Err(StartResult::DfsUnsupported)
-    } else {
-        Ok(())
+    if channel.is_dfs() {
+        return Err(StartResult::InvalidArguments(format!(
+            "DFS channels not supported: {}",
+            channel
+        )));
     }
+
+    let phy = radio_cfg.phy;
+    match phy {
+        Phy::Hew => {
+            return Err(StartResult::InvalidArguments(format!("Unsupported PHY type: {:?}", phy)))
+        }
+        Phy::Hr | Phy::Erp => match channel.cbw {
+            Cbw::Cbw20 => (),
+            _ => {
+                return Err(StartResult::InvalidArguments(format!(
+                    "PHY type {:?} not supported on channel {}",
+                    phy, channel
+                )))
+            }
+        },
+        Phy::Ht => {
+            match channel.cbw {
+                Cbw::Cbw20 | Cbw::Cbw40 | Cbw::Cbw40Below => (),
+                _ => {
+                    return Err(StartResult::InvalidArguments(format!(
+                        "HT-mode not supported for channel {}",
+                        channel
+                    )))
+                }
+            }
+
+            match band_cap.ht_cap.as_ref() {
+                None => {
+                    return Err(StartResult::InvalidArguments(format!(
+                        "No HT capabilities: {}",
+                        channel
+                    )))
+                }
+                Some(ht_cap) => {
+                    let ht_cap = parse_ht_capabilities(&ht_cap.bytes[..]).map_err(|e| {
+                        error!("failed to parse HT capability bytes: {:?}", e);
+                        StartResult::InternalError
+                    })?;
+                    let ht_cap_info = ht_cap.ht_cap_info;
+                    if ht_cap_info.chan_width_set() == ChanWidthSet::TWENTY_ONLY {
+                        if channel.cbw != Cbw::Cbw20 {
+                            return Err(StartResult::InvalidArguments(format!(
+                                "20 MHz band capabilities does not support channel {}",
+                                channel
+                            )));
+                        }
+                    }
+                }
+            }
+        }
+        Phy::Vht => {
+            match channel.cbw {
+                Cbw::Cbw160 | Cbw::Cbw80P80 { .. } => {
+                    return Err(StartResult::InvalidArguments(format!(
+                        "Supported for channel {} in VHT mode not available",
+                        channel
+                    )))
+                }
+                _ => (),
+            }
+
+            if !channel.is_5ghz() {
+                return Err(StartResult::InvalidArguments(format!(
+                    "VHT only supported on 5 GHz channels: {}",
+                    channel
+                )));
+            }
+
+            if band_cap.vht_cap.is_none() {
+                return Err(StartResult::InvalidArguments(format!(
+                    "No VHT capabilities: {}",
+                    channel
+                )));
+            }
+        }
+    }
+
+    Ok(OpRadioConfig { phy, channel })
 }
 
 fn handle_start_conf(
@@ -753,7 +805,7 @@ fn create_rsn_cfg(ssid: &Ssid, password: &[u8]) -> Result<Option<RsnCfg>, StartR
 }
 
 fn create_start_request(
-    op: &OpRadioConfig,
+    op_radio_cfg: &OpRadioConfig,
     ssid: &Ssid,
     ap_rsn: Option<&RsnCfg>,
     capabilities: mac::CapabilityInfo,
@@ -767,14 +819,14 @@ fn create_start_request(
         buf
     });
 
-    let (channel_bandwidth, _secondary80) = op.channel.cbw.to_fidl();
+    let (channel_bandwidth, _secondary80) = op_radio_cfg.channel.cbw.to_fidl();
 
     fidl_mlme::StartRequest {
         ssid: ssid.to_vec(),
         bss_type: fidl_internal::BssType::Infrastructure,
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
-        channel: op.channel.primary,
+        channel: op_radio_cfg.channel.primary,
         capability_info: capabilities.raw(),
         rates: rates.to_vec(),
         country: fidl_mlme::Country {
@@ -784,7 +836,7 @@ fn create_start_request(
         },
         rsne: rsne_bytes,
         mesh_id: vec![],
-        phy: op.phy.to_fidl(),
+        phy: op_radio_cfg.phy.to_fidl(),
         channel_bandwidth,
     }
 }
@@ -798,10 +850,10 @@ mod tests {
         ieee80211::MacAddr,
         lazy_static::lazy_static,
         std::convert::TryFrom,
+        test_case::test_case,
         wlan_common::{
             assert_variant,
             channel::{Cbw, Phy},
-            ie::*,
             mac::Aid,
             RadioConfig,
         },
@@ -851,28 +903,70 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_validate_config() {
-        assert_variant!(
-            validate_config(&Config { ssid: Ssid::empty(), password: vec![], radio_cfg: radio_cfg(15) }),
-            Err(e) => { assert!(matches!(e, StartResult::InvalidArguments { .. })); }
-        );
-        assert_eq!(
-            Err(StartResult::DfsUnsupported),
-            validate_config(&Config {
-                ssid: Ssid::empty(),
-                password: vec![],
-                radio_cfg: radio_cfg(52)
-            })
-        );
-        assert_eq!(
-            Ok(()),
-            validate_config(&Config {
-                ssid: Ssid::empty(),
-                password: vec![],
-                radio_cfg: radio_cfg(40)
-            })
-        );
+    #[test_case(false, None, Phy::Ht, 15, Cbw::Cbw20; "invalid US channel")]
+    #[test_case(false, None, Phy::Ht, 52, Cbw::Cbw20; "DFS channel")]
+    #[test_case(false, None, Phy::Hew, 1, Cbw::Cbw20; "HEW not supported")]
+    #[test_case(false, None, Phy::Ht, 36, Cbw::Cbw80; "invalid HT width")]
+    #[test_case(false, None, Phy::Erp, 1, Cbw::Cbw40; "non-HT greater than 20 MHz")]
+    #[test_case(false, None, Phy::Ht, 36, Cbw::Cbw80; "HT greater than 40 MHz")]
+    #[test_case(false, Some(fake_5ghz_band_capabilities_ht_cbw(ChanWidthSet::TWENTY_ONLY)),
+                Phy::Ht, 44, Cbw::Cbw40; "HT 20 MHz only")]
+    #[test_case(false, Some(fidl_mlme::BandCapabilities {
+                    ht_cap: None, ..fake_5ghz_band_capabilities()
+                }),
+                Phy::Ht, 48, Cbw::Cbw40; "No HT capabilities")]
+    #[test_case(false, None, Phy::Vht, 36, Cbw::Cbw160; "160 MHz not supported")]
+    #[test_case(false, None, Phy::Vht, 36, Cbw::Cbw80P80 { secondary80: 106 }; "80+80 MHz not supported")]
+    #[test_case(false, None, Phy::Vht, 1, Cbw::Cbw20; "VHT 2.4 GHz not supported")]
+    #[test_case(false, Some(fidl_mlme::BandCapabilities {
+                    vht_cap: None,
+                    ..fake_5ghz_band_capabilities()
+                }),
+                Phy::Vht, 149, Cbw::Cbw40; "no VHT capabilities")]
+    #[test_case(true, None, Phy::Hr, 1, Cbw::Cbw20)]
+    #[test_case(true, None, Phy::Erp, 1, Cbw::Cbw20)]
+    #[test_case(true, None, Phy::Ht, 1, Cbw::Cbw20)]
+    #[test_case(true, None, Phy::Ht, 1, Cbw::Cbw40)]
+    #[test_case(true, None, Phy::Ht, 11, Cbw::Cbw40Below)]
+    #[test_case(true, None, Phy::Ht, 36, Cbw::Cbw20)]
+    #[test_case(true, None, Phy::Ht, 36, Cbw::Cbw40)]
+    #[test_case(true, None, Phy::Ht, 40, Cbw::Cbw40Below)]
+    #[test_case(true, None, Phy::Vht, 36, Cbw::Cbw20)]
+    #[test_case(true, None, Phy::Vht, 36, Cbw::Cbw40)]
+    #[test_case(true, None, Phy::Vht, 40, Cbw::Cbw40Below)]
+    #[test_case(true, None, Phy::Vht, 36, Cbw::Cbw80)]
+    fn test_validate_radio_cfg(
+        valid: bool,
+        band_cap: Option<fidl_mlme::BandCapabilities>,
+        phy: Phy,
+        primary: u8,
+        cbw: Cbw,
+    ) {
+        let channel = Channel::new(primary, cbw);
+        let radio_cfg = RadioConfig { phy: phy.clone(), channel: channel.clone() };
+        let expected_op_radio_cfg = OpRadioConfig { phy: phy.clone(), channel: channel.clone() };
+        let band_cap = match band_cap {
+            Some(band_cap) => band_cap,
+            None => fake_2ghz_band_capabilities_vht(),
+        };
+
+        match validate_radio_cfg(&band_cap, &radio_cfg) {
+            Ok(op_radio_cfg) => {
+                if valid {
+                    assert_eq!(op_radio_cfg, expected_op_radio_cfg);
+                } else {
+                    panic!("Unexpected successful validation");
+                }
+            }
+            Err(StartResult::InvalidArguments { .. }) => {
+                if valid {
+                    panic!("Unexpected failure to validate.");
+                }
+            }
+            Err(other) => {
+                panic!("Unexpected StartResult value: {:?}", other);
+            }
+        }
     }
 
     #[test]
@@ -912,7 +1006,7 @@ mod tests {
             assert_eq!(start_req.dtim_period, DEFAULT_DTIM_PERIOD);
             assert_eq!(
                 start_req.channel,
-                unprotected_config().radio_cfg.primary_channel.expect("invalid config")
+                unprotected_config().radio_cfg.channel.primary,
             );
             assert!(start_req.rsne.is_none());
         });
@@ -937,7 +1031,7 @@ mod tests {
         assert_eq!(
             Some(fidl_sme::Ap {
                 ssid: SSID.to_vec(),
-                channel: unprotected_config().radio_cfg.primary_channel.unwrap(),
+                channel: unprotected_config().radio_cfg.channel.primary,
                 num_clients: 0,
             }),
             sme.get_running_ap()
@@ -953,7 +1047,7 @@ mod tests {
         assert_eq!(
             Some(fidl_sme::Ap {
                 ssid: SSID.to_vec(),
-                channel: unprotected_config().radio_cfg.primary_channel.unwrap(),
+                channel: unprotected_config().radio_cfg.channel.primary,
                 num_clients: 0,
             }),
             sme.get_running_ap()
@@ -1114,7 +1208,7 @@ mod tests {
         assert_eq!(
             Some(fidl_sme::Ap {
                 ssid: SSID.to_vec(),
-                channel: unprotected_config().radio_cfg.primary_channel.unwrap(),
+                channel: unprotected_config().radio_cfg.channel.primary,
                 num_clients: 1,
             }),
             sme.get_running_ap()
@@ -1346,115 +1440,6 @@ mod tests {
         client2.verify_eapol_req(&mut mlme_stream);
     }
 
-    #[test]
-    fn test_adapt_operation() {
-        // Invalid input
-        {
-            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
-            let ucfg = RadioConfig { phy: None, cbw: Some(Cbw::Cbw20), primary_channel: Some(1) };
-            let got = adapt_operation(&dinf, &ucfg);
-            assert!(got.is_err());
-        }
-        {
-            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
-            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw40, 48);
-            let got = adapt_operation(&dinf, &ucfg);
-            assert!(got.is_err());
-        }
-
-        // VHT device, VHT config
-        {
-            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
-            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw80, 48);
-            let want = OpRadioConfig { phy: Phy::Vht, channel: Channel::new(48, Cbw::Cbw80) };
-            let got = adapt_operation(&dinf, &ucfg).unwrap();
-            assert_eq!(want, got);
-        }
-        {
-            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
-            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw40Below, 48);
-            let want = OpRadioConfig { phy: Phy::Vht, channel: Channel::new(48, Cbw::Cbw40Below) };
-            let got = adapt_operation(&dinf, &ucfg).unwrap();
-            assert_eq!(want, got);
-        }
-        {
-            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
-            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw20, 48);
-            let want = OpRadioConfig { phy: Phy::Vht, channel: Channel::new(48, Cbw::Cbw20) };
-            let got = adapt_operation(&dinf, &ucfg).unwrap();
-            assert_eq!(want, got);
-        }
-
-        // VHT device, HT config
-        {
-            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
-            let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw40Below) };
-            let got = adapt_operation(&dinf, &ucfg).unwrap();
-            assert_eq!(want, got);
-        }
-        {
-            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
-            let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw20) };
-            let got = adapt_operation(&dinf, &ucfg).unwrap();
-            assert_eq!(want, got);
-        }
-        {
-            let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_ONLY);
-            let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw20) };
-            let got = adapt_operation(&dinf, &ucfg).unwrap();
-            assert_eq!(want, got);
-        }
-
-        // HT device, VHT config
-        {
-            let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
-            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw80, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw40Below) };
-            let got = adapt_operation(&dinf, &ucfg).unwrap();
-            assert_eq!(want, got);
-        }
-        {
-            let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
-            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw40Below, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw40Below) };
-            let got = adapt_operation(&dinf, &ucfg).unwrap();
-            assert_eq!(want, got);
-        }
-        {
-            let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
-            let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw20, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw20) };
-            let got = adapt_operation(&dinf, &ucfg).unwrap();
-            assert_eq!(want, got);
-        }
-
-        // HT device, HT config
-        {
-            let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
-            let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw40Below) };
-            let got = adapt_operation(&dinf, &ucfg).unwrap();
-            assert_eq!(want, got);
-        }
-        {
-            let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
-            let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw20) };
-            let got = adapt_operation(&dinf, &ucfg).unwrap();
-            assert_eq!(want, got);
-        }
-        {
-            let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_ONLY);
-            let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw20) };
-            let got = adapt_operation(&dinf, &ucfg).unwrap();
-            assert_eq!(want, got);
-        }
-    }
-
     fn create_start_conf(result_code: fidl_mlme::StartResultCode) -> MlmeEvent {
         MlmeEvent::StartConf { resp: fidl_mlme::StartConfirm { result_code } }
     }
@@ -1593,6 +1578,7 @@ mod tests {
         let (mut sme, mut mlme_stream, mut time_stream) = create_sme(exec);
         let config = if protected { protected_config() } else { unprotected_config() };
         let mut receiver = sme.on_start_command(config);
+        assert_eq!(Ok(None), receiver.try_recv());
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Start(..))));
         // drain time stream
         while let Ok(..) = time_stream.try_next() {}
@@ -1603,8 +1589,6 @@ mod tests {
     }
 
     fn create_sme(_exec: &fasync::TestExecutor) -> (ApSme, MlmeStream, TimeStream) {
-        let mut device_info = fake_device_info(AP_ADDR);
-        device_info.bands = vec![fake_2ghz_band_capabilities()];
-        ApSme::new(device_info)
+        ApSme::new(fake_device_info(AP_ADDR))
     }
 }

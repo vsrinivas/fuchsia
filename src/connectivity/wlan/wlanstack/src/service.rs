@@ -1056,7 +1056,7 @@ mod tests {
         fidl_sme::ApConfig {
             ssid: b"qwerty".to_vec(),
             password: vec![],
-            radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6).to_fidl(),
+            radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6).into(),
         }
     }
 }

@@ -42,52 +42,37 @@ pub mod unaligned_view;
 pub mod wmm;
 
 use {
-    channel::{Cbw, Phy},
+    channel::{Cbw, Channel, Phy},
     fidl_fuchsia_wlan_sme as fidl_sme,
 };
 
 use std::fmt;
 pub use time::TimeUnit;
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RadioConfig {
-    pub phy: Option<Phy>,
-    pub cbw: Option<Cbw>,
-    pub primary_channel: Option<u8>,
+    pub phy: Phy,
+    pub channel: Channel,
+}
+
+impl From<RadioConfig> for fidl_sme::RadioConfig {
+    fn from(radio_cfg: RadioConfig) -> fidl_sme::RadioConfig {
+        fidl_sme::RadioConfig { phy: radio_cfg.phy.to_fidl(), channel: radio_cfg.channel.into() }
+    }
+}
+
+impl From<fidl_sme::RadioConfig> for RadioConfig {
+    fn from(fidl_radio_cfg: fidl_sme::RadioConfig) -> RadioConfig {
+        RadioConfig {
+            phy: Phy::from_fidl(fidl_radio_cfg.phy),
+            channel: fidl_radio_cfg.channel.into(),
+        }
+    }
 }
 
 impl RadioConfig {
     pub fn new(phy: Phy, cbw: Cbw, primary_channel: u8) -> Self {
-        RadioConfig { phy: Some(phy), cbw: Some(cbw), primary_channel: Some(primary_channel) }
-    }
-
-    // TODO(fxbug.dev/83769): Implement `From `instead.
-    pub fn to_fidl(&self) -> fidl_sme::RadioConfig {
-        let (channel_bandwidth, _) = self.cbw.or(Some(Cbw::Cbw20)).unwrap().to_fidl();
-        fidl_sme::RadioConfig {
-            override_phy: self.phy.is_some(),
-            phy: self.phy.or(Some(Phy::Ht)).unwrap().to_fidl(),
-            override_channel_bandwidth: self.cbw.is_some(),
-            channel_bandwidth,
-            override_primary_channel: self.primary_channel.is_some(),
-            primary_channel: self.primary_channel.unwrap_or(0),
-        }
-    }
-
-    pub fn from_fidl(radio_cfg: fidl_sme::RadioConfig) -> Self {
-        RadioConfig {
-            phy: if radio_cfg.override_phy { Some(Phy::from_fidl(radio_cfg.phy)) } else { None },
-            cbw: if radio_cfg.override_channel_bandwidth {
-                Some(Cbw::from_fidl(radio_cfg.channel_bandwidth, 0))
-            } else {
-                None
-            },
-            primary_channel: if radio_cfg.override_primary_channel {
-                Some(radio_cfg.primary_channel)
-            } else {
-                None
-            },
-        }
+        RadioConfig { phy, channel: Channel::new(primary_channel, cbw) }
     }
 }
 

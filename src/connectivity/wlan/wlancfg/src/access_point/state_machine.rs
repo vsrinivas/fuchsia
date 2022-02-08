@@ -28,15 +28,12 @@ use {
     std::sync::Arc,
     void::ResultVoidErrExt,
     wlan_common::{
-        channel::{Cbw, Channel, Phy},
+        channel::{Cbw, Channel},
         RadioConfig,
     },
 };
 
 const AP_STATUS_INTERVAL_SEC: i64 = 10;
-const DEFAULT_CBW: Cbw = Cbw::Cbw20;
-const DEFAULT_CHANNEL: u8 = 6;
-const DEFAULT_PHY: Phy = Phy::Ht;
 
 // If a scan is occurring on a PHY and that same PHY is asked to start an AP, the request to start
 // the AP will likely fail.  Scans are allowed a maximum to 10s to complete.  The timeout is
@@ -116,7 +113,7 @@ impl From<ApConfig> for fidl_sme::ApConfig {
         fidl_sme::ApConfig {
             ssid: config.id.ssid.to_vec(),
             password: config.credential,
-            radio_cfg: config.radio_config.to_fidl(),
+            radio_cfg: config.radio_config.into(),
         }
     }
 }
@@ -315,16 +312,11 @@ fn transition_to_starting(
 async fn starting_state(
     proxy: fidl_sme::ApSmeProxy,
     mut next_req: NextReqFut,
-    mut req: ApConfig,
+    req: ApConfig,
     remaining_retries: u16,
     responder: Option<oneshot::Sender<()>>,
     state_tracker: Arc<ApStateTracker>,
 ) -> Result<State, ExitReason> {
-    // Apply default PHY, CBW, and channel settings.
-    let _ = req.radio_config.phy.get_or_insert(DEFAULT_PHY);
-    let _ = req.radio_config.cbw.get_or_insert(DEFAULT_CBW);
-    let _ = req.radio_config.primary_channel.get_or_insert(DEFAULT_CHANNEL);
-
     // Send a stop request to ensure that the AP begins in an unstarting state.
     let stop_result = match proxy.stop().await {
         Ok(fidl_sme::StopApResultCode::Success) => Ok(()),
@@ -500,7 +492,7 @@ async fn started_state(
         fasync::Interval::new(zx::Duration::from_seconds(AP_STATUS_INTERVAL_SEC));
 
     // Channel bandwidth is required for frequency computation when reporting state updates.
-    let cbw = req.radio_config.cbw.as_ref().map_or(Cbw::Cbw20, |cbw| *cbw);
+    let cbw = req.radio_config.channel.cbw;
 
     loop {
         select! {

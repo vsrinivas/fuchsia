@@ -9,7 +9,6 @@ use {
     ieee80211::MacAddr,
     std::convert::TryInto,
     wlan_common::{
-        channel::{Cbw, Phy},
         ie::{
             rsn::{
                 akm::{self, Akm, AKM_PSK},
@@ -20,7 +19,6 @@ use {
         },
         mac::CapabilityInfo,
         organization::Oui,
-        RadioConfig,
     },
     wlan_rsn::key::{gtk::Gtk, ptk::Ptk},
     zerocopy::AsBytes,
@@ -166,14 +164,6 @@ pub fn fake_band_capabilities_5ghz_vht(chanwidth: ChanWidthSet) -> fidl_mlme::Ba
             bytes: fake_vht_capabilities().as_bytes().try_into().unwrap(),
         })),
         ..bc
-    }
-}
-
-pub fn fake_overrider(phy: fidl_common::Phy, cbw: fidl_common::ChannelBandwidth) -> RadioConfig {
-    RadioConfig {
-        phy: Some(Phy::from_fidl(phy)),
-        cbw: Some(Cbw::from_fidl(cbw, 0)),
-        primary_channel: None,
     }
 }
 

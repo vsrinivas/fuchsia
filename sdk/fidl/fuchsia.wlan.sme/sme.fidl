@@ -154,12 +154,8 @@ protocol ConnectTransaction {
 };
 
 type RadioConfig = struct {
-    override_phy bool;
     phy fuchsia.wlan.common.PHY;
-    override_channel_bandwidth bool;
-    channel_bandwidth fuchsia.wlan.common.ChannelBandwidth;
-    override_primary_channel bool;
-    primary_channel uint8;
+    channel fuchsia.wlan.common.WlanChannel;
 };
 
 /// Empty struct used as credential value for open networks.
@@ -232,7 +228,6 @@ type ApConfig = struct {
 };
 
 type StartApResultCode = strict enum {
-    // TODO(porce): Fix naming style.
     SUCCESS = 0;
     ALREADY_STARTED = 1;
     INTERNAL_ERROR = 2;
@@ -240,7 +235,6 @@ type StartApResultCode = strict enum {
     TIMED_OUT = 4;
     PREVIOUS_START_IN_PROGRESS = 5;
     INVALID_ARGUMENTS = 6;
-    DFS_UNSUPPORTED = 7;
 };
 
 type StopApResultCode = strict enum {

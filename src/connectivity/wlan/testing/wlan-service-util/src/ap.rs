@@ -52,17 +52,16 @@ pub async fn start(
     target_pwd: Vec<u8>,
     channel: u8,
 ) -> Result<fidl_sme::StartApResultCode, Error> {
-    // create ConnectRequest holding network info
     let mut config = fidl_sme::ApConfig {
         ssid: target_ssid.into(),
         password: target_pwd,
         radio_cfg: fidl_sme::RadioConfig {
-            override_phy: false,
             phy: fidl_common::Phy::Ht,
-            override_channel_bandwidth: false,
-            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
-            override_primary_channel: true,
-            primary_channel: channel,
+            channel: fidl_common::WlanChannel {
+                primary: channel,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            },
         },
     };
     let start_ap_result_code = iface_sme_proxy.start(&mut config).await;
@@ -143,12 +142,12 @@ mod tests {
             ssid: target_ssid.to_vec(),
             password: target_password.to_vec(),
             radio_cfg: fidl_sme::RadioConfig {
-                override_phy: false,
                 phy: fidl_common::Phy::Ht,
-                override_channel_bandwidth: false,
-                channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
-                override_primary_channel: true,
-                primary_channel: channel,
+                channel: fidl_common::WlanChannel {
+                    primary: channel,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
+                    secondary80: 0,
+                },
             },
         };
 

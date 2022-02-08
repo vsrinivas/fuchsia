@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints,
     fidl_fuchsia_wlan_common::PowerSaveType,
-    fidl_fuchsia_wlan_common::WlanMacRole,
+    fidl_fuchsia_wlan_common::{self as fidl_common, WlanMacRole},
     fidl_fuchsia_wlan_device_service::{
         self as wlan_service, DeviceMonitorProxy, DeviceServiceProxy, QueryIfaceResponse,
     },
@@ -494,26 +494,15 @@ async fn do_ap(cmd: opts::ApCmd, dev_svc_proxy: DeviceService) -> Result<(), Err
                 ssid: ssid.as_bytes().to_vec(),
                 password: password.map_or(vec![], |p| p.as_bytes().to_vec()),
                 radio_cfg: fidl_sme::RadioConfig {
-                    override_phy: true,
                     phy: PhyArg::Ht.into(),
-                    override_channel_bandwidth: true,
-                    channel_bandwidth: CbwArg::Cbw20.into(),
-                    override_primary_channel: true,
-                    primary_channel: channel,
+                    channel: fidl_common::WlanChannel {
+                        primary: channel,
+                        cbw: CbwArg::Cbw20.into(),
+                        secondary80: 0,
+                    },
                 },
             };
-            let r = sme.start(&mut config).await?;
-            match r {
-                fidl_sme::StartApResultCode::DfsUnsupported => {
-                    println!(
-                        "{:?}: The specified role does not support DFS channel {:?}",
-                        r, config.radio_cfg.primary_channel
-                    );
-                }
-                _ => {
-                    println!("{:?}", r);
-                }
-            }
+            println!("{:?}", sme.start(&mut config).await?);
         }
         opts::ApCmd::Stop { iface_id } => {
             let sme = get_ap_sme(dev_svc_proxy, iface_id).await?;
