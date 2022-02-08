@@ -1640,13 +1640,6 @@ zx_status_t ClientProxy::OnCaptureComplete() {
 zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
                                         config_stamp_t controller_stamp) {
   ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
-
-  {
-    fbl::AutoLock l(&mtx_);
-    if (!enable_vsync_) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-  }
   fidl::Result event_sending_result = fidl::Result::Ok();
 
   config_stamp_t client_stamp = {};
@@ -1661,6 +1654,13 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
   } else {
     client_stamp = it->client_stamp;
     pending_applied_config_stamps_.erase(pending_applied_config_stamps_.begin(), it);
+  }
+
+  {
+    fbl::AutoLock l(&mtx_);
+    if (!enable_vsync_) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
   }
 
   uint64_t cookie = 0;

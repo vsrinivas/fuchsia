@@ -8,6 +8,8 @@
 #include <lib/fidl/llcpp/wire_messaging.h>
 #include <zircon/errors.h>
 
+#include <array>
+
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
@@ -88,6 +90,37 @@ TEST(DisplayTest, ClientVSyncNotSupported) {
   fbl::AutoLock lock(controller.mtx());
   status = clientproxy.OnDisplayVsync(0, 0, INVALID_CONFIG_STAMP_BANJO);
   EXPECT_TRUE(status == ZX_ERR_NOT_SUPPORTED);
+  clientproxy.CloseTest();
+}
+
+TEST(DisplayTest, ClientMustDrainPendingStamps) {
+  constexpr size_t kNumPendingStamps = 5;
+  constexpr std::array<uint64_t, kNumPendingStamps> kControllerStampValues = {1u, 2u, 3u, 4u, 5u};
+  constexpr std::array<uint64_t, kNumPendingStamps> kClientStampValues = {2u, 3u, 4u, 5u, 6u};
+
+  zx::channel server_chl, client_chl;
+  zx_status_t status = zx::channel::create(0, &server_chl, &client_chl);
+  EXPECT_OK(status);
+  Controller controller(nullptr);
+  ClientProxy clientproxy(&controller, false, false, 0, std::move(server_chl));
+  clientproxy.EnableVsync(false);
+  fbl::AutoLock lock(controller.mtx());
+  for (size_t i = 0; i < kNumPendingStamps; i++) {
+    clientproxy.UpdateConfigStampMapping({
+        .controller_stamp = {.value = kControllerStampValues[i]},
+        .client_stamp = {.value = kClientStampValues[i]},
+    });
+  }
+
+  status = clientproxy.OnDisplayVsync(0, 0, {.value = kControllerStampValues.back()});
+  EXPECT_EQ(status, ZX_ERR_NOT_SUPPORTED);
+
+  // Even if Vsync is disabled, ClientProxy should always drain pending
+  // controller stamps.
+  EXPECT_EQ(clientproxy.pending_applied_config_stamps().size(), 1);
+  EXPECT_EQ(clientproxy.pending_applied_config_stamps().front().controller_stamp.value,
+            kControllerStampValues.back());
+
   clientproxy.CloseTest();
 }
 
