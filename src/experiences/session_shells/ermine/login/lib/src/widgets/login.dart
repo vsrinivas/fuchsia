@@ -19,6 +19,7 @@ class Login extends StatelessWidget {
   final _formState = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _showPassword = false.asObservable();
+  final _focusNode = FocusNode();
 
   Login(this.oobe);
 
@@ -26,179 +27,132 @@ class Login extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Color.fromARGB(0xff, 0x0c, 0x0c, 0x0c),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header: Fuchsia logo and welcome.
-          SizedBox(
-            height: 200,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Fuchsia logo.
-                Image(
-                  image: AssetImage('images/Fuchsia-logo-2x.png'),
-                  color: Theme.of(context).colorScheme.primary,
-                  width: 24,
-                  height: 24,
-                ),
-                SizedBox(width: 16),
-                // Welcome text.
-                Text(
-                  Strings.fuchsiaWelcome,
-                  style: Theme.of(context).textTheme.headline6,
-                ),
-              ],
-            ),
-          ),
-
-          // Body: Oobe screens.
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: FocusScope(
-                child: Observer(builder: (context) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Password.
-                      Expanded(
-                        child: Form(
-                          key: _formState,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Title.
-                              Text(
-                                Strings.login,
-                                style: Theme.of(context).textTheme.headline3,
+      child: Center(
+        child: FocusScope(
+          child: Observer(builder: (context) {
+            return Form(
+              onChanged: oobe.resetAuthError,
+              key: _formState,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title.
+                  Padding(
+                    padding: EdgeInsets.only(left: 16),
+                    child: Text(
+                      Strings.login,
+                      style: Theme.of(context).textTheme.headline3,
+                    ),
+                  ),
+                  SizedBox(height: 36),
+                  // Password.
+                  SizedBox(
+                    width: kOobeBodyFieldWidth,
+                    height: 92,
+                    child: Padding(
+                      padding: EdgeInsets.only(left: 16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              key: ValueKey('password'),
+                              focusNode: _focusNode,
+                              autofocus: true,
+                              autovalidateMode:
+                                  AutovalidateMode.onUserInteraction,
+                              controller: _passwordController,
+                              obscureText: !_showPassword.value,
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: Strings.passwordHint,
+                                errorText: oobe.authError.isNotEmpty
+                                    ? oobe.authError
+                                    : null,
                               ),
-                              SizedBox(height: 40),
-                              // Password.
-                              SizedBox(
-                                width: kOobeBodyFieldWidth,
-                                child: TextFormField(
-                                  key: ValueKey('password'),
-                                  autofocus: true,
-                                  autovalidateMode:
-                                      AutovalidateMode.onUserInteraction,
-                                  controller: _passwordController,
-                                  obscureText: !_showPassword.value,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    labelText: Strings.passwordHint,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return Strings.accountPasswordInvalid;
+                                }
+                                if (oobe.authError.isNotEmpty) {
+                                  Focus.of(context).requestFocus(_focusNode);
+                                }
+                                return null;
+                              },
+                              onFieldSubmitted: (_) {
+                                if (_validate()) {
+                                  oobe.login(_passwordController.text);
+                                }
+                              },
+                            ),
+                          ),
+                          SizedBox(width: 16),
+                          Container(
+                            width: 56,
+                            height: 56,
+                            color: oobe.wait
+                                ? Theme.of(context).disabledColor
+                                : Colors.white,
+                            child: oobe.wait
+                                ? Center(child: CircularProgressIndicator())
+                                : ElevatedButton(
+                                    key: ValueKey('login'),
+                                    child: Icon(Icons.arrow_forward),
+                                    onPressed: () => _validate() && !oobe.wait
+                                        ? oobe.login(_passwordController.text)
+                                        : null,
                                   ),
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return Strings.accountPasswordInvalid;
-                                    }
-                                    return null;
-                                  },
-                                  onFieldSubmitted: (_) {
-                                    if (_validate()) {
-                                      oobe.login(_passwordController.text);
-                                    }
-                                  },
-                                ),
-                              ),
-                              SizedBox(height: 40),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
 
-                              // Show password checkbox.
-                              SizedBox(
-                                width: kOobeBodyFieldWidth,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Checkbox(
-                                      onChanged: (value) => runInAction(() =>
-                                          _showPassword.value = value == true),
-                                      value: _showPassword.value,
-                                    ),
-                                    SizedBox(height: 40),
-                                    Text(Strings.showPassword)
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 40),
+                  // Show password checkbox.
+                  SizedBox(
+                    width: kOobeBodyFieldWidth,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Checkbox(
+                          onChanged: (value) => runInAction(
+                              () => _showPassword.value = value == true),
+                          value: _showPassword.value,
+                        ),
+                        SizedBox(height: 40),
+                        Text(Strings.showPassword)
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 144),
 
-                              // Factory reset.
-                              SizedBox(
-                                width: kOobeBodyFieldWidth,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          _confirmFactoryReset(context),
-                                      child: Container(
-                                        padding: EdgeInsets.only(bottom: 1),
-                                        decoration: BoxDecoration(
-                                          border: Border(
-                                            bottom: BorderSide(
-                                              color: Colors.white,
-                                              width: 1,
-                                            ),
-                                          ),
-                                        ),
-                                        child: Text(Strings.factoryDataReset),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 40),
-                              // Show spinning indicator if waiting or api
-                              // errors, if any.
-                              SizedBox(
-                                height: 40,
-                                width: kOobeBodyFieldWidth,
-                                child: oobe.wait
-                                    ? Center(child: CircularProgressIndicator())
-                                    : oobe.authError.isNotEmpty
-                                        ? Text(
-                                            oobe.authError,
-                                            style: TextStyle(color: Colors.red),
-                                          )
-                                        : Offstage(),
-                              ),
-                            ],
+                  Container(
+                    alignment: Alignment.centerLeft,
+                    padding: EdgeInsets.only(left: 16),
+                    width: kOobeBodyFieldWidth,
+                    child: TextButton(
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                      onPressed: () => _confirmFactoryReset(context),
+                      child: Container(
+                        padding: EdgeInsets.only(bottom: 1),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.white,
+                              width: 1,
+                            ),
                           ),
                         ),
+                        child: Text(Strings.factoryDataReset),
                       ),
-
-                      // Buttons.
-                      Container(
-                        alignment: Alignment.center,
-                        padding: EdgeInsets.all(24),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Shutdown button.
-                            OutlinedButton(
-                              onPressed: oobe.wait ? null : oobe.shutdown,
-                              child: Text(Strings.shutdown.toUpperCase()),
-                            ),
-                            SizedBox(width: 24),
-                            // Login button.
-                            ElevatedButton(
-                              key: ValueKey('login'),
-                              onPressed: () => _validate() && !oobe.wait
-                                  ? oobe.login(_passwordController.text)
-                                  : null,
-                              child: Text(Strings.login.toUpperCase()),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                }),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ),
-        ],
+            );
+          }),
+        ),
       ),
     );
   }

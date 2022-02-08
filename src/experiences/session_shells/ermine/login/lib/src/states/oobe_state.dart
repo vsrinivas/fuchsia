@@ -65,6 +65,7 @@ abstract class OobeState {
   void finish();
   void shutdown();
   void factoryReset();
+  void resetAuthError();
 
   factory OobeState.fromEnv() {
     return OobeStateImpl(

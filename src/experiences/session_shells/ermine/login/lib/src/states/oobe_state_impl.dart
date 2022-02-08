@@ -354,6 +354,9 @@ class OobeStateImpl with Disposable implements OobeState {
   }
 
   @override
+  void resetAuthError() => runInAction(() => _authError.value = '');
+
+  @override
   void login(String password) async {
     try {
       runInAction(() {
