@@ -218,15 +218,17 @@ pub fn map_elf_segments(
 
         // Create the VMO part of the mapping.
         let flags = zx::VmarFlags::SPECIFIC | elf_to_vmar_perm_flags(&hdr.flags());
-        mapper
-            .map(
-                virt_addr,
-                vmo_to_map,
-                file_offset as u64,
-                util::page_end(file_size as usize),
-                flags,
-            )
-            .map_err(ElfLoadError::VmarMap)?;
+        if file_size != 0 {
+            mapper
+                .map(
+                    virt_addr,
+                    vmo_to_map,
+                    file_offset as u64,
+                    util::page_end(file_size as usize),
+                    flags,
+                )
+                .map_err(ElfLoadError::VmarMap)?;
+        }
 
         // If the mapping is specified as larger than the data in the file (i.e. virt_size is
         // larger than file_size), the remainder of the space (from virt_addr + file_size to
@@ -354,6 +356,7 @@ mod tests {
     struct RecordedMapping {
         vmo: zx::Vmo,
         vmo_offset: u64,
+        length: usize,
     }
 
     /// Records which VMOs and the offset within them are to be mapped.
@@ -380,12 +383,13 @@ mod tests {
             vmar_offset: usize,
             vmo: &zx::Vmo,
             vmo_offset: u64,
-            _length: usize,
+            length: usize,
             _flags: zx::VmarFlags,
         ) -> Result<usize, zx::Status> {
             self.0.borrow_mut().push(RecordedMapping {
                 vmo: vmo.as_handle_ref().duplicate(zx::Rights::SAME_RIGHTS).unwrap().into(),
                 vmo_offset,
+                length,
             });
             Ok(vmar_offset)
         }
@@ -634,5 +638,33 @@ mod tests {
 
         // No more mappings expected.
         assert_matches!(mapping_iter.next(), None);
+    }
+
+    #[test]
+    fn segment_with_zero_file_size() {
+        // Contains a PT_LOAD segment whose filesz is 0.
+        const ELF_PROGRAM_HEADERS: &[elf_parse::Elf64ProgramHeader] =
+            &[elf_parse::Elf64ProgramHeader {
+                segment_type: elf_parse::SegmentType::Load as u32,
+                flags: elf_parse::SegmentFlags::from_bits_truncate(
+                    elf_parse::SegmentFlags::READ.bits() | elf_parse::SegmentFlags::WRITE.bits(),
+                )
+                .bits(),
+                offset: util::PAGE_SIZE,
+                vaddr: 0x10000,
+                paddr: 0x10000,
+                filesz: 0,
+                memsz: 1,
+                align: util::PAGE_SIZE as u64,
+            }];
+        let headers =
+            elf_parse::Elf64Headers::new_for_test(ELF_FILE_HEADER, Some(ELF_PROGRAM_HEADERS));
+        let vmo = zx::Vmo::create(util::PAGE_SIZE as u64 * 2).expect("create VMO");
+
+        let mapper = TrackingMapper::new();
+        map_elf_segments(&vmo, &headers, &mapper, 0, 0).expect("map ELF segments");
+        for mapping in mapper.into_iter() {
+            assert!(mapping.length != 0);
+        }
     }
 }
