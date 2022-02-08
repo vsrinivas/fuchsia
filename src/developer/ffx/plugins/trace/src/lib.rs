@@ -215,6 +215,7 @@ pub async fn trace(
                 writer.line("")?;
             }
             if opts.background {
+                writer.line("To manually stop the trace, use `ffx trace stop`")?;
                 writer.line("Current tracing status:")?;
                 return status(&proxy, writer).await;
             }
@@ -722,6 +723,7 @@ mod tests {
         // This doesn't find `/.../foo.txt` for the tracing status, since the faked
         // proxy has no state.
         let regex_str = "Tracing started successfully on \"foo\".\nWriting to /([^/]+/)+?foo.txt
+To manually stop the trace, use `ffx trace stop`
 Current tracing status:
 - foo:
   - Output file: /foo/bar.fxt
