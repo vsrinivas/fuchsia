@@ -29,10 +29,10 @@ ALLOWED_RUST_DEPS = [
   "//src/lib/fuchsia:fuchsia",
   "//src/lib/zircon/rust:fuchsia-zircon",
   "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:assert_matches",
   "//third_party/rust_crates:futures",
   "//third_party/rust_crates:log",
   "//third_party/rust_crates:tracing",
-  "//third_party/rust_crates:matches",
 
   # Needed by the reboot_on_terminate test.
   "//examples/components/routing/echo_server:echo_server_component",

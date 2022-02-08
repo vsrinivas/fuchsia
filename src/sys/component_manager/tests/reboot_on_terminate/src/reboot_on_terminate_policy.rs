@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fuchsia_component::client, fuchsia_zircon as zx, futures::StreamExt, matches::assert_matches,
-    tracing::*,
+    assert_matches::assert_matches, fidl_fidl_examples_routing_echo as fecho,
+    fidl_fidl_test_components as ftest, fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_component_decl as fdecl, fuchsia_component::client, fuchsia_zircon as zx,
+    futures::StreamExt, tracing::*,
 };
 
 #[fuchsia::component]
