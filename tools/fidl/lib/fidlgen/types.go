@@ -761,8 +761,7 @@ var _ = []Declaration{
 // TypeAlias represents the declaration of a FIDL type alias.
 type TypeAlias struct {
 	Decl
-	Name                   EncodedCompoundIdentifier `json:"name"`
-	PartialTypeConstructor `json:"partial_type_ctor"`
+	PartialTypeConstructor PartialTypeConstructor `json:"partial_type_ctor"`
 }
 
 // PartialTypeConstructor represents a FIDL type as it is constructed from
@@ -1118,7 +1117,7 @@ const (
 	StructDeclType    DeclType = "struct"
 	TableDeclType     DeclType = "table"
 	UnionDeclType     DeclType = "union"
-	TypeAliasDelcType DeclType = "type_alias"
+	TypeAliasDeclType DeclType = "type_alias"
 )
 
 type DeclInfo struct {

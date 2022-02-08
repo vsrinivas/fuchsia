@@ -531,7 +531,9 @@ func TestCanUnmarshalTypeAliases(t *testing.T) {
 
 	expected := []fidlgen.TypeAlias{
 		{
-			Name: "example/UintThirtyTwo",
+			Decl: fidlgen.Decl{
+				Name: "example/UintThirtyTwo",
+			},
 			PartialTypeConstructor: fidlgen.PartialTypeConstructor{
 				Name:     "uint32",
 				Args:     []fidlgen.PartialTypeConstructor{},
@@ -539,7 +541,9 @@ func TestCanUnmarshalTypeAliases(t *testing.T) {
 			},
 		},
 		{
-			Name: "example/Foo",
+			Decl: fidlgen.Decl{
+				Name: "example/Foo",
+			},
 			PartialTypeConstructor: fidlgen.PartialTypeConstructor{
 				Name: "vector",
 				Args: []fidlgen.PartialTypeConstructor{
@@ -553,7 +557,9 @@ func TestCanUnmarshalTypeAliases(t *testing.T) {
 			},
 		},
 		{
-			Name: "example/FooVector",
+			Decl: fidlgen.Decl{
+				Name: "example/FooVector",
+			},
 			PartialTypeConstructor: fidlgen.PartialTypeConstructor{
 				Name: "vector",
 				Args: []fidlgen.PartialTypeConstructor{
@@ -573,7 +579,9 @@ func TestCanUnmarshalTypeAliases(t *testing.T) {
 			},
 		},
 		{
-			Name: "example/Bar",
+			Decl: fidlgen.Decl{
+				Name: "example/Bar",
+			},
 			PartialTypeConstructor: fidlgen.PartialTypeConstructor{
 				Name: "vector",
 				Args: []fidlgen.PartialTypeConstructor{
@@ -587,7 +595,9 @@ func TestCanUnmarshalTypeAliases(t *testing.T) {
 			},
 		},
 		{
-			Name: "example/Baz",
+			Decl: fidlgen.Decl{
+				Name: "example/Baz",
+			},
 			PartialTypeConstructor: fidlgen.PartialTypeConstructor{
 				Name:     "string",
 				Args:     []fidlgen.PartialTypeConstructor{},
@@ -609,7 +619,7 @@ func TestCanUnmarshalTypeAliases(t *testing.T) {
 	}
 
 	for i, actual := range root.TypeAliases {
-		actual.Decl = fidlgen.Decl{} // Does not matter for the purpose of this comparison.
+		actual.Decl.Location = fidlgen.Location{} // Does not matter for the purpose of this comparison.
 		if diff := cmp.Diff(actual, expected[i]); len(diff) > 0 {
 			t.Errorf("\nexpected: %#v\nactual: %#v", expected[i], actual)
 		}
