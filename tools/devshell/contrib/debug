@@ -135,7 +135,7 @@ if [[ -z "${port}" ]]; then
 fi
 
 if [[ -n "${target_core}" ]]; then
-  id='fd81549e77f2f3b199d4dca16131c3525428140828f0843a0fd30e7c0d2e2631'
+  id='eb345fb7dcaa4260ee0c65bb73ef0ec5341b15a4f603f358d6631c4be6bf7080'
   cache_coredumps=$(fx-command-run shell "find /data/cache/${id}/reports -name minidump.dmp -type f")
   tmp_coredumps=$(fx-command-run shell "find /tmp/${id}/reports -name minidump.dmp -type f")
   all_coredumps=("${cache_coredumps[@]}" "${tmp_coredumps[@]}")
