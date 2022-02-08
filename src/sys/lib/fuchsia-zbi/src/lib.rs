@@ -199,6 +199,28 @@ impl ZbiParser {
         Ok(())
     }
 
+    fn get_zbi_result(
+        &self,
+        zbi_type: ZbiType,
+        zbi_item: &ZbiItem,
+    ) -> Result<ZbiResult, ZbiParserError> {
+        // StorageRamdisk item users currently expect the header to be contained in the item
+        // result.
+        // TODO(fxb/93235): Remove special cases for StorageRamdisk.
+        let (length, offset) = if zbi_type == ZbiType::StorageRamdisk {
+            (ZBI_HEADER_SIZE + zbi_item.item_length as usize, zbi_item.header_offset)
+        } else {
+            (zbi_item.item_length as usize, zbi_item.item_offset)
+        };
+
+        let mut bytes = vec![0; length];
+        self.vmo.read(&mut bytes, offset.into()).map_err(|status| {
+            ZbiParserError::FailedToReadPayload { size: bytes.len(), offset, status }
+        })?;
+
+        Ok(ZbiResult { bytes, extra: zbi_item.extra })
+    }
+
     pub fn new(vmo: zx::Vmo) -> ZbiParser {
         Self {
             vmo,
@@ -228,15 +250,7 @@ impl ZbiParser {
 
         let mut result: Vec<ZbiResult> = Vec::new();
         for item in &self.items[&zbi_type] {
-            let mut bytes = vec![0; item.item_length as usize];
-            self.vmo.read(&mut bytes, item.item_offset.into()).map_err(|status| {
-                ZbiParserError::FailedToReadPayload {
-                    size: bytes.len(),
-                    offset: item.item_offset,
-                    status,
-                }
-            })?;
-            result.push(ZbiResult { bytes, extra: item.extra });
+            result.push(self.get_zbi_result(zbi_type, &item)?);
         }
 
         Ok(result)
@@ -255,15 +269,7 @@ impl ZbiParser {
 
         for item in &self.items[&zbi_type] {
             if item.extra == extra {
-                let mut bytes = vec![0; item.item_length as usize];
-                self.vmo.read(&mut bytes, item.item_offset.into()).map_err(|status| {
-                    ZbiParserError::FailedToReadPayload {
-                        size: bytes.len(),
-                        offset: item.item_offset,
-                        status,
-                    }
-                })?;
-                return Ok(ZbiResult { bytes, extra: item.extra });
+                return Ok(self.get_zbi_result(zbi_type, &item)?);
             }
         }
 
@@ -418,11 +424,12 @@ impl ZbiParser {
 
             if self.should_store_item(zbi_type) {
                 let entry = self.items.entry(zbi_type).or_insert(Vec::new());
+                // TODO(fxb/93235): Remove special case for StorageRamdisk.
                 entry.push(ZbiItem {
                     header_offset: current_offset,
                     item_offset: current_offset + header_offset,
                     item_length: header.length.get(),
-                    extra: header.extra.get(),
+                    extra: if zbi_type == ZbiType::StorageRamdisk { 0 } else { header.extra.get() },
                 });
 
                 // If there is a decommit range, resolve it now so that it doesn't include this
@@ -710,6 +717,35 @@ mod tests {
         assert!((8 - crash_item_length % 8) + crash_item_length == cmdline_item.header_offset);
 
         check_item_bytes(&builder, &parser);
+    }
+
+    #[fuchsia::test]
+    async fn ramdisk_item_contains_header() {
+        // This is a special case which we really should remove. The fshost expects storage
+        // ramdisk items to contain the header, and zero for an extra. See fxb/93235 for details.
+        let size = 0x40;
+        let mut ramdisk_header = ZbiBuilder::simple_header(ZbiType::StorageRamdisk, size);
+        ramdisk_header.extra = U32::<LittleEndian>::new(0xABCD);
+
+        let (zbi, builder) = ZbiBuilder::new()
+            .add_header(ZbiBuilder::simple_header(ZbiType::Container, 0))
+            .add_header(ramdisk_header)
+            .add_item(size)
+            .calculate_item_length()
+            .generate()
+            .expect("failed to create zbi");
+
+        let parser = ZbiParser::new(zbi).parse().expect("Failed to parse ZBI");
+
+        // Extra has been set to zero, while it was 0xABCD in the ZBI.
+        let item = parser
+            .try_get_first_matching_item(ZbiType::StorageRamdisk, 0x0)
+            .expect("Failed to get item");
+
+        // Bytes include the header.
+        assert_eq!(item.bytes.len(), ZBI_HEADER_SIZE + size as usize);
+        let offset = parser.items[&ZbiType::StorageRamdisk][0].header_offset as usize;
+        assert_eq!(builder.zbi_bytes[offset..(offset + item.bytes.len())], item.bytes);
     }
 
     #[fuchsia::test]
