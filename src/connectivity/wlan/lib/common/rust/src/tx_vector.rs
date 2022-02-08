@@ -8,14 +8,14 @@ use {
     banjo_fuchsia_hardware_wlan_associnfo as hw_wlan_associnfo,
     banjo_fuchsia_hardware_wlan_phyinfo as hw_wlan_phyinfo,
     banjo_fuchsia_hardware_wlan_softmac as hw_wlan_softmac,
-    banjo_fuchsia_wlan_common as banjo_common,
+    banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_common as fidl_common,
 };
 
 pub const HT_NUM_MCS: u8 = 32; // Only support MCS 0-31
 pub const HT_NUM_UNIQUE_MCS: u8 = 8;
 pub const ERP_NUM_TX_VECTOR: u8 = 8;
 
-const INVALID_TX_VECTOR_IDX: u16 = hw_wlan_softmac::WLAN_TX_VECTOR_IDX_INVALID;
+const INVALID_TX_VECTOR_IDX: u16 = fidl_common::WLAN_TX_VECTOR_IDX_INVALID;
 
 const HT_NUM_GI: u8 = 2;
 const HT_NUM_CBW: u8 = 2;

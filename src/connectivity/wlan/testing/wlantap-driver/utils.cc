@@ -202,14 +202,18 @@ zx_status_t ConvertTapPhyConfig(
   return ZX_OK;
 }
 
-wlan_tx_status_t ConvertTxStatus(const wlan_tap::WlanTxStatus& in) {
+wlan_tx_status_t ConvertTxStatus(const wlan_common::WlanTxStatus& in) {
   wlan_tx_status_t out;
   std::copy(in.peer_addr.cbegin(), in.peer_addr.cend(), out.peer_addr);
-  for (size_t i = 0; i < in.tx_status_entries.size(); ++i) {
-    out.tx_status_entry[i].tx_vector_idx = in.tx_status_entries[i].tx_vec_idx;
-    out.tx_status_entry[i].attempts = in.tx_status_entries[i].attempts;
+  for (size_t i = 0; i < in.tx_status_entry.size(); ++i) {
+    out.tx_status_entry[i].tx_vector_idx = in.tx_status_entry[i].tx_vector_idx;
+    out.tx_status_entry[i].attempts = in.tx_status_entry[i].attempts;
   }
-  out.success = in.success;
+  if (in.result == wlan_common::WlanTxResult::SUCCESS) {
+    out.result = WLAN_TX_RESULT_SUCCESS;
+  } else {
+    out.result = WLAN_TX_RESULT_FAILED;
+  }
   return out;
 }
 }  // namespace wlan

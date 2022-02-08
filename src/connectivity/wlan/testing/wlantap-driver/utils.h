@@ -8,10 +8,9 @@
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/softmac/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/tap/cpp/fidl.h>
-
-#include "utils.h"
 
 namespace wlan {
 
@@ -28,7 +27,7 @@ zx_status_t ConvertTapPhyConfig(
     wlan_mac_role_t supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
     uint8_t* supported_mac_roles_count,
     const ::fuchsia::wlan::tap::WlantapPhyConfig& tap_phy_config);
-wlan_tx_status_t ConvertTxStatus(const ::fuchsia::wlan::tap::WlanTxStatus& in);
+wlan_tx_status_t ConvertTxStatus(const ::fuchsia::wlan::common::WlanTxStatus& in);
 }  // namespace wlan
 
 #endif  // SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_UTILS_H_

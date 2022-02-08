@@ -164,7 +164,7 @@ impl Peer {
         peer
     }
 
-    fn handle_tx_status_report(&mut self, tx_status: &hw_wlan_softmac::WlanTxStatus) {
+    fn handle_tx_status_report(&mut self, tx_status: &banjo_common::WlanTxStatus) {
         let mut last_attempted_idx = None;
         for status_entry in &tx_status.tx_status_entry[..] {
             let idx = match TxVecIdx::new(status_entry.tx_vector_idx) {
@@ -188,7 +188,7 @@ impl Peer {
             }
         }
         if let Some(idx) = last_attempted_idx {
-            if tx_status.success {
+            if tx_status.result == banjo_common::WlanTxResult::SUCCESS {
                 // last_attempted_idx will always have a corresponding tx_stats_map entry.
                 self.tx_stats_map.get_mut(&idx).unwrap().success_cur += 1;
             }
@@ -515,7 +515,7 @@ impl<T: TimerManager> MinstrelRateSelector<T> {
         }
     }
 
-    pub fn handle_tx_status_report(&mut self, tx_status: &hw_wlan_softmac::WlanTxStatus) {
+    pub fn handle_tx_status_report(&mut self, tx_status: &banjo_common::WlanTxStatus) {
         match self.peer_map.get_mut(&tx_status.peer_addr) {
             Some(peer) => {
                 peer.handle_tx_status_report(tx_status);
@@ -836,20 +836,25 @@ mod tests {
     }
 
     /// Helper fn to easily create tx status reports.
-    fn make_tx_status(entries: Vec<(u16, u8)>, success: bool) -> hw_wlan_softmac::WlanTxStatus {
+    fn make_tx_status(entries: Vec<(u16, u8)>, success: bool) -> banjo_common::WlanTxStatus {
         assert!(entries.len() <= 8);
         let mut tx_status_entry =
-            [hw_wlan_softmac::WlanTxStatusEntry { tx_vector_idx: 0, attempts: 0 }; 8];
+            [banjo_common::WlanTxStatusEntry { tx_vector_idx: 0, attempts: 0 }; 8];
         tx_status_entry[0..entries.len()].copy_from_slice(
             &entries
                 .into_iter()
-                .map(|(tx_vector_idx, attempts)| hw_wlan_softmac::WlanTxStatusEntry {
+                .map(|(tx_vector_idx, attempts)| banjo_common::WlanTxStatusEntry {
                     tx_vector_idx,
                     attempts,
                 })
-                .collect::<Vec<hw_wlan_softmac::WlanTxStatusEntry>>()[..],
+                .collect::<Vec<banjo_common::WlanTxStatusEntry>>()[..],
         );
-        hw_wlan_softmac::WlanTxStatus { tx_status_entry, peer_addr: TEST_MAC_ADDR, success }
+        let result = if success {
+            banjo_common::WlanTxResult::SUCCESS
+        } else {
+            banjo_common::WlanTxResult::FAILED
+        };
+        banjo_common::WlanTxStatus { tx_status_entry, peer_addr: TEST_MAC_ADDR, result }
     }
 
     #[test]

@@ -17,4 +17,6 @@ fidl("fuchsia.wlan.common") {
     "driver_features.fidl",
     "wlan_common.fidl",
   ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211" ]
 }

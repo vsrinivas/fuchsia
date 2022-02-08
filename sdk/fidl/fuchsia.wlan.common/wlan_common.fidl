@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 library fuchsia.wlan.common;
 
+using fuchsia.wlan.ieee80211;
+
 type RequestStatus = strict enum {
     ACKNOWLEDGED = 0;
     REJECTED_NOT_SUPPORTED = 1;
@@ -101,4 +103,37 @@ type PowerSaveType = strict enum : uint32 {
     FAST_PS_MODE = 0x1;
     // STA uses PS Poll frames to retrieve packets from AP as needed.
     PS_POLL_MODE = 0x2;
+};
+
+@namespaced
+const WLAN_TX_VECTOR_IDX_INVALID uint16 = 0;
+@namespaced
+const WLAN_TX_STATUS_MAX_ENTRY uint32 = 8;
+
+/// One entry in a WlanTxStatus report. Indicates a number of attempted transmissions on
+/// a particular tx vector, but does not imply successful transmission.
+type WlanTxStatusEntry = struct {
+    tx_vector_idx uint16;
+    /// Number of total attempts with this specific tx vector, including successful attempts.
+    /// DDK assumes the number of attempts per packet will not exceed 255. (typically <= 8)
+    attempts uint8;
+};
+
+/// Outcome of a packet transmission.
+type WlanTxResult = strict enum : uint8 {
+    /// ACK was not received or transmission otherwise failed.
+    FAILED = 0x0;
+    /// ACK was received from peer.
+    SUCCESS = 0x1;
+};
+
+/// TX status reports are used by the Minstrel rate selection algorithm
+/// Tests should use the default value in //src/connectivity/wlan/testing/hw-sim/src/lib.rs
+type WlanTxStatus = struct {
+    /// up to 8 different tx_vector for one PPDU frame.
+    /// WLAN_TX_VECTOR_IDX_INVALID indicates no more entries.
+    tx_status_entry array<WlanTxStatusEntry, WLAN_TX_STATUS_MAX_ENTRY>;
+    /// Destination mac address, or addr1 in packet header.
+    peer_addr fuchsia.wlan.ieee80211.MacAddr;
+    result WlanTxResult;
 };

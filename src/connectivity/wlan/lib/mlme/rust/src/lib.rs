@@ -32,6 +32,7 @@ use {
     anyhow::{anyhow, bail, Error},
     banjo_fuchsia_hardware_wlan_phyinfo as ddk_wlaninfo,
     banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
+    banjo_fuchsia_wlan_common as banjo_common,
     device::{Device, DeviceInterface},
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
@@ -167,7 +168,7 @@ pub enum DriverEvent {
     // Reports a scan is complete.
     ScanComplete { status: zx::Status, scan_id: u64 },
     // Reports the result of an attempted frame transmission.
-    TxStatusReport { tx_status: banjo_wlan_softmac::WlanTxStatus },
+    TxStatusReport { tx_status: banjo_common::WlanTxStatus },
     // Reports the current status of the vendor driver.
     Status { status: u32 },
 }

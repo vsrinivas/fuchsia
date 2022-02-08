@@ -309,7 +309,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     zxlogf(INFO, "%s: Status done", name_.c_str());
   }
 
-  virtual void ReportTxStatus(uint16_t wlan_softmac_id, wlantap::WlanTxStatus ts) override {
+  virtual void ReportTxStatus(uint16_t wlan_softmac_id, wlan_common::WlanTxStatus ts) override {
     std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
     if (!phy_config_->quiet || report_tx_status_count_ < 32) {
       zxlogf(INFO, "%s: ReportTxStatus %zu", name_.c_str(), report_tx_status_count_);

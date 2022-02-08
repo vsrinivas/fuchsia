@@ -7,9 +7,10 @@ use {
     banjo_fuchsia_hardware_wlan_associnfo::*,
     banjo_fuchsia_hardware_wlan_phyinfo::WlanInfoPhyType,
     banjo_fuchsia_hardware_wlan_softmac::{
-        self as banjo_wlan_softmac, WlanRxPacket, WlanSoftmacInfo, WlanTxPacket, WlanTxStatus,
+        self as banjo_wlan_softmac, WlanRxPacket, WlanSoftmacInfo, WlanTxPacket,
     },
-    banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
+    banjo_fuchsia_wlan_common::{self as banjo_common, WlanTxStatus},
+    banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
     banjo_fuchsia_wlan_internal::BssConfig,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     ieee80211::MacAddr,

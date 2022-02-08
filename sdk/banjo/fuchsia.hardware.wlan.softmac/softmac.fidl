@@ -102,26 +102,6 @@ type WlanTxInfo = struct {
     mcs uint8;
 };
 
-const WLAN_TX_VECTOR_IDX_INVALID uint16 = 0;
-const WLAN_TX_STATUS_MAX_ENTRY uint32 = 8;
-
-type WlanTxStatusEntry = struct {
-    tx_vector_idx uint16;
-    /// Number of total attempts with this specific tx vector, including successful attempts.
-    /// DDK assumes the number of attempts per packet will not exceed 255. (usually <= 8)
-    attempts uint8;
-};
-
-type WlanTxStatus = struct {
-    /// up to 8 different tx_vector for one PPDU frame.
-    /// WLAN_TX_VECTOR_IDX_INVALID indicates no more entries.
-    tx_status_entry array<WlanTxStatusEntry, WLAN_TX_STATUS_MAX_ENTRY>;
-    /// Destination mac address, or addr1 in packet header.
-    peer_addr ieee80211.MacAddr;
-    /// Outcome of packet transmission. True iff ACK was received from peer.
-    success bool;
-};
-
 type WlanProtection = strict enum : uint8 {
     NONE = 0;
     RX = 1;
@@ -212,7 +192,7 @@ protocol WlanSoftmacIfc {
     /// Reports the status of an attempted transmission.
     /// |tx_status|: contains status info of one transmitted packet to one peer at one specific rate.
     ReportTxStatus(struct {
-        tx_status WlanTxStatus;
+        tx_status fuchsia.wlan.common.WlanTxStatus;
     });
 
     /// Reports completion of a scan associated with the unique `scan_id`. The status

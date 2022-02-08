@@ -194,7 +194,7 @@ struct WlantapMacImpl : WlantapMac {
     }
   }
 
-  virtual void ReportTxStatus(const wlantap::WlanTxStatus& ts) override {
+  virtual void ReportTxStatus(const wlan_common::WlanTxStatus& ts) override {
     std::lock_guard<std::mutex> guard(lock_);
     if (ifc_.is_valid()) {
       wlan_tx_status_t converted_tx_status = ConvertTxStatus(ts);

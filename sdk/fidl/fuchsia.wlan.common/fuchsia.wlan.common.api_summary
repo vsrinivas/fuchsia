@@ -68,6 +68,8 @@ struct/member fuchsia.wlan.common/SecuritySupport.sae fuchsia.wlan.common/SaeFea
 struct fuchsia.wlan.common/SecuritySupport
 struct/member fuchsia.wlan.common/SpectrumManagementSupport.dfs fuchsia.wlan.common/DfsFeature
 struct fuchsia.wlan.common/SpectrumManagementSupport
+const fuchsia.wlan.common/WLAN_TX_STATUS_MAX_ENTRY uint32 8
+const fuchsia.wlan.common/WLAN_TX_VECTOR_IDX_INVALID uint16 0
 struct/member fuchsia.wlan.common/WlanChannel.cbw fuchsia.wlan.common/ChannelBandwidth
 struct/member fuchsia.wlan.common/WlanChannel.primary uint8
 struct/member fuchsia.wlan.common/WlanChannel.secondary80 uint8
@@ -76,4 +78,14 @@ enum/member fuchsia.wlan.common/WlanMacRole.AP 2
 enum/member fuchsia.wlan.common/WlanMacRole.CLIENT 1
 enum/member fuchsia.wlan.common/WlanMacRole.MESH 3
 strict enum fuchsia.wlan.common/WlanMacRole uint32
+enum/member fuchsia.wlan.common/WlanTxResult.FAILED 0
+enum/member fuchsia.wlan.common/WlanTxResult.SUCCESS 1
+strict enum fuchsia.wlan.common/WlanTxResult uint8
+struct/member fuchsia.wlan.common/WlanTxStatus.peer_addr array<uint8,6>
+struct/member fuchsia.wlan.common/WlanTxStatus.result fuchsia.wlan.common/WlanTxResult
+struct/member fuchsia.wlan.common/WlanTxStatus.tx_status_entry array<fuchsia.wlan.common/WlanTxStatusEntry,8>
+struct fuchsia.wlan.common/WlanTxStatus
+struct/member fuchsia.wlan.common/WlanTxStatusEntry.attempts uint8
+struct/member fuchsia.wlan.common/WlanTxStatusEntry.tx_vector_idx uint16
+struct fuchsia.wlan.common/WlanTxStatusEntry
 library fuchsia.wlan.common

@@ -6,7 +6,6 @@
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
 
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
-#include <fuchsia/hardware/wlan/softmac/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
@@ -26,7 +25,8 @@ static constexpr uint8_t kHtNumMcs = 32;  // Only support MCS 0-31
 static constexpr uint8_t kHtNumUniqueMcs = 8;
 static constexpr uint8_t kErpNumTxVector = 8;
 
-static constexpr tx_vec_idx_t kInvalidTxVectorIdx = WLAN_TX_VECTOR_IDX_INVALID;
+static constexpr tx_vec_idx_t kInvalidTxVectorIdx =
+    fuchsia::wlan::common::WLAN_TX_VECTOR_IDX_INVALID;
 
 static constexpr uint8_t kHtNumGi = 2;
 static constexpr uint8_t kHtNumCbw = 2;

@@ -4,9 +4,8 @@
 
 use {
     anyhow::Error,
-    fidl_fuchsia_wlan_tap::{
-        WlanTxStatusEntry, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,
-    },
+    fidl_fuchsia_wlan_common::{WlanTxResult, WlanTxStatus, WlanTxStatusEntry},
+    fidl_fuchsia_wlan_tap::{WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_async::Interval,
     fuchsia_zircon::DurationNum,
     futures::{channel::mpsc, poll, StreamExt},
@@ -25,7 +24,7 @@ const DATA_FRAME_INTERVAL_NANOS: i64 = 4_000_000;
 const BSS_MINSTL: Bssid = Bssid([0x6d, 0x69, 0x6e, 0x73, 0x74, 0x0a]);
 
 fn create_wlan_tx_status_entry(tx_vec_idx: u16) -> WlanTxStatusEntry {
-    fidl_fuchsia_wlan_tap::WlanTxStatusEntry { tx_vec_idx: tx_vec_idx, attempts: 1 }
+    WlanTxStatusEntry { tx_vector_idx: tx_vec_idx, attempts: 1 }
 }
 
 fn send_tx_status_report(
@@ -34,12 +33,11 @@ fn send_tx_status_report(
     is_successful: bool,
     proxy: &WlantapPhyProxy,
 ) -> Result<(), Error> {
-    use fidl_fuchsia_wlan_tap::WlanTxStatus;
-
+    let result = if is_successful { WlanTxResult::Success } else { WlanTxResult::Failed };
     let mut ts = WlanTxStatus {
         peer_addr: bssid.0,
-        success: is_successful,
-        tx_status_entries: [
+        result,
+        tx_status_entry: [
             create_wlan_tx_status_entry(tx_vec_idx),
             create_wlan_tx_status_entry(0),
             create_wlan_tx_status_entry(0),

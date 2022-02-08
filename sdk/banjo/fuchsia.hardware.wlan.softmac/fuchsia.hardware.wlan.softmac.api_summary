@@ -1,5 +1,3 @@
-const fuchsia.hardware.wlan.softmac/WLAN_TX_STATUS_MAX_ENTRY uint32 8
-const fuchsia.hardware.wlan.softmac/WLAN_TX_VECTOR_IDX_INVALID uint16 0
 struct/member fuchsia.hardware.wlan.softmac/WlanBcnConfig.beacon_interval uint16
 struct/member fuchsia.hardware.wlan.softmac/WlanBcnConfig.packet_template fuchsia.hardware.wlan.softmac/WlanTxPacket
 struct/member fuchsia.hardware.wlan.softmac/WlanBcnConfig.tim_ele_offset uint64
@@ -62,7 +60,7 @@ struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacActiveScanArgs.ssids vect
 struct fuchsia.hardware.wlan.softmac/WlanSoftmacActiveScanArgs
 protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.CompleteTx(fuchsia.hardware.wlan.softmac/WlanTxPacket packet,int32 status) -> ()
 protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.Recv(fuchsia.hardware.wlan.softmac/WlanRxPacket packet)
-protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.ReportTxStatus(fuchsia.hardware.wlan.softmac/WlanTxStatus tx_status)
+protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.ReportTxStatus(fuchsia.wlan.common/WlanTxStatus tx_status)
 protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.ScanComplete(int32 status,uint64 scan_id)
 protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.Status(uint32 status) -> ()
 protocol fuchsia.hardware.wlan.softmac/WlanSoftmacIfc
@@ -99,11 +97,4 @@ strict enum fuchsia.hardware.wlan.softmac/WlanTxInfoValid uint8
 struct/member fuchsia.hardware.wlan.softmac/WlanTxPacket.info fuchsia.hardware.wlan.softmac/WlanTxInfo
 struct/member fuchsia.hardware.wlan.softmac/WlanTxPacket.mac_frame vector<uint8>
 struct fuchsia.hardware.wlan.softmac/WlanTxPacket
-struct/member fuchsia.hardware.wlan.softmac/WlanTxStatus.peer_addr array<uint8,6>
-struct/member fuchsia.hardware.wlan.softmac/WlanTxStatus.success bool
-struct/member fuchsia.hardware.wlan.softmac/WlanTxStatus.tx_status_entry array<fuchsia.hardware.wlan.softmac/WlanTxStatusEntry,8>
-struct fuchsia.hardware.wlan.softmac/WlanTxStatus
-struct/member fuchsia.hardware.wlan.softmac/WlanTxStatusEntry.attempts uint8
-struct/member fuchsia.hardware.wlan.softmac/WlanTxStatusEntry.tx_vector_idx uint16
-struct fuchsia.hardware.wlan.softmac/WlanTxStatusEntry
 library fuchsia.hardware.wlan.softmac

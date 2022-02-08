@@ -29,7 +29,7 @@ class WlantapMac {
                   const ::fuchsia::wlan::tap::WlanRxInfo& rx_info) = 0;
   virtual void Status(uint32_t status) = 0;
 
-  virtual void ReportTxStatus(const ::fuchsia::wlan::tap::WlanTxStatus& ts) = 0;
+  virtual void ReportTxStatus(const ::fuchsia::wlan::common::WlanTxStatus& ts) = 0;
 
   virtual void RemoveDevice() = 0;
 

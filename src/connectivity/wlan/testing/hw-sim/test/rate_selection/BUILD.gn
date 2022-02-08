@@ -7,6 +7,7 @@ import("//build/rust/rustc_test.gni")
 rustc_test("rate_selection") {
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/ieee80211",

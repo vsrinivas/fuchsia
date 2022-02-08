@@ -80,23 +80,6 @@ type WlanKeyConfig = struct {
     key vector<uint8>:32;
 };
 
-/// One entry in a WlanTxStatus report, 1 report can contain up to 8 entries (see below).
-/// These values are populated by the wlantap driver and should not be specified manually.
-/// See wlan_tx_status_entry_t for details about each field.
-type WlanTxStatusEntry = struct {
-    tx_vec_idx uint16;
-    attempts uint8;
-};
-
-/// TX status report used by Minstrel rate selection algorithm. One report per packet.
-/// You are encouraged to use the default value in //src/connectivity/wlan/testing/hw-sim/src/lib.rs
-/// See wlan_tx_status_t for details about each field.
-type WlanTxStatus = struct {
-    peer_addr ieee80211.MacAddr;
-    tx_status_entries array<WlanTxStatusEntry, 8>;
-    success bool;
-};
-
 /// Country code the device is to switch to.
 /// These values are populated by the wlantap driver and should not be specified manually.
 /// See also phy.fidl CountryCode.
@@ -135,7 +118,7 @@ protocol WlantapPhy {
     /// with a certain number of retries.
     ReportTxStatus(struct {
         wlan_softmac_id uint16;
-        txs WlanTxStatus;
+        txs fuchsia.wlan.common.WlanTxStatus;
     });
 
     // wlan_softmac_protocol_ops_t
