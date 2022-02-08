@@ -19,9 +19,11 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 
+#include <memory>
 #include <optional>
 
 #include "src/lib/fxl/macros.h"
+#include "src/modular/bin/basemgr/child_listener.h"
 #include "src/modular/bin/basemgr/inspector.h"
 #include "src/modular/bin/basemgr/presentation_container.h"
 #include "src/modular/bin/basemgr/session_provider.h"
@@ -64,12 +66,14 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // |inspector| Inspect tree for publishing diagnostics.
   // |launcher| Environment service for creating component instances.
   // |presenter| Service to initialize the presentation.
+  // |child_listener| Active connections to child components.
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
   explicit BasemgrImpl(modular::ModularConfigAccessor config_accessor,
                        std::shared_ptr<sys::OutgoingDirectory> outgoing,
                        BasemgrInspector* inspector, fuchsia::sys::LauncherPtr launcher,
                        fuchsia::ui::policy::PresenterPtr presenter,
                        fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
+                       std::unique_ptr<ChildListener> child_listener,
                        fit::function<void()> on_shutdown);
 
   ~BasemgrImpl() override;
@@ -142,6 +146,10 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   fuchsia::sys::LauncherPtr launcher_;
   // Used to connect the |presentation_container_| to scenic.
   fuchsia::ui::policy::PresenterPtr presenter_;
+
+  // Used to listen to child components and restart on crashes.
+  std::unique_ptr<ChildListener> child_listener_;
+
   // Used to trigger device reboot.
   fuchsia::hardware::power::statecontrol::AdminPtr device_administrator_;
   fit::function<void()> on_shutdown_;

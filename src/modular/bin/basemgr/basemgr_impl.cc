@@ -14,6 +14,7 @@
 
 #include "src/lib/files/directory.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/modular/bin/basemgr/child_listener.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/app_client.h"
@@ -72,12 +73,14 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
                          BasemgrInspector* inspector, fuchsia::sys::LauncherPtr launcher,
                          fuchsia::ui::policy::PresenterPtr presenter,
                          fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
+                         std::unique_ptr<ChildListener> child_listener,
                          fit::function<void()> on_shutdown)
     : config_accessor_(std::move(config_accessor)),
       outgoing_services_(std::move(outgoing_services)),
       inspector_(inspector),
       launcher_(std::move(launcher)),
       presenter_(std::move(presenter)),
+      child_listener_(std::move(child_listener)),
       device_administrator_(std::move(device_administrator)),
       on_shutdown_(std::move(on_shutdown)),
       session_provider_("SessionProvider"),
@@ -101,6 +104,11 @@ void BasemgrImpl::Connect(
 
 void BasemgrImpl::Start() {
   CreateSessionProvider(&config_accessor_);
+
+  // Start listening to child components if a listener is set.
+  if (child_listener_) {
+    child_listener_->StartListening(device_administrator_.get());
+  }
 
   auto start_session_result = StartSession();
   if (start_session_result.is_error()) {

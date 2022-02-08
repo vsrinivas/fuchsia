@@ -88,6 +88,8 @@ source_set("bounded_inspect_list_node") {
 
 source_set("lib") {
   sources = [
+    "child_listener.cc",
+    "child_listener.h",
     "inspector.cc",
     "inspector.h",
     "presentation_container.cc",
@@ -115,6 +117,7 @@ source_set("lib") {
 
   public_deps = [
     ":bounded_inspect_list_node",
+    "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",

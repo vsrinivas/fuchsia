@@ -14,8 +14,14 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 
+#include <memory>
+
+#include "lib/stdcompat/string_view.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/path.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/modular/bin/basemgr/basemgr_impl.h"
+#include "src/modular/bin/basemgr/child_listener.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/basemgr/inspector.h"
 #include "src/modular/lib/modular_config/modular_config.h"
@@ -26,6 +32,9 @@
 constexpr std::string_view kDeletePersistentConfigCommand = "delete_persistent_config";
 // Command-line flag to enable arrested mode that disables starting a session on launch.
 constexpr std::string_view kArrestedFlag = "arrested";
+// Command-line flag that specifies the name of a v2 child that basemgr will
+// start and monitor for crashes.
+constexpr std::string_view kChildFlag = "child";
 
 fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatcher_t* dispatcher,
                                                sys::ComponentContext* component_context) {
@@ -36,16 +45,21 @@ fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatc
 }
 
 std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
-    modular::ModularConfigAccessor config_accessor, sys::ComponentContext* component_context,
-    modular::BasemgrInspector* inspector, async::Loop* loop) {
+    modular::ModularConfigAccessor config_accessor, std::vector<cpp17::string_view> eager_children,
+    sys::ComponentContext* component_context, modular::BasemgrInspector* inspector,
+    async::Loop* loop) {
   fit::deferred_action<fit::closure> cobalt_cleanup = SetupCobalt(
       config_accessor.basemgr_config().enable_cobalt(), loop->dispatcher(), component_context);
+
+  auto child_listener = std::make_unique<modular::ChildListener>(
+      component_context->svc().get(), loop->dispatcher(), std::move(eager_children));
 
   return std::make_unique<modular::BasemgrImpl>(
       std::move(config_accessor), component_context->outgoing(), inspector,
       component_context->svc()->Connect<fuchsia::sys::Launcher>(),
       component_context->svc()->Connect<fuchsia::ui::policy::Presenter>(),
       component_context->svc()->Connect<fuchsia::hardware::power::statecontrol::Admin>(),
+      std::move(child_listener),
       /*on_shutdown=*/
       [loop, cobalt_cleanup = std::move(cobalt_cleanup), component_context]() mutable {
         cobalt_cleanup.call();
@@ -69,6 +83,16 @@ std::string GetUsage() {
     basemgr will continue to serve the fuchsia.modular.session.Launcher protocol that can be
     used to launch a Modular session.
 
+  --child
+
+    Child component which basemgr will launch and monitor for crashes. basemgr
+    will start the child component by connecting to the FIDL Protocol `fuchsia.component.Binder`
+    hosted under the path `fuchsia.component.Binder.<child>`. Therefore, it is expected
+    that a corresponding `use from child` clause is present in basemgr's manifest
+    and that the child component exposes `fuchsia.component.Binder`.
+    If the child fails to start or crashes, basemgr will attempt to restart it
+    3 times. If this fails, then basemgr will restart the system.
+
 basemgr cannot be launched from the shell. Please use `basemgr_launcher` or `run`.
 )";
 }
@@ -81,6 +105,7 @@ int main(int argc, const char** argv) {
 
   // Process command line arguments.
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+
   const auto& positional_args = command_line.positional_args();
   if (positional_args.size() == 1 && positional_args[0] == kDeletePersistentConfigCommand) {
     if (auto result = config_writer.Delete(); result.is_error()) {
@@ -90,8 +115,10 @@ int main(int argc, const char** argv) {
     std::cout << "Deleted persistent configuration." << std::endl;
     return EXIT_SUCCESS;
   }
+
   if (!positional_args.empty()) {
     std::cerr << GetUsage() << std::endl;
+    FX_LOGS(ERROR) << "Exiting because positional_args not empty";
     return EXIT_FAILURE;
   }
 
@@ -113,8 +140,10 @@ int main(int argc, const char** argv) {
   auto inspector = std::make_unique<modular::BasemgrInspector>(component_inspector->inspector());
   inspector->AddConfig(config_reader.GetConfig());
 
+  // Child components to start.
+  auto children = command_line.GetOptionValues(kChildFlag);
   auto basemgr_impl = CreateBasemgrImpl(modular::ModularConfigAccessor(config_result.take_value()),
-                                        component_context.get(), inspector.get(), &loop);
+                                        children, component_context.get(), inspector.get(), &loop);
 
   if (!command_line.HasOption(kArrestedFlag)) {
     basemgr_impl->Start();

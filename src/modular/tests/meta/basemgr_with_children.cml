@@ -1,0 +1,28 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/modular/bin/basemgr/meta/basemgr.cml" ],
+    program: {
+        args: [
+            "--child=foo",
+            "--child=bar",
+        ],
+    },
+
+    // The routing below is slightly different than the one expected in production.
+    // In prod, `basemgr` is expected to `use from child` and route Binder
+    // to the proper path by using the `as` field.
+    // In this case, we consume that path from the parent. This is done strictly
+    // to enable easier testing setup.
+    use: [
+        {
+            protocol: "fuchsia.component.Binder.foo",
+            from: "parent",
+        },
+        {
+            protocol: "fuchsia.component.Binder.bar",
+            from: "parent",
+        },
+    ],
+}

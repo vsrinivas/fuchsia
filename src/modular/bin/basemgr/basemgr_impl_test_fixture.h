@@ -93,10 +93,10 @@ class BasemgrImplTestFixture : public gtest::RealLoopFixture {
   void SetUp() override {}
 
   void CreateBasemgrImpl(fuchsia::modular::session::ModularConfig config) {
-    basemgr_impl_ =
-        std::make_unique<BasemgrImpl>(ModularConfigAccessor(std::move(config)), outgoing_directory_,
-                                      &basemgr_inspector_, GetLauncher(), std::move(presenter_),
-                                      std::move(device_administrator_), std::move(on_shutdown_));
+    basemgr_impl_ = std::make_unique<BasemgrImpl>(
+        ModularConfigAccessor(std::move(config)), outgoing_directory_, &basemgr_inspector_,
+        GetLauncher(), std::move(presenter_), std::move(device_administrator_),
+        /*child_listener=*/nullptr, std::move(on_shutdown_));
   }
 
   fuchsia::modular::session::LauncherPtr GetSessionLauncher() {

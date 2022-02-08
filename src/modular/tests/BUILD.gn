@@ -433,8 +433,11 @@ rustc_test("basemgr_v2_test_bin") {
   name = "basemgr_v2_test"
   source_root = "basemgr_v2_test.rs"
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
@@ -452,6 +455,11 @@ fuchsia_component("basemgr-v2-test") {
   testonly = true
   manifest = "meta/basemgr_v2_test.cml"
   deps = [ ":basemgr_v2_test_bin" ]
+}
+
+fuchsia_component("basemgr-with-children") {
+  manifest = "meta/basemgr_with_children.cml"
+  deps = [ "//src/modular/bin/basemgr:basemgr_bin" ]
 }
 
 fuchsia_package_with_single_component("module_with_fake_runner") {
@@ -490,11 +498,10 @@ fuchsia_test_package("modular_integration_tests") {
     ":story-shell-test",
   ]
   deps = [
+    ":basemgr-with-children",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/modular/bin/basemgr:component_v2",
   ]
-
-  # TODO(fxbug.dev/72349): Ensure basemgr v2 test tears down sessionmgr without errors
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
