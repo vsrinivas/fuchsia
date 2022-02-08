@@ -60,6 +60,8 @@ ExceptionBroker::ExceptionBroker(async_dispatcher_t* dispatcher, inspect::Node* 
 
 void ExceptionBroker::OnException(zx::exception exception, ExceptionInfo info,
                                   OnExceptionCallback cb) {
+  FX_LOGS(INFO) << "Received exception -- pid: " << info.process_koid
+                << " tid: " << info.thread_koid;
   if (!limbo_manager_.active()) {
     handler_manager_.Handle(std::move(exception));
   } else {
