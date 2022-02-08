@@ -17,15 +17,6 @@ type CodecInfo = struct {
     product_name string:MAX_UI_STRING_SIZE;
 };
 
-/// Gain type of representation.
-type GainType = strict enum : uint8 {
-    /// Gain specified in dB, for example -103.0dB or +3.2dB.
-    DECIBELS = 1;
-
-    /// Gain specified as a percentage, for example 10.0% or 80.5%.
-    PERCENT = 2;
-};
-
 /// Gain format/parameters.
 type GainFormat = table {
     /// Specifies what the numbers for gain represent, e.g. a percentage. Required.

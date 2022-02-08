@@ -55,8 +55,52 @@ type ProcessingElementType = flexible enum {
 /// Type specific parameters for a `ProcessingElement` with `type` equal to `VENDOR_SPECIFIC`.
 type VendorSpecificTypeSpecific = table {};
 
+/// Hardware domain of the gain, e.g. ANALOG.
+type GainDomain = flexible enum : uint8 {
+    /// The processing element gain is applied in the digital domain.
+    DIGITAL = 1;
+
+    /// The processing element gain is applied in the analog domain.
+    ANALOG = 2;
+
+    /// The processing element gain is mixed using digital and analog hardware.
+    MIXED = 3;
+};
+
+/// Gain type of representation.
+type GainType = strict enum : uint8 {
+    /// Gain specified in dB, for example -103.0dB or +3.2dB.
+    DECIBELS = 1;
+
+    /// Gain specified as a percentage, for example 10.0% or 80.5%.
+    PERCENT = 2;
+};
+
+/// Parameters for a `ProcessingElement` with `type` equal to `GAIN`.
+type GainTypeSpecific = table {
+    /// Specifies what the numbers for gain represent, e.g. a percentage. Required.
+    1: type GainType;
+
+    /// If included, the gain is applied in the specified `GainDomain`.
+    /// If not included, the gain domain is unspecified.
+    2: domain GainDomain;
+
+    /// Minimum gain in `GainType` format. Required.
+    3: min_gain float32;
+
+    /// Maximum gain in `GainType` format. Required.
+    4: max_gain float32;
+
+    /// Minimum gain step in `GainType` format, this value must not be negative, but may be zero to
+    /// convey an effectively continuous range of values. Must not exceed `max_gain` - `min_gain`.
+    /// The actual gain set may be queried by the client with a `WatchProcessingElement` call.
+    /// Required.
+    5: min_gain_step float32;
+};
+
 type ProcessingElementTypeSpecific = flexible union {
     1: vendor_specific VendorSpecificTypeSpecific;
+    2: gain GainTypeSpecific;
 };
 
 type Latency = flexible union {
@@ -91,12 +135,19 @@ type ProcessingElement = table {
 /// State for a `ProcessingElement` with `type` equal to `VENDOR_SPECIFIC`.
 type VendorSpecificState = table {};
 
+/// State for a `ProcessingElement` with `type` equal to `GAIN`.
+type GainProcessingElementState = table {
+    /// Current gain in `GainType` format. Required.
+    1: gain float32;
+};
+
 /// Type specific processing element state.
 /// The type of processing element control is defined by the type of parameters provided in this
 /// union. Must match the type returned in the corresponding `ProcessingElementType` entry in the
 /// corresponding `ProcessingElement`.
 type ProcessingElementTypeSpecificState = flexible union {
     1: vendor_specific VendorSpecificState;
+    2: gain GainProcessingElementState;
 };
 
 type ProcessingElementState = table {
