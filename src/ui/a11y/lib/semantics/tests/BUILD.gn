@@ -69,7 +69,6 @@ group("integration") {
   public_deps = [
     ":semantics-integration-tests",
     "//garnet/packages/prod:scenic",
-    "//src/chromium",
     "//src/chromium:web_engine",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/flutter",
