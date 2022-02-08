@@ -49,8 +49,9 @@ impl SignalData {
 }
 
 /// Data points related to historical connection
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PastConnectionData {
+    pub bssid: client_types::Bssid,
     /// Time at which connect was first attempted
     pub connection_attempt_time: zx::Time,
     /// Duration from connection attempt to success
@@ -63,6 +64,28 @@ pub struct PastConnectionData {
     pub signal_data_at_disconnect: SignalData,
     /// Average phy rate over connection duration
     pub average_tx_rate: u32,
+}
+
+impl PastConnectionData {
+    pub fn new(
+        bssid: client_types::Bssid,
+        connection_attempt_time: zx::Time,
+        time_to_connect: zx::Duration,
+        disconnect_time: zx::Time,
+        disconnect_reason: client_types::DisconnectReason,
+        signal_data_at_disconnect: SignalData,
+        average_tx_rate: u32,
+    ) -> Self {
+        Self {
+            bssid,
+            connection_attempt_time,
+            time_to_connect,
+            disconnect_time,
+            disconnect_reason,
+            signal_data_at_disconnect,
+            average_tx_rate,
+        }
+    }
 }
 
 /// Aggregated information about the current BSS's connection quality, used for evaluation.
