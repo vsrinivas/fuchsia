@@ -100,12 +100,20 @@ type ProcessingElementTypeSpecificState = flexible union {
 };
 
 type ProcessingElementState = table {
-    /// Type specific state parameters for the processing element. Required.
+    /// Type specific state parameters for the processing element.
+    /// Required if this processing element is enabled.
+    ///
+    /// If this processing element is disabled and its type specific state is provided, then the
+    /// type specific state is only informational, for instance when a `SetProcessingElementState`
+    /// enables a disabled processing element it must provide a `ProcessingElementTypeSpecificState`
+    /// hence any previous informational `ProcessingElementTypeSpecificState` is superceded.
     1: state ProcessingElementTypeSpecificState;
 
-    /// Process element enable/disable state. If the corresponding `ProcessingElement` returned
-    /// `can_disable` equals to `false`, then this field has to be `true`.
-    /// Required.
+    /// Process element enable/disable state. Optional.
+    /// If the corresponding `ProcessingElement` returned `can_disable` equals to `false`, then
+    /// this field can't be set to `false`.
+    /// If `enabled` is not included, then `state` must be included if and only if the processing
+    /// element is currently enabled.
     2: enabled bool;
 
     /// If included, how much latency is added to the pipeline if this processing element is

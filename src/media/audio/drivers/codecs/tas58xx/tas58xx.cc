@@ -237,7 +237,15 @@ void Tas58xx::GetProcessingElements(
 void Tas58xx::SetProcessingElementState(
     uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementState state,
     fuchsia::hardware::audio::SignalProcessing::SetProcessingElementStateCallback callback) {
-  if (processing_element_id != kAglPeId || !state.has_enabled()) {
+  // If enabled is not present, then perform no operation, we keep the current state.
+  if (!state.has_enabled()) {
+    callback(
+        fuchsia::hardware::audio::SignalProcessing_SetProcessingElementState_Result::WithResponse(
+            fuchsia::hardware::audio::SignalProcessing_SetProcessingElementState_Response()));
+    return;
+  }
+
+  if (processing_element_id != kAglPeId) {
     callback(fuchsia::hardware::audio::SignalProcessing_SetProcessingElementState_Result::WithErr(
         ZX_ERR_INVALID_ARGS));
     return;
