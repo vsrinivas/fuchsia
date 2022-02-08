@@ -80,21 +80,22 @@ struct Part {
 }
 
 impl Sdk {
-    pub fn from_build_dir(path: PathBuf) -> Result<Self> {
-        let manifest_path = path.join("sdk/manifest/core");
+    pub fn from_build_dir(path: PathBuf, module_manifest: Option<impl AsRef<str>>) -> Result<Self> {
+        let manifest_path = match module_manifest {
+            None => path.join("sdk/manifest/core"),
+            Some(module) => if cfg!(target_arch = "x86_64") {
+                path.join("host_x64")
+            } else if cfg!(target_arch = "aarch64") {
+                path.join("host_arm64")
+            } else {
+                bail!("Host architecture not supported")
+            }
+            .join("sdk/manifest")
+            .join(module.as_ref()),
+        };
+
         let file = fs::File::open(&manifest_path)
-            .or_else(|_| {
-                if cfg!(target_arch = "x86_64") {
-                    let manifest_path = path.join("host_x64/sdk/manifest/host_tools.modular");
-                    fs::File::open(&manifest_path).map_err(Into::into)
-                } else if cfg!(target_arch = "aarch64") {
-                    let manifest_path = path.join("host_arm64/sdk/manifest/host_tools.modular");
-                    fs::File::open(&manifest_path).map_err(Into::into)
-                } else {
-                    Err(anyhow!("Host architecture not supported"))
-                }
-            })
-            .context(format!("opening sdk path: {:?}", path))?;
+            .context(format!("opening sdk path: {:?}", manifest_path))?;
 
         // If we are able to parse the json file into atoms, creates a Sdk object from the atoms.
         Self::from_sdk_atoms(

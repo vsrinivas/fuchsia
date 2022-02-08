@@ -480,6 +480,7 @@ if (is_host) {
     deps = [
       "//src/developer/debug/zxdb:zxdb_sdk",
       "//src/developer/ffx:bin_sdk",
+      "//src/developer/ffx/plugins/emulator:aemu_internal",
       "//src/storage/bin/fvm:fvm_sdk",
       "//src/storage/tools/blobfs-compression:blobfs-compression_sdk",
       "//src/sys/pkg/bin/far:bin_sdk",
