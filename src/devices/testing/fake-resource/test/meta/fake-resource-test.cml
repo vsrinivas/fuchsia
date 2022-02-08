@@ -8,11 +8,5 @@
     ],
     program: {
         binary: "test/fake-resource-test",
-
-        // TODO(fxb/92565): Remove shuffle disable flag after fixing the test.
-        args: [
-            "--gtest_shuffle",
-            "false",
-        ],
     },
 }

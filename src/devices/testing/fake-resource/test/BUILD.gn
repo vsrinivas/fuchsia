@@ -15,6 +15,7 @@ test("fake-resource-test-bin") {
   output_name = "fake-resource-test"
   sources = [ "fake-resource-test.cc" ]
   deps = [
+    "//src/devices/testing/fake-object",
     "//src/devices/testing/fake-resource",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
