@@ -41,49 +41,36 @@ BoardInfoProvider::BoardInfoProvider(async_dispatcher_t* dispatcher,
 
 ::fpromise::promise<Annotations> BoardInfoProvider::GetAnnotations(
     zx::duration timeout, const AnnotationKeys& allowlist) {
-  const AnnotationKeys annotations_to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
-  if (annotations_to_get.empty()) {
+  const AnnotationKeys to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
+  if (to_get.empty()) {
     return ::fpromise::make_result_promise<Annotations>(::fpromise::ok<Annotations>({}));
   }
 
-  return board_ptr_
-      .GetValue(fit::Timeout(
-          timeout,
-          /*action*/ [=] { cobalt_->LogOccurrence(cobalt::TimedOutData::kBoardInfo); }))
-      .then([=](const ::fpromise::result<std::map<AnnotationKey, std::string>, Error>& result) {
-        Annotations annotations;
-
-        if (result.is_error()) {
-          for (const auto& key : annotations_to_get) {
-            annotations.insert({key, result.error()});
-          }
-        } else {
-          for (const auto& key : annotations_to_get) {
-            const auto& board_info = result.value();
-            if (board_info.find(key) == board_info.end()) {
-              annotations.insert({key, Error::kMissingValue});
-            } else {
-              annotations.insert({key, board_info.at(key)});
-            }
-          }
-        }
+  auto on_timeout = [this] { cobalt_->LogOccurrence(cobalt::TimedOutData::kBoardInfo); };
+  return board_ptr_.GetValue(fit::Timeout(timeout, std::move(on_timeout)))
+      .then([=](const ::fpromise::result<Annotations, Error>& result) {
+        Annotations annotations = (result.is_error()) ? WithError(to_get, result.error())
+                                                      : ExtractAllowlisted(to_get, result.value());
         return ::fpromise::ok(std::move(annotations));
       });
 }
 
 void BoardInfoProvider::GetInfo() {
   board_ptr_->GetInfo([this](BoardInfo info) {
-    std::map<AnnotationKey, std::string> board_info;
+    Annotations annotations({
+        {kAnnotationHardwareBoardName, Error::kMissingValue},
+        {kAnnotationHardwareBoardRevision, Error::kMissingValue},
+    });
 
     if (info.has_name()) {
-      board_info[kAnnotationHardwareBoardName] = info.name();
+      annotations.insert_or_assign(kAnnotationHardwareBoardName, info.name());
     }
 
     if (info.has_revision()) {
-      board_info[kAnnotationHardwareBoardRevision] = info.revision();
+      annotations.insert_or_assign(kAnnotationHardwareBoardRevision, info.revision());
     }
 
-    board_ptr_.SetValue(board_info);
+    board_ptr_.SetValue(std::move(annotations));
   });
 }
 

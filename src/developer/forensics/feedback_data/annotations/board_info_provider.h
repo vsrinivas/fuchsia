@@ -38,7 +38,7 @@ class BoardInfoProvider : public AnnotationProvider {
   const std::shared_ptr<sys::ServiceDirectory> services_;
   cobalt::Logger* cobalt_;
 
-  fidl::CachingPtr<fuchsia::hwinfo::Board, std::map<AnnotationKey, std::string>> board_ptr_;
+  fidl::CachingPtr<fuchsia::hwinfo::Board, Annotations> board_ptr_;
 };
 
 }  // namespace feedback_data
