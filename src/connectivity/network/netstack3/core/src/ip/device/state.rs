@@ -5,6 +5,7 @@
 //! State for an IP device.
 
 use alloc::vec::Vec;
+use core::time::Duration;
 use core::{fmt::Debug, num::NonZeroU8};
 use net_types::{
     ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6Scope},
@@ -256,7 +257,6 @@ impl<I: Instant> Default for Ipv6DeviceState<I> {
 
 impl<I: Instant> IpDeviceState<I, Ipv6> {
     /// Iterates over the global IPv6 address entries.
-    #[cfg(test)]
     pub(crate) fn iter_global_ipv6_addrs(
         &self,
     ) -> impl Iterator<Item = &Ipv6AddressEntry<I>> + Clone {
@@ -332,10 +332,23 @@ impl AddressState {
 
 /// Configuration for an IPv6 address assigned via SLAAC.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct SlaacConfig<Instant> {
-    /// The lifetime of the address, or `None` for a link-local address.
-    pub valid_until: Option<Instant>,
-    // TODO(https://fxbug.dev/21428) split this into Static and Temporary enum.
+pub(crate) enum SlaacConfig<Instant> {
+    /// The address is static.
+    Static {
+        /// The lifetime of the address, or none for a link-local address.
+        valid_until: Option<Instant>,
+    },
+    /// The address is a temporary address, as specified by [RFC 8981].
+    ///
+    /// [RFC 8981]: https://tools.ietf.org/html/rfc8981
+    Temporary {
+        /// The time at which the address is no longer valid.
+        valid_until: Instant,
+        /// The per-address DESYNC_FACTOR specified in RFC 8981 Section 3.4.
+        desync_factor: Duration,
+        /// The time at which the address was created.
+        creation_time: Instant,
+    },
 }
 
 /// The configuration for an IPv6 address.
@@ -355,17 +368,8 @@ impl<Instant> AddrConfig<Instant> {
     /// lifetime; it is never timed out."
     ///
     /// [RFC 4862 Section 5.3]: https://tools.ietf.org/html/rfc4862#section-5.3
-    pub(crate) const SLAAC_LINK_LOCAL: Self = Self::Slaac(SlaacConfig { valid_until: None });
-
-    /// Constructs a new `AddrConfig` describing a global address configured via SLAAC.
-    ///
-    /// According to the algorithm specified in [RFC 4862 Section 5.5.3.e], a global address
-    /// determined via SLAAC will always have a non-infinite valid lifetime.
-    ///
-    /// [RFC 4862 Section 5.5.3.e]: https://tools.ietf.org/html/rfc4862#section-5.5.3
-    pub(crate) const fn new_slaac_global(valid_until: Instant) -> Self {
-        Self::Slaac(SlaacConfig { valid_until: Some(valid_until) })
-    }
+    pub(crate) const SLAAC_LINK_LOCAL: Self =
+        Self::Slaac(SlaacConfig::Static { valid_until: None });
 }
 
 /// The type of address configuration.
@@ -412,15 +416,6 @@ impl<Instant> Ipv6AddressEntry<Instant> {
     }
 }
 
-impl<Instant: Copy> Ipv6AddressEntry<Instant> {
-    pub(crate) fn valid_until(&self) -> Option<Instant> {
-        match &self.config {
-            AddrConfig::Slaac(SlaacConfig { valid_until }) => *valid_until,
-            AddrConfig::Manual => None,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -454,7 +449,7 @@ mod tests {
             ipv6.add_addr(Ipv6AddressEntry::new(
                 AddrSubnet::new(ADDRESS, PREFIX_LEN).unwrap(),
                 AddressState::Tentative { dad_transmits_remaining: None },
-                AddrConfig::Slaac(SlaacConfig { valid_until: None }),
+                AddrConfig::Slaac(SlaacConfig::Static { valid_until: None }),
             )),
             Ok(())
         );

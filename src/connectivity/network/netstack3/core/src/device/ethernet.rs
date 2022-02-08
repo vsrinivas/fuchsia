@@ -43,7 +43,7 @@ use crate::{
     },
     error::{ExistsError, NotFoundError},
     ip::device::state::{
-        AddrConfig, AddrConfigType, AddressState, IpDeviceState, Ipv6AddressEntry,
+        AddrConfig, AddrConfigType, AddressState, IpDeviceState, Ipv6AddressEntry, SlaacConfig,
     },
     Ctx, EventDispatcher,
 };
@@ -1012,7 +1012,7 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
         &mut self,
         device_id: Self::DeviceId,
         addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
-        valid_until: Self::Instant,
+        slaac_config: SlaacConfig<Self::Instant>,
     ) -> Result<(), ExistsError> {
         trace!(
             "ethernet::add_slaac_addr_sub: adding address {:?} on device {:?}",
@@ -1020,11 +1020,7 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
             device_id
         );
 
-        self.add_ip_addr_subnet(
-            device_id,
-            addr_sub.to_witness(),
-            AddrConfig::new_slaac_global(valid_until),
-        )
+        self.add_ip_addr_subnet(device_id, addr_sub.to_witness(), AddrConfig::Slaac(slaac_config))
     }
 
     fn deprecate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>) {

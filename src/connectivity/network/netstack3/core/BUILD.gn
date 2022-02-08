@@ -77,6 +77,7 @@ lib_deps = [
 lib_test_deps = [
   "proptest-support",
   "teststd",
+  "//src/connectivity/lib/net-declare",
   "//third_party/rust_crates:assert_matches",
   "//third_party/rust_crates:proptest",
   "//third_party/rust_crates:test-case",
