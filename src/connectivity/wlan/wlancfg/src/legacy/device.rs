@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, DeviceWatcherEvent},
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    log::info,
+    log::{error, info},
     std::sync::Arc,
 };
 
@@ -53,7 +53,9 @@ pub async fn handle_event(listener: &Listener, evt: DeviceWatcherEvent) {
             drop(phy_manager);
 
             let mut iface_manager = listener.iface_manager.lock().await;
-            let _ = iface_manager.handle_added_iface(iface_id).await;
+            if let Err(e) = iface_manager.handle_added_iface(iface_id).await {
+                error!("Failed to add interface to IfaceManager: {}", e);
+            }
         }
         DeviceWatcherEvent::OnIfaceRemoved { iface_id } => {
             let mut iface_manager = listener.iface_manager.lock().await;

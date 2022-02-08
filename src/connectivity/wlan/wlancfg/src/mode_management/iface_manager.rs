@@ -573,14 +573,14 @@ impl IfaceManagerService {
 
         match iface_info.role {
             fidl_fuchsia_wlan_common::WlanMacRole::Client => {
-                // If this client has already been recorded, take no action.
-                for client in self.clients.iter() {
-                    if client.iface_id == iface_id {
-                        return Ok(());
-                    }
-                }
-
                 let mut client_iface = self.get_client(Some(iface_id)).await?;
+
+                // If this client has already been recorded and it has a client state machine
+                // running, return success early.
+                if client_iface.client_state_machine.is_some() {
+                    self.clients.push(client_iface);
+                    return Ok(());
+                }
 
                 // Create the state machine and controller.  The state machine is setup with no
                 // initial network config.  This will cause it to quickly exit, notifying the
@@ -775,11 +775,8 @@ impl IfaceManagerService {
         // Resume any lingering client interfaces.
         drop(phy_manager);
         for iface_id in lingering_ifaces {
-            match self.get_client(Some(iface_id)).await {
-                Ok(iface) => self.clients.push(iface),
-                Err(e) => {
-                    error!("failed to resume client {}: {:?}", iface_id, e);
-                }
+            if let Err(e) = self.handle_added_iface(iface_id).await {
+                error!("failed to resume client {}: {:?}", iface_id, e);
             };
         }
 
@@ -3012,25 +3009,13 @@ mod tests {
 
         // Delete all client records initially.
         iface_manager.clients.clear();
+        assert!(iface_manager.fsm_futures.is_empty());
 
         {
             let start_fut = iface_manager.start_client_connections();
             pin_mut!(start_fut);
 
-            // The request should stall out while attempting to get a client interface.
-            assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Pending);
-
-            assert_variant!(
-                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                    iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
-                }))) => {
-                    // Send back a positive acknowledgement.
-                    assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
-                }
-            );
-
-            // The request should stall again while querying the iface properties.
+            // The IfaceManager will first query to determine the type of interface.
             assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Pending);
             assert_variant!(
                 exec.run_until_stalled(&mut test_values.device_service_stream.next()),
@@ -3051,11 +3036,58 @@ mod tests {
                 }
             );
 
+            // The request should stall out while attempting to get a client interface.
+            assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Pending);
+            assert_variant!(
+                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+                }))) => {
+                    // Send back a positive acknowledgement.
+                    assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                }
+            );
+
+            // There will be a final query to determine the interface properties.
+            assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Pending);
+            assert_variant!(
+                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                    iface_id: TEST_CLIENT_IFACE_ID, responder
+                }))) => {
+                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
+                        role: fidl_fuchsia_wlan_common::WlanMacRole::Client,
+                        id: TEST_CLIENT_IFACE_ID,
+                        phy_id: 0,
+                        phy_assigned_id: 0,
+                        sta_addr: [0; 6],
+                        driver_features: Vec::new(),
+                    };
+                    responder
+                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
+                        .expect("Failed to send iface response");
+                }
+            );
+
+            // Expect that we have requested a client SME proxy from creating the client state
+            // machine.
+            assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Pending);
+            assert_variant!(
+                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+                }))) => {
+                    // Send back a positive acknowledgement.
+                    assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                }
+            );
+
             // The request should complete successfully.
             assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Ready(Ok(())));
         }
 
         assert!(!iface_manager.clients.is_empty());
+        assert!(!iface_manager.fsm_futures.is_empty());
     }
 
     /// Tests the case where the IfaceManager is able to request that the AP state machine start
