@@ -10,7 +10,7 @@
 
 class Hook : public magma::RegisterIo::Hook {
  public:
-  Hook(std::shared_ptr<magma::RegisterIo> register_io) : register_io_(std::move(register_io)) {}
+  Hook(magma::RegisterIo* register_io) : register_io_(register_io) {}
 
   void Write32(uint32_t val, uint32_t offset) override {}
   void Read64(uint64_t val, uint32_t offset) override {}
@@ -22,7 +22,9 @@ class Hook : public magma::RegisterIo::Hook {
     register_io_->Write32((val & 0xFFFFFF00) | bits, offset);
   }
 
-  std::shared_ptr<magma::RegisterIo> register_io_;
+  // Raw pointer to avoid circular reference. This class is owned by this
+  // register_io_ and will be destroyed when it is.
+  magma::RegisterIo* register_io_;
 };
 
 class TestTimestamp : public testing::Test {
@@ -43,7 +45,7 @@ TEST_F(TestTimestamp, Rollover) {
                         kMmioOffset + registers::Timestamp::kOffset);
 
   // Hook will increment the timestamp register
-  register_io_->InstallHook(std::make_unique<Hook>(register_io_));
+  register_io_->InstallHook(std::make_unique<Hook>(register_io_.get()));
 
   EXPECT_EQ(0x001234abceul, registers::Timestamp::read(register_io_.get(), kMmioOffset));
 }
