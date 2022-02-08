@@ -70,74 +70,74 @@ pub(crate) trait EthernetIpLinkDeviceContext:
     EthernetTimerId<<Self as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
 >
 {
-    /// Adds an IP address to the device.
+    /// Adds an IPv6 address to the device.
     // TODO(https://fxbug.dev/72378): Remove this method once NDP operates at
     // L3.
-    fn add_ip_addr_subnet<A: IpAddress>(
+    fn add_ipv6_addr_subnet(
         &mut self,
         device_id: Self::DeviceId,
-        addr_sub: AddrSubnet<A>,
+        addr_sub: AddrSubnet<Ipv6Addr>,
         config: AddrConfig<Self::Instant>,
     ) -> Result<(), ExistsError>;
 
-    /// Removes an IP address from the device.
+    /// Removes an IPv6 address from the device.
     // TODO(https://fxbug.dev/72378): Remove this method once NDP operates at
     // L3.
-    fn del_ip_addr<A: IpAddress>(
+    fn del_ipv6_addr(
         &mut self,
         device_id: Self::DeviceId,
-        addr: &A,
+        addr: &Ipv6Addr,
     ) -> Result<(), NotFoundError>;
 
-    /// Joins an IP multicast group.
+    /// Joins an IPv6 multicast group.
     // TODO(https://fxbug.dev/72378): Remove this method once NDP operates at
     // L3.
-    fn join_ip_multicast<A: IpAddress>(
+    fn join_ipv6_multicast(
         &mut self,
         device_id: Self::DeviceId,
-        multicast_addr: MulticastAddr<A>,
+        multicast_addr: MulticastAddr<Ipv6Addr>,
     );
 
-    /// Leaves an IP multicast group.
+    /// Leaves an IPv6 multicast group.
     // TODO(https://fxbug.dev/72378): Remove this method once NDP operates at
     // L3.
-    fn leave_ip_multicast<A: IpAddress>(
+    fn leave_ipv6_multicast(
         &mut self,
         device_id: Self::DeviceId,
-        multicast_addr: MulticastAddr<A>,
+        multicast_addr: MulticastAddr<Ipv6Addr>,
     );
 }
 
 impl<D: EventDispatcher> EthernetIpLinkDeviceContext for Ctx<D> {
-    fn add_ip_addr_subnet<A: IpAddress>(
+    fn add_ipv6_addr_subnet(
         &mut self,
         device_id: EthernetDeviceId,
-        addr_sub: AddrSubnet<A>,
+        addr_sub: AddrSubnet<Ipv6Addr>,
         config: AddrConfig<D::Instant>,
     ) -> Result<(), ExistsError> {
         crate::ip::device::add_ip_addr_subnet(self, device_id.into(), addr_sub, config)
     }
 
-    fn del_ip_addr<A: IpAddress>(
+    fn del_ipv6_addr(
         &mut self,
         device_id: EthernetDeviceId,
-        addr: &A,
+        addr: &Ipv6Addr,
     ) -> Result<(), NotFoundError> {
         crate::ip::device::del_ip_addr(self, device_id.into(), addr)
     }
 
-    fn join_ip_multicast<A: IpAddress>(
+    fn join_ipv6_multicast(
         &mut self,
         device_id: Self::DeviceId,
-        multicast_addr: MulticastAddr<A>,
+        multicast_addr: MulticastAddr<Ipv6Addr>,
     ) {
         crate::ip::device::join_ip_multicast(self, device_id.into(), multicast_addr)
     }
 
-    fn leave_ip_multicast<A: IpAddress>(
+    fn leave_ipv6_multicast(
         &mut self,
         device_id: Self::DeviceId,
-        multicast_addr: MulticastAddr<A>,
+        multicast_addr: MulticastAddr<Ipv6Addr>,
     ) {
         crate::ip::device::leave_ip_multicast(self, device_id.into(), multicast_addr)
     }
@@ -390,7 +390,7 @@ pub(super) fn initialize_device<C: EthernetIpLinkDeviceContext>(
     // Join the MAC-derived link-local address. Mark it as configured by SLAAC
     // and not set to expire.
     let addr_sub = state.link.mac.to_ipv6_link_local().to_witness();
-    ctx.add_ip_addr_subnet(device_id, addr_sub, AddrConfig::SLAAC_LINK_LOCAL).expect(
+    ctx.add_ipv6_addr_subnet(device_id, addr_sub, AddrConfig::SLAAC_LINK_LOCAL).expect(
         "internal invariant violated: uninitialized device already had IP address assigned",
     );
 }
@@ -748,7 +748,7 @@ pub(super) fn set_routing_enabled<C: EthernetIpLinkDeviceContext, I: Ip>(
                 if ip_routing {
                     // Now that `device` is a router, join the all-routers multicast
                     // group.
-                    ctx.join_ip_multicast(
+                    ctx.join_ipv6_multicast(
                         device_id,
                         Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
                     );
@@ -767,7 +767,7 @@ pub(super) fn set_routing_enabled<C: EthernetIpLinkDeviceContext, I: Ip>(
                 if ip_routing {
                     // Now that `device` is a host, leave the all-routers multicast
                     // group.
-                    ctx.leave_ip_multicast(
+                    ctx.leave_ipv6_multicast(
                         device_id,
                         Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
                     );
@@ -981,7 +981,7 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
     fn duplicate_address_detected(&mut self, device_id: C::DeviceId, addr: UnicastAddr<Ipv6Addr>) {
         let () = self
-            .del_ip_addr(device_id, &addr.get())
+            .del_ipv6_addr(device_id, &addr.get())
             .expect("expected to delete an address we are performing DAD on");
 
         // TODO: we need to pick a different address depending on what flow we
@@ -1020,7 +1020,7 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
             device_id
         );
 
-        self.add_ip_addr_subnet(device_id, addr_sub.to_witness(), AddrConfig::Slaac(slaac_config))
+        self.add_ipv6_addr_subnet(device_id, addr_sub.to_witness(), AddrConfig::Slaac(slaac_config))
     }
 
     fn deprecate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>) {
@@ -1078,7 +1078,7 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
         // `unwrap` will panic if `addr` is not an address configured via SLAAC
         // on `device_id`.
-        self.del_ip_addr(device_id, &addr.get()).unwrap();
+        self.del_ipv6_addr(device_id, &addr.get()).unwrap();
     }
 
     fn is_router(&self) -> bool {
@@ -1240,35 +1240,35 @@ mod tests {
     }
 
     impl EthernetIpLinkDeviceContext for DummyCtx {
-        fn add_ip_addr_subnet<A: IpAddress>(
+        fn add_ipv6_addr_subnet(
             &mut self,
             _device_id: DummyDeviceId,
-            _addr_sub: AddrSubnet<A>,
+            _addr_sub: AddrSubnet<Ipv6Addr>,
             _config: AddrConfig<DummyInstant>,
         ) -> Result<(), ExistsError> {
             unimplemented!()
         }
 
-        fn del_ip_addr<A: IpAddress>(
+        fn del_ipv6_addr(
             &mut self,
             _device_id: DummyDeviceId,
-            _addr: &A,
+            _addr: &Ipv6Addr,
         ) -> Result<(), NotFoundError> {
             unimplemented!()
         }
 
-        fn join_ip_multicast<A: IpAddress>(
+        fn join_ipv6_multicast(
             &mut self,
             _device_id: DummyDeviceId,
-            _multicast_addr: MulticastAddr<A>,
+            _multicast_addr: MulticastAddr<Ipv6Addr>,
         ) {
             unimplemented!()
         }
 
-        fn leave_ip_multicast<A: IpAddress>(
+        fn leave_ipv6_multicast(
             &mut self,
             _device_id: DummyDeviceId,
-            _multicast_addr: MulticastAddr<A>,
+            _multicast_addr: MulticastAddr<Ipv6Addr>,
         ) {
             unimplemented!()
         }
