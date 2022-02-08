@@ -41,10 +41,6 @@ extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
 
 struct ExampleStruct {
   uint32_t member = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire
@@ -134,10 +130,6 @@ class ExampleTable final {
     frame_ptr_ = std::move(frame_ptr);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
@@ -200,10 +192,6 @@ class ExampleXUnion {
     return envelope_.As<uint32_t>().get_data();
   }
   ::test_placementofattributes::wire::ExampleXUnion::Tag Which() const;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -275,10 +263,6 @@ class ExampleUnion {
     return static_cast<::test_placementofattributes::wire::ExampleUnion::Tag>(
         ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {

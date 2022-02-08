@@ -79,12 +79,6 @@ struct ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> final {
   using ResponseType =
       ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -102,12 +96,6 @@ struct ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> final {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

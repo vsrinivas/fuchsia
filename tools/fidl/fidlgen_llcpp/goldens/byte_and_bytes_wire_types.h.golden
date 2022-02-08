@@ -35,10 +35,6 @@ struct ByteAndBytes {
   ::fidl::VectorView<uint8_t> only_one_k_bytes = {};
 
   ::fidl::VectorView<uint8_t> opt_only_one_k_bytes = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

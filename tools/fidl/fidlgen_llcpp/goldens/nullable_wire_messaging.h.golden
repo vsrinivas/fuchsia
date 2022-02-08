@@ -73,12 +73,6 @@ struct ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> final {
   using ResponseType =
       ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -90,12 +84,6 @@ struct ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> final {
 
   explicit WireResponse(int32_t sum) : sum(sum) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

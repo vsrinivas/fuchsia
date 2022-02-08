@@ -119,10 +119,6 @@ class TableWithHandle final {
   }
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
@@ -191,10 +187,6 @@ class UnionWithHandle {
   ::test_handlesintypes::wire::UnionWithHandle::Tag Which() const;
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -228,10 +220,6 @@ struct HandlesInTypes {
   ::test_handlesintypes::wire::UnionWithHandle union_with_handle = {};
 
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 #endif  // __Fuchsia__
 

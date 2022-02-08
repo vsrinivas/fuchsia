@@ -42,10 +42,6 @@ struct Int16Int8 {
   int16_t a = {};
 
   int8_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 #ifdef __Fuchsia__
@@ -59,10 +55,6 @@ struct NonInlineStructTestStruct {
   ::zx::handle h = {};
 
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 #endif  // __Fuchsia__
 
@@ -72,20 +64,12 @@ struct Int8Int32 {
   int8_t a = {};
 
   int32_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_encapsulatedstructs_ArrayInt16Int8Table;
 
 struct ArrayInt16Int8 {
   ::fidl::Array<::test_encapsulatedstructs::wire::Int16Int8, 3> arr = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t
@@ -97,10 +81,6 @@ struct StructPaddingTestStruct {
   ::test_encapsulatedstructs::wire::Int8Int32 inner = {};
 
   ::test_encapsulatedstructs::wire::ArrayInt16Int8 array = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 #ifdef __Fuchsia__
@@ -113,10 +93,6 @@ struct TopLevelStruct {
   ::test_encapsulatedstructs::wire::NonInlineStructTestStruct b = {};
 
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 #endif  // __Fuchsia__
 

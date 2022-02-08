@@ -70,12 +70,6 @@ struct ::fidl::WireRequest<::test_inheritance::Super::Foo> final {
   WireRequest() { _InitHeader(); }
   using ResponseType = ::fidl::WireResponse<::test_inheritance::Super::Foo>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -87,12 +81,6 @@ struct ::fidl::WireResponse<::test_inheritance::Super::Foo> final {
 
   explicit WireResponse(int64_t y) : y(y) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -483,12 +471,6 @@ struct ::fidl::WireRequest<::test_inheritance::Sub::Foo> final {
   WireRequest() { _InitHeader(); }
   using ResponseType = ::fidl::WireResponse<::test_inheritance::Sub::Foo>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -500,12 +482,6 @@ struct ::fidl::WireResponse<::test_inheritance::Sub::Foo> final {
 
   explicit WireResponse(int64_t y) : y(y) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

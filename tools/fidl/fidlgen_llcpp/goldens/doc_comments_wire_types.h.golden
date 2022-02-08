@@ -48,10 +48,6 @@ struct Struct {
   ///
   /// struct member comment #3
   int32_t field = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire
@@ -145,10 +141,6 @@ class Table final {
     frame_ptr_ = std::move(frame_ptr);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<::fidl::WireTableFrame<::test_doccomments::wire::Table>>
@@ -221,10 +213,6 @@ class StrictUnion {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_doccomments::wire::StrictUnion::Tag>(ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -303,10 +291,6 @@ class FlexibleUnion {
     return envelope_.As<int32_t>().get_data();
   }
   ::test_doccomments::wire::FlexibleUnion::Tag Which() const;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {

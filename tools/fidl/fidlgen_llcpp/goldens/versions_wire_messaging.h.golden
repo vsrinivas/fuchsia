@@ -203,12 +203,6 @@ struct ::fidl::WireRequest<::test_versions::Protocol::Foo> final {
 
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };

@@ -78,12 +78,6 @@ struct ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>
   using ResponseType =
       ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -98,12 +92,6 @@ struct ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

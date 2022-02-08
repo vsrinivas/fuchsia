@@ -137,10 +137,6 @@ class TableWithAttributes final {
     frame_ptr_ = std::move(frame_ptr);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
@@ -282,10 +278,6 @@ class SimpleTable final {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   uint64_t max_ordinal_ = 0;
@@ -463,10 +455,6 @@ class ReverseOrdinalTable final {
     frame_ptr_ = std::move(frame_ptr);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
@@ -570,10 +558,6 @@ class OlderSimpleTable final {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   uint64_t max_ordinal_ = 0;
@@ -754,10 +738,6 @@ class NewerSimpleTable final {
     frame_ptr_ = std::move(frame_ptr);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
@@ -823,10 +803,6 @@ class ExtensionTable final {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   uint64_t max_ordinal_ = 0;
@@ -3331,10 +3307,6 @@ class SixtyFourOrdinalTable final {
     frame_ptr_ = std::move(frame_ptr);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
@@ -3401,10 +3373,6 @@ class EmptyTable final {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   uint64_t max_ordinal_ = 0;

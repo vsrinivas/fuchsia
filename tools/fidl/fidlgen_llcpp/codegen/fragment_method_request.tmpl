@@ -40,12 +40,6 @@ struct {{ .WireRequest }} final {
   void _CloseHandles();
   {{- end }}
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };

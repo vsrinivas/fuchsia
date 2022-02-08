@@ -30,10 +30,6 @@ extern "C" const fidl_type_t test_transitivedependencies_BazTable;
 
 struct Baz {
   ::test_middle::wire::Bar g = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

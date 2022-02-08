@@ -51,10 +51,6 @@ extern "C" const fidl_type_t test_anonymous_TableDataTable;
 
 struct TableData {
   uint8_t data = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t
@@ -64,10 +60,6 @@ struct SomeProtocolSomeMethodResponse {
   using BitsMember = test_anonymous::wire::BitsMember;
 
   ::test_anonymous::wire::BitsMember bits_member = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire
@@ -175,10 +167,6 @@ class TableMember final {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   uint64_t max_ordinal_ = 0;
@@ -360,10 +348,6 @@ class FunctionApplication final {
     frame_ptr_ = std::move(frame_ptr);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
@@ -420,10 +404,6 @@ class UnionMember {
     return envelope_.As<uint8_t>().get_data();
   }
   ::test_anonymous::wire::UnionMember::Tag Which() const;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -604,10 +584,6 @@ class Expression {
   }
   ::test_anonymous::wire::Expression::Tag Which() const;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -731,10 +707,6 @@ class SomeProtocolSomeMethodResult {
         ::test_anonymous::wire::SomeProtocolSomeMethodResult::Tag>(ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -758,10 +730,6 @@ struct OverrideTest {
   ::test_anonymous::wire::Expression left = {};
 
   ::test_anonymous::wire::Expression right = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

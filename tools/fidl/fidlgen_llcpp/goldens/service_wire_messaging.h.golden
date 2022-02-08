@@ -79,12 +79,6 @@ struct ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
 
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -340,12 +334,6 @@ struct ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst> final {
   fidl_message_header_t _hdr;
 
   WireRequest() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

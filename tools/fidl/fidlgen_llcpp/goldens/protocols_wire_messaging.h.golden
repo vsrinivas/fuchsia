@@ -118,12 +118,6 @@ struct ::fidl::WireRequest<
   WireRequest() { _InitHeader(); }
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -145,12 +139,6 @@ struct ::fidl::WireRequest<
       ::test_protocols::HandleRightsProtocol::ResponseMethod>;
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -170,12 +158,6 @@ struct ::fidl::WireResponse<
   WireResponse() { _InitHeader(); }
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -193,12 +175,6 @@ struct ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>
   explicit WireEvent(::zx::socket&& h) : h(std::move(h)) { _InitHeader(); }
   WireEvent() { _InitHeader(); }
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -926,12 +902,6 @@ struct ::fidl::WireRequest<
 
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -944,12 +914,6 @@ struct ::fidl::WireRequest<
 
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -961,12 +925,6 @@ struct ::fidl::WireResponse<
   fidl_message_header_t _hdr;
 
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -982,12 +940,6 @@ struct ::fidl::WireRequest<
   using ResponseType = ::fidl::WireResponse<
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -1001,12 +953,6 @@ struct ::fidl::WireResponse<
 
   explicit WireResponse(::fidl::StringView ret) : ret(ret) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -1022,12 +968,6 @@ struct ::fidl::WireRequest<
   explicit WireRequest(::fidl::StringView arg) : arg(arg) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -1042,12 +982,6 @@ struct ::fidl::WireRequest<
   explicit WireRequest(::fidl::StringView arg) : arg(arg) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -1059,12 +993,6 @@ struct ::fidl::WireResponse<
   fidl_message_header_t _hdr;
 
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -1082,12 +1010,6 @@ struct ::fidl::WireRequest<
   using ResponseType = ::fidl::WireResponse<
       ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -1102,12 +1024,6 @@ struct ::fidl::WireResponse<
   explicit WireResponse(::fidl::StringView ret) : ret(ret) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -1119,12 +1035,6 @@ struct ::fidl::WireEvent<
   fidl_message_header_t _hdr;
 
   WireEvent() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -1139,12 +1049,6 @@ struct ::fidl::WireEvent<
 
   explicit WireEvent(::fidl::StringView ret) : ret(ret) { _InitHeader(); }
   WireEvent() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -2866,12 +2770,6 @@ struct ::fidl::WireRequest<::test_protocols::Transitional::Request> final {
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::Transitional::Request>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -2883,12 +2781,6 @@ struct ::fidl::WireResponse<::test_protocols::Transitional::Request> final {
 
   explicit WireResponse(int64_t y) : y(y) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -2902,12 +2794,6 @@ struct ::fidl::WireRequest<::test_protocols::Transitional::OneWay> final {
   explicit WireRequest(int64_t x) : x(x) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -2919,12 +2805,6 @@ struct ::fidl::WireEvent<::test_protocols::Transitional::Event> final {
 
   explicit WireEvent(int64_t x) : x(x) { _InitHeader(); }
   WireEvent() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -3471,12 +3351,6 @@ struct ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>
   }
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -3780,12 +3654,6 @@ struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>
       ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>;
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -3807,12 +3675,6 @@ struct ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>
   }
   WireResponse() { _InitHeader(); }
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -3838,12 +3700,6 @@ struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>
       ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>;
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -3865,12 +3721,6 @@ struct ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>
   }
   WireResponse() { _InitHeader(); }
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -3896,12 +3746,6 @@ struct ::fidl::WireRequest<
       ::test_protocols::WithProtocolEnds::StructContainingEnds>;
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -3923,12 +3767,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -5045,12 +4883,6 @@ struct ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen> final {
   }
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -5395,12 +5227,6 @@ struct ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -5420,12 +5246,6 @@ struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>
   }
   WireResponse() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -5438,12 +5258,6 @@ struct ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
   WireRequest() { _InitHeader(); }
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -5464,12 +5278,6 @@ struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
   }
   WireResponse() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -5482,12 +5290,6 @@ struct ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>
   WireRequest() { _InitHeader(); }
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -5508,12 +5310,6 @@ struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>
   }
   WireResponse() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -5526,12 +5322,6 @@ struct ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>
   WireRequest() { _InitHeader(); }
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -5554,12 +5344,6 @@ struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>
   }
   WireResponse() { _InitHeader(); }
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -6868,12 +6652,6 @@ struct ::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>
 
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -7187,12 +6965,6 @@ struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA> final {
   explicit WireRequest(int64_t a, int64_t b) : a(a), b(b) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -7205,12 +6977,6 @@ struct ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> final {
 
   explicit WireEvent(int64_t a, int64_t b) : a(a), b(b) { _InitHeader(); }
   WireEvent() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -7227,12 +6993,6 @@ struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB> final {
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -7244,12 +7004,6 @@ struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB> final {
 
   explicit WireResponse(int64_t result) : result(result) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -7267,12 +7021,6 @@ struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>
   WireRequest() { _InitHeader(); }
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -7285,12 +7033,6 @@ struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>
   fidl_message_header_t _hdr;
 
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -7310,12 +7052,6 @@ struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>
       ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>;
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -7333,12 +7069,6 @@ struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>
   explicit WireResponse(::zx::socket&& b) : b(std::move(b)) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

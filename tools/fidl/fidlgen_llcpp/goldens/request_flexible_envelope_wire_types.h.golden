@@ -127,10 +127,6 @@ class StrictFoo {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -239,10 +235,6 @@ class FlexibleFoo {
     return envelope_.As<int32_t>().get_data();
   }
   ::test_requestflexibleenvelope::wire::FlexibleFoo::Tag Which() const;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {

@@ -60,10 +60,6 @@ struct WithErrorSyntaxHandleInResultResponse {
   ::zx::handle h = {};
 
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 #endif  // __Fuchsia__
 
@@ -72,10 +68,6 @@ extern "C" const fidl_type_t
 
 struct WithErrorSyntaxErrorAsPrimitiveResponse {
   uint8_t __reserved = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t
@@ -83,10 +75,6 @@ extern "C" const fidl_type_t
 
 struct WithErrorSyntaxErrorAsEnumResponse {
   uint8_t __reserved = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 #ifdef __Fuchsia__
@@ -208,10 +196,6 @@ class WithErrorSyntaxHandleInResultResult {
         ordinal_);
   }
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -367,10 +351,6 @@ class WithErrorSyntaxResponseAsStructResult {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -499,10 +479,6 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -564,10 +540,6 @@ class TheUnion {
     return envelope_.As<uint32_t>().get_data();
   }
   ::test_protocols::wire::TheUnion::Tag Which() const;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -689,10 +661,6 @@ class WithErrorSyntaxErrorAsEnumResult {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -715,10 +683,6 @@ struct WithErrorSyntaxResponseAsStructResponse {
   int64_t b = {};
 
   int64_t c = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 #ifdef __Fuchsia__
@@ -735,10 +699,6 @@ struct ProtocolEnds {
   ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> server_opt = {};
 
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 #endif  // __Fuchsia__
 

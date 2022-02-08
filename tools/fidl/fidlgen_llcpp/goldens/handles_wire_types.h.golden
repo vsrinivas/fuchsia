@@ -123,10 +123,6 @@ struct Handles {
   ::fidl::ServerEnd<::test_handles::SomeProtocol> request_some_protocol = {};
 
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 #endif  // __Fuchsia__
 

@@ -61,10 +61,6 @@ struct Padding1ByteMiddle {
   uint8_t a = {};
 
   uint16_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding1ByteEndTable;
@@ -73,10 +69,6 @@ struct Padding1ByteEnd {
   uint16_t a = {};
 
   uint8_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding7ByteMiddleTable;
@@ -85,10 +77,6 @@ struct Padding7ByteMiddle {
   uint8_t a = {};
 
   uint64_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding7ByteEndTable;
@@ -97,10 +85,6 @@ struct Padding7ByteEnd {
   uint64_t a = {};
 
   uint8_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding6ByteMiddleTable;
@@ -109,10 +93,6 @@ struct Padding6ByteMiddle {
   uint16_t a = {};
 
   uint64_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
@@ -121,10 +101,6 @@ struct Padding6ByteEnd {
   uint64_t a = {};
 
   uint16_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
@@ -135,10 +111,6 @@ struct Padding5ByteMiddle {
   uint8_t b = {};
 
   uint64_t c = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding5ByteEndTable;
@@ -149,10 +121,6 @@ struct Padding5ByteEnd {
   uint16_t b = {};
 
   uint8_t c = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding4ByteMiddleTable;
@@ -161,10 +129,6 @@ struct Padding4ByteMiddle {
   uint32_t a = {};
 
   uint64_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
@@ -173,10 +137,6 @@ struct Padding4ByteEnd {
   uint64_t a = {};
 
   uint32_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding4ByteAlignmentLength12Table;
@@ -189,10 +149,6 @@ struct Padding4ByteAlignmentLength12 {
   uint16_t c = {};
 
   uint16_t d = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
@@ -201,10 +157,6 @@ struct Padding3ByteMiddle {
   uint8_t a = {};
 
   uint32_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding3ByteEndTable;
@@ -213,10 +165,6 @@ struct Padding3ByteEnd {
   uint32_t a = {};
 
   uint8_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding2ByteMiddleTable;
@@ -225,10 +173,6 @@ struct Padding2ByteMiddle {
   uint16_t a = {};
 
   uint32_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding2ByteEndTable;
@@ -237,10 +181,6 @@ struct Padding2ByteEnd {
   uint32_t a = {};
 
   uint16_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_padding_Padding2ByteAlignmentLength6Table;
@@ -251,10 +191,6 @@ struct Padding2ByteAlignmentLength6 {
   uint16_t b = {};
 
   uint8_t c = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

@@ -38,10 +38,6 @@ extern "C" const fidl_type_t test_versions_StructTable;
 
 struct Struct {
   uint32_t x = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire
@@ -127,10 +123,6 @@ class Table final {
     frame_ptr_ = std::move(frame_ptr);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<::fidl::WireTableFrame<::test_versions::wire::Table>>
@@ -183,10 +175,6 @@ class Union {
     return envelope_.As<uint32_t>().get_data();
   }
   ::test_versions::wire::Union::Tag Which() const;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {

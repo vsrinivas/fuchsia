@@ -31,10 +31,6 @@ extern "C" const fidl_type_t
 
 struct Foo {
   ::test_dependent::wire::MyEnum field = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

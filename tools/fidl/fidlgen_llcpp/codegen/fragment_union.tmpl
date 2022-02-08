@@ -133,10 +133,6 @@ class {{ .Name }} {
   void _CloseHandles();
   {{- end }}
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class {{ .WireOrdinalEnum.Self }} : fidl_xunion_tag_t {
     {{ .WireInvalidOrdinal.Self }} = 0,

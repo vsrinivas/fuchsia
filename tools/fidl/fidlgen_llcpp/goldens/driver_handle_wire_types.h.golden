@@ -37,10 +37,6 @@ struct ServerEndWrapper {
   ::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value = {};
 
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 #endif  // __Fuchsia__
 
@@ -52,10 +48,6 @@ struct ClientEndWrapper {
   ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value = {};
 
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 #endif  // __Fuchsia__
 

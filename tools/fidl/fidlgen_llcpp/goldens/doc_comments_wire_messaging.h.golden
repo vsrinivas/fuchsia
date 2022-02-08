@@ -80,12 +80,6 @@ struct ::fidl::WireRequest<::test_doccomments::Interface::Method> final {
 
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -95,12 +89,6 @@ struct ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> final {
   fidl_message_header_t _hdr;
 
   WireEvent() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

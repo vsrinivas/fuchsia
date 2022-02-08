@@ -33,10 +33,6 @@ struct {{ .Name }} {
 
   void _CloseHandles();
   {{- end }}
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 {{- if .IsResourceType }}

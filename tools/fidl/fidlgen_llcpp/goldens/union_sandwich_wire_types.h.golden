@@ -100,10 +100,6 @@ class UnionSize8Alignment4 {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -193,10 +189,6 @@ class UnionSize36Alignment4 {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -285,10 +277,6 @@ class UnionSize12Alignment4 {
     return static_cast<::test_unionsandwich::wire::UnionSize12Alignment4::Tag>(
         ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -389,10 +377,6 @@ class UnionSize24Alignment8 {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -414,10 +398,6 @@ struct SandwichUnionSize8Alignment4 {
   ::test_unionsandwich::wire::UnionSize8Alignment4 union_ = {};
 
   uint32_t after = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t
@@ -429,10 +409,6 @@ struct SandwichUnionSize36Alignment4 {
   ::test_unionsandwich::wire::UnionSize36Alignment4 union_ = {};
 
   uint32_t after = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t
@@ -444,10 +420,6 @@ struct SandwichUnionSize12Alignment4 {
   ::test_unionsandwich::wire::UnionSize12Alignment4 union_ = {};
 
   int32_t after = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_unionsandwich_StructSize16Alignment8Table;
@@ -456,10 +428,6 @@ struct StructSize16Alignment8 {
   uint64_t f1 = {};
 
   uint64_t f2 = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t
@@ -471,10 +439,6 @@ struct SandwichUnionSize24Alignment8 {
   ::test_unionsandwich::wire::UnionSize24Alignment8 union_ = {};
 
   uint32_t after = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

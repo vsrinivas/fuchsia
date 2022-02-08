@@ -71,12 +71,6 @@ struct ::fidl::WireRequest<::test_driveroneway::OneWay::Send> final {
   }
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };

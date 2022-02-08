@@ -93,12 +93,6 @@ struct ::fidl::WireRequest<
   using ResponseType = ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -115,12 +109,6 @@ struct ::fidl::WireResponse<
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -141,12 +129,6 @@ struct ::fidl::WireRequest<
   using ResponseType = ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -163,12 +145,6 @@ struct ::fidl::WireResponse<
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

@@ -132,10 +132,6 @@ class TableSmallArray final {
     frame_ptr_ = std::move(frame_ptr);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
@@ -241,10 +237,6 @@ class TableLargeArray final {
     frame_ptr_ = std::move(frame_ptr);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
@@ -317,10 +309,6 @@ class UnionSmallArray {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_arrays::wire::UnionSmallArray::Tag>(ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -400,10 +388,6 @@ class UnionLargeArray {
     return static_cast<::test_arrays::wire::UnionLargeArray::Tag>(ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -420,20 +404,12 @@ extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;
 
 struct StructSmallArray {
   ::fidl::Array<uint32_t, 2> a = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
 
 struct StructLargeArray {
   ::fidl::Array<uint32_t, 100> a = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

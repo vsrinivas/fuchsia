@@ -129,10 +129,6 @@ class ExampleFooResult {
     return static_cast<::test_error::wire::ExampleFooResult::Tag>(ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -150,10 +146,6 @@ extern "C" const fidl_type_t test_error_Example_foo_ResponseTable;
 
 struct ExampleFooResponse {
   int64_t y = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

@@ -95,12 +95,6 @@ struct ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> final {
   }
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -114,12 +108,6 @@ struct ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> final {
     _InitHeader();
   }
   WireEvent() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -138,12 +126,6 @@ struct ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
   using ResponseType =
       ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -158,12 +140,6 @@ struct ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

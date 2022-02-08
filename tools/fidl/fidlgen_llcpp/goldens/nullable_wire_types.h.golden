@@ -51,10 +51,6 @@ struct StructWithNullableRequest {
   ::fidl::ServerEnd<::test_nullable::SimpleProtocol> val = {};
 
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 #endif  // __Fuchsia__
 
@@ -66,10 +62,6 @@ struct StructWithNullableProtocol {
   ::fidl::ClientEnd<::test_nullable::SimpleProtocol> val = {};
 
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 #endif  // __Fuchsia__
 
@@ -81,10 +73,6 @@ struct StructWithNullableHandle {
   ::zx::vmo val = {};
 
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 #endif  // __Fuchsia__
 
@@ -92,10 +80,6 @@ extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
 
 struct Int32Wrapper {
   int32_t val = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_nullable_SimpleUnionTable;
@@ -173,10 +157,6 @@ class SimpleUnion {
     return static_cast<::test_nullable::wire::SimpleUnion::Tag>(ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -194,40 +174,24 @@ extern "C" const fidl_type_t test_nullable_StructWithNullableVectorTable;
 
 struct StructWithNullableVector {
   ::fidl::VectorView<int32_t> val = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
 
 struct StructWithNullableUnion {
   ::test_nullable::wire::SimpleUnion val = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
 
 struct StructWithNullableStruct {
   ::fidl::ObjectView<::test_nullable::wire::Int32Wrapper> val = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
 
 struct StructWithNullableString {
   ::fidl::StringView val = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

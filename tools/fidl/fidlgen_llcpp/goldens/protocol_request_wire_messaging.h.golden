@@ -106,12 +106,6 @@ struct ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> final {
   using ResponseType =
       ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -130,12 +124,6 @@ struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> final {
   WireResponse() { _InitHeader(); }
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -150,12 +138,6 @@ struct ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
   WireRequest() { _InitHeader(); }
   using ResponseType =
       ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -175,12 +157,6 @@ struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>
   }
   WireResponse() { _InitHeader(); }
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -202,12 +178,6 @@ struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> final {
   WireRequest() { _InitHeader(); }
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -228,12 +198,6 @@ struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
   }
   WireRequest() { _InitHeader(); }
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

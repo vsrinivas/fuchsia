@@ -91,12 +91,6 @@ struct ::fidl::WireRequest<
   using ResponseType = ::fidl::WireResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -117,12 +111,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -138,12 +126,6 @@ struct ::fidl::WireRequest<
   WireRequest() { _InitHeader(); }
   using ResponseType = ::fidl::WireResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -167,12 +149,6 @@ struct ::fidl::WireResponse<
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

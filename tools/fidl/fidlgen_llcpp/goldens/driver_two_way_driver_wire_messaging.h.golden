@@ -73,12 +73,6 @@ struct ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> final {
   WireRequest() { _InitHeader(); }
   using ResponseType = ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -90,12 +84,6 @@ struct ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> final {
 
   explicit WireResponse(uint16_t sum) : sum(sum) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

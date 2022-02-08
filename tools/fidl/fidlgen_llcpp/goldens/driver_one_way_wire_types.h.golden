@@ -30,10 +30,6 @@ extern "C" const fidl_type_t test_driveroneway_PayloadTable;
 
 struct Payload {
   uint32_t value = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

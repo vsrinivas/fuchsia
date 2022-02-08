@@ -154,10 +154,6 @@ class MainProtocolTwoWayImportWithErrorResult {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -315,10 +311,6 @@ class MainProtocolTwoWayAnonWithErrorResult {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -441,10 +433,6 @@ class MainProtocolOnImportWithErrorResult {
     return static_cast<::test_protocolpayloads::wire::
                            MainProtocolOnImportWithErrorResult::Tag>(ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -600,10 +588,6 @@ class MainProtocolOnAnonWithErrorResult {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -746,10 +730,6 @@ class MainProtocolTwoWayLocalWithErrorResult {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -890,10 +870,6 @@ class MainProtocolOnLocalWithErrorResult {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -915,10 +891,6 @@ struct MainProtocolTwoWayAnonWithErrorResponse {
   uint32_t a = {};
 
   uint32_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t
@@ -928,10 +900,6 @@ struct MainProtocolOnAnonWithErrorResponse {
   uint32_t a = {};
 
   uint32_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_protocolpayloads_LocalStructPayloadTable;
@@ -940,10 +908,6 @@ struct LocalStructPayload {
   uint32_t a = {};
 
   uint32_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

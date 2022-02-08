@@ -82,10 +82,6 @@ extern "C" const fidl_type_t test_union_EmptyTable;
 
 struct Empty {
   uint8_t __reserved = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_union_UnionWithAttributesTable;
@@ -151,10 +147,6 @@ class UnionWithAttributes {
     return envelope_.As<int64_t>().get_data();
   }
   ::test_union::wire::UnionWithAttributes::Tag Which() const;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -323,10 +315,6 @@ class Union {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::Union::Tag>(ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -502,10 +490,6 @@ class StrictUnion {
     return static_cast<::test_union::wire::StrictUnion::Tag>(ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -635,10 +619,6 @@ class StrictSimpleXUnion {
     return static_cast<::test_union::wire::StrictSimpleXUnion::Tag>(ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -742,10 +722,6 @@ class StrictFoo {
     return static_cast<::test_union::wire::StrictFoo::Tag>(ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -826,10 +802,6 @@ class StrictBoundedXUnion {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::StrictBoundedXUnion::Tag>(ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -923,10 +895,6 @@ class ReverseOrdinalUnion {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::ReverseOrdinalUnion::Tag>(ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1054,10 +1022,6 @@ class StrictPizzaOrPasta {
     return static_cast<::test_union::wire::StrictPizzaOrPasta::Tag>(ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -1177,10 +1141,6 @@ class PizzaOrPasta {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::PizzaOrPasta::Tag>(ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1308,10 +1268,6 @@ class FlexiblePizzaOrPasta {
     return envelope_.As<::test_union::wire::Pasta>().get_data();
   }
   ::test_union::wire::FlexiblePizzaOrPasta::Tag Which() const;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1442,10 +1398,6 @@ class ExplicitPizzaOrPasta {
     return static_cast<::test_union::wire::ExplicitPizzaOrPasta::Tag>(ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -1545,10 +1497,6 @@ class OlderSimpleUnion {
     return envelope_.As<float>().get_data();
   }
   ::test_union::wire::OlderSimpleUnion::Tag Which() const;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1706,10 +1654,6 @@ class NewerSimpleUnion {
     return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
   ::test_union::wire::NewerSimpleUnion::Tag Which() const;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1885,10 +1829,6 @@ class FlexibleUnion {
   }
   ::test_union::wire::FlexibleUnion::Tag Which() const;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -1991,10 +1931,6 @@ class FlexibleFoo {
   }
   ::test_union::wire::FlexibleFoo::Tag Which() const;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -2060,10 +1996,6 @@ class FieldCollision {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_union::wire::FieldCollision::Tag>(ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -2163,10 +2095,6 @@ class ExplicitXUnion {
     return envelope_.As<float>().get_data();
   }
   ::test_union::wire::ExplicitXUnion::Tag Which() const;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -2286,10 +2214,6 @@ class ExplicitUnion {
     return static_cast<::test_union::wire::ExplicitUnion::Tag>(ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -2393,10 +2317,6 @@ class ExplicitStrictFoo {
     return static_cast<::test_union::wire::ExplicitStrictFoo::Tag>(ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -2498,10 +2418,6 @@ class ExplicitFoo {
   }
   ::test_union::wire::ExplicitFoo::Tag Which() const;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -2570,10 +2486,6 @@ class XUnionContainingEmptyStruct {
   }
   ::test_union::wire::XUnionContainingEmptyStruct::Tag Which() const;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -2590,40 +2502,24 @@ extern "C" const fidl_type_t test_union_StructWithNullableXUnionTable;
 
 struct StructWithNullableXUnion {
   ::test_union::wire::OlderSimpleUnion x1 = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_union_PizzaTable;
 
 struct Pizza {
   ::fidl::VectorView<::fidl::StringView> toppings = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_union_PastaTable;
 
 struct Pasta {
   ::fidl::StringView sauce = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_union_NullableUnionStructTable;
 
 struct NullableUnionStruct {
   ::test_union::wire::Union the_union = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_union_UnionSandwichTable;
@@ -2634,10 +2530,6 @@ struct UnionSandwich {
   ::test_union::wire::ExplicitXUnion u = {};
 
   uint32_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

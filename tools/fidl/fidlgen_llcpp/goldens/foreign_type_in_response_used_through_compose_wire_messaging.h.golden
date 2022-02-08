@@ -81,12 +81,6 @@ struct ::fidl::WireRequest<
   using ResponseType = ::fidl::WireResponse<
       ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -102,12 +96,6 @@ struct ::fidl::WireResponse<
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

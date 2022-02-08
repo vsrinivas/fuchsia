@@ -30,10 +30,6 @@ extern "C" const fidl_type_t test_escaping_DocCommentWithQuotesTable;
 /// "pleaseescapethisdocommentproperly"
 struct DocCommentWithQuotes {
   uint8_t __reserved = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

@@ -56,10 +56,6 @@ extern "C" const fidl_type_t
 
 struct MemberOnlyAppearsInImportingLibrary {
   bool a = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t
@@ -71,10 +67,6 @@ struct OnlyAppearsInImportingLibrary {
 
   ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary
       member_only_appears_in_importing_library = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t
@@ -82,10 +74,6 @@ extern "C" const fidl_type_t
 
 struct DenyEachBindingOnlyDenySyzkallerResponse {
   int32_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t
@@ -93,10 +81,6 @@ extern "C" const fidl_type_t
 
 struct DenyEachBindingOnlyDenyRustResponse {
   int32_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t
@@ -104,10 +88,6 @@ extern "C" const fidl_type_t
 
 struct DenyEachBindingOnlyDenyLibfuzzerResponse {
   int32_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t
@@ -115,10 +95,6 @@ extern "C" const fidl_type_t
 
 struct DenyEachBindingOnlyDenyGoResponse {
   int32_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t
@@ -126,10 +102,6 @@ extern "C" const fidl_type_t
 
 struct DenyEachBindingOnlyDenyDartResponse {
   int32_t b = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 extern "C" const fidl_type_t test_bindingsdenylist_OnlyLlcppTable;
@@ -184,10 +156,6 @@ class OnlyLlcpp {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<::test_bindingsdenylist::wire::OnlyLlcpp::Tag>(ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -322,10 +290,6 @@ class DenyEachBindingOnlyDenySyzkallerResult {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -454,10 +418,6 @@ class DenyEachBindingOnlyDenyRustResult {
         ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::Tag>(
         ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -594,10 +554,6 @@ class DenyEachBindingOnlyDenyLibfuzzerResult {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -720,10 +676,6 @@ class DenyEachBindingOnlyDenyGoResult {
         ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag>(
         ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -853,10 +805,6 @@ class DenyEachBindingOnlyDenyDartResult {
         ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::Tag>(
         ordinal_);
   }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {

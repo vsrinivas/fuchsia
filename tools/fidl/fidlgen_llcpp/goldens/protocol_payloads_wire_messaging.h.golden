@@ -305,12 +305,6 @@ struct ::fidl::WireRequest<
   explicit WireRequest(int32_t a) : a(a) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -327,12 +321,6 @@ struct ::fidl::WireRequest<
   using ResponseType = ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposed>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -346,12 +334,6 @@ struct ::fidl::WireResponse<
 
   explicit WireResponse(int32_t a) : a(a) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -368,12 +350,6 @@ struct ::fidl::WireRequest<
   WireRequest() { _InitHeader(); }
   using ResponseType = ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -395,12 +371,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -413,12 +383,6 @@ struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>
 
   explicit WireEvent(int32_t a) : a(a) { _InitHeader(); }
   WireEvent() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -439,12 +403,6 @@ struct ::fidl::WireEvent<
   }
   WireEvent() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -458,12 +416,6 @@ struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>
 
   explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -481,12 +433,6 @@ struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>
   using ResponseType =
       ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -500,12 +446,6 @@ struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>
 
   explicit WireResponse(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -523,12 +463,6 @@ struct ::fidl::WireRequest<
   WireRequest() { _InitHeader(); }
   using ResponseType = ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -552,12 +486,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -570,12 +498,6 @@ struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal> final {
 
   explicit WireEvent(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
   WireEvent() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -598,12 +520,6 @@ struct ::fidl::WireEvent<
   }
   WireEvent() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -616,12 +532,6 @@ struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayImport>
 
   explicit WireRequest(int32_t a) : a(a) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -638,12 +548,6 @@ struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>
   using ResponseType =
       ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -656,12 +560,6 @@ struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>
 
   explicit WireResponse(int32_t a) : a(a) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -678,12 +576,6 @@ struct ::fidl::WireRequest<
   WireRequest() { _InitHeader(); }
   using ResponseType = ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -707,12 +599,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -725,12 +611,6 @@ struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>
 
   explicit WireEvent(int32_t a) : a(a) { _InitHeader(); }
   WireEvent() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -753,12 +633,6 @@ struct ::fidl::WireEvent<
   }
   WireEvent() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -772,12 +646,6 @@ struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>
 
   explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
   WireRequest() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -795,12 +663,6 @@ struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>
   using ResponseType =
       ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -814,12 +676,6 @@ struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>
 
   explicit WireResponse(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -837,12 +693,6 @@ struct ::fidl::WireRequest<
   WireRequest() { _InitHeader(); }
   using ResponseType = ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -866,12 +716,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -884,12 +728,6 @@ struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon> final {
 
   explicit WireEvent(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
   WireEvent() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -909,12 +747,6 @@ struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>
     _InitHeader();
   }
   WireEvent() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

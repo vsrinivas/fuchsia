@@ -3,7 +3,7 @@
   // Use of this source code is governed by a BSD-style license that can be
   // found in the LICENSE file.
   */}}
-  
+
   {{- define "Method:Event:WireMessagingHeader" }}
   {{- EnsureNamespace "" }}
   {{- if .Response.IsResource }}
@@ -14,14 +14,14 @@
   {{- range .ResponseAnonymousChildren }}
     using {{ .ScopedName }} = {{ .FlattenedName }};
   {{- end }}
-  
+
     FIDL_ALIGNDECL
       {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
       {{- range $index, $param := .ResponseArgs }}
     {{ $param.Type }} {{ $param.Name }};
       {{- end }}
-  
+
     {{ if .ResponseArgs }}
     explicit {{ .WireEvent.Self }}({{ RenderParams .ResponseArgs }})
     {{ RenderInitMessage .ResponseArgs }} {
@@ -31,29 +31,23 @@
     {{ .WireEvent.Self }}() {
     _InitHeader();
     }
-  
+
     {{- if .Response.IsResource }}
     void _CloseHandles();
     {{- end }}
-  
-    class UnownedEncodedMessage;
-    class OwnedEncodedMessage;
-  
-   public:
-    class DecodedMessage;
-  
+
    private:
     void _InitHeader();
   };
-  
+
   {{- if .Response.IsResource }}
   {{- EndifFuchsia -}}
   {{- end }}
   {{- end }}
-  
-  
-  
-  
+
+
+
+
   {{- define "Method:Event:WireMessagingSource" }}
     {{- EnsureNamespace "" }}
   {{- if .Response.IsResource }}
@@ -62,7 +56,7 @@
     void {{ .WireEvent }}::_InitHeader() {
       fidl_init_txn_header(&_hdr, 0, {{ .OrdinalName }});
     }
-  
+
     {{ if .Response.IsResource }}
       void {{ .WireEvent }}::_CloseHandles() {
         {{- range .ResponseArgs }}
@@ -74,8 +68,8 @@
   {{- EndifFuchsia -}}
   {{- end }}
   {{- end }}
-  
-  
+
+
 {{- define "Method:Event:NaturalMessagingHeader" }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}

@@ -177,10 +177,6 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
         ordinal_);
   }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
-
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
@@ -200,10 +196,6 @@ extern "C" const fidl_type_t
 
 struct ExampleUseOfErrorSyntaxCallWhichMayFailResponse {
   int64_t value = {};
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-  class DecodedMessage;
 };
 
 }  // namespace wire

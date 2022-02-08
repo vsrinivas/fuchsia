@@ -84,12 +84,6 @@ struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
   WireRequest() { _InitHeader(); }
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -400,12 +394,6 @@ struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
   WireRequest() { _InitHeader(); }
   void _CloseHandles();
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -427,12 +415,6 @@ struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
   }
   WireRequest() { _InitHeader(); }
   void _CloseHandles();
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();

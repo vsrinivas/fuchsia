@@ -223,12 +223,6 @@ struct ::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
 
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -240,12 +234,6 @@ struct ::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
   fidl_message_header_t _hdr;
 
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -892,12 +880,6 @@ struct ::fidl::WireRequest<
 
   WireRequest() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -909,12 +891,6 @@ struct ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
   fidl_message_header_t _hdr;
 
   WireRequest() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -1369,12 +1345,6 @@ struct ::fidl::WireRequest<
   using ResponseType = ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -1395,12 +1365,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -1415,12 +1379,6 @@ struct ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
   WireRequest() { _InitHeader(); }
   using ResponseType = ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -1442,12 +1400,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -1463,12 +1415,6 @@ struct ::fidl::WireRequest<
   WireRequest() { _InitHeader(); }
   using ResponseType = ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -1492,12 +1438,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -1513,12 +1453,6 @@ struct ::fidl::WireRequest<
   WireRequest() { _InitHeader(); }
   using ResponseType = ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -1540,12 +1474,6 @@ struct ::fidl::WireResponse<
   }
   WireResponse() { _InitHeader(); }
 
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
-
  private:
   void _InitHeader();
 };
@@ -1561,12 +1489,6 @@ struct ::fidl::WireRequest<
   WireRequest() { _InitHeader(); }
   using ResponseType = ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
@@ -1589,12 +1511,6 @@ struct ::fidl::WireResponse<
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
-
-  class UnownedEncodedMessage;
-  class OwnedEncodedMessage;
-
- public:
-  class DecodedMessage;
 
  private:
   void _InitHeader();
