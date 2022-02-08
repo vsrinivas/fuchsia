@@ -36,7 +36,7 @@ namespace {
 // be applied to the new device's add_args.
 // Returns ZX_OK if the device is successfully added.
 zx_status_t AddProtocolPassthrough(const char* name, cpp20::span<const zx_device_prop_t> props,
-                                   zx_device_t* parent) {
+                                   zx_device_t* parent, zx_device_t** out_device) {
   if (!parent || !name) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -59,7 +59,7 @@ zx_status_t AddProtocolPassthrough(const char* name, cpp20::span<const zx_device
       .prop_count = static_cast<uint32_t>(props.size()),
   };
 
-  return device_add(parent, &args, nullptr);
+  return device_add(parent, &args, out_device);
 }
 
 }  // anonymous namespace
@@ -705,7 +705,8 @@ zx_status_t PlatformBus::Init() {
       {BIND_PLATFORM_DEV_VID, 0, board_info_.vid},
       {BIND_PLATFORM_DEV_PID, 0, board_info_.pid},
   };
-  status = AddProtocolPassthrough("platform-passthrough", passthrough_props, zxdev());
+  status = AddProtocolPassthrough("platform-passthrough", passthrough_props, zxdev(),
+                                  &protocol_passthrough_);
   if (status != ZX_OK) {
     // We log the error but we do nothing as we've already added the device successfully.
     zxlogf(ERROR, "Error while adding platform-passthrough: %s", zx_status_get_string(status));
@@ -719,8 +720,8 @@ void PlatformBus::DdkInit(ddk::InitTxn txn) {
     return txn.Reply(board_data.status_value());
   }
   if (board_data.is_ok()) {
-    zx_status_t status =
-        DdkAddMetadata(DEVICE_METADATA_BOARD_PRIVATE, board_data->data(), board_data->size());
+    zx_status_t status = device_add_metadata(protocol_passthrough_, DEVICE_METADATA_BOARD_PRIVATE,
+                                             board_data->data(), board_data->size());
     if (status != ZX_OK) {
       return txn.Reply(status);
     }

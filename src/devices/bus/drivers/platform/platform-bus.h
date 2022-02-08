@@ -147,6 +147,8 @@ class PlatformBus : public PlatformBusType,
   zx::iommu iommu_handle_;
 
   std::map<std::pair<uint32_t, uint32_t>, zx::bti> cached_btis_;
+
+  zx_device_t* protocol_passthrough_ = nullptr;
 };
 
 }  // namespace platform_bus
