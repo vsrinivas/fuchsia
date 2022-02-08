@@ -16,8 +16,7 @@ void fidl::internal::
   ::fidl::MessageEncoder _encoder{
       ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
   return messenger().TwoWay(
-      &::test_transitivedependenciescompose::
-          test_transitivedependenciescompose_TopGetFooRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>,
@@ -34,8 +33,7 @@ void fidl::internal::
   ::fidl::MessageEncoder _encoder{
       ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
   return messenger().TwoWay(
-      &::test_transitivedependenciescompose::
-          test_transitivedependenciescompose_TopGetFooRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>,

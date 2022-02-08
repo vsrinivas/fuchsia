@@ -56,7 +56,7 @@ namespace test_versions {
 fidl::internal::NaturalClientImpl<::test_versions::Protocol>::Foo() const {
   ::fidl::MessageEncoder _encoder{::test_versions::kProtocol_Foo_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test_versions::test_versions_ProtocolFooRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }

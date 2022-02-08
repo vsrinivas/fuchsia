@@ -189,7 +189,11 @@ class {{ .NaturalEventSender }}
     {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
   ::fidl::MessageEncoder _encoder{ {{ .OrdinalName }} };
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
-      &{{ .Response.WireCodingTable }},
+      {{- if .HasResponsePayload -}}
+        &{{ .Response.WireCodingTable }}
+      {{- else -}}
+        nullptr
+      {{- end -}},
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }}),
       [this] (fidl::OutgoingMessage outgoing) {
@@ -202,7 +206,11 @@ class {{ .NaturalEventSender }}
     {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
   ::fidl::MessageEncoder _encoder{ {{ .OrdinalName }} };
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
-      &{{ .Response.WireCodingTable }},
+      {{- if .HasResponsePayload -}}
+        &{{ .Response.WireCodingTable }}
+      {{- else -}}
+        nullptr
+      {{- end -}},
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }}),
       [this] (fidl::OutgoingMessage outgoing) {

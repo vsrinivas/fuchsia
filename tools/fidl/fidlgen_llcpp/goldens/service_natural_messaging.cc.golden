@@ -13,8 +13,7 @@ namespace test_service {
   ::fidl::MessageEncoder _encoder{
       ::test_service::kSecondProtocol_MethodOnSecond_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test_service::
-          test_service_SecondProtocolMethodOnSecondRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }
@@ -97,8 +96,7 @@ namespace test_service {
   ::fidl::MessageEncoder _encoder{
       ::test_service::kFirstProtocol_MethodOnFirst_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test_service::
-          test_service_FirstProtocolMethodOnFirstRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }

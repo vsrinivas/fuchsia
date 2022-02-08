@@ -22,8 +22,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
       ::test_union::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
   return messenger().TwoWay(
-      &::test_union::
-          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_union::TestProtocol::
@@ -45,8 +44,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
       ::test_union::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
   return messenger().TwoWay(
-      &::test_union::
-          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_union::TestProtocol::
@@ -69,8 +67,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
       ::test_union::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
   return messenger().TwoWay(
-      &::test_union::
-          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_union::TestProtocol::
@@ -92,8 +89,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
       ::test_union::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
   return messenger().TwoWay(
-      &::test_union::
-          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_union::TestProtocol::

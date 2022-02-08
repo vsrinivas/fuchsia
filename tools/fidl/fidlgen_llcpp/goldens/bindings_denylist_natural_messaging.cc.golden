@@ -63,8 +63,7 @@ void fidl::internal::NaturalClientImpl<
       ::test_bindingsdenylist::
           kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal};
   return messenger().TwoWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -85,8 +84,7 @@ void fidl::internal::NaturalClientImpl<
       ::test_bindingsdenylist::
           kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal};
   return messenger().TwoWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -124,8 +122,7 @@ void fidl::internal::NaturalCompleterBase<
       ::test_bindingsdenylist::
           kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal};
   messenger_.SendReply(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
 }
 
@@ -246,8 +243,7 @@ namespace test_bindingsdenylist {
   ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }
@@ -259,8 +255,7 @@ namespace test_bindingsdenylist {
       ::test_bindingsdenylist::
           kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }

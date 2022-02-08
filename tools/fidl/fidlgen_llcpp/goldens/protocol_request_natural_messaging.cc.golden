@@ -20,8 +20,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
   ::fidl::MessageEncoder _encoder{
       ::test_protocolrequest::kParent_GetChild_Ordinal};
   return messenger().TwoWay(
-      &::test_protocolrequest::
-          test_protocolrequest_ParentGetChildRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocolrequest::Parent::GetChild>,
@@ -35,8 +34,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
   ::fidl::MessageEncoder _encoder{
       ::test_protocolrequest::kParent_GetChild_Ordinal};
   return messenger().TwoWay(
-      &::test_protocolrequest::
-          test_protocolrequest_ParentGetChildRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocolrequest::Parent::GetChild>,
@@ -53,8 +51,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
   ::fidl::MessageEncoder _encoder{
       ::test_protocolrequest::kParent_GetChildRequest_Ordinal};
   return messenger().TwoWay(
-      &::test_protocolrequest::
-          test_protocolrequest_ParentGetChildRequestRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>,
@@ -70,8 +67,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
   ::fidl::MessageEncoder _encoder{
       ::test_protocolrequest::kParent_GetChildRequest_Ordinal};
   return messenger().TwoWay(
-      &::test_protocolrequest::
-          test_protocolrequest_ParentGetChildRequestRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>,

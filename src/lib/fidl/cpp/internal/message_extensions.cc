@@ -67,19 +67,23 @@ namespace internal {
 ::fidl::OutgoingMessage ConvertFromHLCPPOutgoingMessage(
     const fidl_type_t* type, HLCPPOutgoingMessage&& message, zx_handle_t* handles,
     fidl_channel_handle_metadata_t* handle_metadata) {
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Validate(type, &error_msg);
-  if (status != ZX_OK) {
-    return fidl::OutgoingMessage(fidl::Result::EncodeError(status, error_msg));
-  }
+  if (type != nullptr) {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Validate(type, &error_msg);
+    if (status != ZX_OK) {
+      return fidl::OutgoingMessage(fidl::Result::EncodeError(status, error_msg));
+    }
 
-  for (size_t i = 0; i < message.handles().actual(); i++) {
-    zx_handle_disposition_t handle_disposition = message.handles().data()[i];
-    handles[i] = handle_disposition.handle;
-    handle_metadata[i] = {
-        .obj_type = handle_disposition.type,
-        .rights = handle_disposition.rights,
-    };
+    for (size_t i = 0; i < message.handles().actual(); i++) {
+      zx_handle_disposition_t handle_disposition = message.handles().data()[i];
+      handles[i] = handle_disposition.handle;
+      handle_metadata[i] = {
+          .obj_type = handle_disposition.type,
+          .rights = handle_disposition.rights,
+      };
+    }
+  } else if (unlikely(!message.has_only_header())) {
+    return fidl::OutgoingMessage(fidl::Result::EncodeError(ZX_ERR_INVALID_ARGS));
   }
 
   fidl_outgoing_msg_t c_msg = {

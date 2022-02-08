@@ -16,8 +16,7 @@ void fidl::internal::NaturalClientImpl<
   ::fidl::MessageEncoder _encoder{
       ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal};
   return messenger().TwoWay(
-      &::test_foreigntypeinresponseusedthroughcompose::
-          test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
@@ -35,8 +34,7 @@ void fidl::internal::NaturalClientImpl<
   ::fidl::MessageEncoder _encoder{
       ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal};
   return messenger().TwoWay(
-      &::test_foreigntypeinresponseusedthroughcompose::
-          test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<

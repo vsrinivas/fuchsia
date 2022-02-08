@@ -266,8 +266,7 @@ void fidl::internal::NaturalClientImpl<
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal};
   return messenger().TwoWay(
-      &::test_protocols::
-          test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
@@ -288,8 +287,7 @@ void fidl::internal::NaturalClientImpl<
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal};
   return messenger().TwoWay(
-      &::test_protocols::
-          test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
@@ -311,8 +309,7 @@ void fidl::internal::NaturalClientImpl<
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal};
   return messenger().TwoWay(
-      &::test_protocols::
-          test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
@@ -333,8 +330,7 @@ void fidl::internal::NaturalClientImpl<
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal};
   return messenger().TwoWay(
-      &::test_protocols::
-          test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::
@@ -463,8 +459,7 @@ void fidl::internal::NaturalClientImpl<
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test_protocols::
-          test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }
@@ -545,8 +540,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
-      &::test_protocols::
-          test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       [this](fidl::OutgoingMessage outgoing) {
         return _inner().SendEvent(outgoing);
@@ -559,8 +553,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
-      &::test_protocols::
-          test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       [this](fidl::OutgoingMessage outgoing) {
         outgoing.Write(_transport());
@@ -615,8 +608,7 @@ void fidl::internal::NaturalCompleterBase<
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal};
   messenger_.SendReply(
-      &::test_protocols::
-          test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
 }
 
@@ -642,8 +634,7 @@ void fidl::internal::NaturalCompleterBase<
       ::test_protocols::
           kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal};
   messenger_.SendReply(
-      &::test_protocols::
-          test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
 }
 
@@ -1531,8 +1522,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal};
   return messenger().TwoWay(
-      &::test_protocols::
-          test_protocols_WithErrorSyntaxResponseAsStructRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>,
@@ -1548,8 +1538,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal};
   return messenger().TwoWay(
-      &::test_protocols::
-          test_protocols_WithErrorSyntaxResponseAsStructRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>,
@@ -1566,8 +1555,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal};
   return messenger().TwoWay(
-      &::test_protocols::
-          test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>,
@@ -1583,8 +1571,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal};
   return messenger().TwoWay(
-      &::test_protocols::
-          test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>,
@@ -1601,8 +1588,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal};
   return messenger().TwoWay(
-      &::test_protocols::
-          test_protocols_WithErrorSyntaxErrorAsEnumRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>,
@@ -1618,8 +1604,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal};
   return messenger().TwoWay(
-      &::test_protocols::
-          test_protocols_WithErrorSyntaxErrorAsEnumRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>,
@@ -1636,8 +1621,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal};
   return messenger().TwoWay(
-      &::test_protocols::
-          test_protocols_WithErrorSyntaxHandleInResultRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>,
@@ -1653,8 +1637,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal};
   return messenger().TwoWay(
-      &::test_protocols::
-          test_protocols_WithErrorSyntaxHandleInResultRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>,
@@ -1865,8 +1848,7 @@ namespace test_protocols {
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kDiscoverableProtocol_Method_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test_protocols::
-          test_protocols_DiscoverableProtocolMethodRequestMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }
@@ -2164,8 +2146,7 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_TakeHandle_Ordinal};
   messenger_.SendReply(
-      &::test_protocols::
-          test_protocols_ChannelProtocolTakeHandleResponseMessageTable,
+      nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
 }
 
