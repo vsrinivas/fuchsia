@@ -7,22 +7,24 @@ import("sdk_element.gni")
 # Defines an SDK element containing a host tool binary.
 
 # Parameters
-#   binary (required)
-#     GN label that builds the host tool binary. This will be the element's
-#     only dependency.
+#   deps (required)
+#     A single element list containing the GN label that builds the host tool
+#     binary.
 #
 #   output_name (optional)
-#     Name of the host tool binary, if different than the value of `binary`. For
-#     example, many rustc_binary targets have the label ":bin" and set their own
+#     Name of the host tool binary, if different than the name of the binary GN label. For
+#     example, many rustc_binary targets have the name ":bin" and set their own
 #     `output_name` parameter -- this should be that same name.
 #
 #   description (optional)
-#     Description of the host tool, to be included in the element's metadata.
+#     Description of the host tool, to be included in the element's metadata. If
+#     omitted, defaults to "$output_name host tool for $output_toolchain.".
 template("host_tool_sdk_element") {
-  assert(defined(invoker.binary), "Must define a binary")
-  binary = invoker.binary
+  assert(defined(invoker.deps), "Must define deps.")
+  gn_deps = invoker.deps
+  binary = gn_deps[0]
 
-  if (defined(invoker.output_name)) {
+  if (defined(invoker.output_name) && invoker.output_name != "") {
     output_name = invoker.output_name
   } else {
     output_name = get_label_info(binary, "name")
@@ -31,34 +33,41 @@ template("host_tool_sdk_element") {
   if (defined(invoker.description)) {
     description = invoker.description
   } else {
-    description = ""
+    output_toolchain = get_label_info(binary, "toolchain")
+    description = "$output_name host tool for $output_toolchain."
   }
 
+  output_base = get_label_info(binary, "root_out_dir")
+
   sdk_element(target_name) {
-    non_sdk_deps = [ binary ]
-    schema = "//sdk/schema/host_tool-f8025966.json"
+    deps = gn_deps
+
+    schema = {
+      source = "//sdk/schema/host_tool-f8025966.json"
+    }
+
+    meta = {
+      contents = {
+        schema_id = "https://fuchsia.dev/schema/sdk/host_tool-f8025966.json"
+        data = {
+          name = output_name
+          element_type = "host_tool"
+          description = description
+          host_os = current_os
+          host_arch = current_cpu
+          contents = {
+            binary = output_name
+          }
+        }
+      }
+      dest = "${output_name}_sdk_metadata.json"
+    }
 
     files = [
       {
-        src = rebase_path(get_label_info("$binary($current_toolchain)",
-                                         "root_out_dir") + "/" + output_name,
-                          root_build_dir)
-        dst = output_name
+        source = "$output_base/$output_name"
+        dest = output_name
       },
     ]
-
-    meta = {
-      schema_id = "https://fuchsia.dev/schema/sdk/host_tool-f8025966.json"
-      data = {
-        name = output_name
-        element_type = "host_tool"
-        description = description
-        host_os = current_os
-        host_arch = current_cpu
-        contents = {
-          binary = output_name
-        }
-      }
-    }
   }
 }

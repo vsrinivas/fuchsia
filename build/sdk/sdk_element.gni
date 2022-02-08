@@ -49,6 +49,9 @@ import("//build/json/validate_json.gni")
 #       dest (required)
 #         Destination path in the SDK relative to the element root.
 #
+#   deps (optional)
+#     A list of labels of targets contributing the content to the SDK.
+#
 #   api (optional) [TODO(b/204903307): implement the api parameter]
 #     Scope describing the API surface of the SDK element. If the contents of
 #     the precomputed digest differ from the generated one, the build will
@@ -83,6 +86,12 @@ import("//build/json/validate_json.gni")
 #      A scope specifying the element metadata mapping. The contents are
 #      identical to the file scope.
 template("sdk_element") {
+  if (defined(invoker.deps)) {
+    gn_deps = invoker.deps
+  } else {
+    gn_deps = []
+  }
+
   # Validate the schema scope.
   assert(defined(invoker.schema), "Must define the schema scope.")
   schema = invoker.schema
@@ -173,7 +182,7 @@ template("sdk_element") {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
     files = element_files
-    deps = [ ":${meta_target}" ]
+    deps = [ ":${meta_target}" ] + gn_deps
   }
 
   # TODO(b/204903307): .api generation/validation
@@ -222,14 +231,13 @@ template("sdk_element") {
 #
 # Parameters
 #
-#   sdk_element (required)
-#     Label of the SDK element to adapt.
+#   deps (required)
+#     A single element list containing an sdk_element GN label.
 #
 #   category (optional)
 #     The SDK atom category. Defaults to `partner`.
 template("sdk_element_adapter") {
-  assert(defined(invoker.sdk_element), "Must define sdk_element")
-  element_label = get_label_info(invoker.sdk_element, "label_no_toolchain")
+  assert(defined(invoker.deps), "Must define deps.")
 
   if (defined(invoker.category)) {
     category = invoker.category
@@ -251,7 +259,7 @@ template("sdk_element_adapter") {
     outputs = [ gn_meta_file ]
     data_keys = [ "sdk_adapter" ]
     output_conversion = "json"
-    deps = [ invoker.sdk_element ]
+    deps = invoker.deps
   }
 
   action(target_name) {
@@ -262,7 +270,7 @@ template("sdk_element_adapter") {
                            ])
     depfile = "$target_gen_dir/$target_name.d"
     deps = [ ":${gn_meta_collector_target}" ]
-    public_deps = [ element_label ]
+    public_deps = invoker.deps
     outputs = [
       atom_meta_file,
       atom_manifest_file,

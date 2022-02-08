@@ -114,7 +114,7 @@ version_history_sdk_element("version_history_sdk_element") {
 }
 
 sdk_element_adapter("version_history") {
-  sdk_element = ":version_history_sdk_element"
+  deps = [ ":version_history_sdk_element" ]
 }
 
 # License/rights related information for the SDK.
@@ -691,6 +691,14 @@ sdk("ddk") {
 }
 
 # Experimental SDK packaging using fuchsia packages.
-sdk_package("version_package") {
+sdk_package("version_history_package") {
+  package_name = "sdk_version_history"
   deps = [ ":version_history" ]
+}
+
+group("packages") {
+  deps = [
+    ":version_history_package",
+    "//sdk/tools:packages",
+  ]
 }

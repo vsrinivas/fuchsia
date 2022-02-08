@@ -2,10 +2,97 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/sdk/host_tool_sdk_element.gni")
+import("//build/sdk/sdk_package.gni")
 import("//build/sdk/sdk_prebuilt_executable.gni")
 
-sdk_prebuilt_executable("banjo") {
-  category = "partner"
+# SDK package labels.
+packages = []
 
-  prebuilt = "//prebuilt/tools/banjo/${host_platform}/banjo_bin"
+# Host tool SDK element specs.
+# The tool scope contains:
+#
+# name (required)
+#   Target name.
+# label (required)
+#   Host tool binary label.
+# output (optional)
+#   The name of the output of the host tool binary if the target name and
+#   the binary name differ, which is applicable to rust binaries.
+# description (optional)
+#   A human readable description injected into the host tool SDK metadata.
+tools = [
+  {
+    name = "cmc"
+    label = "//tools/cmc"
+    output = "cmc"
+    description = "Component manifest compiler."
+  },
+  {
+    name = "fidlc"
+    label = "//tools/fidl/fidlc"
+    description = "FIDL compiler."
+  },
+  {
+    name = "zbi"
+    label = "//zircon/tools/zbi"
+    description = "Zircon boot image manipulator."
+  },
+]
+
+# Host tools are package per OS and architecture.
+if (is_host) {
+  sdk_prebuilt_executable("banjo") {
+    category = "partner"
+
+    prebuilt = "//prebuilt/tools/banjo/${host_platform}/banjo_bin"
+  }
+
+  # Experimental SDK targets.
+
+  # TODO(42999): Consider adding element adapters when legacy host tools are
+  # retired.
+  foreach(tool, tools) {
+    host_tool_sdk_element(tool.name) {
+      deps = [ tool.label ]
+      if (defined(tool.output)) {
+        output_name = tool.output
+      }
+      if (defined(tool.description)) {
+        description = tool.description
+      }
+    }
+  }
+}
+
+# SDK tools are package per arch.
+
+# X64 host tools
+sdk_package("host_tools_x64_package") {
+  package_name = "sdk_host_tools_${host_os}_x64"
+
+  deps = []
+  foreach(tool, tools) {
+    deps += [ ":${tool.name}(//build/toolchain:host_x64)" ]
+  }
+}
+
+packages = [ ":host_tools_x64_package" ]
+
+# Arm64 host tools.
+# Arm64 toolchain is only available on a Linux host.
+if (host_os == "linux") {
+  sdk_package("host_tools_arm64_package") {
+    package_name = "sdk_host_tools_${host_os}_arm64"
+    deps = []
+    foreach(tool, tools) {
+      deps += [ ":${tool.name}(//build/toolchain:host_arm64)" ]
+    }
+  }
+
+  packages += [ ":host_tools_arm64_package" ]
+}
+
+group("packages") {
+  deps = packages
 }

@@ -11,13 +11,18 @@ import("//build/components/fuchsia_package.gni")
 # package.
 #
 # Parameters
+#   package_name (optional)
+#     An optional package name. Defaults to the target name. Ideally,
+#     package names should start with the `sdk_` prefix to easy discovery.
 #   deps (required)
 #   One or more sdk_elements().
 template("sdk_package") {
-  assert(defined(invoker.deps), "Deps are required.")
-
   fuchsia_package("${target_name}") {
+    forward_variables_from(invoker,
+                           [
+                             "package_name",
+                             "deps",
+                           ])
     disable_elf_binaries_checks = true  # ELF binaries may be host tools
-    deps = invoker.deps
   }
 }
