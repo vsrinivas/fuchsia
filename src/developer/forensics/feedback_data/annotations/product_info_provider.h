@@ -37,7 +37,7 @@ class ProductInfoProvider : public AnnotationProvider {
   const std::shared_ptr<sys::ServiceDirectory> services_;
   cobalt::Logger* cobalt_;
 
-  fidl::CachingPtr<fuchsia::hwinfo::Product, std::map<AnnotationKey, std::string>> product_ptr_;
+  fidl::CachingPtr<fuchsia::hwinfo::Product, Annotations> product_ptr_;
 };
 
 }  // namespace feedback_data

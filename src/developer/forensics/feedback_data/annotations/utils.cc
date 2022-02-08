@@ -20,6 +20,25 @@ AnnotationKeys RestrictAllowlist(const AnnotationKeys& allowlist,
   return filtered;
 }
 
+Annotations ExtractAllowlisted(const AnnotationKeys& allowlist, const Annotations& annotations) {
+  Annotations out;
+  for (const auto& [k, v] : annotations) {
+    if (allowlist.find(k) != allowlist.end()) {
+      out.insert({k, v});
+    }
+  }
+
+  return out;
+}
+
+Annotations WithError(const AnnotationKeys& allowlist, const Error error) {
+  Annotations out;
+  for (const auto& k : allowlist) {
+    out.insert({k, error});
+  }
+  return out;
+}
+
 std::vector<fuchsia::feedback::Annotation> ToFeedbackAnnotationVector(
     const Annotations& annotations) {
   std::vector<fuchsia::feedback::Annotation> vec;

@@ -15,8 +15,15 @@
 namespace forensics {
 namespace feedback_data {
 
+// Returns the intersection of |allowlist| and |restrict_to|.
 AnnotationKeys RestrictAllowlist(const AnnotationKeys& allowlist,
                                  const AnnotationKeys& restrict_to);
+
+// Returns the annotations in |annotations| that intersect with |allowlist|.
+Annotations ExtractAllowlisted(const AnnotationKeys& allowlist, const Annotations& annotations);
+
+// Returns the keys in |allowlist| as annotations with a value of |error|.
+Annotations WithError(const AnnotationKeys& allowlist, Error error);
 
 // Each annotation in |annotations| that has a value will be converted into a
 // fuchshia::feedback::Annotation

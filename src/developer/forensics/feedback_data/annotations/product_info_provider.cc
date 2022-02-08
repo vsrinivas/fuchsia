@@ -10,6 +10,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
+#include <numeric>
 #include <optional>
 #include <string>
 
@@ -48,103 +49,68 @@ ProductInfoProvider::ProductInfoProvider(async_dispatcher_t* dispatcher,
 
 ::fpromise::promise<Annotations> ProductInfoProvider::GetAnnotations(
     zx::duration timeout, const AnnotationKeys& allowlist) {
-  const AnnotationKeys annotations_to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
-  if (annotations_to_get.empty()) {
+  const AnnotationKeys to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
+  if (to_get.empty()) {
     return ::fpromise::make_result_promise<Annotations>(::fpromise::ok<Annotations>({}));
   }
 
-  return product_ptr_
-      .GetValue(fit::Timeout(
-          timeout,
-          /*action*/ [=] { cobalt_->LogOccurrence(cobalt::TimedOutData::kProductInfo); }))
-      .then([=](const ::fpromise::result<std::map<AnnotationKey, std::string>, Error>& result) {
-        Annotations annotations;
-
-        if (result.is_error()) {
-          for (const auto& key : annotations_to_get) {
-            annotations.insert({key, result.error()});
-          }
-        } else {
-          for (const auto& key : annotations_to_get) {
-            const auto& product_info = result.value();
-            if (product_info.find(key) == product_info.end()) {
-              annotations.insert({key, Error::kMissingValue});
-            } else {
-              annotations.insert({key, product_info.at(key)});
-            }
-          }
-        }
+  auto on_timeout = [this] { cobalt_->LogOccurrence(cobalt::TimedOutData::kProductInfo); };
+  return product_ptr_.GetValue(fit::Timeout(timeout, std::move(on_timeout)))
+      .then([to_get](const ::fpromise::result<Annotations, Error>& result) {
+        Annotations annotations = (result.is_error()) ? WithError(to_get, result.error())
+                                                      : ExtractAllowlisted(to_get, result.value());
         return ::fpromise::ok(std::move(annotations));
       });
 }
 
-namespace {
-
-using fuchsia::intl::LocaleId;
-using fuchsia::intl::RegulatoryDomain;
-
-std::optional<std::string> ExtractCountryCode(const RegulatoryDomain& regulatory_domain) {
-  if (regulatory_domain.has_country_code()) {
-    return regulatory_domain.country_code();
-  }
-  return std::nullopt;
-}
-
-// Convert the list of |LocaleId| into a string of comma separated values.
-std::optional<std::string> Join(const std::vector<LocaleId>& locale_list) {
-  if (locale_list.empty()) {
-    return std::nullopt;
-  }
-
-  std::vector<std::string> locale_ids;
-  for (const auto& local_id : locale_list) {
-    locale_ids.push_back(local_id.id);
-  }
-
-  return fxl::JoinStrings(locale_ids, ", ");
-}
-
-}  // namespace
-
 void ProductInfoProvider::GetInfo() {
   product_ptr_->GetInfo([this](ProductInfo info) {
-    std::map<AnnotationKey, std::string> product_info;
+    Annotations annotations({
+        {kAnnotationHardwareProductSKU, Error::kMissingValue},
+        {kAnnotationHardwareProductLanguage, Error::kMissingValue},
+        {kAnnotationHardwareProductRegulatoryDomain, Error::kMissingValue},
+        {kAnnotationHardwareProductLocaleList, Error::kMissingValue},
+        {kAnnotationHardwareProductName, Error::kMissingValue},
+        {kAnnotationHardwareProductModel, Error::kMissingValue},
+        {kAnnotationHardwareProductManufacturer, Error::kMissingValue},
+    });
 
     if (info.has_sku()) {
-      product_info[kAnnotationHardwareProductSKU] = info.sku();
+      annotations.insert_or_assign(kAnnotationHardwareProductSKU, info.sku());
     }
 
     if (info.has_language()) {
-      product_info[kAnnotationHardwareProductLanguage] = info.language();
+      annotations.insert_or_assign(kAnnotationHardwareProductLanguage, info.language());
     }
 
-    if (info.has_regulatory_domain()) {
-      const auto regulatory_domain = ExtractCountryCode(info.regulatory_domain());
-      if (regulatory_domain) {
-        product_info[kAnnotationHardwareProductRegulatoryDomain] = regulatory_domain.value();
-      }
+    if (info.has_regulatory_domain() && info.regulatory_domain().has_country_code()) {
+      annotations.insert_or_assign(kAnnotationHardwareProductRegulatoryDomain,
+                                   info.regulatory_domain().country_code());
     }
 
-    if (info.has_locale_list()) {
-      const auto locale_list = Join(info.locale_list());
-      if (locale_list) {
-        product_info[kAnnotationHardwareProductLocaleList] = locale_list.value();
-      }
+    if (info.has_locale_list() && !info.locale_list().empty()) {
+      auto begin = std::begin(info.locale_list());
+      auto end = std::end(info.locale_list());
+
+      const std::string locale_list = std::accumulate(
+          std::next(begin), end, begin->id,
+          [](auto& acc, const auto& locale) { return acc.append(", ").append(locale.id); });
+      annotations.insert_or_assign(kAnnotationHardwareProductLocaleList, locale_list);
     }
 
     if (info.has_name()) {
-      product_info[kAnnotationHardwareProductName] = info.name();
+      annotations.insert_or_assign(kAnnotationHardwareProductName, info.name());
     }
 
     if (info.has_model()) {
-      product_info[kAnnotationHardwareProductModel] = info.model();
+      annotations.insert_or_assign(kAnnotationHardwareProductModel, info.model());
     }
 
     if (info.has_manufacturer()) {
-      product_info[kAnnotationHardwareProductManufacturer] = info.manufacturer();
+      annotations.insert_or_assign(kAnnotationHardwareProductManufacturer, info.manufacturer());
     }
 
-    product_ptr_.SetValue(product_info);
+    product_ptr_.SetValue(std::move(annotations));
   });
 }
 
