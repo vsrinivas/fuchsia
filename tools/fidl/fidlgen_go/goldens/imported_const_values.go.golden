@@ -3,7 +3,13 @@
 package importedconstvalues
 
 import (
+	testdependent "fidl/test/dependent"
 	_bindings "syscall/zx/fidl"
+)
+
+const (
+	BitsMember testdependent.MyBits = testdependent.MyBitsMember
+	EnumMember testdependent.MyEnum = testdependent.MyEnumMember
 )
 
 type MyStruct struct {

@@ -86,11 +86,11 @@ pub const ENUM_PRIMITIVE_TRUE: i32 = EnumType::True_.into_primitive();
 
 pub const BITS_VAL: BitsType = BitsType::VALUE;
 
-pub const BITS_PRIMITIVE_VAL: u32 = BitsType::VALUE.bits;
+pub const BITS_PRIMITIVE_VAL: u32 = BitsType::VALUE.bits();
 
 pub const BITS_TRUE: BitsType = BitsType::TRUE_;
 
-pub const BITS_PRIMITIVE_TRUE: u32 = BitsType::TRUE_.bits;
+pub const BITS_PRIMITIVE_TRUE: u32 = BitsType::TRUE_.bits();
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(i32)]

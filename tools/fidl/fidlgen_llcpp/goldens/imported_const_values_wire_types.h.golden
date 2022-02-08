@@ -32,6 +32,12 @@ struct MyStruct {
   uint8_t __reserved = {};
 };
 
+constexpr ::test_dependent::wire::MyEnum kEnumMember =
+    ::test_dependent::wire::MyEnum::kMember;
+
+constexpr ::test_dependent::wire::MyBits kBitsMember =
+    ::test_dependent::wire::MyBits::kMember;
+
 }  // namespace wire
 }  // namespace test_importedconstvalues
 namespace fidl {

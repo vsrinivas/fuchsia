@@ -69,6 +69,12 @@ class MyStruct final {
           &Storage_::__reserved, 0, 0});
 };
 
+constexpr ::test_dependent::MyEnum ENUM_MEMBER =
+    ::test_dependent::MyEnum::kMember;
+
+constexpr ::test_dependent::MyBits BITS_MEMBER =
+    ::test_dependent::MyBits::kMember;
+
 }  // namespace test_importedconstvalues
 namespace fidl {
 

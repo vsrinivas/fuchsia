@@ -40,6 +40,10 @@ import 'package:fidl_test_dependent/fidl_async.dart' as lib$test_dependent;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
+const lib$test_dependent.MyBits bitsMember = lib$test_dependent.MyBits.member;
+
+const lib$test_dependent.MyEnum enumMember = lib$test_dependent.MyEnum.member;
+
 class MyStruct extends $fidl.Struct {
   const MyStruct({
     this.reserved: 0x0,

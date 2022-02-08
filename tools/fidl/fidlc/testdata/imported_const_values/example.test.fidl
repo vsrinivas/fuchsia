@@ -7,3 +7,14 @@ using test.dependent;
 @attr3(test.dependent.MY_TRUE)
 @attr4(test.dependent.MY_FALSE)
 type MyStruct = struct {};
+
+const BITS_MEMBER test.dependent.MyBits = test.dependent.MyBits.MEMBER;
+const ENUM_MEMBER test.dependent.MyEnum = test.dependent.MyEnum.MEMBER;
+
+// TODO(fxbug.dev/62520): Allow in all bindings.
+@bindings_denylist("hlcpp, llcpp, go, dart, libfuzzer")
+const BITS_MEMBER_PRIMITIVE byte = test.dependent.MyBits.MEMBER;
+
+// TODO(fxbug.dev/62520): Allow in all bindings.
+@bindings_denylist("hlcpp, llcpp, go, dart, libfuzzer")
+const ENUM_MEMBER_PRIMITIVE byte = test.dependent.MyEnum.MEMBER;

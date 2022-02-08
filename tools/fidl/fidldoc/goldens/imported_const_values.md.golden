@@ -28,5 +28,41 @@
 
 
 
+## **CONSTANTS**
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr><tr id="BITS_MEMBER">
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl;l=11">BITS_MEMBER</a></td>
+            
+            <td>
+</td>
+        </tr>
+    <tr id="BITS_MEMBER_PRIMITIVE">
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl;l=16">BITS_MEMBER_PRIMITIVE</a></td>
+            <td>
+                    <code><a class='link' href='../test.dependent/'>test.dependent</a>/<a class='link' href='../test.dependent/#MyBits.MEMBER'>MyBits.MEMBER</a></code>
+                </td>
+                <td><code>uint8</code></td>
+            <td>
+</td>
+        </tr>
+    <tr id="ENUM_MEMBER">
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl;l=12">ENUM_MEMBER</a></td>
+            
+            <td>
+</td>
+        </tr>
+    <tr id="ENUM_MEMBER_PRIMITIVE">
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl;l=20">ENUM_MEMBER_PRIMITIVE</a></td>
+            <td>
+                    <code><a class='link' href='../test.dependent/'>test.dependent</a>/<a class='link' href='../test.dependent/#MyEnum.MEMBER'>MyEnum.MEMBER</a></code>
+                </td>
+                <td><code>uint8</code></td>
+            <td>
+</td>
+        </tr>
+    
+</table>
+
 
 

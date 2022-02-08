@@ -63,7 +63,224 @@
     }
   ],
   "bits_declarations": [],
-  "const_declarations": [],
+  "const_declarations": [
+    {
+      "name": "test.importedconstvalues/BITS_MEMBER",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+        "line": 11,
+        "column": 7,
+        "length": 11
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "test.dependent/MyBits",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "test.dependent.MyBits.MEMBER",
+        "identifier": "test.dependent/MyBits.MEMBER"
+      }
+    },
+    {
+      "name": "test.importedconstvalues/ENUM_MEMBER",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+        "line": 12,
+        "column": 7,
+        "length": 11
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "test.dependent/MyEnum",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "test.dependent.MyEnum.MEMBER",
+        "identifier": "test.dependent/MyEnum.MEMBER"
+      }
+    },
+    {
+      "name": "test.importedconstvalues/BITS_MEMBER_PRIMITIVE",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+        "line": 16,
+        "column": 7,
+        "length": 21
+      },
+      "maybe_attributes": [
+        {
+          "name": "bindings_denylist",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "hlcpp, llcpp, go, dart, libfuzzer",
+                "expression": "\"hlcpp, llcpp, go, dart, libfuzzer\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "hlcpp, llcpp, go, dart, libfuzzer",
+                  "expression": "\"hlcpp, llcpp, go, dart, libfuzzer\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+                "line": 15,
+                "column": 20,
+                "length": 35
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+            "line": 15,
+            "column": 1,
+            "length": 55
+          }
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint8",
+        "type_shape_v1": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "test.dependent.MyBits.MEMBER",
+        "identifier": "test.dependent/MyBits.MEMBER"
+      }
+    },
+    {
+      "name": "test.importedconstvalues/ENUM_MEMBER_PRIMITIVE",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+        "line": 20,
+        "column": 7,
+        "length": 21
+      },
+      "maybe_attributes": [
+        {
+          "name": "bindings_denylist",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "hlcpp, llcpp, go, dart, libfuzzer",
+                "expression": "\"hlcpp, llcpp, go, dart, libfuzzer\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "hlcpp, llcpp, go, dart, libfuzzer",
+                  "expression": "\"hlcpp, llcpp, go, dart, libfuzzer\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+                "line": 19,
+                "column": 20,
+                "length": 35
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+            "line": 19,
+            "column": 1,
+            "length": 55
+          }
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint8",
+        "type_shape_v1": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "test.dependent.MyEnum.MEMBER",
+        "identifier": "test.dependent/MyEnum.MEMBER"
+      }
+    }
+  ],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
   "interface_declarations": [],
@@ -217,9 +434,17 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "test.importedconstvalues/MyStruct"
+    "test.importedconstvalues/MyStruct",
+    "test.importedconstvalues/ENUM_MEMBER_PRIMITIVE",
+    "test.importedconstvalues/ENUM_MEMBER",
+    "test.importedconstvalues/BITS_MEMBER_PRIMITIVE",
+    "test.importedconstvalues/BITS_MEMBER"
   ],
   "declarations": {
+    "test.importedconstvalues/BITS_MEMBER": "const",
+    "test.importedconstvalues/ENUM_MEMBER": "const",
+    "test.importedconstvalues/BITS_MEMBER_PRIMITIVE": "const",
+    "test.importedconstvalues/ENUM_MEMBER_PRIMITIVE": "const",
     "test.importedconstvalues/MyStruct": "struct"
   }
 }

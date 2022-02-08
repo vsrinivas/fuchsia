@@ -579,7 +579,7 @@ func (c *compiler) compileConstant(val fidlgen.Constant, typ fidlgen.Type) strin
 			// matches the bits underlying type. If it doesn't the generated
 			// Rust code will not compile.
 			if typ.Kind == fidlgen.PrimitiveType {
-				return fmt.Sprintf("%s.bits", c.compileCompoundIdentifier(parts))
+				return fmt.Sprintf("%s.bits()", c.compileCompoundIdentifier(parts))
 			}
 			return c.compileCompoundIdentifier(parts)
 		case fidlgen.EnumDeclType:

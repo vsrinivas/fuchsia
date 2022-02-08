@@ -25,6 +25,14 @@ use {
     futures::future::{self, MaybeDone, TryFutureExt},
 };
 
+pub const BITS_MEMBER: fidl_test_dependent::MyBits = fidl_test_dependent::MyBits::MEMBER;
+
+pub const ENUM_MEMBER: fidl_test_dependent::MyEnum = fidl_test_dependent::MyEnum::Member;
+
+pub const BITS_MEMBER_PRIMITIVE: u8 = fidl_test_dependent::MyBits::MEMBER.bits();
+
+pub const ENUM_MEMBER_PRIMITIVE: u8 = fidl_test_dependent::MyEnum::Member.into_primitive();
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct MyStruct;
 

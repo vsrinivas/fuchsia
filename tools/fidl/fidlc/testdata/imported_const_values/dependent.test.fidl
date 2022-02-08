@@ -18,7 +18,7 @@ const MY_UINT32 uint32 = 3;
 const MY_UINT64 uint64 = 4;
 const MY_BYTE byte = 5;
 
-type MyBits = flexible bits {
+type MyBits = flexible bits : byte {
     MEMBER = 1;
 };
 
