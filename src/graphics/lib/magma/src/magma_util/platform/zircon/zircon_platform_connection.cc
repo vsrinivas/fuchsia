@@ -267,7 +267,7 @@ void ZirconPlatformConnection::ExecuteCommand(ExecuteCommandRequestView request,
   FlowControl();
 
   // TODO(fxbug.dev/92606) - support > 1 command buffer
-  if (request->command_buffers.count() != 1) {
+  if (request->command_buffers.count() > 1) {
     SetError(&completer, MAGMA_STATUS_UNIMPLEMENTED);
     return;
   }
