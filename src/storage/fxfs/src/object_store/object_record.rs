@@ -5,7 +5,10 @@
 // TODO(jfsulliv): need validation after deserialization.
 
 use {
-    crate::lsm_tree::types::{Item, NextKey, OrdLowerBound, OrdUpperBound},
+    crate::{
+        lsm_tree::types::{Item, NextKey, OrdLowerBound, OrdUpperBound},
+        serialized_types::Versioned,
+    },
     serde::{Deserialize, Serialize},
     std::convert::From,
     std::time::{Duration, SystemTime, UNIX_EPOCH},
@@ -36,7 +39,7 @@ pub enum ObjectKeyData {
 }
 
 /// ObjectKey is a key in the object store.
-#[derive(Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize, Clone)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize, Versioned)]
 pub struct ObjectKey {
     /// The ID of the object referred to.
     pub object_id: u64,
@@ -190,7 +193,7 @@ pub struct ObjectAttributes {
 /// ObjectValue is the value of an item in the object store.
 /// Note that the tree stores deltas on objects, so these values describe deltas. Unless specified
 /// otherwise, a value indicates an insert/replace mutation.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Versioned)]
 pub enum ObjectValue {
     /// Some keys have no value (this often indicates a tombstone of some sort).  Records with this
     /// value are always filtered when a major compaction is performed, so the meaning must be the

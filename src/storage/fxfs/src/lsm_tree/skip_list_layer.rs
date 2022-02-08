@@ -661,7 +661,15 @@ mod tests {
     };
 
     #[derive(
-        Clone, Eq, PartialEq, PartialOrd, Ord, Debug, serde::Serialize, serde::Deserialize,
+        Clone,
+        Eq,
+        PartialEq,
+        PartialOrd,
+        Ord,
+        Debug,
+        serde::Serialize,
+        serde::Deserialize,
+        Versioned,
     )]
     struct TestKey(i32);
 

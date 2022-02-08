@@ -28,7 +28,7 @@ use {
         },
         range::RangeExt,
         round::round_down,
-        serialized_types::VersionedLatest,
+        serialized_types::{Versioned, VersionedLatest},
         trace_duration,
     },
     anyhow::{anyhow, bail, ensure, Error},
@@ -276,7 +276,7 @@ pub type Hold<'a> = ReservationImpl<&'a Reservation, Reservation>;
 // Our allocator implementation tracks extents with a reference count.  At time of writing, these
 // reference counts should never exceed 1, but that might change with snapshots and clones.
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Versioned)]
 pub struct AllocatorKey {
     pub device_range: Range<u64>,
 }
@@ -324,7 +324,7 @@ impl RangeKey for AllocatorKey {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Versioned)]
 pub struct AllocatorValue {
     // This is the delta on a reference count for the extent.
     pub delta: i64,
@@ -332,7 +332,7 @@ pub struct AllocatorValue {
 
 pub type AllocatorItem = Item<AllocatorKey, AllocatorValue>;
 
-#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize, Versioned)]
 pub struct AllocatorInfo {
     pub layers: Vec<u64>,
     pub allocated_bytes: u64,

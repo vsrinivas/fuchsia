@@ -45,18 +45,43 @@ impl Version {
     }
 }
 
-/// This trait is assigned to all versions of a versioned type.
-/// It allows type versions to serialize/deserialize themselves differently on a per-version basis.
+/// This trait is assigned to all versions of a versioned type and is the only means of
+/// serialization/deserialization we use.
+///
+/// It also allows versions to serialize/deserialize themselves differently on a per-version basis.
+/// Doing this here enforces consistency at a given filesystem version.
+///
 pub trait Versioned: Serialize + for<'de> Deserialize<'de> {
-    fn deserialize_from<R: ?Sized>(reader: &mut R) -> anyhow::Result<Self>
+    fn deserialize_from<R: ?Sized>(reader: &mut R, version: Version) -> anyhow::Result<Self>
     where
         R: std::io::Read,
         for<'de> Self: serde::Deserialize<'de>,
     {
-        match bincode::deserialize_from(reader) {
-            // Strip bincode wrapping. anyhow can take std::io::Error.
-            Err(e) => Err(if let bincode::ErrorKind::Io(e) = *e { e.into() } else { e.into() }),
-            Ok(t) => Ok(t),
+        match version.major {
+            // Version 3+ to use bincode 1.3.3 varint encoding and enforces a 4kiB size limit.
+            3.. => {
+                use bincode::Options;
+                let options =
+                    bincode::DefaultOptions::new().with_limit(4096).allow_trailing_bytes();
+                match options.deserialize_from(reader) {
+                    // Strip bincode wrapping. anyhow can take std::io::Error.
+                    Err(e) => {
+                        Err(if let bincode::ErrorKind::Io(e) = *e { e.into() } else { e.into() })
+                    }
+                    Ok(t) => Ok(t),
+                }
+            }
+            // The original version uses bincode 1.1.1 encoding.
+            1.. => {
+                match bincode::deserialize_from(reader) {
+                    // Strip bincode wrapping. anyhow can take std::io::Error.
+                    Err(e) => {
+                        Err(if let bincode::ErrorKind::Io(e) = *e { e.into() } else { e.into() })
+                    }
+                    Ok(t) => Ok(t),
+                }
+            }
+            _ => panic!("Invalid version {}", version),
         }
     }
     fn serialize_into<W>(&self, writer: &mut W) -> anyhow::Result<()>
@@ -64,7 +89,9 @@ pub trait Versioned: Serialize + for<'de> Deserialize<'de> {
         W: std::io::Write,
         Self: serde::Serialize,
     {
-        match bincode::serialize_into(writer, self) {
+        use bincode::Options;
+        let options = bincode::DefaultOptions::new().with_limit(4096).allow_trailing_bytes();
+        match options.serialize_into(writer, self) {
             // Strip bincode wrapping. anyhow can take std::io::Error.
             Err(e) => Err(if let bincode::ErrorKind::Io(e) = *e { e.into() } else { e.into() }),
             Ok(t) => Ok(t),

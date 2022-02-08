@@ -313,7 +313,7 @@ mod tests {
         std::{ops::Bound, sync::Arc},
     };
 
-    #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+    #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize, Versioned)]
     struct TestKey(std::ops::Range<u64>);
 
     versioned_type! { 1.. => TestKey }

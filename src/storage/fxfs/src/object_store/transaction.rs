@@ -13,6 +13,7 @@ use {
             object_manager::{reserved_space_from_journal_usage, ObjectManager},
             object_record::{ObjectItem, ObjectKey, ObjectValue},
         },
+        serialized_types::Versioned,
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -122,7 +123,7 @@ pub trait TransactionHandler: Send + Sync {
 /// transaction, these are stored as a set which allows some mutations to be deduplicated and found
 /// (and we require custom comparison functions below).  For example, we need to be able to find
 /// object size changes.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize, Versioned)]
 pub enum Mutation {
     ObjectStore(ObjectStoreMutation),
     EncryptedObjectStore(Box<[u8]>),

@@ -698,7 +698,7 @@ mod tests {
         std::ops::{Bound, Range},
     };
 
-    #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+    #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize, Versioned)]
     struct TestKey(Range<u64>);
 
     versioned_type! { 1.. => TestKey, }
@@ -1233,7 +1233,7 @@ mod tests {
         .await;
     }
 
-    #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+    #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize, Versioned)]
     struct TestKeyWithDefaultNextKey(Range<u64>);
 
     versioned_type! { 1.. => TestKeyWithDefaultNextKey }

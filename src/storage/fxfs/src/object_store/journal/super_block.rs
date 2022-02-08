@@ -98,7 +98,7 @@ impl SuperBlockCopy {
 /// At mount time, the super block used is the valid `SuperBlock` with the highest generation
 /// number.
 // TODO(csuter): Add a UUID
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Versioned)]
 pub struct SuperBlock {
     /// The major version of the super-block's format.
     pub major_version: u32,
@@ -149,7 +149,7 @@ pub struct SuperBlock {
     pub borrowed_metadata_space: u64,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Versioned)]
 pub enum SuperBlockRecord {
     // When reading the super-block we know the initial extent, but not subsequent extents, so these
     // records need to exist to allow us to completely read the super-block.
@@ -444,7 +444,7 @@ mod tests {
         // Create a large number of objects in the root parent store so that we test handling of
         // extents.
         let mut journal_offset = 0;
-        for _ in 0..8000 {
+        for _ in 0..32000 {
             let mut transaction = fs
                 .clone()
                 .new_transaction(&[], Options::default())

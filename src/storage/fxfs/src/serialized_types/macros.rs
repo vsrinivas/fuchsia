@@ -91,11 +91,7 @@ pub fn versioned_type(input: TokenStream) -> TokenStream {
         arms.iter().map(|x| (x.pat.lo_value(), x.ident.clone())).collect();
     assert_eq!(arms.len(), versions.len(), "Duplicate version range found.");
 
-    // Every versioned type instance should implement 'Versioned'.
-    let mut idents: Vec<&syn::Ident> = versions.values().collect();
-    idents.dedup();
-    let iter = idents.iter();
-    let mut out = quote! { #(impl Versioned for #iter {} )* };
+    let mut out = quote! {};
 
     // The latest version should implement VersionedLatest.
     if let Some((major, ident)) = versions.iter().last() {
@@ -103,7 +99,7 @@ pub fn versioned_type(input: TokenStream) -> TokenStream {
         let iter = arms
             .iter()
             .map(|x| (x.pat.lo_value(), x.ident.clone()))
-            .map(|(v, i)| quote! { #v.. => Ok(#i::deserialize_from(reader)?.into()), });
+            .map(|(v, i)| quote! { #v.. => Ok(#i::deserialize_from(reader, version)?.into()), });
         out = quote! {
             #out
             impl VersionedLatest for #ident {
@@ -125,8 +121,11 @@ pub fn versioned_type(input: TokenStream) -> TokenStream {
             }
         };
     }
+
     // The [From] ladder is a little tricky because users are free to repeat types
     // in their version mapping. We use our sequence of versions.
+    let mut idents: Vec<&syn::Ident> = versions.values().collect();
+    idents.dedup();
     let last_ident = idents.pop().unwrap();
 
     for i in 0..idents.len().saturating_sub(1) {
@@ -143,4 +142,12 @@ pub fn versioned_type(input: TokenStream) -> TokenStream {
         }
     }
     TokenStream::from(out)
+}
+
+/// This is just a shorthand for `impl Versioned for Foo {}` which is required for all top-level
+/// versioned struct/enum in Fxfs.
+#[proc_macro_derive(Versioned)]
+pub fn derive_versioned(input: TokenStream) -> TokenStream {
+    let syn::DeriveInput { ident, .. } = parse_macro_input!(input);
+    TokenStream::from(quote! { impl Versioned for #ident {} })
 }

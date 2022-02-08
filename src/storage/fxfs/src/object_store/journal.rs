@@ -124,7 +124,7 @@ pub fn fletcher64(buf: &[u8], previous: u64) -> u64 {
     (hi as u64) << 32 | lo as u64
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Versioned)]
 pub enum JournalRecord {
     // Indicates no more records in this block.
     EndBlock,
@@ -1213,7 +1213,7 @@ mod tests {
             FxFilesystem::open(device, Arc::new(InsecureCrypt::new())).await.expect("open failed");
         let root_store = fs.root_store();
         // Generate enough work to induce a journal flush.
-        for _ in 0..2000 {
+        for _ in 0..8000 {
             let mut transaction = fs
                 .clone()
                 .new_transaction(&[], Options::default())

@@ -93,7 +93,7 @@ pub trait HandleOwner: AsRef<ObjectStore> + Send + Sync + 'static {
 
 // StoreInfo stores information about the object store.  This is stored within the parent object
 // store, and is used, for example, to get the persistent layer objects.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Versioned)]
 pub struct StoreInfo {
     // The last used object ID.  Note that this field is not accurate in memory; ObjectStore's
     // last_object_id field is the one to use in that case.
@@ -138,7 +138,7 @@ pub struct HandleOptions {
     pub skip_journal_checks: bool,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, Versioned)]
 pub struct EncryptedMutations {
     // Information about the mutations are held here, but the actual encrypted data is held within
     // data.  For each transaction, we record the checkpoint and the count of mutations within the

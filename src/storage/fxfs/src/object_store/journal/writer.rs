@@ -173,7 +173,8 @@ mod tests {
         assert_eq!(buf.len(), TEST_BLOCK_SIZE);
         handle.read(0, buf.as_mut()).await.expect("read failed");
         let mut cursor = std::io::Cursor::new(buf.as_slice());
-        let value: u32 = u32::deserialize_from(&mut cursor).expect("deserialize_from failed");
+        let value: u32 =
+            u32::deserialize_from(&mut cursor, LATEST_VERSION).expect("deserialize_from failed");
         assert_eq!(value, 4u32);
         let (payload, checksum_slice) =
             buf.as_slice().split_at(buf.len() - std::mem::size_of::<Checksum>());
@@ -207,7 +208,8 @@ mod tests {
         assert_eq!(buf.len(), TEST_BLOCK_SIZE);
         handle.read(0, buf.as_mut()).await.expect("read failed");
         let mut cursor = std::io::Cursor::new(&buf.as_slice()[checkpoint.file_offset as usize..]);
-        let value: u64 = u64::deserialize_from(&mut cursor).expect("deserialize_from failed");
+        let value: u64 =
+            u64::deserialize_from(&mut cursor, LATEST_VERSION).expect("deserialize_from failed");
         assert_eq!(value, 17);
     }
 }

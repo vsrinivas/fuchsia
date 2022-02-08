@@ -5,7 +5,10 @@
 // TODO(jfsulliv): need validation after deserialization.
 
 use {
-    crate::lsm_tree::types::{NextKey, OrdLowerBound, OrdUpperBound, RangeKey},
+    crate::{
+        lsm_tree::types::{NextKey, OrdLowerBound, OrdUpperBound, RangeKey},
+        serialized_types::Versioned,
+    },
     serde::{Deserialize, Serialize},
     std::cmp::{max, min},
     std::ops::Range,
@@ -14,7 +17,7 @@ use {
 /// The common case for extents which cover the data payload of some object.
 pub const DEFAULT_DATA_ATTRIBUTE_ID: u64 = 0;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Versioned)]
 pub struct ExtentKey {
     pub object_id: u64,
     pub attribute_id: u64,
@@ -148,7 +151,7 @@ impl Checksums {
 
 /// ExtentValue is the payload for an extent in the object store, which describes where the extent
 /// is physically located.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Versioned)]
 pub enum ExtentValue {
     /// Indicates a deleted extent; that is, the logical range described by the extent key is
     /// considered to be deleted.

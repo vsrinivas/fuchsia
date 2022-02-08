@@ -12,16 +12,16 @@ use {
 // Note we don't use the standard serialized_types::LATEST_VERSION for tests.
 const LATEST_VERSION: Version = Version { major: 4, minor: 2 };
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Versioned)]
 struct FooV1 {
     a: u32,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Versioned)]
 struct FooV2 {
     a: u32,
     b: u8,
 }
-#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize, Versioned)]
 struct FooV3 {
     a: u32,
     c: u64,
@@ -50,7 +50,9 @@ fn test_deserialize_from_version() {
     let f3 = FooV3 { a: 1, c: 256 };
 
     let mut v: Vec<u8> = Vec::new();
-    f1.serialize_into(&mut v).expect("FooV1");
+    // Note we do this by hand because Versioned::serialize_into will use the latest serializer
+    // and we do NOT want varint encoding here.
+    bincode::serialize_into(&mut v, &f1).expect("FooV1");
     assert_eq!(
         FooV3::deserialize_from_version(&mut Cursor::new(&v), Version { major: 1, minor: 0 })
             .expect("Deserialize FooV1"),
@@ -60,7 +62,7 @@ fn test_deserialize_from_version() {
     let mut v: Vec<u8> = Vec::new();
     f2.serialize_into(&mut v).expect("FooV2");
     assert_eq!(
-        FooV3::deserialize_from_version(&mut Cursor::new(&v), Version { major: 2, minor: 0 })
+        FooV3::deserialize_from_version(&mut Cursor::new(&v), Version { major: 3, minor: 0 })
             .expect("Deserialize FooV2"),
         f3
     );

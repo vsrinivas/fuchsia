@@ -17,10 +17,10 @@ use {
 
 // If all layer files are compacted the the journal flushed, and super-block both rewritten, all
 // versions should match this value.
-pub const LATEST_VERSION: Version = Version { major: 2, minor: 0 };
+pub const LATEST_VERSION: Version = Version { major: 3, minor: 0 };
 
 // Note that AllocatorInfoV1 exists only to validate format migrations work.
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Versioned)]
 struct AllocatorInfoV1 {
     allocated_bytes: u32,
     layers: Vec<u64>,

@@ -9,7 +9,7 @@ use {
         },
         object_handle::{ReadObjectHandle, WriteBytes},
         round::{round_down, round_up},
-        serialized_types::{Version, VersionedLatest, LATEST_VERSION},
+        serialized_types::{Version, Versioned, VersionedLatest, LATEST_VERSION},
     },
     anyhow::{bail, Context, Error},
     async_trait::async_trait,
@@ -28,7 +28,7 @@ use {
 };
 
 // The first block of each layer contains metadata for the rest of the layer.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Versioned)]
 pub struct LayerInfo {
     /// The version of the key and value structs serialized in this layer.
     pub key_value_version: Version,

@@ -56,7 +56,7 @@
 mod traits;
 
 // Re-export the traits we need.
-pub use serialize_macros::versioned_type;
+pub use serialize_macros::*;
 pub use traits::*;
 
 #[cfg(test)]
