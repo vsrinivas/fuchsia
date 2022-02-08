@@ -323,15 +323,13 @@
                 "#cobalt",
                 "#feedback",
                 "#pkg-resolver",
+                "#session-manager",
             ],
         },
         {
             protocol: [ "fuchsia.posix.socket.Provider" ],
             from: "#network",
-            to: [
-                "#agis",
-                "#session-manager",
-            ],
+            to: [ "#agis" ],
         },
         {
             protocol: "fuchsia.stash.SecureStore",
