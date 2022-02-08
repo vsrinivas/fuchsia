@@ -52,7 +52,7 @@ fuchsia_component("vkvalidation_external_cmp") {
     ":override",
     ":override_from_path",
     ":vkvalidation_bin",
-    "//src/lib/vulkan/validation-layer-package:validation-client",
+    "//src/lib/vulkan/vulkan-validation-pkg:validation-client",
   ]
   manifest = "meta/vkvalidation-external.cml"
 }
@@ -70,6 +70,6 @@ group("vkvalidation") {
   deps = [
     ":vkvalidation-external-pkg",
     ":vkvalidation-pkg",
-    "//src/lib/vulkan/validation-layer-package",
+    "//src/lib/vulkan/vulkan-validation-pkg:validation-client",
   ]
 }

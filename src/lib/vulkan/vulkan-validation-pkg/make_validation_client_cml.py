@@ -4,6 +4,9 @@
 
 import argparse
 
+#
+# This script generates the component manifest used by the validation-client component.
+#
 parser = argparse.ArgumentParser()
 parser.add_argument("output_file")
 parser.add_argument("hash_file")
@@ -15,21 +18,21 @@ test_hash = open(args.hash_file, "r").read().strip()
 open(args.output_file, "w").write(
     """{ children: [
         {
-            name: "layer-server",
-            url: "fuchsia-pkg://fuchsia.com/validation-layer-package?hash=%s#meta/layer-server.cm",
+            name: "validation-server",
+            url: "fuchsia-pkg://fuchsia.com/validation-server-pkg?hash=%s#meta/validation-server.cm",
         },
     ],
     expose: [
         {
-            directory: "validation-pkg",
-            from: "#layer-server",
+            directory: "validation_server_pkg",
+            from: "#validation-server",
         },
     ],
     offer: [
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
-            to: "#layer-server",
+            to: "#validation-server",
         },
     ],
 }

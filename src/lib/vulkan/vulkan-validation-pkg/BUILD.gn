@@ -8,10 +8,10 @@ import("../layers.gni")
 # To prevent confusion, restrict default visibility.
 visibility = [ ":*" ]
 
-executable("layer-server-bin") {
-  output_name = "layer-server"
+executable("validation-server-bin") {
+  output_name = "validation-server"
 
-  sources = [ "main.cc" ]
+  sources = [ "validation_server.cc" ]
 
   deps = [
     "//sdk/lib/fdio",
@@ -51,29 +51,34 @@ resource("vklayer_khronos_validation_json") {
   deps = [ ":process_layer_json" ]
 }
 
-fuchsia_component("layer-server-component") {
-  manifest = "meta/layer-server.cml"
-  component_name = "layer-server"
+fuchsia_component("validation-server-component") {
+  manifest = "meta/validation-server.cml"
+  component_name = "validation-server"
   deps = [
-    ":layer-server-bin",
+    ":validation-server-bin",
     ":vulkan_validation_layers",
   ]
 }
 
-fuchsia_package("validation-layer-package") {
+fuchsia_package("validation-server-pkg") {
   visibility += [ "*" ]
-  deps = [ ":layer-server-component" ]
+  deps = [ ":validation-server-component" ]
+}
+
+group("vulkan-validation-pkg") {
+  visibility += [ "*" ]
+  deps = [ ":validation-server-pkg" ]
 }
 
 if (current_toolchain == target_toolchain) {
-  # Generate a cml that includes a specific version of validation-layer-package.
+  # Generate a cml that includes a specific version of vulkan-validation-pkg.
   action("cml") {
     # This boils down to a _pm target.
-    target_outputs = get_target_outputs(":validation-layer-package")
+    target_outputs = get_target_outputs(":validation-server-pkg")
 
     # The meta.far.merkle file contains the current package hash.
     merkle_file = target_outputs[2]
-    deps = [ ":validation-layer-package" ]
+    deps = [ ":validation-server-pkg" ]
     script = "make_validation_client_cml.py"
     sources = [
       merkle_file,
@@ -88,7 +93,7 @@ if (current_toolchain == target_toolchain) {
   }
 }
 
-# Clients that want access to the validation layers should depend on this.
+# Clients that want access to Vulkan validation layers should depend on this.
 fuchsia_component("validation-client") {
   component_name = "validation-client"
   visibility += [ "*" ]

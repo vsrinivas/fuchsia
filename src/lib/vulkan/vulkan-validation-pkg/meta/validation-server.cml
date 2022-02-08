@@ -4,18 +4,18 @@
         "syslog/elf_stdio.shard.cml",
     ],
     program: {
-        binary: "bin/layer-server",
+        binary: "bin/validation-server",
     },
     capabilities: [
         {
-            directory: "validation-pkg",
+            directory: "validation_server_pkg",
             rights: [ "rx*" ],
             path: "/pkg",
         },
     ],
     expose: [
         {
-            directory: "validation-pkg",
+            directory: "validation_server_pkg",
             from: "self",
             rights: [ "rx*" ],
         },
