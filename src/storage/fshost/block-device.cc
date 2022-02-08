@@ -1048,10 +1048,19 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     if (response->status != ZX_OK)
       return response->status;
     // If a size is not specified, limit the size of the data partition so as not to use up all
-    // FVM's space (thus limiting blobfs growth).  24 MiB should be enough.
-    slice_count = std::min<uint64_t>(
-        24 * 1024 * 1024 / slice_size - 1,
-        response->manager->slice_count - response->manager->assigned_slice_count);
+    // FVM's space (thus limiting blobfs growth).  24 MiB should be enough except f2fs.
+    // Due to reserved and over-provisoned area of f2fs, it needs volume size at least 100 MiB.
+    const uint64_t slices_available =
+        response->manager->slice_count - response->manager->assigned_slice_count;
+    if (binary_path == kF2fsPath) {
+      if (slices_available < kDefaultF2fsMinBytes / slice_size) {
+        FX_LOGS(ERROR) << "Not enough space for f2fs partition";
+        return ZX_ERR_NO_SPACE;
+      }
+      slice_count = kDefaultF2fsMinBytes / slice_size - 1;
+    } else {
+      slice_count = std::min<uint64_t>(kDefaultMinfsMaxBytes / slice_size - 1, slices_available);
+    }
   } else {
     // Account for the slice zxcrypt uses.
     slice_count--;
