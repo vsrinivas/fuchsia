@@ -140,8 +140,8 @@ class NameMatcher extends TestAttributeMatcher {
       String testName, TestDefinition testDefinition,
       {required MatchLength matchLength, required Comparer comparer}) {
     return matchLength == MatchLength.full
-        ? comparer.equals(testName, testDefinition.name)
-        : comparer.contains(testName, testDefinition.name);
+        ? comparer.equals(testDefinition.name, testName)
+        : comparer.contains(testDefinition.name, testName);
   }
 }
 

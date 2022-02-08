@@ -192,8 +192,15 @@ void main() {
         buildDir: FakeFxEnv.shared.outputDir,
         os: 'fuchsia',
         packageUrl: PackageUrl.fromString(
-            'fuchsia-pkg://fuchsia.com/fancy#meta/test1.cmx'),
-        name: 'device test',
+            'fuchsia-pkg://fuchsia.com/a_fancy_package#meta/test_component_1.cmx'),
+        name: 'device_test_v1',
+      ),
+      TestDefinition(
+        buildDir: FakeFxEnv.shared.outputDir,
+        os: 'fuchsia',
+        packageUrl: PackageUrl.fromString(
+            'fuchsia-pkg://fuchsia.com/another_package#meta/test_component_2.cm'),
+        name: 'device_test_v2',
       ),
       TestDefinition(
         buildDir: FakeFxEnv.shared.outputDir,
@@ -227,6 +234,13 @@ void main() {
       );
     }
 
+    test('when --exact is not specified for a test name', () {
+      ParsedManifest parsedManifest = parseFromArgs(args: ['test_v2']);
+      expect(parsedManifest.testBundles, hasLength(1));
+      expect(
+          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v2');
+    });
+
     test('when the --exact flag is passed for a test name', () {
       // --exact correctly catches exact name matches
       ParsedManifest parsedManifest =
@@ -255,14 +269,17 @@ void main() {
 
     test('when the --exact flag is passed for a test packageUrl', () {
       // --exact correctly catches exact packageUrl matches
-      ParsedManifest parsedManifest = parseFromArgs(
-          args: ['fuchsia-pkg://fuchsia.com/fancy#meta/test1.cmx', '--exact']);
+      ParsedManifest parsedManifest = parseFromArgs(args: [
+        'fuchsia-pkg://fuchsia.com/a_fancy_package#meta/test_component_1.cmx',
+        '--exact'
+      ]);
       expect(parsedManifest.testBundles, hasLength(1));
-      expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
+      expect(
+          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v1');
 
       // --exact kills partial packageUrl matches
-      parsedManifest =
-          parseFromArgs(args: ['fuchsia-pkg://fuchsia.com/fancy', '--exact']);
+      parsedManifest = parseFromArgs(
+          args: ['fuchsia-pkg://fuchsia.com/a_fancy_package', '--exact']);
       expect(parsedManifest.testBundles, hasLength(0));
     });
 
@@ -275,26 +292,33 @@ void main() {
 
     test('when the -d flag is passed', () {
       ParsedManifest parsedManifest = parseFromArgs(
-        args: ['fuchsia-pkg://fuchsia.com/fancy#meta/test1.cmx', '--device'],
+        args: [
+          'fuchsia-pkg://fuchsia.com/a_fancy_package#meta/test_component_1.cmx',
+          '--device'
+        ],
       );
       expect(parsedManifest.testBundles, hasLength(1));
-      expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
+      expect(
+          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v1');
     });
 
     test('when no flags are passed', () {
       ParsedManifest parsedManifest = parseFromArgs();
-      expect(parsedManifest.testBundles, hasLength(2));
+      expect(parsedManifest.testBundles, hasLength(3));
     });
 
     test('when packageUrl.resourcePath is matched', () {
-      ParsedManifest parsedManifest = parseFromArgs(args: ['test1.cmx']);
+      ParsedManifest parsedManifest =
+          parseFromArgs(args: ['test_component_1.cmx']);
       expect(parsedManifest.testBundles, hasLength(1));
-      expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
+      expect(
+          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v1');
     });
     test('when packageUrl.rawResource is matched', () {
-      ParsedManifest parsedManifest = parseFromArgs(args: ['test1']);
+      ParsedManifest parsedManifest = parseFromArgs(args: ['test_component_1']);
       expect(parsedManifest.testBundles, hasLength(1));
-      expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
+      expect(
+          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v1');
     });
 
     test('when packageUrl.resourcePath are not components', () {
@@ -322,7 +346,7 @@ void main() {
 
     test('when packageUrl.packageName is matched', () {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(
-        rawArgs: ['fancy'],
+        rawArgs: ['a_fancy_package'],
         fxEnv: FakeFxEnv.shared,
       );
       var cmd = FuchsiaTestCommand.fromConfig(
@@ -336,14 +360,15 @@ void main() {
         testsConfig: testsConfig,
       );
       expect(parsedManifest.testBundles, hasLength(1));
-      expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
+      expect(
+          parsedManifest.testBundles[0].testDefinition.name, 'device_test_v1');
     });
 
     test(
         'when packageUrl.packageName is matched but discriminating '
         'flag prevents', () {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(
-        rawArgs: ['fancy', '--host'],
+        rawArgs: ['a_fancy_package', '--host'],
         fxEnv: FakeFxEnv.shared,
       );
       var cmd = FuchsiaTestCommand.fromConfig(
@@ -439,7 +464,7 @@ void main() {
 
     test('when some supplied arguments match', () {
       ParsedManifest parsedManifest =
-          parseFromArgs(args: ['fancy', 'no-match']);
+          parseFromArgs(args: ['a_fancy_package', 'no-match']);
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.unusedConfigs, hasLength(1));
       expect(parsedManifest.unusedConfigs?[0].testNameGroup,
@@ -447,7 +472,8 @@ void main() {
     });
 
     test('when multiple arguments match the same test', () {
-      ParsedManifest parsedManifest = parseFromArgs(args: ['fancy', 'test1']);
+      ParsedManifest parsedManifest =
+          parseFromArgs(args: ['a_fancy_package', 'test_component_1']);
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.unusedConfigs, hasLength(0));
     });
