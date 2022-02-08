@@ -12,7 +12,7 @@ use arbitrary::{Arbitrary, Unstructured};
 use fuzz_util::Fuzzed;
 use net_declare::net_mac;
 use net_types::{
-    ip::{IpAddress, Ipv4Addr},
+    ip::{IpAddress, Ipv4Addr, Ipv6Addr},
     UnicastAddr,
 };
 use packet::{
@@ -21,7 +21,7 @@ use packet::{
 };
 use packet_formats::{
     ethernet::EthernetFrameBuilder, ip::IpPacketBuilder, ipv4::Ipv4PacketBuilder,
-    udp::UdpPacketBuilder,
+    ipv6::Ipv6PacketBuilder, tcp::TcpSegmentBuilder, udp::UdpPacketBuilder,
 };
 
 mod print_on_panic {
@@ -155,12 +155,14 @@ enum FrameType {
 enum EthernetFrameType {
     Raw,
     Ipv4(IpFrameType),
+    Ipv6(IpFrameType),
 }
 
 #[derive(Copy, Clone, Debug, Arbitrary)]
 enum IpFrameType {
     Raw,
     Udp,
+    Tcp,
 }
 
 impl FrameType {
@@ -186,6 +188,9 @@ impl EthernetFrameType {
             EthernetFrameType::Ipv4(ip_type) => {
                 ip_type.arbitrary_buf::<Ipv4Addr, Ipv4PacketBuilder, _>(outer, u)
             }
+            EthernetFrameType::Ipv6(ip_type) => {
+                ip_type.arbitrary_buf::<Ipv6Addr, Ipv6PacketBuilder, _>(outer, u)
+            }
         }
     }
 }
@@ -209,6 +214,10 @@ impl IpFrameType {
             IpFrameType::Udp => {
                 let udp_in_ip = Fuzzed::<Nested<UdpPacketBuilder<A>, IPB>>::arbitrary(u)?.into();
                 arbitrary_packet(udp_in_ip.encapsulate(outer), u)
+            }
+            IpFrameType::Tcp => {
+                let tcp_in_ip = Fuzzed::<Nested<TcpSegmentBuilder<A>, IPB>>::arbitrary(u)?.into();
+                arbitrary_packet(tcp_in_ip.encapsulate(outer), u)
             }
         }
     }
