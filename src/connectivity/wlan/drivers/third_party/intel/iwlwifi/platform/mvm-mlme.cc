@@ -444,9 +444,6 @@ zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, uint32_t options,
     return ret;
   }
 
-  // Tell firmware to pass multicast packets to driver.
-  iwl_mvm_configure_filter(mvmvif->mvm);
-
   {
     auto lock = std::lock_guard(mvmvif->mvm->mutex);
 

@@ -733,11 +733,11 @@ TEST_F(MacInterfaceTest, AssocWithHtConfig) {
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
 
   ExpectSendCmd(expected_cmd_id_list({
-     MockCommand(WIDE_ID(LONG_GROUP, LQ_CMD)),
-     MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
-     MockCommand(WIDE_ID(LONG_GROUP, MAC_CONTEXT_CMD)),
-     MockCommand(WIDE_ID(LONG_GROUP, TIME_EVENT_CMD)),
-     MockCommand(WIDE_ID(LONG_GROUP, MCAST_FILTER_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, LQ_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, ADD_STA)),
+      MockCommand(WIDE_ID(LONG_GROUP, MAC_CONTEXT_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, TIME_EVENT_CMD)),
+      MockCommand(WIDE_ID(LONG_GROUP, MCAST_FILTER_CMD)),
   }));
 
   // Extract LQ_CMD data.
