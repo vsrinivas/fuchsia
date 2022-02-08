@@ -64,20 +64,16 @@ fuchsia_test_component("fshost_cpp_integration_test_component") {
   component_name = "fshost_cpp_integration_test_component"
   manifest_outputs = get_target_outputs(":fshost_cpp_integration_test.cml")
   manifest = manifest_outputs[0]
-  deps = [
-    ":fshost_cpp_integration_test",
-    ":fshost_cpp_integration_test.cml",
-  ]
+  deps = [ ":fshost_cpp_integration_test" ]
+  manifest_deps = [ ":fshost_cpp_integration_test.cml" ]
 }
 
 fuchsia_test_component("fshost_rust_integration_test_component") {
   component_name = "fshost_rust_integration_test_component"
   manifest_outputs = get_target_outputs(":fshost_rust_integration_test.cml")
   manifest = manifest_outputs[0]
-  deps = [
-    ":fshost_rust_integration_test",
-    ":fshost_rust_integration_test.cml",
-  ]
+  deps = [ ":fshost_rust_integration_test" ]
+  manifest_deps = [ ":fshost_rust_integration_test.cml" ]
 }
 
 cmc_merge("test-fshost-rust.cml") {
@@ -92,10 +88,8 @@ fuchsia_component("test-fshost-rust") {
   testonly = true
   manifest_outputs = get_target_outputs(":test-fshost-rust.cml")
   manifest = manifest_outputs[0]
-  deps = [
-    ":test-fshost-rust.cml",
-    "..:fshost-rust",
-  ]
+  manifest_deps = [ ":test-fshost-rust.cml" ]
+  deps = [ "..:fshost-rust" ]
 }
 
 fuchsia_test_package("fshost_integration_tests") {

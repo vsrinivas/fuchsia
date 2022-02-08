@@ -227,7 +227,7 @@ foreach(test, fidl_compatibility_tests) {
     visibility = [ ":*" ]
     component_name = component_name
     manifest = generate_output
-    deps = [ ":$generate_label" ]
+    manifest_deps = [ ":$generate_label" ]
   }
 }
 

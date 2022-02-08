@@ -81,6 +81,7 @@ template("fuchsia_package_with_single_component") {
                            [
                              "deps",
                              "manifest",
+                             "manifest_deps",
                              "restricted_features",
                              "testonly",
                            ])

@@ -234,8 +234,8 @@ template("graphics_compute_single_component_package") {
     deps = [
       ":${_binary_target}",
       ":${_component_index_target}",
-      ":${_component_manifest_target}",
     ]
+    manifest_deps = [ ":${_component_manifest_target}" ]
     testonly = _testonly
 
     if (_needs_vulkan) {

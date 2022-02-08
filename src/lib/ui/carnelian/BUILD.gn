@@ -596,6 +596,7 @@ template("carnelian_example") {
     forward_variables_from(invoker, [ "manifest" ])
     visibility = [ ":*" ]
     deps = example_deps
+    manifest_deps = invoker.manifest_deps
   }
 }
 
@@ -696,10 +697,8 @@ foreach(carnelian_example_details, carnelian_examples) {
   # for the example
   carnelian_example(carnelian_example_package_name) {
     manifest = rebase_path(carnelian_example_manifest_path)
-    deps = [
-      ":" + carnelian_example_details.name,
-      ":${carnelian_example_manifest_label}",
-    ]
+    deps = [ ":" + carnelian_example_details.name ]
+    manifest_deps = [ ":${carnelian_example_manifest_label}" ]
     if (defined(carnelian_example_details.additional_deps)) {
       deps += carnelian_example_details.additional_deps
     }

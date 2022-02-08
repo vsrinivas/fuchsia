@@ -53,10 +53,8 @@ template("audio_core_api_test_component") {
     testonly = true
     manifest = get_target_outputs(":${cmx_target}")
     manifest = manifest[0]
-    deps = [
-      ":${cmx_target}",
-      ":${target_name}-bin",
-    ]
+    deps = [ ":${target_name}-bin" ]
+    manifest_deps = [ ":${cmx_target}" ]
     if (defined(invoker.component_deps)) {
       deps += invoker.component_deps
     }

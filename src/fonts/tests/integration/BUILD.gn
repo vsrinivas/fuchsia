@@ -110,50 +110,50 @@ fuchsia_component("fonts_with_aliases_fonts") {
   testonly = true
   manifest = "${target_out_dir}/fonts_with_aliases_fonts.cml"
   deps = [
-    ":fonts_with_aliases_fonts_cml",
     ":testdata",
     "//src/fonts:font_provider",
   ]
+  manifest_deps = [ ":fonts_with_aliases_fonts_cml" ]
 }
 
 fuchsia_component("fonts_with_ephemeral_fonts") {
   testonly = true
   manifest = "${target_out_dir}/fonts_with_ephemeral_fonts.cml"
   deps = [
-    ":fonts_with_ephemeral_fonts_cml",
     ":testdata",
     "//src/fonts:font_provider",
   ]
+  manifest_deps = [ ":fonts_with_ephemeral_fonts_cml" ]
 }
 
 fuchsia_component("fonts_with_large_fonts") {
   testonly = true
   manifest = "${target_out_dir}/fonts_with_large_fonts.cml"
   deps = [
-    ":fonts_with_large_fonts_cml",
     "//src/fonts:font_provider",
     "//src/fonts/collections:test-fonts-large-collection",
   ]
+  manifest_deps = [ ":fonts_with_large_fonts_cml" ]
 }
 
 fuchsia_component("fonts_with_medium_fonts") {
   testonly = true
   manifest = "${target_out_dir}/fonts_with_medium_fonts.cml"
   deps = [
-    ":fonts_with_medium_fonts_cml",
     "//src/fonts:font_provider",
     "//src/fonts/collections:test-fonts-medium-collection",
   ]
+  manifest_deps = [ ":fonts_with_medium_fonts_cml" ]
 }
 
 fuchsia_component("fonts_with_small_fonts") {
   testonly = true
   manifest = "${target_out_dir}/fonts_with_small_fonts.cml"
   deps = [
-    ":fonts_with_small_fonts_cml",
     "//src/fonts:font_provider",
     "//src/fonts/collections:test-fonts-small-collection",
   ]
+  manifest_deps = [ ":fonts_with_small_fonts_cml" ]
 }
 
 # Main integration test driver and capability providers

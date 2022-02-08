@@ -106,11 +106,11 @@ template("audio_pipeline_benchmark") {
     }
     deps += [
       ":${bin_name}-bin",
-      ":${bin_name}-cmx-base",
       ":${bin_name}-config",
     ]
+    manifest_deps = [ ":${bin_name}-cmx-base" ]
     if (defined(invoker.extra_cmx)) {
-      deps += [ ":${bin_name}-cmx-merged" ]
+      manifest_deps += [ ":${bin_name}-cmx-merged" ]
     }
   }
 }

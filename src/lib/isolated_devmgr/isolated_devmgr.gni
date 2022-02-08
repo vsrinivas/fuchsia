@@ -83,15 +83,16 @@ template("isolated_devmgr_component") {
       forward_variables_from(invoker,
                              [
                                "deps",
+                               "manifest_deps",
                                "visibility",
                              ])
       manifest = get_target_outputs(":$manifest_target")
       manifest = manifest[0]
       testonly = true
-      if (!defined(deps)) {
-        deps = []
+      if (!defined(manifest_deps)) {
+        manifest_deps = []
       }
-      deps += [ ":$manifest_target" ]
+      manifest_deps += [ ":$manifest_target" ]
     }
   } else {
     group(target_name) {

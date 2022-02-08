@@ -102,10 +102,8 @@ template("core_realm") {
     manifest = merge_outputs[0]
     component_name = "core"
     check_includes = false
-    deps = [
-      ":${merged_manifest_target}",
-      "//src/sys/core:core_proxy",
-    ]
+    deps = [ "//src/sys/core:core_proxy" ]
+    manifest_deps = [ ":${merged_manifest_target}" ]
   }
 
   fuchsia_package(target_name) {

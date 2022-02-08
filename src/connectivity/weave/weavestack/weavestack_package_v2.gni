@@ -29,12 +29,15 @@ template("_weavestack_package_v2") {
     if (!defined(deps)) {
       deps = []
     }
+    if (!defined(manifest_deps)) {
+      manifest_deps = []
+    }
     deps += [
       "//src/connectivity/weave/weavestack:bin",
       "//src/connectivity/weave/weavestack:default_environment_schema",
     ]
     if (defined(manifest_merge_target_v2)) {
-      deps += [ ":$manifest_merge_target_v2" ]
+      manifest_deps += [ ":$manifest_merge_target_v2" ]
     }
   }
 

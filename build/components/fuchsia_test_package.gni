@@ -145,7 +145,7 @@ template("fuchsia_test_package") {
           component_name = name
           manifest = manifest
           visibility = [ ":*" ]
-          deps = [ ":$generated_manifest_target" ]
+          manifest_deps = [ ":$generated_manifest_target" ]
         }
 
         manifest_name = get_target_outputs(":$modern_generated_name")

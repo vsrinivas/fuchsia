@@ -78,12 +78,13 @@ template("wrap_with_decompressor") {
                            [
                              "deps",
                              "manifest",
+                             "manifest_deps",
                              "visibility",
                              "component_name",
                            ])
-    if (!defined(deps)) {
-      deps = []
+    if (!defined(manifest_deps)) {
+      manifest_deps = []
     }
-    deps += [ ":$generated_target" ]
+    manifest_deps += [ ":$generated_target" ]
   }
 }

@@ -76,7 +76,7 @@ fuchsia_test_component("realm") {
     "dynamic_offers",
     "services",
   ]
-  deps = [ ":realm.cml" ]
+  manifest_deps = [ ":realm.cml" ]
 }
 
 fuchsia_unittest_package("services_test") {

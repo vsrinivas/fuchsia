@@ -179,17 +179,21 @@ template("fuchsia_driver_component") {
                                "component_name",
                                "deps",
                                "manifest",
+                               "manifest_deps",
                                "restricted_features",
                                "testonly",
                                "visibility",
                              ])
-      if (!defined(deps)) {
-        deps = []
-      }
       if (generate_manifest) {
-        deps += [ ":${full_manifest_target}" ]
+        if (!defined(manifest_deps)) {
+          manifest_deps = []
+        }
+        manifest_deps += [ ":${full_manifest_target}" ]
         manifest = get_target_outputs(":${full_manifest_target}")
         manifest = manifest[0]
+      }
+      if (!defined(deps)) {
+        deps = []
       }
       if (create_driver_doc) {
         deps += [ ":${doc_target}" ]

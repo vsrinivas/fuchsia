@@ -100,8 +100,8 @@ fuchsia_component("validation-client") {
 
   cml_target = ":cml($target_toolchain)"
 
-  deps = [ cml_target ]
+  manifest_deps = [ cml_target ]
 
-  manifest =
-      get_label_info(deps[0], "target_gen_dir") + "/validation-client.cml"
+  manifest = get_label_info(manifest_deps[0], "target_gen_dir") +
+             "/validation-client.cml"
 }

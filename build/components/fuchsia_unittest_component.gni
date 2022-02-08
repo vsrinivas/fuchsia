@@ -109,6 +109,7 @@ template("fuchsia_unittest_component") {
                              [
                                "deps",
                                "manifest",
+                               "manifest_deps",
                                "restricted_features",
                                "visibility",
                              ])
@@ -123,10 +124,10 @@ template("fuchsia_unittest_component") {
       testonly = true
 
       if (defined(generated_target)) {
-        if (!defined(deps)) {
-          deps = []
+        if (!defined(manifest_deps)) {
+          manifest_deps = []
         }
-        deps += [ ":$generated_target" ]
+        manifest_deps += [ ":$generated_target" ]
       }
     }
   } else {

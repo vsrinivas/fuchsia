@@ -85,12 +85,13 @@ template("_audio_core_package") {
 
       if (use_prebuilt_coefficient_tables) {
         deps = [ "//src/media/audio/audio_core:audio_core_bin_with_prebuilt_coefficient_tables" ]
-        deps += [ ":$manifest_rewrite_target" ]
+        manifest_deps = [ ":$manifest_rewrite_target" ]
       } else {
         deps = [ "//src/media/audio/audio_core:audio_core_bin" ]
+        manifest_deps = []
       }
       if (defined(manifest_merge_target)) {
-        deps += [ ":$manifest_merge_target" ]
+        manifest_deps += [ ":$manifest_merge_target" ]
       }
     }
     components += [ ":$component_target" ]

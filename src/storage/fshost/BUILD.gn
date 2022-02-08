@@ -416,9 +416,9 @@ fuchsia_component("test-fshost") {
   manifest = manifest_outputs[0]
   deps = [
     ":fshost",
-    ":test-fshost.cml",
     "//src/security/policy/zxcrypt:null",
   ]
+  manifest_deps = [ ":test-fshost.cml" ]
 }
 
 cmc_merge("test-fshost-no-watcher.cml") {
@@ -441,9 +441,9 @@ fuchsia_component("test-fshost-no-watcher") {
   manifest = manifest_outputs[0]
   deps = [
     ":fshost",
-    ":test-fshost-no-watcher.cml",
     "//src/security/policy/zxcrypt:null",
   ]
+  manifest_deps = [ ":test-fshost-no-watcher.cml" ]
 }
 
 test("copier_test") {

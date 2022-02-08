@@ -48,6 +48,7 @@ template("fuchsia_shell_package") {
         forward_variables_from(invoker,
                                [
                                  "deps",
+                                 "manifest_deps",
                                  "testonly",
                                ])
         visibility = [ ":*" ]
