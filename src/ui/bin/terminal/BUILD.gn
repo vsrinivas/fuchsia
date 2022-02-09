@@ -22,7 +22,6 @@ rustc_library("lib") {
   edition = "2018"
 
   deps = [
-    "third_party/term-model",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty-rustc",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
@@ -45,6 +44,7 @@ rustc_library("lib") {
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/ui/terminal",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/alacritty/alacritty_terminal:term_model",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",
@@ -173,7 +173,7 @@ fuchsia_test_package("terminal_tests") {
 fuchsia_test_component("term_model_tests_component") {
   component_name = "term_model_tests"
   manifest = "meta/term_model_lib_test.cmx"
-  deps = [ "third_party/term-model:term-model_test" ]
+  deps = [ "//third_party/alacritty/alacritty_terminal:term-model_test" ]
 }
 
 fuchsia_test_package("term_model_tests") {
