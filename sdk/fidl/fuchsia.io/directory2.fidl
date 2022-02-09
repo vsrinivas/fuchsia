@@ -65,8 +65,7 @@ protocol Directory2 {
     ///   have a different server end of the socket and there will be a single client end per
     ///   inotify instance on inotify init.
     ///
-    // TODO(tamird): why does this specify "io1"?
-    @selector("fuchsia.io1/Directory.AddInotifyFilter")
+    @selector("fuchsia.io/Directory.AddInotifyFilter")
     AddInotifyFilter(resource struct {
         path Path;
         filter InotifyWatchMask;
