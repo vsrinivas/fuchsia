@@ -53,6 +53,7 @@ class NandOperation {
   static void OnCompletion(void* cookie, zx_status_t status, nand_operation_t* op);
   zx_status_t GetVmo(size_t num_bytes);
   void CreateOperation();
+  zx_status_t WaitForCompletion();
 
   sync_completion_t event_;
   fzl::OwnedVmoMapper mapper_;

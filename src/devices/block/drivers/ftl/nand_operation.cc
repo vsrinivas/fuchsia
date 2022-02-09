@@ -49,14 +49,25 @@ nand_operation_t* NandOperation::GetOperation() {
   return reinterpret_cast<nand_operation_t*>(raw_buffer_.get());
 }
 
+zx_status_t NandOperation::WaitForCompletion() {
+  for (;;) {
+    zx_status_t status = sync_completion_wait(&event_, ZX_SEC(60));
+    switch (status) {
+      case ZX_OK:
+        sync_completion_reset(&event_);
+        return status_;
+      case ZX_ERR_TIMED_OUT:
+        zxlogf(ERROR, "FTL: slow operation (%p), still waiting...", this);
+        break;
+      default:
+        return status;
+    }
+  }
+}
+
 zx_status_t NandOperation::Execute(OobDoubler* parent) {
   parent->Queue(GetOperation(), OnCompletion, this);
-  zx_status_t status = sync_completion_wait(&event_, ZX_SEC(60));
-  sync_completion_reset(&event_);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return status_;
+  return WaitForCompletion();
 }
 
 // Static.
@@ -82,7 +93,7 @@ std::vector<zx::status<>> NandOperation::ExecuteBatch(
   }
 
   for (size_t i = 0; i < operations.size(); ++i) {
-    zx_status_t status = sync_completion_wait(&operations[i]->event_, zx::sec(60).get());
+    zx_status_t status = operations[i]->WaitForCompletion();
     results[i] = status == ZX_OK ? zx::status<>(zx::ok()) : zx::status<>(zx::error(status));
     if (results[i].is_ok()) {
       results[i] = operations[i]->status_ == ZX_OK
