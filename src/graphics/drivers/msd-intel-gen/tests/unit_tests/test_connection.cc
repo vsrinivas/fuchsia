@@ -235,6 +235,35 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     connection->DestroyContext(context);
   }
 
+  // This can happen when a connection is shutting down.
+  void ReleaseBufferWhileMappedNoContext() {
+    auto connection = std::shared_ptr<MsdIntelConnection>(MsdIntelConnection::Create(this, 0));
+    ASSERT_TRUE(connection);
+
+    std::shared_ptr<MsdIntelBuffer> buffer = MsdIntelBuffer::Create(PAGE_SIZE, "test");
+    std::shared_ptr<GpuMapping> mapping;
+
+    constexpr uint64_t kGpuAddr = 0x10000;
+    EXPECT_TRUE(AddressSpace::MapBufferGpu(connection->per_process_gtt(), buffer, kGpuAddr, 0, 1,
+                                           &mapping));
+    ASSERT_TRUE(mapping);
+    EXPECT_TRUE(connection->per_process_gtt()->AddMapping(mapping));
+
+    auto wait_callback = [&](magma::PlatformEvent* event, uint32_t timeout_ms) {
+      // Should never be called.
+      EXPECT_TRUE(false);
+      return MAGMA_STATUS_OK;
+    };
+
+    connection->ReleaseBuffer(buffer->platform_buffer(), wait_callback);
+
+    EXPECT_FALSE(connection->sent_context_killed());
+
+    const std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>>& mappings =
+        connection->mappings_to_release();
+    EXPECT_EQ(0u, mappings.size());
+  }
+
   void ReuseGpuAddrWithoutRelease() {
     auto connection = MsdIntelConnection::Create(this, 0);
     ASSERT_TRUE(connection);
@@ -273,6 +302,10 @@ TEST_F(TestMsdIntelConnection, ReleaseBufferWhileMapped) { ReleaseBufferWhileMap
 
 TEST_F(TestMsdIntelConnection, ReleaseBufferWhileMappedMultiContext) {
   ReleaseBufferWhileMappedMultiContext();
+}
+
+TEST_F(TestMsdIntelConnection, ReleaseBufferWhileMappedNoContext) {
+  ReleaseBufferWhileMappedNoContext();
 }
 
 TEST_F(TestMsdIntelConnection, ReleaseBufferStuckCommandBuffer) {

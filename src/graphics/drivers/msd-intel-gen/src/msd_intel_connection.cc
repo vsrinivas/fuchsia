@@ -214,9 +214,10 @@ void MsdIntelConnection::ReleaseBuffer(
         mappings_to_release_.emplace_back(std::move(bus_mappings[i]));
       }
     } else {
-      // Since all events have signaled, all inflight mappings should be destroyed so
+      // If there are no contexts, the connection is in the process of shutting down.
+      // Otherwise, since all events have signaled, all inflight mappings should be destroyed so
       // there should be no excess use count.
-      DASSERT(false);
+      DASSERT(context_list_.empty());
     }
   }
 }
