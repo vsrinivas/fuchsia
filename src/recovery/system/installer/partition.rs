@@ -286,6 +286,10 @@ impl Partition {
             _ => Configuration::A,
         }
     }
+
+    pub fn get_src(self) -> String{
+        self.src.clone()
+    }
 }
 
 impl fmt::Debug for Partition {

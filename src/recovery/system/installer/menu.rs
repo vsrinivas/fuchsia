@@ -19,6 +19,8 @@ const CONST_BUTTON_USB_INSTALL: &'static str = "Install from USB";
 pub const CONST_WARN_MESSAGE: &'static str = "Installing Fuchsia will WIPE YOUR DISK!";
 pub const CONST_WARN_PROCEED: &'static str = "Do you wish to proceed?";
 
+//pub const CONST_PLEASE_WAIT: &'static str = "Please Wait";
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum MenuState {
     SelectInstall,
@@ -33,6 +35,7 @@ pub enum MenuEvent {
     Navigate(Key),
     Enter,
     GotBlockDevices(Vec<String>),
+    ProgressUpdate(String),
     Error(String),
 }
 
@@ -85,9 +88,13 @@ impl MenuStateMachine {
                         MenuState::SelectDisk
                     }
                 }
-                MenuEvent::Enter => MenuState::SelectInstall,
                 MenuEvent::Error(error_msg) => {
                     self.error_msg = String::from(error_msg);
+                    MenuState::Error
+                }
+                MenuEvent::Enter => MenuState::SelectInstall,
+                _ => {
+                    self.error_msg = String::from(CONST_ERR_UNEXPECTED_EVENT);
                     MenuState::Error
                 }
             },
@@ -100,12 +107,12 @@ impl MenuStateMachine {
                         MenuState::Error
                     }
                 },
-                MenuEvent::GotBlockDevices(_devices) => {
-                    self.error_msg = String::from(CONST_ERR_UNEXPECTED_EVENT);
-                    MenuState::Error
-                }
                 MenuEvent::Error(error_msg) => {
                     self.error_msg = String::from(error_msg);
+                    MenuState::Error
+                }
+                _ => {
+                    self.error_msg = String::from(CONST_ERR_UNEXPECTED_EVENT);
                     MenuState::Error
                 }
             },
@@ -122,16 +129,22 @@ impl MenuStateMachine {
                         MenuState::Error
                     }
                 },
-                MenuEvent::GotBlockDevices(_devices) => {
-                    self.error_msg = String::from(CONST_ERR_UNEXPECTED_EVENT);
-                    MenuState::Error
-                }
                 MenuEvent::Error(error_msg) => {
                     self.error_msg = String::from(error_msg);
                     MenuState::Error
                 }
+                _ => {
+                    self.error_msg = String::from(CONST_ERR_UNEXPECTED_EVENT);
+                    MenuState::Error
+                }
             },
-            MenuState::Progress => MenuState::Progress,
+            MenuState::Progress => match event {
+                MenuEvent::ProgressUpdate(update) => {
+                    self.error_msg = String::from(update);
+                    MenuState::Progress
+                }
+                _ => MenuState::Progress,
+            },
             MenuState::Error => MenuState::Error,
         };
 
@@ -235,6 +248,14 @@ impl MenuStateMachine {
         }
 
         self.buttons[self.selected_button_index].button_type
+    }
+
+    pub fn get_selected_button_text(&self) -> String {
+        if self.buttons.len() == 0 {
+            return String::from("");
+        }
+
+        String::from(self.buttons[self.selected_button_index].text.clone())
     }
 
     pub fn get_error_msg(&self) -> String {

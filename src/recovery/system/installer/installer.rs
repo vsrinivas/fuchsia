@@ -2,15 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+
 use {
     crate::partition::Partition,
     anyhow::{anyhow, Context, Error},
     fdio,
-    fidl::endpoints::Proxy,
+    fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_hardware_block::BlockProxy,
-    fidl_fuchsia_sysinfo as fsysinfo, fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
-    std::{fs, path::Path},
+    fidl_fuchsia_paver::{
+        BootManagerMarker, Configuration, DynamicDataSinkProxy, PaverMarker, PaverProxy,
+    },
+    fidl_fuchsia_sysinfo as fsysinfo, //fuchsia_async as fasync,
+    fuchsia_component::client,
+    fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
+    std::{
+        fs,
+        //io::{self, BufRead},
+        path::Path,
+    },
 };
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -105,6 +115,20 @@ pub async fn find_install_source(
     candidate
 }
 
+pub fn paver_connect(path: &str) -> Result<(PaverProxy, DynamicDataSinkProxy), Error> {
+    let (block_device_chan, block_remote) = zx::Channel::create()?;
+    fdio::service_connect(&path, block_remote)?;
+    let (data_sink_chan, data_remote) = zx::Channel::create()?;
+
+    let paver: PaverProxy =
+        client::connect_to_protocol::<PaverMarker>().context("Could not connect to paver")?;
+    paver.use_block_device(ClientEnd::from(block_device_chan), ServerEnd::from(data_remote))?;
+
+    let data_sink =
+        DynamicDataSinkProxy::from_channel(fidl::AsyncChannel::from_channel(data_sink_chan)?);
+    Ok((paver, data_sink))
+}
+
 pub async fn get_bootloader_type() -> Result<BootloaderType, Error> {
     let (sysinfo_chan, remote) = zx::Channel::create()?;
     fdio::service_connect(&"/dev/sys/platform", remote).context("Connect to sysinfo")?;
@@ -127,3 +151,33 @@ pub async fn get_bootloader_type() -> Result<BootloaderType, Error> {
         Err(Error::new(zx::Status::from_raw(status)))
     }
 }
+
+/// Set the active boot configuration for the newly-installed system. We always boot from the "A"
+/// slot to start with.
+pub async fn set_active_configuration(paver: &PaverProxy) -> Result<(), Error> {
+
+    println!("xxxxxxxxxxxxxxxxxxxxxxxx in set_active_config."); // debug
+
+    let (boot_manager, server) = fidl::endpoints::create_proxy::<BootManagerMarker>()
+        .context("Creating boot manager endpoints")?;
+
+        println!("xxxxxxxxxxxxxxxxxxxxxxxx paver: {:?}", paver); // debug
+
+    paver.find_boot_manager(server).context("Could not find boot manager")?;
+    println!("xxxxxxxxxxxxxxxxxxxxxxxx after find boot manager"); // last surviving println
+    // after that print this error comes up, but the function does't actually return an error:
+    // paver:[Bind] Failed to get ABR client: ZX_ERR_NOT_SUPPORTED 
+    // from //fuchsia/src/storage/lib/paver/paver.cc
+    zx::Status::ok(
+        boot_manager
+            .set_configuration_active(Configuration::A)
+            .await
+            .context("Sending set configuration active")?,
+    )
+    .context("Setting active configuration")?;
+    println!("xxxxxxxxxxxxxxxxxxxxxxxx after set active config"); // debug
+
+    zx::Status::ok(boot_manager.flush().await.context("Sending boot manager flush")?)
+        .context("Flushing active configuration")
+}
+
