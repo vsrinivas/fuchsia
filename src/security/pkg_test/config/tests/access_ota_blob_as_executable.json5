@@ -1,0 +1,7 @@
+{
+    // Domain name (that is, hostname of package server) used for OTA updates.
+    // There must be a corresponding `pkg-resolver` configuration for this
+    // domain, and update packages must designate this domain in their
+    // `packages.json` file.
+    update_domain: "test.fuchsia.com",
+}

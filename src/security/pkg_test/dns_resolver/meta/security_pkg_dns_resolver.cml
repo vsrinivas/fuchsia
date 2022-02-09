@@ -12,15 +12,6 @@
     capabilities: [
         { protocol: "fuchsia.net.name.Lookup" },
     ],
-    use: [
-        // Parse repository URL(s) from `pkg-resolver` config to determine
-        // hostname(s) that will be used for updates.
-        {
-            directory: "pkg-resolver-repositories",
-            rights: [ "r*" ],
-            path: "/pkg-resolver-repositories",
-        },
-    ],
     expose: [
         {
             protocol: "fuchsia.net.name.Lookup",

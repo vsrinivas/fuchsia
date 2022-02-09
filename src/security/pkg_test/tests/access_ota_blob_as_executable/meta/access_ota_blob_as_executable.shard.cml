@@ -104,16 +104,6 @@
             protocol: "fuchsia.update.installer.Installer",
             from: "#system-updater",
         },
-
-        // Parse repository URLs from `pkg-resolver` config to determine update
-        // URL.
-        {
-            directory: "pkgfs",
-            from: "#fshost",
-            rights: [ "r*" ],
-            path: "/pkg-resolver-repositories",
-            subdir: "packages/config-data/0/meta/data/pkg-resolver/repositories",
-        },
     ],
     offer: [
         {
@@ -188,13 +178,6 @@
                 "#pkg-resolver",
                 "#pkg_server",
             ],
-        },
-        {
-            directory: "pkgfs",
-            from: "#fshost",
-            as: "pkg-resolver-repositories",
-            to: "#dns_resolver",
-            subdir: "packages/config-data/0/meta/data/pkg-resolver/repositories",
         },
         {
             protocol: "fuchsia.pkg.PackageCache",

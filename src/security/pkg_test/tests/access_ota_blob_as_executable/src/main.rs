@@ -23,15 +23,14 @@ use {
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon::{AsHandleRef, Rights, Status},
     futures::{channel::oneshot::channel, join},
-    io_util::directory::{open_file, open_in_namespace},
-    security_pkg_test_util::hostname_from_pkg_resolver_directory,
+    io_util::directory::open_file,
+    security_pkg_test_util::{default_target_config_path, load_config},
     std::{convert::TryInto, fs::File},
 };
 
 const HELLO_WORLD_V0_META_FAR_PATH: &str = "/pkg/data/assemblies/v0/hello_world/meta.far";
 const HELLO_WORLD_V1_UPDATE_FAR_PATH: &str =
     "/pkg/data/assemblies/access_ota_blob_as_executable_v1/update/update.far";
-const PKG_RESOLVER_REPOSITORIES_CONFIG_PATH: &str = "/pkg-resolver-repositories";
 
 async fn get_storage_for_component_instance(moniker_prefix: &str) -> DirectoryProxy {
     let storage_admin = connect_to_protocol::<StorageAdminMarker>().unwrap();
@@ -135,14 +134,11 @@ async fn get_hello_world_v1_update_merkle() -> Hash {
     receiver.await.unwrap()
 }
 
-async fn get_repository_hostname() -> String {
-    let pkg_resolver_repositories_dir =
-        open_in_namespace(PKG_RESOLVER_REPOSITORIES_CONFIG_PATH, OPEN_RIGHT_READABLE).unwrap();
-    hostname_from_pkg_resolver_directory(&pkg_resolver_repositories_dir).await
-}
-
 #[fuchsia::test]
 async fn access_ota_blob_as_executable() {
+    // Load test environment configuration.
+    let config = load_config(default_target_config_path());
+
     // Setup storage capabilities.
     let pkg_resolver_storage_proxy = get_storage_for_component_instance("./pkg-resolver").await;
     // TODO(fxbug.dev/88453): Need a test that confirms assumption: Production
@@ -151,10 +147,9 @@ async fn access_ota_blob_as_executable() {
 
     fx_log_info!("Gathering data and connecting to package server");
 
-    let (_, update_merkle, repository_hostname, package_server_url) = join!(
+    let (_, update_merkle, package_server_url) = join!(
         check_v0_cache_resolver_results(),
         get_hello_world_v1_update_merkle(),
-        get_repository_hostname(),
         get_local_package_server_url()
     );
 
@@ -167,7 +162,7 @@ async fn access_ota_blob_as_executable() {
     assert!(package_server_url.starts_with("http://localhost"));
 
     let update_url =
-        format!("fuchsia-pkg://{}/update/0?hash={}", repository_hostname, update_merkle);
+        format!("fuchsia-pkg://{}/update/0?hash={}", config.update_domain, update_merkle);
 
     fx_log_info!("Initiating update: {}", update_url);
 

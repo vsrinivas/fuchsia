@@ -6,7 +6,7 @@ use {
     anyhow::{Context, Result},
     argh::from_env,
     fuchsia_url::pkg_url::PkgUrl,
-    security_pkg_test_util_host::hostname_from_vec,
+    security_pkg_test_util::load_config,
     std::fs::{read, write},
 };
 
@@ -23,18 +23,19 @@ pub struct Args {
     #[argh(option)]
     pub output: String,
 
+    /// absolute path to the test configuration file that designates an
+    /// `update_domain` to be used in domain name substitution.
+    #[argh(option)]
+    pub test_config: String,
+
     /// the domain name that appears in `--input` that is to be substituted.
     #[argh(option)]
     pub in_domain: String,
-
-    /// the domain name(s) that may be substituted into `--output`.
-    #[argh(option)]
-    pub out_domain: Vec<String>,
 }
 
 fn main() -> Result<()> {
-    let _args @ Args { input, output, in_domain, out_domain: out_domains } = &from_env();
-    let out_domain = hostname_from_vec(out_domains);
+    let _args @ Args { input, output, test_config, in_domain } = &from_env();
+    let out_domain = load_config(test_config).update_domain;
     let input_packages_json_contents = read(input).context("failed to read input packages.json")?;
     let input_packages_json =
         update_package::parse_packages_json(input_packages_json_contents.as_slice())

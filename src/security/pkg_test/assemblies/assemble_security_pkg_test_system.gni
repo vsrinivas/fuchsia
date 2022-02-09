@@ -30,10 +30,10 @@ import("//src/security/pkg_test/assemblies/build_info.gni")
 #     [string] The subdirectory in data/assemblies where the
 #     packaged-in-a-fuchsia-package copy of assembled artifacts will be stored.
 #
-#   package_domain_names (required):
-#     [list of strings] The custom domain names that may be used in the update
-#     package's package.json. This value must correspond to a repository config
-#     file's configuration.
+#   test_config (required):
+#     [string] Path to shared test configuration file that is used by host tools
+#     to generate consistent inputs. For example, host tools need to access the
+#     domain that should be used for package URLs in the update package.
 #
 # Public targets:
 #
@@ -63,8 +63,8 @@ template("assemble_security_pkg_test_system") {
          "system_version_file must be defined for $target_name")
   assert(defined(invoker.packaged_assembly_directory),
          "packaged_assembly_directory must be defined for $target_name")
-  assert(defined(invoker.package_domain_names),
-         "package_domain_names must be defined for $target_name")
+  assert(defined(invoker.test_config),
+         "test_config must be defined for $target_name")
 
   assembly_name = target_name
   if (current_toolchain == target_toolchain) {
@@ -118,6 +118,7 @@ template("assemble_security_pkg_test_system") {
     verify_update_package_resources =
         "${target_out_dir}/${labels.verify_update_package_resources}.ok"
     build_info_version = invoker.system_version_file
+    test_config = invoker.test_config
 
     # TODO(fxbug.dev/88453): These should be specified `invoker` to match the
     # configured product.
@@ -226,23 +227,21 @@ template("assemble_security_pkg_test_system") {
     testonly = true
     tool = "//src/security/pkg_test/rewrite_packages_json_domain"
     deps = [ ":${labels.assembly}" ]
-    inputs = [ files.assembly_out_packages_json ]
+    inputs = [
+      files.assembly_out_packages_json,
+      files.test_config,
+    ]
     outputs = [ files.packages_json ]
     args = [
       "--input",
       rebase_path(files.assembly_out_packages_json, root_build_dir),
       "--output",
       rebase_path(files.packages_json, root_build_dir),
+      "--test-config",
+      rebase_path(files.test_config, root_build_dir),
       "--in-domain",
       "fuchsia.com",
     ]
-
-    foreach(package_domain_name, invoker.package_domain_names) {
-      args += [
-        "--out-domain",
-        package_domain_name,
-      ]
-    }
   }
 
   # Construct an update package for the system assembly.

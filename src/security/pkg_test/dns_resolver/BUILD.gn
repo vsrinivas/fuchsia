@@ -13,8 +13,6 @@ rustc_binary("security_pkg_dns_resolver-binary") {
 
   sources = [ "src/main.rs" ]
   deps = [
-    "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
     "//src/lib/fuchsia-async",
