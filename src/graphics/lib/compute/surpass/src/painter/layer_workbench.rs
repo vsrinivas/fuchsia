@@ -11,7 +11,9 @@ use std::{
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-    painter::{BlendMode, Cover, CoverCarry, Fill, FillRule, Func, LayerProps, Props, Style},
+    painter::{
+        BlendMode, Color, Cover, CoverCarry, Fill, FillRule, Func, LayerProps, Props, Style,
+    },
     rasterizer::{self, PixelSegment},
 };
 
@@ -19,7 +21,7 @@ pub(crate) trait LayerPainter {
     fn clear_cells(&mut self);
     fn acc_segment(&mut self, segment: PixelSegment);
     fn acc_cover(&mut self, cover: Cover);
-    fn clear(&mut self, color: [f32; 4]);
+    fn clear(&mut self, color: Color);
     fn paint_layer(
         &mut self,
         tile_x: usize,
@@ -100,7 +102,7 @@ impl<A> Extend<A> for MaskedVec<A> {
 #[derive(Debug, PartialEq)]
 pub enum TileWriteOp {
     None,
-    Solid([f32; 4]),
+    Solid(Color),
     ColorBuffer,
 }
 
@@ -110,7 +112,7 @@ pub struct Context<'c, P: LayerProps> {
     pub segments: &'c [PixelSegment],
     pub props: &'c P,
     pub previous_layers: Cell<Option<&'c mut Option<u32>>>,
-    pub clear_color: [f32; 4],
+    pub clear_color: Color,
 }
 
 #[derive(Debug, Default)]
@@ -286,7 +288,7 @@ impl LayerWorkbench {
     ) -> ControlFlow<TileWriteOp> {
         #[derive(Debug)]
         enum InterestingCover {
-            Opaque([f32; 4]),
+            Opaque(Color),
             Incomplete,
         }
 
@@ -312,7 +314,7 @@ impl LayerWorkbench {
                 ..
             }) = props.func
             {
-                if color[3] == 1.0 {
+                if color.a == 1.0 {
                     if first_interesting_cover.is_none() {
                         first_interesting_cover = Some(InterestingCover::Opaque(color));
                     }
@@ -448,10 +450,13 @@ mod tests {
     use std::borrow::Cow;
 
     use crate::{
-        painter::Props,
+        painter::{style::Color, Props},
         simd::{i8x16, Simd},
         PIXEL_WIDTH, TILE_SIZE,
     };
+
+    const WHITE: Color = Color { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
+    const BLACK: Color = Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0 };
 
     impl<T: PartialEq, const N: usize> PartialEq<[T; N]> for MaskedVec<T> {
         fn eq(&self, other: &[T; N]) -> bool {
@@ -550,7 +555,7 @@ mod tests {
             ],
             props: &UnimplementedProps,
             previous_layers: Cell::default(),
-            clear_color: [0.0; 4],
+            clear_color: BLACK,
         };
 
         workbench.populate_layers(&context);
@@ -598,7 +603,7 @@ mod tests {
             segments: &[segment(0), segment(1), segment(2), segment(3), segment(4)],
             props: &TestProps,
             previous_layers: Cell::new(Some(&mut layers)),
-            clear_color: [0.0; 4],
+            clear_color: BLACK,
         };
 
         workbench.populate_layers(&context);
@@ -613,7 +618,7 @@ mod tests {
             segments: &[segment(0), segment(1), segment(2), segment(3), segment(4)],
             props: &TestProps,
             previous_layers: Cell::new(Some(&mut layers)),
-            clear_color: [0.0; 4],
+            clear_color: BLACK,
         };
 
         // Skip should occur because the previous pass updated the number of layers.
@@ -626,7 +631,7 @@ mod tests {
             segments: &[segment(1), segment(2), segment(3), segment(4), segment(5)],
             props: &TestProps,
             previous_layers: Cell::new(Some(&mut layers)),
-            clear_color: [0.0; 4],
+            clear_color: BLACK,
         };
 
         workbench.next_tile();
@@ -672,7 +677,7 @@ mod tests {
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),
-            clear_color: [0.0; 4],
+            clear_color: BLACK,
         };
 
         workbench.populate_layers(&context);
@@ -711,7 +716,7 @@ mod tests {
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),
-            clear_color: [0.0; 4],
+            clear_color: BLACK,
         };
 
         workbench.populate_layers(&context);
@@ -753,7 +758,7 @@ mod tests {
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),
-            clear_color: [0.0; 4],
+            clear_color: BLACK,
         };
 
         workbench.populate_layers(&context);
@@ -791,7 +796,7 @@ mod tests {
             segments: &[segment(3)],
             props: &TestProps,
             previous_layers: Cell::default(),
-            clear_color: [0.0; 4],
+            clear_color: BLACK,
         };
 
         workbench.populate_layers(&context);
@@ -811,7 +816,7 @@ mod tests {
             fn get(&self, layer_id: u32) -> Cow<'_, Props> {
                 Cow::Owned(Props {
                     func: Func::Draw(Style {
-                        fill: Fill::Solid([0.5; 4]),
+                        fill: Fill::Solid(Color { r: 0.5, g: 0.5, b: 0.5, a: 0.5 }),
                         blend_mode: match layer_id {
                             0 => BlendMode::Over,
                             1 => BlendMode::Multiply,
@@ -836,14 +841,19 @@ mod tests {
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),
-            clear_color: [0.0; 4],
+            clear_color: BLACK,
         };
 
         workbench.populate_layers(&context);
 
         assert_eq!(
             workbench.skip_fully_covered_layers(&context),
-            ControlFlow::Break(TileWriteOp::Solid([0.1875, 0.1875, 0.1875, 0.75]))
+            ControlFlow::Break(TileWriteOp::Solid(Color {
+                r: 0.1875,
+                g: 0.1875,
+                b: 0.1875,
+                a: 0.75,
+            }))
         );
     }
 
@@ -857,7 +867,7 @@ mod tests {
             fn get(&self, _layer_id: u32) -> Cow<'_, Props> {
                 Cow::Owned(Props {
                     func: Func::Draw(Style {
-                        fill: Fill::Solid([0.5; 4]),
+                        fill: Fill::Solid(Color { r: 0.5, g: 0.5, b: 0.5, a: 0.5 }),
                         blend_mode: BlendMode::Multiply,
                         ..Default::default()
                     }),
@@ -878,14 +888,19 @@ mod tests {
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),
-            clear_color: [1.0; 4],
+            clear_color: WHITE,
         };
 
         workbench.populate_layers(&context);
 
         assert_eq!(
             workbench.skip_fully_covered_layers(&context),
-            ControlFlow::Break(TileWriteOp::Solid([0.5625, 0.5625, 0.5625, 1.0]))
+            ControlFlow::Break(TileWriteOp::Solid(Color {
+                r: 0.5625,
+                g: 0.5625,
+                b: 0.5625,
+                a: 1.0,
+            }))
         );
     }
 
@@ -923,7 +938,7 @@ mod tests {
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),
-            clear_color: [1.0; 4],
+            clear_color: WHITE,
         };
 
         workbench.populate_layers(&context);
@@ -943,7 +958,7 @@ mod tests {
                     func: match layer_id {
                         0 => Func::Clip(1),
                         1 => Func::Draw(Style {
-                            fill: Fill::Solid([0.5; 4]),
+                            fill: Fill::Solid(Color { r: 0.5, g: 0.5, b: 0.5, a: 0.5 }),
                             blend_mode: BlendMode::Multiply,
                             ..Default::default()
                         }),
@@ -973,7 +988,7 @@ mod tests {
                 unimplemented!();
             }
 
-            fn clear(&mut self, _color: [f32; 4]) {
+            fn clear(&mut self, _color: Color) {
                 unimplemented!();
             }
 
@@ -997,12 +1012,12 @@ mod tests {
             segments: &[],
             props: &TestProps,
             previous_layers: Cell::default(),
-            clear_color: [1.0; 4],
+            clear_color: WHITE,
         };
 
         assert_eq!(
             workbench.drive_tile_painting(&mut UnimplementedPainter, &context),
-            TileWriteOp::Solid([0.75, 0.75, 0.75, 1.0])
+            TileWriteOp::Solid(Color { r: 0.75, g: 0.75, b: 0.75, a: 1.0 })
         );
     }
 }

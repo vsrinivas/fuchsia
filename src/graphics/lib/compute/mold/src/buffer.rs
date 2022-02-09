@@ -23,34 +23,30 @@ pub struct Buffer<'b, 'l, L: Layout<'l, 'b>> {
 
 #[derive(Debug)]
 pub struct BufferBuilder<'b, 'l, L: Layout<'l, 'b>> {
-    buffer: &'b mut [u8],
-    layout: &'l mut L,
-    layer_cache: Option<BufferLayerCache>,
-    flusher: Option<Box<dyn Flusher>>,
+    buffer: Buffer<'b, 'l, L>,
 }
 
 impl<'b: 'l, 'l, L: Layout<'l, 'b>> BufferBuilder<'b, 'l, L> {
     #[inline]
     pub fn new(buffer: &'b mut [u8], layout: &'l mut L) -> Self {
-        Self { buffer, layout, layer_cache: None, flusher: None }
+        Self { buffer: Buffer { buffer, layout, layer_cache: None, flusher: None } }
     }
 
     #[inline]
     pub fn layer_cache(mut self, layer_cache: BufferLayerCache) -> Self {
-        self.layer_cache = Some(layer_cache);
+        self.buffer.layer_cache = Some(layer_cache);
         self
     }
 
     #[inline]
     pub fn flusher(mut self, flusher: Box<dyn Flusher>) -> Self {
-        self.flusher = Some(flusher);
+        self.buffer.flusher = Some(flusher);
         self
     }
 
     #[inline]
     pub fn build(self) -> Buffer<'b, 'l, L> {
-        let Self { buffer, layout, layer_cache, flusher } = self;
-        Buffer { buffer, layout, layer_cache, flusher }
+        self.buffer
     }
 }
 

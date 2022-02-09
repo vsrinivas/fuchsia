@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{drawing::DisplayRotation, render::generic::Backend};
+use crate::{
+    color::{srgb_to_linear, Color},
+    drawing::DisplayRotation,
+    render::generic::Backend,
+};
 
 use euclid::default::Size2D;
 use fidl::endpoints::ClientEnd;
@@ -48,6 +52,18 @@ impl Backend for Mold {
         display_rotation: DisplayRotation,
     ) -> MoldContext {
         MoldContext::new(token, size, display_rotation)
+    }
+}
+
+impl From<&Color> for mold::Color {
+    fn from(color: &Color) -> Self {
+        let Color { r, g, b, a } = color;
+        mold::Color {
+            r: srgb_to_linear(*r),
+            g: srgb_to_linear(*g),
+            b: srgb_to_linear(*b),
+            a: *a as f32 * 255.0f32.recip(),
+        }
     }
 }
 

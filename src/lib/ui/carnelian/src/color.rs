@@ -5,7 +5,7 @@
 use anyhow::Error;
 use fidl_fuchsia_ui_gfx::ColorRgba;
 
-fn srgb_to_linear(l: u8) -> f32 {
+pub(crate) fn srgb_to_linear(l: u8) -> f32 {
     let l = l as f32 * 255.0f32.recip();
 
     if l <= 0.04045 {

@@ -6,6 +6,51 @@ use std::sync::Arc;
 
 use crate::{simd::f32x8, Point};
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Channel {
+    Red,
+    Green,
+    Blue,
+    Alpha,
+}
+
+impl Channel {
+    pub(crate) fn select<T>(self, r: T, g: T, b: T, a: T) -> T {
+        match self {
+            Channel::Red => r,
+            Channel::Green => g,
+            Channel::Blue => b,
+            Channel::Alpha => a,
+        }
+    }
+
+    pub(crate) fn select_from_color(self, color: Color) -> f32 {
+        match self {
+            Channel::Red => color.r,
+            Channel::Green => color.g,
+            Channel::Blue => color.b,
+            Channel::Alpha => color.a,
+        }
+    }
+}
+
+pub const RGBA: [Channel; 4] = [Channel::Red, Channel::Green, Channel::Blue, Channel::Alpha];
+pub const BGRA: [Channel; 4] = [Channel::Blue, Channel::Green, Channel::Red, Channel::Alpha];
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Color {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
+}
+
+impl Default for Color {
+    fn default() -> Self {
+        Self { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FillRule {
     NonZero,
@@ -31,7 +76,7 @@ pub struct GradientBuilder {
     r#type: GradientType,
     start: Point<f32>,
     end: Point<f32>,
-    stops: Vec<([f32; 4], f32)>,
+    stops: Vec<(Color, f32)>,
 }
 
 impl GradientBuilder {
@@ -44,12 +89,12 @@ impl GradientBuilder {
         self
     }
 
-    pub fn color(&mut self, color: [f32; 4]) -> &mut Self {
+    pub fn color(&mut self, color: Color) -> &mut Self {
         self.stops.push((color, NO_STOP));
         self
     }
 
-    pub fn color_with_stop(&mut self, color: [f32; 4], stop: f32) -> &mut Self {
+    pub fn color_with_stop(&mut self, color: Color, stop: f32) -> &mut Self {
         if !(0.0..=1.0).contains(&stop) {
             panic!("gradient stops must be between 0.0 and 1.0");
         }
@@ -84,7 +129,7 @@ pub struct Gradient {
     r#type: GradientType,
     start: Point<f32>,
     end: Point<f32>,
-    stops: Arc<[([f32; 4], f32)]>,
+    stops: Arc<[(Color, f32)]>,
 }
 
 impl Gradient {
@@ -120,7 +165,10 @@ impl Gradient {
 
         let mask = t.le(f32x8::splat(self.stops[0].1));
         if mask.any() {
-            for (channel, &stop_channel) in channels.iter_mut().zip(self.stops[0].0.iter()) {
+            let stop = self.stops[0].0;
+            for (channel, &stop_channel) in
+                channels.iter_mut().zip([stop.r, stop.g, stop.b, stop.a].iter())
+            {
                 *channel |= f32x8::splat(stop_channel).select(f32x8::splat(0.0), mask);
             }
         }
@@ -135,9 +183,11 @@ impl Gradient {
                 let d = end_stop - start_stop;
                 let local_t = (t - f32x8::splat(start_stop)) * f32x8::splat(d.recip());
 
-                for (channel, (&start_channel, &end_channel)) in
-                    channels.iter_mut().zip(start_color.iter().zip(color.iter()))
-                {
+                for (channel, (&start_channel, &end_channel)) in channels.iter_mut().zip(
+                    [start_color.r, start_color.g, start_color.b, start_color.a]
+                        .iter()
+                        .zip([color.r, color.g, color.b, color.a].iter()),
+                ) {
                     *channel |= local_t
                         .mul_add(
                             f32x8::splat(end_channel),
@@ -156,8 +206,9 @@ impl Gradient {
 
         let mask = !acc_mask;
         if mask.any() {
+            let stop = self.stops[self.stops.len() - 1].0;
             for (channel, &stop_channel) in
-                channels.iter_mut().zip(self.stops[self.stops.len() - 1].0.iter())
+                channels.iter_mut().zip([stop.r, stop.g, stop.b, stop.a].iter())
             {
                 *channel |= f32x8::splat(stop_channel).select(f32x8::splat(0.0), mask);
             }
@@ -169,13 +220,13 @@ impl Gradient {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Fill {
-    Solid([f32; 4]),
+    Solid(Color),
     Gradient(Gradient),
 }
 
 impl Default for Fill {
     fn default() -> Self {
-        Self::Solid([0.0, 0.0, 0.0, 1.0])
+        Self::Solid(Color::default())
     }
 }
 
@@ -259,22 +310,22 @@ impl BlendMode {
         }
     }
 
-    pub(crate) fn blend(self, dst: [f32; 4], src: [f32; 4]) -> [f32; 4] {
+    pub(crate) fn blend(self, dst: Color, src: Color) -> Color {
         let f = self.blend_fn();
 
-        let alpha = src[3];
+        let alpha = src.a;
         let inv_alpha = 1.0 - alpha;
 
-        let current_c0 = f(dst[0], src[0]) * alpha;
-        let current_c1 = f(dst[1], src[1]) * alpha;
-        let current_c2 = f(dst[2], src[2]) * alpha;
+        let current_red = f(dst.r, src.r) * alpha;
+        let current_green = f(dst.g, src.g) * alpha;
+        let current_blue = f(dst.b, src.b) * alpha;
 
-        [
-            dst[0].mul_add(inv_alpha, current_c0),
-            dst[1].mul_add(inv_alpha, current_c1),
-            dst[2].mul_add(inv_alpha, current_c2),
-            dst[3].mul_add(inv_alpha, alpha),
-        ]
+        Color {
+            r: dst.r.mul_add(inv_alpha, current_red),
+            g: dst.g.mul_add(inv_alpha, current_green),
+            b: dst.b.mul_add(inv_alpha, current_blue),
+            a: dst.a.mul_add(inv_alpha, alpha),
+        }
     }
 }
 
@@ -427,6 +478,12 @@ mod tests {
 
     macro_rules! color {
         ( $val:expr ) => {
+            Color { r: $val, g: $val, b: $val, a: $val }
+        };
+    }
+
+    macro_rules! color_array {
+        ( $val:expr ) => {
             [$val, $val, $val, $val]
         };
     }
@@ -493,30 +550,30 @@ mod tests {
         let gradient = builder.build().unwrap();
 
         let col = colors(&gradient.color_at(0.0, 0.0));
-        assert_eq!(col[0], color!(0.25));
+        assert_eq!(col[0], color_array!(0.25));
         assert!(color_eq!(col[1]) < color_eq!(col[2]));
         assert!(color_eq!(col[2]) < color_eq!(col[3]));
         assert!(color_eq!(col[4]) > color_eq!(col[5]));
         assert!(color_eq!(col[5]) > color_eq!(col[6]));
-        assert_eq!(col[7], color!(0.25));
+        assert_eq!(col[7], color_array!(0.25));
 
         let col = colors(&gradient.color_at(3.0, 0.0));
         assert!(color_eq!(col[0]) < 0.75);
         assert!(color_eq!(col[1]) > color_eq!(col[2]));
         assert!(color_eq!(col[2]) > color_eq!(col[3]));
-        assert_eq!(col[3], color!(0.25));
+        assert_eq!(col[3], color_array!(0.25));
         assert!(color_eq!(col[3]) < color_eq!(col[4]));
         assert!(color_eq!(col[4]) < color_eq!(col[5]));
         assert!(color_eq!(col[5]) < color_eq!(col[6]));
         assert!(color_eq!(col[7]) < 0.75);
 
         let col = colors(&gradient.color_at(7.0, 0.0));
-        assert_eq!(col[0], color!(0.25));
+        assert_eq!(col[0], color_array!(0.25));
         assert!(color_eq!(col[1]) < color_eq!(col[2]));
         assert!(color_eq!(col[2]) < color_eq!(col[3]));
         assert!(color_eq!(col[4]) > color_eq!(col[5]));
         assert!(color_eq!(col[5]) > color_eq!(col[6]));
-        assert_eq!(col[7], color!(0.25));
+        assert_eq!(col[7], color_array!(0.25));
     }
 
     #[test]
@@ -531,13 +588,13 @@ mod tests {
         let gradient = builder.build().unwrap();
 
         let col = colors(&gradient.color_at(0.0, 0.0));
-        assert_eq!(col[0], color!(0.25));
+        assert_eq!(col[0], color_array!(0.25));
         assert!(color_eq!(col[1]) < color_eq!(col[2]));
         assert!(color_eq!(col[2]) < color_eq!(col[3]));
         assert!(color_eq!(col[3]) < color_eq!(col[4]));
         assert!(color_eq!(col[4]) < color_eq!(col[5]));
         assert!(color_eq!(col[5]) < color_eq!(col[6]));
-        assert_eq!(col[7], color!(0.75));
+        assert_eq!(col[7], color_array!(0.75));
 
         let col = colors(&gradient.color_at(3.0, 0.0));
         assert!(color_eq!(col[0]) < color_eq!(col[1]));
@@ -546,7 +603,7 @@ mod tests {
         assert!(color_eq!(col[3]) < color_eq!(col[4]));
         assert!(color_eq!(col[4]) < color_eq!(col[5]));
         assert!(color_eq!(col[5]) < color_eq!(col[6]));
-        assert_eq!(col[7], color!(0.75));
+        assert_eq!(col[7], color_array!(0.75));
 
         let col = colors(&gradient.color_at(4.0, 0.0));
         assert!(color_eq!(col[0]) < color_eq!(col[1]));
@@ -554,18 +611,18 @@ mod tests {
         assert!(color_eq!(col[2]) < color_eq!(col[3]));
         assert!(color_eq!(col[3]) < color_eq!(col[4]));
         assert!(color_eq!(col[4]) < color_eq!(col[5]));
-        assert_eq!(col[6], color!(0.75));
-        assert_eq!(col[7], color!(0.75));
+        assert_eq!(col[6], color_array!(0.75));
+        assert_eq!(col[7], color_array!(0.75));
 
         let col = colors(&gradient.color_at(7.0, 0.0));
-        assert_eq!(col[0], color!(0.75));
-        assert_eq!(col[1], color!(0.75));
-        assert_eq!(col[2], color!(0.75));
-        assert_eq!(col[3], color!(0.75));
-        assert_eq!(col[4], color!(0.75));
-        assert_eq!(col[5], color!(0.75));
-        assert_eq!(col[6], color!(0.75));
-        assert_eq!(col[7], color!(0.75));
+        assert_eq!(col[0], color_array!(0.75));
+        assert_eq!(col[1], color_array!(0.75));
+        assert_eq!(col[2], color_array!(0.75));
+        assert_eq!(col[3], color_array!(0.75));
+        assert_eq!(col[4], color_array!(0.75));
+        assert_eq!(col[5], color_array!(0.75));
+        assert_eq!(col[6], color_array!(0.75));
+        assert_eq!(col[7], color_array!(0.75));
     }
 
     #[test]
@@ -626,5 +683,24 @@ mod tests {
     #[test]
     fn test_blend_mode_exclusion() {
         test_blend_mode(BlendMode::Exclusion);
+    }
+
+    #[test]
+    fn channel_select() {
+        let channels: [Channel; 4] = [Channel::Blue, Channel::Green, Channel::Red, Channel::Alpha];
+        let red = [3f32; 8];
+        let green = [2f32; 8];
+        let blue = [1f32; 8];
+        let alpha = [1f32; 8];
+        let color = channels.map(|c| c.select(red, green, blue, alpha));
+        assert_eq!(color, [blue, green, red, alpha]);
+    }
+
+    #[test]
+    fn channel_select_from_color() {
+        let channels: [Channel; 4] = [Channel::Blue, Channel::Green, Channel::Red, Channel::Alpha];
+        let color = Color { r: 3.0, g: 2.0, b: 1.0, a: 1.0 };
+        let color = channels.map(|c| c.select_from_color(color));
+        assert_eq!(color, [1.0, 2.0, 3.0, 1.0]);
     }
 }

@@ -229,6 +229,9 @@ impl<'l, 'b: 'l> Layout<'l, 'b> for LinearLayout {
 }
 
 /// A fill that the [`TileWriter`] uses to write to tiles.
+/// The content of the color depends on the channels argument passed to [`Composition::render`].
+///
+/// [`Composition::render`]: ../../../mold/struct.Composition.html#method.render
 pub enum TileFill<'c> {
     /// Fill tile with a solid color.
     Solid([u8; 4]),

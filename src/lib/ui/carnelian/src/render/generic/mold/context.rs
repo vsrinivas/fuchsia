@@ -317,7 +317,8 @@ impl Context<Mold> for MoldContext {
         duration_begin!("gfx", "render::Context<Mold>::render_composition");
         composition.composition.render(
             &mut image.as_buffer(),
-            composition.background_color.to_linear_bgra(),
+            mold::BGRA,
+            mold::Color::from(&composition.background_color),
             Some(mold::Rect::new(
                 clip.origin.x as usize..(clip.origin.x + clip.size.width) as usize,
                 clip.origin.y as usize..(clip.origin.y + clip.size.height) as usize,

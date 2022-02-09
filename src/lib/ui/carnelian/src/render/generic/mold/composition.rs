@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use euclid::default::{Transform2D, Vector2D};
-use mold::{GeomPresTransform, Order as MoldOrder};
+use mold::{Color as MoldColor, GeomPresTransform, Order as MoldOrder};
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::convert::TryFrom;
 
@@ -186,7 +186,7 @@ impl Composition<Mold> for MoldComposition {
             },
             func: mold::Func::Draw(mold::Style {
                 fill: match &layer.style.fill {
-                    Fill::Solid(color) => mold::Fill::Solid(color.to_linear_bgra()),
+                    Fill::Solid(color) => mold::Fill::Solid(MoldColor::from(color)),
                     Fill::Gradient(gradient) => {
                         let mut builder = mold::GradientBuilder::new(
                             mold::Point::new(gradient.start.x, gradient.start.y),
@@ -198,7 +198,7 @@ impl Composition<Mold> for MoldComposition {
                         });
 
                         for &(color, stop) in &gradient.stops {
-                            builder.color_with_stop(color.to_linear_bgra(), stop);
+                            builder.color_with_stop(MoldColor::from(&color), stop);
                         }
 
                         mold::Fill::Gradient(builder.build().unwrap())
