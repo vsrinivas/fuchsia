@@ -33,7 +33,7 @@ namespace f2fs {
 #ifdef __Fuchsia__
 F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc,
            std::unique_ptr<Superblock> sb, const MountOptions& mount_options)
-    : fs::ManagedVfs(dispatcher),
+    : fs::PagedVfs(dispatcher),
       bc_(std::move(bc)),
       mount_options_(mount_options),
       raw_sb_(std::move(sb)) {
@@ -45,7 +45,10 @@ F2fs::F2fs(std::unique_ptr<f2fs::Bcache> bc, std::unique_ptr<Superblock> sb,
     : bc_(std::move(bc)), mount_options_(mount_options), raw_sb_(std::move(sb)) {}
 #endif  // __Fuchsia__
 
-F2fs::~F2fs() {}
+F2fs::~F2fs() {
+  // Inform PagedVfs so that it can stop threads that might call out to f2fs.
+  TearDown();
+}
 
 #ifdef __Fuchsia__
 zx_status_t F2fs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc,
@@ -61,6 +64,9 @@ zx_status_t F2fs::Create(std::unique_ptr<f2fs::Bcache> bc, const MountOptions& o
 
 #ifdef __Fuchsia__
   *out = std::make_unique<F2fs>(dispatcher, std::move(bc), std::move(info), options);
+  // Create Pager and PagerPool
+  if (auto status = (*out)->Init(); status.is_error())
+    return status.status_value();
 #else   // __Fuchsia__
   *out = std::unique_ptr<F2fs>(new F2fs(std::move(bc), std::move(info), options));
 #endif  // __Fuchsia__
@@ -182,7 +188,7 @@ void Sync(SyncCallback closure) {
 }
 
 void F2fs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
-  ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
+  PagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
     Sync([this, status, cb = std::move(cb)](zx_status_t) mutable {
       async::PostTask(dispatcher(), [this, status, cb = std::move(cb)]() mutable {
         PutSuper();

@@ -11,7 +11,11 @@
 
 namespace f2fs {
 
+#ifdef __Fuchsia__
+VnodeF2fs::VnodeF2fs(F2fs *fs, ino_t ino) : PagedVnode(fs), ino_(ino) {}
+#else   // __Fuchsia__
 VnodeF2fs::VnodeF2fs(F2fs *fs, ino_t ino) : Vnode(fs), ino_(ino) {}
+#endif  // __Fuchsia__
 
 fs::VnodeProtocolSet VnodeF2fs::GetProtocols() const {
   if (IsDir()) {

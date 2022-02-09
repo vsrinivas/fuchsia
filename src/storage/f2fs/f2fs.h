@@ -42,7 +42,8 @@
 #include <condition_variable>
 
 #ifdef __Fuchsia__
-#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/paged_vfs.h"
+#include "src/lib/storage/vfs/cpp/paged_vnode.h"
 #include "src/lib/storage/vfs/cpp/query_service.h"
 #include "src/lib/storage/vfs/cpp/watcher.h"
 #include "src/lib/storage/vfs/cpp/shared_mutex.h"
@@ -101,7 +102,9 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions &mount_opti
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-class F2fs : public fs::ManagedVfs {
+// The F2fs class *has* to be final because it calls PagedVfs::TearDown from
+// its destructor which is required to ensure thread-safety at destruction time.
+class F2fs final : public fs::PagedVfs {
 #else   // __Fuchsia__
 class F2fs : public fs::Vfs {
 #endif  // __Fuchsia__

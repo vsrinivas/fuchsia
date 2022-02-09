@@ -39,10 +39,17 @@ struct InodeInfo {
   ExtentInfo ext;             // in-memory extent cache entry
 };
 
+#ifdef __Fuchsia__
+class VnodeF2fs : public fs::PagedVnode,
+                  public fbl::Recyclable<VnodeF2fs>,
+                  public fbl::WAVLTreeContainable<VnodeF2fs *>,
+                  public fbl::DoublyLinkedListable<fbl::RefPtr<VnodeF2fs>> {
+#else   // __Fuchsia__
 class VnodeF2fs : public fs::Vnode,
                   public fbl::Recyclable<VnodeF2fs>,
                   public fbl::WAVLTreeContainable<VnodeF2fs *>,
                   public fbl::DoublyLinkedListable<fbl::RefPtr<VnodeF2fs>> {
+#endif  // __Fuchsia__
  public:
   explicit VnodeF2fs(F2fs *fs, ino_t ino);
 
@@ -85,6 +92,18 @@ class VnodeF2fs : public fs::Vnode,
 #endif  // __Fuchsia__
 
   fs::VnodeProtocolSet GetProtocols() const final;
+
+#ifdef __Fuchsia__
+  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo *out_vmo,
+                     size_t *out_size) override {
+    FX_LOGS(ERROR) << "Unsupported GetVMO in VnodeF2fs. This method should be overridden.";
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  void VmoRead(uint64_t offset, uint64_t length) override {
+    FX_LOGS(ERROR) << "Unsupported VmoRead in VnodeF2fs. This method should be overridden.";
+  }
+#endif  // __Fuchsia__
 
 #if 0  // porting needed
   // void F2fsSetInodeFlags();
