@@ -60,7 +60,10 @@ __EXPORT zx_off_t device_get_size(zx_device_t* dev) { return 0; }
 
 // LibDriver Misc Interfaces
 
-__EXPORT zx_handle_t get_root_resource() { return kRootResource.get(); }
+__EXPORT zx_handle_t get_root_resource() {
+  std::scoped_lock lock(kRootResourceLock);
+  return kRootResource.get();
+}
 
 __EXPORT zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_device_t* dev, const char* path,
                                                zx_handle_t* fw, size_t* size) {

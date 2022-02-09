@@ -63,15 +63,24 @@ class TestNode : public fidl::testing::WireTestBase<fdf::Node> {
 };
 
 class TestRootResource : public fidl::testing::WireTestBase<fboot::RootResource> {
+ public:
+  TestRootResource() { EXPECT_EQ(ZX_OK, zx::event::create(0, &fake_resource_)); }
+
  private:
   void Get(GetRequestView request, GetCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NO_RESOURCES);
+    zx::event duplicate;
+    ASSERT_EQ(ZX_OK, fake_resource_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate));
+    completer.Reply(zx::resource(duplicate.release()));
   }
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
     printf("Not implemented: RootResource::%s\n", name.data());
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
+
+  // An event is similar enough that we can pretend it's the root resource, in that we can
+  // send it over a FIDL channel.
+  zx::event fake_resource_;
 };
 
 class TestItems : public fidl::testing::WireTestBase<fboot::Items> {
@@ -303,6 +312,26 @@ TEST_F(DriverTest, Start_DeviceAddNull) {
   EXPECT_FALSE(node().HasChildren());
   ASSERT_TRUE(RunLoopUntilIdle());
   EXPECT_TRUE(node().HasChildren());
+}
+
+TEST_F(DriverTest, Start_RootResourceIsConstant) {
+  // Set the root resource before the test starts.
+  zx_handle_t resource;
+  {
+    std::scoped_lock lock(kRootResourceLock);
+    ASSERT_EQ(ZX_OK, zx_event_create(0, kRootResource.reset_and_get_address()));
+    resource = kRootResource.get();
+  }
+
+  zx_protocol_device_t ops{};
+  auto driver = StartDriver("/pkg/driver/v1_device_add_null_test.so", &ops);
+
+  ASSERT_TRUE(RunLoopUntilIdle());
+
+  zx_handle_t resource2 = get_root_resource();
+
+  // Check that the root resource's value did not change.
+  ASSERT_EQ(resource, resource2);
 }
 
 TEST_F(DriverTest, Start_GetBufferFailed) {

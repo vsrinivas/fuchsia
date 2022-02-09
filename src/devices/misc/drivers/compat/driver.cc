@@ -8,6 +8,7 @@
 #include <lib/ddk/binding_priv.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/dlfcn.h>
 
@@ -30,6 +31,9 @@ using fpromise::ok;
 using fpromise::promise;
 using fpromise::result;
 
+// The root resource must only be written once, as it is shared by all drivers within a single
+// process.
+std::mutex kRootResourceLock;
 zx::resource kRootResource;
 
 namespace {
@@ -134,13 +138,25 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
                             });
 
   auto root_resource =
-      driver::Connect<fboot::RootResource>(ns_, dispatcher_)
-          .and_then(fit::bind_member<&Driver::GetRootResource>(this))
-          .or_else([this](zx_status_t& status) {
-            FDF_LOG(WARNING, "Failed to get root resource: %s", zx_status_get_string(status));
-            FDF_LOG(WARNING, "Assuming test environment and continuing");
-            return error(status);
-          });
+      fpromise::make_result_promise<zx::resource, zx_status_t>(error(ZX_ERR_ALREADY_BOUND)).box();
+  {
+    std::scoped_lock lock(kRootResourceLock);
+    if (!kRootResource.is_valid()) {
+      // If the root resource is invalid, try fetching it. Once we've fetched it we might find that
+      // we lost the race with another process -- we'll handle that later.
+      auto connect_promise =
+          driver::Connect<fboot::RootResource>(ns_, dispatcher_)
+              .and_then(fit::bind_member<&Driver::GetRootResource>(this))
+              .or_else([this](zx_status_t& status) {
+                FDF_LOG(WARNING, "Failed to get root resource: %s", zx_status_get_string(status));
+                FDF_LOG(WARNING, "Assuming test environment and continuing");
+                return error(status);
+              })
+              .box();
+      root_resource.swap(connect_promise);
+    }
+  }
+
   auto loader_vmo = driver::Connect<fio::File>(ns_, dispatcher_, kLibDriverPath, kOpenFlags)
                         .and_then(fit::bind_member<&Driver::GetBuffer>(this));
   auto driver_vmo = driver::Connect<fio::File>(ns_, dispatcher_, driver_path, kOpenFlags)
@@ -202,7 +218,10 @@ result<std::tuple<zx::vmo, zx::vmo>, zx_status_t> Driver::Join(
   }
   auto& [root_resource, loader_vmo, driver_vmo] = results.value();
   if (root_resource.is_ok()) {
-    kRootResource = root_resource.take_value();
+    std::scoped_lock lock(kRootResourceLock);
+    if (!kRootResource.is_valid()) {
+      kRootResource = root_resource.take_value();
+    }
   }
   if (loader_vmo.is_error()) {
     return loader_vmo.take_error_result();
