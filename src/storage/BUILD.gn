@@ -19,6 +19,7 @@ group("tests") {
     "fshost:tests",
     "fshost-rust:tests",
     "fuchsia-fatfs:tests",
+    "fuzzers:tests",
     "fvm:tests",
     "fxfs:tests",
     "gpt:tests",
