@@ -1543,6 +1543,17 @@ pub struct zx_cpu_performance_info_t {
     pub performance_scale: zx_cpu_performance_scale_t,
 }
 
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub struct zx_iommu_desc_dummy_t {
+    pub reserved: u8,
+}
+
+multiconst!(u32, [
+    ZX_IOMMU_TYPE_DUMMY = 0;
+    ZX_IOMMU_TYPE_INTEL = 1;
+]);
+
 #[cfg(test)]
 mod test {
     use super::*;

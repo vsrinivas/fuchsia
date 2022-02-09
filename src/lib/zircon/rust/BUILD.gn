@@ -22,6 +22,7 @@ common_sources = [
   "src/handle.rs",
   "src/info.rs",
   "src/interrupt.rs",
+  "src/iommu.rs",
   "src/job.rs",
   "src/lib.rs",
   "src/pager.rs",
@@ -158,6 +159,7 @@ rustc_test("fuchsia-zircon-unittests") {
 
     # Test-only deps
     ":fuchsia-zircon",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-component",

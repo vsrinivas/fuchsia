@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
+                "fuchsia.boot.RootResource",
                 "fuchsia.kernel.VmexResource"
             ]
         }
@@ -17,6 +18,7 @@
             "deprecated-ambient-replace-as-executable"
         ],
         "services": [
+            "fuchsia.boot.RootResource",
             "fuchsia.kernel.VmexResource",
             "fuchsia.process.Launcher"
         ]
