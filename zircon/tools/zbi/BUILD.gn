@@ -26,10 +26,14 @@ zx_host_tool("zbi") {
 group("tests") {
   testonly = true
   deps = [
-    ":zbi-input-chrdev-test",
     ":zbi-input-size-limit-test",
     ":zbi-storage-kernel-test",
   ]
+  if (!is_mac) {
+    # TODO(fxbug.dev/85167): when bug fixed, add the dep below
+    # unconditionally.
+    deps += [ ":zbi-input-chrdev-test" ]
+  }
 }
 
 template("input_test") {
