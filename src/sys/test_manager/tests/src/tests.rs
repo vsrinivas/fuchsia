@@ -665,6 +665,8 @@ async fn custom_artifact_test() {
     assert_eq!(&expected_events, &events);
 }
 
+// TODO(fxbug.dev/93350): reenable sending debug data as an artifact.
+#[ignore]
 #[fuchsia_async::run_singlethreaded(test)]
 async fn debug_data_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/debug_data_write_test.cm";
