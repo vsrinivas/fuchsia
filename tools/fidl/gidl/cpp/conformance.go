@@ -34,7 +34,7 @@ TEST(Conformance, {{ .Name }}_Encode) {
 	const auto expected_bytes = {{ .Bytes }};
 	const auto expected_handles = {{ .Handles }};
 	conformance_utils::EncodeSuccess(
-		{{ .WireFormatVersion }}, obj, expected_bytes, expected_handles);
+		{{ .WireFormatVersion }}, obj, expected_bytes, expected_handles, {{ .CheckHandleRights }});
 }
 {{ end }}
 
@@ -105,6 +105,7 @@ type conformanceTmplInput struct {
 
 type encodeSuccessCase struct {
 	WireFormatVersion, Name, ValueBuild, ValueVar, Bytes, HandleDefs, Handles string
+	CheckHandleRights                                                         bool
 }
 
 type decodeSuccessCase struct {
@@ -170,6 +171,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
 				HandleDefs:        buildHandleDefs(encodeSuccess.HandleDefs),
 				Handles:           libhlcpp.BuildRawHandleDispositions(encoding.HandleDispositions),
+				CheckHandleRights: encodeSuccess.CheckHandleRights,
 			})
 		}
 	}

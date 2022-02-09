@@ -136,8 +136,6 @@ success("VectorOfOptionalHandles") {
 }
 
 success("MultipleHandleSubtypes") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     handle_defs = {
         #0 = channel(),
         #1 = event(),

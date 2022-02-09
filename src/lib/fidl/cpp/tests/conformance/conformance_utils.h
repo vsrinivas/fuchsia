@@ -52,7 +52,8 @@ inline fidl::internal::WireFormatMetadata CreateWireFormatMetadata(
 template <typename FidlType>
 void EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlType& obj,
                    const std::vector<uint8_t>& expected_bytes,
-                   const std::vector<zx_handle_disposition_t> expected_handles) {
+                   const std::vector<zx_handle_disposition_t> expected_handles,
+                   bool check_handle_rights) {
   fidl::internal::EncodeResult result = fidl::internal::EncodeIntoResult(obj);
   ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
               result.message().error().FormatDescription().c_str());
@@ -63,10 +64,12 @@ void EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
   ASSERT_EQ(expected_handles.size(), result.message().handle_actual());
   for (uint32_t i = 0; i < expected_handles.size(); i++) {
     ASSERT_EQ(expected_handles[i].handle, result.message().handles()[i]);
-    ASSERT_EQ(expected_handles[i].type,
-              result.message().handle_metadata<fidl::internal::ChannelTransport>()[i].obj_type);
-    ASSERT_EQ(expected_handles[i].rights,
-              result.message().handle_metadata<fidl::internal::ChannelTransport>()[i].rights);
+    if (check_handle_rights) {
+      ASSERT_EQ(expected_handles[i].type,
+                result.message().handle_metadata<fidl::internal::ChannelTransport>()[i].obj_type);
+      ASSERT_EQ(expected_handles[i].rights,
+                result.message().handle_metadata<fidl::internal::ChannelTransport>()[i].rights);
+    }
   }
 }
 
