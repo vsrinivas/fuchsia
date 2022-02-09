@@ -4,11 +4,11 @@
 
 #![cfg(test)]
 
-use std::{convert::TryFrom as _, mem::size_of};
+use std::mem::size_of;
 
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack as net_stack;
-use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
+use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
 use anyhow::{self, Context as _};
@@ -412,50 +412,11 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(
 ///
 /// If no remote node has any interest in an address the netstack is attempting to assign to
 /// an interface, DAD should succeed.
-// TODO(https://fxbug.dev/82046): Rewrite this test using fuchsia.net.interfaces.admin. Add
-// addresses using Control.AddAddress and watch for DAD_FAILED using
-// AddressStateProvider.OnAddressRemoved instead of the timeouts below.
 #[variants_test]
 async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
-    /// Makes sure that `ipv6_consts::LINK_LOCAL_ADDR` is not assigned to the interface after the
-    /// DAD resolution time.
-    async fn check_address_failed_dad(iface: &netemul::TestInterface<'_>) {
-        // Clocks sometimes jump in infrastructure, which can cause a timer to expire prematurely.
-        // Fortunately such jumps are rarely seen in quick succession - if we repeatedly wait for
-        // shorter durations we can be reasonably sure that the intended amount of time truly did
-        // elapse. It is expected that at most one timer worth of time may be lost.
-        const STEP: zx::Duration = zx::Duration::from_millis(10);
-        let duration = EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS
-            + ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT;
-        let iterations =
-            (duration + STEP - zx::Duration::from_nanos(1)).into_nanos() / STEP.into_nanos();
-        let iterations = usize::try_from(iterations).expect("integer conversion");
-        let () = fasync::Interval::new(STEP).take(iterations).collect().await;
-
-        let link_local_addr = net::Subnet {
-            addr: net::IpAddress::Ipv6(net::Ipv6Address {
-                addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
-            }),
-            prefix_len: 64,
-        };
-        let addrs = iface.get_addrs().await.expect("error getting interface addresses");
-        assert!(
-            !addrs
-                .iter()
-                .any(|fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| *addr
-                    == link_local_addr),
-            "DAD did not fail, found {:?} in {:?}",
-            link_local_addr,
-            addrs
-        );
-    }
-
     /// Transmits a Neighbor Solicitation message and expects `ipv6_consts::LINK_LOCAL_ADDR`
     /// to not be assigned to the interface after the normal resolution time for DAD.
-    async fn fail_dad_with_ns(
-        iface: &netemul::TestInterface<'_>,
-        fake_ep: &netemul::TestFakeEndpoint<'_>,
-    ) {
+    async fn fail_dad_with_ns(fake_ep: &netemul::TestFakeEndpoint<'_>) {
         let snmc = ipv6_consts::LINK_LOCAL_ADDR.to_solicited_node_address();
         let () = write_ndp_message::<&[u8], _>(
             eth_consts::MAC_ADDR,
@@ -468,16 +429,11 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         )
         .await
         .expect("failed to write NDP message");
-
-        check_address_failed_dad(iface).await
     }
 
     /// Transmits a Neighbor Advertisement message and expects `ipv6_consts::LINK_LOCAL_ADDR`
     /// to not be assigned to the interface after the normal resolution time for DAD.
-    async fn fail_dad_with_na(
-        iface: &netemul::TestInterface<'_>,
-        fake_ep: &netemul::TestFakeEndpoint<'_>,
-    ) {
+    async fn fail_dad_with_na(fake_ep: &netemul::TestFakeEndpoint<'_>) {
         let () = write_ndp_message::<&[u8], _>(
             eth_consts::MAC_ADDR,
             Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
@@ -494,8 +450,6 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         )
         .await
         .expect("failed to write NDP message");
-
-        check_address_failed_dad(iface).await
     }
 
     // Wait for and verify a NS message transmitted by netstack for DAD.
@@ -542,6 +496,11 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         assert_eq!(ttl, NDP_MESSAGE_TTL);
     }
 
+    type State = Result<
+        fidl_fuchsia_net_interfaces_admin::AddressAssignmentState,
+        fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError,
+    >;
+
     /// Adds `ipv6_consts::LINK_LOCAL_ADDR` to the interface and makes sure a Neighbor Solicitation
     /// message is transmitted by the netstack for DAD.
     ///
@@ -551,21 +510,21 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         'a,
         'b: 'a,
         R: 'b + Future<Output = ()>,
-        FN: FnOnce(&'b netemul::TestInterface<'a>, &'b netemul::TestFakeEndpoint<'a>) -> R,
+        FN: FnOnce(&'b netemul::TestFakeEndpoint<'a>) -> R,
     >(
         iface: &'b netemul::TestInterface<'a>,
         fake_ep: &'b netemul::TestFakeEndpoint<'a>,
         control: &'b fidl_fuchsia_net_interfaces_admin::ControlProxy,
-        fail_dad_fn: FN,
-        want_state: fidl_fuchsia_net_interfaces_admin::AddressAssignmentState,
-    ) -> Result<
-        fidl_fuchsia_net_interfaces_admin::AddressStateProviderProxy,
-        fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError,
-    > {
+        interface_up: bool,
+        dad_fn: FN,
+    ) -> impl futures::stream::Stream<Item = State> {
         let (address_state_provider, server) = fidl::endpoints::create_proxy::<
             fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
         >()
         .expect("create AddressStateProvider proxy");
+        // Create the state stream before adding the address to observe all events.
+        let state_stream =
+            fidl_fuchsia_net_interfaces_ext::admin::assignment_state_stream(address_state_provider);
         let () = control
             .add_address(
                 &mut net::InterfaceAddress::Ipv6(net::Ipv6Address {
@@ -575,58 +534,34 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
                 server,
             )
             .expect("Control.AddAddress FIDL error");
+        if interface_up {
+            // The first DAD message should be sent immediately.
+            expect_dad_neighbor_solicitation(fake_ep).await;
 
-        match want_state {
-            fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned
-            | fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Tentative => {
-                // The first DAD message should be sent immediately.
-                expect_dad_neighbor_solicitation(fake_ep).await;
-
-                // Ensure that fuchsia.net.interfaces/Watcher doesn't erroneously report the
-                // address as added before DAD completes successfully or otherwise.
-                assert_eq!(
-                    iface.get_addrs().await.expect("failed to get addresses").into_iter().find(
-                        |fidl_fuchsia_net_interfaces_ext::Address {
-                             addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
-                             valid_until: _,
-                         }| {
-                            match addr {
-                                fidl_fuchsia_net::IpAddress::Ipv4(
-                                    fidl_fuchsia_net::Ipv4Address { addr: _ },
-                                ) => false,
-                                fidl_fuchsia_net::IpAddress::Ipv6(
-                                    fidl_fuchsia_net::Ipv6Address { addr },
-                                ) => *addr == ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
-                            }
+            // Ensure that fuchsia.net.interfaces/Watcher doesn't erroneously report the
+            // address as added before DAD completes successfully or otherwise.
+            assert_eq!(
+                iface.get_addrs().await.expect("failed to get addresses").into_iter().find(
+                    |fidl_fuchsia_net_interfaces_ext::Address {
+                         addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                         valid_until: _,
+                     }| {
+                        match addr {
+                            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                                addr: _,
+                            }) => false,
+                            fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                                addr,
+                            }) => *addr == ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
                         }
-                    ),
-                    None,
-                    "added IPv6 LL address already present even though it is tentative"
-                );
-            }
-            fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Unavailable => {}
-        }
-
-        fail_dad_fn(iface, fake_ep).await;
-
-        {
-            let state_stream = fidl_fuchsia_net_interfaces_ext::admin::assignment_state_stream(
-                address_state_provider.clone(),
+                    }
+                ),
+                None,
+                "added IPv6 LL address already present even though it is tentative"
             );
-            futures::pin_mut!(state_stream);
-            let () = fidl_fuchsia_net_interfaces_ext::admin::wait_assignment_state(
-                &mut state_stream,
-                want_state,
-            )
-            .on_timeout(
-                (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS
-                    + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
-                    .after_now(),
-                || panic!("timed out waiting for address assignment state"),
-            )
-            .await?;
         }
-        Ok(address_state_provider)
+        dad_fn(fake_ep).await;
+        state_stream
     }
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
@@ -643,63 +578,87 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         .get_admin(iface.id(), server)
         .expect("fuchsia.net.debug/Interfaces.GetAdmin failed");
 
+    async fn dad_state(
+        state_stream: &mut (impl futures::stream::Stream<Item = State> + std::marker::Unpin),
+    ) -> State {
+        // The address state provider doesn't buffer events, so we might see the tentative state,
+        // but we might not.
+        let state = match state_stream.by_ref().next().await.expect("state stream not ended") {
+            Ok(fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Tentative) => {
+                state_stream.by_ref().next().await.expect("state stream not ended")
+            }
+            state => state,
+        };
+        // Ensure errors are terminal.
+        match state {
+            Ok(_) => {}
+            Err(_) => {
+                match state_stream.by_ref().next().await {
+                    None => {} // Error was terminal. Good.
+                    Some(state) => {
+                        // TODO(https://fxbug.dev/92940): Remove this arm when states no longer
+                        // interleave with the terminal event.
+                        assert_matches::assert_matches!(state, Ok(fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Tentative));
+                        // Ok, now we should really be done.
+                        assert_matches::assert_matches!(state_stream.by_ref().next().await, None);
+                    }
+                }
+            }
+        }
+        state
+    }
+
+    async fn assert_dad_failed(
+        mut state_stream: (impl futures::stream::Stream<Item = State> + std::marker::Unpin),
+    ) {
+        assert_matches::assert_matches!(
+            dad_state(&mut state_stream).await,
+            Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
+                fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::DadFailed
+            ))
+        );
+    }
+
     // Add an address and expect it to fail DAD because we simulate another node
     // performing DAD at the same time.
-    assert_matches::assert_matches!(
-        add_address_for_dad(
-            &iface,
-            &fake_ep,
-            &control,
-            fail_dad_with_ns,
-            fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned
-        )
-        .await,
-        Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
-            fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::DadFailed
-        ))
-    );
+    {
+        let state_stream =
+            add_address_for_dad(&iface, &fake_ep, &control, true, fail_dad_with_ns).await;
+        assert_dad_failed(state_stream).await;
+    }
     // Add an address and expect it to fail DAD because we simulate another node
     // already owning the address.
-    assert_matches::assert_matches!(
-        add_address_for_dad(
-            &iface,
-            &fake_ep,
-            &control,
-            fail_dad_with_na,
-            fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned
-        )
-        .await,
-        Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
-            fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::DadFailed
-        ))
-    );
+    {
+        let state_stream =
+            add_address_for_dad(&iface, &fake_ep, &control, true, fail_dad_with_na).await;
+        assert_dad_failed(state_stream).await;
+    }
+
+    async fn assert_dad_success(
+        state_stream: &mut (impl futures::stream::Stream<Item = State> + std::marker::Unpin),
+    ) {
+        assert_matches::assert_matches!(
+            dad_state(state_stream).await,
+            Ok(fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned)
+        );
+    }
 
     {
         // Add the address, and make sure it gets assigned.
-        let address_state_provider = add_address_for_dad(
-            &iface,
-            &fake_ep,
-            &control,
-            |_, _| async {},
-            fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned,
-        )
-        .await
-        .expect("DAD should have succeeded");
+        let mut state_stream =
+            add_address_for_dad(&iface, &fake_ep, &control, true, |_| futures::future::ready(()))
+                .await;
+
+        assert_dad_success(&mut state_stream).await;
 
         // Disable the interface, ensure that the address becomes unavailable.
         let did_disable = iface.control().disable().await.expect("send disable").expect("disable");
         assert!(did_disable);
 
-        let state_stream = fidl_fuchsia_net_interfaces_ext::admin::assignment_state_stream(
-            address_state_provider.clone(),
+        assert_matches::assert_matches!(
+            state_stream.by_ref().next().await,
+            Some(Ok(fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Unavailable))
         );
-        futures::pin_mut!(state_stream);
-        fidl_fuchsia_net_interfaces_ext::admin::wait_assignment_state(
-            &mut state_stream,
-            fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Unavailable,
-        )
-        .await
-        .expect("failed to wait for address to be UNAVAILBALE");
 
         let removed = control
             .remove_address(&mut net::InterfaceAddress::Ipv6(net::Ipv6Address {
@@ -712,15 +671,14 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
     }
 
     // Add the address while the interface is down.
-    let address_state_provider = add_address_for_dad(
-        &iface,
-        &fake_ep,
-        &control,
-        |_, _| async {},
-        fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Unavailable,
-    )
-    .await
-    .expect("DAD should have succeeded");
+    let mut state_stream =
+        add_address_for_dad(&iface, &fake_ep, &control, false, |_| futures::future::ready(()))
+            .await;
+
+    assert_matches::assert_matches!(
+        state_stream.by_ref().next().await,
+        Some(Ok(fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Unavailable))
+    );
 
     // Re-enable the interface, DAD should run.
     let did_enable = iface.control().enable().await.expect("send enable").expect("enable");
@@ -728,46 +686,26 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
 
     expect_dad_neighbor_solicitation(&fake_ep).await;
 
-    let state_stream = fidl_fuchsia_net_interfaces_ext::admin::assignment_state_stream(
-        address_state_provider.clone(),
-    );
-    futures::pin_mut!(state_stream);
-    fidl_fuchsia_net_interfaces_ext::admin::wait_assignment_state(
-        &mut state_stream,
-        fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned,
-    )
-    .await
-    .expect("failed to wait for address to be ASSIGNED");
+    assert_dad_success(&mut state_stream).await;
 
-    let interface_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("failed to connect to fuchsia.net.interfaces/State");
-    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-            .expect("error getting interfaces state event stream"),
-        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(iface.id()),
-        |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
-            addresses.iter().find_map(
-                |&fidl_fuchsia_net_interfaces_ext::Address {
-                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
-                     valid_until: _,
-                 }| {
-                    match addr {
-                        net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
-                            (addr == ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes()).then(|| ())
-                        }
-                        net::IpAddress::Ipv4(_) => None,
+    let addresses = iface.get_addrs().await.expect("addrs");
+    assert!(
+        addresses.iter().any(
+            |&fidl_fuchsia_net_interfaces_ext::Address {
+                 addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                 valid_until: _,
+             }| {
+                match addr {
+                    net::IpAddress::Ipv4(_) => false,
+                    net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
+                        addr == ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes()
                     }
-                },
-            )
-        },
-    )
-    .map_err(anyhow::Error::from)
-    .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
-        Err(anyhow::anyhow!("timed out"))
-    })
-    .await
-    .expect("error waiting for address to be assigned")
+                }
+            }
+        ),
+        "addresses: {:?}",
+        addresses
+    );
 }
 
 /// Tests to make sure default router discovery, prefix discovery and more-specific
@@ -910,16 +848,16 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
                         NeighborSolicitation,
                         _,
                     >(&data, |p| assert_eq!(p.body().iter().count(), 0))
-                    .map_or(None, |(_src_mac, _dst_mac, _src_ip, _dst_ip, _ttl, message, _code)| {
-                        // If the NS target_address does not have the prefix we have advertised,
-                        // this is for some other address. We ignore it as it is not relevant to
-                        // our test.
-                        if !ipv6_consts::PREFIX.contains(message.target_address()) {
-                            return None;
-                        }
+                        .map_or(None, |(_src_mac, _dst_mac, _src_ip, _dst_ip, _ttl, message, _code)| {
+                            // If the NS target_address does not have the prefix we have advertised,
+                            // this is for some other address. We ignore it as it is not relevant to
+                            // our test.
+                            if !ipv6_consts::PREFIX.contains(message.target_address()) {
+                                return None;
+                            }
 
-                        Some(*message.target_address())
-                    }),
+                            Some(*message.target_address())
+                        }),
                 )
             })
             .try_next()
