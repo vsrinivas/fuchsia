@@ -107,6 +107,7 @@
         {
             protocol: [
                 "fuchsia.logger.LogSink",
+                "fuchsia.media.Audio",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
