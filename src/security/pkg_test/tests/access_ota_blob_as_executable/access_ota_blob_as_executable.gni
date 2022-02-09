@@ -153,10 +153,12 @@ template("access_ota_blob_as_executable") {
       # Fake services for update flow.
       "//src/security/pkg_test/dns_resolver:security_pkg_dns_resolver-component",
       "//src/security/pkg_test/paver:security_pkg_paver-component",
+      "//src/security/pkg_test/reboot:security_pkg_reboot-component",
 
       # Production SWD components.
       "//src/sys/pkg/bin/pkg-cache:component",
       "//src/sys/pkg/bin/pkg-resolver:component",
+      "//src/sys/pkg/bin/system-update-committer:component",
       "//src/sys/pkg/bin/system-updater:component",
 
       # Production network components for OTA update.

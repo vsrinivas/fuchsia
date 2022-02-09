@@ -217,7 +217,15 @@ template("assemble_security_pkg_test_system") {
     testonly = true
     board_name = invoker.board_name
     bootfs_labels = []
-    base_packages = [ ":${labels.build_info}" ] + invoker.base_packages
+    base_packages = [
+                      ":${labels.build_info}",
+
+                      # TODO(fxbug.dev/88453): There should be a contract for
+                      # determining the correct configuration for every product.
+                      # For now, this appears to be the only configuration in
+                      # use.
+                      "//src/sys/pkg/bin/system-update-committer:enable_reboot_on_verification_failure",
+                    ] + invoker.base_packages
     pkgfs_package_label = ":${labels.empty_pkgfs}"
   }
 

@@ -1,0 +1,22 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/syslog/client.shard.cml",
+        "//sdk/lib/syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/security_pkg_reboot",
+    },
+    capabilities: [
+        { protocol: "fuchsia.hardware.power.statecontrol.Admin" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
+            from: "self",
+        },
+    ],
+}

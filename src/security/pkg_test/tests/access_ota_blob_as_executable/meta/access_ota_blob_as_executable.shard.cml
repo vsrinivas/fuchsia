@@ -38,6 +38,10 @@
             name: "dns_resolver",
             url: "#meta/security_pkg_dns_resolver.cm",
         },
+        {
+            name: "reboot",
+            url: "#meta/security_pkg_reboot.cm",
+        },
 
         // Non-production dependencies.
         {
@@ -63,6 +67,10 @@
         {
             name: "system-updater",
             url: "#meta/system-updater.cm",
+        },
+        {
+            name: "system-update-committer",
+            url: "#meta/system-update-committer.cm",
         },
     ],
     capabilities: [
@@ -153,6 +161,13 @@
             subdir: "packages/config-data/0/meta/data/pkg-resolver",
         },
         {
+            directory: "pkgfs",
+            from: "#fshost",
+            as: "config-data",
+            to: "#system-update-committer",
+            subdir: "packages/config-data/0/meta/data/system-update-committer",
+        },
+        {
             directory: "root-ssl-certificates",
             from: "parent",
             as: "root-ssl-certificates",
@@ -234,7 +249,10 @@
         {
             protocol: "fuchsia.paver.Paver",
             from: "#paver",
-            to: "#system-updater",
+            to: [
+                "#system-update-committer",
+                "#system-updater",
+            ],
         },
         {
             directory: "pkgfs",
@@ -252,25 +270,26 @@
                 "#system-updater",
             ],
         },
+        {
+            protocol: "fuchsia.update.CommitStatusProvider",
+            from: "#system-update-committer",
+            to: "#pkg-cache",
+        },
+        {
+            protocol: [ "fuchsia.hardware.power.statecontrol.Admin" ],
+            from: "#reboot",
+            to: [
+                "#system-update-committer",
+                "#system-updater",
+            ],
+        },
 
         // TODO(fxbug.dev/88453): Add production components or custom protocol
         // implementations.
         // {
-        //     protocol: "fuchsia.update.CommitStatusProvider",
-        //     from: "???",
-        //     to: "#pkg-cache",
-        // },
-        // {
         //     protocol: "fuchsia.pkg.LocalMirror",
         //     from: "???",
         //     to: "#pkg-resolver",
-        // },
-        // {
-        //     protocol: [
-        //         "fuchsia.hardware.power.statecontrol.Admin",
-        //     ],
-        //     from: "???",
-        //     to: "#system-updater",
         // },
     ],
 }

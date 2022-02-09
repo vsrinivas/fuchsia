@@ -1,0 +1,28 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_test_component.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("security_pkg_reboot-binary") {
+  testonly = true
+  output_name = "security_pkg_reboot"
+  edition = "2018"
+  source_root = "src/main.rs"
+
+  sources = [ "src/main.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/pkg/testing/mock-reboot",
+  ]
+}
+
+fuchsia_test_component("security_pkg_reboot-component") {
+  component_name = "security_pkg_reboot"
+  manifest = "meta/security_pkg_reboot.cml"
+  deps = [ ":security_pkg_reboot-binary" ]
+}
