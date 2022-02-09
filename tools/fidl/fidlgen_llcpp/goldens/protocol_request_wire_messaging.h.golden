@@ -22,13 +22,7 @@ class Parent;
 class Child;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildRequestResponseMessageTable;
@@ -37,13 +31,7 @@ __LOCAL extern "C" const fidl_type_t
     test_protocolrequest_ParentTakeChildRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildRequestResponseMessageTable;
 }  // namespace test_protocolrequest
 template <>
 struct ::fidl::internal::WireOrdinal<::test_protocolrequest::Parent::GetChild>

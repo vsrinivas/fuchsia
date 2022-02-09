@@ -21,9 +21,6 @@ class OneWay;
 
 __LOCAL extern "C" const fidl_type_t
     test_driveroneway_OneWaySendRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_driveroneway_OneWaySendResponseMessageTable;
 }  // namespace test_driveroneway
 template <>
 struct ::fidl::internal::WireOrdinal<::test_driveroneway::OneWay::Send> final {

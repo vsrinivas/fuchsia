@@ -10,8 +10,6 @@ namespace test_driveroneway {
 
 extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestMessageTable;
 
-extern "C" const fidl_type_t test_driveroneway_OneWaySendResponseMessageTable;
-
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway
 ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send>::WireUnownedResult(

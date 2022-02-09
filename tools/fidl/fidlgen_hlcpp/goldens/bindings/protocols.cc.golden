@@ -2024,18 +2024,6 @@ zx_status_t HandleRightsProtocol_SyncProxy::ResponseMethod(
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
@@ -2045,16 +2033,10 @@ __LOCAL extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
@@ -3698,25 +3680,13 @@ zx_status_t ManyParameters_SyncProxy::Fifteen(bool p1, bool p2, bool p3,
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxResponseAsStructRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxErrorAsEnumRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxHandleInResultRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
@@ -4190,11 +4160,6 @@ zx_status_t WithErrorSyntax_SyncProxy::HandleInResult(
 
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_DiscoverableProtocolMethodRequestMessageTable;
-
-}  // namespace _internal
 DiscoverableProtocol::~DiscoverableProtocol() = default;
 const char DiscoverableProtocol::Name_[] =
     "test.protocols.DiscoverableProtocol";
@@ -4340,9 +4305,6 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolTakeHandleResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMutateSocketRequestMessageTable;

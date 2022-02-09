@@ -24,7 +24,7 @@ using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
 {{- IfdefFuchsia -}}
 
 {{- range .Methods }}
-  {{- if .HasRequest }}
+  {{- if .HasRequestPayload }}
   {{ EnsureNamespace .Request.HlCodingTable }}
   __LOCAL extern "C" const fidl_type_t {{ .Request.HlCodingTable.Name }};
   {{- end }}
@@ -83,7 +83,7 @@ class {{ .RequestEncoder.Name }} {
 };
 
 {{- range .Methods }}
-  {{- if .HasResponse }}
+  {{- if .HasResponsePayload }}
   {{ EnsureNamespace .Response.HlCodingTable }}
   __LOCAL extern "C" const fidl_type_t {{ .Response.HlCodingTable.Name }};
   {{- end }}

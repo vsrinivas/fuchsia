@@ -10,17 +10,11 @@ namespace test_union {
         582913180652179677lu;
 
 extern "C" const fidl_type_t
-    test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestMessageTable;
-
-extern "C" const fidl_type_t
     test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t
     kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
         7698084639218919941lu;
-
-extern "C" const fidl_type_t
-    test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestMessageTable;
 
 extern "C" const fidl_type_t
     test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;

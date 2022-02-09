@@ -217,42 +217,18 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t 
       return true;
     }
     case fuchsia_tracing_provider_ProviderStopOrdinal: {
-      if (unlikely(num_bytes < sizeof(fidl_message_header_t))) {
+      // The method does not define a request payload, so the message should be a header only.
+      if (unlikely(num_bytes != sizeof(fidl_message_header_t))) {
         return ZX_ERR_INVALID_ARGS;
       }
-      uint32_t trimmed_num_bytes = num_bytes - (uint32_t)(sizeof(fidl_message_header_t));
-      if (unlikely(buffer == NULL)) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      uint8_t* trimmed_bytes = (uint8_t*)buffer + sizeof(fidl_message_header_t);
-
-      zx_status_t status =
-          fidl_decode_etc(&fuchsia_tracing_provider_ProviderStopRequestMessageTable, trimmed_bytes,
-                          trimmed_num_bytes, handles, num_handles, nullptr);
-      if (status != ZX_OK) {
-        return false;
-      }
-
       impl_->Stop();
       return true;
     }
     case fuchsia_tracing_provider_ProviderTerminateOrdinal: {
-      if (unlikely(num_bytes < sizeof(fidl_message_header_t))) {
+      // The method does not define a request payload, so the message should be a header only.
+      if (unlikely(num_bytes != sizeof(fidl_message_header_t))) {
         return ZX_ERR_INVALID_ARGS;
       }
-      uint32_t trimmed_num_bytes = num_bytes - (uint32_t)(sizeof(fidl_message_header_t));
-      if (unlikely(buffer == NULL)) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      uint8_t* trimmed_bytes = (uint8_t*)buffer + sizeof(fidl_message_header_t);
-
-      zx_status_t status =
-          fidl_decode_etc(&fuchsia_tracing_provider_ProviderTerminateRequestMessageTable,
-                          trimmed_bytes, trimmed_num_bytes, handles, num_handles, nullptr);
-      if (status != ZX_OK) {
-        return false;
-      }
-
       impl_->Terminate();
       return true;
     }

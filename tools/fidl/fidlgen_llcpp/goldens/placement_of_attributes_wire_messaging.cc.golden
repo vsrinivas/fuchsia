@@ -10,9 +10,6 @@ namespace test_placementofattributes {
 
 extern "C" const fidl_type_t
     test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_placementofattributes_ExampleProtocolMethodResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_placementofattributes
 ::fidl::WireResult<::test_placementofattributes::ExampleProtocol::Method>::

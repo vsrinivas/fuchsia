@@ -111,12 +111,6 @@ namespace test_bindingsdenylist {
 [[maybe_unused]] constexpr uint64_t
     kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal =
         2342407566057198902lu;
-
-extern "C" const fidl_type_t
-    test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
 ::fidl::WireResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -571,21 +565,9 @@ namespace test_bindingsdenylist {
 [[maybe_unused]] constexpr uint64_t
     kImportsSameNameContext_Unattributed_Ordinal = 475191379775102607lu;
 
-extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextUnattributedResponseMessageTable;
-
 [[maybe_unused]] constexpr uint64_t
     kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal =
         2914965219653596920lu;
-
-extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
 ::fidl::WireResult<

@@ -110,10 +110,6 @@ void fidl::WireServer<::test_versions::OtherProtocol>::dispatch_message(
 namespace test_versions {
 [[maybe_unused]] constexpr uint64_t kProtocol_Foo_Ordinal =
     6231434419097198905lu;
-
-extern "C" const fidl_type_t test_versions_ProtocolFooRequestMessageTable;
-
-extern "C" const fidl_type_t test_versions_ProtocolFooResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_versions
 ::fidl::WireResult<::test_versions::Protocol::Foo>::WireResult(

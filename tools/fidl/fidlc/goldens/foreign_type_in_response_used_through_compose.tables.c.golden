@@ -7,9 +7,6 @@ __LOCAL extern const struct FidlCodedStruct test_bottom_FooTable;
 __LOCAL extern const struct FidlCodedStruct test_middle_MiddleGetFooTopResponseTable;
 
 
-__LOCAL extern const struct FidlCodedStruct test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable;
-const struct FidlCodedStruct test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=0u, .size_v2=0u, .name="test.foreigntypeinresponseusedthroughcompose/TopGetFooRequestMessage"};
-
 __LOCAL extern const struct FidlCodedStruct test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
 const struct FidlCodedStruct test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.foreigntypeinresponseusedthroughcompose/TopGetFooResponseMessage"};
 

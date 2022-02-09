@@ -12,16 +12,10 @@
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
-namespace fidl {}  // namespace fidl
-namespace test_service {
-__LOCAL extern "C" const fidl_type_t
-    test_service_SecondProtocolMethodOnSecondRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_service_SecondProtocolMethodOnSecondResponseMessageTable;
+namespace fidl {
 
 #ifdef __Fuchsia__
-}  // namespace test_service
+}  // namespace fidl
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_service::SecondProtocol> final
     : public ::fidl::internal::NaturalClientBase {
@@ -29,10 +23,10 @@ class ::fidl::internal::NaturalClientImpl<::test_service::SecondProtocol> final
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> MethodOnSecond() const;
 };
-namespace test_service {
+namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace test_service
+}  // namespace fidl
 #ifdef __Fuchsia__
 
 template <>
@@ -151,15 +145,8 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_service::SecondProtocol>
 };
 #endif  // __Fuchsia__
 
-namespace test_service {
-__LOCAL extern "C" const fidl_type_t
-    test_service_FirstProtocolMethodOnFirstRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_service_FirstProtocolMethodOnFirstResponseMessageTable;
-
 #ifdef __Fuchsia__
-}  // namespace test_service
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_service::FirstProtocol> final
     : public ::fidl::internal::NaturalClientBase {
@@ -167,10 +154,8 @@ class ::fidl::internal::NaturalClientImpl<::test_service::FirstProtocol> final
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> MethodOnFirst() const;
 };
-namespace test_service {
 #endif  // __Fuchsia__
 
-}  // namespace test_service
 #ifdef __Fuchsia__
 
 template <>

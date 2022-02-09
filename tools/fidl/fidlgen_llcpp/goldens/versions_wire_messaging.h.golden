@@ -157,11 +157,6 @@ class ::fidl::WireServer<::test_versions::OtherProtocol>
 namespace test_versions {
 #endif  // __Fuchsia__
 
-__LOCAL extern "C" const fidl_type_t
-    test_versions_ProtocolFooRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_versions_ProtocolFooResponseMessageTable;
 }  // namespace test_versions
 template <>
 struct ::fidl::internal::WireOrdinal<::test_versions::Protocol::Foo> final {

@@ -255,7 +255,7 @@ protocol ErrorSyntaxProtocol {
   fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
-  ASSERT_EQ(4, gen.coded_types().size());
+  ASSERT_EQ(3, gen.coded_types().size());
 
   auto type0 = gen.coded_types().at(0).get();
   EXPECT_STREQ("example_ErrorSyntaxProtocol_ErrorSyntaxMethod_ResultNullableRef",
@@ -267,20 +267,12 @@ protocol ErrorSyntaxProtocol {
   EXPECT_STREQ("uint32", type1->coded_name.c_str());
 
   auto type2 = gen.coded_types().at(2).get();
-  EXPECT_STREQ("example_ErrorSyntaxProtocolErrorSyntaxMethodRequestMessage",
-               type2->coded_name.c_str());
-  EXPECT_EQ(0, type2->size_v1);
-  EXPECT_EQ(0, type2->size_v2);
-  auto type2_message = static_cast<const fidl::coded::MessageType*>(type2);
-  EXPECT_FALSE(type2_message->contains_envelope);
-
-  auto type3 = gen.coded_types().at(3).get();
   EXPECT_STREQ("example_ErrorSyntaxProtocolErrorSyntaxMethodResponseMessage",
-               type3->coded_name.c_str());
-  EXPECT_EQ(24, type3->size_v1);
-  EXPECT_EQ(16, type3->size_v2);
-  auto type3_message = static_cast<const fidl::coded::MessageType*>(type3);
-  EXPECT_TRUE(type3_message->contains_envelope);
+               type2->coded_name.c_str());
+  EXPECT_EQ(24, type2->size_v1);
+  EXPECT_EQ(16, type2->size_v2);
+  auto type2_message = static_cast<const fidl::coded::MessageType*>(type2);
+  EXPECT_TRUE(type2_message->contains_envelope);
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfProtocolEnds) {

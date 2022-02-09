@@ -23,12 +23,6 @@ __LOCAL extern "C" const fidl_type_t
     test_emptystruct_EmptyProtocolSendRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolReceiveRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_emptystruct_EmptyProtocolReceiveEventMessageTable;
 
 __LOCAL extern "C" const fidl_type_t

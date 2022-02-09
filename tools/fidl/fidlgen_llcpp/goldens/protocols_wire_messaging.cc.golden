@@ -11,9 +11,6 @@ namespace test_protocols {
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
 
-extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolNoResponseMethodResponseMessageTable;
-
 [[maybe_unused]] constexpr uint64_t
     kHandleRightsProtocol_ResponseMethod_Ordinal = 5956276128041940295lu;
 
@@ -25,9 +22,6 @@ extern "C" const fidl_type_t
 
 [[maybe_unused]] constexpr uint64_t kHandleRightsProtocol_AnEvent_Ordinal =
     476727631355490611lu;
-
-extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolAnEventRequestMessageTable;
 
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolAnEventEventMessageTable;
@@ -660,28 +654,13 @@ namespace test_protocols {
     kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
         5413654872775949227lu;
 
-extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseResponseMessageTable;
-
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal =
         1631193469798418024lu;
 
-extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseMessageTable;
-
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal =
         9037369643591427517lu;
-
-extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestMessageTable;
 
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
@@ -693,18 +672,12 @@ extern "C" const fidl_type_t
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable;
 
-extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseResponseMessageTable;
-
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal =
         2877322062572412767lu;
 
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal =
@@ -720,18 +693,9 @@ extern "C" const fidl_type_t
     kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal =
         5397663296507358806lu;
 
-extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseOnEmptyResponseRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable;
-
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_OnWithResponse_Ordinal =
         5811598563493228968lu;
-
-extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestMessageTable;
 
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
@@ -2393,14 +2357,8 @@ extern "C" const fidl_type_t
 extern "C" const fidl_type_t
     test_protocols_TransitionalOneWayRequestMessageTable;
 
-extern "C" const fidl_type_t
-    test_protocols_TransitionalOneWayResponseMessageTable;
-
 [[maybe_unused]] constexpr uint64_t kTransitional_Event_Ordinal =
     8507647465196374081lu;
-
-extern "C" const fidl_type_t
-    test_protocols_TransitionalEventRequestMessageTable;
 
 extern "C" const fidl_type_t test_protocols_TransitionalEventEventMessageTable;
 #ifdef __Fuchsia__
@@ -2941,9 +2899,6 @@ namespace test_protocols {
 
 extern "C" const fidl_type_t
     test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_protocols_MethodWithUnionUnionMethodResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 ::fidl::WireResult<::test_protocols::MethodWithUnion::UnionMethod>::WireResult(
@@ -4118,9 +4073,6 @@ namespace test_protocols {
 
 extern "C" const fidl_type_t
     test_protocols_ManyParametersFifteenRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_protocols_ManyParametersFifteenResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 ::fidl::WireResult<::test_protocols::ManyParameters::Fifteen>::WireResult(
@@ -4343,16 +4295,10 @@ namespace test_protocols {
     268248568430741139lu;
 
 extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxResponseAsStructRequestMessageTable;
-
-extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal =
     6930994461233198567lu;
-
-extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestMessageTable;
 
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
@@ -4361,16 +4307,10 @@ extern "C" const fidl_type_t
     5491891352371277635lu;
 
 extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxErrorAsEnumRequestMessageTable;
-
-extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_HandleInResult_Ordinal =
     1371676333068455103lu;
-
-extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxHandleInResultRequestMessageTable;
 
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
@@ -5595,12 +5535,6 @@ void ::fidl::WireResponse<
 namespace test_protocols {
 [[maybe_unused]] constexpr uint64_t kDiscoverableProtocol_Method_Ordinal =
     3455873048082739435lu;
-
-extern "C" const fidl_type_t
-    test_protocols_DiscoverableProtocolMethodRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_protocols_DiscoverableProtocolMethodResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 ::fidl::WireResult<::test_protocols::DiscoverableProtocol::Method>::WireResult(
@@ -5788,14 +5722,8 @@ namespace test_protocols {
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMethodARequestMessageTable;
 
-extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMethodAResponseMessageTable;
-
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_EventA_Ordinal =
     2220452875311597006lu;
-
-extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolEventARequestMessageTable;
 
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolEventAEventMessageTable;
@@ -5814,9 +5742,6 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolTakeHandleResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal =
     7411742788430590287lu;

@@ -9,16 +9,10 @@ namespace test_protocolrequest {
     881818649151440699lu;
 
 extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestMessageTable;
-
-extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kParent_GetChildRequest_Ordinal =
     1096855814967598201lu;
-
-extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestRequestMessageTable;
 
 extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildRequestResponseMessageTable;
@@ -29,17 +23,11 @@ extern "C" const fidl_type_t
 extern "C" const fidl_type_t
     test_protocolrequest_ParentTakeChildRequestMessageTable;
 
-extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildResponseMessageTable;
-
 [[maybe_unused]] constexpr uint64_t kParent_TakeChildRequest_Ordinal =
     2333981071306416007lu;
 
 extern "C" const fidl_type_t
     test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildRequestResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
 ::fidl::WireResult<::test_protocolrequest::Parent::GetChild>::WireResult(

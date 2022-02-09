@@ -38,10 +38,14 @@
 {{- $protocol := . }}
 {{ "" }}
   {{- range .Methods }}
-{{ EnsureNamespace .Request.WireCodingTable }}
+    {{- if .HasRequestPayload }}
+      {{ EnsureNamespace .Request.WireCodingTable }}
 __LOCAL extern "C" const fidl_type_t {{ .Request.WireCodingTable.Name }};
-{{ EnsureNamespace .Response.WireCodingTable }}
+    {{- end }}
+    {{- if .HasResponsePayload }}
+      {{ EnsureNamespace .Response.WireCodingTable }}
 __LOCAL extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
+    {{- end }}
   {{- end }}
 {{ "" }}
 
@@ -245,10 +249,14 @@ static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $par
 {{ EnsureNamespace .OrdinalName }}
 [[maybe_unused]]
 constexpr uint64_t {{ .OrdinalName.Name }} = {{ .Ordinal }}lu;
+{{- if .HasRequestPayload }}
 {{ EnsureNamespace .Request.WireCodingTable }}
 extern "C" const fidl_type_t {{ .Request.WireCodingTable.Name }};
+{{- end }}
+{{- if .HasResponsePayload }}
 {{ EnsureNamespace .Response.WireCodingTable }}
 extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
+{{- end }}
 {{- end }}
 
 {{- /* Client-calling functions do not apply to events. */}}
@@ -315,9 +323,13 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
   {{- /* This decouples the natural messaging header from the messaging header. */}}
   {{- /* For example, we could transition one of them off of coding tables independently. */}}
   {{- range .Methods }}
-    {{ EnsureNamespace .Request.WireCodingTable }}
+    {{- if .HasRequestPayload }}
+      {{ EnsureNamespace .Request.WireCodingTable }}
     __LOCAL extern "C" const fidl_type_t {{ .Request.WireCodingTable.Name }};
-    {{ EnsureNamespace .Response.WireCodingTable }}
+    {{- end }}
+    {{- if .HasResponsePayload }}
+      {{ EnsureNamespace .Response.WireCodingTable }}
     __LOCAL extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
+    {{- end }}
   {{- end }}
 {{- end }}

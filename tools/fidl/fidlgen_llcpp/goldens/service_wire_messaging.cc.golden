@@ -7,12 +7,6 @@
 namespace test_service {
 [[maybe_unused]] constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal =
     8121179205110225988lu;
-
-extern "C" const fidl_type_t
-    test_service_SecondProtocolMethodOnSecondRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_service_SecondProtocolMethodOnSecondResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_service
 ::fidl::WireResult<::test_service::SecondProtocol::MethodOnSecond>::WireResult(
@@ -191,12 +185,6 @@ void ::fidl::WireRequest<
 namespace test_service {
 [[maybe_unused]] constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal =
     6352548393671797041lu;
-
-extern "C" const fidl_type_t
-    test_service_FirstProtocolMethodOnFirstRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_service_FirstProtocolMethodOnFirstResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_service
 ::fidl::WireResult<::test_service::FirstProtocol::MethodOnFirst>::WireResult(

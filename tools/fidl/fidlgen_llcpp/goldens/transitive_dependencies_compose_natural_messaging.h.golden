@@ -17,9 +17,6 @@
 namespace fidl {}  // namespace fidl
 namespace test_transitivedependenciescompose {
 __LOCAL extern "C" const fidl_type_t
-    test_transitivedependenciescompose_TopGetFooRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_transitivedependenciescompose_TopGetFooResponseMessageTable;
 
 #ifdef __Fuchsia__

@@ -1321,14 +1321,6 @@ using OlderSimpleUnionPtr = ::std::unique_ptr<OlderSimpleUnion>;
 
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestMessageTable;
-
-}  // namespace _internal
 class TestProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage

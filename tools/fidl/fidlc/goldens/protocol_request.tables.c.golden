@@ -13,17 +13,11 @@ static const struct FidlCodedHandle Request26test_protocolrequest_Childnonnullab
 
 static const struct FidlCodedHandle Protocol26test_protocolrequest_ChildnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
-__LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestMessageTable;
-const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=0u, .size_v2=0u, .name="test.protocolrequest/ParentGetChildRequestMessage"};
-
 __LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildResponseMessageTable;
 static const struct FidlStructElement Fields50test_protocolrequest_ParentGetChildResponseMessage[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Protocol26test_protocolrequest_ChildnonnullableTable)}}
 };
 const struct FidlCodedStruct test_protocolrequest_ParentGetChildResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields50test_protocolrequest_ParentGetChildResponseMessage, .element_count=1u, .size_v1=4u, .size_v2=4u, .name="test.protocolrequest/ParentGetChildResponseMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestRequestMessageTable;
-const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=0u, .size_v2=0u, .name="test.protocolrequest/ParentGetChildRequestRequestMessage"};
 
 __LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestResponseMessageTable;
 static const struct FidlStructElement Fields57test_protocolrequest_ParentGetChildRequestResponseMessage[] = {

@@ -11,9 +11,6 @@ namespace test_protocolpayloads {
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOneWayComposedRequestMessageTable;
 
-extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayComposedResponseMessageTable;
-
 [[maybe_unused]] constexpr uint64_t kMainProtocol_TwoWayComposed_Ordinal =
     2542459230546612144lu;
 
@@ -36,16 +33,10 @@ extern "C" const fidl_type_t
     1872339328378152762lu;
 
 extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnComposedRequestMessageTable;
-
-extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOnComposedEventMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OnComposedWithError_Ordinal =
     7167282778061495960lu;
-
-extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnComposedWithErrorRequestMessageTable;
 
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOnComposedWithErrorEventMessageTable;
@@ -55,9 +46,6 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOneWayLocalRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayLocalResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_TwoWayLocal_Ordinal =
     8374292137648566031lu;
@@ -81,16 +69,10 @@ extern "C" const fidl_type_t
     5135782819583756313lu;
 
 extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnLocalRequestMessageTable;
-
-extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOnLocalEventMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OnLocalWithError_Ordinal =
     5678277415565140399lu;
-
-extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnLocalWithErrorRequestMessageTable;
 
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOnLocalWithErrorEventMessageTable;
@@ -100,9 +82,6 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOneWayImportRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayImportResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_TwoWayImport_Ordinal =
     2374708679656510579lu;
@@ -126,16 +105,10 @@ extern "C" const fidl_type_t
     1996489653379631369lu;
 
 extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnImportRequestMessageTable;
-
-extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOnImportEventMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OnImportWithError_Ordinal =
     7102941407914553861lu;
-
-extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnImportWithErrorRequestMessageTable;
 
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOnImportWithErrorEventMessageTable;
@@ -145,9 +118,6 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOneWayAnonRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayAnonResponseMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_TwoWayAnon_Ordinal =
     629880979996923737lu;
@@ -171,16 +141,10 @@ extern "C" const fidl_type_t
     4815229650203439104lu;
 
 extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnAnonRequestMessageTable;
-
-extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOnAnonEventMessageTable;
 
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OnAnonWithError_Ordinal =
     5024931894357412354lu;
-
-extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnAnonWithErrorRequestMessageTable;
 
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOnAnonWithErrorEventMessageTable;

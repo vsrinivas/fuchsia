@@ -23,9 +23,6 @@ class ExampleProtocol;
 
 __LOCAL extern "C" const fidl_type_t
     test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_placementofattributes_ExampleProtocolMethodResponseMessageTable;
 }  // namespace test_placementofattributes
 template <>
 struct ::fidl::internal::WireOrdinal<

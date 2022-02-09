@@ -20,11 +20,6 @@ using TopHandle = ::fidl::InterfaceHandle<Top>;
 
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_transitivedependenciescompose_TopGetFooRequestMessageTable;
-
-}  // namespace _internal
 class Top_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::MessageEncoder* _encoder) {

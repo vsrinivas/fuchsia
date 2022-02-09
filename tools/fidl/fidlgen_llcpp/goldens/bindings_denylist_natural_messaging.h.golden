@@ -115,15 +115,7 @@ struct ::fidl::internal::NaturalServerDispatcher<
 };
 #endif  // __Fuchsia__
 
-namespace test_bindingsdenylist {
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
-
 #ifdef __Fuchsia__
-}  // namespace test_bindingsdenylist
 
 template <>
 class ::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -148,7 +140,6 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = false;
 };
-namespace test_bindingsdenylist {}  // namespace test_bindingsdenylist
 template <>
 class ::fidl::internal::ClientCallbackTraits<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -182,10 +173,8 @@ class ::fidl::internal::NaturalClientImpl<
           ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
               LibfuzzerNeedsNonemptyProtocol>&& _callback) const;
 };
-namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
 
-}  // namespace test_bindingsdenylist
 #ifdef __Fuchsia__
 
 template <>
@@ -445,21 +434,8 @@ struct ::fidl::internal::NaturalServerDispatcher<
 };
 #endif  // __Fuchsia__
 
-namespace test_bindingsdenylist {
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextUnattributedResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryResponseMessageTable;
-
 #ifdef __Fuchsia__
-}  // namespace test_bindingsdenylist
+
 template <>
 class ::fidl::internal::NaturalClientImpl<
     ::test_bindingsdenylist::ImportsSameNameContext>
@@ -470,10 +446,8 @@ class ::fidl::internal::NaturalClientImpl<
 
   ::fitx::result<::fidl::Error> AlwaysAppearsInImportingLibrary() const;
 };
-namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
 
-}  // namespace test_bindingsdenylist
 #ifdef __Fuchsia__
 
 template <>

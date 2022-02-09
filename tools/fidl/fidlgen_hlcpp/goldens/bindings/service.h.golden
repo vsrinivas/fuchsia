@@ -39,11 +39,6 @@ class EmptyService;
 
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_service_SecondProtocolMethodOnSecondRequestMessageTable;
-
-}  // namespace _internal
 class SecondProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage MethodOnSecond(
@@ -59,11 +54,6 @@ class SecondProtocol_ResponseEncoder {
 
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_service_FirstProtocolMethodOnFirstRequestMessageTable;
-
-}  // namespace _internal
 class FirstProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage MethodOnFirst(

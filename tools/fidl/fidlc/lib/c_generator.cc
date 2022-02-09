@@ -1225,7 +1225,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
     }
 
     bool has_padding = method_info.request->typeshape.has_padding;
-    bool encode_request = (count > 0) || (request_hcount > 0) || has_padding;
+    bool encode_request = !request.empty() && ((count > 0) || (request_hcount > 0) || has_padding);
 
     EmitClientMethodDecl(&file_, method_info.c_name, request, response);
     file_ << " {\n";
@@ -1335,7 +1335,8 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
       // message.
       count = CountSecondaryObjects(response);
       has_padding = method_info.response->typeshape.has_padding;
-      bool decode_response = (count > 0) || (response_hcount > 0) || has_padding;
+      bool decode_response =
+          !response.empty() && ((count > 0) || (response_hcount > 0) || has_padding);
       if (count > 0u) {
         file_ << kIndent << "if ";
         if (count > 1u)
@@ -1534,13 +1535,14 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
       continue;
     }
     file_ << kIndent << "case " << method_info.ordinal_name << ": {\n";
-    file_ << kIndent << kIndent << "status = fidl_decode_msg(&" << method_info.request->coded_name
-          << ", msg, NULL);\n";
-    file_ << kIndent << kIndent << "if (status != ZX_OK)\n";
-    file_ << kIndent << kIndent << kIndent << "break;\n";
-    if (!request.empty())
+    if (!request.empty()) {
+      file_ << kIndent << kIndent << "status = fidl_decode_msg(&" << method_info.request->coded_name
+            << ", msg, NULL);\n";
+      file_ << kIndent << kIndent << "if (status != ZX_OK)\n";
+      file_ << kIndent << kIndent << kIndent << "break;\n";
       file_ << kIndent << kIndent << method_info.request->c_name << "* request = ("
             << method_info.request->c_name << "*)msg->bytes;\n";
+    }
     file_ << kIndent << kIndent << "status = (*ops->" << method_info.identifier << ")(ctx";
     for (const auto& member : request) {
       switch (member.kind) {

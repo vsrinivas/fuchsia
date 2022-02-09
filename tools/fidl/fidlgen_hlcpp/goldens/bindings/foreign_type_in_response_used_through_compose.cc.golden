@@ -17,9 +17,6 @@ namespace test {
 namespace foreigntypeinresponseusedthroughcompose {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
 
 }  // namespace _internal

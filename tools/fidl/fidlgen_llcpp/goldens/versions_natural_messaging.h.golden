@@ -112,15 +112,8 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_versions::OtherProtocol>
 };
 #endif  // __Fuchsia__
 
-namespace test_versions {
-__LOCAL extern "C" const fidl_type_t
-    test_versions_ProtocolFooRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_versions_ProtocolFooResponseMessageTable;
-
 #ifdef __Fuchsia__
-}  // namespace test_versions
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_versions::Protocol> final
     : public ::fidl::internal::NaturalClientBase {
@@ -128,10 +121,8 @@ class ::fidl::internal::NaturalClientImpl<::test_versions::Protocol> final
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> Foo() const;
 };
-namespace test_versions {
 #endif  // __Fuchsia__
 
-}  // namespace test_versions
 #ifdef __Fuchsia__
 
 template <>

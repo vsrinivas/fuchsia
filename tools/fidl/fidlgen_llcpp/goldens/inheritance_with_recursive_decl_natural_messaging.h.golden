@@ -17,9 +17,6 @@ namespace test_inheritancewithrecursivedecl {
 __LOCAL extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
 
-__LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ParentFirstResponseMessageTable;
-
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
 template <>
@@ -185,13 +182,7 @@ __LOCAL extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildFirstResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildSecondResponseMessageTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl

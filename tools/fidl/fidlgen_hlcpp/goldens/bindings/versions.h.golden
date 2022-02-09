@@ -395,11 +395,6 @@ class OtherProtocol_ResponseEncoder {
 
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_versions_ProtocolFooRequestMessageTable;
-
-}  // namespace _internal
 class Protocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Foo(::fidl::MessageEncoder* _encoder) {

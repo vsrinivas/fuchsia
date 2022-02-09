@@ -17,13 +17,7 @@ namespace test {
 namespace protocolrequest {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildRequestResponseMessageTable;

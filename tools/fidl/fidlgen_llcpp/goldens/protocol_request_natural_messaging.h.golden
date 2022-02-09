@@ -15,13 +15,7 @@
 namespace fidl {}  // namespace fidl
 namespace test_protocolrequest {
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildRequestResponseMessageTable;
@@ -30,13 +24,7 @@ __LOCAL extern "C" const fidl_type_t
     test_protocolrequest_ParentTakeChildRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildRequestResponseMessageTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest

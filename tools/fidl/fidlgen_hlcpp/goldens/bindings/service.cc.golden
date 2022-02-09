@@ -15,11 +15,6 @@
 
 namespace test {
 namespace service {
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_service_SecondProtocolMethodOnSecondRequestMessageTable;
-
-}  // namespace _internal
 SecondProtocol::~SecondProtocol() = default;
 
 const fidl_type_t* ::test::service::SecondProtocol_RequestDecoder::GetType(
@@ -149,11 +144,6 @@ zx_status_t SecondProtocol_SyncProxy::MethodOnSecond() {
 
 namespace test {
 namespace service {
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_service_FirstProtocolMethodOnFirstRequestMessageTable;
-
-}  // namespace _internal
 FirstProtocol::~FirstProtocol() = default;
 
 const fidl_type_t* ::test::service::FirstProtocol_RequestDecoder::GetType(

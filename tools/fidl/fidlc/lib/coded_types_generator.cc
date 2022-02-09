@@ -323,12 +323,12 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         assert(method_with_info.method != nullptr);
         const auto& method = *method_with_info.method;
         auto CompileMessage = [&](const std::unique_ptr<flat::TypeConstructor>& payload) -> void {
-          std::unique_ptr<coded::MessageType>& coded_message =
-              coded_protocol->messages_during_compile[i++];
-          std::vector<coded::StructElement>& request_elements = coded_message->elements;
-          uint32_t field_num = 0;
-          bool is_noop = true;
           if (payload) {
+            std::unique_ptr<coded::MessageType>& coded_message =
+                coded_protocol->messages_during_compile[i++];
+            std::vector<coded::StructElement>& request_elements = coded_message->elements;
+            uint32_t field_num = 0;
+            bool is_noop = true;
             auto id = static_cast<const flat::IdentifierType*>(payload->type);
 
             // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
@@ -352,16 +352,16 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
               }
               field_num++;
             }
-          }
 
-          coded_message->is_noop = is_noop;
-          // We move the coded_message to coded_types_ so that we'll generate tables for the
-          // message in the proper order.
-          coded_types_.push_back(std::move(coded_message));
-          // We also keep back pointers to reference to these messages via the
-          // coded_protocol.
-          coded_protocol->messages_after_compile.push_back(
-              static_cast<const coded::MessageType*>(coded_types_.back().get()));
+            coded_message->is_noop = is_noop;
+            // We move the coded_message to coded_types_ so that we'll generate tables for the
+            // message in the proper order.
+            coded_types_.push_back(std::move(coded_message));
+            // We also keep back pointers to reference to these messages via the
+            // coded_protocol.
+            coded_protocol->messages_after_compile.push_back(
+                static_cast<const coded::MessageType*>(coded_types_.back().get()));
+          }
         };
         if (method.has_request) {
           CompileMessage(method.maybe_request);
@@ -512,11 +512,11 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         std::string method_qname = NameMethod(protocol_qname, method);
         auto CreateMessage = [&](const std::unique_ptr<flat::TypeConstructor>& payload,
                                  types::MessageKind kind) -> void {
-          std::string message_name = NameMessage(method_name, kind);
-          std::string message_qname = NameMessage(method_qname, kind);
-          auto typeshape_v1 = TypeShape::ForEmptyPayload();
-          auto typeshape_v2 = TypeShape::ForEmptyPayload();
           if (payload) {
+            std::string message_name = NameMessage(method_name, kind);
+            std::string message_qname = NameMessage(method_qname, kind);
+            auto typeshape_v1 = TypeShape::ForEmptyPayload();
+            auto typeshape_v2 = TypeShape::ForEmptyPayload();
             auto id = static_cast<const flat::IdentifierType*>(payload->type);
 
             // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
@@ -525,12 +525,12 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
 
             typeshape_v1 = as_struct->typeshape(WireFormat::kV1NoEe);
             typeshape_v2 = as_struct->typeshape(WireFormat::kV2);
-          }
 
-          protocol_messages.push_back(std::make_unique<coded::MessageType>(
-              std::move(message_name), std::vector<coded::StructElement>(),
-              typeshape_v1.inline_size, typeshape_v2.inline_size, typeshape_v1.has_envelope,
-              std::move(message_qname)));
+            protocol_messages.push_back(std::make_unique<coded::MessageType>(
+                std::move(message_name), std::vector<coded::StructElement>(),
+                typeshape_v1.inline_size, typeshape_v2.inline_size, typeshape_v1.has_envelope,
+                std::move(message_qname)));
+          }
         };
         if (method.has_request) {
           CreateMessage(method.maybe_request, types::MessageKind::kRequest);

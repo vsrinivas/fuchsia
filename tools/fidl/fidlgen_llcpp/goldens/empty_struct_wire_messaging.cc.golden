@@ -11,14 +11,8 @@ namespace test_emptystruct {
 extern "C" const fidl_type_t
     test_emptystruct_EmptyProtocolSendRequestMessageTable;
 
-extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendResponseMessageTable;
-
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_Receive_Ordinal =
     2301564782476583487lu;
-
-extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolReceiveRequestMessageTable;
 
 extern "C" const fidl_type_t
     test_emptystruct_EmptyProtocolReceiveEventMessageTable;

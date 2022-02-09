@@ -8,19 +8,8 @@ namespace test_doccomments {
 [[maybe_unused]] constexpr uint64_t kInterface_Method_Ordinal =
     5017051197196532121lu;
 
-extern "C" const fidl_type_t
-    test_doccomments_InterfaceMethodRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_doccomments_InterfaceMethodResponseMessageTable;
-
 [[maybe_unused]] constexpr uint64_t kInterface_OnEvent_Ordinal =
     28780186509098736lu;
-
-extern "C" const fidl_type_t
-    test_doccomments_InterfaceOnEventRequestMessageTable;
-
-extern "C" const fidl_type_t test_doccomments_InterfaceOnEventEventMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_doccomments
 ::fidl::WireResult<::test_doccomments::Interface::Method>::WireResult(

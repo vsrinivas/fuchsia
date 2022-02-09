@@ -8,9 +8,6 @@ namespace test_transitivedependenciescompose {
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 2618685789258237543lu;
 
 extern "C" const fidl_type_t
-    test_transitivedependenciescompose_TopGetFooRequestMessageTable;
-
-extern "C" const fidl_type_t
     test_transitivedependenciescompose_TopGetFooResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_transitivedependenciescompose

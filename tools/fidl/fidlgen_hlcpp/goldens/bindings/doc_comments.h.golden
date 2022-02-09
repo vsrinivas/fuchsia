@@ -521,22 +521,13 @@ using StrictUnionPtr = ::std::unique_ptr<StrictUnion>;
 
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_doccomments_InterfaceMethodRequestMessageTable;
-
-}  // namespace _internal
 class Interface_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Method(::fidl::MessageEncoder* _encoder) {
     return _encoder->GetMessage();
   }
 };
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_doccomments_InterfaceOnEventEventMessageTable;
 
-}  // namespace _internal
 class Interface_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage OnEvent(

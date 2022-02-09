@@ -49,39 +49,18 @@ void CheckTransaction(const board_test::DeviceEntry& entry, const char* device_f
   status = fdio_get_service_handle(fd.get(), &driver_channel);
   ASSERT_OK(status);
 
-  fuchsia_hardware_test_DeviceGetChannelRequestMessage req;
-  std::memset(&req, 0, sizeof(req));
+  // The method does not define a request payload, so the message should be a header only.
+  fidl_message_header_t hdr;
+  std::memset(&hdr, 0, sizeof(hdr));
   zx_txid_t first_txid = 1;
-  fidl_init_txn_header(&req.hdr, first_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal);
-  uint32_t actual = 0;
-  uint32_t trimmed_req_len;
-  uint8_t* trimmed_req;
-
-  status = ::fidl::internal::fidl_exclude_header_bytes(reinterpret_cast<void*>(&req), sizeof(req),
-                                                       &trimmed_req, &trimmed_req_len, nullptr);
-  ASSERT_OK(status);
-
-  status =
-      fidl_encode(&fuchsia_hardware_test::fuchsia_hardware_test_DeviceGetChannelRequestMessageTable,
-                  &trimmed_req, trimmed_req_len, nullptr, 0, &actual, nullptr);
-  ASSERT_OK(status);
-  ASSERT_OK(zx_channel_write(driver_channel, 0, &req, sizeof(req), nullptr, 0));
-
+  fidl_init_txn_header(&hdr, first_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal);
+  ASSERT_OK(zx_channel_write(driver_channel, 0, &hdr, sizeof(hdr), nullptr, 0));
   ASSERT_OK(zx_object_wait_one(driver_channel, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE, nullptr));
 
-  std::memset(&req, 0, sizeof(req));
+  std::memset(&hdr, 0, sizeof(hdr));
   zx_txid_t second_txid = 2;
-  fidl_init_txn_header(&req.hdr, second_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal);
-
-  status = ::fidl::internal::fidl_exclude_header_bytes(reinterpret_cast<void*>(&req), sizeof(req),
-                                                       &trimmed_req, &trimmed_req_len, nullptr);
-  ASSERT_OK(status);
-
-  status =
-      fidl_encode(&fuchsia_hardware_test::fuchsia_hardware_test_DeviceGetChannelRequestMessageTable,
-                  &trimmed_req, trimmed_req_len, nullptr, 0, &actual, nullptr);
-  ASSERT_OK(status);
-  ASSERT_OK(zx_channel_write(driver_channel, 0, &req, sizeof(req), nullptr, 0));
+  fidl_init_txn_header(&hdr, second_txid, fuchsia_hardware_test_DeviceGetChannelOrdinal);
+  ASSERT_OK(zx_channel_write(driver_channel, 0, &hdr, sizeof(hdr), nullptr, 0));
 
   // If the transaction incorrectly closes the sent handles, it will cause a policy violation.
   // Waiting for the channel to be readable once isn't enough, there is still a very small amount

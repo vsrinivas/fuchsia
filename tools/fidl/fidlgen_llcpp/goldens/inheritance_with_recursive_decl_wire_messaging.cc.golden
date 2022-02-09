@@ -10,9 +10,6 @@ namespace test_inheritancewithrecursivedecl {
 
 extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ParentFirstResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
 ::fidl::WireResult<::test_inheritancewithrecursivedecl::Parent::First>::
@@ -251,17 +248,11 @@ namespace test_inheritancewithrecursivedecl {
 extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
 
-extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildFirstResponseMessageTable;
-
 [[maybe_unused]] constexpr uint64_t kChild_Second_Ordinal =
     2545123272820824165lu;
 
 extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
-
-extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildSecondResponseMessageTable;
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
 ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::First>::

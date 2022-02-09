@@ -18,9 +18,6 @@ namespace test_placementofattributes {
 __LOCAL extern "C" const fidl_type_t
     test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
 
-__LOCAL extern "C" const fidl_type_t
-    test_placementofattributes_ExampleProtocolMethodResponseMessageTable;
-
 #ifdef __Fuchsia__
 }  // namespace test_placementofattributes
 template <>

@@ -25,12 +25,6 @@ using ChildHandle = ::fidl::InterfaceHandle<Child>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
     test_protocolrequest_ParentTakeChildRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t

@@ -1976,14 +1976,6 @@ Allowed_SyncProxy::~Allowed_SyncProxy() = default;
 
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
-
-}  // namespace _internal
 OnlyLibfuzzerAndDeps::~OnlyLibfuzzerAndDeps() = default;
 
 const fidl_type_t* ::test::bindingsdenylist::
@@ -2274,14 +2266,6 @@ OnlyCppAndDeps_SyncProxy::~OnlyCppAndDeps_SyncProxy() = default;
 
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
-
-}  // namespace _internal
 ImportsSameNameContext::~ImportsSameNameContext() = default;
 
 const fidl_type_t* ::test::bindingsdenylist::

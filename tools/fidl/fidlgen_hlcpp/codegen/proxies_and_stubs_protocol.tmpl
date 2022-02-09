@@ -212,11 +212,11 @@ class {{ .SyncProxy.Name }} : public {{ .SyncInterface }} {
 {{- IfdefFuchsia -}}
 
 {{- range .Methods }}
-{{ if .HasRequest }}
+{{ if .HasRequestPayload }}
 {{ EnsureNamespace .Request.HlCodingTable }}
 __LOCAL extern "C" const fidl_type_t {{ .Request.HlCodingTable.Name }};
 {{- end }}
-{{- if .HasResponse }}
+{{- if .HasResponsePayload }}
 {{ EnsureNamespace .Response.HlCodingTable }}
 __LOCAL extern "C" const fidl_type_t {{ .Response.HlCodingTable.Name }};
 {{- end }}

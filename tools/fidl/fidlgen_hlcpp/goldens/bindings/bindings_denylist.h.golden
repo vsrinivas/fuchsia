@@ -84,11 +84,6 @@ class Allowed_ResponseEncoder {
 
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
-
-}  // namespace _internal
 class OnlyLibfuzzerAndDeps_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage LibfuzzerNeedsNonemptyProtocol(
@@ -96,11 +91,7 @@ class OnlyLibfuzzerAndDeps_RequestEncoder {
     return _encoder->GetMessage();
   }
 };
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
 
-}  // namespace _internal
 class OnlyLibfuzzerAndDeps_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage LibfuzzerNeedsNonemptyProtocol(
@@ -179,14 +170,6 @@ using OnlyAppearsInImportingLibraryPtr =
 
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
-
-}  // namespace _internal
 class ImportsSameNameContext_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Unattributed(

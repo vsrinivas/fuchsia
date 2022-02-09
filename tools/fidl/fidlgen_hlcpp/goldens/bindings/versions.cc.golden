@@ -542,11 +542,6 @@ OtherProtocol_SyncProxy::~OtherProtocol_SyncProxy() = default;
 
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_versions_ProtocolFooRequestMessageTable;
-
-}  // namespace _internal
 Protocol::~Protocol() = default;
 
 const fidl_type_t* ::test::versions::Protocol_RequestDecoder::GetType(

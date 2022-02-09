@@ -168,11 +168,6 @@ class ::fidl::WireServer<::test_bindingsdenylist::Allowed>
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
 
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
 }  // namespace test_bindingsdenylist
 template <>
 struct ::fidl::internal::WireOrdinal<
@@ -813,17 +808,6 @@ class ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
 
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextUnattributedRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextUnattributedResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_ImportsSameNameContextAlwaysAppearsInImportingLibraryResponseMessageTable;
 }  // namespace test_bindingsdenylist
 template <>
 struct ::fidl::internal::WireOrdinal<
