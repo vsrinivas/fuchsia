@@ -5,8 +5,6 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
-# See:
-# https://fuchsia.dev/fuchsia-src/development/source_code/layout?hl=en#canonical_targets
 group("manager") {
   testonly = true
   public_deps = [
@@ -26,7 +24,6 @@ rustc_binary("intl_property_manager_bin") {
   with_unit_tests = true
 
   deps = [
-    "//examples/intl/manager/fidl:fuchsia.examples.intl.manager-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -34,6 +31,7 @@ rustc_binary("intl_property_manager_bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
     "//src/lib/syslog/rust:syslog",
+    "//src/testing/fidl/intl_property_manager/fidl:fuchsia.test.intl.manager-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:futures",
