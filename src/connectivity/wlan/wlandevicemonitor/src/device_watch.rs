@@ -99,7 +99,7 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_wlan_common as fidl_wlan_common,
-        fidl_fuchsia_wlan_device::{self as fidl_wlan_dev, SupportedPhy},
+        fidl_fuchsia_wlan_device::{self as fidl_wlan_dev},
         fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_tap as fidl_wlantap,
         fuchsia_zircon::prelude::*,
         futures::{poll, task::Poll},
@@ -205,10 +205,11 @@ mod tests {
         fidl_wlantap::WlantapPhyConfig {
             sta_addr: [1; 6],
             supported_phys: vec![
-                SupportedPhy::Dsss,
-                SupportedPhy::Cck,
-                SupportedPhy::Ofdm,
-                SupportedPhy::Ht,
+                fidl_wlan_common::WlanPhyType::Dsss,
+                fidl_wlan_common::WlanPhyType::Hr,
+                fidl_wlan_common::WlanPhyType::Ofdm,
+                fidl_wlan_common::WlanPhyType::Erp,
+                fidl_wlan_common::WlanPhyType::Ht,
             ],
             driver_features: vec![],
             mac_role: fidl_wlan_common::WlanMacRole::Client,

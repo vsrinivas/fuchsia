@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/assert.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -3138,12 +3139,19 @@ void ath10k_pci_fill_wlan_softmac_info(struct ath10k* ar, wlan_softmac_info_t* m
   mac_info->mac_role = ar->mac_role;
 
   // supported_phys
-  mac_info->supported_phys =
-      WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_HR | WLAN_INFO_PHY_TYPE_OFDM;
-  if (ar->ht_cap_info & WMI_HT_CAP_ENABLED) {
-    mac_info->supported_phys |= WLAN_INFO_PHY_TYPE_HT;
+  wlan_phy_type_t mandatory_phys[] = {WLAN_PHY_TYPE_DSSS, WLAN_PHY_TYPE_HR, WLAN_PHY_TYPE_OFDM,
+                                      WLAN_PHY_TYPE_ERP};
+  size_t count = countof(mandatory_phys);
+  ZX_DEBUG_ASSERT(count <= fuchsia_wlan_common_MAX_SUPPORTED_PHY_TYPES);
+  for (size_t i = 0; i < count; i++) {
+    mac_info->supported_phys_list[i] = mandatory_phys[i];
   }
-  mac_info->supported_phys |= WLAN_INFO_PHY_TYPE_VHT;
+  if (ar->ht_cap_info & WMI_HT_CAP_ENABLED) {
+    ZX_DEBUG_ASSERT(count <= fuchsia_wlan_common_MAX_SUPPORTED_PHY_TYPES - 2);
+    mac_info->supported_phys_list[count++] = WLAN_PHY_TYPE_HT;
+    mac_info->supported_phys_list[count++] = WLAN_PHY_TYPE_VHT;
+  }
+  mac_info->supported_phys_count = count;
 
   // driver_features
   mac_info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD |

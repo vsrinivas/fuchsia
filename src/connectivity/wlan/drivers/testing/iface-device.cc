@@ -10,6 +10,7 @@
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <stdio.h>
+#include <zircon/assert.h>
 
 namespace wlan {
 namespace testing {
@@ -85,8 +86,15 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
   std::memcpy(info->sta_addr, mac, fuchsia_wlan_ieee80211_MAC_ADDR_LEN);
 
   // Fill out a minimal set of wlan device capabilities
-  info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_HR | WLAN_INFO_PHY_TYPE_OFDM |
-                         WLAN_INFO_PHY_TYPE_HT;
+  size_t count = 0;
+  for (auto phy : {WLAN_PHY_TYPE_DSSS, WLAN_PHY_TYPE_HR, WLAN_PHY_TYPE_OFDM, WLAN_PHY_TYPE_ERP,
+                   WLAN_PHY_TYPE_HT}) {
+    ZX_DEBUG_ASSERT(count < fuchsia_wlan_common_MAX_SUPPORTED_PHY_TYPES);
+    info->supported_phys_list[count] = phy;
+    ++count;
+  }
+  info->supported_phys_count = count;
+
   info->driver_features = WLAN_INFO_DRIVER_FEATURE_SYNTH;
   info->mac_role = role_;
   info->caps = 0;

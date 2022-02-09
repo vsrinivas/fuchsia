@@ -165,8 +165,17 @@ zx_status_t mac_query(void* ctx, wlan_softmac_info_t* info) {
   info->mac_role = mvmvif->mac_role;
   // TODO(43517): Better handling of driver features bits/flags
   info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_INFO_DRIVER_FEATURE_MFP;
-  info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_HR | WLAN_INFO_PHY_TYPE_OFDM |
-                         WLAN_INFO_PHY_TYPE_HT;
+
+  // Fill out a minimal set of wlan device capabilities
+  size_t count = 0;
+  for (auto phy : {WLAN_PHY_TYPE_DSSS, WLAN_PHY_TYPE_HR, WLAN_PHY_TYPE_OFDM, WLAN_PHY_TYPE_ERP,
+                   WLAN_PHY_TYPE_HT}) {
+    ZX_DEBUG_ASSERT(count < fuchsia_wlan_common_MAX_SUPPORTED_PHY_TYPES);
+    info->supported_phys_list[count] = phy;
+    ++count;
+  }
+  info->supported_phys_count = count;
+
   info->caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
                WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT |
                WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;

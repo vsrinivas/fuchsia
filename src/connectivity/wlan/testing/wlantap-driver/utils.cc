@@ -15,6 +15,7 @@
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>
 #include <wlan/common/parse_element.h>
+#include <wlan/common/phy.h>
 
 namespace wlan {
 
@@ -22,28 +23,14 @@ namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_device = ::fuchsia::wlan::device;
 namespace wlan_tap = ::fuchsia::wlan::tap;
 
-uint16_t ConvertSupportedPhys(const ::std::vector<wlan_device::SupportedPhy>& phys) {
-  uint16_t ret = 0;
+void FillSupportedPhys(
+    wlan_phy_type_t out_supported_phys_list[fuchsia_wlan_common_MAX_SUPPORTED_PHY_TYPES],
+    uint8_t* out_supported_phys_count, const ::std::vector<wlan_common::WlanPhyType>& phys) {
+  *out_supported_phys_count = 0;
   for (auto sp : phys) {
-    switch (sp) {
-      case wlan_device::SupportedPhy::DSSS:
-        ret |= WLAN_INFO_PHY_TYPE_DSSS;
-        break;
-      case wlan_device::SupportedPhy::CCK:
-        ret |= WLAN_INFO_PHY_TYPE_HR;
-        break;
-      case wlan_device::SupportedPhy::OFDM:
-        ret |= WLAN_INFO_PHY_TYPE_OFDM;
-        break;
-      case wlan_device::SupportedPhy::HT:
-        ret |= WLAN_INFO_PHY_TYPE_HT;
-        break;
-      case wlan_device::SupportedPhy::VHT:
-        ret |= WLAN_INFO_PHY_TYPE_VHT;
-        break;
-    }
+    out_supported_phys_list[*out_supported_phys_count] = common::FromFidl(sp);
+    ++*out_supported_phys_count;
   }
-  return ret;
 }
 
 uint32_t ConvertDriverFeatures(const ::std::vector<wlan_common::DriverFeature>& dfs) {
@@ -168,7 +155,9 @@ zx_status_t ConvertTapPhyConfig(wlan_softmac_info_t* mac_info,
                                 const wlan_tap::WlantapPhyConfig& tap_phy_config) {
   std::memset(mac_info, 0, sizeof(*mac_info));
   std::copy_n(tap_phy_config.sta_addr.begin(), ETH_MAC_SIZE, mac_info->sta_addr);
-  mac_info->supported_phys = ConvertSupportedPhys(tap_phy_config.supported_phys);
+
+  FillSupportedPhys(mac_info->supported_phys_list, &mac_info->supported_phys_count,
+                    tap_phy_config.supported_phys);
   mac_info->driver_features = ConvertDriverFeatures(tap_phy_config.driver_features);
   mac_info->mac_role = ConvertMacRole(tap_phy_config.mac_role);
   mac_info->caps = ConvertCaps(tap_phy_config.caps);

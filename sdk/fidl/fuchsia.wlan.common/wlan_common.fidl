@@ -16,18 +16,71 @@ type RequestStatus = strict enum {
 // LINT analyzer keyword intended for humans:
 // LINT.IfChange
 
-type PHY = strict enum {
-    /// IEEE 802.11b, used for DSSS, HR/DSSS, ERP-DSSS/CCK
-    HR = 1;
-    /// IEEE 802.11a/g, used for ERP-OFDM
-    ERP = 2;
-    /// IEEE 802.11n
-    HT = 3;
-    /// IEEE 802.11ac
-    VHT = 4;
-    /// IEEE 802.11ax
-    HEW = 5;
+/// PHY types supporting different MCS and payload data rates.
+/// Based off of dot11PHYType from IEEE 802.11-2016/2020 Annex C + Amendments
+type WlanPhyType = strict enum {
+    /// IEEE 802.11-2016 Clause 15:
+    ///     Direct Sequence Spread Spectrum
+    /// Supports 1, 2 Mbps.
+    DSSS = 1;
+
+    /// IEEE 802.11-2016 Clause 16:
+    ///     High Rate DSSS
+    /// Supports 5.5, 11 Mbps.
+    /// Also referred to as ERP-CCK
+    HR = 2;
+
+    /// IEEE 802.11a/g or IEEE 802.11-2016 Clause 17:
+    ///     Orthogonal Frequency Division Multiplexing
+    /// Supports 6, 9, 12, 18, 24, 36, 48, and 54 Mbps.
+    OFDM = 3;
+
+    /// IEEE 802.11g or IEEE 802.11-2016 Clause 18:
+    ///     Extended Rate PHY
+    /// Supports 1, 2, 5.5, 11, 12, 24 Mbps + optionally 6, 54 Mbps.
+    /// Encompasses DSSS/HR/OFDM rates and modulation.
+    ERP = 4;
+
+    /// IEEE 802.11n or IEEE 802.11-2016 Clause 19:
+    ///     High Throughput PHY
+    /// Supports rates up to 495 Mbps.
+    HT = 5;
+
+    /// 802.11ad or IEEE 802.11-2016 Clause 20:
+    ///     Directional Multi-Gigabit PHY
+    DMG = 6;
+
+    /// IEEE 802.11ac or IEEE 802.11-2016 Clause 21:
+    ///     Very High Throughput PHY
+    /// Supports rates up to 6.9 Gbps.
+    VHT = 7;
+
+    /// IEEE 802.11af or IEEE 802.11-2016 Clause 22:
+    ///     Television Very High Throughput PHY
+    /// Supports rates of up to 568.9 Mbps in TV spectrum
+    TVHT = 8;
+
+    /// IEEE 802.11ah or IEEE 802.11-2020 Clause 23:
+    ///     Sub 1-GHz PHY
+    S1G = 9;
+
+    /// IEEE 802.11aj or IEEE 802.11-2020 Clause 24:
+    ///     China Directional Multi-Gigabit PHY
+    CDMG = 10;
+
+    /// IEEE 802.11aj or IEEE 802.11-2020 Clause 25:
+    ///     China Millimeter-wave Multi-Gigabit PHY
+    CMMG = 11;
+
+    /// IEEE 802.11ax: High Efficiency PHY
+    /// Supports rates of up to 9.6 Gbps (whew!)
+    HE = 12;
 };
+
+/// This constant defines fixed length for arrays containing PHY types supported by
+/// PHY entities.
+@namespaced
+const MAX_SUPPORTED_PHY_TYPES uint8 = 64;
 
 // Numbers defined to guarantee consistent numbering between all code bindings
 // to ease conversion.

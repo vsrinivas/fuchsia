@@ -31,17 +31,12 @@ enum/member fuchsia.wlan.common/GuardInterval.LONG_GI 1
 enum/member fuchsia.wlan.common/GuardInterval.SHORT_GI 2
 strict enum fuchsia.wlan.common/GuardInterval uint8
 const fuchsia.wlan.common/MAX_SUPPORTED_MAC_ROLES uint8 16
+const fuchsia.wlan.common/MAX_SUPPORTED_PHY_TYPES uint8 64
 struct/member fuchsia.wlan.common/MacSublayerSupport.data_plane fuchsia.wlan.common/DataPlaneExtension
 struct/member fuchsia.wlan.common/MacSublayerSupport.rate_selection_offload fuchsia.wlan.common/RateSelectionOffloadExtension
 struct fuchsia.wlan.common/MacSublayerSupport
 struct/member fuchsia.wlan.common/MfpFeature.supported bool
 struct fuchsia.wlan.common/MfpFeature
-enum/member fuchsia.wlan.common/PHY.ERP 2
-enum/member fuchsia.wlan.common/PHY.HEW 5
-enum/member fuchsia.wlan.common/PHY.HR 1
-enum/member fuchsia.wlan.common/PHY.HT 3
-enum/member fuchsia.wlan.common/PHY.VHT 4
-strict enum fuchsia.wlan.common/PHY uint32
 enum/member fuchsia.wlan.common/PowerSaveType.FAST_PS_MODE 1
 enum/member fuchsia.wlan.common/PowerSaveType.PS_MODE_OFF 0
 enum/member fuchsia.wlan.common/PowerSaveType.PS_POLL_MODE 2
@@ -78,6 +73,19 @@ enum/member fuchsia.wlan.common/WlanMacRole.AP 2
 enum/member fuchsia.wlan.common/WlanMacRole.CLIENT 1
 enum/member fuchsia.wlan.common/WlanMacRole.MESH 3
 strict enum fuchsia.wlan.common/WlanMacRole uint32
+enum/member fuchsia.wlan.common/WlanPhyType.CDMG 10
+enum/member fuchsia.wlan.common/WlanPhyType.CMMG 11
+enum/member fuchsia.wlan.common/WlanPhyType.DMG 6
+enum/member fuchsia.wlan.common/WlanPhyType.DSSS 1
+enum/member fuchsia.wlan.common/WlanPhyType.ERP 4
+enum/member fuchsia.wlan.common/WlanPhyType.HE 12
+enum/member fuchsia.wlan.common/WlanPhyType.HR 2
+enum/member fuchsia.wlan.common/WlanPhyType.HT 5
+enum/member fuchsia.wlan.common/WlanPhyType.OFDM 3
+enum/member fuchsia.wlan.common/WlanPhyType.S1G 9
+enum/member fuchsia.wlan.common/WlanPhyType.TVHT 8
+enum/member fuchsia.wlan.common/WlanPhyType.VHT 7
+strict enum fuchsia.wlan.common/WlanPhyType uint32
 enum/member fuchsia.wlan.common/WlanTxResult.FAILED 0
 enum/member fuchsia.wlan.common/WlanTxResult.SUCCESS 1
 strict enum fuchsia.wlan.common/WlanTxResult uint8

@@ -230,16 +230,12 @@ mod tests {
         crate::{access_point::types, config_management::network_config::Credential},
         anyhow::format_err,
         fidl::endpoints::create_proxy,
-        fuchsia_async as fasync,
+        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
         futures::{future::BoxFuture, task::Poll, StreamExt},
         pin_utils::pin_mut,
         std::convert::TryFrom,
         test_case::test_case,
-        wlan_common::{
-            assert_variant,
-            channel::{Cbw, Phy},
-            RadioConfig,
-        },
+        wlan_common::{assert_variant, channel::Cbw, RadioConfig},
     };
 
     struct TestValues {
@@ -1053,7 +1049,7 @@ mod tests {
                 security_type: types::SecurityType::None,
             },
             credential: vec![],
-            radio_config: RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6),
+            radio_config: RadioConfig::new(fidl_common::WlanPhyType::Ht, Cbw::Cbw20, 6),
             mode: types::ConnectivityMode::Unrestricted,
             band: types::OperatingBand::Any,
         }

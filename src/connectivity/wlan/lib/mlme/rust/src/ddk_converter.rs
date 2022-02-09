@@ -45,11 +45,11 @@ pub fn build_ddk_assoc_ctx(
     let has_ht_cap = negotiated_capabilities.ht_cap.is_some();
     let has_vht_cap = negotiated_capabilities.vht_cap.is_some();
     let phy = match (has_ht_cap, has_vht_cap) {
-        (true, true) => banjo_wlan_phyinfo::WlanInfoPhyType::VHT,
-        (true, false) => banjo_wlan_phyinfo::WlanInfoPhyType::HT,
+        (true, true) => banjo_common::WlanPhyType::VHT,
+        (true, false) => banjo_common::WlanPhyType::HT,
         // It is invalid to have VHT without HT and SME would guarantee it does not happen.
         // But default to ERP nonetheless just to be safe.
-        _ => banjo_wlan_phyinfo::WlanInfoPhyType::ERP,
+        _ => banjo_common::WlanPhyType::ERP,
     };
     let ht_cap_bytes =
         negotiated_capabilities.ht_cap.map_or([0; fidl_internal::HT_CAP_LEN as usize], |h| h.bytes);
@@ -263,7 +263,7 @@ mod tests {
         assert_eq!([1, 2, 3, 4, 5, 6], ddk.bssid);
         assert_eq!(42, ddk.aid);
         assert_eq!(0, ddk.listen_interval);
-        assert_eq!(banjo_wlan_phyinfo::WlanInfoPhyType::VHT, ddk.phy);
+        assert_eq!(banjo_common::WlanPhyType::VHT, ddk.phy);
         assert_eq!(
             banjo_common::WlanChannel {
                 primary: 149,
@@ -320,7 +320,7 @@ mod tests {
         banjo_wlan_softmac::WlanRxInfo {
             rx_flags: 0,
             valid_fields: 0,
-            phy: 0,
+            phy: banjo_common::WlanPhyType::DSSS,
             data_rate: 0,
             channel: banjo_common::WlanChannel {
                 primary: 0,

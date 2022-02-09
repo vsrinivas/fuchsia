@@ -1498,7 +1498,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     rx_status->rate_idx = rate_n_flags & RATE_HT_MCS_INDEX_MSK;
     rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
 #endif  // NEEDS_PORTING
-    rx_status.rx_info.phy = WLAN_INFO_PHY_TYPE_HT;
+    rx_status.rx_info.phy = WLAN_PHY_TYPE_HT;
   } else if (rate_n_flags & RATE_MCS_VHT_MSK) {
 #if 0   // NEEDS_PORTING
     // TODO(fxbug.dev/36684)
@@ -1511,7 +1511,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
       rx_status->enc_flags |= RX_ENC_FLAG_BF;
     }
 #endif  // NEEDS_PORTING
-    rx_status.rx_info.phy = WLAN_INFO_PHY_TYPE_VHT;
+    rx_status.rx_info.phy = WLAN_PHY_TYPE_VHT;
   } else if (!(rate_n_flags & RATE_MCS_HE_MSK)) {
     int rate;
     if (ZX_OK != iwl_mvm_legacy_rate_to_mac80211_idx(rate_n_flags, band, &rate)) {
@@ -1530,7 +1530,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     }
     // rx_status->rate_idx = rate;
     rx_status.rx_info.phy =
-        phy_info & RX_RES_PHY_FLAGS_MOD_CCK ? WLAN_INFO_PHY_TYPE_HR : WLAN_INFO_PHY_TYPE_OFDM;
+        phy_info & RX_RES_PHY_FLAGS_MOD_CCK ? WLAN_PHY_TYPE_HR : WLAN_PHY_TYPE_OFDM;
   }
   rx_status.rx_info.valid_fields |= WLAN_RX_INFO_VALID_DATA_RATE;
 

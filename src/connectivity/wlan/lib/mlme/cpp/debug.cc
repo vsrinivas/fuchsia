@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/wlan/common/c/banjo.h>
+#include <zircon/assert.h>
 
 #include <cstring>
 #include <iomanip>
@@ -147,21 +148,24 @@ std::string Describe(const DataFrameHeader& hdr) {
   return std::string(buf);
 }
 
-std::string Describe(const wlan_info_phy_type_t& phy) {
-  switch (phy) {
-    case WLAN_INFO_PHY_TYPE_HR:
-      return "CCK";
-    case WLAN_INFO_PHY_TYPE_DSSS:
-      return "DSSS";
-    case WLAN_INFO_PHY_TYPE_ERP:
-      return "ERP";
-    case WLAN_INFO_PHY_TYPE_HT:
-      return " HT";
-    case WLAN_INFO_PHY_TYPE_VHT:
-      return "VHT";
-    default:
-      return "PHY---";
+struct wlan_phy_name {
+  wlan_phy_type_t phy;
+  const char* name;
+};
+
+static struct wlan_phy_name phy_names[] = {
+    {WLAN_PHY_TYPE_DSSS, "DSSS"}, {WLAN_PHY_TYPE_HR, "HR"},     {WLAN_PHY_TYPE_OFDM, "OFDM"},
+    {WLAN_PHY_TYPE_ERP, "ERP"},   {WLAN_PHY_TYPE_HT, "HT"},     {WLAN_PHY_TYPE_DMG, "DMG"},
+    {WLAN_PHY_TYPE_VHT, "VHT"},   {WLAN_PHY_TYPE_TVHT, "TVHT"}, {WLAN_PHY_TYPE_S1G, "S1G"},
+    {WLAN_PHY_TYPE_CDMG, "CDMG"}, {WLAN_PHY_TYPE_CMMG, "CMMG"}, {WLAN_PHY_TYPE_HE, "HE"},
+};
+
+const char* Describe(const wlan_phy_type_t& phy) {
+  if (phy == 0 || phy > fuchsia_wlan_common_MAX_SUPPORTED_PHY_TYPES) {
+    return "UNKNOWN";
   }
+  ZX_DEBUG_ASSERT(phy_names[phy - 1].phy == phy);
+  return phy_names[phy - 1].name;
 }
 
 std::string Describe(const wlan_gi_t& gi) {
@@ -656,7 +660,10 @@ std::string Describe(const wlan_softmac_info& wi) {
 
   BUFFER("mac:[%s]", common::MacAddr(wi.sta_addr).ToString().c_str());
   BUFFER("role:%u", wi.mac_role);
-  BUFFER("phys:0x%04x", wi.supported_phys);
+  BUFFER("#phys:%u", wi.supported_phys_count);
+  for (uint8_t i = 0; i < wi.supported_phys_count; i++) {
+    BUFFER("[phy %u]%s", i, Describe(wi.supported_phys_list[i]));
+  }
   BUFFER("feat:0x%08x", wi.driver_features);
   BUFFER("capability_info:0x%08x", wi.caps);
   BUFFER("#bands:%du", wi.bands_count);

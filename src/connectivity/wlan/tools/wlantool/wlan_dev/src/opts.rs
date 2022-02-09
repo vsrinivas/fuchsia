@@ -61,12 +61,12 @@ impl ::std::convert::From<RoleArg> for wlan_common::WlanMacRole {
     }
 }
 
-impl ::std::convert::From<PhyArg> for wlan_common::Phy {
+impl ::std::convert::From<PhyArg> for wlan_common::WlanPhyType {
     fn from(arg: PhyArg) -> Self {
         match arg {
-            PhyArg::Erp => wlan_common::Phy::Erp,
-            PhyArg::Ht => wlan_common::Phy::Ht,
-            PhyArg::Vht => wlan_common::Phy::Vht,
+            PhyArg::Erp => wlan_common::WlanPhyType::Erp,
+            PhyArg::Ht => wlan_common::WlanPhyType::Ht,
+            PhyArg::Vht => wlan_common::WlanPhyType::Vht,
         }
     }
 }

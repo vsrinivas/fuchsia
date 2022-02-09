@@ -396,11 +396,7 @@ mod tests {
     use futures::task::Poll;
     use pin_utils::pin_mut;
     use std::pin::Pin;
-    use wlan_common::{
-        assert_variant,
-        channel::{Cbw, Phy},
-        RadioConfig,
-    };
+    use wlan_common::{assert_variant, channel::Cbw, RadioConfig};
 
     use crate::{
         device::IfaceDevice,
@@ -1019,7 +1015,7 @@ mod tests {
         fidl_sme::ApConfig {
             ssid: b"qwerty".to_vec(),
             password: vec![],
-            radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6).into(),
+            radio_cfg: RadioConfig::new(fidl_common::WlanPhyType::Ht, Cbw::Cbw20, 6).into(),
         }
     }
 }

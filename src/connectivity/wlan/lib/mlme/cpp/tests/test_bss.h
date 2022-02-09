@@ -39,7 +39,7 @@ static constexpr wlan_channel_t kBssChannel = {
     .primary = 36,
     .cbw = CHANNEL_BANDWIDTH_CBW40,
 };
-static constexpr wlan_info_phy_type_t kBssPhy = WLAN_INFO_PHY_TYPE_HT;
+static constexpr wlan_phy_type_t kBssPhy = WLAN_PHY_TYPE_HT;
 static constexpr uint8_t kSsid[] = {'F', 'u', 'c', 'h', 's', 'i', 'a', '-', 'A', 'P'};
 static constexpr uint8_t kEapolPdu[] = {'E', 'A', 'P', 'O', 'L'};
 static constexpr uint8_t kKeyData[] = {0x40, 0x41, 0x42, 0x43, 0x44};

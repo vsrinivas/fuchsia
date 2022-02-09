@@ -19,15 +19,15 @@ pub(crate) fn create_wlantap_config(
     mac_role: fidl_common::WlanMacRole,
 ) -> wlantap::WlantapPhyConfig {
     use fidl_fuchsia_wlan_common::DriverFeature;
-    use fidl_fuchsia_wlan_device::SupportedPhy;
     wlantap::WlantapPhyConfig {
         // TODO(fxbug.dev/64628): wlantap will configure all of its ifaces to use the same MAC address
         sta_addr,
         supported_phys: vec![
-            SupportedPhy::Dsss,
-            SupportedPhy::Cck,
-            SupportedPhy::Ofdm,
-            SupportedPhy::Ht,
+            fidl_common::WlanPhyType::Dsss,
+            fidl_common::WlanPhyType::Hr,
+            fidl_common::WlanPhyType::Ofdm,
+            fidl_common::WlanPhyType::Erp,
+            fidl_common::WlanPhyType::Ht,
         ],
         driver_features: vec![
             DriverFeature::Synth,

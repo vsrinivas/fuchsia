@@ -46,8 +46,6 @@ uint8_t GetCenterChanIdx(const wlan_channel_t& channel);
 std::string ChanStr(const wlan_channel_t& channel);
 std::string ChanStrLong(const wlan_channel_t& channel);
 
-std::string GetPhyStr(wlan_info_phy_type_t phy);
-
 struct Channel {
   wlan_channel_t channel;
   // TODO(porce): Validation
@@ -59,9 +57,6 @@ struct Channel {
 
 wlan_channel_t FromFidl(const ::fuchsia::wlan::common::WlanChannel& fidl_channel);
 ::fuchsia::wlan::common::WlanChannel ToFidl(const wlan_channel_t& channel);
-
-wlan_info_phy_type_t FromFidl(::fuchsia::wlan::common::PHY phy);
-::fuchsia::wlan::common::PHY ToFidl(wlan_info_phy_type_t phy);
 
 const char* CbwSuffix(channel_bandwidth_t cbw);
 const char* CbwStr(channel_bandwidth_t cbw);

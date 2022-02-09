@@ -22,7 +22,7 @@ std::string Describe(const SequenceControl& sc);
 std::string Describe(const MgmtFrameHeader& hdr);
 std::string Describe(const DataFrameHeader& hdr);
 
-std::string Describe(const wlan_info_phy_type_t& phy);
+const char* Describe(const wlan_phy_type_t& phy);
 std::string Describe(const wlan_gi_t& gi);
 std::string Describe(const TxVector& tx_vec, tx_vec_idx_t tx_vec_idx = kInvalidTxVectorIdx);
 std::string Describe(tx_vec_idx_t tx_vec_idx);

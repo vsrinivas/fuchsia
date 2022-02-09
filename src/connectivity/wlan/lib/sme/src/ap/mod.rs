@@ -17,7 +17,8 @@ use {
         capabilities::get_device_band_info, mlme_event_name, responder::Responder, MlmeRequest,
         MlmeSink,
     },
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
     fidl_fuchsia_wlan_sme as fidl_sme,
     futures::channel::{mpsc, oneshot},
@@ -25,7 +26,7 @@ use {
     log::{debug, error, info, warn},
     std::collections::HashMap,
     wlan_common::{
-        channel::{Cbw, Channel, Phy},
+        channel::{Cbw, Channel},
         ie::{parse_ht_capabilities, rsn::rsne::Rsne, ChanWidthSet, SupportedRate},
         mac,
         timer::{self, EventId, TimedEvent, Timer},
@@ -47,7 +48,7 @@ pub struct Config {
 // OpRadioConfig keeps admitted configuration and operation state
 #[derive(Clone, Debug, PartialEq)]
 pub struct OpRadioConfig {
-    phy: Phy,
+    phy: fidl_common::WlanPhyType,
     channel: Channel,
 }
 
@@ -498,10 +499,10 @@ fn validate_radio_cfg(
 
     let phy = radio_cfg.phy;
     match phy {
-        Phy::Hew => {
-            return Err(StartResult::InvalidArguments(format!("Unsupported PHY type: {:?}", phy)))
-        }
-        Phy::Hr | Phy::Erp => match channel.cbw {
+        fidl_common::WlanPhyType::Dsss
+        | fidl_common::WlanPhyType::Hr
+        | fidl_common::WlanPhyType::Ofdm
+        | fidl_common::WlanPhyType::Erp => match channel.cbw {
             Cbw::Cbw20 => (),
             _ => {
                 return Err(StartResult::InvalidArguments(format!(
@@ -510,7 +511,7 @@ fn validate_radio_cfg(
                 )))
             }
         },
-        Phy::Ht => {
+        fidl_common::WlanPhyType::Ht => {
             match channel.cbw {
                 Cbw::Cbw20 | Cbw::Cbw40 | Cbw::Cbw40Below => (),
                 _ => {
@@ -545,7 +546,7 @@ fn validate_radio_cfg(
                 }
             }
         }
-        Phy::Vht => {
+        fidl_common::WlanPhyType::Vht => {
             match channel.cbw {
                 Cbw::Cbw160 | Cbw::Cbw80P80 { .. } => {
                     return Err(StartResult::InvalidArguments(format!(
@@ -569,6 +570,14 @@ fn validate_radio_cfg(
                     channel
                 )));
             }
+        }
+        fidl_common::WlanPhyType::Dmg
+        | fidl_common::WlanPhyType::Tvht
+        | fidl_common::WlanPhyType::S1G
+        | fidl_common::WlanPhyType::Cdmg
+        | fidl_common::WlanPhyType::Cmmg
+        | fidl_common::WlanPhyType::He => {
+            return Err(StartResult::InvalidArguments(format!("Unsupported PHY type: {:?}", phy)))
         }
     }
 
@@ -836,7 +845,7 @@ fn create_start_request(
         },
         rsne: rsne_bytes,
         mesh_id: vec![],
-        phy: op_radio_cfg.phy.to_fidl(),
+        phy: op_radio_cfg.phy,
         channel_bandwidth,
     }
 }
@@ -851,12 +860,7 @@ mod tests {
         lazy_static::lazy_static,
         std::convert::TryFrom,
         test_case::test_case,
-        wlan_common::{
-            assert_variant,
-            channel::{Cbw, Phy},
-            mac::Aid,
-            RadioConfig,
-        },
+        wlan_common::{assert_variant, channel::Cbw, mac::Aid, RadioConfig},
     };
 
     const AP_ADDR: MacAddr = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
@@ -882,7 +886,7 @@ mod tests {
     ];
 
     fn radio_cfg(primary_channel: u8) -> RadioConfig {
-        RadioConfig::new(Phy::Ht, Cbw::Cbw20, primary_channel)
+        RadioConfig::new(fidl_common::WlanPhyType::Ht, Cbw::Cbw20, primary_channel)
     }
 
     fn unprotected_config() -> Config {
@@ -903,42 +907,47 @@ mod tests {
         }
     }
 
-    #[test_case(false, None, Phy::Ht, 15, Cbw::Cbw20; "invalid US channel")]
-    #[test_case(false, None, Phy::Ht, 52, Cbw::Cbw20; "DFS channel")]
-    #[test_case(false, None, Phy::Hew, 1, Cbw::Cbw20; "HEW not supported")]
-    #[test_case(false, None, Phy::Ht, 36, Cbw::Cbw80; "invalid HT width")]
-    #[test_case(false, None, Phy::Erp, 1, Cbw::Cbw40; "non-HT greater than 20 MHz")]
-    #[test_case(false, None, Phy::Ht, 36, Cbw::Cbw80; "HT greater than 40 MHz")]
+    #[test_case(false, None, fidl_common::WlanPhyType::Ht, 15, Cbw::Cbw20; "invalid US channel")]
+    #[test_case(false, None, fidl_common::WlanPhyType::Ht, 52, Cbw::Cbw20; "DFS channel")]
+    #[test_case(false, None, fidl_common::WlanPhyType::Dmg, 1, Cbw::Cbw20; "DMG not supported")]
+    #[test_case(false, None, fidl_common::WlanPhyType::Tvht, 1, Cbw::Cbw20; "TVHT not supported")]
+    #[test_case(false, None, fidl_common::WlanPhyType::S1G, 1, Cbw::Cbw20; "S1G not supported")]
+    #[test_case(false, None, fidl_common::WlanPhyType::Cdmg, 1, Cbw::Cbw20; "CDMG not supported")]
+    #[test_case(false, None, fidl_common::WlanPhyType::Cmmg, 1, Cbw::Cbw20; "CMMG not supported")]
+    #[test_case(false, None, fidl_common::WlanPhyType::He, 1, Cbw::Cbw20; "HE not supported")]
+    #[test_case(false, None, fidl_common::WlanPhyType::Ht, 36, Cbw::Cbw80; "invalid HT width")]
+    #[test_case(false, None, fidl_common::WlanPhyType::Erp, 1, Cbw::Cbw40; "non-HT greater than 20 MHz")]
+    #[test_case(false, None, fidl_common::WlanPhyType::Ht, 36, Cbw::Cbw80; "HT greater than 40 MHz")]
     #[test_case(false, Some(fake_5ghz_band_capabilities_ht_cbw(ChanWidthSet::TWENTY_ONLY)),
-                Phy::Ht, 44, Cbw::Cbw40; "HT 20 MHz only")]
+                fidl_common::WlanPhyType::Ht, 44, Cbw::Cbw40; "HT 20 MHz only")]
     #[test_case(false, Some(fidl_mlme::BandCapabilities {
                     ht_cap: None, ..fake_5ghz_band_capabilities()
                 }),
-                Phy::Ht, 48, Cbw::Cbw40; "No HT capabilities")]
-    #[test_case(false, None, Phy::Vht, 36, Cbw::Cbw160; "160 MHz not supported")]
-    #[test_case(false, None, Phy::Vht, 36, Cbw::Cbw80P80 { secondary80: 106 }; "80+80 MHz not supported")]
-    #[test_case(false, None, Phy::Vht, 1, Cbw::Cbw20; "VHT 2.4 GHz not supported")]
+                fidl_common::WlanPhyType::Ht, 48, Cbw::Cbw40; "No HT capabilities")]
+    #[test_case(false, None, fidl_common::WlanPhyType::Vht, 36, Cbw::Cbw160; "160 MHz not supported")]
+    #[test_case(false, None, fidl_common::WlanPhyType::Vht, 36, Cbw::Cbw80P80 { secondary80: 106 }; "80+80 MHz not supported")]
+    #[test_case(false, None, fidl_common::WlanPhyType::Vht, 1, Cbw::Cbw20; "VHT 2.4 GHz not supported")]
     #[test_case(false, Some(fidl_mlme::BandCapabilities {
                     vht_cap: None,
                     ..fake_5ghz_band_capabilities()
                 }),
-                Phy::Vht, 149, Cbw::Cbw40; "no VHT capabilities")]
-    #[test_case(true, None, Phy::Hr, 1, Cbw::Cbw20)]
-    #[test_case(true, None, Phy::Erp, 1, Cbw::Cbw20)]
-    #[test_case(true, None, Phy::Ht, 1, Cbw::Cbw20)]
-    #[test_case(true, None, Phy::Ht, 1, Cbw::Cbw40)]
-    #[test_case(true, None, Phy::Ht, 11, Cbw::Cbw40Below)]
-    #[test_case(true, None, Phy::Ht, 36, Cbw::Cbw20)]
-    #[test_case(true, None, Phy::Ht, 36, Cbw::Cbw40)]
-    #[test_case(true, None, Phy::Ht, 40, Cbw::Cbw40Below)]
-    #[test_case(true, None, Phy::Vht, 36, Cbw::Cbw20)]
-    #[test_case(true, None, Phy::Vht, 36, Cbw::Cbw40)]
-    #[test_case(true, None, Phy::Vht, 40, Cbw::Cbw40Below)]
-    #[test_case(true, None, Phy::Vht, 36, Cbw::Cbw80)]
+                fidl_common::WlanPhyType::Vht, 149, Cbw::Cbw40; "no VHT capabilities")]
+    #[test_case(true, None, fidl_common::WlanPhyType::Hr, 1, Cbw::Cbw20)]
+    #[test_case(true, None, fidl_common::WlanPhyType::Erp, 1, Cbw::Cbw20)]
+    #[test_case(true, None, fidl_common::WlanPhyType::Ht, 1, Cbw::Cbw20)]
+    #[test_case(true, None, fidl_common::WlanPhyType::Ht, 1, Cbw::Cbw40)]
+    #[test_case(true, None, fidl_common::WlanPhyType::Ht, 11, Cbw::Cbw40Below)]
+    #[test_case(true, None, fidl_common::WlanPhyType::Ht, 36, Cbw::Cbw20)]
+    #[test_case(true, None, fidl_common::WlanPhyType::Ht, 36, Cbw::Cbw40)]
+    #[test_case(true, None, fidl_common::WlanPhyType::Ht, 40, Cbw::Cbw40Below)]
+    #[test_case(true, None, fidl_common::WlanPhyType::Vht, 36, Cbw::Cbw20)]
+    #[test_case(true, None, fidl_common::WlanPhyType::Vht, 36, Cbw::Cbw40)]
+    #[test_case(true, None, fidl_common::WlanPhyType::Vht, 40, Cbw::Cbw40Below)]
+    #[test_case(true, None, fidl_common::WlanPhyType::Vht, 36, Cbw::Cbw80)]
     fn test_validate_radio_cfg(
         valid: bool,
         band_cap: Option<fidl_mlme::BandCapabilities>,
-        phy: Phy,
+        phy: fidl_common::WlanPhyType,
         primary: u8,
         cbw: Cbw,
     ) {

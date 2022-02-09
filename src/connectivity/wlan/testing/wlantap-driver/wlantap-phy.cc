@@ -9,6 +9,7 @@
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/debug.h>
+#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <array>
@@ -22,7 +23,6 @@
 namespace wlan {
 
 namespace wlan_common = ::fuchsia::wlan::common;
-namespace wlan_device = ::fuchsia::wlan::device;
 namespace wlantap = ::fuchsia::wlan::tap;
 
 namespace {
@@ -99,6 +99,12 @@ wlantap::SetKeyArgs ToSetKeyArgs(uint16_t wlan_softmac_id, const wlan_key_config
 }
 
 wlantap::TxArgs ToTxArgs(uint16_t wlan_softmac_id, const wlan_tx_packet_t* pkt) {
+  wlan_common::WlanPhyType phy;
+  zx_status_t status = common::ToFidl(&phy, pkt->info.phy);
+  if (status != ZX_OK) {
+    ZX_PANIC("Unknown PHY in wlan_tx_packet_t: %u.", pkt->info.phy);
+  }
+
   auto tx_args = wlantap::TxArgs{
       .wlan_softmac_id = wlan_softmac_id,
       .packet =
@@ -107,7 +113,7 @@ wlantap::TxArgs ToTxArgs(uint16_t wlan_softmac_id, const wlan_tx_packet_t* pkt) 
                                         .tx_flags = pkt->info.tx_flags,
                                         .valid_fields = pkt->info.valid_fields,
                                         .tx_vector_idx = pkt->info.tx_vector_idx,
-                                        .phy = pkt->info.phy,
+                                        .phy = phy,
                                         .cbw = static_cast<uint8_t>(pkt->info.channel_bandwidth),
                                         .mcs = pkt->info.mcs,
                                     }},

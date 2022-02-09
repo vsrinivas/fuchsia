@@ -409,7 +409,7 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
 
   // See rate_n_flags bit fields definition in fw/api/rs.h.
   if (rate_n_flags & RATE_MCS_HT_MSK) {
-    rx_info.phy = WLAN_INFO_PHY_TYPE_HT;
+    rx_info.phy = WLAN_PHY_TYPE_HT;
 #if 0   // NEEDS_PORTING
     // TODO(36683): Supports HT (802.11n)
     u8 stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >>
@@ -419,7 +419,7 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
     rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
 #endif  // NEEDS_PORTING
   } else if (rate_n_flags & RATE_MCS_VHT_MSK) {
-    rx_info.phy = WLAN_INFO_PHY_TYPE_VHT;
+    rx_info.phy = WLAN_PHY_TYPE_VHT;
 #if 0   // NEEDS_PORTING
     // TODO(36684): Supports VHT (802.11ac)
     uint8_t stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
@@ -432,8 +432,7 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
     }
 #endif  // NEEDS_PORTING
   } else {
-    rx_info.phy =
-        phy_flags & RX_RES_PHY_FLAGS_MOD_CCK ? WLAN_INFO_PHY_TYPE_HR : WLAN_INFO_PHY_TYPE_OFDM;
+    rx_info.phy = phy_flags & RX_RES_PHY_FLAGS_MOD_CCK ? WLAN_PHY_TYPE_HR : WLAN_PHY_TYPE_OFDM;
 
     int mac80211_idx;
     zx_status_t status = iwl_mvm_legacy_rate_to_mac80211_idx(rate_n_flags, band, &mac80211_idx);

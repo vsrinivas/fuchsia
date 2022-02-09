@@ -2702,19 +2702,19 @@ static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(const wlan_assoc_ctx_t* ass
 
   switch (band) {
     case WLAN_INFO_BAND_TWO_GHZ:
-      if ((assoc->phy == WLAN_INFO_PHY_TYPE_VHT) && assoc->has_vht_cap) {
+      if ((assoc->phy == WLAN_PHY_TYPE_VHT) && assoc->has_vht_cap) {
         if (cbw == CHANNEL_BANDWIDTH_CBW40 || cbw == CHANNEL_BANDWIDTH_CBW40BELOW) {
           phymode = MODE_11AC_VHT40;
         } else {
           phymode = MODE_11AC_VHT20;
         }
-      } else if ((assoc->phy == WLAN_INFO_PHY_TYPE_HT) && assoc->has_ht_cap) {
+      } else if ((assoc->phy == WLAN_PHY_TYPE_HT) && assoc->has_ht_cap) {
         if (cbw == CHANNEL_BANDWIDTH_CBW40 || cbw == CHANNEL_BANDWIDTH_CBW40BELOW) {
           phymode = MODE_11NG_HT40;
         } else {
           phymode = MODE_11NG_HT20;
         }
-      } else if (assoc->phy == WLAN_INFO_PHY_TYPE_OFDM) {  // Has OFDM ONLY.
+      } else if (assoc->phy == WLAN_PHY_TYPE_OFDM) {  // Has OFDM ONLY.
         phymode = MODE_11G;
       } else {
         phymode = MODE_11B;
@@ -2725,9 +2725,9 @@ static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(const wlan_assoc_ctx_t* ass
       /*
        * Check VHT first.
        */
-      if ((assoc->phy == WLAN_INFO_PHY_TYPE_VHT) && assoc->has_vht_cap) {
+      if ((assoc->phy == WLAN_PHY_TYPE_VHT) && assoc->has_vht_cap) {
         phymode = ath10k_mac_get_phymode_vht(assoc->channel.cbw);
-      } else if ((assoc->phy == WLAN_INFO_PHY_TYPE_HT) && assoc->has_ht_cap) {
+      } else if ((assoc->phy == WLAN_PHY_TYPE_HT) && assoc->has_ht_cap) {
         if (cbw == CHANNEL_BANDWIDTH_CBW40 || cbw == CHANNEL_BANDWIDTH_CBW40BELOW) {
           phymode = MODE_11NA_HT40;
         } else {

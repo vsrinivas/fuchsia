@@ -56,7 +56,7 @@ pub async fn start(
         ssid: target_ssid.into(),
         password: target_pwd,
         radio_cfg: fidl_sme::RadioConfig {
-            phy: fidl_common::Phy::Ht,
+            phy: fidl_common::WlanPhyType::Ht,
             channel: fidl_common::WlanChannel {
                 primary: channel,
                 cbw: fidl_common::ChannelBandwidth::Cbw20,
@@ -142,7 +142,7 @@ mod tests {
             ssid: target_ssid.to_vec(),
             password: target_password.to_vec(),
             radio_cfg: fidl_sme::RadioConfig {
-                phy: fidl_common::Phy::Ht,
+                phy: fidl_common::WlanPhyType::Ht,
                 channel: fidl_common::WlanChannel {
                     primary: channel,
                     cbw: fidl_common::ChannelBandwidth::Cbw20,

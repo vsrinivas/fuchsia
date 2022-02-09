@@ -24,8 +24,7 @@ use {
     },
     anyhow::{format_err, Error},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_wlan_common, fidl_fuchsia_wlan_policy, fidl_fuchsia_wlan_sme,
-    fuchsia_async as fasync,
+    fidl_fuchsia_wlan_policy, fidl_fuchsia_wlan_sme, fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::{
@@ -1356,7 +1355,7 @@ mod tests {
         fidl::endpoints::create_proxy,
         fidl_fuchsia_cobalt::CobaltEvent,
         fidl_fuchsia_stash as fidl_stash,
-        fidl_fuchsia_wlan_common::DriverFeature,
+        fidl_fuchsia_wlan_common::{self as fidl_common, DriverFeature},
         fuchsia_async::TestExecutor,
         fuchsia_inspect::{self as inspect},
         futures::{
@@ -1369,11 +1368,7 @@ mod tests {
         pin_utils::pin_mut,
         std::convert::TryFrom,
         test_case::test_case,
-        wlan_common::{
-            assert_variant,
-            channel::{Cbw, Phy},
-            random_fidl_bss_description, RadioConfig,
-        },
+        wlan_common::{assert_variant, channel::Cbw, random_fidl_bss_description, RadioConfig},
     };
 
     // Responses that FakePhyManager will provide
@@ -1754,7 +1749,7 @@ mod tests {
     }
 
     fn create_ap_config(ssid: &ap_types::Ssid, password: &str) -> ap_fsm::ApConfig {
-        let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
+        let radio_config = RadioConfig::new(fidl_common::WlanPhyType::Ht, Cbw::Cbw20, 6);
         ap_fsm::ApConfig {
             id: ap_types::NetworkIdentifier {
                 ssid: ssid.clone(),

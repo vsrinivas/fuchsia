@@ -117,7 +117,7 @@ wlan_mlme::StartRequest CreateStartRequest(bool protected_ap) {
   req.channel = kBssChannel.primary;
   req.rates = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c};
   req.mesh_id.resize(0);
-  req.phy = wlan_common::PHY::ERP;
+  req.phy = wlan_common::WlanPhyType::ERP;
   if (protected_ap) {
     req.rsne.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
   }

@@ -729,7 +729,7 @@ mod tests {
             banjo_wlan_softmac::WlanRxInfo {
                 rx_flags: 0,
                 valid_fields: 0,
-                phy: 0,
+                phy: banjo_common::WlanPhyType::DSSS,
                 data_rate: 0,
                 channel: banjo_common::WlanChannel {
                     primary: 0,
@@ -775,7 +775,7 @@ mod tests {
         let rx_info_wrong_channel = banjo_wlan_softmac::WlanRxInfo {
             rx_flags: 0,
             valid_fields: 0,
-            phy: 0,
+            phy: banjo_common::WlanPhyType::DSSS,
             data_rate: 0,
             channel: banjo_common::WlanChannel {
                 primary: 0,
@@ -821,7 +821,7 @@ mod tests {
             country: fidl_mlme::Country { alpha2: *b"xx", suffix: fidl_mlme::COUNTRY_ENVIRON_ALL },
             mesh_id: vec![],
             rsne: None,
-            phy: fidl_common::Phy::Erp,
+            phy: fidl_common::WlanPhyType::Erp,
             channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
         })
         .expect("expected Ap::handle_mlme_start_request OK");
@@ -875,7 +875,7 @@ mod tests {
             country: fidl_mlme::Country { alpha2: *b"xx", suffix: fidl_mlme::COUNTRY_ENVIRON_ALL },
             mesh_id: vec![],
             rsne: None,
-            phy: fidl_common::Phy::Erp,
+            phy: fidl_common::WlanPhyType::Erp,
             channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
         })
         .expect("expected Ap::handle_mlme_start_request OK");

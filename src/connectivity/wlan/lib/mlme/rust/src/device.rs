@@ -5,7 +5,6 @@
 use {
     crate::{buffer::OutBuf, key},
     banjo_fuchsia_hardware_wlan_associnfo::*,
-    banjo_fuchsia_hardware_wlan_phyinfo::WlanInfoPhyType,
     banjo_fuchsia_hardware_wlan_softmac::{
         self as banjo_wlan_softmac, WlanRxPacket, WlanSoftmacInfo, WlanTxPacket,
     },
@@ -114,7 +113,7 @@ impl Device {
                 // TODO(fxbug.dev/43456): Log stats about minstrel usage vs default tx vector.
                 let mcs_idx = if frame_control.is_data() { 7 } else { 3 };
                 tx_vector::TxVector::new(
-                    WlanInfoPhyType::ERP,
+                    banjo_common::WlanPhyType::ERP,
                     WlanGi::G_800NS,
                     banjo_common::ChannelBandwidth::CBW20,
                     mcs_idx,
@@ -564,6 +563,7 @@ mod test_utils {
         banjo_fuchsia_hardware_wlan_phyinfo::*,
         banjo_fuchsia_wlan_common as banjo_common, fuchsia_async as fasync,
         fuchsia_zircon as zircon,
+        std::convert::TryInto,
     };
 
     pub struct CapturedWlanSoftmacPassiveScanArgs {
@@ -934,10 +934,32 @@ mod test_utils {
             },
         };
 
+        let supported_phys_list = [
+            banjo_common::WlanPhyType::DSSS,
+            banjo_common::WlanPhyType::HR,
+            banjo_common::WlanPhyType::OFDM,
+            banjo_common::WlanPhyType::ERP,
+            banjo_common::WlanPhyType::HT,
+            banjo_common::WlanPhyType::VHT,
+        ];
+        // Convert to u8 for use in WlanSoftmacInfo.supported_phys_count.
+        let supported_phys_count: u8 = supported_phys_list.len().try_into().unwrap();
+
+        // The Banjo transport requires this array to have a
+        // size of banjo_common::MAX_SUPPORTED_PHY_TYPES.
+        let supported_phys_list = {
+            let mut initialized_supported_phys_list =
+                [banjo_common::WlanPhyType(0); banjo_common::MAX_SUPPORTED_PHY_TYPES as usize];
+            initialized_supported_phys_list[..supported_phys_count as usize]
+                .copy_from_slice(&supported_phys_list);
+            initialized_supported_phys_list
+        };
+
         WlanSoftmacInfo {
             sta_addr: [7u8; 6],
             mac_role: banjo_common::WlanMacRole::CLIENT,
-            supported_phys: WlanInfoPhyType::ERP | WlanInfoPhyType::HT | WlanInfoPhyType::VHT,
+            supported_phys_list,
+            supported_phys_count,
             driver_features: WlanInfoDriverFeature(0),
             caps: WlanInfoHardwareCapability(0),
             bands,
@@ -1297,7 +1319,7 @@ mod tests {
             bssid: [1, 2, 3, 4, 5, 6],
             aid: 1,
             listen_interval: 2,
-            phy: WlanInfoPhyType::ERP,
+            phy: banjo_common::WlanPhyType::ERP,
             channel: banjo_common::WlanChannel {
                 primary: 3,
                 cbw: banjo_common::ChannelBandwidth::CBW20,

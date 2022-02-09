@@ -34,17 +34,4 @@ enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.SHORT_SLOT_
 enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.SIMULTANEOUS_CLIENT_AP 65536
 enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.SPECTRUM_MGMT 256
 strict enum fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability uint32
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.CDMG 512
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.CMMG 1024
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.DMG 32
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.DSSS 1
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.ERP 8
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.HE 2048
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.HR 2
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.HT 16
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.OFDM 4
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.S1G 256
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.TVHT 128
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.VHT 64
-strict enum fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType uint32
 library fuchsia.hardware.wlan.phyinfo

@@ -36,7 +36,7 @@ namespace {
 struct WlanPacket {
   std::unique_ptr<Packet> pkt;
   channel_bandwidth_t cbw;
-  wlan_info_phy_type_t phy;
+  wlan_phy_type_t phy;
   wlan_tx_info_t tx_info;
 };
 
@@ -101,8 +101,17 @@ struct MockDevice : public DeviceInterface {
 
     memcpy(wlan_softmac_info.sta_addr, addr.byte, 6);
     wlan_softmac_info.mac_role = WLAN_MAC_ROLE_CLIENT;
-    wlan_softmac_info.supported_phys =
-        WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT | WLAN_INFO_PHY_TYPE_VHT;
+
+    // Fill out a minimal set of wlan device capabilities
+    size_t count = 0;
+    for (auto phy : {WLAN_PHY_TYPE_DSSS, WLAN_PHY_TYPE_HR, WLAN_PHY_TYPE_OFDM, WLAN_PHY_TYPE_ERP,
+                     WLAN_PHY_TYPE_HT}) {
+      ZX_DEBUG_ASSERT(count < fuchsia_wlan_common_MAX_SUPPORTED_PHY_TYPES);
+      wlan_softmac_info.supported_phys_list[count] = phy;
+      ++count;
+    }
+    wlan_softmac_info.supported_phys_count = count;
+
     wlan_softmac_info.driver_features = 0;
     wlan_softmac_info.bands_count = 2;
     wlan_softmac_info.bands[0] = test_utils::FakeBandInfo(WLAN_INFO_BAND_TWO_GHZ);

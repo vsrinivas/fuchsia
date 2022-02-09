@@ -90,7 +90,7 @@ pub fn create_rx_info(channel: &fidl_common::WlanChannel, rssi_dbm: i8) -> WlanR
     WlanRxInfo {
         rx_flags: 0,
         valid_fields: if rssi_dbm == 0 { 0 } else { WLAN_RX_INFO_VALID_RSSI },
-        phy: 0,
+        phy: fidl_common::WlanPhyType::Dsss,
         data_rate: 0,
         channel: fidl_common::WlanChannel {
             // TODO(fxbug.dev/7391): use clone()

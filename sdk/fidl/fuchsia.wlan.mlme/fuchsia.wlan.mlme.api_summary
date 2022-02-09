@@ -341,7 +341,7 @@ struct/member fuchsia.wlan.mlme/StartRequest.channel_bandwidth fuchsia.wlan.comm
 struct/member fuchsia.wlan.mlme/StartRequest.country fuchsia.wlan.mlme/Country
 struct/member fuchsia.wlan.mlme/StartRequest.dtim_period uint8
 struct/member fuchsia.wlan.mlme/StartRequest.mesh_id vector<uint8>:32
-struct/member fuchsia.wlan.mlme/StartRequest.phy fuchsia.wlan.common/PHY
+struct/member fuchsia.wlan.mlme/StartRequest.phy fuchsia.wlan.common/WlanPhyType
 struct/member fuchsia.wlan.mlme/StartRequest.rates vector<uint8>:22
 struct/member fuchsia.wlan.mlme/StartRequest.rsne vector<uint8>:optional
 struct/member fuchsia.wlan.mlme/StartRequest.ssid vector<uint8>:32

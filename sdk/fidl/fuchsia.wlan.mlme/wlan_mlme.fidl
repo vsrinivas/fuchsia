@@ -364,7 +364,7 @@ type StartRequest = struct {
     // - VHT Capabilities
     // - VHT Operation
     // - Extended Capabilities
-    phy fuchsia.wlan.common.PHY;
+    phy fuchsia.wlan.common.WlanPhyType;
     channel_bandwidth fuchsia.wlan.common.ChannelBandwidth;
 };
 

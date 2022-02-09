@@ -16,6 +16,7 @@
 #include <mutex>
 
 #include <wlan/common/channel.h>
+#include <wlan/common/phy.h>
 
 #include "utils.h"
 
@@ -145,7 +146,7 @@ struct WlantapMacImpl : WlantapMac {
     if (ifc_.is_valid()) {
       wlan_rx_info_t converted_info = {.rx_flags = rx_info.rx_flags,
                                        .valid_fields = rx_info.valid_fields,
-                                       .phy = rx_info.phy,
+                                       .phy = common::FromFidl(rx_info.phy),
                                        .data_rate = rx_info.data_rate,
                                        .channel = {.primary = rx_info.channel.primary,
                                                    .cbw = static_cast<uint8_t>(rx_info.channel.cbw),

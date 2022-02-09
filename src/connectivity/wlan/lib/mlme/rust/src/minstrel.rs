@@ -5,7 +5,6 @@
 use {
     crate::probe_sequence::{ProbeEntry, ProbeSequence},
     banjo_fuchsia_hardware_wlan_associnfo as banjo_wlan_associnfo,
-    banjo_fuchsia_hardware_wlan_phyinfo as banjo_wlan_phyinfo,
     banjo_fuchsia_hardware_wlan_softmac as hw_wlan_softmac,
     banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_minstrel as fidl_minstrel,
     fuchsia_zircon as zx,
@@ -254,13 +253,9 @@ impl Peer {
         let mut tx_stats_added = 0;
         for mcs_idx in 0..HT_NUM_MCS {
             if mcs_set.support(mcs_idx) {
-                let tx_vector = TxVector::new(
-                    banjo_wlan_phyinfo::WlanInfoPhyType::HT,
-                    gi,
-                    channel_bandwidth,
-                    mcs_idx,
-                )
-                .expect("Should be a valid TxVector");
+                let tx_vector =
+                    TxVector::new(banjo_common::WlanPhyType::HT, gi, channel_bandwidth, mcs_idx)
+                        .expect("Should be a valid TxVector");
                 let tx_vector_idx = tx_vector.to_idx();
                 let perfect_tx_time = tx_time_ht(channel_bandwidth, gi, mcs_idx);
                 let tx_stats = TxStats { perfect_tx_time, ..TxStats::new(tx_vector_idx) };
@@ -287,7 +282,7 @@ impl Peer {
                         None
                     }
                 }?;
-                if tx_vector.phy() != banjo_wlan_phyinfo::WlanInfoPhyType::ERP {
+                if tx_vector.phy() != banjo_common::WlanPhyType::ERP {
                     return None;
                 }
                 let tx_vector_idx = tx_vector.to_idx();

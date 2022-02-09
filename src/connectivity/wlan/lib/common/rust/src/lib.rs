@@ -42,35 +42,32 @@ pub mod unaligned_view;
 pub mod wmm;
 
 use {
-    channel::{Cbw, Channel, Phy},
-    fidl_fuchsia_wlan_sme as fidl_sme,
+    channel::{Cbw, Channel},
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
 };
 
 pub use time::TimeUnit;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RadioConfig {
-    pub phy: Phy,
+    pub phy: fidl_common::WlanPhyType,
     pub channel: Channel,
 }
 
 impl From<RadioConfig> for fidl_sme::RadioConfig {
     fn from(radio_cfg: RadioConfig) -> fidl_sme::RadioConfig {
-        fidl_sme::RadioConfig { phy: radio_cfg.phy.to_fidl(), channel: radio_cfg.channel.into() }
+        fidl_sme::RadioConfig { phy: radio_cfg.phy, channel: radio_cfg.channel.into() }
     }
 }
 
 impl From<fidl_sme::RadioConfig> for RadioConfig {
     fn from(fidl_radio_cfg: fidl_sme::RadioConfig) -> RadioConfig {
-        RadioConfig {
-            phy: Phy::from_fidl(fidl_radio_cfg.phy),
-            channel: fidl_radio_cfg.channel.into(),
-        }
+        RadioConfig { phy: fidl_radio_cfg.phy, channel: fidl_radio_cfg.channel.into() }
     }
 }
 
 impl RadioConfig {
-    pub fn new(phy: Phy, cbw: Cbw, primary_channel: u8) -> Self {
+    pub fn new(phy: fidl_common::WlanPhyType, cbw: Cbw, primary_channel: u8) -> Self {
         RadioConfig { phy, channel: Channel::new(primary_channel, cbw) }
     }
 }

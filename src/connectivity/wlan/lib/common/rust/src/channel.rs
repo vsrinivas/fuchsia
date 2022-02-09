@@ -59,39 +59,6 @@ impl Cbw {
     }
 }
 
-/// A short list of IEEE WLAN PHY.
-#[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq)]
-pub enum Phy {
-    Hr,  // IEEE 802.11b, used for DSSS, HR/DSSS, ERP-DSSS/CCK
-    Erp, // IEEE 802.11a/g, used for ERP-OFDM
-    Ht,  // IEEE 802.11n
-    Vht, // IEEE 802.11ac
-    Hew, // IEEE 802.11ax
-}
-
-impl Phy {
-    // TODO(fxbug.dev/83769): Implement `From `instead.
-    pub fn to_fidl(&self) -> fidl_common::Phy {
-        match self {
-            Phy::Hr => fidl_common::Phy::Hr,
-            Phy::Erp => fidl_common::Phy::Erp,
-            Phy::Ht => fidl_common::Phy::Ht,
-            Phy::Vht => fidl_common::Phy::Vht,
-            Phy::Hew => fidl_common::Phy::Hew,
-        }
-    }
-
-    pub fn from_fidl(phy: fidl_common::Phy) -> Self {
-        match phy {
-            fidl_common::Phy::Hr => Phy::Hr,
-            fidl_common::Phy::Erp => Phy::Erp,
-            fidl_common::Phy::Ht => Phy::Ht,
-            fidl_common::Phy::Vht => Phy::Vht,
-            fidl_common::Phy::Hew => Phy::Hew,
-        }
-    }
-}
-
 /// A Channel defines the frequency spectrum to be used for radio synchronization.
 /// See for sister definitions in FIDL and C/C++
 ///  - //sdk/fidl/fuchsia.wlan.common/wlan_common.fidl |struct wlan_channel_t|
@@ -560,13 +527,6 @@ mod tests {
         }
         .into();
         assert!(c.primary == 149 && c.cbw == Cbw::Cbw80P80 { secondary80: 42 });
-    }
-
-    #[test]
-    fn test_convert_fidl_phy() {
-        let p = Phy::Vht;
-        assert_eq!(p.to_fidl(), fidl_common::Phy::Vht);
-        assert_eq!(Phy::from_fidl(p.to_fidl()), p);
     }
 
     const RX_PRIMARY_CHAN: u8 = 11;

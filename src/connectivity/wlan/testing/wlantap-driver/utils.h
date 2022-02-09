@@ -15,7 +15,6 @@
 namespace wlan {
 
 // Functions for converting between FIDL classes and related wlan C structs
-uint16_t ConvertSupportedPhys(const ::std::vector<::fuchsia::wlan::device::SupportedPhy>& phys);
 uint32_t ConvertDriverFeatures(const ::std::vector<::fuchsia::wlan::common::DriverFeature>& dfs);
 wlan_mac_role_t ConvertMacRole(::fuchsia::wlan::common::WlanMacRole role);
 ::fuchsia::wlan::common::WlanMacRole ConvertMacRole(uint16_t role);

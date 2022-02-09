@@ -19,10 +19,7 @@ use {
     },
     log::{error, info, warn},
     std::sync::Arc,
-    wlan_common::{
-        channel::{Cbw, Phy},
-        RadioConfig,
-    },
+    wlan_common::{channel::Cbw, RadioConfig},
 };
 
 pub mod state_machine;
@@ -324,7 +321,7 @@ fn derive_ap_config(
         fidl_policy::OperatingBand::Only5Ghz => 36,
     };
 
-    let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, channel);
+    let radio_config = RadioConfig::new(fidl_common::WlanPhyType::Ht, Cbw::Cbw20, channel);
 
     Ok(state_machine::ApConfig {
         id: network_id.into(),

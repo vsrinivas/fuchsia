@@ -439,7 +439,7 @@ TEST_F(ClientTest, ConstructAssociateContext) {
   ASSERT_TRUE(sta_assoc_ctx != nullptr);
   EXPECT_EQ(sta_assoc_ctx->aid, kAid);
   EXPECT_EQ(sta_assoc_ctx->listen_interval, 0);
-  EXPECT_EQ(sta_assoc_ctx->phy, WLAN_INFO_PHY_TYPE_HT);
+  EXPECT_EQ(sta_assoc_ctx->phy, WLAN_PHY_TYPE_HT);
   EXPECT_EQ(sta_assoc_ctx->channel.primary, 36);
   EXPECT_EQ(sta_assoc_ctx->channel.cbw, CHANNEL_BANDWIDTH_CBW40);
   EXPECT_TRUE(sta_assoc_ctx->has_ht_cap);

@@ -18,7 +18,9 @@ type WlanSoftmacInfo = struct {
     mac_role fuchsia.wlan.common.WlanMacRole;
 
     /// Bitmask indicating WlanInfoPhyType values supported by the hardware.
-    supported_phys fuchsia.hardware.wlan.phyinfo.WlanInfoPhyType;
+    supported_phys_list
+            array<fuchsia.wlan.common.WlanPhyType, fuchsia.wlan.common.MAX_SUPPORTED_PHY_TYPES>;
+    supported_phys_count uint8;
 
     /// Bitmask indicating enabled WlanInfoDriverFeature values.
     driver_features fuchsia.hardware.wlan.phyinfo.WlanInfoDriverFeature;
@@ -48,7 +50,7 @@ type WlanRxInfo = struct {
     /// must be zero.
     valid_fields uint32;
     /// The PHY format of the device at the time of the operation.
-    phy uint16;
+    phy fuchsia.wlan.common.WlanPhyType;
     /// The data rate of the device, measured in units of 0.5 Mb/s.
     data_rate uint32;
     /// The channel of the device at the time of the operation. This field must be included.
@@ -94,7 +96,7 @@ type WlanTxInfo = struct {
     // WLAN_TX_INFO_VALID_TX_VECTOR_IDX.
     tx_vector_idx uint16;
     // The PHY format to be used to transmit this packet.
-    phy uint16;
+    phy fuchsia.wlan.common.WlanPhyType;
     // The channel width to be used to transmit this packet.
     channel_bandwidth fuchsia.wlan.common.ChannelBandwidth;
     /// The modulation and coding scheme index for this packet. Depends on the PHY format and

@@ -426,7 +426,7 @@ mod test_utils {
     pub struct MockWlanRxInfo {
         pub rx_flags: u32,
         pub valid_fields: u32,
-        pub phy: u16,
+        pub phy: banjo_common::WlanPhyType,
         pub data_rate: u32,
         pub channel: banjo_common::WlanChannel,
         pub mcs: u8,
@@ -451,7 +451,7 @@ mod test_utils {
                 // Default to 0 for these fields since there are no
                 // other reasonable values to mock.
                 rx_flags: 0,
-                phy: 0,
+                phy: banjo_common::WlanPhyType::DSSS,
                 data_rate: 0,
                 mcs: 0,
             }

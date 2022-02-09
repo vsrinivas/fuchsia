@@ -13,7 +13,6 @@ use {
     },
     banjo_ddk_hw_wlan_ieee80211::*,
     banjo_fuchsia_hardware_wlan_associnfo::*,
-    banjo_fuchsia_hardware_wlan_phyinfo::WlanInfoPhyType,
     banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     ieee80211::{MacAddr, Ssid},
@@ -443,7 +442,7 @@ impl RemoteClient {
                     bssid: self.addr,
                     aid: aid,
                     listen_interval: 0, // This field is not used for AP.
-                    phy: WlanInfoPhyType::ERP,
+                    phy: banjo_common::WlanPhyType::ERP,
                     channel: banjo_common::WlanChannel {
                         primary: channel,
                         // TODO(fxbug.dev/40917): Correctly support this.

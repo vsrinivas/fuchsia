@@ -89,7 +89,7 @@ mod tests {
         // Unused fields
         rx_flags: 0,
         valid_fields: 0,
-        phy: 0,
+        phy: banjo_common::WlanPhyType::DSSS,
         data_rate: 0,
         mcs: 0,
     };
