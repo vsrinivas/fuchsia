@@ -17,6 +17,7 @@ use {
                 Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
             },
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
+            crypt::Crypt,
             extent_record::{ExtentKey, ExtentValue},
             filesystem::{Filesystem, FxFilesystem},
             fsck::errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
@@ -80,12 +81,16 @@ pub fn default_options() -> FsckOptions<impl Fn(&FsckIssue)> {
 //    stores or the allocator.
 // TODO(csuter): This currently takes a write lock on the filesystem.  It would be nice if we could
 // take a snapshot.
-pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
-    fsck_with_options(filesystem, default_options()).await
+pub async fn fsck(
+    filesystem: &Arc<FxFilesystem>,
+    crypt: Option<Arc<dyn Crypt>>,
+) -> Result<(), Error> {
+    fsck_with_options(filesystem, crypt, default_options()).await
 }
 
 pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     filesystem: &Arc<FxFilesystem>,
+    crypt: Option<Arc<dyn Crypt>>,
     options: FsckOptions<F>,
 ) -> Result<(), Error> {
     log::info!("Starting fsck");
@@ -122,7 +127,8 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     // TODO(csuter): We could maybe iterate over stores concurrently.
     while let Some((name, store_id, _)) = iter.get() {
         fsck.verbose(format!("Scanning volume \"{}\" (id {})...", name, store_id));
-        fsck.check_child_store(&filesystem, store_id, &mut root_store_root_objects).await?;
+        fsck.check_child_store(&filesystem, store_id, &mut root_store_root_objects, crypt.clone())
+            .await?;
         iter.advance().await?;
         fsck.verbose("Scanning volume done");
     }
@@ -305,13 +311,18 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
         filesystem: &FxFilesystem,
         store_id: u64,
         root_store_root_objects: &mut Vec<u64>,
+        crypt: Option<Arc<dyn Crypt>>,
     ) -> Result<(), Error> {
+        // TODO(fxbug.dev/92275): Support checking the extents of a child store when we don't have
+        // the crypt object.
+        let crypt = crypt.expect("fsck without crypt is not yet supported");
+
         let root_store = filesystem.root_store();
 
         // Manually open the store so we can do our own validation.  Later, we will call open_store
         // to get a regular ObjectStore wrapper.
         let handle = self.assert(
-            ObjectStore::open_object(&root_store, store_id, HandleOptions::default()).await,
+            ObjectStore::open_object(&root_store, store_id, HandleOptions::default(), None).await,
             FsckFatal::MissingStoreInfo(store_id),
         )?;
         let (object_layer_file_object_ids, extent_layer_file_object_ids) = {
@@ -344,6 +355,7 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
                 &root_store,
                 store_id,
                 layer_file_object_id,
+                crypt.as_ref(),
             )
             .await?;
         }
@@ -352,11 +364,12 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
                 &root_store,
                 store_id,
                 layer_file_object_id,
+                crypt.as_ref(),
             )
             .await?;
         }
 
-        let store = filesystem.object_manager().open_store(store_id).await?;
+        let store = filesystem.object_manager().open_store(store_id, crypt).await?;
 
         store_scanner::scan_store(self, store.as_ref(), &store.root_objects()).await?;
         let mut parent_objects = store.parent_objects();
@@ -372,10 +385,16 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
         root_store: &Arc<ObjectStore>,
         store_object_id: u64,
         layer_file_object_id: u64,
+        crypt: &dyn Crypt,
     ) -> Result<(), Error> {
         let layer_file = self.assert(
-            ObjectStore::open_object(root_store, layer_file_object_id, HandleOptions::default())
-                .await,
+            ObjectStore::open_object(
+                root_store,
+                layer_file_object_id,
+                HandleOptions::default(),
+                Some(crypt),
+            )
+            .await,
             FsckFatal::MissingLayerFile(store_object_id, layer_file_object_id),
         )?;
         if self.options.do_slow_passes {

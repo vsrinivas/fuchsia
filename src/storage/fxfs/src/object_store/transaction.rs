@@ -855,23 +855,17 @@ impl Drop for WriteGuard<'_> {
 mod tests {
     use {
         super::{LockKey, LockManager, LockState, Mutation, Options, TransactionHandler},
-        crate::object_store::{crypt::InsecureCrypt, filesystem::FxFilesystem},
+        crate::object_store::filesystem::FxFilesystem,
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, future::FutureExt, join},
-        std::{
-            sync::{Arc, Mutex},
-            task::Poll,
-            time::Duration,
-        },
+        std::{sync::Mutex, task::Poll, time::Duration},
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     #[fasync::run_singlethreaded(test)]
     async fn test_simple() {
         let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
-        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
-            .await
-            .expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let mut t = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -884,9 +878,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_locks() {
         let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
-        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
-            .await
-            .expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
         let (send3, recv3) = channel();
@@ -931,9 +923,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_read_lock_after_write_lock() {
         let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
-        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
-            .await
-            .expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
         let done = Mutex::new(false);
@@ -966,9 +956,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_write_lock_after_read_lock() {
         let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
-        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
-            .await
-            .expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
         let done = Mutex::new(false);
@@ -1001,9 +989,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_drop_uncommitted_transaction() {
         let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
-        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
-            .await
-            .expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let key = LockKey::object(1, 1);
 
         // Dropping while there's a reader.

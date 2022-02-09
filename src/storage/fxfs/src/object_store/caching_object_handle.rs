@@ -384,7 +384,6 @@ mod tests {
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
-                crypt::InsecureCrypt,
                 extent_record::ExtentKey,
                 filesystem::{Filesystem, FxFilesystem, OpenFxFilesystem},
                 object_record::{ObjectKey, ObjectValue, Timestamp},
@@ -410,9 +409,7 @@ mod tests {
 
     async fn test_filesystem() -> OpenFxFilesystem {
         let device = DeviceHolder::new(FakeDevice::new(16384, TEST_DEVICE_BLOCK_SIZE));
-        FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
-            .await
-            .expect("new_empty failed")
+        FxFilesystem::new_empty(device).await.expect("new_empty failed")
     }
 
     async fn test_filesystem_and_object() -> (OpenFxFilesystem, CachingObjectHandle<ObjectStore>) {
@@ -425,7 +422,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         handle =
-            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), Some(0))
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), None)
                 .await
                 .expect("create_object failed");
         transaction.commit().await.expect("commit failed");
@@ -495,7 +492,7 @@ mod tests {
             &fs.root_store(),
             &mut transaction,
             HandleOptions::default(),
-            Some(0),
+            None,
         )
         .await
         .expect("create_object failed");
@@ -580,7 +577,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         let handle2 =
-            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), Some(0))
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), None)
                 .await
                 .expect("create_object failed");
         transaction.commit().await.expect("commit failed");
@@ -713,7 +710,7 @@ mod tests {
             .expect("new_transaction failed");
         let store = fs.root_store();
         handle =
-            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), Some(0))
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), None)
                 .await
                 .expect("create_object failed");
         let object = Arc::new(CachingObjectHandle::new(handle));
@@ -792,7 +789,7 @@ mod tests {
                 &fs.root_store(),
                 &mut transaction,
                 HandleOptions::default(),
-                Some(0),
+                None,
             )
             .await
             .expect("create_object failed");
@@ -833,12 +830,10 @@ mod tests {
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
         device.reopen();
-        let fs = FxFilesystem::open(device, Arc::new(InsecureCrypt::new()))
-            .await
-            .expect("FS open failed");
+        let fs = FxFilesystem::open(device).await.expect("FS open failed");
 
         let handle =
-            ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
+            ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default(), None)
                 .await
                 .expect("open_object failed");
         let object = CachingObjectHandle::new(handle);
@@ -872,7 +867,7 @@ mod tests {
                 &fs.root_store(),
                 &mut transaction,
                 HandleOptions::default(),
-                Some(0),
+                None,
             )
             .await
             .expect("create_object failed");
@@ -927,12 +922,10 @@ mod tests {
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
         device.reopen();
-        let fs = FxFilesystem::open(device, Arc::new(InsecureCrypt::new()))
-            .await
-            .expect("FS open failed");
+        let fs = FxFilesystem::open(device).await.expect("FS open failed");
 
         let object =
-            ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
+            ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default(), None)
                 .await
                 .expect("open_object failed");
         let object = CachingObjectHandle::new(object);
@@ -955,7 +948,7 @@ mod tests {
             &fs.root_store(),
             &mut transaction,
             HandleOptions::default(),
-            Some(0),
+            None,
         )
         .await
         .expect("create_object failed");
@@ -971,7 +964,7 @@ mod tests {
         let object_id = object.object_id();
         std::mem::drop(object);
         let object =
-            ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
+            ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default(), None)
                 .await
                 .expect("open_object failed");
         let object = CachingObjectHandle::new(object);

@@ -445,7 +445,7 @@ impl SimpleAllocator {
             &mut transaction,
             self.object_id(),
             HandleOptions::default(),
-            Some(0),
+            None,
         )
         .await?;
         transaction.commit().await?;
@@ -460,7 +460,8 @@ impl SimpleAllocator {
         let root_store = filesystem.root_store();
 
         let handle =
-            ObjectStore::open_object(&root_store, self.object_id, HandleOptions::default()).await?;
+            ObjectStore::open_object(&root_store, self.object_id, HandleOptions::default(), None)
+                .await?;
 
         if handle.get_size() > 0 {
             let serialized_info = handle.contents(MAX_ALLOCATOR_INFO_SERIALIZED_SIZE).await?;
@@ -470,8 +471,13 @@ impl SimpleAllocator {
             let mut total_size = 0;
             for object_id in &info.layers {
                 let handle = CachingObjectHandle::new(
-                    ObjectStore::open_object(&root_store, *object_id, HandleOptions::default())
-                        .await?,
+                    ObjectStore::open_object(
+                        &root_store,
+                        *object_id,
+                        HandleOptions::default(),
+                        None,
+                    )
+                    .await?,
                 );
                 total_size += handle.get_size();
                 handles.push(handle);
@@ -1016,7 +1022,7 @@ impl Mutations for SimpleAllocator {
             &root_store,
             &mut transaction,
             HandleOptions { skip_journal_checks: true, ..Default::default() },
-            Some(0),
+            None,
         )
         .await?;
         let object_id = layer_object_handle.object_id();
@@ -1044,7 +1050,7 @@ impl Mutations for SimpleAllocator {
 
         log::debug!("using {} for allocator layer file", object_id);
         let object_handle =
-            ObjectStore::open_object(&root_store, self.object_id(), HandleOptions::default())
+            ObjectStore::open_object(&root_store, self.object_id(), HandleOptions::default(), None)
                 .await?;
 
         // TODO(jfsulliv): Can we preallocate the buffer instead of doing a bounce? Do we know the

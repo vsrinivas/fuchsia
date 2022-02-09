@@ -102,7 +102,13 @@ impl FxVolume {
             GetResult::Placeholder(placeholder) => {
                 let node = match object_descriptor {
                     ObjectDescriptor::File => FxFile::new(
-                        ObjectStore::open_object(self, object_id, HandleOptions::default()).await?,
+                        ObjectStore::open_object(
+                            self,
+                            object_id,
+                            HandleOptions::default(),
+                            self.store().crypt().as_deref(),
+                        )
+                        .await?,
                     ) as Arc<dyn FxNode>,
                     ObjectDescriptor::Directory => {
                         Arc::new(FxDirectory::new(parent, Directory::open(self, object_id).await?))
@@ -629,11 +635,11 @@ mod tests {
         // We have to do a bit of set-up ourselves for this test, since we want to be able to access
         // the underlying StoreObjectHandle at the same time as the FxFile which corresponds to it.
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
-        let filesystem =
-            FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new())).await.unwrap();
+        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         {
             let root_volume = root_volume(&filesystem).await.unwrap();
-            let volume = root_volume.new_volume("vol").await.unwrap();
+            let volume =
+                root_volume.new_volume("vol", Arc::new(InsecureCrypt::new())).await.unwrap();
             let mut transaction = filesystem
                 .clone()
                 .new_transaction(&[], Options::default())
@@ -643,7 +649,7 @@ mod tests {
                 &volume,
                 &mut transaction,
                 HandleOptions::default(),
-                Some(0),
+                None,
             )
             .await
             .expect("create_object failed")
@@ -666,9 +672,10 @@ mod tests {
             let data_has_persisted = || async {
                 // We have to reopen the object each time since this is a distinct handle from the
                 // one managed by the FxFile.
-                let object = ObjectStore::open_object(&volume, object_id, HandleOptions::default())
-                    .await
-                    .expect("open_object failed");
+                let object =
+                    ObjectStore::open_object(&volume, object_id, HandleOptions::default(), None)
+                        .await
+                        .expect("open_object failed");
                 let data = object.contents(8192).await.expect("read failed");
                 data.len() == 1 && data[..] == [123u8]
             };
