@@ -27,6 +27,12 @@ class GeometryProviderManager {
   void Register(fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> endpoint,
                 zx_koid_t context_view);
 
+  // Adds a server side endpoint provided by
+  // fuchsia.ui.observation.test.Registry.RegisterGlobalGeometryProvider to |endpoints_|. Endpoints
+  // registered by this method get a global access to the view tree.
+  void RegisterGlobalGeometryProvider(
+      fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> endpoint);
+
   // Inject a new snapshot of the ViewTree. Adds the snapshot to each ProviderEndpoint's
   // |view_tree_snapshots_| and send a response to the respective clients if the required conditions
   // are met. See SendResponseMaybe() for more details on the required conditions.
@@ -36,7 +42,8 @@ class GeometryProviderManager {
   // extracting information about the |context_view| and its descendant views from
   // |snapshot|.
   static fuchsia::ui::observation::geometry::ViewTreeSnapshotPtr ExtractObservationSnapshot(
-      zx_koid_t context_view, std::shared_ptr<const view_tree::Snapshot> snapshot);
+      std::optional<zx_koid_t> endpoint_context_view,
+      std::shared_ptr<const view_tree::Snapshot> snapshot);
 
  private:
   using ProviderEndpointId = int64_t;
@@ -48,7 +55,7 @@ class GeometryProviderManager {
    public:
     explicit ProviderEndpoint(
         fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> provider,
-        zx_koid_t context_view, ProviderEndpointId id,
+        std::optional<zx_koid_t> context_view, ProviderEndpointId id,
         fit::function<void()> destroy_instance_function);
 
     ProviderEndpoint(ProviderEndpoint&& original) noexcept;
@@ -67,7 +74,7 @@ class GeometryProviderManager {
 
     bool IsAlive() const { return endpoint_.is_bound(); }
 
-    zx_koid_t context_view() const { return context_view_; }
+    std::optional<zx_koid_t> context_view() const { return context_view_; }
 
    private:
     // Checks whether the required conditions for sending the response to the client are met and
@@ -98,7 +105,7 @@ class GeometryProviderManager {
     // triggered whenever a new snapshot gets generated.
     fuchsia::ui::observation::geometry::Provider::WatchCallback pending_callback_;
 
-    const zx_koid_t context_view_;
+    std::optional<const zx_koid_t> context_view_;
 
     // Key for storing the associated server endpoint in |endpoints_|.
     const ProviderEndpointId id_;

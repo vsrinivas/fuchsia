@@ -24,6 +24,9 @@ protocol Registry {
     /// Flow control. The caller is allowed at most one in-flight call at a
     /// time. Subsequent calls must wait until the acknowledgment returns.
     /// Non-compliance results in channel closure.
+    ///
+    /// Client can freely disconnect this `Registry` endpoint after this method
+    /// returns.
     RegisterGlobalGeometryProvider(resource struct {
         provider server_end:fuchsia.ui.observation.geometry.Provider;
     }) -> ();

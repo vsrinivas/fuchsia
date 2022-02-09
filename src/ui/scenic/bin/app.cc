@@ -543,7 +543,10 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
     FX_DCHECK(status == ZX_OK);
   }
 
-  { observer_registry_.Publish(app_context_.get()); }
+  geometry_provider_manager_ = std::make_shared<view_tree::GeometryProviderManager>();
+
+  observer_registry_ = std::make_unique<view_tree::Registry>(geometry_provider_manager_);
+  observer_registry_->Publish(app_context_.get());
 }
 
 void App::InitializeInput() {
@@ -619,6 +622,14 @@ void App::InitializeHeartbeat() {
                                      std::move(snapshot));
                                },
                            .dispatcher = async_get_default_dispatcher()});
+
+    subscribers.push_back({.on_new_view_tree =
+                               [this](auto snapshot) {
+                                 geometry_provider_manager_->OnNewViewTreeSnapshot(
+                                     std::move(snapshot));
+                               },
+                           .dispatcher = async_get_default_dispatcher()});
+
     if (enable_snapshot_dump_) {
       subscribers.push_back({.on_new_view_tree =
                                  [](auto snapshot) {

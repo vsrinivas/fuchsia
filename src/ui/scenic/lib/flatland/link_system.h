@@ -281,6 +281,10 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
                    const GlobalMatrixVector& global_matrices, const glm::vec2& display_pixel_scale,
                    const UberStruct::InstanceMap& uber_structs);
 
+  // Returns the mapping of a child_view_watcher handle to its parent_viewport_watcher handle.
+  std::unordered_map<TransformHandle, TransformHandle> const
+  GetChildViewWatcherToParentViewportWatcherMapping();
+
  private:
   TransformHandle::InstanceId instance_id_;
   TransformGraph link_graph_;

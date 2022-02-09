@@ -65,10 +65,10 @@ TEST(GlobalTopologyDataTest, GlobalTopologyLinkExpansion) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetLinkHandle(2);
 
-  TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 1}, {link_2, 0}},  // 1:0 - 0:2
-                                              {{{2, 0}, 0}}};              // 2:0
+  const TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 1}, {link_2, 0}},  // 1:0 - 0:2
+                                                    {{{2, 0}, 0}}};              // 2:0
 
   MakeLink(links, 2);  // 0:2 - 2:0
 
@@ -98,11 +98,11 @@ TEST(GlobalTopologyDataTest, GlobalTopologyIncompleteLink) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetLinkHandle(2);
 
   // The link is in the middle of the topology to demonstrate that the topology it links to replaces
   // it in the correct order.
-  TransformGraph::TopologyVector vectors[] = {
+  const TransformGraph::TopologyVector vectors[] = {
       {{{1, 0}, 3}, {{1, 1}, 0}, {link_2, 0}, {{1, 2}, 0}},  // 1:0 - 1:1
                                                              //   \ \
                                                              //    \  0:2
@@ -176,11 +176,11 @@ TEST(GlobalTopologyDataTest, GlobalTopologyLinksMismatchedUberStruct) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetLinkHandle(2);
 
-  TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 1}, {link_2, 0}},  // 1:0 - 0:2
-                                                                           //
-                                              {{{2, 0}, 0}}};              // 2:0
+  const TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 1}, {link_2, 0}},  // 1:0 - 0:2
+                                                                                 //
+                                                    {{{2, 0}, 0}}};              // 2:0
 
   // Explicitly make an incorrect link for 0:2 to 2:1, which is not the start of the topology vector
   // for instance ID 2. The link is skipped, leaving the expected topology as just 1:0.
@@ -227,18 +227,19 @@ TEST(GlobalTopologyDataTest, GlobalTopologyDiamondInheritance) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  auto link_2 = GetLinkHandle(2);
-  auto link_3 = GetLinkHandle(3);
+  const auto link_2 = GetLinkHandle(2);
+  const auto link_3 = GetLinkHandle(3);
 
-  TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 2}, {link_2, 0}, {link_3, 0}},  // 1:0 - 0:2
-                                                                                        //     \
+  const TransformGraph::TopologyVector vectors[] = {
+      {{{1, 0}, 2}, {link_2, 0}, {link_3, 0}},  // 1:0 - 0:2
+                                                //     \
                                                                                         //       0:3
-                                                                                        //
-                                              {{{2, 0}, 2}, {{2, 1}, 0}, {link_3, 0}},  // 2:0 - 2:1
-                                                                                        //     \
+                                                //
+      {{{2, 0}, 2}, {{2, 1}, 0}, {link_3, 0}},  // 2:0 - 2:1
+                                                //     \
                                                                                         //       0:3
-                                                                                        //
-                                              {{{3, 0}, 0}}};                           // 3:0
+                                                //
+      {{{3, 0}, 0}}};                           // 3:0
 
   for (const auto& v : vectors) {
     auto uber_struct = std::make_unique<UberStruct>();
@@ -273,7 +274,7 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetLinkHandle(2);
 
   auto [control_ref1, view_ref1] = scenic::ViewRefPair::New();
   auto [control_ref2, view_ref2] = scenic::ViewRefPair::New();
@@ -283,14 +284,20 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
 
   // Recreate the GlobalTopologyData from GlobalTopologyDataTest.GlobalTopologyIncompleteLink and
   // confirm that the correct ViewTreeSnapshot is generated.
-  TransformGraph::TopologyVector vectors[] = {
-      {{{1, 0}, 3}, {{1, 1}, 0}, {link_2, 0}, {{1, 2}, 0}},  // 1:0 - 1:1
-                                                             //   \ \
-                                                             //    \  0:2
-                                                             //     \
-                                                             //       1:2
+  // {1:1} acts as a transform handle for the viewport.
+  const TransformGraph::TopologyVector vectors[] = {
+      {{{1, 0}, 2}, {{1, 1}, 1}, {link_2, 0}, {{1, 2}, 0}},  // 1:0 - 1:1 - 0:2
+                                                             //   \
+                                                             //    1:2
                                                              //
       {{{2, 0}, 1}, {{2, 1}, 0}}};                           // 2:0 - 2:1
+
+  // {1,1} acts as a parent_viewport_watcher_handle to {2,1} which is the child's view watcher
+  // handle.
+  const auto& parent_viewport_watcher_handle = vectors[0][1].handle;
+  const auto& child_view_watcher_handle = vectors[1][0].handle;
+  const std::unordered_map<TransformHandle, TransformHandle> child_parent_viewport_watcher_mapping =
+      {{child_view_watcher_handle, parent_viewport_watcher_handle}};
   {
     auto uber_struct = std::make_unique<UberStruct>();
     uber_struct->local_topology = vectors[0];
@@ -298,7 +305,7 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
     uber_struct->debug_name = "test_instance_1";
     fuc_ViewportProperties properties;
     properties.set_logical_size({logical_size_width, logical_size_height});
-    uber_struct->link_properties.try_emplace(vectors[1][0].handle, std::move(properties));
+    uber_struct->link_properties.try_emplace(parent_viewport_watcher_handle, std::move(properties));
     uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
   }
   {
@@ -311,14 +318,12 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
 
   // When the link becomes available, the full topology is available, excluding the link handle.
   //
-  // 1:0 - 1:1
-  //   \ \
-  //    \  2:0 - 2:1
-  //     \
-  //       1:2
+  // 1:0 - 1:1 - 2:0 - 2:1
+  //   \
+  //    1:2
   GlobalTopologyData::TopologyVector expected_topology = {{1, 0}, {1, 1}, {2, 0}, {2, 1}, {1, 2}};
-  GlobalTopologyData::ChildCountVector expected_child_counts = {3, 0, 1, 0, 0};
-  GlobalTopologyData::ParentIndexVector expected_parent_indices = {0, 0, 0, 2, 0};
+  GlobalTopologyData::ChildCountVector expected_child_counts = {2, 1, 1, 0, 0};
+  GlobalTopologyData::ParentIndexVector expected_parent_indices = {0, 0, 1, 2, 0};
 
   MakeLink(links, 2);  // 0:2 - 2:0
 
@@ -336,7 +341,8 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
     const float kWidth = 10;
     const float kHeight = 5;
     auto snapshot = GlobalTopologyData::GenerateViewTreeSnapshot(
-        kWidth, kHeight, gtd, UberStructSystem::ExtractViewRefKoids(uber_structs));
+        kWidth, kHeight, gtd, UberStructSystem::ExtractViewRefKoids(uber_structs),
+        child_parent_viewport_watcher_mapping);
     auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
     EXPECT_EQ(root, view_ref1_koid);
     EXPECT_EQ(view_tree.size(), 2u);
@@ -380,17 +386,17 @@ TEST(GlobalTopologyDataTest, LastChildEdgeCase_NoLink) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetLinkHandle(2);
 
   // The link is the middle child in the topology.
-  TransformGraph::TopologyVector vectors[] = {{{{1, 0}, /*One too few*/ 2},
-                                               {{1, 1}, 0},
-                                               {link_2, 0},
-                                               {{1, 2}, 0}},  // 1:0   - 1:1
-                                                              //    \  - 0:2 (Broken Link)
-                                                              //     \ - 1:2
-                                                              //
-                                              {{{2, 0}, 1}, {{2, 1}, 0}}};  // 2:0 - 2:1
+  const TransformGraph::TopologyVector vectors[] = {{{{1, 0}, /*One too few*/ 2},
+                                                     {{1, 1}, 0},
+                                                     {link_2, 0},
+                                                     {{1, 2}, 0}},  // 1:0   - 1:1
+                                                                    //    \  - 0:2 (Broken Link)
+                                                                    //     \ - 1:2
+                                                                    //
+                                                    {{{2, 0}, 1}, {{2, 1}, 0}}};  // 2:0 - 2:1
 
   // Since we are purposefully not creating the link, the global topology
   // should just be the following:
@@ -420,10 +426,10 @@ TEST(GlobalTopologyDataTest, LinkEdgeCaseTest2_NoUberStruct) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetLinkHandle(2);
 
   // The link is the middle child in the topology.
-  TransformGraph::TopologyVector vectors[] = {
+  const TransformGraph::TopologyVector vectors[] = {
       {{{1, 0}, /*One too few*/ 2}, {{1, 1}, 0}, {link_2, 0}, {{1, 2}, 0}},  // 1:0   - 1:1
                                                                              //    \  - 0:2
                                                                              //     \ - 1:2
@@ -463,10 +469,10 @@ TEST(GlobalTopologyDataTest, LinkEdgeCaseTest3_WrongHandle) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
-  auto link_2 = GetLinkHandle(2);
+  const auto link_2 = GetLinkHandle(2);
 
   // The link is the middle child in the topology.
-  TransformGraph::TopologyVector vectors[] = {
+  const TransformGraph::TopologyVector vectors[] = {
       {{{1, 0}, /*One too few*/ 2}, {{1, 1}, 0}, {link_2, 0}, {{1, 2}, 0}},  // 1:0   - 1:1
                                                                              //    \  - 0:2
                                                                              //     \ - 1:2

@@ -241,4 +241,13 @@ GlobalTopologyData::LinkTopologyMap LinkSystem::GetResolvedTopologyLinks() {
 
 TransformHandle::InstanceId LinkSystem::GetInstanceId() const { return instance_id_; }
 
+std::unordered_map<TransformHandle, TransformHandle> const
+LinkSystem::GetChildViewWatcherToParentViewportWatcherMapping() {
+  std::unordered_map<TransformHandle, TransformHandle> mapping;
+  for (auto& [handle, data] : parent_viewport_watcher_map_) {
+    mapping.try_emplace(data.child_link_origin, handle);
+  }
+  return mapping;
+}
+
 }  // namespace flatland

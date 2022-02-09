@@ -20,7 +20,8 @@ using GlobalIndexVector = std::vector<size_t>;
 struct GlobalTopologyData {
   // The LinkSystem stores topology links as a key-value pair of TransformHandles. This type alias
   // is declared because while this map is created by the LinkSystem, it is only ever consumed
-  // by ComputeGlobalTopolgyData().
+  // by ComputeGlobalTopologyData().
+  // Link handle acts as the key and child view watcher handle as the value.
   using LinkTopologyMap = std::unordered_map<TransformHandle, TransformHandle>;
 
   // The list of transforms reachable from a particular root, sorted in topological (i.e.,
@@ -77,7 +78,11 @@ struct GlobalTopologyData {
 
   static view_tree::SubtreeSnapshot GenerateViewTreeSnapshot(
       float display_width, float display_height, const GlobalTopologyData& data,
-      const std::unordered_set<zx_koid_t>& view_ref_koids);
+      const std::unordered_set<zx_koid_t>& view_ref_koids,
+      // Set from |LinkSystem::GetChildViewWatcherToParentViewportWatcherMapping|. Used to get the
+      // parent viewport watcher handle for a child view watcher handle to fetch its viewport
+      // properties from |viewport_properties|.
+      const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping);
 };
 
 }  // namespace flatland

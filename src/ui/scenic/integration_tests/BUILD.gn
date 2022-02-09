@@ -186,8 +186,11 @@ executable("observer_registry_integration_test_bin") {
   sources = [ "observer_registry_integration_test.cc" ]
   deps = [
     ":common_deps",
+    "//sdk//fidl/fuchsia.ui.composition",
+    "//sdk//fidl/fuchsia.ui.focus",
     "//sdk//fidl/fuchsia.ui.observation.geometry",
     "//sdk//fidl/fuchsia.ui.observation.test",
+    "//src/ui/scenic/lib/utils",
   ]
 }
 

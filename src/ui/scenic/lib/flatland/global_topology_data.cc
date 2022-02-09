@@ -198,7 +198,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
                           uber_structs.at(current_entry.handle.GetInstanceId())->debug_name);
     }
 
-    // For each view, save the ViewportProperties of its child instances.
+    // For each node in the local topology, save the ViewportProperties of its child instances.
     for (auto& [child_handle, child_properties] :
          uber_structs.at(current_entry.handle.GetInstanceId())->link_properties) {
       fuc_ViewportProperties properties;
@@ -248,7 +248,8 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
 
 view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
     float display_width, float display_height, const GlobalTopologyData& data,
-    const std::unordered_set<zx_koid_t>& view_ref_koids) {
+    const std::unordered_set<zx_koid_t>& view_ref_koids,
+    const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping) {
   // Find the first node with a ViewRef set. This is the root of the ViewTree.
   size_t root_index = 0;
   while (root_index < data.topology_vector.size() &&
@@ -288,9 +289,13 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
     if (data.debug_names.count(transform_handle) != 0)
       debug_name = data.debug_names.at(transform_handle);
 
+    // Get the viewport_properties of a handle through its parent_viewport_watcher_handle.
     fuc_ViewportProperties properties;
-    if (data.viewport_properties.count(transform_handle) != 0) {
-      fidl::Clone(data.viewport_properties.at(transform_handle), &properties);
+    if (child_view_watcher_mapping.count(transform_handle) != 0) {
+      auto& parent_viewport_watcher_handle = child_view_watcher_mapping.at(transform_handle);
+      if (data.viewport_properties.count(parent_viewport_watcher_handle) != 0) {
+        fidl::Clone(data.viewport_properties.at(parent_viewport_watcher_handle), &properties);
+      }
     }
 
     // Find the parent by looking upwards until a View is found. The root has no parent.

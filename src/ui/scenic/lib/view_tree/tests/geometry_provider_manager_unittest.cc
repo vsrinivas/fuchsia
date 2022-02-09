@@ -523,5 +523,33 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
     EXPECT_EQ(vd.view_ref_koid(), node_c_koid);
   }
 }
+
+// Clients registered through |RegisterGlobalGeometryProvider| should receive information about all
+// the nodes in a view tree.
+TEST_F(GeometryProviderManagerTest, RegisterGlobalGeometryProviderTest) {
+  fuog_ProviderPtr client;
+  std::optional<fuog_ProviderWatchResponse> client_result;
+  const uint32_t num_snapshots = 1;
+  const uint64_t num_nodes = 5;
+
+  geometry_provider_manager_.RegisterGlobalGeometryProvider(client.NewRequest());
+
+  PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+
+  client->Watch([&client_result](auto response) { client_result = std::move(response); });
+
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(client_result.has_value());
+  ASSERT_TRUE(client_result->has_updates());
+  EXPECT_FALSE(client_result->has_error());
+  ASSERT_EQ(client_result->updates().size(), num_snapshots);
+
+  // Client should receive fuog_ViewDescriptors for |num_nodes| since it has a unlimited access to
+  // the global view tree.
+  ASSERT_TRUE(client_result->updates()[0].has_views());
+  EXPECT_EQ(client_result->updates()[0].views().size(), num_nodes);
+}
+
 }  // namespace geometry_provider_manager::test
 }  // namespace view_tree

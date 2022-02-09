@@ -41,6 +41,18 @@ void GeometryProviderManager::Register(fidl::InterfaceRequest<fuog_Provider> end
                                                    })});
 }
 
+void GeometryProviderManager::RegisterGlobalGeometryProvider(
+    fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> endpoint) {
+  FX_DCHECK(endpoint.is_valid()) << "precondition";
+  auto endpoint_id = endpoint_counter_++;
+  endpoints_.insert(
+      {endpoint_id, ProviderEndpoint(std::move(endpoint), /*context_view*/ std::nullopt,
+                                     endpoint_id, [this, endpoint_id] {
+                                       auto count = endpoints_.erase(endpoint_id);
+                                       FX_DCHECK(count > 0);
+                                     })});
+}
+
 void GeometryProviderManager::OnNewViewTreeSnapshot(
     std::shared_ptr<const view_tree::Snapshot> snapshot) {
   // Remove any dead endpoints.
@@ -59,11 +71,21 @@ void GeometryProviderManager::OnNewViewTreeSnapshot(
 }
 
 fuog_ViewTreeSnapshotPtr GeometryProviderManager::ExtractObservationSnapshot(
-    zx_koid_t context_view, std::shared_ptr<const view_tree::Snapshot> snapshot) {
+    std::optional<zx_koid_t> endpoint_context_view,
+    std::shared_ptr<const view_tree::Snapshot> snapshot) {
   auto view_tree_snapshot = fuog_ViewTreeSnapshot::New();
   view_tree_snapshot->set_time(scenic_impl::gfx::dispatcher_clock_now());
   std::vector<fuog_ViewDescriptor> views;
   bool views_exceeded = false;
+
+  // |ProviderEndpoint| not having a |context_view_| get global access to the view tree as they get
+  // registered through f.u.o.t.Registry.RegisterGlobalGeometryProvider.
+  zx_koid_t context_view = 0;
+  if (endpoint_context_view.has_value()) {
+    context_view = endpoint_context_view.value();
+  } else {
+    context_view = snapshot->root;
+  }
 
   // Perform a depth-first search on the view tree to populate |views| with
   // fuog_ViewDescriptors.
@@ -107,104 +129,105 @@ fuog_ViewTreeSnapshotPtr GeometryProviderManager::ExtractObservationSnapshot(
 fuog_ViewDescriptor GeometryProviderManager::ExtractViewDescriptor(
     zx_koid_t view_ref_koid, zx_koid_t context_view,
     std::shared_ptr<const view_tree::Snapshot> snapshot) {
-  auto& view_node = snapshot->view_tree.at(view_ref_koid);
-
-  // The coordinates of a view_node's bounding box.
-  FX_DCHECK(view_node.viewport_properties.has_logical_size()) << "precondition";
-  uint32_t width = view_node.viewport_properties.logical_size().width;
-  uint32_t height = view_node.viewport_properties.logical_size().height;
-
-  std::array<uint32_t, 2> bounding_box_min = {0, 0};
-  std::array<uint32_t, 2> bounding_box_max = {width, height};
-
-  fuog_Layout layout = {.extent = {.min = {static_cast<float>(bounding_box_min[0]),
-                                           static_cast<float>(bounding_box_min[1])},
-                                   .max = {static_cast<float>(bounding_box_max[0]),
-                                           static_cast<float>(bounding_box_max[1])}},
-                        .pixel_scale = {1.0f, 1.0f},
-                        // TODO(fxb/92073): Populate this value from gfx's inset.
-                        .inset = {}};
-
-  auto world_from_local_transform = glm::inverse(view_node.local_from_world_transform);
-  auto extent_in_context_transform =
-      snapshot->view_tree.at(context_view).local_from_world_transform * world_from_local_transform;
-
-  // The coordinates of a view_node's bounding box in context_view's coordinate system.
-  auto extent_in_context_top_left = utils::TransformPointerCoords(
-      {bounding_box_min[0], bounding_box_min[1]}, extent_in_context_transform);
-  auto extent_in_context_top_right = utils::TransformPointerCoords(
-      {bounding_box_max[0], bounding_box_min[1]}, extent_in_context_transform);
-  auto extent_in_context_bottom_left = utils::TransformPointerCoords(
-      {bounding_box_min[0], bounding_box_max[1]}, extent_in_context_transform);
-
-  auto extent_in_context_dx = extent_in_context_top_right[0] - extent_in_context_top_left[0];
-  auto extent_in_context_dy = extent_in_context_top_right[1] - extent_in_context_top_left[1];
-
-  // Angle of a line segment with coordinates (x1,y1) and (x2,y2) is defined as tan inverse
-  // (y2-y1/x2-x1). As the return value is in radians multiply it by 180/PI.
-  FX_DCHECK(extent_in_context_dx != 0 || extent_in_context_dy != 0)
-      << "top left and top right coordinates cannot be the same";
-  auto angle_context = atan2(extent_in_context_dy, extent_in_context_dx) * (180. / M_PI);
-
-  fuog_RotatableExtent extent_in_context = {
-      .origin = {extent_in_context_top_left[0], extent_in_context_top_left[1]},
-      // Root mean squared distance between two coordinates.
-      .width = std::hypot(extent_in_context_top_right[0] - extent_in_context_top_left[0],
-                          extent_in_context_top_right[1] - extent_in_context_top_left[1]),
-      .height = std::hypot(extent_in_context_bottom_left[0] - extent_in_context_top_left[0],
-                           extent_in_context_bottom_left[1] - extent_in_context_top_left[1]),
-      .angle = static_cast<float>(angle_context)};
-
-  glm::mat4 extent_in_parent_transform;
-
-  // If the context view is the root node, it will not have a parent so the
-  // extent_in_parent_transform will be an identity matrix.
-  if (view_node.parent != ZX_KOID_INVALID) {
-    extent_in_parent_transform =
-        snapshot->view_tree.at(view_node.parent).local_from_world_transform *
-        world_from_local_transform;
-  }
-
-  // The coordinates of a view_node's bounding box in its parent's coordinate system.
-  auto extent_in_parent_top_left = utils::TransformPointerCoords(
-      {bounding_box_min[0], bounding_box_min[1]}, extent_in_parent_transform);
-  auto extent_in_parent_top_right = utils::TransformPointerCoords(
-      {bounding_box_max[0], bounding_box_min[1]}, extent_in_parent_transform);
-  auto extent_in_parent_bottom_left = utils::TransformPointerCoords(
-      {bounding_box_min[0], bounding_box_max[1]}, extent_in_parent_transform);
-
-  auto extent_in_parent_dx = extent_in_parent_top_right[0] - extent_in_parent_top_left[0];
-  auto extent_in_parent_dy = extent_in_parent_top_right[1] - extent_in_parent_top_left[1];
-  FX_DCHECK(extent_in_parent_dx != 0 || extent_in_parent_dy != 0)
-      << "top left and top right coordinates cannot be the same";
-  auto angle_parent = atan2(extent_in_parent_dy, extent_in_parent_dx) * (180. / M_PI);
-
-  fuog_RotatableExtent extent_in_parent = {
-      .origin = {extent_in_parent_top_left[0], extent_in_parent_top_left[1]},
-      .width = std::hypot(extent_in_parent_top_right[0] - extent_in_parent_top_left[0],
-                          extent_in_parent_top_right[1] - extent_in_parent_top_left[1]),
-      .height = std::hypot(extent_in_parent_bottom_left[0] - extent_in_parent_top_left[0],
-                           extent_in_parent_bottom_left[1] - extent_in_parent_top_left[1]),
-      .angle = static_cast<float>(angle_parent)};
-
-  FX_DCHECK(view_node.children.size() <= fuog_MAX_VIEW_COUNT) << "invariant.";
-  std::vector<uint32_t> children = {view_node.children.begin(), view_node.children.end()};
-
   fuog_ViewDescriptor view_descriptor;
   view_descriptor.set_view_ref_koid(view_ref_koid);
-  view_descriptor.set_layout(std::move(layout));
-  view_descriptor.set_extent_in_context(std::move(extent_in_context));
-  view_descriptor.set_extent_in_parent(std::move(extent_in_parent));
-  view_descriptor.set_children(std::move(children));
+  auto& view_node = snapshot->view_tree.at(view_ref_koid);
+
+  if (view_node.viewport_properties.has_logical_size()) {
+    // The coordinates of a view_node's bounding box.
+    uint32_t width = view_node.viewport_properties.logical_size().width;
+    uint32_t height = view_node.viewport_properties.logical_size().height;
+
+    std::array<uint32_t, 2> bounding_box_min = {0, 0};
+    std::array<uint32_t, 2> bounding_box_max = {width, height};
+
+    fuog_Layout layout = {.extent = {.min = {static_cast<float>(bounding_box_min[0]),
+                                             static_cast<float>(bounding_box_min[1])},
+                                     .max = {static_cast<float>(bounding_box_max[0]),
+                                             static_cast<float>(bounding_box_max[1])}},
+                          .pixel_scale = {1.0f, 1.0f},
+                          // TODO(fxb/92073): Populate this value from gfx's inset.
+                          .inset = {}};
+
+    auto world_from_local_transform = glm::inverse(view_node.local_from_world_transform);
+    auto extent_in_context_transform =
+        snapshot->view_tree.at(context_view).local_from_world_transform *
+        world_from_local_transform;
+
+    // The coordinates of a view_node's bounding box in context_view's coordinate system.
+    auto extent_in_context_top_left = utils::TransformPointerCoords(
+        {bounding_box_min[0], bounding_box_min[1]}, extent_in_context_transform);
+    auto extent_in_context_top_right = utils::TransformPointerCoords(
+        {bounding_box_max[0], bounding_box_min[1]}, extent_in_context_transform);
+    auto extent_in_context_bottom_left = utils::TransformPointerCoords(
+        {bounding_box_min[0], bounding_box_max[1]}, extent_in_context_transform);
+
+    auto extent_in_context_dx = extent_in_context_top_right[0] - extent_in_context_top_left[0];
+    auto extent_in_context_dy = extent_in_context_top_right[1] - extent_in_context_top_left[1];
+
+    // Angle of a line segment with coordinates (x1,y1) and (x2,y2) is defined as tan inverse
+    // (y2-y1/x2-x1). As the return value is in radians multiply it by 180/PI.
+    FX_DCHECK(extent_in_context_dx != 0 || extent_in_context_dy != 0)
+        << "top left and top right coordinates cannot be the same";
+    auto angle_context = atan2(extent_in_context_dy, extent_in_context_dx) * (180. / M_PI);
+
+    fuog_RotatableExtent extent_in_context = {
+        .origin = {extent_in_context_top_left[0], extent_in_context_top_left[1]},
+        // Root mean squared distance between two coordinates.
+        .width = std::hypot(extent_in_context_top_right[0] - extent_in_context_top_left[0],
+                            extent_in_context_top_right[1] - extent_in_context_top_left[1]),
+        .height = std::hypot(extent_in_context_bottom_left[0] - extent_in_context_top_left[0],
+                             extent_in_context_bottom_left[1] - extent_in_context_top_left[1]),
+        .angle = static_cast<float>(angle_context)};
+
+    glm::mat4 extent_in_parent_transform;
+
+    // If the context view is the root node, it will not have a parent so the
+    // extent_in_parent_transform will be an identity matrix.
+    if (view_node.parent != ZX_KOID_INVALID) {
+      extent_in_parent_transform =
+          snapshot->view_tree.at(view_node.parent).local_from_world_transform *
+          world_from_local_transform;
+    }
+
+    // The coordinates of a view_node's bounding box in its parent's coordinate system.
+    auto extent_in_parent_top_left = utils::TransformPointerCoords(
+        {bounding_box_min[0], bounding_box_min[1]}, extent_in_parent_transform);
+    auto extent_in_parent_top_right = utils::TransformPointerCoords(
+        {bounding_box_max[0], bounding_box_min[1]}, extent_in_parent_transform);
+    auto extent_in_parent_bottom_left = utils::TransformPointerCoords(
+        {bounding_box_min[0], bounding_box_max[1]}, extent_in_parent_transform);
+
+    auto extent_in_parent_dx = extent_in_parent_top_right[0] - extent_in_parent_top_left[0];
+    auto extent_in_parent_dy = extent_in_parent_top_right[1] - extent_in_parent_top_left[1];
+    FX_DCHECK(extent_in_parent_dx != 0 || extent_in_parent_dy != 0)
+        << "top left and top right coordinates cannot be the same";
+    auto angle_parent = atan2(extent_in_parent_dy, extent_in_parent_dx) * (180. / M_PI);
+
+    fuog_RotatableExtent extent_in_parent = {
+        .origin = {extent_in_parent_top_left[0], extent_in_parent_top_left[1]},
+        .width = std::hypot(extent_in_parent_top_right[0] - extent_in_parent_top_left[0],
+                            extent_in_parent_top_right[1] - extent_in_parent_top_left[1]),
+        .height = std::hypot(extent_in_parent_bottom_left[0] - extent_in_parent_top_left[0],
+                             extent_in_parent_bottom_left[1] - extent_in_parent_top_left[1]),
+        .angle = static_cast<float>(angle_parent)};
+
+    view_descriptor.set_layout(std::move(layout));
+    view_descriptor.set_extent_in_context(std::move(extent_in_context));
+    view_descriptor.set_extent_in_parent(std::move(extent_in_parent));
+  }
+
+  FX_DCHECK(view_node.children.size() <= fuog_MAX_VIEW_COUNT) << "invariant.";
+  view_descriptor.set_children({view_node.children.begin(), view_node.children.end()});
 
   return view_descriptor;
 }
 
 GeometryProviderManager::ProviderEndpoint::ProviderEndpoint(
-    fidl::InterfaceRequest<fuog_Provider> endpoint, zx_koid_t context_view, ProviderEndpointId id,
-    fit::function<void()> destroy_instance_function)
+    fidl::InterfaceRequest<fuog_Provider> endpoint, std::optional<zx_koid_t> context_view,
+    ProviderEndpointId id, fit::function<void()> destroy_instance_function)
     : endpoint_(this, std::move(endpoint)),
-      context_view_(context_view),
+      context_view_(std::move(context_view)),
       id_(id),
       // The |destroy_instance_function_| captures the 'this' pointer to the GeometryProviderManager
       // instance. However, the below operation is safe because it is expected that the
