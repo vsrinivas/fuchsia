@@ -356,8 +356,9 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager,
       .spawn_colocated = true,
   };
 
-#ifndef IS_TEST
+#if !defined(IS_TEST) && !defined(ENABLE_DFV2)
   // TODO(fxbug.dev/79923): re-enable this in tests once mock_ddk supports composites.
+  // TODO(fxbug.dev/93333): For DFv2, we don't add composite device fragments yet.
   auto composite_name = fbl::StringPrintf("%s-composite", name());
   // Don't worry about any metadata, since it's present in the "acpi" parent.
   auto composite_device = std::make_unique<Device>(manager, parent_->zx_device_, handle_);
