@@ -4,12 +4,12 @@
 
 use {
     crate::{
-        container::ComponentIdentity,
         events::{
             error::EventError,
             router::{Dispatcher, EventProducer},
             types::*,
         },
+        identity::ComponentIdentity,
     },
     fidl_fuchsia_sys_internal::{LogConnection, LogConnectionListenerRequest, LogConnectorProxy},
     fuchsia_zircon as zx,

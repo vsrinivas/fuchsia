@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    container::ComponentIdentity,
+    identity::ComponentIdentity,
     logs::{debuglog, error::StreamError, stats::LogStreamStats},
 };
 use diagnostics_data::{LogsData, Severity};

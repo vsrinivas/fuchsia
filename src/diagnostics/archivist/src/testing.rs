@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use crate::{container::ComponentIdentity, events::types::ComponentIdentifier};
+use crate::{events::types::ComponentIdentifier, identity::ComponentIdentity};
 use lazy_static::lazy_static;
 use std::sync::Arc;
 

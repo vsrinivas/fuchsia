@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use crate::{
-    container::ComponentIdentity,
     events::{
         error::EventError,
         router::{Dispatcher, EventProducer},
         types::{Event, EventPayload, LogSinkRequestedPayload},
     },
+    identity::ComponentIdentity,
 };
 use fidl_fuchsia_logger as flogger;
 use fuchsia_zircon as zx;

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::{
-    container::ComponentIdentity,
     events::error::{EventError, MonikerError},
+    identity::ComponentIdentity,
 };
 use fidl::endpoints::{ProtocolMarker, ServerEnd};
 use fidl_fuchsia_io::DirectoryProxy;

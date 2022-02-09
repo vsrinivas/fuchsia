@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::{
-    container::ComponentIdentity,
     events::types::{Event, EventPayload, LogSinkRequestedPayload},
+    identity::ComponentIdentity,
     logs::budget::BudgetManager,
     repository::DataRepo,
 };

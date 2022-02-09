@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::{
-    container::ComponentIdentity,
     diagnostics::GlobalConnectionStats,
+    identity::ComponentIdentity,
     inspect::collector::{self as collector, InspectData},
     ImmutableString,
 };
@@ -271,11 +271,15 @@ impl<'a> UnpopulatedInspectDataContainer {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{container::EMPTY_IDENTITY, diagnostics::GlobalConnectionStats};
+    use crate::diagnostics::GlobalConnectionStats;
     use fidl_fuchsia_io::DirectoryMarker;
     use fuchsia_inspect::Node;
     use fuchsia_zircon::DurationNum;
     use futures::StreamExt;
+
+    lazy_static! {
+        static ref EMPTY_IDENTITY: ComponentIdentity = ComponentIdentity::unknown();
+    }
 
     #[fuchsia::test]
     async fn population_times_out() {

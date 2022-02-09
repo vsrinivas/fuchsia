@@ -71,9 +71,9 @@ mod tests {
         super::*,
         crate::{
             accessor::BatchIterator,
-            container::ComponentIdentity,
             diagnostics::{self, BatchIteratorConnectionStats},
             events::types::ComponentIdentifier,
+            identity::ComponentIdentity,
             inspect::collector,
             repository::DataRepo,
         },

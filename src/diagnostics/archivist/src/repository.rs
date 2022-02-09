@@ -5,9 +5,10 @@
 use {
     crate::{
         constants::{ARCHIVIST_MONIKER, ARCHIVIST_URL},
-        container::{ComponentDiagnostics, ComponentIdentity},
+        container::ComponentDiagnostics,
         error::Error,
         events::types::{ComponentIdentifier, UniqueKey},
+        identity::ComponentIdentity,
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
         logs::{

@@ -105,7 +105,7 @@ mod tests {
     use diagnostics_data::Severity;
 
     use super::*;
-    use crate::{container::ComponentIdentity, events::types::ComponentIdentifier};
+    use crate::{events::types::ComponentIdentifier, identity::ComponentIdentity};
 
     fn test_message() -> LogsData {
         let identity = ComponentIdentity::from_identifier_and_url(

@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use crate::{
-    container::ComponentIdentity,
     events::{
         error::EventError,
         router::{Dispatcher, EventProducer},
         types::*,
     },
+    identity::ComponentIdentity,
 };
 use fidl_fuchsia_io::DirectoryMarker;
 use fidl_fuchsia_sys_internal::{

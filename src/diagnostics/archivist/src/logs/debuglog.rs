@@ -5,8 +5,8 @@
 // Read debug logs, convert them to LogMessages and serve them.
 
 use crate::{
-    container::ComponentIdentity,
     events::types::ComponentIdentifier,
+    identity::ComponentIdentity,
     logs::{error::LogsError, stored_message::StoredMessage},
 };
 use async_trait::async_trait;

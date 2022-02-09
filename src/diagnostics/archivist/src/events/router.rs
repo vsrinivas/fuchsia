@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{container::ComponentIdentity, events::types::*};
+use crate::{events::types::*, identity::ComponentIdentity};
 use async_trait::async_trait;
 use fuchsia_inspect::{self as inspect, NumericProperty};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};

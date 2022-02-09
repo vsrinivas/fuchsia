@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        container::ComponentIdentity, inspect::container::InspectArtifactsContainer,
+        identity::ComponentIdentity, inspect::container::InspectArtifactsContainer,
         logs::container::LogsArtifactsContainer,
     },
     diagnostics_data::{self as schema, LifecycleType},

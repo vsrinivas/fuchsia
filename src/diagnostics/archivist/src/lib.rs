@@ -12,6 +12,7 @@ pub mod diagnostics;
 pub mod error;
 pub mod events;
 pub mod formatter;
+pub mod identity;
 pub mod inspect;
 pub mod lifecycle;
 pub mod logs;

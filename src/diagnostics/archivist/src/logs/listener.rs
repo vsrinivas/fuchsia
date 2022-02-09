@@ -212,7 +212,7 @@ pub enum ListenerError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{container::ComponentIdentity, events::types::ComponentIdentifier};
+    use crate::{events::types::ComponentIdentifier, identity::ComponentIdentity};
 
     use diagnostics_message::{fx_log_packet_t, LoggerMessage, METADATA_SIZE};
     use fidl::endpoints::ServerEnd;

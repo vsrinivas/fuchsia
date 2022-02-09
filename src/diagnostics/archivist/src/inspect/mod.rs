@@ -321,8 +321,9 @@ mod tests {
         super::collector::InspectData,
         super::*,
         crate::{
-            accessor::BatchIterator, container::ComponentIdentity, diagnostics::AccessorStats,
-            events::types::ComponentIdentifier, pipeline::Pipeline, repository::DataRepo,
+            accessor::BatchIterator, diagnostics::AccessorStats,
+            events::types::ComponentIdentifier, identity::ComponentIdentity, pipeline::Pipeline,
+            repository::DataRepo,
         },
         diagnostics_hierarchy::trie::TrieIterableNode,
         fdio,

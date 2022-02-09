@@ -21,7 +21,7 @@ pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
 #[cfg(test)]
 mod tests {
     use crate::{
-        container::ComponentIdentity, events::types::ComponentIdentifier, logs::testing::*,
+        events::types::ComponentIdentifier, identity::ComponentIdentity, logs::testing::*,
     };
     use diagnostics_data::{
         LegacySeverity, DROPPED_LABEL, MESSAGE_LABEL, PID_LABEL, TAG_LABEL, TID_LABEL,

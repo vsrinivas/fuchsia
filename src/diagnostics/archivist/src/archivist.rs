@@ -4,9 +4,7 @@
 
 use {
     crate::{
-        component_lifecycle, configs,
-        container::ComponentIdentity,
-        diagnostics,
+        component_lifecycle, configs, diagnostics,
         error::Error,
         events::{
             router::{ConsumerConfig, EventConsumer, EventRouter, ProducerConfig, ProducerType},
@@ -15,6 +13,7 @@ use {
             },
             types::*,
         },
+        identity::ComponentIdentity,
         logs::{budget::BudgetManager, socket::LogMessageSocket, KernelDebugLog},
         pipeline::Pipeline,
         repository::DataRepo,

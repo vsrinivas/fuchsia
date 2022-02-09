@@ -61,7 +61,7 @@ impl EventProducer for EventSource {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::{container::ComponentIdentity, events::types::*};
+    use crate::{events::types::*, identity::ComponentIdentity};
     use fidl_fuchsia_io::NodeMarker;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;

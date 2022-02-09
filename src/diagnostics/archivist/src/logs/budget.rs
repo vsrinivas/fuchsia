@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{container::ComponentIdentity, logs::container::LogsArtifactsContainer};
+use crate::{identity::ComponentIdentity, logs::container::LogsArtifactsContainer};
 use futures::channel::mpsc;
 use parking_lot::Mutex;
 use std::sync::{Arc, Weak};

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    container::ComponentIdentity,
+    identity::ComponentIdentity,
     logs::{
         budget::BudgetHandle,
         buffer::{ArcList, LazyItem},

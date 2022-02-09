@@ -113,6 +113,7 @@ rustc_library("lib") {
     "src/events/sources/unattributed_log_sink.rs",
     "src/events/types.rs",
     "src/formatter.rs",
+    "src/identity.rs",
     "src/inspect/collector.rs",
     "src/inspect/container.rs",
     "src/inspect/mod.rs",

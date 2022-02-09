@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        container::ComponentIdentity,
         events::{error::EventError, types::*},
+        identity::ComponentIdentity,
     },
     fuchsia_inspect::{self as inspect, NumericProperty},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
