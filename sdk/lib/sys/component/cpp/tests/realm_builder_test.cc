@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <errno.h>
+#include <fcntl.h>
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/examples/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
@@ -14,9 +17,14 @@
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/component_context.h>
+#include <string.h>
+#include <zircon/assert.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
+#include <iostream>
 #include <memory>
+#include <sstream>
 
 #include <gtest/gtest.h>
 #include <src/lib/testing/loop_fixture/real_loop_fixture.h>
@@ -241,6 +249,67 @@ TEST_F(RealmBuilderTest, RoutesProtocolFromLocalComponentInSubRealm) {
   EXPECT_TRUE(local_echo_server.WasCalled());
 }
 
+class FileReader : public LocalComponent {
+ public:
+  explicit FileReader(fit::closure quit_loop) : quit_loop_(std::move(quit_loop)) {}
+
+  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
+    handles_ = std::move(handles);
+    started_ = true;
+    quit_loop_();
+  }
+
+  std::string GetContentsAt(std::string_view dirpath, std::string_view filepath) {
+    ZX_ASSERT_MSG(handles_ != nullptr,
+                  "FileReader/GetContentsAt called before FileReader was started.");
+
+    constexpr static size_t kMaxBufferSize = 1024;
+    static char kReadBuffer[kMaxBufferSize];
+
+    int dirfd = fdio_ns_opendir(handles_->ns());
+    ZX_ASSERT_MSG(dirfd > 0, "Failed to open root ns as a file descriptor: %s", strerror(errno));
+
+    std::stringstream path_builder;
+    path_builder << dirpath << '/' << filepath;
+    auto path = path_builder.str();
+    int filefd = openat(dirfd, path.c_str(), O_RDONLY);
+    ZX_ASSERT_MSG(filefd > 0, "Failed to open path \"%s\": %s", path.c_str(), strerror(errno));
+
+    size_t bytes_read = read(filefd, reinterpret_cast<void*>(kReadBuffer), kMaxBufferSize);
+    ZX_ASSERT_MSG(bytes_read > 0, "Read 0 bytes from file at \"%s\": %s", path.c_str(),
+                  strerror(errno));
+
+    return std::string(kReadBuffer, bytes_read);
+  }
+
+  bool HasStarted() const { return started_; }
+
+ private:
+  fit::closure quit_loop_;
+  bool started_ = false;
+  std::unique_ptr<LocalComponentHandles> handles_;
+};
+
+TEST_F(RealmBuilderTest, RoutesReadOnlyDirectory) {
+  static constexpr char kDirectoryName[] = "config";
+  static constexpr char kFilename[] = "environment";
+  static constexpr char kContent[] = "DEV";
+
+  FileReader file_reader(QuitLoopClosure());
+
+  auto realm_builder = RealmBuilder::Create();
+  realm_builder.AddLocalChild("file_reader", &file_reader,
+                              ChildOptions{.startup_mode = StartupMode::EAGER});
+  realm_builder.RouteReadOnlyDirectory(kDirectoryName, {ChildRef{"file_reader"}},
+                                       std::move(DirectoryContents().AddFile(kFilename, kContent)));
+  auto realm = realm_builder.Build(dispatcher());
+
+  RunLoop();
+
+  ASSERT_TRUE(file_reader.HasStarted());
+  EXPECT_EQ(file_reader.GetContentsAt(kDirectoryName, kFilename), kContent);
+}
+
 // This test is nearly identicaly to the RealmBuilderTest.RoutesProtocolFromChild
 // test case above. The only difference is that it provides a svc directory
 // from the sys::Context singleton object to the Realm::Builder::Create method.
@@ -346,4 +415,28 @@ TEST(RealmBuilderUnittest, PanicsWhenArgsAreNullptr) {
       },
       "");
 }
+
+TEST(DirectoryContentsUnittest, PanicWhenGivenInvalidPath) {
+  ASSERT_DEATH(
+      {
+        auto directory_contents = DirectoryContents();
+        directory_contents.AddFile("/foo/bar.txt", "Hello World!");
+      },
+      "");
+
+  ASSERT_DEATH(
+      {
+        auto directory_contents = DirectoryContents();
+        directory_contents.AddFile("foo/bar/", "Hello World!");
+      },
+      "");
+
+  ASSERT_DEATH(
+      {
+        auto directory_contents = DirectoryContents();
+        directory_contents.AddFile("", "Hello World!");
+      },
+      "");
+}
+
 }  // namespace

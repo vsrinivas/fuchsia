@@ -142,6 +142,12 @@ class Realm final {
   // Route a capability from one child to another.
   Realm& AddRoute(Route route);
 
+  /// Offers a directory capability to a component in this realm. The
+  /// directory will be read-only (i.e. have `r*` rights), and will have the
+  /// contents described in `directory`.
+  Realm& RouteReadOnlyDirectory(const std::string& name, std::vector<Ref> to,
+                                DirectoryContents directory);
+
   friend class RealmBuilder;
 
  private:
@@ -193,6 +199,11 @@ class RealmBuilder final {
   // Route a capability for the root realm being constructed.
   // See |Realm.AddRoute| for more details.
   RealmBuilder& AddRoute(Route route);
+
+  /// Offers a directory capability to a component in this realm.
+  // See |Realm.RouteReadOnlyDirectory| for more details.
+  RealmBuilder& RouteReadOnlyDirectory(const std::string& name, std::vector<Ref> to,
+                                       DirectoryContents directory);
 
   // Build the realm root prepared by the associated builder methods, e.g. |AddComponent|.
   // |dispatcher| must be non-null, or |async_get_default_dispatcher| must be

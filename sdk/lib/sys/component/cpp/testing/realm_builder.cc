@@ -112,6 +112,20 @@ Realm& Realm::AddRoute(Route route) {
   return *this;
 }
 
+Realm& Realm::RouteReadOnlyDirectory(const std::string& name, std::vector<Ref> to,
+                                     DirectoryContents directory) {
+  auto to_fidl = internal::ConvertToFidlVec<Ref, fuchsia::component::decl::Ref>(std::move(to));
+  auto directory_fidl = directory.TakeAsFidl();
+
+  fuchsia::component::test::Realm_ReadOnlyDirectory_Result result;
+  ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
+      "Realm/ReadOnlyDirectory",
+      realm_proxy_->ReadOnlyDirectory(name, std::move(to_fidl), std::move(directory_fidl), &result),
+      result);
+
+  return *this;
+}
+
 Realm::Realm(fuchsia::component::test::RealmSyncPtr realm_proxy,
              std::shared_ptr<internal::LocalComponentRunner::Builder> runner_builder,
              std::vector<std::string> scope)
@@ -188,6 +202,12 @@ RealmBuilder& RealmBuilder::AddRoute(Route route) {
   ZX_ASSERT_MSG(!route.targets.empty(), "route.targets can't be empty");
 
   root_.AddRoute(std::move(route));
+  return *this;
+}
+
+RealmBuilder& RealmBuilder::RouteReadOnlyDirectory(const std::string& name, std::vector<Ref> to,
+                                                   DirectoryContents directory) {
+  root_.RouteReadOnlyDirectory(name, std::move(to), std::move(directory));
   return *this;
 }
 

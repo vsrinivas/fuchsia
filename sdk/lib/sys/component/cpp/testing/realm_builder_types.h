@@ -6,7 +6,9 @@
 #define LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_TYPES_H_
 
 #include <fuchsia/component/decl/cpp/fidl.h>
+#include <fuchsia/component/test/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
+#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/namespace.h>
 #include <lib/sys/cpp/outgoing_directory.h>
@@ -137,6 +139,47 @@ struct Route {
   std::vector<Capability> capabilities;
   Ref source;
   std::vector<Ref> targets;
+};
+
+// A type that specifies the content of a binary file for
+// |Realm.RouteReadOnlyDirectory|.
+struct BinaryContents {
+  // Pointer to bytes of content.
+  const void* buffer;
+
+  // Size of content. Only bytes up to this size will be stored.
+  size_t size;
+
+  // Offset (optional) to start writing content from |buffer|.
+  size_t offset = 0;
+};
+
+// An in-memory directory passed to |Realm.RouteReadOnlyDirectory| to
+// create directories with files at runtime.
+//
+// This is useful if a test needs to configure the content of a Directory
+// capability provided to a component under test in a Realm.
+class DirectoryContents {
+ public:
+  DirectoryContents() = default;
+
+  // Add a file to this directory with |contents| at destination |path|.
+  // Paths can include slashes, e.g. "foo/bar.txt".  However, neither a leading
+  // nor a trailing slash must be supplied.
+  DirectoryContents& AddFile(std::string_view path, BinaryContents contents);
+
+  // Same as above but allows for a string type for the contents.
+  DirectoryContents& AddFile(std::string_view path, std::string_view contents);
+
+ private:
+  // Friend class needed in order to invoke |TakeAsFidl|.
+  friend class Realm;
+
+  // Take this object and convert it to its FIDL counterpart. Invoking this method
+  // resets this object, erasing all previously-added file entries.
+  fuchsia::component::test::DirectoryContents TakeAsFidl();
+
+  fuchsia::component::test::DirectoryContents contents_;
 };
 
 }  // namespace component_testing
