@@ -538,18 +538,6 @@ protocol Flatland {
         orientation Orientation;
     });
 
-    /// This sets the bounds in pixel space that the renderables can be rendered in. If the area
-    /// of a renderable exceeds the clip bounds, the area outside the bounds will not be
-    /// rendered. These bounds are valid for all children of this transform node as well. The
-    /// default state is for a transform to be unclipped, meaning it will not have any bounds
-    /// placed on its render region. The clip width/height must be positive. The only exception
-    /// is that setting the clip rect to {-1, -1, -1, -1} will remove the clip bounds altogether.
-    @deprecated
-    SetClipBounds(struct {
-        transform_id TransformId;
-        rect fuchsia.math.Rect;
-    });
-
     /// Sets the bounds, expressed in the local coordinate space of the transform, that
     /// constrains the region that content attached to this transform can be rendered to.
     /// If the content's area exceeds the clip bounds, the area outside the bounds will
@@ -560,7 +548,6 @@ protocol Flatland {
     /// to be unclipped, meaning it will not have any bounds placed on its render region.
     /// The clip width/height must be positive. Negative values will result in an error.
     /// Passing in an empty box to the |rect| parameter will remove the clip bounds.
-    @transitional
     SetClipBoundary(struct {
         transform_id TransformId;
         rect box<fuchsia.math.Rect>;

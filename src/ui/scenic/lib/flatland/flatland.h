@@ -106,8 +106,6 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   void SetOrientation(TransformId transform_id,
                       fuchsia::ui::composition::Orientation orientation) override;
   // |fuchsia::ui::composition::Flatland|
-  void SetClipBounds(TransformId transform_id, fuchsia::math::Rect bounds) override;
-  // |fuchsia::ui::composition::Flatland|
   void SetClipBoundary(TransformId transform_id,
                        std::unique_ptr<fuchsia::math::Rect> bounds) override;
   // |fuchsia::ui::composition::Flatland|

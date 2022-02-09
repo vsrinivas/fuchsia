@@ -531,17 +531,6 @@ void Flatland::SetOrientation(TransformId transform_id, Orientation orientation)
   matrices_[transform_kv->second].SetOrientation(orientation);
 }
 
-void Flatland::SetClipBounds(TransformId transform_id, fuchsia::math::Rect bounds) {
-  // Since this function is deprecated, forward it to the new function. If the bounds
-  // are (-1,-1,-1,-1), pass through a nullptr.
-  // TODO(fxbug.dev/91132): Remove when finished deprecating this function.
-  if (bounds.x == -1 && bounds.y == -1 && bounds.width == -1 && bounds.height == -1) {
-    SetClipBoundary(transform_id, nullptr);
-  } else {
-    SetClipBoundary(transform_id, std::make_unique<fuchsia::math::Rect>(std::move(bounds)));
-  }
-}
-
 void Flatland::SetClipBoundary(TransformId transform_id,
                                std::unique_ptr<fuchsia::math::Rect> bounds_ptr) {
   if (transform_id.value == kInvalidId) {
