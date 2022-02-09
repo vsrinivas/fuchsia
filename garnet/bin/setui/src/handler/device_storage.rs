@@ -13,7 +13,7 @@ use anyhow::{format_err, Context, Error};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_stash::{StoreAccessorProxy, StoreProxy, Value};
 use fuchsia_async::{Task, Timer, WakeupTime};
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::fx_log_err;
 use futures::channel::mpsc::UnboundedSender;
 use futures::future::OptionFuture;
 use futures::lock::Mutex;
@@ -21,7 +21,6 @@ use futures::{FutureExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use crate::audio::types::AudioInfo;
 use crate::handler::setting_handler::persist::UpdateState;
 use crate::handler::stash_inspect_logger::StashInspectLogger;
 
@@ -226,84 +225,80 @@ impl DeviceStorage {
             .map({
                 let inspect_handle = Arc::clone(&inspect_handle);
                 move |key| {
-                // Generate a separate stash proxy for each key.
-                let (flush_sender, flush_receiver) = futures::channel::mpsc::unbounded::<()>();
-                let stash_proxy = stash_generator();
+                    // Generate a separate stash proxy for each key.
+                    let (flush_sender, flush_receiver) = futures::channel::mpsc::unbounded::<()>();
+                    let stash_proxy = stash_generator();
 
-                let storage = TypedStorage {
+                    let storage = TypedStorage {
                         flush_sender,
                         cached_storage: Mutex::new(CachedStorage {
                             current_data: None,
                             stash_proxy: stash_proxy.clone(),
-                        })
+                        }),
                     };
 
-                let stash_proxy_clone = stash_proxy.clone();
-                let inspect_handle = Arc::clone(&inspect_handle);
-                // Each key has an independent flush queue.
-                Task::spawn(async move {
-                    const MIN_FLUSH_DURATION: Duration =
-                        Duration::from_millis(MIN_FLUSH_INTERVAL_MS);
-                    let mut has_pending_flush = false;
+                    let stash_proxy_clone = stash_proxy.clone();
+                    let inspect_handle = Arc::clone(&inspect_handle);
+                    // Each key has an independent flush queue.
+                    Task::spawn(async move {
+                        const MIN_FLUSH_DURATION: Duration =
+                            Duration::from_millis(MIN_FLUSH_INTERVAL_MS);
+                        let mut has_pending_flush = false;
 
-                    // The time of the last flush. Initialized to MIN_FLUSH_INTERVAL_MS before the
-                    // current time so that the first flush always goes through, no matter the
-                    // timing.
-                    let mut last_flush: Instant = Instant::now().sub(MIN_FLUSH_DURATION);
+                        // The time of the last flush. Initialized to MIN_FLUSH_INTERVAL_MS before the
+                        // current time so that the first flush always goes through, no matter the
+                        // timing.
+                        let mut last_flush: Instant = Instant::now().sub(MIN_FLUSH_DURATION);
 
+                        // Timer for flush cooldown. OptionFuture allows us to wait on the future even
+                        // if it's None.
+                        let mut next_flush_timer: OptionFuture<Timer> = None.into();
+                        let mut next_flush_timer_fuse = next_flush_timer.fuse();
 
-                    // Timer for flush cooldown. OptionFuture allows us to wait on the future even
-                    // if it's None.
-                    let mut next_flush_timer: OptionFuture<Timer> = None.into();
-                    let mut next_flush_timer_fuse = next_flush_timer.fuse();
+                        let flush_fuse = flush_receiver.fuse();
 
-                    let flush_fuse = flush_receiver.fuse();
-
-                    futures::pin_mut!(flush_fuse);
-                    loop {
-                        futures::select! {
-                            _ = flush_fuse.select_next_some() => {
-                                // Received a request to do a flush.
-                                let now = Instant::now();
-                                let next_flush_time = if now - last_flush > MIN_FLUSH_DURATION {
-                                    // Last flush happened more than MIN_FLUSH_INTERVAL_MS ago,
-                                    // flush immediately in next iteration of loop.
-                                    now
-                                } else {
-                                    // Last flush was less than MIN_FLUSH_INTERVAL_MS ago, schedule
-                                    // it accordingly. It's okay if the time is in the past, Timer
-                                    // will still trigger on the next loop iteration.
-                                    last_flush.add(MIN_FLUSH_DURATION)
-                                };
-                                has_pending_flush = true;
-                                next_flush_timer = Some(Timer::new(next_flush_time.into_time()))
-                                    .into();
-                                next_flush_timer_fuse = next_flush_timer.fuse();
-                            }
-
-                            _ = next_flush_timer_fuse => {
-                                // Timer triggered, check for pending flushes.
-                                if has_pending_flush {
-                                    if key == AudioInfo::KEY {
-                                        fx_log_info!("b/210170985: flushing audio setting to stash");
-                                    }
-
-                                    DeviceStorage::stash_flush(
-                                        &stash_proxy_clone,
-                                        Arc::clone(&inspect_handle),
-                                        &key.to_string()).await;
-                                    last_flush = Instant::now();
-                                    has_pending_flush = false;
+                        futures::pin_mut!(flush_fuse);
+                        loop {
+                            futures::select! {
+                                _ = flush_fuse.select_next_some() => {
+                                    // Received a request to do a flush.
+                                    let now = Instant::now();
+                                    let next_flush_time = if now - last_flush > MIN_FLUSH_DURATION {
+                                        // Last flush happened more than MIN_FLUSH_INTERVAL_MS ago,
+                                        // flush immediately in next iteration of loop.
+                                        now
+                                    } else {
+                                        // Last flush was less than MIN_FLUSH_INTERVAL_MS ago, schedule
+                                        // it accordingly. It's okay if the time is in the past, Timer
+                                        // will still trigger on the next loop iteration.
+                                        last_flush.add(MIN_FLUSH_DURATION)
+                                    };
+                                    has_pending_flush = true;
+                                    next_flush_timer = Some(Timer::new(next_flush_time.into_time()))
+                                        .into();
+                                    next_flush_timer_fuse = next_flush_timer.fuse();
                                 }
-                            }
 
-                            complete => break,
+                                _ = next_flush_timer_fuse => {
+                                    // Timer triggered, check for pending flushes.
+                                    if has_pending_flush {
+                                        DeviceStorage::stash_flush(
+                                            &stash_proxy_clone,
+                                            Arc::clone(&inspect_handle),
+                                            &key.to_string()).await;
+                                        last_flush = Instant::now();
+                                        has_pending_flush = false;
+                                    }
+                                }
+
+                                complete => break,
+                            }
                         }
-                    }
-                })
-                .detach();
-                (key, storage)
-            }})
+                    })
+                    .detach();
+                    (key, storage)
+                }
+            })
             .collect();
         DeviceStorage {
             caching_enabled: true,
@@ -330,14 +325,9 @@ impl DeviceStorage {
         setting_key: &String,
     ) {
         if matches!(stash_proxy.flush().await, Ok(Err(_)) | Err(_)) {
-            if setting_key == AudioInfo::KEY {
-                fx_log_info!("b/210170985: stash flush for audio failed");
-            }
             // TODO(fxbug.dev/89083): save a record of the recent error messages as well.
             // Record the write failure to inspect.
             inspect_handle.lock().await.record_flush_failure(setting_key);
-        } else if setting_key == AudioInfo::KEY {
-            fx_log_info!("b/210170985: stash flush for audio finished");
         }
     }
 
@@ -348,9 +338,6 @@ impl DeviceStorage {
         data_as_any: Box<dyn Any + Send + Sync>,
         mapping_fn: Box<dyn FnOnce(&(dyn Any + Send + Sync)) -> String + Send>,
     ) -> Result<UpdateState, Error> {
-        if key == AudioInfo::KEY {
-            fx_log_info!("b/210170985: begin writing new audio setting");
-        }
         let typed_storage = self
             .typed_storage_map
             .get(key)
@@ -381,9 +368,6 @@ impl DeviceStorage {
         };
 
         Ok(if cached_value != Some(&new_value) {
-            if key == AudioInfo::KEY {
-                fx_log_info!("b/210170985: writing new audio setting to stash");
-            }
             let mut serialized = Value::Stringval(new_value);
             let key = prefixed(key);
             cached_storage.stash_proxy.set_value(&key, &mut serialized)?;
@@ -401,9 +385,6 @@ impl DeviceStorage {
                 })?;
             }
             cached_storage.current_data = Some(data_as_any);
-            if key == AudioInfo::KEY {
-                fx_log_info!("b/210170985: finished writing new audio setting");
-            }
             UpdateState::Updated
         } else {
             UpdateState::Unchanged
