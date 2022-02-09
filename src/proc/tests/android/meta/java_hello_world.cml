@@ -10,7 +10,7 @@
             "Main",
         ],
         environ: [
-            "ANDROID_I18N_ROOT=/system",
+            "ANDROID_I18N_ROOT=/system/apex/com.android.i18n",
             "ANDROID_TZDATA_ROOT=/system",
             "ANDROID_DATA=/data",
             "LD_LIBRARY_PATH=/system/apex/com.android.art.debug/lib64:/system/apex/com.android.i18n/lib64",
