@@ -8,7 +8,6 @@ use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceServiceRequest};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MinstrelStatsResponse};
 use fuchsia_async as fasync;
-use fuchsia_cobalt::{self, CobaltSender};
 use fuchsia_inspect_contrib::{auto_persist, inspect_log};
 use fuchsia_zircon as zx;
 use futures::{future::BoxFuture, prelude::*};
@@ -41,8 +40,6 @@ pub async fn serve_device_requests(
     ifaces: Arc<IfaceMap>,
     mut req_stream: fidl_svc::DeviceServiceRequestStream,
     inspect_tree: Arc<inspect::WlanstackTree>,
-    cobalt_sender: CobaltSender,
-    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> Result<(), anyhow::Error> {
@@ -67,8 +64,6 @@ pub async fn serve_device_requests(
                     &ifaces,
                     &iface_counter,
                     &inspect_tree,
-                    &cobalt_sender,
-                    cobalt_1dot1_proxy.clone(),
                     dev_monitor_proxy.clone(),
                     persistence_req_sender.clone(),
                 )
@@ -326,8 +321,6 @@ async fn add_iface(
     ifaces: &Arc<IfaceMap>,
     iface_counter: &Arc<IfaceCounter>,
     inspect_tree: &Arc<inspect::WlanstackTree>,
-    cobalt_sender: &CobaltSender,
-    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> AddIfaceResult {
@@ -359,8 +352,6 @@ async fn add_iface(
         ifaces.clone(),
         inspect_tree.clone(),
         iface_tree_holder,
-        cobalt_sender.clone(),
-        cobalt_1dot1_proxy,
         device_info,
         dev_monitor_proxy,
         persistence_req_sender,
@@ -603,11 +594,6 @@ mod tests {
         let iface_map = Arc::new(IfaceMap::new());
         let iface_counter = Arc::new(IfaceCounter::new());
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
-        let (sender, _receiver) = mpsc::channel(1);
-        let cobalt_sender = CobaltSender::new(sender);
-        let (cobalt_1dot1_proxy, _) =
-            create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
-                .expect("failed to create Cobalt 1.1 proxy");
         let (dev_monitor_proxy, _) =
             create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
                 .expect("failed to create DeviceMonitor proxy");
@@ -627,8 +613,6 @@ mod tests {
             &iface_map,
             &iface_counter,
             &inspect_tree,
-            &cobalt_sender,
-            cobalt_1dot1_proxy,
             dev_monitor_proxy,
             persistence_req_sender,
         );
@@ -660,11 +644,6 @@ mod tests {
         let iface_map = Arc::new(IfaceMap::new());
         let iface_counter = Arc::new(IfaceCounter::new());
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
-        let (sender, _receiver) = mpsc::channel(1);
-        let cobalt_sender = CobaltSender::new(sender);
-        let (cobalt_1dot1_proxy, _) =
-            create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
-                .expect("failed to create Cobalt 1.1 proxy");
         let (dev_monitor_proxy, _) =
             create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
                 .expect("failed to create DeviceMonitor proxy");
@@ -687,8 +666,6 @@ mod tests {
             &iface_map,
             &iface_counter,
             &inspect_tree,
-            &cobalt_sender,
-            cobalt_1dot1_proxy,
             dev_monitor_proxy,
             persistence_req_sender,
         );
@@ -710,11 +687,6 @@ mod tests {
         let iface_map = Arc::new(IfaceMap::new());
         let iface_counter = Arc::new(IfaceCounter::new());
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
-        let (sender, _receiver) = mpsc::channel(1);
-        let cobalt_sender = CobaltSender::new(sender);
-        let (cobalt_1dot1_proxy, _) =
-            create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
-                .expect("failed to create Cobalt 1.1 proxy");
         let (dev_monitor_proxy, _) =
             create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
                 .expect("failed to create DeviceMonitor proxy");
@@ -735,8 +707,6 @@ mod tests {
             &iface_map,
             &iface_counter,
             &inspect_tree,
-            &cobalt_sender,
-            cobalt_1dot1_proxy,
             dev_monitor_proxy,
             persistence_req_sender,
         );
@@ -885,11 +855,6 @@ mod tests {
         iface_map.insert(IFACE_ID, iface.iface);
         let iface_counter = Arc::new(IfaceCounter::new());
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
-        let (sender, _receiver) = mpsc::channel(1);
-        let cobalt_sender = CobaltSender::new(sender);
-        let (cobalt_1dot1_proxy, _) =
-            create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
-                .expect("failed to create Cobalt 1.1 proxy");
         let (dev_monitor_proxy, _) =
             create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
                 .expect("failed to create DeviceMonitor proxy");
@@ -906,8 +871,6 @@ mod tests {
             iface_map,
             dev_svc_req_stream,
             inspect_tree,
-            cobalt_sender,
-            cobalt_1dot1_proxy,
             dev_monitor_proxy,
             persistence_req_sender,
         ));

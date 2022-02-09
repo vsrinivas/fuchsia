@@ -91,10 +91,6 @@ rustc_binary("bin") {
     "src/station/mesh.rs",
     "src/station/mod.rs",
     "src/stats_scheduler.rs",
-    "src/telemetry/convert.rs",
-    "src/telemetry/disconnect_tracker.rs",
-    "src/telemetry/mod.rs",
-    "src/telemetry/test_helper.rs",
     "src/test_helper.rs",
   ]
 }

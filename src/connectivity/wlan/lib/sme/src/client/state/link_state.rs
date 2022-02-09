@@ -7,14 +7,13 @@ use {
     crate::{
         client::{
             event::{self, Event},
-            info::ConnectionPingInfo,
             internal::Context,
             rsn::Rsna,
             EstablishRsnaFailureReason,
         },
         MlmeRequest, MlmeSink,
     },
-    anyhow, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_inspect_contrib::{inspect_log, log::InspectBytes},
     fuchsia_zircon as zx,
     ieee80211::{Bssid, MacAddr, WILDCARD_BSSID},
@@ -53,7 +52,6 @@ pub struct EstablishingRsna {
 pub struct LinkUp {
     pub protection: Protection,
     pub since: zx::Time,
-    pub ping_event: Option<EventId>,
 }
 
 statemachine!(
@@ -105,13 +103,7 @@ impl EstablishingRsna {
             }));
 
             let now = now();
-            let info = ConnectionPingInfo::first_connected(now);
-            let ping_event = Some(report_ping(info, context));
-            RsnaProgressed::Complete(LinkUp {
-                protection: Protection::Rsna(self.rsna),
-                since: now,
-                ping_event,
-            })
+            RsnaProgressed::Complete(LinkUp { protection: Protection::Rsna(self.rsna), since: now })
         } else {
             RsnaProgressed::InProgress(self)
         }
@@ -131,24 +123,6 @@ impl EstablishingRsna {
     }
 }
 
-impl LinkUp {
-    pub fn connected_duration(&self) -> zx::Duration {
-        now() - self.since
-    }
-
-    fn handle_connection_ping(
-        &mut self,
-        event_id: EventId,
-        prev_ping: ConnectionPingInfo,
-        context: &mut Context,
-    ) {
-        if triggered(&self.ping_event, event_id) {
-            cancel(&mut self.ping_event);
-            self.ping_event.replace(report_ping(prev_ping.next_ping(now()), context));
-        }
-    }
-}
-
 impl LinkState {
     pub fn new(
         protection: Protection,
@@ -156,7 +130,6 @@ impl LinkState {
     ) -> Result<Self, EstablishRsnaFailureReason> {
         match protection {
             Protection::Rsna(mut rsna) | Protection::LegacyWpa(mut rsna) => {
-                context.info.report_rsna_started(context.att_id);
                 match rsna.supplicant.start() {
                     Ok(_) => {
                         let rsna_timeout =
@@ -173,17 +146,14 @@ impl LinkState {
                     }
                     Err(e) => {
                         error!("could not start Supplicant: {}", e);
-                        context.info.report_supplicant_error(anyhow::anyhow!(e));
                         Err(EstablishRsnaFailureReason::StartSupplicantFailed)
                     }
                 }
             }
             Protection::Open | Protection::Wep(_) => {
                 let now = now();
-                let info = ConnectionPingInfo::first_connected(now);
-                let ping_event = Some(report_ping(info, context));
                 Ok(State::new(Init)
-                    .transition_to(LinkUp { protection: Protection::Open, since: now, ping_event })
+                    .transition_to(LinkUp { protection: Protection::Open, since: now })
                     .into())
             }
         }
@@ -342,7 +312,6 @@ impl LinkState {
                 }
                 Event::KeyFrameExchangeTimeout(timeout) => {
                     let (transition, mut state) = state.release_data();
-                    context.info.report_key_exchange_timeout();
                     match process_eapol_key_frame_timeout(context, timeout, &mut state.rsna) {
                         RsnaStatus::Failed(failure_reason) => Err(failure_reason),
                         RsnaStatus::Unchanged => Ok(transition.to(state).into()),
@@ -362,21 +331,10 @@ impl LinkState {
                 }
                 _ => Ok(state.into()),
             },
-            Self::LinkUp(mut state) => match event {
-                Event::ConnectionPing(prev_ping) => {
-                    state.handle_connection_ping(event_id, prev_ping, context);
-                    Ok(state.into())
-                }
-                _ => Ok(state.into()),
-            },
+            Self::LinkUp(state) => Ok(state.into()),
             _ => unreachable!(),
         }
     }
-}
-
-fn report_ping(info: ConnectionPingInfo, context: &mut Context) -> EventId {
-    context.info.report_connection_ping(info.clone());
-    context.timer.schedule(info)
 }
 
 fn triggered(id: &Option<EventId>, received_id: EventId) -> bool {
@@ -477,7 +435,6 @@ fn process_eapol_conf(
     match rsna.supplicant.on_eapol_conf(&mut update_sink, eapol_conf.result_code) {
         Err(e) => {
             error!("error handling EAPOL confirm: {}", e);
-            context.info.report_supplicant_error(anyhow::anyhow!(e));
             return RsnaStatus::Unchanged;
         }
         Ok(_) => {
@@ -486,7 +443,6 @@ fn process_eapol_conf(
             }
         }
     }
-    context.info.report_supplicant_updates(&update_sink);
     process_eapol_updates(context, Bssid(eapol_conf.dst_addr), update_sink)
 }
 
@@ -499,7 +455,6 @@ fn process_eapol_key_frame_timeout(
     match rsna.supplicant.on_eapol_key_frame_timeout(&mut update_sink) {
         Err(e) => {
             error!("error handling EAPOL key frame timeout: {}", e);
-            context.info.report_supplicant_error(anyhow::anyhow!(e));
             return RsnaStatus::Failed(EstablishRsnaFailureReason::KeyFrameExchangeTimeout);
         }
         Ok(_) => {
@@ -508,7 +463,6 @@ fn process_eapol_key_frame_timeout(
             }
         }
     }
-    context.info.report_supplicant_updates(&update_sink);
     process_eapol_updates(context, timeout.bssid, update_sink)
 }
 
@@ -539,7 +493,6 @@ fn process_eapol_ind(
                 rx_eapol_frame: InspectBytes(&eapol_pdu),
                 status: format!("rejected (processing error): {}", e)
             });
-            context.info.report_supplicant_error(anyhow::anyhow!(e));
             return RsnaStatus::Unchanged;
         }
         Ok(_) => {
@@ -552,7 +505,6 @@ fn process_eapol_ind(
             }
         }
     }
-    context.info.report_supplicant_updates(&update_sink);
     process_eapol_updates(context, Bssid(ind.src_addr), update_sink)
 }
 

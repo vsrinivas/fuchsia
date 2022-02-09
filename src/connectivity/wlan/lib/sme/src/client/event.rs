@@ -4,13 +4,11 @@
 
 use fuchsia_zircon::{self as zx, prelude::DurationNum};
 
-use crate::client::info::ConnectionPingInfo;
 use ieee80211::{Bssid, MacAddr};
 use wlan_common::timer::TimeoutDuration;
 
 pub const ESTABLISHING_RSNA_TIMEOUT_SECONDS: i64 = 3;
 pub const KEY_FRAME_EXCHANGE_TIMEOUT_MILLIS: i64 = 200;
-pub const CONNECTION_PING_TIMEOUT_MINUTES: i64 = 1;
 pub const INSPECT_PULSE_CHECK_MINUTES: i64 = 1;
 pub const INSPECT_PULSE_PERSIST_MINUTES: i64 = 5;
 pub const SAE_RETRANSMISSION_TIMEOUT_MILLIS: i64 = 200;
@@ -19,7 +17,6 @@ pub const SAE_RETRANSMISSION_TIMEOUT_MILLIS: i64 = 200;
 pub enum Event {
     EstablishingRsnaTimeout(EstablishingRsnaTimeout),
     KeyFrameExchangeTimeout(KeyFrameExchangeTimeout),
-    ConnectionPing(ConnectionPingInfo),
     InspectPulseCheck(InspectPulseCheck),
     /// From startup, periodically schedule an event to persist the Inspect pulse data
     InspectPulsePersist(InspectPulsePersist),

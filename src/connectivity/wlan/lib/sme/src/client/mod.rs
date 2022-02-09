@@ -4,7 +4,6 @@
 
 mod capabilities;
 mod event;
-pub mod info;
 mod inspect;
 mod protection;
 mod rsn;
@@ -20,16 +19,13 @@ use {
     self::{
         capabilities::derive_join_capabilities,
         event::Event,
-        info::InfoReporter,
         protection::Protection,
         rsn::{get_wpa2_rsna, get_wpa3_rsna},
         scan::{DiscoveryScan, ScanScheduler},
         state::{ClientState, ConnectCommand},
         wpa::get_legacy_wpa_association,
     },
-    crate::{
-        responder::Responder, Config, InfoSink, InfoStream, MlmeRequest, MlmeSink, MlmeStream,
-    },
+    crate::{responder::Responder, Config, MlmeRequest, MlmeSink, MlmeStream},
     anyhow::{bail, format_err, Context as _},
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
@@ -53,8 +49,6 @@ use {
     wlan_rsn::auth,
 };
 
-pub use self::info::InfoEvent;
-
 // This is necessary to trick the private-in-public checker.
 // A private module is not allowed to include private types in its interface,
 // even though the module itself is private and will never be exported.
@@ -62,7 +56,7 @@ pub use self::info::InfoEvent;
 mod internal {
     use {
         crate::{
-            client::{event::Event, info::InfoReporter, inspect, ConnectionAttemptId},
+            client::{event::Event, inspect, ConnectionAttemptId},
             MlmeSink,
         },
         fidl_fuchsia_wlan_mlme as fidl_mlme,
@@ -76,7 +70,6 @@ mod internal {
         pub(crate) timer: Timer<Event>,
         pub att_id: ConnectionAttemptId,
         pub(crate) inspect: Arc<inspect::SmeTree>,
-        pub(crate) info: InfoReporter,
         pub(crate) is_softmac: bool,
     }
 }
@@ -448,10 +441,9 @@ impl ClientSme {
         hasher: WlanHasher,
         persistence_req_sender: auto_persist::PersistenceReqSender,
         is_softmac: bool,
-    ) -> (Self, MlmeStream, InfoStream, TimeStream) {
+    ) -> (Self, MlmeStream, TimeStream) {
         let device_info = Arc::new(info);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
-        let (info_sink, info_stream) = mpsc::unbounded();
         let (mut timer, time_stream) = timer::create_timer();
         let inspect = Arc::new(inspect::SmeTree::new(&iface_tree_holder.node, hasher));
         iface_tree_holder.add_iface_subtree(inspect.clone());
@@ -479,12 +471,10 @@ impl ClientSme {
                     timer,
                     att_id: 0,
                     inspect,
-                    info: InfoReporter::new(InfoSink::new(info_sink)),
                     is_softmac,
                 },
             },
             mlme_stream,
-            info_stream,
             time_stream,
         )
     }
@@ -495,8 +485,6 @@ impl ClientSme {
     ) -> ConnectTransactionStream {
         let (mut connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
 
-        // fuchsia.wlan.sme/ConnectRequest.ssid is always at most fidl_ieee80211::MAX_SSID_BYTE_LEN bytes
-        let ssid = Ssid::from_bytes_unchecked(req.ssid);
         // Cancel any ongoing connect attempt
         self.state = self.state.take().map(|state| state.cancel_ongoing_connect(&mut self.context));
 
@@ -540,11 +528,6 @@ impl ClientSme {
         let cmd =
             ConnectCommand { bss: Box::new(bss_description.clone()), connect_txn_sink, protection };
 
-        self.context.info.report_connect_started(ssid);
-        self.context.info.report_candidate_network(info::CandidateNetwork {
-            bss: bss_description,
-            multiple_bss_candidates: req.multiple_bss_candidates,
-        });
         self.state = self.state.take().map(|state| state.connect(cmd, &mut self.context));
         connect_txn_stream
     }
@@ -592,7 +575,6 @@ impl ClientSme {
 
     fn send_scan_request(&mut self, req: Option<fidl_mlme::ScanRequest>) {
         if let Some(req) = req {
-            self.context.info.report_scan_started(req.clone(), self.status().is_connected());
             self.context.mlme_sink.send(MlmeRequest::Scan(req));
         }
     }
@@ -613,7 +595,6 @@ impl super::Station for ClientSme {
                     Ok((scan_end, next_request)) => {
                         // Finalize stats for previous scan before sending scan request for
                         // the next one, which start stats collection for new scan.
-                        self.context.info.report_scan_ended(end.txn_id, &scan_end);
                         self.send_scan_request(next_request);
 
                         match scan_end.result_code {
@@ -670,7 +651,6 @@ impl super::Station for ClientSme {
         self.state = self.state.take().map(|state| match timed_event.event {
             event @ Event::EstablishingRsnaTimeout(..)
             | event @ Event::KeyFrameExchangeTimeout(..)
-            | event @ Event::ConnectionPing(..)
             | event @ Event::SaeTimeout(..) => {
                 state.handle_timeout(timed_event.id, event, &mut self.context)
             }
@@ -696,14 +676,7 @@ impl super::Station for ClientSme {
     }
 }
 
-fn report_connect_finished(
-    connect_txn_sink: &mut ConnectTransactionSink,
-    context: &mut Context,
-    result: ConnectResult,
-) {
-    if !connect_txn_sink.is_reconnecting() {
-        context.info.report_connect_finished(result.clone());
-    }
+fn report_connect_finished(connect_txn_sink: &mut ConnectTransactionSink, result: ConnectResult) {
     connect_txn_sink.send_connect_result(result);
 }
 
@@ -816,10 +789,7 @@ mod tests {
         test_utils::fake_stas::IesOverrides,
     };
 
-    use super::test_utils::{
-        create_assoc_conf, create_auth_conf, create_join_conf, create_on_wmm_status_resp,
-        expect_stream_empty, fake_wmm_param, fake_wmm_status_resp,
-    };
+    use super::test_utils::{create_on_wmm_status_resp, fake_wmm_param, fake_wmm_status_resp};
 
     use crate::test_utils;
     use crate::Station;
@@ -1107,7 +1077,7 @@ mod tests {
     #[test]
     fn status_connecting() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, _mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         // Issue a connect command and expect the status to change appropriately.
@@ -1146,7 +1116,7 @@ mod tests {
         let sme_root_node = inspector.root().create_child("sme");
         let (persistence_req_sender, _persistence_receiver) =
             test_utils::create_inspect_persistence_channel();
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = ClientSme::new(
+        let (mut sme, mut mlme_stream, _time_stream) = ClientSme::new(
             ClientConfig::from_config(SmeConfig::default().with_wep(), false),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
@@ -1168,7 +1138,7 @@ mod tests {
     #[test]
     fn connecting_to_wep_network_unsupported() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, mut _mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, mut _mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         // Issue a connect command and expect the status to change appropriately.
@@ -1182,7 +1152,7 @@ mod tests {
     #[test]
     fn connecting_password_supplied_for_protected_network() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         // Issue a connect command and expect the status to change appropriately.
@@ -1199,7 +1169,7 @@ mod tests {
     #[test]
     fn connecting_psk_supplied_for_protected_network() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         // Issue a connect command and expect the status to change appropriately.
@@ -1226,7 +1196,7 @@ mod tests {
     #[test]
     fn connecting_password_supplied_for_unprotected_network() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, mut _mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, mut _mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
@@ -1248,7 +1218,7 @@ mod tests {
     #[test]
     fn connecting_psk_supplied_for_unprotected_network() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, mut _mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, mut _mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::Psk(b"somepass".to_vec());
@@ -1270,7 +1240,7 @@ mod tests {
     #[test]
     fn connecting_no_password_supplied_for_protected_network() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
@@ -1295,7 +1265,7 @@ mod tests {
     #[test]
     fn connecting_bypass_join_scan_open() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
@@ -1313,7 +1283,7 @@ mod tests {
     #[test]
     fn connecting_bypass_join_scan_protected() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
@@ -1331,7 +1301,7 @@ mod tests {
     #[test]
     fn connecting_bypass_join_scan_mismatched_credential() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
@@ -1355,7 +1325,7 @@ mod tests {
     #[test]
     fn connecting_bypass_join_scan_unsupported_bss() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
@@ -1379,7 +1349,7 @@ mod tests {
     #[test]
     fn connecting_right_credential_type_no_privacy() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, _mlme_stream, _time_stream) = create_sme(&exec);
 
         let credential = fidl_sme::Credential::Password(b"password".to_vec());
         let bss_description = fake_fidl_bss_description!(
@@ -1411,7 +1381,7 @@ mod tests {
     #[test]
     fn connecting_right_credential_type_but_short_password() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, _mlme_stream, _time_stream) = create_sme(&exec);
 
         let credential = fidl_sme::Credential::Password(b"pass".to_vec());
         let bss_description =
@@ -1434,7 +1404,7 @@ mod tests {
     #[test]
     fn new_connect_attempt_cancels_pending_connect() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, _mlme_stream, _time_stream) = create_sme(&exec);
 
         let bss_description =
             fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
@@ -1487,197 +1457,9 @@ mod tests {
     }
 
     #[test]
-    fn test_info_event_complete_connect() {
-        let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme(&exec);
-        assert_eq!(ClientSmeStatus::Idle, sme.status());
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss_description =
-            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bssname").unwrap());
-        let bssid = Bssid(bss_description.bssid);
-        let mut req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
-        req.multiple_bss_candidates = false;
-        let _connect_fut = sme.on_connect_command(req);
-
-        sme.on_mlme_event(create_join_conf(fidl_ieee80211::StatusCode::Success));
-        sme.on_mlme_event(create_auth_conf(bssid, fidl_ieee80211::StatusCode::Success));
-        sme.on_mlme_event(create_assoc_conf(fidl_ieee80211::StatusCode::Success));
-
-        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
-        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
-            assert!(stats.auth_time().is_some());
-            assert!(stats.assoc_time().is_some());
-            assert!(stats.rsna_time().is_none());
-            assert!(stats.connect_time().into_nanos() > 0);
-            assert_variant!(stats.result, ConnectResult::Success);
-            assert_variant!(stats.candidate_network, Some(candidate_network) => {
-                assert!(!candidate_network.multiple_bss_candidates);
-            });
-            assert!(stats.previous_disconnect_info.is_none());
-        });
-    }
-
-    #[test]
-    fn test_info_event_assoc_fail_after_auth() {
-        let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme(&exec);
-        assert_eq!(ClientSmeStatus::Idle, sme.status());
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss_description =
-            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bssname").unwrap());
-        let bssid = Bssid(bss_description.bssid);
-        let mut req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
-        req.multiple_bss_candidates = false;
-        let _connect_fut = sme.on_connect_command(req);
-
-        sme.on_mlme_event(create_join_conf(fidl_ieee80211::StatusCode::Success));
-        sme.on_mlme_event(create_auth_conf(bssid, fidl_ieee80211::StatusCode::Success));
-        let assoc_fail_code = fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc;
-        let assoc_failure =
-            AssociationFailure { bss_protection: BssProtection::Open, code: assoc_fail_code };
-        sme.on_mlme_event(create_assoc_conf(assoc_fail_code));
-
-        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
-            assert!(stats.auth_time().is_some());
-            assert!(stats.assoc_time().is_some());
-            assert!(stats.rsna_time().is_none());
-            assert!(stats.connect_time().into_nanos() > 0);
-            assert_variant!(stats.result, ConnectResult::Failed(failure) => {
-                assert_eq!(failure, ConnectFailure::AssociationFailure(assoc_failure));
-            });
-            assert!(stats.candidate_network.is_some());
-        });
-        expect_stream_empty(&mut info_stream, "unexpected event in info stream");
-    }
-
-    #[test]
-    fn test_info_event_failed_connect() {
-        let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme(&exec);
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss_description =
-            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
-        let _recv = sme.on_connect_command(connect_req(
-            Ssid::try_from("foo").unwrap(),
-            bss_description.clone(),
-            credential,
-        ));
-
-        let bssid = Bssid(bss_description.bssid);
-        report_fake_scan_result(&mut sme, zx::Time::get_monotonic().into_nanos(), bss_description);
-
-        sme.on_mlme_event(create_join_conf(fidl_ieee80211::StatusCode::Success));
-        let auth_failure = fidl_ieee80211::StatusCode::RefusedReasonUnspecified;
-        sme.on_mlme_event(create_auth_conf(bssid, auth_failure));
-
-        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
-            assert!(stats.auth_time().is_some());
-            // no association time since requests already fails at auth step
-            assert!(stats.assoc_time().is_none());
-            assert!(stats.rsna_time().is_none());
-            assert!(stats.connect_time().into_nanos() > 0);
-            assert_variant!(stats.result, ConnectResult::Failed(failure) => {
-                assert_eq!(failure, ConnectFailure::AuthenticationFailure(auth_failure));
-            });
-            assert!(stats.candidate_network.is_some());
-        });
-        expect_stream_empty(&mut info_stream, "unexpected event in info stream");
-    }
-
-    #[test]
-    fn test_info_event_candidate_network_multiple_bss() {
-        let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme(&exec);
-
-        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
-        let bss_description =
-            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("bssname").unwrap());
-        let req = connect_req(Ssid::try_from("bssname").unwrap(), bss_description, credential);
-        let _connect_fut = sme.on_connect_command(req);
-
-        // Stop connecting attempt early since we just want to get ConnectStats
-        sme.on_mlme_event(create_join_conf(fidl_ieee80211::StatusCode::JoinFailure));
-
-        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
-            assert_variant!(stats.candidate_network, Some(candidate_network) => {
-                assert!(candidate_network.multiple_bss_candidates);
-            });
-        });
-    }
-
-    #[test]
-    fn test_info_event_dont_suppress_bss() {
-        let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, _mlme_strem, _info_stream, _time_stream) = create_sme(&exec);
-        let mut recv =
-            sme.on_scan_command(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
-
-        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
-        bss.bssid = [3; 6];
-        sme.on_mlme_event(fidl_mlme::MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult {
-                txn_id: 1,
-                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                bss,
-            },
-        });
-        let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
-        bss.bssid = [4; 6];
-        sme.on_mlme_event(fidl_mlme::MlmeEvent::OnScanResult {
-            result: fidl_mlme::ScanResult {
-                txn_id: 1,
-                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                bss,
-            },
-        });
-        sme.on_mlme_event(fidl_mlme::MlmeEvent::OnScanEnd {
-            end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCode::Success },
-        });
-
-        // check that both BSS are received at the end of a scan
-        assert_variant!(recv.try_recv(), Ok(Some(Ok(scan_result_list))) => {
-            let mut reported_ssid = scan_result_list
-                .into_iter()
-                .map(|scan_result| (scan_result.bss_description.ssid.clone(), scan_result.bss_description.bssid))
-                .collect::<Vec<_>>();
-            reported_ssid.sort();
-            assert_eq!(reported_ssid, vec![(Ssid::try_from("foo").unwrap(), Bssid([3; 6])), (Ssid::try_from("foo").unwrap(), Bssid([4; 6]))]);
-        })
-    }
-
-    #[test]
-    fn test_info_event_discovery_scan() {
-        let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme(&exec);
-
-        let _recv =
-            sme.on_scan_command(fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-                ssids: vec![],
-                channels: vec![],
-            }));
-
-        report_fake_scan_result(
-            &mut sme,
-            zx::Time::get_monotonic().into_nanos(),
-            fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap()),
-        );
-
-        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::DiscoveryScanStats(scan_stats))) => {
-            assert!(!scan_stats.scan_start_while_connected);
-            assert!(scan_stats.scan_time().into_nanos() > 0);
-            assert_eq!(scan_stats.scan_type, fidl_mlme::ScanTypes::Active);
-            assert_eq!(scan_stats.result_code, fidl_mlme::ScanResultCode::Success);
-            assert_eq!(scan_stats.bss_count, 1);
-        });
-    }
-
-    #[test]
     fn test_simple_scan_error() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, _mlme_strem, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, _mlme_strem, _time_stream) = create_sme(&exec);
         let mut recv =
             sme.on_scan_command(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
 
@@ -1697,7 +1479,7 @@ mod tests {
     #[test]
     fn test_scan_error_after_some_results_returned() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, _mlme_strem, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, _mlme_strem, _time_stream) = create_sme(&exec);
         let mut recv =
             sme.on_scan_command(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
 
@@ -1737,7 +1519,7 @@ mod tests {
     #[test]
     fn test_wmm_status_success() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         let mut receiver = sme.wmm_status();
 
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::WmmStatusReq)));
@@ -1754,7 +1536,7 @@ mod tests {
     #[test]
     fn test_wmm_status_failed() {
         let exec = fuchsia_async::TestExecutor::new().unwrap();
-        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme(&exec);
+        let (mut sme, mut mlme_stream, _time_stream) = create_sme(&exec);
         let mut receiver = sme.wmm_status();
 
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::WmmStatusReq)));
@@ -1769,7 +1551,7 @@ mod tests {
         let sme_root_node = inspector.root().create_child("sme");
         let (persistence_req_sender, mut persistence_receiver) =
             test_utils::create_inspect_persistence_channel();
-        let (mut sme, _mlme_stream, _info_stream, mut time_stream) = ClientSme::new(
+        let (mut sme, _mlme_stream, mut time_stream) = ClientSme::new(
             ClientConfig::from_config(SmeConfig::default().with_wep(), false),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
@@ -1835,7 +1617,7 @@ mod tests {
 
     // The unused _exec parameter ensures that an executor exists for the lifetime of the SME.
     // Our internal timer implementation relies on the existence of a local executor.
-    fn create_sme(_exec: &fasync::TestExecutor) -> (ClientSme, MlmeStream, InfoStream, TimeStream) {
+    fn create_sme(_exec: &fasync::TestExecutor) -> (ClientSme, MlmeStream, TimeStream) {
         let inspector = finspect::Inspector::new();
         let sme_root_node = inspector.root().create_child("sme");
         let (persistence_req_sender, _persistence_receiver) =

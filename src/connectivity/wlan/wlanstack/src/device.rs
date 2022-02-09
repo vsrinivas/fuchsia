@@ -5,7 +5,6 @@
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_cobalt::CobaltSender,
     fuchsia_inspect_contrib::{auto_persist, inspect_log},
     futures::{
         channel::mpsc,
@@ -104,8 +103,6 @@ pub fn create_and_serve_sme(
     ifaces: Arc<IfaceMap>,
     inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
-    cobalt_sender: CobaltSender,
-    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     device_info: fidl_mlme::DeviceInfo,
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     persistence_req_sender: auto_persist::PersistenceReqSender,
@@ -119,9 +116,6 @@ pub fn create_and_serve_sme(
         event_stream,
         &device_info,
         stats_reqs,
-        cobalt_sender,
-        cobalt_1dot1_proxy,
-        inspect_tree.clone(),
         iface_tree_holder.clone(),
         inspect_tree.hasher.clone(),
         persistence_req_sender,
@@ -133,7 +127,7 @@ pub fn create_and_serve_sme(
         msg: format!("new iface #{} with role '{:?}'", id, device_info.role)
     });
     if let fidl_common::WlanMacRole::Client = device_info.role {
-        inspect_tree.mark_active_client_iface(id, ifaces.clone(), iface_tree_holder.clone());
+        inspect_tree.mark_active_client_iface(id);
     }
     let is_softmac = device_info.driver_features.contains(&fidl_common::DriverFeature::TempSoftmac);
     // For testing only: All synthetic devices are softmac devices.
@@ -179,9 +173,6 @@ fn create_sme<S>(
     event_stream: fidl_mlme::MlmeEventStream,
     device_info: &fidl_mlme::DeviceInfo,
     stats_requests: S,
-    cobalt_sender: CobaltSender,
-    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
-    inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     hasher: WlanHasher,
     persistence_req_sender: auto_persist::PersistenceReqSender,
@@ -201,9 +192,6 @@ where
                 event_stream,
                 receiver,
                 stats_requests,
-                cobalt_sender,
-                cobalt_1dot1_proxy,
-                inspect_tree,
                 iface_tree_holder,
                 hasher,
                 persistence_req_sender,
@@ -235,18 +223,9 @@ where
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::test_helper,
-        fidl::endpoints::create_proxy,
-        fidl_mlme::MlmeMarker,
-        fuchsia_async as fasync,
-        fuchsia_cobalt::{self, CobaltSender},
-        fuchsia_inspect::assert_data_tree,
-        futures::channel::mpsc,
-        futures::future::join,
-        futures::sink::SinkExt,
-        futures::task::Poll,
-        pin_utils::pin_mut,
+        super::*, crate::test_helper, fidl::endpoints::create_proxy, fidl_mlme::MlmeMarker,
+        fuchsia_async as fasync, fuchsia_inspect::assert_data_tree, futures::channel::mpsc,
+        futures::future::join, futures::sink::SinkExt, futures::task::Poll, pin_utils::pin_mut,
         wlan_common::assert_variant,
     };
 
@@ -269,11 +248,6 @@ mod tests {
         let iface_map = Arc::new(iface_map);
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
         let iface_tree_holder = inspect_tree.create_iface_child(1);
-        let (sender, _receiver) = mpsc::channel(1);
-        let cobalt_sender = CobaltSender::new(sender);
-        let (cobalt_1dot1_proxy, _) =
-            create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
-                .expect("failed to create Cobalt 1.1 proxy");
         let (dev_monitor_proxy, _) =
             create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
                 .expect("failed to create DeviceMonitor proxy");
@@ -291,8 +265,6 @@ mod tests {
             iface_map.clone(),
             inspect_tree.clone(),
             iface_tree_holder,
-            cobalt_sender,
-            cobalt_1dot1_proxy,
             fake_device_info(),
             dev_monitor_proxy,
             persistence_req_sender,
@@ -361,11 +333,6 @@ mod tests {
         let iface_map = Arc::new(iface_map);
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
         let iface_tree_holder = inspect_tree.create_iface_child(1);
-        let (sender, _receiver) = mpsc::channel(1);
-        let cobalt_sender = CobaltSender::new(sender);
-        let (cobalt_1dot1_proxy, _) =
-            create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
-                .expect("failed to create Cobalt 1.1 proxy");
         let (dev_monitor_proxy, dev_monitor_server) =
             create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
                 .expect("failed to create DeviceMonitor proxy");
@@ -386,8 +353,6 @@ mod tests {
             iface_map.clone(),
             inspect_tree.clone(),
             iface_tree_holder,
-            cobalt_sender,
-            cobalt_1dot1_proxy,
             fake_device_info(),
             dev_monitor_proxy,
             persistence_req_sender,

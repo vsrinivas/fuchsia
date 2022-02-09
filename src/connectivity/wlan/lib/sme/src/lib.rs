@@ -16,8 +16,6 @@ use futures::channel::mpsc;
 use thiserror::Error;
 use wlan_common::{sink::UnboundedSink, timer::TimedEvent};
 
-use crate::client::InfoEvent;
-
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Config {
     pub wep_supported: bool,
@@ -68,8 +66,6 @@ pub trait Station {
 
 pub type MlmeStream = mpsc::UnboundedReceiver<MlmeRequest>;
 pub type MlmeSink = UnboundedSink<MlmeRequest>;
-pub type InfoStream = mpsc::UnboundedReceiver<InfoEvent>;
-pub type InfoSink = UnboundedSink<InfoEvent>;
 
 mod responder {
     use futures::channel::oneshot;

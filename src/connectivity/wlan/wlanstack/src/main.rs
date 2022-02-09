@@ -13,7 +13,6 @@ mod inspect;
 mod service;
 mod station;
 mod stats_scheduler;
-mod telemetry;
 #[cfg(test)]
 pub mod test_helper;
 
@@ -21,14 +20,13 @@ use anyhow::{Context, Error};
 use argh::FromArgs;
 use fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream;
 use fuchsia_async as fasync;
-use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::Inspector;
 use fuchsia_inspect_contrib::auto_persist;
 use fuchsia_syslog as syslog;
-use futures::future::try_join4;
+use futures::future::try_join;
 use futures::prelude::*;
-use log::{error, info};
+use log::info;
 use std::sync::Arc;
 use wlan_sme;
 
@@ -84,54 +82,14 @@ async fn main() -> Result<(), Error> {
     let ifaces = IfaceMap::new();
     let ifaces = Arc::new(ifaces);
 
-    let cobalt_1dot1_svc = fuchsia_component::client::connect_to_protocol::<
-        fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker,
-    >()
-    .context("failed to connect to metrics service")?;
-    let (cobalt_1dot1_proxy, cobalt_1dot1_server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
-            .context("failed to create MetricEventLoggerMarker endponts")?;
-    let project_spec = fidl_fuchsia_metrics::ProjectSpec {
-        customer_id: None, // defaults to fuchsia
-        project_id: Some(wlan_metrics_registry::PROJECT_ID),
-        ..fidl_fuchsia_metrics::ProjectSpec::EMPTY
-    };
-    if let Err(e) =
-        cobalt_1dot1_svc.create_metric_event_logger(project_spec, cobalt_1dot1_server).await
-    {
-        error!("create_metric_event_logger failure: {}", e);
-    }
-
-    let (cobalt_sender, cobalt_reporter) = CobaltConnector::default()
-        .serve(ConnectionType::project_id(wlan_metrics_registry::PROJECT_ID));
-    let telemetry_server = telemetry::report_telemetry_periodically(
-        ifaces.clone(),
-        cobalt_sender.clone(),
-        inspect_tree.clone(),
-    );
-
     let dev_monitor = fuchsia_component::client::connect_to_protocol::<
         fidl_fuchsia_wlan_device_service::DeviceMonitorMarker,
     >()
     .context("Failed to connect to DeviceMonitor.")?;
-    let serve_fidl_fut = serve_fidl(
-        cfg,
-        fs,
-        ifaces,
-        inspect_tree,
-        cobalt_sender,
-        cobalt_1dot1_proxy,
-        dev_monitor,
-        persistence_req_sender,
-    );
+    let serve_fidl_fut =
+        serve_fidl(cfg, fs, ifaces, inspect_tree, dev_monitor, persistence_req_sender);
 
-    let ((), (), (), ()) = try_join4(
-        serve_fidl_fut,
-        cobalt_reporter.map(Ok),
-        persistence_req_forwarder_fut.map(Ok),
-        telemetry_server.map(Ok),
-    )
-    .await?;
+    let ((), ()) = try_join(serve_fidl_fut, persistence_req_forwarder_fut.map(Ok)).await?;
     info!("Exiting");
     Ok(())
 }
@@ -145,8 +103,6 @@ async fn serve_fidl(
     mut fs: ServiceFs<ServiceObjLocal<'_, IncomingServices>>,
     ifaces: Arc<IfaceMap>,
     inspect_tree: Arc<inspect::WlanstackTree>,
-    cobalt_sender: CobaltSender,
-    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> Result<(), Error> {
@@ -155,8 +111,6 @@ async fn serve_fidl(
 
     let fdio_server = fs.for_each_concurrent(CONCURRENT_LIMIT, move |s| {
         let ifaces = ifaces.clone();
-        let cobalt_sender = cobalt_sender.clone();
-        let cobalt_1dot1_proxy = cobalt_1dot1_proxy.clone();
         let cfg = cfg.clone();
         let inspect_tree = inspect_tree.clone();
         let iface_counter = iface_counter.clone();
@@ -171,8 +125,6 @@ async fn serve_fidl(
                         ifaces,
                         stream,
                         inspect_tree,
-                        cobalt_sender,
-                        cobalt_1dot1_proxy,
                         dev_monitor_proxy,
                         persistence_req_sender,
                     )

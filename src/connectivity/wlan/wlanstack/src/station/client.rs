@@ -8,9 +8,8 @@ use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
-use fuchsia_async as fasync;
 use fuchsia_inspect_contrib::auto_persist;
-use fuchsia_zircon::{self as zx, DurationNum};
+use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use futures::{prelude::*, select, stream::FuturesUnordered};
 use itertools::Itertools;
@@ -25,15 +24,10 @@ use wlan_sme::{
     self as sme,
     client::{
         self as client_sme, ConnectResult, ConnectTransactionEvent, ConnectTransactionStream,
-        InfoEvent,
     },
-    InfoStream,
 };
 
-use crate::inspect;
 use crate::stats_scheduler::StatsRequest;
-use crate::telemetry;
-use fuchsia_cobalt::CobaltSender;
 
 pub type Endpoint = ServerEnd<fidl_sme::ClientSmeMarker>;
 type Sme = client_sme::ClientSme;
@@ -45,9 +39,6 @@ pub async fn serve<S>(
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     stats_requests: S,
-    cobalt_sender: CobaltSender,
-    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
-    inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     hasher: WlanHasher,
     persistence_req_sender: auto_persist::PersistenceReqSender,
@@ -62,7 +53,7 @@ where
         }) && device_info.driver_features.contains(&fidl_common::DriverFeature::Mfp);
     let cfg = client_sme::ClientConfig::from_config(cfg, wpa3_supported);
     let is_softmac = device_info.driver_features.contains(&fidl_common::DriverFeature::TempSoftmac);
-    let (sme, mlme_stream, info_stream, time_stream) =
+    let (sme, mlme_stream, time_stream) =
         Sme::new(cfg, device_info, iface_tree_holder, hasher, persistence_req_sender, is_softmac);
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme = super::serve_mlme_sme(
@@ -74,14 +65,11 @@ where
         time_stream,
     );
     let sme_fidl = serve_fidl(sme, new_fidl_clients);
-    let telemetry = handle_telemetry(info_stream, cobalt_sender, cobalt_1dot1_proxy, inspect_tree);
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);
-    pin_mut!(telemetry);
     Ok(select! {
         mlme_sme = mlme_sme.fuse() => mlme_sme?,
         sme_fidl = sme_fidl.fuse() => match sme_fidl? {},
-        telemetry = telemetry.fuse() => match telemetry? {},
     })
 }
 
@@ -139,35 +127,6 @@ async fn handle_fidl_request(
         }
         ClientSmeRequest::Status { responder } => responder.send(&mut status(sme)),
         ClientSmeRequest::WmmStatus { responder } => wmm_status(sme, responder).await,
-    }
-}
-
-async fn handle_telemetry(
-    info_stream: InfoStream,
-    mut cobalt_sender: CobaltSender,
-    mut cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
-    inspect_tree: Arc<inspect::WlanstackTree>,
-) -> Result<Void, anyhow::Error> {
-    let mut info_stream = info_stream.fuse();
-    let mut daily = fasync::Interval::new(24.hours());
-    let mut disconnect_tracker = telemetry::DisconnectTracker::new();
-
-    loop {
-        select! {
-            info_event = info_stream.next() => match info_event {
-                Some(e) => handle_info_event(e, &mut cobalt_sender, &mut cobalt_1dot1_proxy, inspect_tree.clone(), &mut disconnect_tracker).await,
-                None => return Err(format_err!("Info Event stream unexpectedly ended")),
-            },
-            _daily = daily.next() => {
-                let disconnects_today = disconnect_tracker.disconnects_today();
-                // Only log this metric for population that have low number of disconnects per day
-                if disconnects_today.len() > 0 && disconnects_today.len() <= 2 {
-                    for info in disconnects_today {
-                        telemetry::log_disconnect_reason_avg_population(&mut cobalt_1dot1_proxy, &info).await;
-                    }
-                }
-            },
-        }
     }
 }
 
@@ -269,35 +228,6 @@ async fn wmm_status(
     responder.send(&mut wmm_status)
 }
 
-async fn handle_info_event(
-    e: InfoEvent,
-    cobalt_sender: &mut CobaltSender,
-    cobalt_1dot1_proxy: &mut fidl_fuchsia_metrics::MetricEventLoggerProxy,
-    inspect_tree: Arc<inspect::WlanstackTree>,
-    disconnect_tracker: &mut telemetry::DisconnectTracker,
-) {
-    match e {
-        InfoEvent::DiscoveryScanStats(scan_stats) => {
-            let is_join_scan = false;
-            telemetry::log_scan_stats(cobalt_sender, inspect_tree, &scan_stats, is_join_scan);
-        }
-        InfoEvent::ConnectStats(connect_stats) => {
-            telemetry::log_connect_stats(
-                cobalt_sender,
-                cobalt_1dot1_proxy,
-                inspect_tree,
-                &connect_stats,
-            )
-            .await
-        }
-        InfoEvent::ConnectionPing(info) => telemetry::log_connection_ping(cobalt_sender, &info),
-        InfoEvent::DisconnectInfo(info) => {
-            disconnect_tracker.add_event(info.clone());
-            telemetry::log_disconnect(cobalt_sender, cobalt_1dot1_proxy, inspect_tree, &info).await
-        }
-    }
-}
-
 fn send_scan_error(
     handle: fidl_sme::ScanTransactionControlHandle,
     scan_result_code: fidl_mlme::ScanResultCode,
@@ -364,7 +294,6 @@ fn convert_connect_result(result: &ConnectResult, is_reconnect: bool) -> fidl_sm
 mod tests {
     use {
         super::*,
-        crate::test_helper::fake_inspect_tree,
         fidl::endpoints::{create_proxy, create_proxy_and_stream},
         fidl_fuchsia_wlan_internal as fidl_internal,
         fidl_fuchsia_wlan_mlme::ScanResultCode,
@@ -374,7 +303,6 @@ mod tests {
         pin_utils::pin_mut,
         rand::{prelude::ThreadRng, Rng},
         std::convert::TryInto,
-        telemetry::test_helper::{fake_cobalt_sender, fake_disconnect_info, CobaltExt},
         test_case::test_case,
         wlan_common::{assert_variant, bss::BssDescription, random_bss_description},
         wlan_rsn::auth,
@@ -610,51 +538,6 @@ mod tests {
             *stream_fut = stream.into_future();
             item
         })
-    }
-
-    #[test]
-    fn test_logging_disconnects_today_avg_population() {
-        let mut exec =
-            fasync::TestExecutor::new_with_fake_time().expect("failed to create an executor");
-        exec.set_fake_time(fasync::Time::from_nanos(0));
-
-        let (info_sink, info_stream) = mpsc::unbounded();
-        let (cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
-        let (cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
-            create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
-                .expect("failed to create Cobalt 1.1 proxy and stream");
-        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
-
-        let telemetry_fut =
-            handle_telemetry(info_stream, cobalt_sender, cobalt_1dot1_proxy, inspect_tree);
-        pin_mut!(telemetry_fut);
-        assert_variant!(exec.run_until_stalled(&mut telemetry_fut), Poll::Pending);
-
-        let disconnect_info = InfoEvent::DisconnectInfo(fake_disconnect_info([1u8; 6]));
-        info_sink.unbounded_send(disconnect_info).expect("expect send info to succeed");
-
-        assert_variant!(exec.run_until_stalled(&mut telemetry_fut), Poll::Pending);
-        while let Poll::Ready(Some(Ok(req))) =
-            exec.run_until_stalled(&mut cobalt_1dot1_stream.next())
-        {
-            // Telemetry should only log disconnect reason for average population on daily timer,
-            // so at this point, verify it's not logged yet.
-            assert_ne!(
-                req.metric_id(),
-                wlan_metrics_registry::DISCONNECT_REASON_AVERAGE_POPULATION_METRIC_ID
-            );
-            req.respond(fidl_fuchsia_metrics::Status::Ok);
-            assert_variant!(exec.run_until_stalled(&mut telemetry_fut), Poll::Pending);
-        }
-
-        // Set time to 24 hours later. Verify that the metric is now logged.
-        exec.set_fake_time(fasync::Time::after(24.hours()));
-        exec.wake_expired_timers();
-        assert_variant!(exec.run_until_stalled(&mut telemetry_fut), Poll::Pending);
-        assert_variant!(exec.run_until_stalled(&mut cobalt_1dot1_stream.next()), Poll::Ready(Some(Ok(req))) => {
-            assert_eq!(req.metric_id(), wlan_metrics_registry::DISCONNECT_REASON_AVERAGE_POPULATION_METRIC_ID);
-            req.respond(fidl_fuchsia_metrics::Status::Ok);
-        });
     }
 
     async fn collect_scan(proxy: &fidl_sme::ScanTransactionProxy) -> Vec<fidl_sme::ScanResult> {

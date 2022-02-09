@@ -10,7 +10,6 @@ use {
         client::{
             capabilities::derive_join_capabilities,
             event::{self, Event},
-            info::{DisconnectInfo, DisconnectSource},
             internal::Context,
             protection::{build_protection_ie, Protection, ProtectionIe},
             report_connect_finished, AssociationFailure, ClientConfig, ClientSmeStatus,
@@ -119,7 +118,7 @@ statemachine!(
 
 /// Context surrounding the state change, for Inspect logging
 pub enum StateChangeContext {
-    Disconnect { msg: String, disconnect_source: DisconnectSource },
+    Disconnect { msg: String, disconnect_source: fidl_sme::DisconnectSource },
     Msg(String),
 }
 
@@ -150,7 +149,6 @@ impl Joining {
     ) -> Result<Authenticating, Idle> {
         match conf.result_code {
             fidl_ieee80211::StatusCode::Success => {
-                context.info.report_auth_started();
                 let (auth_type, sae_password) = match &self.cmd.protection {
                     Protection::Rsna(rsna) => match rsna.supplicant.get_auth_cfg() {
                         auth::Config::Sae { .. } => (fidl_mlme::AuthenticationTypes::Sae, None),
@@ -188,7 +186,6 @@ impl Joining {
                 warn!("{}", msg);
                 report_connect_finished(
                     &mut self.cmd.connect_txn_sink,
-                    context,
                     ConnectResult::Failed(ConnectFailure::JoinFailure(other)),
                 );
                 state_change_ctx.set_msg(msg);
@@ -207,7 +204,6 @@ impl Authenticating {
     ) -> Result<Associating, Idle> {
         match conf.result_code {
             fidl_ieee80211::StatusCode::Success => {
-                context.info.report_assoc_started();
                 send_mlme_assoc_req(
                     self.cmd.bss.bssid.clone(),
                     self.capability_info.as_ref(),
@@ -228,7 +224,6 @@ impl Authenticating {
                 warn!("{}", msg);
                 report_connect_finished(
                     &mut self.cmd.connect_txn_sink,
-                    context,
                     ConnectResult::Failed(ConnectFailure::AuthenticationFailure(other)),
                 );
                 state_change_ctx.set_msg(msg);
@@ -241,14 +236,12 @@ impl Authenticating {
         mut self,
         ind: fidl_mlme::DeauthenticateIndication,
         state_change_ctx: &mut Option<StateChangeContext>,
-        context: &mut Context,
     ) -> Idle {
         let msg = format!("Authenticate request failed due to spurious deauthentication; reason code: {:?}, locally_initiated: {:?}",
             ind.reason_code, ind.locally_initiated);
         warn!("{}", msg);
         report_connect_finished(
             &mut self.cmd.connect_txn_sink,
-            context,
             ConnectResult::Failed(ConnectFailure::AuthenticationFailure(
                 fidl_ieee80211::StatusCode::SpuriousDeauthOrDisassoc,
             )),
@@ -330,7 +323,6 @@ impl Associating {
             });
         let link_state = match conf.result_code {
             fidl_ieee80211::StatusCode::Success => {
-                context.info.report_assoc_success(context.att_id);
                 if let Some(capability_info) = self.capability_info.as_ref() {
                     let negotiated_cap = intersect_with_ap_as_client(capability_info, &conf.into());
                     // TODO(eyw): Enable this check once we switch to Rust MLME which populates
@@ -347,7 +339,6 @@ impl Associating {
                         send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
                         report_connect_finished(
                             &mut self.cmd.connect_txn_sink,
-                            context,
                             ConnectResult::Failed(
                                 AssociationFailure {
                                     bss_protection: self.cmd.bss.protection(),
@@ -373,7 +364,6 @@ impl Associating {
                         send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
                         report_connect_finished(
                             &mut self.cmd.connect_txn_sink,
-                            context,
                             EstablishRsnaFailure { auth_method, reason: failure_reason }.into(),
                         );
                         return Err(Idle { cfg: self.cfg });
@@ -386,7 +376,6 @@ impl Associating {
                 send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
                 report_connect_finished(
                     &mut self.cmd.connect_txn_sink,
-                    context,
                     ConnectResult::Failed(
                         AssociationFailure {
                             bss_protection: self.cmd.bss.protection(),
@@ -402,11 +391,7 @@ impl Associating {
         state_change_ctx.set_msg(format!("Associate succeeded"));
 
         if let LinkState::LinkUp(_) = link_state {
-            report_connect_finished(
-                &mut self.cmd.connect_txn_sink,
-                context,
-                ConnectResult::Success,
-            );
+            report_connect_finished(&mut self.cmd.connect_txn_sink, ConnectResult::Success);
         }
 
         Ok(Associated {
@@ -427,14 +412,12 @@ impl Associating {
         mut self,
         ind: fidl_mlme::DeauthenticateIndication,
         state_change_ctx: &mut Option<StateChangeContext>,
-        context: &mut Context,
     ) -> Idle {
         let msg = format!("Association request failed due to spurious deauthentication; reason code: {:?}, locally_initiated: {:?}",
                           ind.reason_code, ind.locally_initiated);
         warn!("{}", msg);
         report_connect_finished(
             &mut self.cmd.connect_txn_sink,
-            context,
             ConnectResult::Failed(
                 AssociationFailure {
                     bss_protection: self.cmd.bss.protection(),
@@ -459,7 +442,6 @@ impl Associating {
         send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
         report_connect_finished(
             &mut self.cmd.connect_txn_sink,
-            context,
             ConnectResult::Failed(
                 AssociationFailure {
                     bss_protection: self.cmd.bss.protection(),
@@ -507,7 +489,6 @@ impl Associating {
                 send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
                 report_connect_finished(
                     &mut self.cmd.connect_txn_sink,
-                    context,
                     ConnectResult::Failed(
                         AssociationFailure {
                             bss_protection: self.cmd.bss.protection(),
@@ -537,36 +518,18 @@ impl Associated {
             reason_code: ind.reason_code,
         };
         let disconnect_source = if ind.locally_initiated {
-            DisconnectSource::Mlme(disconnect_reason)
+            fidl_sme::DisconnectSource::Mlme(disconnect_reason)
         } else {
-            DisconnectSource::Ap(disconnect_reason)
+            fidl_sme::DisconnectSource::Ap(disconnect_reason)
         };
 
-        if let Some(duration) = connected_duration {
-            let disconnect_info = DisconnectInfo {
-                connected_duration: duration,
-                last_rssi: self.latest_ap_state.rssi_dbm,
-                last_snr: self.latest_ap_state.snr_db,
-                bssid: self.latest_ap_state.bssid,
-                ssid: self.latest_ap_state.ssid.clone(),
-                protection: self.latest_ap_state.protection(),
-                wsc: self.latest_ap_state.probe_resp_wsc(),
-                channel: self.latest_ap_state.channel.clone(),
-                disconnect_source,
-                time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
-            };
-            context.info.report_disconnect(disconnect_info);
-            let fidl_disconnect_info = fidl_sme::DisconnectInfo {
-                is_sme_reconnecting: true,
-                disconnect_source: disconnect_source.into(),
-            };
+        if let Some(_duration) = connected_duration {
+            let fidl_disconnect_info =
+                fidl_sme::DisconnectInfo { is_sme_reconnecting: true, disconnect_source };
             self.connect_txn_sink
                 .send(ConnectTransactionEvent::OnDisconnect { info: fidl_disconnect_info });
         }
-        let msg = format!(
-            "received DisassociateInd msg; reason code {:?}",
-            disconnect_source.reason_code()
-        );
+        let msg = format!("received DisassociateInd msg; reason code {:?}", ind.reason_code);
         state_change_ctx.replace(match connected_duration {
             Some(_) => StateChangeContext::Disconnect { msg, disconnect_source },
             None => StateChangeContext::Msg(msg),
@@ -602,7 +565,6 @@ impl Associated {
         mut self,
         ind: fidl_mlme::DeauthenticateIndication,
         state_change_ctx: &mut Option<StateChangeContext>,
-        context: &mut Context,
     ) -> Idle {
         let (_, connected_duration) = self.link_state.disconnect();
 
@@ -611,26 +573,13 @@ impl Associated {
             reason_code: ind.reason_code,
         };
         let disconnect_source = if ind.locally_initiated {
-            DisconnectSource::Mlme(disconnect_reason)
+            fidl_sme::DisconnectSource::Mlme(disconnect_reason)
         } else {
-            DisconnectSource::Ap(disconnect_reason)
+            fidl_sme::DisconnectSource::Ap(disconnect_reason)
         };
 
         match connected_duration {
-            Some(duration) => {
-                let disconnect_info = DisconnectInfo {
-                    connected_duration: duration,
-                    last_rssi: self.latest_ap_state.rssi_dbm,
-                    last_snr: self.latest_ap_state.snr_db,
-                    bssid: self.latest_ap_state.bssid,
-                    ssid: self.latest_ap_state.ssid.clone(),
-                    protection: self.latest_ap_state.protection(),
-                    wsc: self.latest_ap_state.probe_resp_wsc(),
-                    channel: self.latest_ap_state.channel.clone(),
-                    disconnect_source,
-                    time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
-                };
-                context.info.report_disconnect(disconnect_info);
+            Some(_duration) => {
                 let fidl_disconnect_info = fidl_sme::DisconnectInfo {
                     is_sme_reconnecting: false,
                     disconnect_source: disconnect_source.into(),
@@ -644,15 +593,12 @@ impl Associated {
                     reason: EstablishRsnaFailureReason::InternalError,
                 }
                 .into();
-                report_connect_finished(&mut self.connect_txn_sink, context, connect_result);
+                report_connect_finished(&mut self.connect_txn_sink, connect_result);
             }
         }
 
         state_change_ctx.replace(StateChangeContext::Disconnect {
-            msg: format!(
-                "received DeauthenticateInd msg; reason code {:?}",
-                disconnect_source.reason_code()
-            ),
+            msg: format!("received DeauthenticateInd msg; reason code {:?}", ind.reason_code),
             disconnect_source,
         });
         Idle { cfg: self.cfg }
@@ -690,7 +636,6 @@ impl Associated {
             Err(failure_reason) => {
                 report_connect_finished(
                     &mut self.connect_txn_sink,
-                    context,
                     EstablishRsnaFailure { auth_method: self.auth_method, reason: failure_reason }
                         .into(),
                 );
@@ -701,12 +646,7 @@ impl Associated {
 
         if let LinkState::LinkUp(_) = link_state {
             if was_establishing_rsna {
-                context.info.report_rsna_established(context.att_id);
-                report_connect_finished(
-                    &mut self.connect_txn_sink,
-                    context,
-                    ConnectResult::Success,
-                );
+                report_connect_finished(&mut self.connect_txn_sink, ConnectResult::Success);
             }
         }
 
@@ -794,7 +734,6 @@ impl Associated {
             Err(failure_reason) => {
                 report_connect_finished(
                     &mut self.connect_txn_sink,
-                    context,
                     EstablishRsnaFailure { auth_method: self.auth_method, reason: failure_reason }
                         .into(),
                 );
@@ -878,8 +817,7 @@ impl ClientState {
                 }
                 MlmeEvent::DeauthenticateInd { ind } => {
                     let (transition, authenticating) = state.release_data();
-                    let idle =
-                        authenticating.on_deauthenticate_ind(ind, &mut state_change_ctx, context);
+                    let idle = authenticating.on_deauthenticate_ind(ind, &mut state_change_ctx);
                     transition.to(idle).into()
                 }
                 _ => state.into(),
@@ -894,8 +832,7 @@ impl ClientState {
                 }
                 MlmeEvent::DeauthenticateInd { ind } => {
                     let (transition, associating) = state.release_data();
-                    let idle =
-                        associating.on_deauthenticate_ind(ind, &mut state_change_ctx, context);
+                    let idle = associating.on_deauthenticate_ind(ind, &mut state_change_ctx);
                     transition.to(idle).into()
                 }
                 MlmeEvent::DisassociateInd { ind } => {
@@ -928,8 +865,7 @@ impl ClientState {
                 }
                 MlmeEvent::DeauthenticateInd { ind } => {
                     let (transition, associated) = state.release_data();
-                    let idle =
-                        associated.on_deauthenticate_ind(ind, &mut state_change_ctx, context);
+                    let idle = associated.on_deauthenticate_ind(ind, &mut state_change_ctx);
                     transition.to(idle).into()
                 }
                 MlmeEvent::SignalReport { ind } => {
@@ -1072,27 +1008,12 @@ impl ClientState {
         user_disconnect_reason: fidl_sme::UserDisconnectReason,
     ) -> Self {
         let mut disconnected_from_link_up = false;
-        let disconnect_source = DisconnectSource::User(user_disconnect_reason);
+        let disconnect_source = fidl_sme::DisconnectSource::User(user_disconnect_reason);
         if let Self::Associated(state) = &mut self {
-            if let LinkState::LinkUp(link_up) = &state.link_state {
+            if let LinkState::LinkUp(_link_up) = &state.link_state {
                 disconnected_from_link_up = true;
-                let disconnect_info = DisconnectInfo {
-                    connected_duration: link_up.connected_duration(),
-                    last_rssi: state.latest_ap_state.rssi_dbm,
-                    last_snr: state.latest_ap_state.snr_db,
-                    bssid: state.latest_ap_state.bssid,
-                    ssid: state.latest_ap_state.ssid.clone(),
-                    protection: state.latest_ap_state.protection(),
-                    wsc: state.latest_ap_state.probe_resp_wsc(),
-                    channel: state.latest_ap_state.channel.clone(),
-                    disconnect_source,
-                    time_since_channel_switch: state.last_channel_switch_time.map(|t| now() - t),
-                };
-                context.info.report_disconnect(disconnect_info);
-                let fidl_disconnect_info = fidl_sme::DisconnectInfo {
-                    is_sme_reconnecting: false,
-                    disconnect_source: disconnect_source.into(),
-                };
+                let fidl_disconnect_info =
+                    fidl_sme::DisconnectInfo { is_sme_reconnecting: false, disconnect_source };
                 state
                     .connect_txn_sink
                     .send(ConnectTransactionEvent::OnDisconnect { info: fidl_disconnect_info });
@@ -1117,29 +1038,17 @@ impl ClientState {
             Self::Idle(state) => state.cfg,
             Self::Joining(state) => {
                 let (_, mut state) = state.release_data();
-                report_connect_finished(
-                    &mut state.cmd.connect_txn_sink,
-                    context,
-                    ConnectResult::Canceled,
-                );
+                report_connect_finished(&mut state.cmd.connect_txn_sink, ConnectResult::Canceled);
                 state.cfg
             }
             Self::Authenticating(state) => {
                 let (_, mut state) = state.release_data();
-                report_connect_finished(
-                    &mut state.cmd.connect_txn_sink,
-                    context,
-                    ConnectResult::Canceled,
-                );
+                report_connect_finished(&mut state.cmd.connect_txn_sink, ConnectResult::Canceled);
                 state.cfg
             }
             Self::Associating(state) => {
                 let (_, mut state) = state.release_data();
-                report_connect_finished(
-                    &mut state.cmd.connect_txn_sink,
-                    context,
-                    ConnectResult::Canceled,
-                );
+                report_connect_finished(&mut state.cmd.connect_txn_sink, ConnectResult::Canceled);
                 send_deauthenticate_request(&state.cmd.bss, &context.mlme_sink);
                 state.cfg
             }
@@ -1315,31 +1224,26 @@ fn log_state_change(
 
     match state_change_ctx {
         Some(inner) => match inner {
-            // Only log the `disconnect_ctx` if an operation had an effect of moving from
-            // non-idle state to idle state. This is so that the client that consumes
-            // `disconnect_ctx` does not log a disconnect event when it's effectively no-op.
-            StateChangeContext::Disconnect { msg, disconnect_source }
-                if start_state != IDLE_STATE =>
-            {
-                info!(
-                    "{} => {}, ctx: `{}`, disconnect_source: {:?}",
-                    start_state,
-                    new_state.state_name(),
-                    msg,
-                    disconnect_source,
-                );
+            StateChangeContext::Disconnect { msg, disconnect_source } => {
+                // Only log the disconnect source if an operation had an effect of moving from
+                // non-idle state to idle state.
+                if start_state != IDLE_STATE {
+                    info!(
+                        "{} => {}, ctx: `{}`, disconnect_source: {:?}",
+                        start_state,
+                        new_state.state_name(),
+                        msg,
+                        disconnect_source,
+                    );
+                }
 
                 inspect_log!(context.inspect.state_events.lock(), {
                     from: start_state,
                     to: new_state.state_name(),
                     ctx: msg,
-                    disconnect_ctx: {
-                        reason_code: disconnect_source.reason_code() as u64,
-                        locally_initiated: disconnect_source.locally_initiated(),
-                    }
                 });
             }
-            StateChangeContext::Disconnect { msg, .. } | StateChangeContext::Msg(msg) => {
+            StateChangeContext::Msg(msg) => {
                 inspect_log!(context.inspect.state_events.lock(), {
                     from: start_state,
                     to: new_state.state_name(),
@@ -1460,10 +1364,7 @@ mod tests {
         fake_bss_description,
         hasher::WlanHasher,
         ie::{
-            fake_ies::{
-                fake_probe_resp_wsc_ie, fake_probe_resp_wsc_ie_bytes,
-                get_vendor_ie_bytes_for_wsc_ie,
-            },
+            fake_ies::{fake_probe_resp_wsc_ie_bytes, get_vendor_ie_bytes_for_wsc_ie},
             rsn::rsne::Rsne,
         },
         test_utils::fake_stas::IesOverrides,
@@ -1480,12 +1381,10 @@ mod tests {
         expect_stream_empty, fake_negotiated_channel_and_capabilities, fake_wmm_param,
         mock_psk_supplicant, MockSupplicant, MockSupplicantController,
     };
-    use crate::client::{
-        info::InfoReporter, inspect, rsn::Rsna, ConnectTransactionStream, InfoEvent, TimeStream,
-    };
+    use crate::client::{inspect, rsn::Rsna, ConnectTransactionStream, TimeStream};
     use crate::test_utils::make_wpa1_ie;
 
-    use crate::{test_utils, InfoSink, InfoStream, MlmeStream};
+    use crate::{test_utils, MlmeStream};
 
     #[test]
     fn associate_happy_path_unprotected() {
@@ -1520,8 +1419,6 @@ mod tests {
         assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
             assert_eq!(result, ConnectResult::Success);
         });
-
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
     }
 
     #[test]
@@ -1565,8 +1462,6 @@ mod tests {
         assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
             assert_eq!(result, ConnectResult::Success);
         });
-
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
     }
 
     #[test]
@@ -1632,7 +1527,6 @@ mod tests {
         assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
             assert_eq!(result, ConnectResult::Success);
         });
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
     }
 
     #[test]
@@ -1698,7 +1592,6 @@ mod tests {
         assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
             assert_eq!(result, ConnectResult::Success);
         });
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
     }
 
     #[test]
@@ -2028,7 +1921,6 @@ mod tests {
             assert_variant!(&state.link_state, LinkState::EstablishingRsna { .. })});
 
         expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
-        expect_stream_empty(&mut h.info_stream, "unexpected event in info stream");
     }
 
     #[test]
@@ -2051,7 +1943,6 @@ mod tests {
             assert_variant!(&state.link_state, LinkState::EstablishingRsna { .. })});
 
         expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
-        expect_stream_empty(&mut h.info_stream, "unexpected event in info stream");
     }
 
     #[test]
@@ -2297,17 +2188,6 @@ mod tests {
             state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::FailedToConnect);
         let state = exchange_deauth(state, &mut h);
         assert_idle(state);
-
-        assert_data_tree!(h._inspector, root: contains {
-            state_events: {
-                "0": contains {
-                    disconnect_ctx: {
-                        reason_code: (1u64 << 16) + 1,
-                        locally_initiated: true,
-                    }
-                }
-            }
-        });
     }
 
     #[test]
@@ -2352,36 +2232,6 @@ mod tests {
     }
 
     #[test]
-    fn log_disconnect_ctx_on_disassoc_from_link_up() {
-        let mut h = TestHelper::new();
-        let (cmd, _connect_txn_stream) = connect_command_one();
-        let bss = cmd.bss.clone();
-        let state = link_up_state(cmd);
-        assert_eq!(h.context.att_id, 0);
-
-        let disassociate_ind = MlmeEvent::DisassociateInd {
-            ind: fidl_mlme::DisassociateIndication {
-                peer_sta_address: [0, 0, 0, 0, 0, 0],
-                reason_code: fidl_ieee80211::ReasonCode::UnacceptablePowerCapability,
-                locally_initiated: true,
-            },
-        };
-        let state = state.on_mlme_event(disassociate_ind, &mut h.context);
-        assert_associating(state, &bss);
-
-        assert_data_tree!(h._inspector, root: contains {
-            state_events: {
-                "0": contains {
-                    disconnect_ctx: {
-                        reason_code: 131072u64 + 10u64,
-                        locally_initiated: true,
-                    }
-                }
-            }
-        });
-    }
-
-    #[test]
     fn do_not_log_disconnect_ctx_on_disassoc_from_non_link_up() {
         let mut h = TestHelper::new();
         let (supplicant, _suppl_mock) = mock_psk_supplicant();
@@ -2415,53 +2265,9 @@ mod tests {
     }
 
     #[test]
-    fn connection_ping() {
-        let mut h = TestHelper::new();
-
-        let (cmd, _connect_txn_stream) = connect_command_one();
-
-        // Start in an "Associating" state
-        let state = ClientState::from(testing::new_state(Associating {
-            cfg: ClientConfig::default(),
-            cmd,
-            capability_info: None,
-            protection_ie: None,
-        }));
-        let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::Success);
-        let state = state.on_mlme_event(assoc_conf, &mut h.context);
-
-        // Verify ping timeout is scheduled
-        let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
-        let first_ping = assert_variant!(timed_event.event.clone(), Event::ConnectionPing(info) => {
-            assert_eq!(info.connected_since, info.now);
-            assert!(info.last_reported.is_none());
-            info
-        });
-        // Verify that ping is reported
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(ref info))) => {
-            assert_eq!(info.connected_since, info.now);
-            assert!(info.last_reported.is_none());
-        });
-
-        // Trigger the above timeout
-        let _state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
-
-        // Verify ping timeout is scheduled again
-        let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
-        assert_variant!(timed_event.event, Event::ConnectionPing(ref info) => {
-            assert_variant!(info.last_reported, Some(time) => assert_eq!(time, first_ping.now));
-        });
-        // Verify that ping is reported
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(ref info))) => {
-            assert_variant!(info.last_reported, Some(time) => assert_eq!(time, first_ping.now));
-        });
-    }
-
-    #[test]
     fn disconnect_reported_on_deauth_ind() {
         let mut h = TestHelper::new();
         let (cmd, mut connect_txn_stream) = connect_command_one();
-        let bss = cmd.bss.clone();
         let state = link_up_state(cmd);
 
         let deauth_ind = MlmeEvent::DeauthenticateInd {
@@ -2473,18 +2279,6 @@ mod tests {
         };
 
         let _state = state.on_mlme_event(deauth_ind, &mut h.context);
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
-            assert_eq!(info.last_rssi, 60);
-            assert_eq!(info.last_snr, 30);
-            assert_eq!(info.ssid, bss.ssid);
-            assert_eq!(info.wsc, None);
-            assert_eq!(info.protection, BssProtection::Open);
-            assert_eq!(info.bssid, bss.bssid);
-            assert_variant!(info.disconnect_source, DisconnectSource::Mlme(fidl_sme::DisconnectCause {
-                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
-                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
-            }));
-        });
         let fidl_info = assert_variant!(
             connect_txn_stream.try_next(),
             Ok(Some(ConnectTransactionEvent::OnDisconnect { info })) => info
@@ -2515,18 +2309,6 @@ mod tests {
         };
 
         let state = state.on_mlme_event(deauth_ind, &mut h.context);
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
-            assert_eq!(info.last_rssi, 60);
-            assert_eq!(info.last_snr, 30);
-            assert_eq!(info.ssid, bss.ssid);
-            assert_eq!(info.wsc, None);
-            assert_eq!(info.protection, BssProtection::Open);
-            assert_eq!(info.bssid, bss.bssid);
-            assert_variant!(info.disconnect_source, DisconnectSource::Mlme(fidl_sme::DisconnectCause {
-                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DisassociateIndication,
-                reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
-            }));
-        });
         let info = assert_variant!(
             connect_txn_stream.try_next(),
             Ok(Some(ConnectTransactionEvent::OnDisconnect { info })) => info
@@ -2596,20 +2378,10 @@ mod tests {
     fn disconnect_reported_on_manual_disconnect() {
         let mut h = TestHelper::new();
         let (cmd, mut connect_txn_stream) = connect_command_one();
-        let bss = cmd.bss.clone();
         let state = link_up_state(cmd);
 
         let _state =
             state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
-            assert_eq!(info.last_rssi, 60);
-            assert_eq!(info.last_snr, 30);
-            assert_eq!(info.ssid, bss.ssid);
-            assert_eq!(info.wsc, None);
-            assert_eq!(info.protection, BssProtection::Open);
-            assert_eq!(info.bssid, bss.bssid);
-            assert_eq!(info.disconnect_source, DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
-        });
         let info = assert_variant!(
             connect_txn_stream.try_next(),
             Ok(Some(ConnectTransactionEvent::OnDisconnect { info })) => info
@@ -2639,15 +2411,6 @@ mod tests {
 
         let _state =
             state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
-        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
-            assert_eq!(info.last_rssi, 60);
-            assert_eq!(info.last_snr, 30);
-            assert_eq!(info.ssid, Ssid::try_from("bar").unwrap());
-            assert_eq!(info.wsc, Some(fake_probe_resp_wsc_ie()));
-            assert_eq!(info.protection, BssProtection::Open);
-            assert_eq!(info.bssid.0, [8; 6]);
-            assert_eq!(info.disconnect_source, DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
-        });
         let info = assert_variant!(
             connect_txn_stream.try_next(),
             Ok(Some(ConnectTransactionEvent::OnDisconnect { info })) => info
@@ -3084,7 +2847,6 @@ mod tests {
     // Helper functions and data structures for tests
     struct TestHelper {
         mlme_stream: MlmeStream,
-        info_stream: InfoStream,
         time_stream: TimeStream,
         context: Context,
         // Inspector is kept so that root node doesn't automatically get removed from VMO
@@ -3098,7 +2860,6 @@ mod tests {
         fn new() -> Self {
             let executor = fuchsia_async::TestExecutor::new().unwrap();
             let (mlme_sink, mlme_stream) = mpsc::unbounded();
-            let (info_sink, info_stream) = mpsc::unbounded();
             let (timer, time_stream) = timer::create_timer();
             let inspector = Inspector::new();
             let hasher = WlanHasher::new([88, 77, 66, 55, 44, 33, 22, 11]);
@@ -3108,12 +2869,10 @@ mod tests {
                 timer,
                 att_id: 0,
                 inspect: Arc::new(inspect::SmeTree::new(inspector.root(), hasher)),
-                info: InfoReporter::new(InfoSink::new(info_sink)),
                 is_softmac: true,
             };
             TestHelper {
                 mlme_stream,
-                info_stream,
                 time_stream,
                 context,
                 _inspector: inspector,
@@ -3485,12 +3244,8 @@ mod tests {
 
     fn link_up_state_with_wmm(cmd: ConnectCommand, wmm_param: Option<ie::WmmParam>) -> ClientState {
         let auth_method = cmd.protection.get_rsn_auth_method();
-        let link_state = testing::new_state(LinkUp {
-            protection: cmd.protection,
-            since: now(),
-            ping_event: None,
-        })
-        .into();
+        let link_state =
+            testing::new_state(LinkUp { protection: cmd.protection, since: now() }).into();
         testing::new_state(Associated {
             cfg: ClientConfig::default(),
             connect_txn_sink: cmd.connect_txn_sink,

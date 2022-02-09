@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    diagnostics_hierarchy::{self, DiagnosticsHierarchy, Property, PropertyEntry},
+    diagnostics_hierarchy::{self, DiagnosticsHierarchy},
     diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{self as wlantap, WlantapPhyProxy},
@@ -12,9 +12,7 @@ use {
     fuchsia_zircon::DurationNum,
     ieee80211::{Bssid, Ssid},
     pin_utils::pin_mut,
-    selectors,
-    std::collections::HashSet,
-    wlan_common::{assert_variant, bss::Protection, format::MacFmt as _, mac},
+    wlan_common::{bss::Protection, format::MacFmt as _, mac},
     wlan_hw_sim::*,
 };
 
@@ -55,8 +53,6 @@ const WSC_IE_BODY: &'static [u8] = &[
 const DEVICEMONITOR_MONIKER: &'static str = "wlandevicemonitor";
 const WLANSTACK_MONIKER: &'static str = "wlanstack";
 const POLICY_MONIKER: &'static str = "wlancfg";
-const DISCONNECT_CTX_SELECTOR: &'static str =
-    "core/wlanstack:root/iface-0/state_events/*/disconnect_ctx";
 
 fn build_event_handler<'a>(
     ssid: &'a Ssid,
@@ -104,13 +100,6 @@ fn build_event_handler<'a>(
         .build()
 }
 
-fn select_properties(hierarchy: DiagnosticsHierarchy, selector: &str) -> Vec<PropertyEntry> {
-    let parsed_selector = selectors::parse_selector::<selectors::VerboseError>(selector)
-        .expect("expect valid selector.");
-    diagnostics_hierarchy::select_from_hierarchy(hierarchy, parsed_selector)
-        .expect("Selecting from hierarchy should succeed.")
-}
-
 /// Test a client can connect to a network with no protection by simulating an AP that sends out
 /// hard coded authentication and association response frames.
 #[fuchsia_async::run_singlethreaded(test)]
@@ -147,14 +136,6 @@ async fn verify_wlan_inspect() {
         get_inspect_hierarchy(WLANSTACK_MONIKER).await.expect("expect Inspect data");
     assert_data_tree!(wlanstack_hierarchy, root: contains {
         latest_active_client_iface: 0u64,
-        client_stats: contains {
-            connect: {
-                "0": {
-                    "@time": AnyProperty,
-                    attempts: 1u64,
-                },
-            }
-        },
         device_events: contains {
             "0": contains {},
         },
@@ -182,9 +163,6 @@ async fn verify_wlan_inspect() {
             },
         }
     });
-
-    let properties = select_properties(wlanstack_hierarchy, DISCONNECT_CTX_SELECTOR);
-    assert!(properties.is_empty(), "there should not be a disconnect_ctx yet");
 
     let policy_hierarchy =
         get_inspect_hierarchy(POLICY_MONIKER).await.expect("expect Inspect data");
@@ -226,40 +204,6 @@ async fn verify_wlan_inspect() {
         get_inspect_hierarchy(WLANSTACK_MONIKER).await.expect("expect Inspect data");
     assert_data_tree!(wlanstack_hierarchy, root: contains {
         latest_active_client_iface: 0u64,
-        client_stats: contains {
-            connect: {
-                "0": {
-                    "@time": AnyProperty,
-                    attempts: 1u64,
-                },
-            },
-            disconnect: {
-                "0": contains {
-                    "@time": AnyProperty,
-                    connected_duration: AnyProperty,
-                    bssid: BSSID.0.to_mac_string(),
-                    bssid_hash: AnyProperty,
-                    ssid: AP_SSID.to_string(),
-                    ssid_hash: AnyProperty,
-                    wsc: {
-                        device_name: "ASUS Router",
-                        manufacturer: "ASUSTek Computer Inc.",
-                        model_name: "RT-AC58U",
-                        model_number: "123",
-                    },
-                    protection: "Open",
-                    channel: {
-                        primary: 1u64,
-                        cbw: "Cbw20",
-                        secondary80: 0u64,
-                    },
-                    last_rssi: AnyProperty,
-                    last_snr: AnyProperty,
-                    reason_code: AnyProperty,
-                    disconnect_source: "source: user, reason: NetworkUnsaved",
-                },
-            },
-        },
         device_events: contains {
             "0": contains {},
         },
@@ -287,18 +231,6 @@ async fn verify_wlan_inspect() {
             },
         }
     });
-
-    let properties = select_properties(wlanstack_hierarchy, DISCONNECT_CTX_SELECTOR);
-    let node_paths: HashSet<&str> =
-        properties.iter().map(|p| p.property_node_path.as_str()).collect();
-    assert_eq!(node_paths.len(), 1, "only one disconnect ctx is expected");
-    for p in properties {
-        match p.property.key().as_str() {
-            "reason_code" => (),
-            "locally_initiated" => assert_variant!(p.property, Property::Bool(_, true)),
-            _ => panic!("expect `reason_code` or `locally_initiated` property"),
-        }
-    }
 
     let policy_hierarchy =
         get_inspect_hierarchy(POLICY_MONIKER).await.expect("expect Inspect data");
