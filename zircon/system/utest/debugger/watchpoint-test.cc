@@ -150,13 +150,6 @@ void test_watchpoint_impl(zx_handle_t excp_channel) {
   uint64_t far = 0;
   ASSERT_EQ(get_far(thread_handle, &far), ZX_OK);
   ASSERT_NE(far, 0);
-
-  // We can also get the FAR from the exception report. Just assert it matches
-  // what we find in the debug regs.
-  zx_exception_report_t report = {};
-  ASSERT_OK(zx_object_get_info(thread_handle, ZX_INFO_THREAD_EXCEPTION_REPORT, &report,
-                               sizeof(report), nullptr, nullptr));
-  EXPECT_EQ(report.context.arch.u.arm_64.far, far);
 #endif
 
   // Clear the state and resume the thread.

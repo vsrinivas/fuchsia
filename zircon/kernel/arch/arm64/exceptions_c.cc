@@ -7,7 +7,6 @@
 #include <bits.h>
 #include <debug.h>
 #include <inttypes.h>
-#include <lib/arch/arm64/system.h>
 #include <lib/counters.h>
 #include <lib/crashlog.h>
 #include <platform.h>
@@ -32,8 +31,6 @@
 #define LOCAL_TRACE 0
 
 #define DFSC_ALIGNMENT_FAULT 0b100001
-
-using ESRExceptionClass = ::arch::ArmExceptionSyndromeRegister::ExceptionClass;
 
 static void dump_iframe(const iframe_t* iframe) {
   printf("iframe %p:\n", iframe);
@@ -79,25 +76,6 @@ static const char* dfsc_to_string(uint32_t dfsc) {
 }
 // clang-format on
 
-// Faulting Virtual Address for synchronous exceptions taken to EL1. Exceptions that
-// set the FAR_EL1 are Instruction Aborts (EC 0x20 or 0x21), Data Aborts (EC 0x24 or
-// 0x25), PC alignment faults (EC 0x22), and Watchpoints (EC 0x34 or 0x35).
-// ESR_EL1.EC holds the EC value for the exception.
-static bool exception_sets_far(ESRExceptionClass ec) {
-  switch (ec) {
-    case ESRExceptionClass::kInstructionAbortLowerEl:
-    case ESRExceptionClass::kInstructionAbortSameEl:
-    case ESRExceptionClass::kDataAbortLowerEl:
-    case ESRExceptionClass::kDataAbortSameEl:
-    case ESRExceptionClass::kPcAlignment:
-    case ESRExceptionClass::kWatchpointLowerEl:
-    case ESRExceptionClass::kWatchpointSameEl:
-      return true;
-    default:
-      return false;
-  }
-}
-
 KCOUNTER(exceptions_brkpt, "exceptions.breakpoint")
 KCOUNTER(exceptions_hw_brkpt, "exceptions.hw_breakpoint")
 KCOUNTER(exceptions_hw_wp, "exceptions.hw_watchpoint")
@@ -126,12 +104,9 @@ static zx_status_t try_dispatch_user_data_fault_exception(zx_excp_type_t type, i
   return status;
 }
 
-// Must be called with interrupts disabled from exception entry.
 static zx_status_t try_dispatch_user_exception(zx_excp_type_t type, iframe_t* iframe,
                                                uint32_t esr) {
-  auto esr_reg = arch::ArmExceptionSyndromeRegister::Get().FromValue(esr);
-  uint64_t maybe_far = exception_sets_far(esr_reg.ec()) ? __arm_rsr64("far_el1") : 0;
-  return try_dispatch_user_data_fault_exception(type, iframe, esr, maybe_far, 0);
+  return try_dispatch_user_data_fault_exception(type, iframe, esr, 0, 0);
 }
 
 // Prints exception details and then panics.
@@ -182,16 +157,6 @@ static void arm64_brk_handler(iframe_t* iframe, uint exception_flags, uint32_t e
     arm64_uarch_do_spectre_v2_mitigation();
   }
   try_dispatch_user_exception(ZX_EXCP_SW_BREAKPOINT, iframe, esr);
-}
-
-static void arm64_pc_alignment_fault_handler(iframe_t* iframe, uint exception_flags, uint32_t esr) {
-  if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
-    /* trapped inside the kernel, this is bad */
-    exception_die(iframe, esr, __arm_rsr64("far_el1"),
-                  "PC alignment fault in kernel: PC at %#" PRIx64 "\n", iframe->elr);
-  }
-
-  try_dispatch_user_exception(ZX_EXCP_UNALIGNED_ACCESS, iframe, esr);
 }
 
 static void arm64_hw_breakpoint_exception_handler(iframe_t* iframe, uint exception_flags,
@@ -408,51 +373,48 @@ static void arm64_data_abort_handler(iframe_t* iframe, uint exception_flags, uin
 
 /* called from assembly */
 extern "C" void arm64_sync_exception(iframe_t* iframe, uint exception_flags, uint32_t esr) {
-  auto esr_reg = arch::ArmExceptionSyndromeRegister::Get().FromValue(esr);
+  uint32_t ec = BITS_SHIFT(esr, 31, 26);
 
-  switch (esr_reg.ec()) {
-    case ESRExceptionClass::kUnknown:
+  switch (ec) {
+    case 0b000000: /* unknown reason */
       kcounter_add(exceptions_unknown, 1);
       arm64_unknown_handler(iframe, exception_flags, esr);
       break;
-    case ESRExceptionClass::kFp:
+    case 0b000111: /* floating point */
       kcounter_add(exceptions_fpu, 1);
       arm64_fpu_handler(iframe, exception_flags, esr);
       break;
-    case ESRExceptionClass::kSvc32:
-    case ESRExceptionClass::kSvc64:
+    case 0b010001: /* syscall from arm32 */
+    case 0b010101: /* syscall from arm64 */
       exception_die(iframe, esr, __arm_rsr64("far_el1"),
                     "syscalls should be handled in assembly\n");
       break;
-    case ESRExceptionClass::kInstructionAbortLowerEl:
-    case ESRExceptionClass::kInstructionAbortSameEl:
+    case 0b100000: /* instruction abort from lower level */
+    case 0b100001: /* instruction abort from same level */
       arm64_instruction_abort_handler(iframe, exception_flags, esr);
       break;
-    case ESRExceptionClass::kDataAbortLowerEl:
-    case ESRExceptionClass::kDataAbortSameEl:
+    case 0b100100: /* data abort from lower level */
+    case 0b100101: /* data abort from same level */
       arm64_data_abort_handler(iframe, exception_flags, esr);
       break;
-    case ESRExceptionClass::kBreakpointLowerEl:
-    case ESRExceptionClass::kBreakpointSameEl:
+    case 0b110000: /* HW breakpoint from a lower level */
+    case 0b110001: /* HW breakpoint from same level */
       kcounter_add(exceptions_hw_brkpt, 1);
       arm64_hw_breakpoint_exception_handler(iframe, exception_flags, esr);
       break;
-    case ESRExceptionClass::kStepLowerEl:
-    case ESRExceptionClass::kStepSameEl:
+    case 0b110010: /* software step from lower level */
+    case 0b110011: /* software step from same level */
       arm64_step_handler(iframe, exception_flags, esr);
       break;
-    case ESRExceptionClass::kWatchpointLowerEl:
-    case ESRExceptionClass::kWatchpointSameEl:
+    case 0b110100: /* HW watchpoint from a lower level */
+    case 0b110101: /* HW watchpoint from same level */
       kcounter_add(exceptions_hw_wp, 1);
       arm64_watchpoint_exception_handler(iframe, exception_flags, esr);
       break;
-    case ESRExceptionClass::kBkpt:
-    case ESRExceptionClass::kBrk:
+    case 0b111000: /* BRK from arm32 */
+    case 0b111100: /* BRK from arm64 */
       kcounter_add(exceptions_brkpt, 1);
       arm64_brk_handler(iframe, exception_flags, esr);
-      break;
-    case ESRExceptionClass::kPcAlignment:
-      arm64_pc_alignment_fault_handler(iframe, exception_flags, esr);
       break;
     default: {
       /* TODO: properly decode more of these */
@@ -540,26 +502,21 @@ void arch_dump_exception_context(const arch_exception_context_t* context) {
     return;
   }
 
-  auto esr = arch::ArmExceptionSyndromeRegister::Get().FromValue(context->esr);
-  ESRExceptionClass ec = esr.ec();
-  uint32_t iss = static_cast<uint32_t>(esr.iss());
+  uint32_t ec = BITS_SHIFT(context->esr, 31, 26);
+  uint32_t iss = BITS(context->esr, 24, 0);
 
   switch (ec) {
-    case ESRExceptionClass::kInstructionAbortLowerEl:
-    case ESRExceptionClass::kInstructionAbortSameEl:
+    case 0b100000: /* instruction abort from lower level */
+    case 0b100001: /* instruction abort from same level */
       printf("instruction abort: PC at %#" PRIx64 ", address %#" PRIx64 " IFSC %#x %s\n",
              context->frame->elr, context->far, BITS(context->esr, 5, 0),
-             BIT(static_cast<uint32_t>(ec), 0) ? "" : "user ");
+             BIT(ec, 0) ? "" : "user ");
 
       break;
-    case ESRExceptionClass::kDataAbortLowerEl:
-    case ESRExceptionClass::kDataAbortSameEl:
+    case 0b100100: /* data abort from lower level */
+    case 0b100101: /* data abort from same level */
       printf("data abort: PC at %#" PRIx64 ", address %#" PRIx64 " %s%s\n", context->frame->elr,
-             context->far, BIT(static_cast<uint32_t>(ec), 0) ? "" : "user ",
-             BIT(iss, 6) ? "write" : "read");
-      break;
-    default:
-      break;
+             context->far, BIT(ec, 0) ? "" : "user ", BIT(iss, 6) ? "write" : "read");
   }
 
   dump_iframe(context->frame);
@@ -580,8 +537,15 @@ void arch_fill_in_exception_context(const arch_exception_context_t* arch_context
 
   zx_context->synth_code = arch_context->user_synth_code;
   zx_context->synth_data = arch_context->user_synth_data;
+
   zx_context->arch.u.arm_64.esr = arch_context->esr;
-  zx_context->arch.u.arm_64.far = arch_context->far;
+
+  // If there was a fatal page fault, fill in the address that caused the fault.
+  if (report->header.type == ZX_EXCP_FATAL_PAGE_FAULT) {
+    zx_context->arch.u.arm_64.far = arch_context->far;
+  } else {
+    zx_context->arch.u.arm_64.far = 0;
+  }
 }
 
 zx_status_t arch_dispatch_user_policy_exception(uint32_t policy_exception_code,
