@@ -54,7 +54,7 @@ Set to true to enable legacy data partition names.
 
 **Current value (from the default):** `true`
 
-From //src/storage/fshost/generated_fshost_config.gni:49
+From //src/storage/fshost/generated_fshost_config.gni:47
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -646,20 +646,18 @@ See https://fuchsia.dev/fuchsia-src/development/hardware/installer
 From //build/images/args.gni:31
 
 ### bundle_f2fs
-Whether to bundle f2fs with the build.  This doesn't enable f2fs in any way, it simply includes
-the binary in the build with fshost.
+Soft migration; do not use
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/generated_fshost_config.gni:38
+From //src/storage/fshost/generated_fshost_config.gni:37
 
 ### bundle_fxfs
-Whether to bundle fxfs with the build.  This doesn't enable fxfs in any way, it simply includes
-the binary in the build with fshost.
+Soft migration; do not use
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/generated_fshost_config.gni:42
+From //src/storage/fshost/generated_fshost_config.gni:40
 
 ### cache_package_labels
 If you add package labels to this variable, the packages will be included
@@ -1652,14 +1650,14 @@ or f2fs by writing "fxfs" or "f2fs" to /data/fs_switch and then rebooting.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/generated_fshost_config.gni:46
+From //src/storage/fshost/generated_fshost_config.gni:44
 
 ### fshost_watch_for_nand
 Make fshost watch for NAND devices.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/generated_fshost_config.gni:52
+From //src/storage/fshost/generated_fshost_config.gni:50
 
 ### fuchsia_async_trace_level_logging
 Determines whether the fuchsia_async library used by many Rust targets will be compiled
