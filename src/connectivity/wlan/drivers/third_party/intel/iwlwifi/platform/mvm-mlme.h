@@ -46,21 +46,17 @@ zx_status_t phy_get_country(void* ctx, wlanphy_country_t* out_country);
 void phy_create_iface_undo(struct iwl_trans* iwl_trans, uint16_t idx);
 
 // Mac protocol helpers
-zx_status_t mac_query(void* ctx, uint32_t options, wlan_softmac_info_t* info);
+zx_status_t mac_query(void* ctx, wlan_softmac_info_t* info);
 zx_status_t mac_start(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,
                       zx_handle_t* out_mlme_channel);
 void mac_stop(struct iwl_mvm_vif* mvmvif);
-zx_status_t mac_set_channel(struct iwl_mvm_vif* mvmvif, uint32_t options,
-                            const wlan_channel_t* channel);
-zx_status_t mac_configure_bss(struct iwl_mvm_vif* mvmvif, uint32_t options,
-                              const bss_config_t* config);
+zx_status_t mac_set_channel(struct iwl_mvm_vif* mvmvif, const wlan_channel_t* channel);
+zx_status_t mac_configure_bss(struct iwl_mvm_vif* mvmvif, const bss_config_t* config);
 zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif);
-zx_status_t mac_enable_beaconing(void* ctx, uint32_t options, const wlan_bcn_config_t* bcn_cfg);
-zx_status_t mac_configure_beacon(void* ctx, uint32_t options,
-                                 const wlan_tx_packet_t* packet_template);
-zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, uint32_t options,
-                                const wlan_assoc_ctx_t* assoc_ctx);
-zx_status_t mac_clear_assoc(struct iwl_mvm_vif* mvmvif, uint32_t options,
+zx_status_t mac_enable_beaconing(void* ctx, const wlan_bcn_config_t* bcn_cfg);
+zx_status_t mac_configure_beacon(void* ctx, const wlan_tx_packet_t* packet_template);
+zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, const wlan_assoc_ctx_t* assoc_ctx);
+zx_status_t mac_clear_assoc(struct iwl_mvm_vif* mvmvif,
                             const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]);
 zx_status_t mac_start_passive_scan(void* ctx,
                                    const wlan_softmac_passive_scan_args_t* passive_scan_args,

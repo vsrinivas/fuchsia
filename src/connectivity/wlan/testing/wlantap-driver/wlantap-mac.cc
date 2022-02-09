@@ -46,7 +46,7 @@ struct WlantapMacImpl : WlantapMac {
 
   // WlanSoftmac protocol impl
 
-  static zx_status_t WlanSoftmacQuery(void* ctx, uint32_t options, wlan_softmac_info_t* mac_info) {
+  static zx_status_t WlanSoftmacQuery(void* ctx, wlan_softmac_info_t* mac_info) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     ConvertTapPhyConfig(mac_info, *self.phy_config_);
     return ZX_OK;
@@ -79,19 +79,14 @@ struct WlantapMacImpl : WlantapMac {
     self.listener_->WlantapMacStop(self.id_);
   }
 
-  static zx_status_t WlanSoftmacQueueTx(void* ctx, uint32_t options,
-                                        const wlan_tx_packet_t* packet) {
+  static zx_status_t WlanSoftmacQueueTx(void* ctx, const wlan_tx_packet_t* packet) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     self.listener_->WlantapMacQueueTx(self.id_, packet);
     return ZX_OK;
   }
 
-  static zx_status_t WlanSoftmacSetChannel(void* ctx, uint32_t options,
-                                           const wlan_channel_t* channel) {
+  static zx_status_t WlanSoftmacSetChannel(void* ctx, const wlan_channel_t* channel) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    if (options != 0) {
-      return ZX_ERR_INVALID_ARGS;
-    }
     if (!wlan::common::IsValidChan(*channel)) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -99,12 +94,8 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanSoftmacConfigureBss(void* ctx, uint32_t options,
-                                             const bss_config_t* config) {
+  static zx_status_t WlanSoftmacConfigureBss(void* ctx, const bss_config_t* config) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    if (options != 0) {
-      return ZX_ERR_INVALID_ARGS;
-    }
     bool expected_remote = self.role_ == wlan_common::WlanMacRole::CLIENT;
     if (config->remote != expected_remote) {
       return ZX_ERR_INVALID_ARGS;
@@ -113,41 +104,25 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanSoftmacEnableBeaconing(void* ctx, uint32_t options,
-                                                const wlan_bcn_config_t* bcn_cfg) {
-    if (options != 0) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+  static zx_status_t WlanSoftmacEnableBeaconing(void* ctx, const wlan_bcn_config_t* bcn_cfg) {
     // This is the test driver, so we can just pretend beaconing was enabled.
     (void)bcn_cfg;
     return ZX_OK;
   }
 
-  static zx_status_t WlanSoftmacConfigureBeacon(void* ctx, uint32_t options,
-                                                const wlan_tx_packet_t* pkt) {
-    if (options != 0) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+  static zx_status_t WlanSoftmacConfigureBeacon(void* ctx, const wlan_tx_packet_t* pkt) {
     // This is the test driver, so we can just pretend the beacon was configured.
     (void)pkt;
     return ZX_OK;
   }
 
-  static zx_status_t WlanSoftmacSetKey(void* ctx, uint32_t options,
-                                       const wlan_key_config_t* key_config) {
+  static zx_status_t WlanSoftmacSetKey(void* ctx, const wlan_key_config_t* key_config) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    if (options != 0) {
-      return ZX_ERR_INVALID_ARGS;
-    }
     self.listener_->WlantapMacSetKey(self.id_, key_config);
     return ZX_OK;
   }
 
-  static zx_status_t WlanSoftmacConfigureAssoc(void* ctx, uint32_t options,
-                                               const wlan_assoc_ctx* assoc_ctx) {
-    if (options != 0) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+  static zx_status_t WlanSoftmacConfigureAssoc(void* ctx, const wlan_assoc_ctx* assoc_ctx) {
     // This is the test driver, so we can just pretend the association was configured.
     (void)assoc_ctx;
     // TODO(fxbug.dev/28907): Evalute the use and implement
@@ -155,10 +130,7 @@ struct WlantapMacImpl : WlantapMac {
   }
 
   static zx_status_t WlanSoftmacClearAssoc(
-      void* ctx, uint32_t options, const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
-    if (options != 0) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+      void* ctx, const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
     if (!peer_addr) {
       return ZX_ERR_INVALID_ARGS;
     }

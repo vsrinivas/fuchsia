@@ -55,8 +55,7 @@ class Device : public DeviceInterface {
                     zx::channel* out_sme_channel) final;
   zx_status_t DeliverEthernet(cpp20::span<const uint8_t> eth_frame) final
       __TA_EXCLUDES(ethernet_proxy_lock_);
-  zx_status_t QueueTx(uint32_t options, std::unique_ptr<Packet> packet,
-                      wlan_tx_info_t tx_info) final;
+  zx_status_t QueueTx(std::unique_ptr<Packet> packet, wlan_tx_info_t tx_info) final;
   zx_status_t SetChannel(wlan_channel_t channel) final;
   zx_status_t SetStatus(uint32_t status) final __TA_EXCLUDES(ethernet_proxy_lock_);
   zx_status_t ConfigureBss(bss_config_t* cfg) final;

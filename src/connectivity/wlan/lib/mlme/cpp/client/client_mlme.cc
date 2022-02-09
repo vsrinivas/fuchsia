@@ -69,7 +69,7 @@ zx_status_t ClientMlme::Init() {
       .queue_tx = [](void* device, uint32_t options, mlme_out_buf_t buf,
                      wlan_tx_info_t tx_info) -> zx_status_t {
         auto pkt = FromRustOutBuf(buf);
-        return DEVICE(device)->QueueTx(options, std::move(pkt), tx_info);
+        return DEVICE(device)->QueueTx(std::move(pkt), tx_info);
       },
       .set_eth_status = [](void* device, uint32_t status) { DEVICE(device)->SetStatus(status); },
       .get_wlan_channel = [](void* device) -> wlan_channel_t {

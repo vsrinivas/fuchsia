@@ -80,7 +80,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   debugfn();
   infof("Binding our new WLAN device.\n");
 
-  zx_status_t status = wlan_softmac_proxy_.Query(0, &wlan_softmac_info_);
+  zx_status_t status = wlan_softmac_proxy_.Query(&wlan_softmac_info_);
   if (status != ZX_OK) {
     errorf("could not query wlan-softmac device: %d\n", status);
     return status;
@@ -297,12 +297,11 @@ zx_status_t Device::DeliverEthernet(cpp20::span<const uint8_t> eth_frame) {
   return ZX_OK;
 }
 
-zx_status_t Device::QueueTx(uint32_t options, std::unique_ptr<Packet> packet,
-                            wlan_tx_info_t tx_info) {
+zx_status_t Device::QueueTx(std::unique_ptr<Packet> packet, wlan_tx_info_t tx_info) {
   ZX_DEBUG_ASSERT(packet->len() <= std::numeric_limits<uint16_t>::max());
   packet->CopyCtrlFrom(tx_info);
   wlan_tx_packet_t tx_pkt = packet->AsWlanTxPacket();
-  auto status = wlan_softmac_proxy_.QueueTx(options, &tx_pkt);
+  auto status = wlan_softmac_proxy_.QueueTx(&tx_pkt);
   // TODO(tkilbourn): remove this once we implement WlanSoftmacCompleteTx and allow
   // wlan-softmac drivers to complete transmits asynchronously.
   ZX_DEBUG_ASSERT(status != ZX_ERR_SHOULD_WAIT);
@@ -325,7 +324,7 @@ zx_status_t Device::SetChannel(wlan_channel_t channel) __TA_NO_THREAD_SAFETY_ANA
   snprintf(buf, sizeof(buf), "channel set: from %s to %s",
            common::ChanStr(state_->channel()).c_str(), common::ChanStr(channel).c_str());
 
-  zx_status_t status = wlan_softmac_proxy_.SetChannel(0u, &channel);
+  zx_status_t status = wlan_softmac_proxy_.SetChannel(&channel);
   if (status != ZX_OK) {
     errorf("%s change failed (status %d)\n", buf, status);
     return status;
@@ -346,7 +345,7 @@ zx_status_t Device::SetStatus(uint32_t status) {
 }
 
 zx_status_t Device::ConfigureBss(bss_config_t* cfg) {
-  return wlan_softmac_proxy_.ConfigureBss(0u, cfg);
+  return wlan_softmac_proxy_.ConfigureBss(cfg);
 }
 
 zx_status_t Device::EnableBeaconing(wlan_bcn_config_t* bcn_cfg) {
@@ -356,7 +355,7 @@ zx_status_t Device::EnableBeaconing(wlan_bcn_config_t* bcn_cfg) {
                       {reinterpret_cast<const uint8_t*>(bcn_cfg->packet_template.mac_frame_buffer),
                        bcn_cfg->packet_template.mac_frame_size}));
   }
-  return wlan_softmac_proxy_.EnableBeaconing(0u, bcn_cfg);
+  return wlan_softmac_proxy_.EnableBeaconing(bcn_cfg);
 }
 
 zx_status_t Device::ConfigureBeacon(std::unique_ptr<Packet> beacon) {
@@ -368,11 +367,11 @@ zx_status_t Device::ConfigureBeacon(std::unique_ptr<Packet> beacon) {
   ZX_DEBUG_ASSERT(ValidateFrame("Malformed beacon template", {beacon->data(), beacon->size()}));
 
   wlan_tx_packet_t tx_packet = beacon->AsWlanTxPacket();
-  return wlan_softmac_proxy_.ConfigureBeacon(0u, &tx_packet);
+  return wlan_softmac_proxy_.ConfigureBeacon(&tx_packet);
 }
 
 zx_status_t Device::SetKey(wlan_key_config_t* key_config) {
-  return wlan_softmac_proxy_.SetKey(0u, key_config);
+  return wlan_softmac_proxy_.SetKey(key_config);
 }
 
 zx_status_t Device::StartPassiveScan(const wlan_softmac_passive_scan_args_t* passive_scan_args,
@@ -386,11 +385,11 @@ zx_status_t Device::StartActiveScan(const wlan_softmac_active_scan_args_t* activ
 }
 
 zx_status_t Device::ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) {
-  return wlan_softmac_proxy_.ConfigureAssoc(0u, assoc_ctx);
+  return wlan_softmac_proxy_.ConfigureAssoc(assoc_ctx);
 }
 
 zx_status_t Device::ClearAssoc(const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
-  return wlan_softmac_proxy_.ClearAssoc(0u, peer_addr);
+  return wlan_softmac_proxy_.ClearAssoc(peer_addr);
 }
 
 fbl::RefPtr<DeviceState> Device::GetState() { return state_; }

@@ -22,34 +22,27 @@ static zx_protocol_device_t wlan_softmac_test_device_ops = {
 };
 
 static wlan_softmac_protocol_ops_t wlan_softmac_test_protocol_ops = {
-    .query = [](void* ctx, uint32_t options, wlan_softmac_info_t* info) -> zx_status_t {
-      return DEV(ctx)->Query(options, info);
+    .query = [](void* ctx, wlan_softmac_info_t* info) -> zx_status_t {
+      return DEV(ctx)->Query(info);
     },
     .start = [](void* ctx, const wlan_softmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel)
         -> zx_status_t { return DEV(ctx)->Start(ifc, out_mlme_channel); },
     .stop = [](void* ctx) { DEV(ctx)->Stop(); },
-    .queue_tx = [](void* ctx, uint32_t options, const wlan_tx_packet_t* pkt) -> zx_status_t {
+    .queue_tx = [](void* ctx, const wlan_tx_packet_t* pkt) -> zx_status_t { return ZX_OK; },
+    .set_channel = [](void* ctx, const wlan_channel_t* channel) -> zx_status_t {
+      return DEV(ctx)->SetChannel(channel);
+    },
+    .configure_bss = [](void* ctx, const bss_config_t* config) -> zx_status_t { return ZX_OK; },
+    .enable_beaconing = [](void* ctx, const wlan_bcn_config_t* bcn_cfg) -> zx_status_t {
       return ZX_OK;
     },
-    .set_channel = [](void* ctx, uint32_t options, const wlan_channel_t* channel) -> zx_status_t {
-      return DEV(ctx)->SetChannel(options, channel);
-    },
-    .configure_bss = [](void* ctx, uint32_t options, const bss_config_t* config) -> zx_status_t {
+    .configure_beacon = [](void* ctx, const wlan_tx_packet_t* pkt) -> zx_status_t { return ZX_OK; },
+    .set_key = [](void* ctx, const wlan_key_config_t* key_config) -> zx_status_t { return ZX_OK; },
+    .configure_assoc = [](void* ctx, const wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t {
       return ZX_OK;
     },
-    .enable_beaconing = [](void* ctx, uint32_t options,
-                           const wlan_bcn_config_t* bcn_cfg) -> zx_status_t { return ZX_OK; },
-    .configure_beacon = [](void* ctx, uint32_t options,
-                           const wlan_tx_packet_t* pkt) -> zx_status_t { return ZX_OK; },
-    .set_key = [](void* ctx, uint32_t options, const wlan_key_config_t* key_config) -> zx_status_t {
-      return ZX_OK;
-    },
-    .configure_assoc = [](void* ctx, uint32_t options,
-                          const wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t { return ZX_OK; },
-    .clear_assoc = [](void* ctx, uint32_t options,
-                      const uint8_t[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) -> zx_status_t {
-      return ZX_OK;
-    },
+    .clear_assoc = [](void* ctx, const uint8_t[fuchsia_wlan_ieee80211_MAC_ADDR_LEN])
+        -> zx_status_t { return ZX_OK; },
 };
 #undef DEV
 
@@ -84,7 +77,7 @@ void IfaceDevice::Release() {
   delete this;
 }
 
-zx_status_t IfaceDevice::Query(uint32_t options, wlan_softmac_info_t* info) {
+zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
   zxlogf(INFO, "wlan::testing::IfaceDevice::Query()");
   memset(info, 0, sizeof(*info));
 
@@ -150,7 +143,7 @@ zx_status_t IfaceDevice::Start(const wlan_softmac_ifc_protocol_t* ifc,
   return ZX_OK;
 }
 
-zx_status_t IfaceDevice::SetChannel(uint32_t options, const wlan_channel_t* channel) {
+zx_status_t IfaceDevice::SetChannel(const wlan_channel_t* channel) {
   zxlogf(INFO, "wlan::testing::IfaceDevice::SetChannel()  channel=%u", channel->primary);
   return ZX_OK;
 }

@@ -288,9 +288,7 @@ type WlanSoftmacActiveScanArgs = struct {
 protocol WlanSoftmac {
     /// Obtain information about the device and supported features
     /// Safe to call at any time.
-    Query(struct {
-        options uint32;
-    }) -> (struct {
+    Query() -> (struct {
         status zx.status;
         info WlanSoftmacInfo;
     });
@@ -321,7 +319,6 @@ protocol WlanSoftmac {
     /// queue_tx() may be called at any time after start() is called including from multiple threads
     /// simultaneously.
     QueueTx(struct {
-        options uint32;
         packet WlanTxPacket;
     }) -> (struct {
         status zx.status;
@@ -329,7 +326,6 @@ protocol WlanSoftmac {
 
     // Set the radio channel
     SetChannel(struct {
-        options uint32;
         chan fuchsia.wlan.common.WlanChannel;
     }) -> (struct {
         status zx.status;
@@ -337,7 +333,6 @@ protocol WlanSoftmac {
 
     // Configures a BSS which the STA is either joining or managing.
     ConfigureBss(struct {
-        options uint32;
         config fuchsia.wlan.internal.BssConfig;
     }) -> (struct {
         st zx.status;
@@ -346,7 +341,6 @@ protocol WlanSoftmac {
     // Enables or disables hardware Beaconing.
     // * |bcn_cfg|: Pass `nullptr` to disable hardware Beacons. Used by hardware beacon offload.
     EnableBeaconing(struct {
-        options uint32;
         bcn_cfg WlanBcnConfig;
     }) -> (struct {
         st zx.status;
@@ -356,7 +350,6 @@ protocol WlanSoftmac {
     /// * |packet|: Pass `nullptr` to disable hardware Beacons. Used by software generated beacon.
     /// TODO(fxbug.dev/29298): Rename to update_beacon.
     ConfigureBeacon(struct {
-        options uint32;
         packet WlanTxPacket;
     }) -> (struct {
         st zx.status;
@@ -364,7 +357,6 @@ protocol WlanSoftmac {
 
     /// Specify a key for frame protection.
     SetKey(struct {
-        options uint32;
         key_config WlanKeyConfig;
     }) -> (struct {
         st zx.status;
@@ -372,7 +364,6 @@ protocol WlanSoftmac {
 
     /// Notifies MAC and PHY parameters negotiated through a successful association
     ConfigureAssoc(struct {
-        options uint32;
         assoc_ctx fuchsia.hardware.wlan.associnfo.WlanAssocCtx;
     }) -> (struct {
         st zx.status;
@@ -380,7 +371,6 @@ protocol WlanSoftmac {
 
     /// Notifies MAC and PHY that the peer has been de-associated.
     ClearAssoc(struct {
-        options uint32;
         peer_addr ieee80211.MacAddr;
     }) -> (struct {
         st zx.status;

@@ -50,7 +50,7 @@ zx_status_t ApMlme::Init() {
       .queue_tx = [](void* mlme, uint32_t options, mlme_out_buf_t buf,
                      wlan_tx_info_t tx_info) -> zx_status_t {
         auto pkt = FromRustOutBuf(buf);
-        return MLME(mlme)->device_->QueueTx(options, std::move(pkt), tx_info);
+        return MLME(mlme)->device_->QueueTx(std::move(pkt), tx_info);
       },
       .set_eth_status = [](void* mlme, uint32_t status) { MLME(mlme)->device_->SetStatus(status); },
       .get_wlan_channel = [](void* mlme) -> wlan_channel_t {

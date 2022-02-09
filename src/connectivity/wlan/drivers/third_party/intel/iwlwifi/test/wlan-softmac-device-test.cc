@@ -179,11 +179,10 @@ TEST_F(WlanSoftmacDeviceTest, FillBandInfosOnly5GHz) {
 
 TEST_F(WlanSoftmacDeviceTest, Query) {
   // Test input null pointers
-  uint32_t options = 0;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacQuery(options, nullptr));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacQuery(nullptr));
 
   wlan_softmac_info_t info = {};
-  ASSERT_EQ(ZX_OK, device_->WlanSoftmacQuery(options, &info));
+  ASSERT_EQ(ZX_OK, device_->WlanSoftmacQuery(&info));
   EXPECT_EQ(WLAN_MAC_ROLE_CLIENT, info.mac_role);
 
   //
@@ -318,32 +317,26 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
 
  protected:
   zx_status_t SetChannel(const wlan_channel_t* channel) {
-    uint32_t option = 0;
-    return device_->WlanSoftmacSetChannel(option, channel);
+    return device_->WlanSoftmacSetChannel(channel);
   }
 
   zx_status_t ConfigureBss(const bss_config_t* config) {
-    uint32_t option = 0;
-    return device_->WlanSoftmacConfigureBss(option, config);
+    return device_->WlanSoftmacConfigureBss(config);
   }
 
   zx_status_t ConfigureAssoc(const wlan_assoc_ctx_t* config) {
-    uint32_t option = 0;
-    return device_->WlanSoftmacConfigureAssoc(option, config);
+    return device_->WlanSoftmacConfigureAssoc(config);
   }
 
   zx_status_t ClearAssoc() {
-    uint32_t option = 0;
-    uint8_t
-        peer_addr[::fuchsia_wlan_ieee80211::wire::kMacAddrLen];  // Not used since all info were
-                                                                 // saved in mvmvif_sta_ already.
-    return device_->WlanSoftmacClearAssoc(option, peer_addr);
+    // Not used since all info were saved in mvmvif_sta_ already.
+    uint8_t peer_addr[::fuchsia_wlan_ieee80211::wire::kMacAddrLen];
+    return device_->WlanSoftmacClearAssoc(peer_addr);
   }
 
   zx_status_t SetKey(const wlan_key_config_t* key_config) {
-    uint32_t option = 0;
     IWL_INFO(nullptr, "Calling set_key");
-    return device_->WlanSoftmacSetKey(option, key_config);
+    return device_->WlanSoftmacSetKey(key_config);
   }
   // The following functions are for mocking up the firmware commands.
   //
@@ -862,7 +855,7 @@ TEST_F(MacInterfaceTest, TxPktTooLong) {
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
   wlan_pkt->wlan_pkt()->mac_frame_size = WLAN_MSDU_MAX_LEN + 1;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacQueueTx(0, wlan_pkt->wlan_pkt()));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt()));
   unbindTx();
 }
 
@@ -877,7 +870,7 @@ TEST_F(MacInterfaceTest, TxPktNotSupportedRole) {
   bindTx(tx_wrapper);
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacQueueTx(0, wlan_pkt->wlan_pkt()));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt()));
   unbindTx();
 }
 
@@ -891,7 +884,7 @@ TEST_F(MacInterfaceTest, TxPkt) {
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
   mock_tx_.ExpectCall(ZX_OK, wlan_pkt->len(), WIDE_ID(0, TX_CMD), IWL_MVM_DQA_MIN_MGMT_QUEUE);
-  ASSERT_EQ(ZX_OK, device_->WlanSoftmacQueueTx(0, wlan_pkt->wlan_pkt()));
+  ASSERT_EQ(ZX_OK, device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt()));
   unbindTx();
 }
 

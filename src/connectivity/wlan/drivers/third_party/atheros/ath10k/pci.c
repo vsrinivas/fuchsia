@@ -3159,8 +3159,7 @@ void ath10k_pci_fill_wlan_softmac_info(struct ath10k* ar, wlan_softmac_info_t* m
   ath10k_foreach_band(ar, ath10k_wlan_softmac_band_query_info, mac_info);
 }
 
-static zx_status_t ath10k_pci_mac_query(void* ctx, uint32_t options,
-                                        wlan_softmac_info_t* mac_info) {
+static zx_status_t ath10k_pci_mac_query(void* ctx, wlan_softmac_info_t* mac_info) {
   struct ath10k* ar = ctx;
 
   ZX_DEBUG_ASSERT(BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED));
@@ -3189,7 +3188,7 @@ static bool verify_started(struct ath10k* ar) {
   return result;
 }
 
-static zx_status_t ath10k_pci_queue_tx(void* ctx, uint32_t options, const wlan_tx_packet_t* pkt) {
+static zx_status_t ath10k_pci_queue_tx(void* ctx, const wlan_tx_packet_t* pkt) {
   struct ath10k* ar = ctx;
   return ath10k_mac_op_tx(ar, pkt);
 }
@@ -3213,8 +3212,7 @@ static const char* cbw_as_str(channel_bandwidth_t cbw) {
   }
 }
 
-static zx_status_t ath10k_pci_set_channel(void* ctx, uint32_t options,
-                                          const wlan_channel_t* channel) {
+static zx_status_t ath10k_pci_set_channel(void* ctx, const wlan_channel_t* channel) {
   struct ath10k* ar = ctx;
   if (!verify_started(ar)) {
     return ZX_ERR_BAD_STATE;
@@ -3226,8 +3224,7 @@ static zx_status_t ath10k_pci_set_channel(void* ctx, uint32_t options,
   return ath10k_mac_assign_vif_chanctx(ar, channel);
 }
 
-static zx_status_t ath10k_pci_configure_bss(void* ctx, uint32_t options,
-                                            const bss_config_t* config) {
+static zx_status_t ath10k_pci_configure_bss(void* ctx, const bss_config_t* config) {
   struct ath10k* ar = ctx;
   if (!verify_started(ar)) {
     return ZX_ERR_BAD_STATE;
@@ -3237,8 +3234,7 @@ static zx_status_t ath10k_pci_configure_bss(void* ctx, uint32_t options,
   return ath10k_mac_set_bss(ar, config);
 }
 
-static zx_status_t ath10k_pci_enable_beaconing(void* ctx, uint32_t options,
-                                               const wlan_bcn_config_t* bcn_cfg) {
+static zx_status_t ath10k_pci_enable_beaconing(void* ctx, const wlan_bcn_config_t* bcn_cfg) {
   struct ath10k* ar = ctx;
   struct ath10k_vif* arvif = &ar->arvif;
 
@@ -3266,15 +3262,13 @@ static zx_status_t ath10k_pci_enable_beaconing(void* ctx, uint32_t options,
   return ath10k_mac_start_ap(arvif);
 }
 
-static zx_status_t ath10k_pci_configure_beacon(void* ctx, uint32_t options,
-                                               const wlan_tx_packet_t* pkt) {
+static zx_status_t ath10k_pci_configure_beacon(void* ctx, const wlan_tx_packet_t* pkt) {
   ath10k_warn("This should not be called since this is hardware offload beacon.\n");
 
   return ZX_OK;
 }
 
-static zx_status_t ath10k_pci_set_key(void* ctx, uint32_t options,
-                                      const wlan_key_config_t* key_config) {
+static zx_status_t ath10k_pci_set_key(void* ctx, const wlan_key_config_t* key_config) {
   struct ath10k* ar = ctx;
   ath10k_info(
       "attempting to set key (bssid: %d, prot: %s, cipher: %s, type: %s, len: %d,"
@@ -3297,8 +3291,7 @@ static zx_status_t ath10k_pci_set_key(void* ctx, uint32_t options,
   return ath10k_mac_set_key(ar, key_config);
 }
 
-static zx_status_t ath10k_pci_configure_assoc(void* ctx, uint32_t options,
-                                              const wlan_assoc_ctx_t* assoc_ctx) {
+static zx_status_t ath10k_pci_configure_assoc(void* ctx, const wlan_assoc_ctx_t* assoc_ctx) {
   struct ath10k* ar = ctx;
   char buf[ETH_ALEN * 3];
 
@@ -3319,7 +3312,7 @@ static zx_status_t ath10k_pci_configure_assoc(void* ctx, uint32_t options,
 }
 
 static zx_status_t ath10k_pci_clear_assoc(
-    void* ctx, uint32_t options, const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
+    void* ctx, const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
   struct ath10k* ar = ctx;
   char buf[fuchsia_wlan_ieee80211_MAC_ADDR_LEN * 3];
 

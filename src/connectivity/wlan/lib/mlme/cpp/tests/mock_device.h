@@ -138,8 +138,7 @@ struct MockDevice : public DeviceInterface {
     return ZX_OK;
   }
 
-  zx_status_t QueueTx(uint32_t options, std::unique_ptr<Packet> packet,
-                      wlan_tx_info_t tx_info) final {
+  zx_status_t QueueTx(std::unique_ptr<Packet> packet, wlan_tx_info_t tx_info) final {
     WlanPacket wlan_packet;
     wlan_packet.pkt = std::move(packet);
     wlan_packet.tx_info = tx_info;

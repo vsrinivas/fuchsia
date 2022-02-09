@@ -29,8 +29,8 @@ WlanSoftmacDevice::WlanSoftmacDevice(zx_device* parent, iwl_trans* drvdata, uint
 
 WlanSoftmacDevice::~WlanSoftmacDevice() = default;
 
-zx_status_t WlanSoftmacDevice::WlanSoftmacQuery(uint32_t options, wlan_softmac_info_t* out_info) {
-  return mac_query(mvmvif_, options, out_info);
+zx_status_t WlanSoftmacDevice::WlanSoftmacQuery(wlan_softmac_info_t* out_info) {
+  return mac_query(mvmvif_, out_info);
 }
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacStart(const wlan_softmac_ifc_protocol_t* ifc,
@@ -43,8 +43,7 @@ void WlanSoftmacDevice::WlanSoftmacStop() {
   mac_stop(mvmvif_);
 }
 
-zx_status_t WlanSoftmacDevice::WlanSoftmacQueueTx(uint32_t options,
-                                                  const wlan_tx_packet_t* packet) {
+zx_status_t WlanSoftmacDevice::WlanSoftmacQueueTx(const wlan_tx_packet_t* packet) {
   if (ap_mvm_sta_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
@@ -84,8 +83,7 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacQueueTx(uint32_t options,
   return iwl_mvm_mac_tx(mvmvif_, ap_mvm_sta_->iwl_mvm_sta(), &mac_packet);
 }
 
-zx_status_t WlanSoftmacDevice::WlanSoftmacSetChannel(uint32_t options,
-                                                     const wlan_channel_t* channel) {
+zx_status_t WlanSoftmacDevice::WlanSoftmacSetChannel(const wlan_channel_t* channel) {
   zx_status_t status = ZX_OK;
 
   // If the AP sta already exists, it probably was left from the previous association attempt.
@@ -96,16 +94,15 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacSetChannel(uint32_t options,
     }
     ap_mvm_sta_.reset();
   }
-  return mac_set_channel(mvmvif_, options, channel);
+  return mac_set_channel(mvmvif_, channel);
 }
 
-zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureBss(uint32_t options,
-                                                       const bss_config_t* config) {
+zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureBss(const bss_config_t* config) {
   zx_status_t status = ZX_OK;
   if (ap_mvm_sta_ != nullptr) {
     return ZX_ERR_ALREADY_BOUND;
   }
-  if ((status = mac_configure_bss(mvmvif_, options, config)) != ZX_OK) {
+  if ((status = mac_configure_bss(mvmvif_, config)) != ZX_OK) {
     return status;
   }
 
@@ -119,34 +116,30 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureBss(uint32_t options,
   return ZX_OK;
 }
 
-zx_status_t WlanSoftmacDevice::WlanSoftmacEnableBeaconing(uint32_t options,
-                                                          const wlan_bcn_config_t* bcn_cfg) {
-  return mac_enable_beaconing(mvmvif_, options, bcn_cfg);
+zx_status_t WlanSoftmacDevice::WlanSoftmacEnableBeaconing(const wlan_bcn_config_t* bcn_cfg) {
+  return mac_enable_beaconing(mvmvif_, bcn_cfg);
 }
 
-zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureBeacon(uint32_t options,
-                                                          const wlan_tx_packet_t* pkt) {
-  return mac_configure_beacon(mvmvif_, options, pkt);
+zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureBeacon(const wlan_tx_packet_t* pkt) {
+  return mac_configure_beacon(mvmvif_, pkt);
 }
 
-zx_status_t WlanSoftmacDevice::WlanSoftmacSetKey(uint32_t options,
-                                                 const wlan_key_config_t* key_config) {
+zx_status_t WlanSoftmacDevice::WlanSoftmacSetKey(const wlan_key_config_t* key_config) {
   if (ap_mvm_sta_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
   return ap_mvm_sta_->SetKey(key_config);
 }
 
-zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureAssoc(uint32_t options,
-                                                         const wlan_assoc_ctx_t* assoc_ctx) {
+zx_status_t WlanSoftmacDevice::WlanSoftmacConfigureAssoc(const wlan_assoc_ctx_t* assoc_ctx) {
   if (ap_mvm_sta_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
-  return mac_configure_assoc(mvmvif_, options, assoc_ctx);
+  return mac_configure_assoc(mvmvif_, assoc_ctx);
 }
 
 zx_status_t WlanSoftmacDevice::WlanSoftmacClearAssoc(
-    uint32_t options, const uint8_t peer_addr_list[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
+    const uint8_t peer_addr_list[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
   zx_status_t status = ZX_OK;
 
   if (ap_mvm_sta_ == nullptr) {
@@ -158,7 +151,7 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacClearAssoc(
   mvmvif_->bss_conf.assoc = false;
   ap_mvm_sta_.reset();
 
-  if ((status = mac_clear_assoc(mvmvif_, options, peer_addr_list)) != ZX_OK) {
+  if ((status = mac_clear_assoc(mvmvif_, peer_addr_list)) != ZX_OK) {
     return status;
   }
 

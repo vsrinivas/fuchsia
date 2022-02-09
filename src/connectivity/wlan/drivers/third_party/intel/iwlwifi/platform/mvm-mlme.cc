@@ -149,7 +149,7 @@ void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t
 
 /////////////////////////////////////       MAC       //////////////////////////////////////////////
 
-zx_status_t mac_query(void* ctx, uint32_t options, wlan_softmac_info_t* info) {
+zx_status_t mac_query(void* ctx, wlan_softmac_info_t* info) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
   if (!ctx || !info) {
@@ -278,8 +278,7 @@ out:
 
 // This is called right after SSID scan. The MLME tells this function the channel to tune in.
 // This function configures the PHY context and binds the MAC to that PHY context.
-zx_status_t mac_set_channel(struct iwl_mvm_vif* mvmvif, uint32_t options,
-                            const wlan_channel_t* channel) {
+zx_status_t mac_set_channel(struct iwl_mvm_vif* mvmvif, const wlan_channel_t* channel) {
   zx_status_t ret;
 
   IWL_INFO(mvmvif, "mac_set_channel(primary:%d, bandwidth:'%s', secondary:%d)\n", channel->primary,
@@ -328,8 +327,7 @@ zx_status_t mac_set_channel(struct iwl_mvm_vif* mvmvif, uint32_t options,
 }
 
 // This is called after mac_set_channel(). The MAC (mvmvif) will be configured as a CLIENT role.
-zx_status_t mac_configure_bss(struct iwl_mvm_vif* mvmvif, uint32_t options,
-                              const bss_config_t* config) {
+zx_status_t mac_configure_bss(struct iwl_mvm_vif* mvmvif, const bss_config_t* config) {
   zx_status_t ret = ZX_OK;
 
   IWL_INFO(mvmvif, "mac_configure_bss(bssid=%02x:%02x:%02x:%02x:%02x:%02x, type=%d, remote=%d)\n",
@@ -382,13 +380,12 @@ zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif) {
   return ZX_OK;
 }
 
-zx_status_t mac_enable_beaconing(void* ctx, uint32_t options, const wlan_bcn_config_t* bcn_cfg) {
+zx_status_t mac_enable_beaconing(void* ctx, const wlan_bcn_config_t* bcn_cfg) {
   IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t mac_configure_beacon(void* ctx, uint32_t options,
-                                 const wlan_tx_packet_t* packet_template) {
+zx_status_t mac_configure_beacon(void* ctx, const wlan_tx_packet_t* packet_template) {
   IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -398,8 +395,7 @@ zx_status_t mac_configure_beacon(void* ctx, uint32_t options,
 // The current mac context is set by mac_configure_bss() with default values.
 //   TODO(fxbug.dev/36684): supports VHT (802.11ac)
 //
-zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, uint32_t options,
-                                const wlan_assoc_ctx_t* assoc_ctx) {
+zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, const wlan_assoc_ctx_t* assoc_ctx) {
   zx_status_t ret = ZX_OK;
   IWL_INFO(ctx, "Associating ...\n");
 
@@ -471,7 +467,7 @@ zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, uint32_t options,
   return ZX_OK;
 }
 
-zx_status_t mac_clear_assoc(struct iwl_mvm_vif* mvmvif, uint32_t options,
+zx_status_t mac_clear_assoc(struct iwl_mvm_vif* mvmvif,
                             const uint8_t peer_addr[fuchsia_wlan_ieee80211::wire::kMacAddrLen]) {
   IWL_INFO(ctx, "Disassociating ...\n");
 
