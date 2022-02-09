@@ -29,6 +29,7 @@
 #include <arch/aspace.h>
 #include <fbl/auto_lock.h>
 #include <fbl/bits.h>
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/mutex.h>
 #include <ktl/algorithm.h>
 #include <vm/arch_vm_aspace.h>
@@ -1431,6 +1432,12 @@ zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
     return ZX_ERR_INVALID_ARGS;
   }
 
+  // Avoid preemption while "involuntarily" holding the arch aspace lock during
+  // access harvesting. The harvest loop below is O(n), however, the amount of
+  // work performed with the lock held and preemption disabled is limited. Other
+  // O(n) operations under this lock are opt-in by the user (e.g. Map, Protect)
+  // and are performed with preemption enabled.
+  AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
 
   const vaddr_t vaddr_rel = vaddr - vaddr_base_;
@@ -1494,9 +1501,17 @@ zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
     // Release and re-acquire the lock to let contending threads have a chance
     // to acquire the arch aspace lock between iterations. Use arch::Yield() to
     // give other CPUs spinning on the aspace mutex a slight edge in acquiring
-    // the mutex. Releasing the mutex also flushes a preemption that may have
-    // pended during the critical section.
-    guard.CallUnlocked([] { arch::Yield(); });
+    // the mutex. Reenable preemption to flush any pending preemptions that may
+    // have pended during the critical section.
+    guard.CallUnlocked([] {
+      PreemptionState& preemption_state = Thread::Current::preemption_state();
+      DEBUG_ASSERT(!preemption_state.PreemptIsEnabled());
+      preemption_state.PreemptReenable();
+
+      arch::Yield();
+
+      preemption_state.PreemptDisable();
+    });
   }
 
   return ZX_OK;
