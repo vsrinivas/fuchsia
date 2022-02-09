@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_FEATURE_H_
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_FEATURE_H_
 
+#include <lib/arch/hwreg.h>
 #include <lib/arch/x86/cpuid.h>
 #include <lib/arch/x86/msr.h>
 
@@ -117,8 +118,7 @@ struct AmdHardwareConfigurationMsr
 // IA32_EFER
 //
 struct X86ExtendedFeatureEnableRegisterMsr
-    : public X86MsrBase<X86ExtendedFeatureEnableRegisterMsr, X86Msr::IA32_EFER,
-                        hwreg::EnablePrinter> {
+    : public X86MsrBase<X86ExtendedFeatureEnableRegisterMsr, X86Msr::IA32_EFER> {
   DEF_RSVDZ_FIELD(63, 19);
   // Bits [18:12] are reserved in Intel docs, but further specified by AMD.
   // AMD documents the reserved bits among [63:9] as MBZ while Intel simply

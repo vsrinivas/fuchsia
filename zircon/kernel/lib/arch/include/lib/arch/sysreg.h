@@ -5,13 +5,12 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_SYSREG_H_
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_SYSREG_H_
 
+#include <lib/arch/hwreg.h>
 #include <lib/arch/intrin.h>
 #include <zircon/assert.h>
 
 #include <cstdint>
 #include <type_traits>
-
-#include <hwreg/bitfields.h>
 
 namespace arch {
 
@@ -210,8 +209,8 @@ class SysReg {
 // layout type with arch::SysRegDerivedBase<LT> and then defining separate
 // register tag types using `struct T : public arch::SysRegDerived<T, LT> {};`.
 
-template <class RegisterType, typename IntType = uint64_t, typename Printer = void>
-class SysRegDerivedBase : public hwreg::RegisterBase<RegisterType, IntType, Printer> {
+template <class RegisterType, typename IntType = uint64_t>
+class SysRegDerivedBase : public hwreg::RegisterBase<RegisterType, IntType, EnablePrinter> {
  public:
   using SelfType = RegisterType;
   using ValueType = IntType;
@@ -236,8 +235,8 @@ struct SysRegDerived : public RegisterType {
   void Write() { SysReg().Write<RegisterTag>(*this); }
 };
 
-template <class RegisterTag, typename IntType = uint64_t, typename Printer = void>
-using SysRegBase = SysRegDerived<RegisterTag, SysRegDerivedBase<RegisterTag, IntType, Printer>>;
+template <class RegisterTag, typename IntType = uint64_t>
+using SysRegBase = SysRegDerived<RegisterTag, SysRegDerivedBase<RegisterTag, IntType>>;
 
 }  // namespace arch
 

@@ -49,6 +49,7 @@ zx_library("arch") {
 hwreg_asm_header("gen-x86-msr-asm") {
   visibility = [ ":*" ]
   output_name = "lib/arch/x86/msr-asm.h"
+  defines = [ "LIB_ARCH_PRINTERS" ]
   sources = [ "gen-x86-msr-asm.cc" ]
   deps = [ ":arch" ]
 }
@@ -56,6 +57,7 @@ hwreg_asm_header("gen-x86-msr-asm") {
 hwreg_asm_header("gen-arm64-sysreg-asm") {
   visibility = [ ":*" ]
   output_name = "lib/arch/arm64/sysreg-asm.h"
+  defines = [ "LIB_ARCH_PRINTERS" ]
   sources = [ "gen-arm64-sysreg-asm.cc" ]
   deps = [ ":arch" ]
 }

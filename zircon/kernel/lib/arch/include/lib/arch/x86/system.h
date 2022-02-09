@@ -5,12 +5,11 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_SYSTEM_H_
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_SYSTEM_H_
 
+#include <lib/arch/hwreg.h>
 #include <lib/arch/intrin.h>
 #include <lib/arch/sysreg.h>
 
 #include <optional>
-
-#include <hwreg/bitfields.h>
 
 namespace arch {
 
@@ -26,7 +25,7 @@ namespace arch {
 // specific registers with the right layout types.
 
 // [intel/vol3]: 2.5 Control Registers: CR0
-struct X86Cr0 : public SysRegBase<X86Cr0, uint64_t, hwreg::EnablePrinter> {
+struct X86Cr0 : public SysRegBase<X86Cr0, uint64_t> {
   DEF_RSVDZ_FIELD(63, 32);
   DEF_BIT(31, pg);  // Paging enabled
   DEF_BIT(30, cd);  // Cache disabled

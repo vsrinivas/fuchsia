@@ -46,6 +46,7 @@ zx_library("x86") {
 
 hwreg_asm_header("gen-cpuid-asm") {
   output_name = "lib/arch/x86/cpuid-asm.h"
+  defines = [ "LIB_ARCH_PRINTERS" ]
   sources = [ "gen-cpuid-asm.cc" ]
   deps = [ ".." ]
 }

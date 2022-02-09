@@ -6,13 +6,12 @@
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_ARM64_SYSTEM_H_
 
 #include <lib/arch/arm64/feature.h>
+#include <lib/arch/hwreg.h>
 #include <lib/arch/internal/bits.h>
 #include <lib/arch/sysreg.h>
 
 #include <functional>
 #include <optional>
-
-#include <hwreg/bitfields.h>
 
 namespace arch {
 
@@ -26,7 +25,7 @@ namespace arch {
 // accessors for specific registers with the right layout types.
 
 // [arm/sysreg]/currentel: CurrentEL, Current Exception Level
-struct ArmCurrentEl : public SysRegBase<ArmCurrentEl, uint64_t, hwreg::EnablePrinter> {
+struct ArmCurrentEl : public SysRegBase<ArmCurrentEl, uint64_t> {
   // This returns call(el1) or call(el2) or call(el3) depending on current EL.
   // It uses perfect forwarding.  All three overloads of call must all have the
   // same return type, which may be void.
@@ -73,8 +72,7 @@ ARCH_ARM64_SYSREG(ArmCurrentEl, "CurrentEL");
 //  * [arm/sysreg]/sctlr_el3: System Control Register (EL3)
 // Some fields (mostly things relating to EL0) are only used in EL1 and are
 // reserved in the other registers.  Missing bits are reserved in all cases.
-struct ArmSystemControlRegister
-    : public SysRegDerivedBase<ArmSystemControlRegister, uint64_t, hwreg::EnablePrinter> {
+struct ArmSystemControlRegister : public SysRegDerivedBase<ArmSystemControlRegister, uint64_t> {
   enum class TagCheckFault : uint64_t {
     kNone = 0b00,             // Faults have no effect.
     kSynchronous = 0b01,      // All faults cause a synchronous exception.
@@ -453,7 +451,7 @@ ARCH_ARM64_SYSREG(ArmMairEl2, "mair_el2");
 // This state is accessed via multiple registers with different bit placements.
 // The three registers DAIF, DAIFSet, and DAIFClr are specified in:
 // [arm/sysreg]/currentel: DAIF, Interrupt Mask Bits
-struct ArmDaif : public SysRegBase<ArmDaif, uint64_t, hwreg::EnablePrinter> {
+struct ArmDaif : public SysRegBase<ArmDaif, uint64_t> {
   DEF_BIT(9, d);
   DEF_BIT(8, a);
   DEF_BIT(7, i);
@@ -469,7 +467,7 @@ ARCH_ARM64_SYSREG(ArmDaif, "daif");
 // constant argument and any layers of inline function around the intrinsics
 // prevent the compiler from allowing a value to be passed down even if it's
 // all done as constexpr.
-struct ArmDaifSetClr : public SysRegBase<ArmDaifSetClr, uint64_t, hwreg::EnablePrinter> {
+struct ArmDaifSetClr : public SysRegBase<ArmDaifSetClr, uint64_t> {
   DEF_BIT(3, d);
   DEF_BIT(2, a);
   DEF_BIT(1, i);
@@ -587,7 +585,7 @@ ARCH_ARM64_SYSREG(ArmSpsrEl3, "spsr_el3");
 //
 // These are the assignments when an exception is taken from AArch64 state.
 struct ArmExceptionSyndromeRegister
-    : public SysRegDerivedBase<ArmExceptionSyndromeRegister, uint64_t, hwreg::EnablePrinter> {
+    : public SysRegDerivedBase<ArmExceptionSyndromeRegister, uint64_t> {
   // Some values are only possible in ESR_EL2 and/or ESR_EL3.
   enum class ExceptionClass : uint32_t {
     kUnknown = 0b000000,

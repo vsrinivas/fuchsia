@@ -136,6 +136,7 @@ if (current_toolchain != default_toolchain) {
   source_set("hello-world-test.source") {
     testonly = true
     sources = [ "hello-world-test.cc" ]
+    defines = [ "LIB_ARCH_PRINTERS" ]
     deps = [
       ":test-main",
       "//zircon/kernel/lib/libc",

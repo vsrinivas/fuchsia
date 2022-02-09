@@ -37,6 +37,7 @@ zx_library("arm64") {
 hwreg_asm_header("gen-arm64-system-asm") {
   visibility = [ ":*" ]
   output_name = "lib/arch/arm64/system-asm.h"
+  defines = [ "LIB_ARCH_PRINTERS" ]
   sources = [ "gen-arm64-system-asm.cc" ]
   deps = [ ".." ]
 }

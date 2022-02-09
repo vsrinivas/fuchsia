@@ -321,7 +321,10 @@ if (current_toolchain == default_toolchain) {
 hwreg_asm_header("phys32-header") {
   output_name = "phys32.h"
   sources = [ "gdt32.cc" ]
-  defines = [ "GENERATE" ]
+  defines = [
+    "GENERATE",
+    "LIB_ARCH_PRINTERS",
+  ]
   deps = [ "//zircon/kernel/lib/arch" ]
 }
 

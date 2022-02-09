@@ -50,9 +50,8 @@
 
 #else  // clang-format on
 
+#include <lib/arch/hwreg.h>
 #include <stdint.h>
-
-#include <hwreg/bitfields.h>
 
 namespace arch {
 
@@ -96,8 +95,8 @@ enum class X86Msr : uint32_t {
 
 // A convenience class to inherit from in defining MSR register types. Gives a
 // cleaner and more compact definition.
-template <typename ValueType, X86Msr Msr, class PrinterState = void>
-struct X86MsrBase : public hwreg::RegisterBase<ValueType, uint64_t, PrinterState> {
+template <typename ValueType, X86Msr Msr>
+struct X86MsrBase : public hwreg::RegisterBase<ValueType, uint64_t, EnablePrinter> {
   static auto Get() { return hwreg::RegisterAddr<ValueType>(static_cast<uint32_t>(Msr)); }
 };
 

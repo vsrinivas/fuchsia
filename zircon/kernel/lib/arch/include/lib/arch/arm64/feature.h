@@ -5,14 +5,13 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_ARM64_FEATURE_H_
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_ARM64_FEATURE_H_
 
+#include <lib/arch/hwreg.h>
 #include <lib/arch/sysreg.h>
-
-#include <hwreg/bitfields.h>
 
 namespace arch {
 
 // [arm/sysreg]/ID_AA64ISAR0_EL1: AArch64 Instruction Set Attribute Register 0
-struct ArmIdAa64IsaR0El1 : public SysRegBase<ArmIdAa64IsaR0El1, uint64_t, hwreg::EnablePrinter> {
+struct ArmIdAa64IsaR0El1 : public SysRegBase<ArmIdAa64IsaR0El1, uint64_t> {
   enum class Rndr : uint8_t {
     kNone = 0b0000,
     kRng = 0b0001,
