@@ -1,0 +1,28 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "Temperature Logger Config Schema",
+    "type": "object",
+    "properties": {
+        "drivers": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "topological_path": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "name",
+                    "topological_path"
+                ]
+            }
+        }
+    },
+    "additionalProperties": false,
+    "required": [ "drivers" ]
+}

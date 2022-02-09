@@ -1,0 +1,18 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/metrics_logger_bin_test",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+        },
+    ],
+}

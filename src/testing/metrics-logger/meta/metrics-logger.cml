@@ -1,0 +1,44 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/metrics_logger",
+    },
+    capabilities: [
+        { protocol: "fuchsia.metricslogger.test.MetricsLogger" },
+    ],
+    use: [
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            directory: "dev-temperature",
+            rights: [ "r*" ],
+            path: "/dev/class/temperature",
+        },
+        {
+            directory: "dev-thermal",
+            rights: [ "r*" ],
+            path: "/dev/class/thermal",
+        },
+        {
+            protocol: [
+                "fuchsia.device.Controller",
+                "fuchsia.hardware.temperature.Device",
+                "fuchsia.kernel.Stats",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.metricslogger.test.MetricsLogger",
+            from: "self",
+        },
+    ],
+}

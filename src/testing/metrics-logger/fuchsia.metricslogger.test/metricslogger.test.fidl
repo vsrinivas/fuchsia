@@ -1,0 +1,97 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.metricslogger.test;
+
+// Type aliase for client Id for convenience
+alias ClientId = string:8;
+
+/// Errors associated with MetricsLogger methods.
+/// If the request contains any of the following errors, it will fail without
+/// affecting the existing logging tasks.
+type MetricsLoggerError = strict enum : uint32 {
+    /// Indicates that no driver is found for requested metric logging.
+    NO_DRIVERS = 1;
+    /// Indicates that an invalid argument was provided.
+    INVALID_ARGUMENT = 2;
+    /// Requests to start logging will fail if logging is already active for a
+    /// given client.
+    ALREADY_LOGGING = 3;
+    /// Indicates that the logging request contains duplicated metric type.
+    DUPLICATED_METRIC = 4;
+};
+
+/// Metric type requested in MetricsLogger methods.
+type Metric = strict union {
+    1: temperature Temperature;
+    2: cpu_load CpuLoad;
+};
+
+/// Temperature metric details.
+type Temperature = struct {
+    /// Length of the polling interval in milliseconds.
+    /// Must be positive and smaller than `duration_ms` of the logging request.
+    interval_ms uint32;
+};
+
+/// CPU Load metric details.
+type CpuLoad = struct {
+    /// Length of the polling interval in milliseconds.
+    /// Must be positive and smaller than `duration_ms` of the logging request.
+    interval_ms uint32;
+};
+
+
+/// A protocol for managing on-demand metrics logging.
+@discoverable
+protocol MetricsLogger {
+    /// Initiates logging of specified metrics for the provided duration.
+    /// Supports concurrent logging of different metrics. Logging may be
+    /// terminated early with a call to `StopLogging`.
+    ///
+    /// This call will fail if logging of the specified metric is already
+    /// active. For this reason, a client may wish to precede a `StartLogging`
+    /// call with a `StopLogging` call, after which the only reason for The
+    /// logger to be active would be a conflict with another client.
+    ///
+    /// + request `client_id` String format Id of the client. Client may choose
+    ///     any Id with a maximum byte size of 8 (e.g., "ffxTest").
+    /// + request `metrics` Type of the metrics to be polled and logged.
+    /// + request `duration_ms` Duration of logging in milliseconds; must be
+    ///     positive. After this duration, polling and logging will cease.
+    /// + error a [fuchsia.metrics.test/MeticsLoggerError] value indicating why
+    ///     the request failed.
+    StartLogging(struct {
+        client_id ClientId;
+        metrics vector<Metric>:MAX;
+        duration_ms uint32;
+    }) -> (struct {}) error MetricsLoggerError;
+
+    /// Initiates logging of specified metrics. Supports concurrent logging of
+    /// different metrics. Logging will only end upon a `StopLogging` call.
+    ///
+    /// `StartLogging` should be preferred for usage in automated tests to
+    /// ensure that logging terminates even if the test crashes.
+    ///
+    /// + request `client_id` String format Id of the client. Client may choose
+    ///     any Id with a maximum byte size of 8 (e.g., "ffxTest").
+    /// + request `metrics` Type of the metrics to be polled and logged.
+    /// + error a [fuchsia.metrics.test/MetricsLoggerError] value indicating why
+    ///     the request failed.
+    StartLoggingForever(struct {
+        client_id ClientId;
+        metrics vector<Metric>:MAX;
+    }) -> (struct {}) error MetricsLoggerError;
+
+    /// Terminates all active logging tasks with the given client_id. It is
+    /// valid to call this method when logging is inactive.
+    ///
+    /// + request `client_id` String format Id of the client.
+    /// - response `status` A bool value indicating if existing logging was
+    ///     stopped (true) or there'sno existing logging for the client.
+    StopLogging(struct {
+        client_id ClientId;
+    }) -> (struct {
+        stopped bool;
+    });
+};
