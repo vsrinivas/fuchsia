@@ -197,11 +197,11 @@ source_set("block-watcher") {
     sources += [ "extract-metadata-noop.cc" ]
   }
 
-  if (bundle_fxfs || data_filesystem_format == "fxfs") {
+  if (data_filesystem_format == "fxfs") {
     deps += [ "//src/storage/fxfs" ]
   }
 
-  if (bundle_f2fs || data_filesystem_format == "f2fs") {
+  if (data_filesystem_format == "f2fs") {
     deps += [ "//src/storage/bin/f2fs" ]
   }
 
@@ -237,7 +237,7 @@ executable("fshost") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 
-  if (bundle_fxfs || data_filesystem_format == "fxfs") {
+  if (data_filesystem_format == "fxfs") {
     deps += [ "//src/storage/fxfs-crypt" ]
   }
 
@@ -402,10 +402,8 @@ cmc_merge("test-fshost.cml") {
     "meta/base_fshost.cml",
     "meta/core_fshost.cml",
     "meta/cpp_fshost.cml",
+    "meta/fxfs_fshost.cml",
   ]
-  if (bundle_fxfs || data_filesystem_format == "fxfs") {
-    sources += [ "meta/fxfs_fshost.cml" ]
-  }
 }
 
 # This is a test version of fshost, not a component with fshost tests.
@@ -426,11 +424,9 @@ cmc_merge("test-fshost-no-watcher.cml") {
     "meta/base_fshost.cml",
     "meta/core_fshost.cml",
     "meta/cpp_fshost.cml",
+    "meta/fxfs_fshost.cml",
     "meta/no_watcher.cml",
   ]
-  if (bundle_fxfs || data_filesystem_format == "fxfs") {
-    sources += [ "meta/fxfs_fshost.cml" ]
-  }
 }
 
 # This is a test version of fshost with no block watcher.
@@ -503,13 +499,11 @@ cmc_merge("fshost.cml") {
   sources = [
     "meta/base_fshost.cml",
     "meta/cpp_fshost.cml",
+    "meta/fxfs_fshost.cml",
     "meta/real_fshost.cml",
   ]
   if (!bootfs_only) {
     sources += [ "meta/core_fshost.cml" ]
-  }
-  if (bundle_fxfs || data_filesystem_format == "fxfs") {
-    sources += [ "meta/fxfs_fshost.cml" ]
   }
 }
 

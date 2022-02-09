@@ -33,12 +33,10 @@ declare_args() {
   # migrated in-place to the specified format when fshost mounts it.
   data_filesystem_format = "minfs"
 
-  # Whether to bundle f2fs with the build.  This doesn't enable f2fs in any way, it simply includes
-  # the binary in the build with fshost.
+  # Soft migration; do not use
   bundle_f2fs = false
 
-  # Whether to bundle fxfs with the build.  This doesn't enable fxfs in any way, it simply includes
-  # the binary in the build with fshost.
+  # Soft migration; do not use
   bundle_fxfs = false
 
   # If enabled, users can change the data partition from the default minfs filesystem to either fxfs
