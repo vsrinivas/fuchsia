@@ -206,9 +206,6 @@ fuchsia_test_package("mediaplayer_tests") {
     ":mp4_resource",
     ":webm_resource",
   ]
-
-  # TODO(fxbug.dev/58495): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 config_data("player_config") {
