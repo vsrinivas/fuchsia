@@ -9,6 +9,7 @@
     program: {
         runner: "elf",
         binary: "bin/basemgr",
+        lifecycle: { stop_event: "notify" },
     },
     capabilities: [
         {

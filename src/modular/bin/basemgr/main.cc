@@ -44,6 +44,39 @@ fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatc
   return modular::InitializeCobalt(dispatcher, component_context);
 }
 
+class LifecycleHandler : public fuchsia::process::lifecycle::Lifecycle {
+ public:
+  explicit LifecycleHandler(modular::BasemgrImpl* basemgr_impl, async::Loop* loop)
+      : basemgr_impl_(basemgr_impl), loop_(loop) {
+    FX_DCHECK(basemgr_impl_);
+    FX_DCHECK(loop_);
+
+    zx::channel lifecycle_request{zx_take_startup_handle(PA_LIFECYCLE)};
+    if (lifecycle_request) {
+      bindings_.AddBinding(this,
+                           fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle>(
+                               std::move(lifecycle_request)),
+                           loop_->dispatcher());
+    } else {
+      FX_LOGS(WARNING) << "Lifecycle startup handle is not valid. "
+                          "basemgr will not shut down cleanly.";
+    }
+  }
+
+  // |fuchsia.process.lifecycle.Lifecycle|
+  void Stop() override {
+    basemgr_impl_->Stop();
+    loop_->Quit();
+    bindings_.CloseAll();
+  }
+
+ private:
+  modular::BasemgrImpl* const basemgr_impl_;  // Not owned.
+  async::Loop* const loop_;                   // Not owned.
+
+  fidl::BindingSet<fuchsia::process::lifecycle::Lifecycle> bindings_;
+};
+
 std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
     modular::ModularConfigAccessor config_accessor, std::vector<cpp17::string_view> eager_children,
     sys::ComponentContext* component_context, modular::BasemgrInspector* inspector,
@@ -144,6 +177,8 @@ int main(int argc, const char** argv) {
   auto children = command_line.GetOptionValues(kChildFlag);
   auto basemgr_impl = CreateBasemgrImpl(modular::ModularConfigAccessor(config_result.take_value()),
                                         children, component_context.get(), inspector.get(), &loop);
+
+  LifecycleHandler lifecycle_handler{basemgr_impl.get(), &loop};
 
   if (!command_line.HasOption(kArrestedFlag)) {
     basemgr_impl->Start();
