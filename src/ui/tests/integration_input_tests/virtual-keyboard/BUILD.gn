@@ -83,10 +83,10 @@ group("tests") {
     ":virtual-keyboard-test",
 
     # The deps below are necessary on minimal product configs.
+    "//examples/intl/manager:intl_property_manager",
     "//src/chromium:web_engine",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/graphics/bin/vulkan_loader",
-    "//src/testing/fidl/intl_property_manager",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
     "//src/ui/bin/text:text_manager",
     "//src/ui/tests/integration_input_tests/virtual-keyboard/web-virtual-keyboard-client",
@@ -99,9 +99,9 @@ group("tests-product-webengine") {
   testonly = true
   deps = [
     ":virtual-keyboard-test",
+    "//examples/intl/manager:intl_property_manager",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/graphics/bin/vulkan_loader",
-    "//src/testing/fidl/intl_property_manager",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
     "//src/ui/bin/text:text_manager",
     "//src/ui/tests/integration_input_tests/virtual-keyboard/web-virtual-keyboard-client",

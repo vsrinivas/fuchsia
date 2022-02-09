@@ -48,6 +48,7 @@ group("cmx_allowlist") {
     "//examples/fidl/test/*",
     "//examples/fuzzers/*",
     "//examples/hello_world/dart/*",
+    "//examples/intl/manager/*",
     "//examples/isolated_cache/*",
     "//garnet/bin/catapult_converter/*",
     "//garnet/bin/cpuperf/*",

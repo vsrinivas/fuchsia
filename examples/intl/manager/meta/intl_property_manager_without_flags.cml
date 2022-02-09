@@ -5,7 +5,7 @@
     },
     capabilities: [
         { protocol: "fuchsia.intl.PropertyProvider" },
-        { protocol: "fuchsia.test.intl.manager.PropertyManager" },
+        { protocol: "fuchsia.examples.intl.manager.PropertyManager" },
     ],
     expose: [
         {
@@ -13,7 +13,7 @@
             from: "self",
         },
         {
-            protocol: "fuchsia.test.intl.manager.PropertyManager",
+            protocol: "fuchsia.examples.intl.manager.PropertyManager",
             from: "self",
         },
     ],

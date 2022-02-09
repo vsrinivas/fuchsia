@@ -217,11 +217,11 @@ group("tests") {
     ":touch-input-test-ip",
 
     # The deps below are necessary on minimal product configs.
+    "//examples/intl/manager:intl_property_manager",
     "//src/chromium:web_engine",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/flutter",
     "//src/graphics/bin/vulkan_loader",
-    "//src/testing/fidl/intl_property_manager",
     "//src/ui/a11y/bin/a11y_manager:a11y-manager",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
     "//src/ui/bin/text:text_manager",
