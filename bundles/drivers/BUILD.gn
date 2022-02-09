@@ -16,11 +16,15 @@ group("bootstrap") {
   ]
 
   if (enable_dfv2) {
-    deps += [
-      "//products/kernel_cmdline:driver_manager.root-meta--platform-bus.cm",
-      "//products/kernel_cmdline:driver_manager.use_driver_framework_v2--true",
-    ]
+    deps += [ ":bootstrap-dfv2" ]
   }
+}
+
+group("bootstrap-dfv2") {
+  deps = [
+    "//products/kernel_cmdline:driver_manager.root-meta--platform-bus.cm",
+    "//products/kernel_cmdline:driver_manager.use_driver_framework_v2--true",
+  ]
 }
 
 # Drivers which are meant only for non-user facing products.

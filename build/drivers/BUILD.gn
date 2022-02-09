@@ -8,3 +8,7 @@ python_binary("gen_create_all_drivers_doc") {
   main_source = "//build/drivers/create_all_drivers_doc.py"
   deps = [ "//third_party/pyyaml:yaml" ]
 }
+
+config("enable_dfv2") {
+  defines = [ "ENABLE_DFV2" ]
+}

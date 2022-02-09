@@ -1,0 +1,13 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("chromebook-x64.gni")
+
+# Enable DFv2.
+board_configs += [ "//build/drivers:enable_dfv2" ]
+
+board_bootfs_labels += [
+  "//bundles/drivers:bootstrap-dfv2",
+  "//src/devices/bin/driver_host2",
+]
