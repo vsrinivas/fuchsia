@@ -5,7 +5,7 @@
 use {fidl_fuchsia_wlan_mlme as fidl_mlme, ieee80211::MacAddr};
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KeyType(u8);
 
 // LINT.IfChange
@@ -18,7 +18,7 @@ impl KeyType {
 // LINT.ThenChange(//zircon/system/banjo/fuchsia.hardware.wlan.associnfo/info.banjo)
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Protection(u8);
 
 impl Protection {

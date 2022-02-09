@@ -3227,7 +3227,6 @@ mod tests {
     #[test]
     #[allow(deprecated)]
     fn mlme_set_keys_associated() {
-        use crate::key::*;
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
@@ -3245,24 +3244,28 @@ mod tests {
             fidl_mlme::SetKeyResult { key_id: 6, status: zx::Status::OK.into_raw() }
         );
 
+        assert_eq!(m.fake_device.keys[0].bssid, 0);
         assert_eq!(
-            m.fake_device.keys[0],
-            KeyConfig {
-                bssid: 0,
-                protection: Protection::RX_TX,
-                cipher_oui: [1, 2, 3],
-                cipher_type: 4,
-                key_type: KeyType::PAIRWISE,
-                peer_addr: [5; 6],
-                key_idx: 6,
-                key_len: 7,
-                key: [
-                    1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0,
-                ],
-                rsc: 8,
-            }
+            m.fake_device.keys[0].protection,
+            banjo_fuchsia_hardware_wlan_softmac::WlanProtection::RX_TX
         );
+        assert_eq!(m.fake_device.keys[0].cipher_oui, [1, 2, 3]);
+        assert_eq!(m.fake_device.keys[0].cipher_type, 4);
+        assert_eq!(
+            m.fake_device.keys[0].key_type,
+            banjo_fuchsia_hardware_wlan_associnfo::WlanKeyType::PAIRWISE
+        );
+        assert_eq!(m.fake_device.keys[0].peer_addr, [5; 6]);
+        assert_eq!(m.fake_device.keys[0].key_idx, 6);
+        assert_eq!(m.fake_device.keys[0].key_len, 7);
+        assert_eq!(
+            m.fake_device.keys[0].key,
+            [
+                1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0,
+            ]
+        );
+        assert_eq!(m.fake_device.keys[0].rsc, 8);
     }
 
     #[test]

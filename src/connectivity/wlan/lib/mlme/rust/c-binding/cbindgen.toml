@@ -54,6 +54,7 @@ exclude = [
     "WlanAssocCtx",
     "WlanChannel",
     "WlanIndication",
+    "WlanKeyConfig",
     "WlanSoftmacInfo",
     "WlanRxInfo",
     "WlanTxInfo",
@@ -101,15 +102,12 @@ exclude = [
 "WlanSoftmacIfcProtocolOps" = "rust_wlan_softmac_ifc_protocol_ops_copy_t"
 "WlanSoftmacInfo" = "wlan_softmac_info_t"
 "WlanIndication" = "wlan_indication_t"
+"WlanKeyConfig" = "wlan_key_config_t"
 "WlanRxPacket" = "wlan_rx_packet_t"
 "WlanRxInfo" = "wlan_rx_info_t"
 "WlanTxPacket" = "wlan_tx_packet_t"
 "WlanTxInfo" = "wlan_tx_info_t"
 "WlanTxStatus" = "wlan_tx_status_t"
-
-
-# Other existing types.
-"KeyConfig" = "wlan_key_config_t"
 
 [fn]
 prefix = 'extern "C"'

@@ -391,7 +391,7 @@ pub struct DeviceInterface {
     set_wlan_channel: extern "C" fn(device: *mut c_void, channel: banjo_common::WlanChannel) -> i32,
     /// Set a key on the device.
     /// |key| is mutable because the underlying API does not take a const wlan_key_config_t.
-    set_key: extern "C" fn(device: *mut c_void, key: *mut key::KeyConfig) -> i32,
+    set_key: extern "C" fn(device: *mut c_void, key: *mut banjo_wlan_softmac::WlanKeyConfig) -> i32,
     /// Make passive scan request to the driver
     start_passive_scan: extern "C" fn(
         device: *mut c_void,
@@ -461,8 +461,32 @@ impl DeviceInterface {
         zx::ok(status)
     }
 
-    fn set_key(&self, mut key: key::KeyConfig) -> Result<(), zx::Status> {
-        let status = (self.set_key)(self.device, &mut key as *mut key::KeyConfig);
+    fn set_key(&self, key: key::KeyConfig) -> Result<(), zx::Status> {
+        let mut banjo_key = banjo_wlan_softmac::WlanKeyConfig {
+            bssid: key.bssid,
+            protection: match key.protection {
+                key::Protection::NONE => banjo_wlan_softmac::WlanProtection::NONE,
+                key::Protection::RX => banjo_wlan_softmac::WlanProtection::RX,
+                key::Protection::TX => banjo_wlan_softmac::WlanProtection::TX,
+                key::Protection::RX_TX => banjo_wlan_softmac::WlanProtection::RX_TX,
+                _ => return Err(zx::Status::INVALID_ARGS),
+            },
+            cipher_oui: key.cipher_oui,
+            cipher_type: key.cipher_type,
+            key_type: match key.key_type {
+                key::KeyType::PAIRWISE => WlanKeyType::PAIRWISE,
+                key::KeyType::GROUP => WlanKeyType::GROUP,
+                key::KeyType::IGTK => WlanKeyType::IGTK,
+                key::KeyType::PEER => WlanKeyType::PEER,
+                _ => return Err(zx::Status::INVALID_ARGS),
+            },
+            peer_addr: key.peer_addr,
+            key_idx: key.key_idx,
+            key_len: key.key_len,
+            key: key.key,
+            rsc: key.rsc,
+        };
+        let status = (self.set_key)(self.device, &mut banjo_key);
         zx::ok(status)
     }
 
@@ -598,7 +622,7 @@ mod test_utils {
         pub wlan_queue: Vec<(Vec<u8>, u32)>,
         pub sme_sap: (fidl_mlme::MlmeControlHandle, zx::Channel),
         pub wlan_channel: banjo_common::WlanChannel,
-        pub keys: Vec<key::KeyConfig>,
+        pub keys: Vec<banjo_wlan_softmac::WlanKeyConfig>,
         pub next_scan_id: u64,
         pub captured_passive_scan_args: Option<CapturedWlanSoftmacPassiveScanArgs>,
         pub captured_active_scan_args: Option<ActiveScanArgs>,
@@ -712,7 +736,10 @@ mod test_utils {
             zx::sys::ZX_OK
         }
 
-        pub extern "C" fn set_key(device: *mut c_void, key: *mut key::KeyConfig) -> i32 {
+        pub extern "C" fn set_key(
+            device: *mut c_void,
+            key: *mut banjo_wlan_softmac::WlanKeyConfig,
+        ) -> i32 {
             let device = unsafe { &mut *(device as *mut Self) };
             device.keys.push(unsafe { (*key).clone() });
             if device.set_key_results.is_empty() {
