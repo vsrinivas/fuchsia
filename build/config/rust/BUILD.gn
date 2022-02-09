@@ -209,5 +209,5 @@ config("allow_unused_results") {
 }
 
 config("coverage") {
-  rustflags = [ "-Zinstrument-coverage" ]
+  rustflags = [ "-Cinstrument-coverage" ]
 }

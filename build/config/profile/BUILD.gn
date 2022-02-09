@@ -100,7 +100,7 @@ variant("profile") {
 # DO NOT NAME THIS WITH PREFIX `rust-`. The prefix will be stripped in some cases, and fail to
 # work with other cases that do not expect the stripped prefix.
 variant("coverage-rust") {
-  rustflags = [ "-Zinstrument-coverage" ]
+  rustflags = [ "-Cinstrument-coverage" ]
 
   if (!is_kernel && is_fuchsia) {
     # The statically-linked profiling runtime depends on libzircon.
