@@ -25,7 +25,6 @@ rustc_test("bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/network/netsvc-proto",
     "//src/lib/network/packet",
-    "//src/lib/testing/fixture",
     "//src/lib/zerocopy",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/component-events",

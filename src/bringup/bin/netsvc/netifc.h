@@ -7,11 +7,29 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/stdcompat/span.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/zx/status.h>
 #include <stdbool.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include "src/connectivity/lib/network-device/cpp/network_device_client.h"
+
+struct eth_buffer;
+
+class DeviceBuffer {
+ public:
+  using Contents =
+      std::variant<std::monostate, eth_buffer*, network::client::NetworkDeviceClient::Buffer>;
+  explicit DeviceBuffer(Contents contents);
+  cpp20::span<uint8_t> data();
+  zx_status_t Send(size_t len);
+  static zx::status<DeviceBuffer> Get(size_t len, bool block);
+
+ private:
+  Contents contents_;
+};
 
 // Setup networking.
 //

@@ -11,7 +11,8 @@
     },
     "sandbox": {
         "dev": [
-            "class/ethernet"
+            "class/ethernet",
+            "class/network"
         ]
     }
 }

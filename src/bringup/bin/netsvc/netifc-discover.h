@@ -15,10 +15,13 @@
 
 #include "src/bringup/bin/netsvc/inet6.h"
 
+struct NetdeviceInterface {
+  fidl::ClientEnd<fuchsia_hardware_network::Device> device;
+  fuchsia_hardware_network::wire::PortId port_id;
+};
+
 struct DiscoveredInterface {
-  std::variant<fidl::ClientEnd<fuchsia_hardware_ethernet::Device>,
-               fidl::ClientEnd<fuchsia_hardware_network::Device>>
-      device;
+  std::variant<fidl::ClientEnd<fuchsia_hardware_ethernet::Device>, NetdeviceInterface> device;
   mac_addr_t mac;
 };
 

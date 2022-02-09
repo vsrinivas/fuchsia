@@ -16,6 +16,7 @@
 #include <optional>
 
 #include "src/bringup/bin/netsvc/netifc-discover.h"
+#include "src/bringup/bin/netsvc/netifc.h"
 
 #define REPORT_BAD_PACKETS 0
 
@@ -265,24 +266,23 @@ struct Ip6Stack {
     return std::make_tuple(data, ip6_header_checksum(hdr, type));
   }
 
-  static constexpr size_t kIcmp6MacPayload = ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN;
+  static constexpr size_t kIcmp6MaxPayload = ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN;
 
   zx_status_t SendIcmp6(const void* data, size_t length, const ip6_addr_t& saddr,
                         const ip6_addr_t& daddr, bool block) {
-    if (length > kIcmp6MacPayload) {
+    if (length > kIcmp6MaxPayload) {
       return ZX_ERR_INVALID_ARGS;
     }
-    eth_buffer_t* ethbuf;
-    uint8_t* p;
 
-    zx_status_t status = eth_get_buffer(ETH_MTU, reinterpret_cast<void**>(&p), &ethbuf, block);
-    if (status != ZX_OK) {
-      return status;
+    zx::status status = DeviceBuffer::Get(ETH_MTU, block);
+    if (status.is_error()) {
+      return status.status_value();
     }
+    DeviceBuffer& buffer = status.value();
 
-    std::optional prepared = PrepareIp6Packet(p, saddr, daddr, length, HDR_ICMP6);
+    std::optional prepared =
+        PrepareIp6Packet(buffer.data().begin(), saddr, daddr, length, HDR_ICMP6);
     if (!prepared.has_value()) {
-      eth_put_buffer(ethbuf);
       return ZX_ERR_INVALID_ARGS;
     }
     auto [body, checksum] = prepared.value();
@@ -290,7 +290,7 @@ struct Ip6Stack {
     checksum = ip6_finalize_checksum(checksum, data, length);
     std::copy_n(reinterpret_cast<const uint8_t*>(&checksum), sizeof(checksum),
                 body + offsetof(icmp6_hdr_t, checksum));
-    return eth_send(ethbuf, ETH_HDR_LEN + IP6_HDR_LEN + length);
+    return buffer.Send(ETH_HDR_LEN + IP6_HDR_LEN + length);
   }
 };
 
@@ -307,21 +307,20 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
   if (dlen > UDP6_MAX_PAYLOAD)
     return ZX_ERR_INVALID_ARGS;
   size_t length = dlen + UDP_HDR_LEN;
-  uint8_t* p;
-  eth_buffer_t* ethbuf;
-  zx_status_t status = eth_get_buffer(ETH_MTU, reinterpret_cast<void**>(&p), &ethbuf, block);
-  if (status != ZX_OK) {
-    return status;
+  zx::status status = DeviceBuffer::Get(ETH_MTU, block);
+  if (status.is_error()) {
+    return status.status_value();
   }
+  DeviceBuffer& buffer = status.value();
 
   ZX_ASSERT(g_state.has_value());
   Ip6Stack& stack_state = g_state.value();
   const bool ula = (*daddr).u8[0] == stack_state.ula_ip6_addr.u8[0];
   const ip6_addr_t& saddr = ula ? stack_state.ula_ip6_addr : stack_state.ll_ip6_addr;
 
-  std::optional prepared = stack_state.PrepareIp6Packet(p, saddr, *daddr, length, HDR_UDP);
+  std::optional prepared =
+      stack_state.PrepareIp6Packet(buffer.data().begin(), saddr, *daddr, length, HDR_UDP);
   if (!prepared.has_value()) {
-    eth_put_buffer(ethbuf);
     return ZX_ERR_INVALID_ARGS;
   }
   auto [body, checksum] = prepared.value();
@@ -336,7 +335,7 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
   checksum = ip6_finalize_checksum(checksum, body, sizeof(udp) + dlen);
   std::copy_n(reinterpret_cast<const uint8_t*>(&checksum), sizeof(checksum),
               body + offsetof(udp_hdr_t, checksum));
-  return eth_send(ethbuf, ETH_HDR_LEN + IP6_HDR_LEN + length);
+  return buffer.Send(ETH_HDR_LEN + IP6_HDR_LEN + length);
 }
 
 #if REPORT_BAD_PACKETS

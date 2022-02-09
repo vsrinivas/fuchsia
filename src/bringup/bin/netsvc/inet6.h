@@ -124,14 +124,6 @@ struct ndp_n_hdr {
 void ip6_init(mac_addr_t macaddr, bool quiet);
 void eth_recv(async_dispatcher_t* dispatcher, void* data, size_t len);
 
-using eth_buffer_t = struct eth_buffer;
-
-// provided by interface driver
-zx_status_t eth_get_buffer(size_t len, void** data, eth_buffer_t** out, bool block);
-void eth_put_buffer(eth_buffer_t* ethbuf);
-
-zx_status_t eth_send(eth_buffer_t* ethbuf, size_t len);
-
 int eth_add_mcast_filter(const mac_addr_t* addr);
 
 // call to transmit a UDP packet

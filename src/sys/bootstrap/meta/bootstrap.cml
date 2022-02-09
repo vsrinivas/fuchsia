@@ -473,6 +473,16 @@
         {
             directory: "dev",
             from: "#driver_manager",
+            as: "dev-class-network",
+            to: [
+                "#device_name_provider",
+                "#netsvc",
+            ],
+            subdir: "class/network",
+        },
+        {
+            directory: "dev",
+            from: "#driver_manager",
             as: "dev-class-block",
             to: "#live_usb",
             subdir: "class/block",

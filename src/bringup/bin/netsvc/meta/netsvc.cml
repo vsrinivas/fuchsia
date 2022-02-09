@@ -11,6 +11,13 @@
             path: "/dev/class/ethernet",
         },
 
+        // For network device access.
+        {
+            directory: "dev-class-network",
+            rights: [ "rw*" ],
+            path: "/dev/class/network",
+        },
+
         // For netcp access.
         {
             directory: "boot",

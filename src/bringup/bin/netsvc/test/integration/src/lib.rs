@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use fidl::endpoints::ProtocolMarker as _;
-use fixture::fixture;
 use fuchsia_zircon::{self as zx, HandleBased as _};
 use futures::{Future, FutureExt as _, StreamExt as _};
 use itertools::Itertools as _;
 use net_types::Witness as _;
-use netemul::{Endpoint as _, RealmUdpSocket as _};
+use netemul::{Endpoint, RealmUdpSocket as _};
 use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
+use netstack_testing_macros::variants_test;
 use netsvc_proto::{debuglog, netboot, tftp};
 use packet::{FragmentedBuffer as _, InnerPacketBuilder as _, ParseBuffer as _, Serializer};
 use std::borrow::Cow;
@@ -26,6 +26,7 @@ const NAME_PROVIDER_NAME: &str = "device-name-provider";
 const MOCK_SERVICES_NAME: &str = "mock";
 
 const DEV_ETHERNET_DIRECTORY: &str = "dev-class-ethernet";
+const DEV_NETWORK_DIRECTORY: &str = "dev-class-network";
 
 const BUFFER_SIZE: usize = 2048;
 
@@ -304,6 +305,13 @@ where
                                 ..fidl_fuchsia_netemul::DevfsDep::EMPTY
                             },
                         ),
+                        fidl_fuchsia_netemul::Capability::NetemulDevfs(
+                            fidl_fuchsia_netemul::DevfsDep {
+                                name: Some(DEV_NETWORK_DIRECTORY.to_string()),
+                                subdir: Some(netemul::NetworkDevice::DEV_PATH.to_string()),
+                                ..fidl_fuchsia_netemul::DevfsDep::EMPTY
+                            },
+                        ),
                         fidl_fuchsia_netemul::Capability::ChildDep(
                             fidl_fuchsia_netemul::ChildDep {
                                 name: Some(NAME_PROVIDER_NAME.to_string()),
@@ -366,6 +374,13 @@ where
                                 ..fidl_fuchsia_netemul::DevfsDep::EMPTY
                             },
                         ),
+                        fidl_fuchsia_netemul::Capability::NetemulDevfs(
+                            fidl_fuchsia_netemul::DevfsDep {
+                                name: Some(DEV_NETWORK_DIRECTORY.to_string()),
+                                subdir: Some(netemul::NetworkDevice::DEV_PATH.to_string()),
+                                ..fidl_fuchsia_netemul::DevfsDep::EMPTY
+                            },
+                        ),
                         fidl_fuchsia_netemul::Capability::LogSink(fidl_fuchsia_netemul::Empty {}),
                     ])),
                     exposes: Some(vec![fidl_fuchsia_device::NameProviderMarker::NAME.to_string()]),
@@ -383,14 +398,18 @@ where
     (realm, fs)
 }
 
-async fn with_netsvc_and_netstack_bind_port<F, Fut, A, V>(port: u16, name: &str, args: V, test: F)
-where
+async fn with_netsvc_and_netstack_bind_port<E, F, Fut, A, V>(
+    port: u16,
+    name: &str,
+    args: V,
+    test: F,
+) where
     F: FnOnce(fuchsia_async::net::UdpSocket, u32) -> Fut,
     Fut: futures::Future<Output = ()>,
     A: Into<String>,
     V: IntoIterator<Item = A>,
+    E: netemul::Endpoint,
 {
-    type E = netemul::Ethernet;
     let netsvc_name = format!("{}-netsvc", name);
     let ns_name = format!("{}-netstack", name);
 
@@ -411,10 +430,7 @@ where
     );
 
     let network = sandbox.create_network("net").await.expect("create network");
-    let ep = network
-        .create_endpoint::<netemul::Ethernet, _>(&netsvc_name)
-        .await
-        .expect("create endpoint");
+    let ep = network.create_endpoint::<E, _>(&netsvc_name).await.expect("create endpoint");
     let () = ep.set_link_up(true).await.expect("set link up");
 
     let () = netsvc_realm
@@ -465,27 +481,14 @@ where
 
 const DEFAULT_NETSVC_ARGS: [&str; 2] = ["--netboot", "--all-features"];
 
-async fn with_netsvc_and_netstack<F, Fut>(name: &str, test: F)
+async fn with_netsvc_and_netstack<E, F, Fut>(name: &str, test: F)
 where
     F: FnOnce(fuchsia_async::net::UdpSocket, u32) -> Fut,
     Fut: futures::Future<Output = ()>,
+    E: netemul::Endpoint,
 {
-    with_netsvc_and_netstack_bind_port(
+    with_netsvc_and_netstack_bind_port::<E, _, _, _, _>(
         /* unspecified port */ 0,
-        name,
-        DEFAULT_NETSVC_ARGS,
-        test,
-    )
-    .await
-}
-
-async fn with_netsvc_and_netstack_debuglog_port<F, Fut>(name: &str, test: F)
-where
-    F: FnOnce(fuchsia_async::net::UdpSocket, u32) -> Fut,
-    Fut: futures::Future<Output = ()>,
-{
-    with_netsvc_and_netstack_bind_port(
-        debuglog::MULTICAST_PORT.get(),
         name,
         DEFAULT_NETSVC_ARGS,
         test,
@@ -621,15 +624,16 @@ where
     buffer.parse::<P>().expect("parse failed")
 }
 
-#[fixture(with_netsvc_and_netstack)]
-#[fuchsia_async::run_singlethreaded(test)]
-async fn can_discover(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
+async fn can_discover_inner(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
     let _: std::net::Ipv6Addr = discover(&sock, scope_id).await;
 }
 
-#[fixture(with_netsvc_and_netstack_debuglog_port)]
-#[fuchsia_async::run_singlethreaded(test)]
-async fn debuglog(sock: fuchsia_async::net::UdpSocket, _scope_id: u32) {
+#[variants_test]
+async fn can_discover<E: netemul::Endpoint>(name: &str) {
+    with_netsvc_and_netstack::<E, _, _>(name, can_discover_inner).await;
+}
+
+async fn debuglog_inner(sock: fuchsia_async::net::UdpSocket, _scope_id: u32) {
     #[derive(Clone)]
     enum Ack {
         Yes,
@@ -707,9 +711,18 @@ async fn debuglog(sock: fuchsia_async::net::UdpSocket, _scope_id: u32) {
             .await;
 }
 
-#[fixture(with_netsvc_and_netstack)]
-#[fuchsia_async::run_singlethreaded(test)]
-async fn get_board_info(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
+#[variants_test]
+async fn debuglog<E: netemul::Endpoint>(name: &str) {
+    with_netsvc_and_netstack_bind_port::<E, _, _, _, _>(
+        debuglog::MULTICAST_PORT.get(),
+        name,
+        DEFAULT_NETSVC_ARGS,
+        debuglog_inner,
+    )
+    .await
+}
+
+async fn get_board_info_inner(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
     const BOARD_NAME_FILE: &str = "<<image>>board_info";
     let device = discover(&sock, scope_id).await;
     let socket_addr = std::net::SocketAddrV6::new(
@@ -815,6 +828,11 @@ async fn get_board_info(sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
         };
         assert_eq!(board_name, expected_board_name);
     }
+}
+
+#[variants_test]
+async fn get_board_info<E: netemul::Endpoint>(name: &str) {
+    with_netsvc_and_netstack::<E, _, _>(name, get_board_info_inner).await;
 }
 
 async fn pave(image_name: &str, sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
@@ -978,21 +996,24 @@ async fn pave(image_name: &str, sock: fuchsia_async::net::UdpSocket, scope_id: u
     }
 }
 
+#[variants_test]
 #[test_case("zirconr.img"; "recovery")]
 #[test_case("sparse.fvm"; "fvm")]
-#[fuchsia_async::run_singlethreaded(test)]
-async fn pave_image(image: &str) {
-    with_netsvc_and_netstack(&format!("pave-{}", image), |sock, scope_id| async move {
-        let () = pave(&format!("<<image>>{}", image), sock, scope_id).await;
-    })
+async fn pave_image<E: netemul::Endpoint>(name: &str, image: &str) {
+    with_netsvc_and_netstack::<E, _, _>(
+        &format!("{}-{}", name, image),
+        |sock, scope_id| async move {
+            let () = pave(&format!("<<image>>{}", image), sock, scope_id).await;
+        },
+    )
     .await;
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn advertises() {
-    let () = with_netsvc_and_netstack_bind_port(
+#[variants_test]
+async fn advertises<E: netemul::Endpoint>(name: &str) {
+    let () = with_netsvc_and_netstack_bind_port::<E, _, _, _, _>(
         netsvc_proto::netboot::ADVERT_PORT.get(),
-        "advertises",
+        name,
         IntoIterator::into_iter(DEFAULT_NETSVC_ARGS).chain(["--advertise"]),
         |sock, scope| async move {
             let mut buffer = [0u8; BUFFER_SIZE];
