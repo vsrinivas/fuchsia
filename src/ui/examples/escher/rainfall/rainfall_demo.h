@@ -46,7 +46,7 @@ class RainfallDemo : public Demo {
   escher::TexturePtr depth_buffer_;
 
   uint32_t current_scene_ = 0;
-  std::vector<std::unique_ptr<Scene>> demo_scenes_;
+  std::vector<Scene*> demo_scenes_;
   escher::Stopwatch stopwatch_;
 };
 
