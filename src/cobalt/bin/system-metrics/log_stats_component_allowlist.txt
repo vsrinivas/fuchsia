@@ -12,7 +12,6 @@
 11 fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx
 12 fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx
 13 fuchsia-pkg://fuchsia.com/hwinfo#meta/hwinfo.cmx
-14 fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg.cmx
 15 fuchsia-boot:///#meta/driver_manager.cm
 16 fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx
 17 fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cmx
