@@ -156,11 +156,13 @@ bool VmoToInspectMapper::ShouldInclude(const counters::Descriptor& entry) {
   // These counters are always included. The strings are the full name of the
   // counter.
   static constexpr const char* kByName[] = {
+      "channel.full",             //
       "channel.messages",         //
       "profile.create",           //
       "profile.set",              //
       "init.target.time.msec",    //
       "init.userboot.time.msec",  //
+      "handles.alloc.failed",     //
       "handles.duped",            //
       "handles.live",             //
       "handles.made",             //
@@ -175,12 +177,14 @@ bool VmoToInspectMapper::ShouldInclude(const counters::Descriptor& entry) {
   // Any counters starting with these prefixes are included.
   // TODO(scottmg): It would be nice to filter these to only-if-non-zero.
   static constexpr const char* kByPrefix[] = {
-      "exceptions.",      //
-      "policy.deny.",     //
-      "policy.kill.",     //
-      "port.full.count",  //
-      "boot.",            //
-      "thread.suspend",   //
+      "exceptions.",       //
+      "policy.deny.",      //
+      "policy.kill.",      //
+      "port.full.count",   //
+      "boot.",             //
+      "lockup_detector.",  //
+      "thread.suspend",    //
+      "vm.pmm.",           //
   };
   for (size_t i = 0; i < std::size(kByPrefix); ++i) {
     if (strncmp(kByPrefix[i], entry.name, strlen(kByPrefix[i])) == 0) {
