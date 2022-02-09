@@ -61,6 +61,10 @@
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys.Loader",
                 "fuchsia.sysmem.Allocator",
+
+                // TODO(fxbug.dev/93338): delete this when tee_manager migrated to CFv2
+                "fuchsia.tee.Application.99dc95b2-938e-47eb-80e8-9404ae8a1385",
+                "fuchsia.tee.DeviceInfo",
                 "fuchsia.tracing.controller.Controller",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.annotation.Registry",
