@@ -128,20 +128,33 @@ magma_status_t magma_execute_command_buffer_with_resources2(
   return static_cast<magma_status_t>(response.result_return);
 }
 
-magma_status_t magma_execute(magma_connection_t connection, uint32_t context_id,
-                             struct magma_command_descriptor* descriptor) {
+magma_status_t magma_execute_command(magma_connection_t connection, uint32_t context_id,
+                                     struct magma_command_descriptor* descriptor) {
 #if VIRTMAGMA_DEBUG
   printf("%s\n", __PRETTY_FUNCTION__);
 #endif
 
+  struct WireDescriptor {
+    uint32_t resource_count;
+    uint32_t command_buffer_count;
+    uint32_t wait_semaphore_count;
+    uint32_t signal_semaphore_count;
+    uint64_t flags;
+  };
+
+  WireDescriptor wire_descriptor = {.resource_count = descriptor->resource_count,
+                                    .command_buffer_count = descriptor->command_buffer_count,
+                                    .wait_semaphore_count = descriptor->wait_semaphore_count,
+                                    .signal_semaphore_count = descriptor->signal_semaphore_count,
+                                    .flags = descriptor->flags};
+
   // Ensure host compatibility with 32bit guest
-  static_assert(sizeof(magma_command_descriptor) % 8 == 0);
-  static_assert(sizeof(magma_command_buffer) % 8 == 0);
+  static_assert(sizeof(magma_exec_command_buffer) % 8 == 0);
   static_assert(sizeof(magma_exec_resource) % 8 == 0);
 
   virtmagma_command_descriptor vdesc = {
-      .descriptor_size = sizeof(magma_command_descriptor),
-      .descriptor = reinterpret_cast<uintptr_t>(descriptor),
+      .descriptor_size = sizeof(wire_descriptor),
+      .descriptor = reinterpret_cast<uintptr_t>(&wire_descriptor),
       .resource_size = sizeof(magma_exec_resource) * descriptor->resource_count,
       .resources = reinterpret_cast<uintptr_t>(descriptor->resources),
       .command_buffer_size = sizeof(magma_exec_command_buffer) * descriptor->command_buffer_count,

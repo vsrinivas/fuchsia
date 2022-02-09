@@ -601,7 +601,15 @@ zx_status_t VirtioMagma::Handle_execute_command(VirtioDescriptor* request_desc,
 
   auto request = *reinterpret_cast<virtio_magma_execute_command_ctrl_t*>(request_ptr);
 
-  auto descriptor = *reinterpret_cast<magma_command_descriptor*>(request_ptr + sizeof(request));
+  struct WireDescriptor {
+    uint32_t resource_count;
+    uint32_t command_buffer_count;
+    uint32_t wait_semaphore_count;
+    uint32_t signal_semaphore_count;
+    uint64_t flags;
+  };
+
+  auto descriptor = *reinterpret_cast<WireDescriptor*>(request_ptr + sizeof(request));
 
   size_t resources_size = sizeof(magma_exec_resource) * descriptor.resource_count;
   size_t command_buffers_size = sizeof(magma_exec_command_buffer) * descriptor.command_buffer_count;
@@ -615,12 +623,13 @@ zx_status_t VirtioMagma::Handle_execute_command(VirtioDescriptor* request_desc,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  std::vector<magma_exec_resource> resources(descriptor.resource_count);
-  memcpy(resources.data(), request_ptr + sizeof(request) + sizeof(descriptor), resources_size);
-
   std::vector<magma_exec_command_buffer> command_buffers(descriptor.command_buffer_count);
-  memcpy(command_buffers.data(),
-         request_ptr + sizeof(request) + sizeof(descriptor) + resources_size, command_buffers_size);
+  memcpy(command_buffers.data(), request_ptr + sizeof(request) + sizeof(descriptor),
+         command_buffers_size);
+
+  std::vector<magma_exec_resource> resources(descriptor.resource_count);
+  memcpy(resources.data(),
+         request_ptr + sizeof(request) + sizeof(descriptor) + command_buffers_size, resources_size);
 
   std::vector<uint64_t> semaphore_ids(descriptor.wait_semaphore_count +
                                       descriptor.signal_semaphore_count);
@@ -628,11 +637,17 @@ zx_status_t VirtioMagma::Handle_execute_command(VirtioDescriptor* request_desc,
          request_ptr + sizeof(request) + sizeof(descriptor) + resources_size + command_buffers_size,
          semaphore_ids_size);
 
-  descriptor.resources = resources.data();
-  descriptor.command_buffers = command_buffers.data();
-  descriptor.semaphore_ids = semaphore_ids.data();
+  magma_command_descriptor magma_descriptor = {
+      .resource_count = descriptor.resource_count,
+      .command_buffer_count = descriptor.command_buffer_count,
+      .wait_semaphore_count = descriptor.wait_semaphore_count,
+      .signal_semaphore_count = descriptor.signal_semaphore_count,
+      .resources = resources.data(),
+      .command_buffers = command_buffers.data(),
+      .semaphore_ids = semaphore_ids.data(),
+      .flags = descriptor.flags};
 
-  request.descriptor = reinterpret_cast<uintptr_t>(&descriptor);
+  request.descriptor = reinterpret_cast<uintptr_t>(&magma_descriptor);
 
   virtio_magma_execute_command_resp_t response{};
 
