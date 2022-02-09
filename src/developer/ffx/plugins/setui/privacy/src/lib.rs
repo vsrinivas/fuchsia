@@ -18,21 +18,18 @@ pub async fn run_command(privacy_proxy: PrivacyProxy, privacy: Privacy) -> Resul
 }
 
 async fn command(proxy: PrivacyProxy, user_data_sharing_consent: Option<bool>) -> WatchOrSetResult {
-    Ok(if let Some(user_data_sharing_consent_value) = user_data_sharing_consent {
-        let mut settings = PrivacySettings::EMPTY;
-        settings.user_data_sharing_consent = Some(user_data_sharing_consent_value);
+    let mut settings = PrivacySettings::EMPTY;
+    settings.user_data_sharing_consent = user_data_sharing_consent;
 
-        let mutate_result = proxy.set(settings).await?;
-        Either::Set(match mutate_result {
-            Ok(_) => format!(
-                "Successfully set user_data_sharing_consent to {}",
-                user_data_sharing_consent_value
-            ),
-            Err(err) => format!("{:?}", err),
-        })
+    if settings == PrivacySettings::EMPTY {
+        Ok(Either::Watch(utils::watch_to_stream(proxy, |p| p.watch())))
     } else {
-        Either::Watch(utils::watch_to_stream(proxy, |p| p.watch()))
-    })
+        Ok(Either::Set(if let Err(err) = proxy.set(settings.clone()).await? {
+            format!("{:?}", err)
+        } else {
+            format!("Successfully set user_data_sharing_consent to {:?}", user_data_sharing_consent)
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -41,6 +38,24 @@ mod test {
     use fidl_fuchsia_settings::{PrivacyRequest, PrivacySettings};
     use futures::prelude::*;
     use test_case::test_case;
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_run_command() {
+        const CONSENT: bool = true;
+
+        let proxy = setup_fake_privacy_proxy(move |req| match req {
+            PrivacyRequest::Set { settings: _, responder } => {
+                let _ = responder.send(&mut Ok(()));
+            }
+            PrivacyRequest::Watch { responder: _ } => {
+                panic!("Unexpected call to watch");
+            }
+        });
+
+        let privacy = Privacy { user_data_sharing_consent: Some(CONSENT) };
+        let response = run_command(proxy, privacy).await;
+        assert!(response.is_ok());
+    }
 
     #[test_case(
         true;
@@ -65,8 +80,8 @@ mod test {
         assert_eq!(
             output,
             format!(
-                "Successfully set user_data_sharing_consent to {}",
-                expected_user_data_sharing_consent
+                "Successfully set user_data_sharing_consent to {:?}",
+                Some(expected_user_data_sharing_consent)
             )
         );
         Ok(())

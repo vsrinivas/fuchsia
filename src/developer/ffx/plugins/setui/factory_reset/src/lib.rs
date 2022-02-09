@@ -33,15 +33,15 @@ async fn command(
     let mut settings = FactoryResetSettings::EMPTY;
     settings.is_local_reset_allowed = is_local_reset_allowed;
 
-    Ok(if settings != FactoryResetSettings::EMPTY {
-        Either::Set(if let Err(err) = proxy.set(settings.clone()).await? {
+    if settings == FactoryResetSettings::EMPTY {
+        Ok(Either::Watch(utils::watch_to_stream(proxy, |p| p.watch())))
+    } else {
+        Ok(Either::Set(if let Err(err) = proxy.set(settings.clone()).await? {
             format!("{:?}", err)
         } else {
             format!("Successfully set factory_reset to {:?}", settings)
-        })
-    } else {
-        Either::Watch(utils::watch_to_stream(proxy, |p| p.watch()))
-    })
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -50,6 +50,24 @@ mod test {
     use fidl_fuchsia_settings::{FactoryResetRequest, FactoryResetSettings};
     use futures::prelude::*;
     use test_case::test_case;
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_run_command() {
+        const ALLOWED: bool = true;
+
+        let proxy = setup_fake_factory_reset_proxy(move |req| match req {
+            FactoryResetRequest::Set { settings: _, responder } => {
+                let _ = responder.send(&mut Ok(()));
+            }
+            FactoryResetRequest::Watch { responder: _ } => {
+                panic!("Unexpected call to watch");
+            }
+        });
+
+        let factory_reset = FactoryReset { is_local_reset_allowed: Some(ALLOWED) };
+        let response = run_command(proxy, factory_reset).await;
+        assert!(response.is_ok());
+    }
 
     #[test_case(
         true;

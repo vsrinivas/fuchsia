@@ -44,6 +44,25 @@ mod test {
     use futures::prelude::*;
     use test_case::test_case;
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_run_command() {
+        const USER: bool = true;
+        const NIGHT_MODE: bool = false;
+
+        let proxy = setup_fake_do_not_disturb_proxy(move |req| match req {
+            DoNotDisturbRequest::Set { settings: _, responder } => {
+                let _ = responder.send(&mut Ok(()));
+            }
+            DoNotDisturbRequest::Watch { responder: _ } => {
+                panic!("Unexpected call to watch");
+            }
+        });
+
+        let dnd = DoNotDisturb { user_dnd: Some(USER), night_mode_dnd: Some(NIGHT_MODE) };
+        let response = run_command(proxy, dnd).await;
+        assert!(response.is_ok());
+    }
+
     #[test_case(
         DoNotDisturb {
             user_dnd: Some(false),

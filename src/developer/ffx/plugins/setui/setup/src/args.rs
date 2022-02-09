@@ -7,7 +7,7 @@ use ffx_core::ffx_command;
 use fidl_fuchsia_settings::ConfigurationInterfaces;
 
 #[ffx_command()]
-#[derive(FromArgs, Debug, PartialEq, Clone, Copy)]
+#[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "setup")]
 /// get or set setup settings
 pub struct Setup {
@@ -27,4 +27,21 @@ fn str_to_interfaces(src: &str) -> Result<ConfigurationInterfaces, String> {
             } | acc)
         })
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    const CMD_NAME: &'static [&'static str] = &["setup"];
+
+    #[test]
+    fn test_setup_cmd() {
+        // Test input arguments are generated to according struct.
+        let interfaces = "eth";
+        let args = &["-i", interfaces];
+        assert_eq!(
+            Setup::from_args(CMD_NAME, args),
+            Ok(Setup { configuration_interfaces: Some(str_to_interfaces(interfaces).unwrap()) })
+        )
+    }
 }

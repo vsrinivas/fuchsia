@@ -29,3 +29,20 @@ impl From<DoNotDisturb> for DoNotDisturbSettings {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    const CMD_NAME: &'static [&'static str] = &["do_not_disturb"];
+
+    #[test]
+    fn test_dnd_cmd() {
+        // Test input arguments are generated to according struct.
+        let user = "true";
+        let args = &["-u", user];
+        assert_eq!(
+            DoNotDisturb::from_args(CMD_NAME, args),
+            Ok(DoNotDisturb { user_dnd: Some(true), night_mode_dnd: None })
+        )
+    }
+}

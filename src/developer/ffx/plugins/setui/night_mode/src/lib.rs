@@ -21,18 +21,18 @@ pub async fn run_command(night_mode_proxy: NightModeProxy, night_mode: NightMode
 }
 
 async fn command(proxy: NightModeProxy, night_mode_enabled: Option<bool>) -> WatchOrSetResult {
-    Ok(if let Some(night_mode_enabled_value) = night_mode_enabled {
-        let mut settings = NightModeSettings::EMPTY;
-        settings.night_mode_enabled = Some(night_mode_enabled_value);
+    let mut settings = NightModeSettings::EMPTY;
+    settings.night_mode_enabled = night_mode_enabled;
 
-        let mutate_result = proxy.set(settings).await?;
-        Either::Set(match mutate_result {
-            Ok(_) => format!("Successfully set night_mode_enabled to {}", night_mode_enabled_value),
-            Err(err) => format!("{:?}", err),
-        })
+    if settings == NightModeSettings::EMPTY {
+        Ok(Either::Watch(utils::watch_to_stream(proxy, |p| p.watch())))
     } else {
-        Either::Watch(utils::watch_to_stream(proxy, |p| p.watch()))
-    })
+        Ok(Either::Set(if let Err(err) = proxy.set(settings.clone()).await? {
+            format!("{:?}", err)
+        } else {
+            format!("Successfully set night_mode_enabled to {:?}", night_mode_enabled)
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -41,6 +41,24 @@ mod test {
     use fidl_fuchsia_settings::{NightModeRequest, NightModeSettings};
     use futures::prelude::*;
     use test_case::test_case;
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_run_command() {
+        const ENABLED: bool = true;
+
+        let proxy = setup_fake_night_mode_proxy(move |req| match req {
+            NightModeRequest::Set { settings: _, responder } => {
+                let _ = responder.send(&mut Ok(()));
+            }
+            NightModeRequest::Watch { responder: _ } => {
+                panic!("Unexpected call to watch");
+            }
+        });
+
+        let night_mode = NightMode { night_mode_enabled: Some(ENABLED) };
+        let response = run_command(proxy, night_mode).await;
+        assert!(response.is_ok());
+    }
 
     #[test_case(
         true;
@@ -64,7 +82,10 @@ mod test {
         let output = utils::assert_set!(command(proxy, Some(expected_night_mode_enabled)));
         assert_eq!(
             output,
-            format!("Successfully set night_mode_enabled to {}", expected_night_mode_enabled)
+            format!(
+                "Successfully set night_mode_enabled to {:?}",
+                Some(expected_night_mode_enabled)
+            )
         );
         Ok(())
     }

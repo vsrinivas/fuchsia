@@ -14,3 +14,20 @@ pub struct FactoryReset {
     #[argh(option, short = 'l')]
     pub is_local_reset_allowed: Option<bool>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    const CMD_NAME: &'static [&'static str] = &["factory_reset"];
+
+    #[test]
+    fn test_factory_reset_cmd() {
+        // Test input arguments are generated to according struct.
+        let allowed = "true";
+        let args = &["-l", allowed];
+        assert_eq!(
+            FactoryReset::from_args(CMD_NAME, args),
+            Ok(FactoryReset { is_local_reset_allowed: Some(true) })
+        )
+    }
+}

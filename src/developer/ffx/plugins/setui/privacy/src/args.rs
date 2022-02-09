@@ -15,3 +15,20 @@ pub struct Privacy {
     #[argh(option, short = 'u')]
     pub user_data_sharing_consent: Option<bool>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    const CMD_NAME: &'static [&'static str] = &["privacy"];
+
+    #[test]
+    fn test_privacy_cmd() {
+        // Test input arguments are generated to according struct.
+        let consent = "true";
+        let args = &["-u", consent];
+        assert_eq!(
+            Privacy::from_args(CMD_NAME, args),
+            Ok(Privacy { user_data_sharing_consent: Some(true) })
+        )
+    }
+}

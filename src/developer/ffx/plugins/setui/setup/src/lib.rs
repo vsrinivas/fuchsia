@@ -43,6 +43,29 @@ mod test {
     use futures::prelude::*;
     use test_case::test_case;
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_run_command() {
+        const INTERFACE: ConfigurationInterfaces = ConfigurationInterfaces::ETHERNET;
+
+        let proxy = setup_fake_setup_proxy(move |req| match req {
+            SetupRequest::Set { settings, reboot_device: _, responder } => {
+                if let Some(val) = settings.enabled_configuration_interfaces {
+                    assert_eq!(val, INTERFACE);
+                    let _ = responder.send(&mut Ok(()));
+                } else {
+                    panic!("Unexpected call to set");
+                }
+            }
+            SetupRequest::Watch { responder: _ } => {
+                panic!("Unexpected call to watch");
+            }
+        });
+
+        let setup = Setup { configuration_interfaces: Some(INTERFACE) };
+        let response = run_command(proxy, setup).await;
+        assert!(response.is_ok());
+    }
+
     #[test_case(
         ConfigurationInterfaces::ETHERNET;
         "Test setup set() output with ethernet config."
