@@ -37,10 +37,7 @@ var defaultSuccessExclusions = []exclusion{}
 var cases = []interface{}{
 	// All the following test cases check boundary conditions of code units
 
-	exclude{
-		validCase{"\x00", "single byte, min: 0"},
-		[]exclusion{{"cpp", "not yet supported"}},
-	},
+	validCase{"\x00", "single byte, min: 0"},
 	validCase{"\x7f", "single byte, max: 127"},
 	validCase{"\xc2\x80", "two bytes,   min: 128"},
 	validCase{"\xdf\xbf", "two bytes,   max: 2047"},
@@ -103,10 +100,7 @@ var cases = []interface{}{
 	validCase{"a", "simply the letter a"},
 	validCase{"€", `euro sign, i.e \xe2\x82\xac`},
 
-	exclude{
-		validCase{"\x00\xf4\x8f\xbf\xbf\x7f\xf0\x90\x80\x80\xc2\x80", "mix and match from earlier cases"},
-		[]exclusion{{"cpp", "not yet supported"}},
-	},
+	validCase{"\x00\xf4\x8f\xbf\xbf\x7f\xf0\x90\x80\x80\xc2\x80", "mix and match from earlier cases"},
 	validCase{"\xdf\xbf\xef\xbf\xbf\xe1\x80\x80", "mix and match from earlier cases"},
 
 	// UTF-8 BOM

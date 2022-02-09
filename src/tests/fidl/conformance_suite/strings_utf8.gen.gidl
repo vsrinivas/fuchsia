@@ -9,8 +9,6 @@
 
 // single byte, min: 0
 success("StringsValidCase1") {
-    // not yet supported
-    bindings_denylist = [cpp],
     value = StringWrapper{
         str: "\x00",
     },
@@ -909,8 +907,6 @@ success("StringsValidCase20") {
 
 // mix and match from earlier cases
 success("StringsValidCase21") {
-    // not yet supported
-    bindings_denylist = [cpp],
     value = StringWrapper{
         str: "\x00\xf4\x8f\xbf\xbf\x7f\xf0\x90\x80\x80\xc2\x80",
     },

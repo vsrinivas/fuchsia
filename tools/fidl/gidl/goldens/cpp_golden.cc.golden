@@ -73,7 +73,7 @@ var1.v() = double(0);
 
 TEST(Conformance, GoldenStringStruct_V2_Encode) {
 	auto var1 = test_conformance::GoldenStringStruct{};
-var1.v() = "abcd";
+var1.v() = std::string("abcd", 4);
 
 	auto obj = std::move(var1);
 	const auto expected_bytes = std::vector<uint8_t>{
@@ -88,7 +88,7 @@ var1.v() = "abcd";
 
 TEST(Conformance, GoldenNullableStringStructNonNull_V2_Encode) {
 	auto var1 = test_conformance::GoldenNullableStringStruct{};
-var1.v() = "abcd";
+var1.v() = std::string("abcd", 4);
 
 	auto obj = std::move(var1);
 	const auto expected_bytes = std::vector<uint8_t>{
@@ -777,7 +777,7 @@ ASSERT_FALSE(f1.v().is_valid());
 TEST(Conformance, GoldenStringWithMaxSize2_V2_EncodeFailure) {
 	const std::vector<zx_handle_t> handle_defs;
 	auto var1 = test_conformance::GoldenStringWithMaxSize2{};
-var1.s() = "abc";
+var1.s() = std::string("abc", 3);
 
 	auto obj = std::move(var1);
 	conformance_utils::EncodeFailure(

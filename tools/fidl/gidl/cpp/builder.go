@@ -6,7 +6,6 @@ package cpp
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
@@ -102,11 +101,7 @@ func (a *builder) visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 			return fmt.Sprintf("([] { uint64_t u = %#b; double d; memcpy(&d, &u, sizeof(double)); return d; })()", value)
 		}
 	case string:
-		if !isPointer {
-			// This clause is optional and simplifies the output.
-			return strconv.Quote(value)
-		}
-		return a.construct(typeNameIgnoreNullable(decl), isPointer, "%q", value)
+		return a.construct(typeNameIgnoreNullable(decl), isPointer, "%q, %d", value, len(value))
 	case gidlir.HandleWithRights:
 		if a.handleRepr == handleReprDisposition || a.handleRepr == handleReprInfo {
 			return fmt.Sprintf("%s(handle_defs[%d].handle)", typeName(decl), value.Handle)
