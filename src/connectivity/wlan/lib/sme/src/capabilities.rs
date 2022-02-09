@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::error,
     static_assertions::assert_eq_size,
     std::convert::TryInto,
@@ -139,10 +140,28 @@ impl StaCapabilities {
     }
 }
 
+// TODO(fxbug.dev/91038): Using channel number to determine band is incorrect.
+fn get_band_id(primary_channel: u8) -> fidl_common::Band {
+    if primary_channel <= 14 {
+        fidl_common::Band::WlanBand2Ghz
+    } else {
+        fidl_common::Band::WlanBand5Ghz
+    }
+}
+
+pub fn get_device_band_info(
+    device_info: &fidl_mlme::DeviceInfo,
+    channel: u8,
+) -> Option<&fidl_mlme::BandCapabilities> {
+    let target = get_band_id(channel);
+    device_info.bands.iter().find(|b| b.band_id == target)
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
+        crate::test_utils::fake_device_info_ht,
         fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         wlan_common::{ie, mac},
     };
@@ -261,6 +280,33 @@ mod tests {
                     bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap()
                 })),
             }
+        );
+    }
+
+    #[test]
+    fn band_id() {
+        assert_eq!(fidl_common::Band::WlanBand2Ghz, get_band_id(1));
+        assert_eq!(fidl_common::Band::WlanBand2Ghz, get_band_id(14));
+        assert_eq!(fidl_common::Band::WlanBand5Ghz, get_band_id(36));
+        assert_eq!(fidl_common::Band::WlanBand5Ghz, get_band_id(165));
+    }
+
+    #[test]
+    fn test_get_band_id() {
+        assert_eq!(fidl_common::Band::WlanBand2Ghz, get_band_id(14));
+        assert_eq!(fidl_common::Band::WlanBand5Ghz, get_band_id(36));
+    }
+
+    #[test]
+    fn test_get_device_band_info() {
+        assert_eq!(
+            fidl_common::Band::WlanBand5Ghz,
+            get_device_band_info(
+                &fake_device_info_ht(wlan_common::ie::ChanWidthSet::TWENTY_FORTY),
+                36
+            )
+            .unwrap()
+            .band_id
         );
     }
 }

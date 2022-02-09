@@ -9,10 +9,7 @@
 //! If successful, the capabilities will be extracted and saved.
 
 use {
-    crate::{
-        capabilities::{ClientCapabilities, StaCapabilities},
-        phy_selection::get_device_band_info,
-    },
+    crate::capabilities::{get_device_band_info, ClientCapabilities, StaCapabilities},
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
     wlan_common::{

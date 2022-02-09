@@ -14,7 +14,7 @@ use remote_client::*;
 
 use {
     crate::{
-        mlme_event_name, phy_selection::get_device_band_info, responder::Responder, MlmeRequest,
+        capabilities::get_device_band_info, mlme_event_name, responder::Responder, MlmeRequest,
         MlmeSink,
     },
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,

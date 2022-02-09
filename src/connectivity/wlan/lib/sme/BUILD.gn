@@ -70,7 +70,6 @@ rustc_library("wlan-sme") {
     "src/clone_utils.rs",
     "src/lib.rs",
     "src/mesh/mod.rs",
-    "src/phy_selection.rs",
     "src/test_utils.rs",
   ]
 }

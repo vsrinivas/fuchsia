@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        clone_utils, phy_selection::get_device_band_info, responder::Responder, MlmeRequest,
+        capabilities::get_device_band_info, clone_utils, responder::Responder, MlmeRequest,
         MlmeSink,
     },
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
