@@ -426,9 +426,27 @@ executable("virtio_wl_bin") {
   ]
 }
 
-fuchsia_package_with_single_component("virtio_wl") {
+# TODO(fxbug.dev/72386)
+# CFv2 migration in progress
+# v2 component is being used in device tests
+# v1 component is being used in prod code
+fuchsia_package("virtio_wl") {
+  deps = [
+    ":virtio_wl_v1",
+    ":virtio_wl_v2",
+  ]
+}
+
+fuchsia_component("virtio_wl_v2") {
+  manifest = "../meta/virtio_wl.cml"
+  deps = [ ":virtio_wl_bin" ]
+  component_name = "virtio_wl"
+}
+
+fuchsia_component("virtio_wl_v1") {
   manifest = "../meta/virtio_wl.cmx"
   deps = [ ":virtio_wl_bin" ]
+  component_name = "virtio_wl"
 }
 
 executable("device_tests") {

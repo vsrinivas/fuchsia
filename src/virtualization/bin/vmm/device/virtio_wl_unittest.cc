@@ -4,9 +4,11 @@
 
 #include <drm_fourcc.h>
 #include <fuchsia/sysmem/cpp/fidl_test_base.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl_test_base.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <fuchsia/wayland/cpp/fidl.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/zx/socket.h>
 #include <string.h>
 
@@ -15,6 +17,7 @@
 #include <fbl/algorithm.h>
 #include <virtio/wl.h>
 
+#include "fuchsia/logger/cpp/fidl.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
@@ -24,7 +27,6 @@ namespace {
 #define VIRTWL_VQ_OUT 1
 #define VIRTWL_NEXT_VFD_ID_BASE 0x40000000
 
-static constexpr char kVirtioWlUrl[] = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cmx";
 static constexpr uint16_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 32;
 static constexpr uint32_t kVirtioWlVmarSize = 1 << 16;
@@ -154,7 +156,7 @@ class TestAllocator : public fuchsia::ui::composition::testing::Allocator_TestBa
   fidl::Binding<fuchsia::ui::composition::Allocator> binding_{this};
 };
 
-class VirtioWlTest : public TestWithDevice {
+class VirtioWlTest : public TestWithDeviceV2 {
  public:
   VirtioWlTest()
       : wl_dispatcher_([this](zx::channel channel) { channels_.emplace_back(std::move(channel)); }),
@@ -169,20 +171,48 @@ class VirtioWlTest : public TestWithDevice {
     ASSERT_EQ(
         zx::vmar::root_self()->allocate(kAllocateFlags, 0u, kVirtioWlVmarSize, &vmar, &vmar_addr),
         ZX_OK);
-    fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status = LaunchDevice(kVirtioWlUrl, out_queue_.end(), &start_info);
-    ASSERT_EQ(ZX_OK, status);
 
-    // Start device execution.
-    services_->Connect(wl_.NewRequest());
-    RunLoopUntilIdle();
+    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cm";
+    constexpr auto kComponentName = "virtio_wl";
+
+    using component_testing::ChildRef;
+    using component_testing::ParentRef;
+    using component_testing::Protocol;
+    using component_testing::RealmBuilder;
+    using component_testing::RealmRoot;
+    using component_testing::Route;
+
+    auto realm_builder = RealmBuilder::Create();
+    realm_builder.AddChild(kComponentName, kComponentUrl);
+
+    realm_builder
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::logger::LogSink::Name_},
+                                Protocol{fuchsia::tracing::provider::Registry::Name_},
+                            },
+                        .source = ParentRef(),
+                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::virtualization::hardware::VirtioWayland::Name_},
+                            },
+                        .source = ChildRef{kComponentName},
+                        .targets = {ParentRef()}});
+
+    realm_ = std::make_unique<RealmRoot>(realm_builder.Build(dispatcher()));
+    wl_ = realm_->ConnectSync<fuchsia::virtualization::hardware::VirtioWayland>();
+
+    fuchsia::virtualization::hardware::StartInfo start_info;
+    zx_status_t status = MakeStartInfo(out_queue_.end(), &start_info);
+    ASSERT_EQ(ZX_OK, status);
 
     ASSERT_EQ(sysmem_loop_.StartThread(), ZX_OK);
     ASSERT_EQ(scenic_loop_.StartThread(), ZX_OK);
 
-    wl_->Start(std::move(start_info), std::move(vmar), wl_dispatcher_.Bind(),
-               sysmem_allocator_.Bind(sysmem_loop_.dispatcher()),
-               scenic_allocator_.Bind(scenic_loop_.dispatcher()));
+    status = wl_->Start(std::move(start_info), std::move(vmar), wl_dispatcher_.Bind(),
+                        sysmem_allocator_.Bind(sysmem_loop_.dispatcher()),
+                        scenic_allocator_.Bind(scenic_loop_.dispatcher()));
     ASSERT_EQ(ZX_OK, status);
 
     // Configure device queues.
@@ -310,6 +340,7 @@ class VirtioWlTest : public TestWithDevice {
   std::vector<zx::channel> channels_;
   async::Loop sysmem_loop_;
   async::Loop scenic_loop_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
 TEST_F(VirtioWlTest, HandleNew) {
