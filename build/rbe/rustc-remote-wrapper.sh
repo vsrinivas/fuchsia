@@ -212,6 +212,7 @@ llvm_bc_output="no"
 extern_paths=()
 
 save_analysis=0
+llvm_time_trace=0
 
 extra_linker_outputs=()
 
@@ -326,6 +327,7 @@ EOF
     --target) prev_opt=target_triple ;;
 
     -Zsave-analysis=yes | save-analysis=yes) save_analysis=1 ;;
+    -Zllvm-time-trace | llvm-time-trace) llvm_time_trace=1 ;;
 
     # Rewrite this token to only generate dependency information (locally),
     # and do no other compilation/linking.
@@ -619,6 +621,11 @@ test "$save_analysis" = 0 || {
   analysis_file=save-analysis-temp/"$(basename "$output" .rlib)".json
   analysis_file_stripped="${analysis_file#./}"
   extra_outputs+=( "$analysis_file_stripped" )
+}
+
+test "$llvm_time_trace" = 0 || {
+  llvm_trace_file="${output%.rlib}".llvm_timings.json
+  extra_outputs+=( "$llvm_trace_file" )
 }
 
 # When using the linker, also grab the necessary libraries.
