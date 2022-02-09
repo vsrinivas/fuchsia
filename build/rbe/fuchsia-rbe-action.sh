@@ -200,15 +200,17 @@ test "$dry_run" = 0 || {
 status="$?"
 
 case "$status" in
-  45 | 137)
-    # 45: remote execution error, e.g. remote blob download failure
+  35 | 45 | 137)
+    # Retry once under these conditions:
+    # 35: reclient error
+    # 45: remote execution (server) error, e.g. remote blob download failure
     # 137: SIGKILL'd (signal 9) by OS.
     #   Reasons may include segmentation fault, or out of memory.
-    echo "[$script]:" "${full_command[@]}"
-    echo "[$script] First attempt exited $status.  Retrying once."
+    # Successful retry will be silent.
+    # Retries can be detected by looking for duplicate action digests
+    # in reproxy logs, one will fail with REMOTE_ERROR.
     "${full_command[@]}"
     status="$?"
-    echo "[$script] Retry exited $status."
     ;;
   0) exit "$status" ;;
 esac
