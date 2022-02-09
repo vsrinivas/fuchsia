@@ -32,17 +32,10 @@ constexpr std::string_view kBootsvcNextArg = "bootsvc.next=";
 bool StoreItem(uint32_t type) {
   switch (type) {
     case ZBI_TYPE_CMDLINE:
-    case ZBI_TYPE_CRASHLOG:
-    case ZBI_TYPE_KERNEL_DRIVER:
-    case ZBI_TYPE_PLATFORM_ID:
-    case ZBI_TYPE_STORAGE_RAMDISK:
     case ZBI_TYPE_IMAGE_ARGS:
-    case ZBI_TYPE_SERIAL_NUMBER:
-    case ZBI_TYPE_BOOTLOADER_FILE:
-    case ZBI_TYPE_DEVICETREE:
       return true;
     default:
-      return ZBI_TYPE_DRV_METADATA(type);
+      return false;
   }
 }
 
@@ -59,66 +52,12 @@ void DiscardItem(zx::vmo* vmo, uint32_t begin_in, uint32_t end_in) {
 }
 
 bootsvc::ItemKey CreateItemKey(uint32_t type, uint32_t extra) {
-  switch (type) {
-    case ZBI_TYPE_STORAGE_RAMDISK:
-      // If this is for a ramdisk, set the extra value to zero.
-      return bootsvc::ItemKey{.type = type, .extra = 0};
-    default:
-      // Otherwise, store the extra value.
-      return bootsvc::ItemKey{.type = type, .extra = extra};
-  }
+  return bootsvc::ItemKey{.type = type, .extra = extra};
 }
 
 bootsvc::ItemValue CreateItemValue(uint32_t type, uint32_t off, uint32_t len) {
-  switch (type) {
-    case ZBI_TYPE_STORAGE_RAMDISK:
-      // If this is for a ramdisk, capture the ZBI header.
-      len = safemath::CheckAdd(len, sizeof(zbi_header_t)).ValueOrDie<uint32_t>();
-      break;
-    default:
-      // Otherwise, adjust the offset to skip the ZBI header.
-      off = safemath::CheckAdd(off, sizeof(zbi_header_t)).ValueOrDie<uint32_t>();
-  }
+  off = safemath::CheckAdd(off, sizeof(zbi_header_t)).ValueOrDie<uint32_t>();
   return bootsvc::ItemValue{.offset = off, .length = len};
-}
-
-zx_status_t ProcessBootloaderFile(const zx::vmo& vmo, uint32_t offset, uint32_t length,
-                                  std::string* out_filename,
-                                  bootsvc::ItemValue* out_bootloader_file) {
-  offset = safemath::CheckAdd(offset, sizeof(zbi_header_t)).ValueOrDie<uint32_t>();
-
-  if (length < sizeof(uint8_t)) {
-    printf("bootsvc: Bootloader File ZBI item too small\n");
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  uint8_t name_len;
-  zx_status_t status = vmo.read(&name_len, offset, sizeof(uint8_t));
-  if (status != ZX_OK) {
-    printf("bootsvc: Failed to read input VMO: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  if (length <= sizeof(uint8_t) + name_len) {
-    printf("bootsvc: Bootloader File ZBI item too small.\n");
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  std::string name(name_len, '\0');
-
-  offset = safemath::CheckAdd(offset, sizeof(uint8_t)).ValueOrDie<uint32_t>();
-  status = vmo.read(name.data(), offset, name_len);
-  if (status != ZX_OK) {
-    printf("bootsvc: Failed to read input VMO: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  offset = safemath::CheckAdd(offset, name_len).ValueOrDie<uint32_t>();
-  uint32_t payload_length = length - name_len - sizeof(uint8_t);
-
-  *out_bootloader_file = bootsvc::ItemValue{.offset = offset, .length = payload_length};
-  *out_filename = std::move(name);
-  return ZX_OK;
 }
 
 }  // namespace
@@ -167,23 +106,12 @@ zx_status_t RetrieveBootImage(zx::vmo vmo, zx::vmo* out_vmo, ItemMap* out_map,
       printf("bootsvc: ZBI item too large (%u > %u)\n", item_len, len);
       return ZX_ERR_IO_DATA_INTEGRITY;
     } else if (StoreItem(header.type)) {
-      if (header.type == ZBI_TYPE_BOOTLOADER_FILE) {
-        std::string filename;
-        ItemValue bootloader_file;
+      const ItemKey key = CreateItemKey(header.type, header.extra);
+      const ItemValue val = CreateItemValue(header.type, off, header.length);
 
-        status = ProcessBootloaderFile(vmo, off, header.length, &filename, &bootloader_file);
-        if (status == ZX_OK) {
-          bootloader_file_map.emplace(std::move(filename), std::move(bootloader_file));
-        } else {
-          printf("bootsvc: Failed to process bootloader file: %s\n", zx_status_get_string(status));
-        }
+      auto [it, _] = map.emplace(key, std::vector<ItemValue>{});
+      it->second.push_back(val);
 
-      } else {
-        const ItemKey key = CreateItemKey(header.type, header.extra);
-        const ItemValue val = CreateItemValue(header.type, off, header.length);
-        auto [it, _] = map.emplace(key, std::vector<ItemValue>{});
-        it->second.push_back(val);
-      }
       DiscardItem(&vmo, discard_begin, discard_end);
       discard_begin = next_off;
     } else {

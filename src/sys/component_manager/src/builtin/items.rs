@@ -27,7 +27,6 @@ pub struct Items {
 }
 
 impl Items {
-    #[allow(dead_code)] // Temporary until we instantiate this in component manager.
     pub fn new(mut zbi_parser: ZbiParser) -> Result<Arc<Self>, Error> {
         // Bootloader files, if they are present in the ZBI, have special layout aware processing
         // where this service needs to parse their payload to extract the filename which is the

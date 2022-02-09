@@ -616,10 +616,6 @@ int main(int argc, char** argv) {
   // Set up the svcfs service
   printf("bootsvc: Creating svcfs service...\n");
   fbl::RefPtr<bootsvc::SvcfsService> svcfs_svc = bootsvc::SvcfsService::Create(loop.dispatcher());
-  svcfs_svc->AddService(
-      fuchsia_boot_Items_Name,
-      bootsvc::CreateItemsService(loop.dispatcher(), std::move(image_vmo), std::move(item_map),
-                                  std::move(bootloader_file_map)));
 
   // Launch the next process in the chain.  This must be in a thread, since
   // it may issue requests to the loader, which runs in the async loop that

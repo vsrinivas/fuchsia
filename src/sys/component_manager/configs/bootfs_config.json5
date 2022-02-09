@@ -12,11 +12,6 @@
                 "rx*",
             ],
         },
-        {
-            protocol: [
-                "fuchsia.boot.Items",
-            ],
-        },
     ],
     builtin_capabilities: [
         {
@@ -27,6 +22,7 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.kernel.CpuResource",
                 "fuchsia.kernel.DebugResource",
+                "fuchsia.boot.Items",
                 "fuchsia.boot.FactoryItems",
                 "fuchsia.kernel.HypervisorResource",
                 "fuchsia.kernel.InfoResource",

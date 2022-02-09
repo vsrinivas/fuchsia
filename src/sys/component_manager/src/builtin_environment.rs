@@ -18,6 +18,7 @@ use {
             info_resource::InfoResource,
             ioport_resource::IoportResource,
             irq_resource::IrqResource,
+            items::Items,
             kernel_stats::KernelStats,
             log::{ReadOnlyLog, WriteOnlyLog},
             mmio_resource::MmioResource,
@@ -354,6 +355,7 @@ pub struct BuiltinEnvironment {
     pub read_only_log: Option<Arc<ReadOnlyLog>>,
     pub write_only_log: Option<Arc<WriteOnlyLog>>,
     pub factory_items_service: Option<Arc<FactoryItems>>,
+    pub items_service: Option<Arc<Items>>,
     pub mmio_resource: Option<Arc<MmioResource>>,
     pub power_resource: Option<Arc<PowerResource>>,
     pub root_resource: Option<Arc<RootResource>>,
@@ -454,9 +456,8 @@ impl BuiltinEnvironment {
 
         let zbi_vmo_handle = take_startup_handle(HandleType::BootdataVmo.into()).map(zx::Vmo::from);
 
-        // TODO(fxb/44784): Migrate the items service to use this ZBI handle too.
-        let factory_items_service = match zbi_vmo_handle {
-            None => None,
+        let (factory_items_service, items_service) = match zbi_vmo_handle {
+            None => (None, None),
             Some(zbi_vmo) => {
                 let mut zbi_parser = ZbiParser::new(zbi_vmo)
                     .set_store_item(ZbiType::Cmdline)
@@ -474,7 +475,11 @@ impl BuiltinEnvironment {
 
                 let factory_items = FactoryItems::new(&mut zbi_parser)?;
                 model.root().hooks.install(factory_items.hooks()).await;
-                Some(factory_items)
+
+                let items = Items::new(zbi_parser)?;
+                model.root().hooks.install(items.hooks()).await;
+
+                (Some(factory_items), Some(items))
             }
         };
 
@@ -805,6 +810,7 @@ impl BuiltinEnvironment {
             read_only_log,
             write_only_log,
             factory_items_service,
+            items_service,
             cpu_resource,
             debug_resource,
             mmio_resource,

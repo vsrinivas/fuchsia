@@ -42,8 +42,6 @@ namespace fio = fuchsia_io;
 
 static std::vector<std::string> arguments;
 
-constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
-
 void print_test_success_string() {
   // Get the debuglog handle.
   // If any of these operations fail, there's nothing we can really do here, so
@@ -194,95 +192,6 @@ TEST(BootsvcIntegrationTest, Arguments) {
   ASSERT_EQ(arguments.size(), 2);
   EXPECT_STREQ(arguments[0].c_str(), "bin/bootsvc-integration-test");
   EXPECT_STREQ(arguments[1].c_str(), "testargument");
-}
-
-// Make sure the fuchsia.boot.Items service works
-TEST(BootsvcIntegrationTest, BootItems) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we can open the fuchsia.boot.Items service.
-  status = fdio_service_connect(kItemsPath, remote.release());
-  ASSERT_EQ(ZX_OK, status);
-
-  // Check that we can get the following boot item types.
-  for (uint32_t type : (uint32_t[]){
-           ZBI_TYPE_CRASHLOG,
-           ZBI_TYPE_DEVICETREE,
-           ZBI_TYPE_DRV_BOARD_INFO,
-           ZBI_TYPE_PLATFORM_ID,
-           ZBI_TYPE_SERIAL_NUMBER,
-           ZBI_TYPE_STORAGE_RAMDISK,
-       }) {
-    zx::vmo payload;
-    uint32_t length;
-    status = fuchsia_boot_ItemsGet(local.get(), type, 0, payload.reset_and_get_address(), &length);
-    ASSERT_EQ(ZX_OK, status);
-
-#ifdef __x64_64__
-    // (The following is only implemented on x64 at this time, so we only test
-    // it there.)
-    // If we see a ZBI_TYPE_CRASHLOG item, then the kernel should have
-    // translated it into a VMO file, and bootsvc should have put it at the
-    // path below.
-    if (type == ZBI_TYPE_CRASHLOG) {
-      ASSERT_TRUE(payload.is_valid());
-      std::string path = std::stringPrintf("/boot/%s", bootsvc::kLastPanicFilePath);
-      fbl::unique_fd fd(open(path.data(), O_RDONLY));
-      ASSERT_TRUE(fd.is_valid());
-
-      auto file_buf = std::make_unique<uint8_t[]>(length);
-      auto payload_buf = std::make_unique<uint8_t[]>(length);
-      ASSERT_EQ(length, read(fd.get(), file_buf.get(), length));
-      ASSERT_EQ(ZX_OK, payload.read(payload_buf.get(), 0, length));
-      ASSERT_BYTES_EQ(file_buf.get(), payload_buf.get(), length, "");
-    }
-#endif
-
-    if (type == ZBI_TYPE_SERIAL_NUMBER) {
-      ASSERT_TRUE(payload.is_valid());
-      ASSERT_GE(length, 0);
-      std::string serial_no(length, '\0');
-      ASSERT_OK(payload.read(serial_no.data(), 0, length));
-      EXPECT_EQ(length, serial_no.size());
-    }
-  }
-}
-
-// Make sure fuchsia.boot.Items::GetBootloaderFile works
-TEST(BootsvcIntegrationTest, BootloaderFiles) {
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-
-  // Check that we can open the fuchsia.boot.Items service.
-  ASSERT_OK(fdio_service_connect(kItemsPath, remote.release()));
-
-  constexpr char kInvalidBootloaderFileName[] = "This filename is too short";
-
-  zx_handle_t vmo_handle;
-  ASSERT_OK(fuchsia_boot_ItemsGetBootloaderFile(local.get(), kInvalidBootloaderFileName,
-                                                strlen(kInvalidBootloaderFileName), &vmo_handle));
-  ASSERT_EQ(ZX_HANDLE_INVALID, vmo_handle);
-
-  constexpr char kValidBootloaderFileName[] = "This is the filename of the file!";
-  constexpr char kValidBootloaderFilePayload[] = "FILE CONTENTS ARE HERE";
-
-  ASSERT_OK(fuchsia_boot_ItemsGetBootloaderFile(local.get(), kValidBootloaderFileName,
-                                                strlen(kValidBootloaderFileName), &vmo_handle));
-  ASSERT_NE(ZX_HANDLE_INVALID, vmo_handle);
-
-  zx::vmo vmo(vmo_handle);
-  ASSERT_TRUE(vmo.is_valid());
-
-  uint64_t size;
-  ASSERT_OK(vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size)));
-
-  uint8_t buf[sizeof(kValidBootloaderFilePayload) - 1];
-  ASSERT_EQ(size, sizeof(buf));
-  ASSERT_OK(vmo.read(buf, 0, size));
-
-  ASSERT_BYTES_EQ(buf, kValidBootloaderFilePayload, sizeof(buf));
 }
 
 // Check that the kernel-provided VDSOs were added to /boot/kernel/vdso
