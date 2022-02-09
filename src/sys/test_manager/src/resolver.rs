@@ -19,7 +19,6 @@ fn get_global_allowlist() -> HashSet<String> {
     hashset! {
         "driver_test_realm".to_string(),
         "regulatory_region".to_string(),
-        "blobfs-integration".to_string(),
         "archivist-with-feedback-filtering".to_string(),
         "archivist-with-legacy-metrics".to_string(),
         "archivist-with-feedback-filtering-disabled".to_string(),

@@ -473,6 +473,7 @@ fuchsia_test_package("blobfs-large-integration-package") {
     ":blobfs-no-space-component",
     ":blobfs-use-second-bitmap-component",
     "//src/storage/bin/blobfs",
+    "//src/storage/blobfs:decompressor-sandbox",
   ]
 }
 
