@@ -1319,7 +1319,6 @@ mod tests {
             bssid: [1, 2, 3, 4, 5, 6],
             aid: 1,
             listen_interval: 2,
-            phy: banjo_common::WlanPhyType::ERP,
             channel: banjo_common::WlanChannel {
                 primary: 3,
                 cbw: banjo_common::ChannelBandwidth::CBW20,

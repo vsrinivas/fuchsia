@@ -137,7 +137,6 @@ type WlanAssocCtx = struct {
     bssid ieee80211.MacAddr;
     aid uint16;
     listen_interval uint16;
-    phy fuchsia.wlan.common.WlanPhyType;
     channel fuchsia.wlan.common.WlanChannel;
 
     /// QoS capable and parameters

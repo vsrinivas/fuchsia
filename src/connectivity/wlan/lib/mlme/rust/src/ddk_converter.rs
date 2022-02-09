@@ -44,13 +44,6 @@ pub fn build_ddk_assoc_ctx(
     rates[..negotiated_capabilities.rates.len()].clone_from_slice(&negotiated_capabilities.rates);
     let has_ht_cap = negotiated_capabilities.ht_cap.is_some();
     let has_vht_cap = negotiated_capabilities.vht_cap.is_some();
-    let phy = match (has_ht_cap, has_vht_cap) {
-        (true, true) => banjo_common::WlanPhyType::VHT,
-        (true, false) => banjo_common::WlanPhyType::HT,
-        // It is invalid to have VHT without HT and SME would guarantee it does not happen.
-        // But default to ERP nonetheless just to be safe.
-        _ => banjo_common::WlanPhyType::ERP,
-    };
     let ht_cap_bytes =
         negotiated_capabilities.ht_cap.map_or([0; fidl_internal::HT_CAP_LEN as usize], |h| h.bytes);
     let vht_cap_bytes = negotiated_capabilities
@@ -66,7 +59,6 @@ pub fn build_ddk_assoc_ctx(
         // TODO(fxbug.dev/42217): ath10k disregard this value and hard code it to 1.
         // It is working now but we may need to revisit.
         listen_interval: 0,
-        phy,
         channel: ddk_channel_from_fidl(negotiated_capabilities.channel),
         // TODO(fxbug.dev/29325): QoS works with Aruba/Ubiquiti for BlockAck session but it may need to be
         // dynamically determined for each outgoing data frame.
@@ -263,7 +255,6 @@ mod tests {
         assert_eq!([1, 2, 3, 4, 5, 6], ddk.bssid);
         assert_eq!(42, ddk.aid);
         assert_eq!(0, ddk.listen_interval);
-        assert_eq!(banjo_common::WlanPhyType::VHT, ddk.phy);
         assert_eq!(
             banjo_common::WlanChannel {
                 primary: 149,

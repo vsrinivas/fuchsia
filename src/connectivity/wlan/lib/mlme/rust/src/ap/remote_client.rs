@@ -442,7 +442,6 @@ impl RemoteClient {
                     bssid: self.addr,
                     aid: aid,
                     listen_interval: 0, // This field is not used for AP.
-                    phy: banjo_common::WlanPhyType::ERP,
                     channel: banjo_common::WlanChannel {
                         primary: channel,
                         // TODO(fxbug.dev/40917): Correctly support this.

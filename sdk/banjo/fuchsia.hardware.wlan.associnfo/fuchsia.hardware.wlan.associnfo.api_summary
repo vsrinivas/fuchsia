@@ -22,7 +22,6 @@ struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.has_vht_op bool
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.ht_cap ddk.hw.wlan.ieee80211/Ieee80211HtCapabilities
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.ht_op fuchsia.hardware.wlan.associnfo/WlanHtOp
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.listen_interval uint16
-struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.phy fuchsia.wlan.common/WlanPhyType
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.qos bool
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.rates array<uint8,263>
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.rates_cnt uint16
