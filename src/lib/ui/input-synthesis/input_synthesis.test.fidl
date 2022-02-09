@@ -45,3 +45,26 @@ protocol Text {
         text string:1024;
     }) -> ();
 };
+
+/// A hardcoded number of max mouse buttons. This should be increased in the future
+/// if we ever see mice with more buttons. Copied from fuchsia.input.report.mouse.
+const MOUSE_MAX_NUM_BUTTONS uint32 = 32;
+
+/// A protocol that allows the test to pretend to be a mouse and inject
+/// mouse cursor movement and button presses into the input pipeline.
+///
+/// Only minimally required mouse synthesis is exposed through the protocol. If
+/// you need to expose more functionality, feel free to add methods to this
+/// protocol.
+@discoverable
+protocol Mouse {
+    /// Sends relative mouse movement through the input pipeline.
+    Change(struct {
+        /// The amount of relative X movement.
+        movement_x uint32;
+        /// The amount of relative Y movement.
+        movement_y uint32;
+        /// A list of currently pressed buttons.
+        pressed_buttons vector<uint8>:MOUSE_MAX_NUM_BUTTONS;
+    }) -> ();
+};

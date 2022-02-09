@@ -9,7 +9,10 @@
     },
     capabilities: [
         {
-            protocol: [ "test.inputsynthesis.Text" ],
+            protocol: [
+                "test.inputsynthesis.Mouse",
+                "test.inputsynthesis.Text",
+            ],
         },
     ],
     use: [
@@ -23,7 +26,10 @@
     ],
     expose: [
         {
-            protocol: [ "test.inputsynthesis.Text" ],
+            protocol: [
+                "test.inputsynthesis.Mouse",
+                "test.inputsynthesis.Text",
+            ],
             from: "self",
         },
     ],

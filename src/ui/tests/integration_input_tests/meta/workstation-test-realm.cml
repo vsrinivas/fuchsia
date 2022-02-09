@@ -13,9 +13,7 @@
 //
 // Feel free to add the components that you need but aren't here yet.
 {
-    include: [
-        "//src/ui/tests/integration_input_tests/meta/scenic-test-realm.cml",
-    ],
+    include: [ "//src/ui/tests/integration_input_tests/meta/scenic-test-realm.cml" ],
     children: [
         {
             name: "text_manager",
@@ -93,7 +91,10 @@
     ],
     expose: [
         {
-            protocol: [ "test.inputsynthesis.Text" ],
+            protocol: [
+                "test.inputsynthesis.Mouse",
+                "test.inputsynthesis.Text",
+            ],
             from: "#input_synthesis",
         },
         {

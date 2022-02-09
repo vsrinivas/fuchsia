@@ -24,7 +24,7 @@
 //! presses from those typed up on a real keyboard.
 
 use anyhow::Result;
-use fidl_test_inputsynthesis::{TextRequest, TextRequestStream};
+use fidl_test_inputsynthesis::{MouseRequest, MouseRequestStream, TextRequest, TextRequestStream};
 use fuchsia_async::{self as fasync, futures::StreamExt};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
@@ -54,6 +54,37 @@ async fn main() -> Result<()> {
                 }
             }
             fx_log_warn!("text requester terminated - no more text injection is possible");
+        })
+        .detach();
+    });
+    fs.dir("svc").add_fidl_service(|mut stream: MouseRequestStream| {
+        fasync::Task::local(async move {
+            while let Some(request) = stream.next().await {
+                fx_log_info!("got request: {:?}", &request);
+                match request {
+                    Ok(MouseRequest::Change {
+                        movement_x,
+                        movement_y,
+                        pressed_buttons,
+                        responder,
+                        ..
+                    }) => {
+                        input_synthesis::mouse_command(
+                            Some((movement_x, movement_y)),
+                            pressed_buttons,
+                            127,
+                            127,
+                        )
+                        .await
+                        .expect("mouse command is sent");
+                        responder.send().expect("send a response to MouseRequest");
+                    }
+                    Err(e) => {
+                        fx_log_err!("could not receive request: {:?}", e);
+                    }
+                }
+            }
+            fx_log_warn!("mouse requester terminated - no more mouse injection is possible");
         })
         .detach();
     });

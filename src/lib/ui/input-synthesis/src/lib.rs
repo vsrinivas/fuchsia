@@ -237,6 +237,16 @@ pub async fn multi_finger_swipe_command(
     .await
 }
 
+/// Simulates a mouse event.
+pub async fn mouse_command(
+    movement: Option<(u32, u32)>,
+    pressed_buttons: Vec<u8>,
+    width: u32,
+    height: u32,
+) -> Result<(), Error> {
+    mouse_event(movement, pressed_buttons, width, height, get_backend().await?.as_mut()).await
+}
+
 /// Selects an injection protocol, and returns the corresponding implementation
 /// of `synthesizer::InputDeviceRegistry`.
 ///
