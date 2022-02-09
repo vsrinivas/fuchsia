@@ -5,14 +5,18 @@
 #include <fuchsia/hardware/network/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl_test_base.h>
 #include <fuchsia/net/virtualization/cpp/fidl_test_base.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fpromise/bridge.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/trace-provider/provider.h>
 #include <zircon/device/ethernet.h>
 
 #include <virtio/net.h>
 
+#include "fuchsia/logger/cpp/fidl.h"
 #include "lib/fpromise/single_threaded_executor.h"
 #include "src/connectivity/lib/network-device/cpp/network_device_client.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
@@ -23,7 +27,6 @@ namespace {
 using fuchsia_hardware_network::wire::PortId;
 using network::client::NetworkDeviceClient;
 
-constexpr char kVirtioNetUrl[] = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cmx";
 constexpr size_t kNumQueues = 2;
 constexpr uint16_t kQueueSize = 64;
 constexpr size_t kVmoSize = 4096ul * kQueueSize;
@@ -53,29 +56,119 @@ void SendPacketToGuest(NetworkDeviceClient& client, PortId port_id,
   ASSERT_EQ(buffer.Send(), ZX_OK) << "Send failed";
 }
 
-class VirtioNetTest : public TestWithDevice,
-                      public fuchsia::net::virtualization::Control,
-                      public fuchsia::net::virtualization::Network,
-                      public fuchsia::net::virtualization::Interface {
+class FakeNetwork : public fuchsia::net::virtualization::Control,
+                    public fuchsia::net::virtualization::Network,
+                    public fuchsia::net::virtualization::Interface,
+                    public component_testing::LocalComponent {
+ public:
+  explicit FakeNetwork(async::Loop& loop) : loop_(loop) {}
+
+  // Fake `fuchsia.net.virtualization/Control` implementation.
+  void CreateNetwork(
+      fuchsia::net::virtualization::Config config,
+      fidl::InterfaceRequest<fuchsia::net::virtualization::Network> network) override {
+    FX_CHECK(network_binding_set_.bindings().empty())
+        << "virtio-net attempted to create multiple networks";
+    network_binding_set_.AddBinding(this, std::move(network));
+  }
+
+  // Fake `fuchsia.net.virtualization/Network` implementation.
+  void AddPort(fidl::InterfaceHandle<fuchsia::hardware::network::Port> port,
+               fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) override {
+    FX_CHECK(!device_client_.has_value()) << "virtio-net attempted to add multiple devices";
+    interface_binding_set_.AddBinding(this, std::move(interface));
+
+    // Get the device backing this port.
+    port_ptr_.Bind(std::move(port), loop_.dispatcher());
+    fidl::InterfaceHandle<fuchsia::hardware::network::Device> device;
+    port_ptr_->GetDevice(device.NewRequest());
+
+    // Get the PortId of this port.
+    port_ptr_->GetInfo([this](fuchsia::hardware::network::PortInfo info) {
+      port_id_ = PortId{
+          .base = info.id().base,
+          .salt = info.id().salt,
+      };
+    });
+
+    // Create a NetworkDeviceClient to the device.
+    device_client_.emplace(fidl::ClientEnd<fuchsia_hardware_network::Device>(device.TakeChannel()),
+                           loop_.dispatcher());
+  }
+
+  void Start(std::unique_ptr<component_testing::LocalComponentHandles> handles) override {
+    // This class contains handles to the component's incoming and outgoing capabilities.
+    handles_ = std::move(handles);
+
+    ASSERT_EQ(handles_->outgoing()->AddPublicService(
+                  control_binding_set_.GetHandler(this, loop_.dispatcher())),
+              ZX_OK);
+  }
+
+  std::optional<NetworkDeviceClient>& device_client() { return device_client_; }
+  std::optional<PortId>& port_id() { return port_id_; }
+
+ private:
+  async::Loop& loop_;
+  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
+  fidl::BindingSet<fuchsia::net::virtualization::Control> control_binding_set_;
+  fidl::BindingSet<fuchsia::net::virtualization::Network> network_binding_set_;
+  fidl::BindingSet<fuchsia::net::virtualization::Interface> interface_binding_set_;
+  fuchsia::hardware::network::PortPtr port_ptr_;
+  std::optional<NetworkDeviceClient> device_client_;
+  std::optional<PortId> port_id_;
+};
+
+class VirtioNetTest : public TestWithDeviceV2 {
  protected:
   VirtioNetTest()
       : rx_queue_(phys_mem_, kVmoSize * kNumQueues, kQueueSize),
-        tx_queue_(phys_mem_, rx_queue_.end(), kQueueSize) {}
+        tx_queue_(phys_mem_, rx_queue_.end(), kQueueSize),
+        fake_network_(loop()) {}
 
   void SetUp() override {
-    std::unique_ptr<sys::testing::EnvironmentServices> env_services = CreateServices();
+    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cm";
+    constexpr auto kComponentName = "virtio_net";
+    constexpr auto kFakeNetwork = "fake_network";
 
-    // Add our fake services.
-    ASSERT_EQ(ZX_OK, env_services->AddService(control_.GetHandler(this)));
+    using component_testing::ChildRef;
+    using component_testing::ParentRef;
+    using component_testing::Protocol;
+    using component_testing::RealmBuilder;
+    using component_testing::RealmRoot;
+    using component_testing::Route;
 
-    // Launch device process.
+    auto realm_builder = RealmBuilder::Create();
+    realm_builder.AddChild(kComponentName, kComponentUrl);
+    realm_builder.AddLocalChild(kFakeNetwork, &fake_network_);
+
+    realm_builder
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::logger::LogSink::Name_},
+                                Protocol{fuchsia::tracing::provider::Registry::Name_},
+                            },
+                        .source = ParentRef(),
+                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::net::virtualization::Control::Name_},
+                            },
+                        .source = {ChildRef{kFakeNetwork}},
+                        .targets = {ChildRef{kComponentName}}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::virtualization::hardware::VirtioNet::Name_},
+                            },
+                        .source = ChildRef{kComponentName},
+                        .targets = {ParentRef()}});
+
+    realm_ = std::make_unique<RealmRoot>(realm_builder.Build(dispatcher()));
+    net_ = realm_->Connect<fuchsia::virtualization::hardware::VirtioNet>();
+
     fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status =
-        LaunchDevice(kVirtioNetUrl, tx_queue_.end(), &start_info, std::move(env_services));
+    zx_status_t status = MakeStartInfo(tx_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
-
-    // Start device execution.
-    services_->Connect(net_.NewRequest());
 
     fuchsia::hardware::ethernet::MacAddress mac_address = {
         .octets = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff},
@@ -107,12 +200,14 @@ class VirtioNetTest : public TestWithDevice,
 
     // Wait for virtio-net to connect to Netstack (i.e., us), add its device, and port
     // information to be fetched.
-    RunLoopUntil([this] { return device_client_.has_value() && port_id_.has_value(); });
+    RunLoopUntil([this] {
+      return fake_network_.device_client().has_value() && fake_network_.port_id().has_value();
+    });
 
     // Open a session with the network device.
     {
       std::optional<zx_status_t> result;
-      device_client_->OpenSession(
+      fake_network_.device_client()->OpenSession(
           "virtio_net_test", [&](zx_status_t status) { result = status; },
           [](const network::client::DeviceInfo& dev_info) -> network::client::SessionConfig {
             network::client::SessionConfig config =
@@ -130,69 +225,33 @@ class VirtioNetTest : public TestWithDevice,
     // Attach a port to the session.
     {
       std::optional<zx_status_t> result;
-      device_client_->AttachPort(port_id_.value(),
-                                 {fuchsia_hardware_network::wire::FrameType::kEthernet},
-                                 [&](zx_status_t status) { result = status; });
+      fake_network_.device_client()->AttachPort(
+          fake_network_.port_id().value(), {fuchsia_hardware_network::wire::FrameType::kEthernet},
+          [&](zx_status_t status) { result = status; });
       RunLoopUntil([&] { return result.has_value(); });
       ASSERT_EQ(*result, ZX_OK);
     }
   }
 
-  // Fake `fuchsia.net.virtualization/Control` implementation.
-  void CreateNetwork(
-      fuchsia::net::virtualization::Config config,
-      fidl::InterfaceRequest<fuchsia::net::virtualization::Network> network) override {
-    FX_CHECK(network_.bindings().empty()) << "virtio-net attempted to create multiple networks";
-    network_.AddBinding(this, std::move(network));
-  }
-
-  // Fake `fuchsia.net.virtualization/Network` implementation.
-  void AddPort(fidl::InterfaceHandle<fuchsia::hardware::network::Port> port,
-               fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) override {
-    FX_CHECK(!device_client_.has_value()) << "virtio-net attempted to add multiple devices";
-    interface_.AddBinding(this, std::move(interface));
-
-    // Get the device backing this port.
-    port_ptr_.Bind(std::move(port), dispatcher());
-    fidl::InterfaceHandle<fuchsia::hardware::network::Device> device;
-    port_ptr_->GetDevice(device.NewRequest());
-
-    // Get the PortId of this port.
-    port_ptr_->GetInfo([this](fuchsia::hardware::network::PortInfo info) {
-      port_id_ = PortId{
-          .base = info.id().base,
-          .salt = info.id().salt,
-      };
-    });
-
-    // Create a NetworkDeviceClient to the device.
-    device_client_.emplace(fidl::ClientEnd<fuchsia_hardware_network::Device>(device.TakeChannel()),
-                           dispatcher());
-  }
-
   fuchsia::virtualization::hardware::VirtioNetPtr net_;
   VirtioQueueFake rx_queue_;
   VirtioQueueFake tx_queue_;
-  fidl::BindingSet<fuchsia::net::virtualization::Control> control_;
-  fidl::BindingSet<fuchsia::net::virtualization::Network> network_;
-  fidl::BindingSet<fuchsia::net::virtualization::Interface> interface_;
-  fuchsia::hardware::network::PortPtr port_ptr_;
-  std::optional<NetworkDeviceClient> device_client_;
-  std::optional<PortId> port_id_;
+  FakeNetwork fake_network_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
 TEST_F(VirtioNetTest, ConnectDisconnect) {
   // Ensure we are connected.
-  ASSERT_TRUE(device_client_->HasSession());
+  ASSERT_TRUE(fake_network_.device_client()->HasSession());
 
   // Kill the session, and wait for it to return.
-  ASSERT_EQ(device_client_->KillSession(), ZX_OK);
+  ASSERT_EQ(fake_network_.device_client()->KillSession(), ZX_OK);
   bool done = false;
-  device_client_->SetErrorCallback([&](zx_status_t status) { done = true; });
+  fake_network_.device_client()->SetErrorCallback([&](zx_status_t status) { done = true; });
   RunLoopUntil([&] { return done; });
 
   // Ensure the session completed.
-  ASSERT_FALSE(device_client_->HasSession());
+  ASSERT_FALSE(fake_network_.device_client()->HasSession());
 }
 
 TEST_F(VirtioNetTest, SendToGuest) {
@@ -206,8 +265,8 @@ TEST_F(VirtioNetTest, SendToGuest) {
   ASSERT_EQ(status, ZX_OK);
 
   // Transmit a packet to the guest.
-  ASSERT_NO_FATAL_FAILURE(
-      SendPacketToGuest(*device_client_, *port_id_, cpp20::span(expected_packet)));
+  ASSERT_NO_FATAL_FAILURE(SendPacketToGuest(
+      *fake_network_.device_client(), *fake_network_.port_id(), cpp20::span(expected_packet)));
 
   // Wait for the device to receive an interrupt.
   status = WaitOnInterrupt();
@@ -226,7 +285,7 @@ TEST_F(VirtioNetTest, SendToGuest) {
 
 TEST_F(VirtioNetTest, ReceiveFromGuest) {
   std::vector<NetworkDeviceClient::Buffer> received;
-  device_client_->SetRxCallback(
+  fake_network_.device_client()->SetRxCallback(
       [&](NetworkDeviceClient::Buffer buffer) { received.push_back(std::move(buffer)); });
 
   // Add packet to virtio TX queue.
@@ -256,7 +315,7 @@ TEST_F(VirtioNetTest, ReceiveFromGuest) {
 TEST_F(VirtioNetTest, ResumesReceiveFromGuest) {
   std::mutex mutex;
   std::vector<NetworkDeviceClient::Buffer> received;  // guarded by `mutex`
-  device_client_->SetRxCallback([&](NetworkDeviceClient::Buffer buffer) {
+  fake_network_.device_client()->SetRxCallback([&](NetworkDeviceClient::Buffer buffer) {
     std::lock_guard guard(mutex);
     received.push_back(std::move(buffer));
   });

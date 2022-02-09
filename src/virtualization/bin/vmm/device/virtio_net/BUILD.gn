@@ -25,7 +25,25 @@ executable("virtio_net_bin") {
   ]
 }
 
-fuchsia_package_with_single_component("virtio_net") {
+# TODO(fxbug.dev/72386)
+# CFv2 migration in progress
+# v2 component is being used in device tests
+# v1 component is being used in prod code
+fuchsia_package("virtio_net") {
+  deps = [
+    ":virtio_net_v1",
+    ":virtio_net_v2",
+  ]
+}
+
+fuchsia_component("virtio_net_v2") {
+  manifest = "meta/virtio_net.cml"
+  deps = [ ":virtio_net_bin" ]
+  component_name = "virtio_net"
+}
+
+fuchsia_component("virtio_net_v1") {
   manifest = "meta/virtio_net.cmx"
   deps = [ ":virtio_net_bin" ]
+  component_name = "virtio_net"
 }

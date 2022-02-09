@@ -352,7 +352,7 @@ class VirtioSoundTestBase : public TestWithDeviceV2 {
     using component_testing::Protocol;
     using component_testing::RealmBuilder;
     using component_testing::RealmRoot;
-    using component_testing::Route;    
+    using component_testing::Route;
 
     auto realm_builder = RealmBuilder::Create();
     realm_builder.AddChild(kComponentName, kComponentUrl);
