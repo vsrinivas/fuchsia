@@ -1036,24 +1036,35 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
 
   // Ensure that the method's type constructors for request/response payloads actually exist, and
   // are the right kind of layout.
-  auto CheckPayloadDeclKind = [this](const SourceSpan& method_name, const Decl* decl,
-                                     bool empty_payload_allowed) -> void {
+  std::function<void(const SourceSpan&, const Decl*, bool)> CheckPayloadDeclKind =
+      [&](const SourceSpan& method_name, const Decl* decl, bool empty_payload_allowed) -> void {
     switch (decl->kind) {
       case Decl::Kind::kStruct: {
-        auto struct_decl = static_cast<const Struct*>(decl);
+        const auto struct_decl = static_cast<const Struct*>(decl);
         if (!empty_payload_allowed && struct_decl->members.empty()) {
           Fail(ErrEmptyPayloadStructs, method_name, method_name.data());
         }
         break;
       }
-      case Decl::Kind::kBits:
-      case Decl::Kind::kEnum: {
-        Fail(ErrInvalidParameterListType, method_name, decl);
-        break;
-      }
       case Decl::Kind::kTable:
       case Decl::Kind::kUnion: {
         Fail(ErrNotYetSupportedParameterListType, method_name, decl);
+        break;
+      }
+      case Decl::Kind::kTypeAlias: {
+        const auto as_type_alias_decl = static_cast<const TypeAlias*>(decl);
+        const Type* aliased_type = as_type_alias_decl->partial_type_ctor->type;
+        switch (aliased_type->kind) {
+          case Type::Kind::kIdentifier: {
+            const auto as_identifier_type = static_cast<const IdentifierType*>(aliased_type);
+            CheckPayloadDeclKind(method_name, as_identifier_type->type_decl, empty_payload_allowed);
+            break;
+          }
+          default: {
+            Fail(ErrInvalidParameterListType, method_name, decl);
+            break;
+          }
+        }
         break;
       }
       default: {

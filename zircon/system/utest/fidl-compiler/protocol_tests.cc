@@ -519,6 +519,18 @@ protocol MyProtocol {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "union");
 }
 
+TEST(ProtocolTests, BadMethodEmptyPayloadStruct) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+  MyMethod(struct {}) -> (struct {});
+};
+)FIDL");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs,
+                                      fidl::ErrEmptyPayloadStructs);
+}
+
 TEST(ProtocolTests, BadMethodEmptyResponseWithError) {
   TestLibrary library(R"FIDL(
 library example;
@@ -578,6 +590,54 @@ protocol MyProtocol {
   ASSERT_COMPILED(library);
 }
 
+TEST(ProtocolTests, GoodMethodNamedAlias) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type MyStruct = struct {
+  a bool;
+};
+
+alias MyStructAlias = MyStruct;
+alias MyAliasAlias = MyStructAlias;
+
+protocol MyProtocol {
+    MyMethod(MyStructAlias) -> (MyAliasAlias);
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ProtocolTests, BadMethodNamedEmptyPayloadStruct) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type MyStruct = struct{};
+
+protocol MyProtocol {
+    MyMethod(MyStruct) -> (MyStruct);
+};
+)FIDL");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs,
+                                      fidl::ErrEmptyPayloadStructs);
+}
+
+TEST(ProtocolTests, BadMethodNamedDefaultValueStruct) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type MyStruct = struct{
+  a bool = false;
+};
+
+protocol MyProtocol {
+    MyMethod(MyStruct) -> (MyStruct);
+};
+)FIDL");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrPayloadStructHasDefaultMembers,
+                                      fidl::ErrPayloadStructHasDefaultMembers);
+}
+
 TEST(ProtocolTests, BadMethodNamedInvalidHandle) {
   TestLibrary library(R"FIDL(
 library example;
@@ -626,17 +686,27 @@ resource_definition handle : uint32 {
     };
 };
 
-alias MyPrim = bool;
-alias MyHandle = handle;
+alias MyPrimAlias = bool;
+alias MyHandleAlias = handle;
+alias MyVectorAlias = vector<MyPrimAlias>;
+alias MyAliasAlias = MyVectorAlias:optional;
 
 protocol MyProtocol {
-    MyMethod(MyPrim) -> (MyHandle);
+    MyMethod(MyPrimAlias) -> (MyHandleAlias);
+    MyOtherMethod(MyVectorAlias) -> (MyAliasAlias);
 };
 )FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrInvalidParameterListType,
-                                      fidl::ErrInvalidParameterListType);
+  ASSERT_FALSE(library.Compile());
+
+  ASSERT_ERR(library.errors()[0], fidl::ErrInvalidParameterListType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyPrim");
+  ASSERT_ERR(library.errors()[1], fidl::ErrInvalidParameterListType);
   ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "MyHandle");
+
+  ASSERT_ERR(library.errors()[2], fidl::ErrInvalidParameterListType);
+  ASSERT_SUBSTR(library.errors()[2]->msg.c_str(), "MyVector");
+  ASSERT_ERR(library.errors()[3], fidl::ErrInvalidParameterListType);
+  ASSERT_SUBSTR(library.errors()[3]->msg.c_str(), "MyAlias");
 }
 
 TEST(ProtocolTests, BadMethodNamedInvalidKind) {
