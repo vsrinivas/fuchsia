@@ -173,6 +173,21 @@ var1.v() = std::move(var2);
 		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes, expected_handles, false);
 }
 
+TEST(Conformance, GoldenNullableUnionStructNonNull_V2_Encode) {
+	auto var1 = test_conformance::GoldenNullableUnionStruct{};
+auto var2 = std::make_unique<test_conformance::GoldenUnion>(test_conformance::GoldenUnion::WithV(int16_t(1ull)));
+var1.v() = std::move(var2);
+
+	auto obj = std::move(var1);
+	const auto expected_bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+};
+	const auto expected_handles = std::vector<zx_handle_disposition_t>{};
+	conformance_utils::EncodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes, expected_handles, false);
+}
+
 TEST(Conformance, GoldenNullableUnionStructNull_V2_Encode) {
 	auto var1 = test_conformance::GoldenNullableUnionStruct{};
 var1.v() = std::unique_ptr<test_conformance::GoldenUnion>();
@@ -560,6 +575,22 @@ TEST(Conformance, GoldenUnionStruct_V2_Decode) {
 [[maybe_unused]] auto& f2 = f1.v();
 ASSERT_EQ(f2.Which(), test_conformance::GoldenUnion::Tag::kV);
 ASSERT_EQ(f2.v().value(), int16_t(1ull));
+
+	});
+}
+
+TEST(Conformance, GoldenNullableUnionStructNonNull_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	conformance_utils::DecodeSuccess<test_conformance::GoldenNullableUnionStruct>(
+		::fidl::internal::WireFormatVersion::kV2, bytes, handles, [&](test_conformance::GoldenNullableUnionStruct& value) {
+		[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v();
+ASSERT_EQ(f2->Which(), test_conformance::GoldenUnion::Tag::kV);
+ASSERT_EQ(f2->v().value(), int16_t(1ull));
 
 	});
 }

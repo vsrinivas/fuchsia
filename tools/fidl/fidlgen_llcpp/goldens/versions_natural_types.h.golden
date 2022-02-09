@@ -228,6 +228,14 @@ struct CodingTraits<::test_versions::Table>
 
 template <>
 struct IsFidlType<::test_versions::Union> : public std::true_type {};
+template <>
+struct IsUnion<::test_versions::Union> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_versions::Union> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_versions::Union> final

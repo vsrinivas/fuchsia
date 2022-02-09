@@ -85,6 +85,34 @@ struct CodingTraits<cpp17::optional<std::string>> {
   }
 };
 
+template <typename T>
+struct CodingTraits<std::unique_ptr<T>, typename std::enable_if<IsUnion<T>::value>::type> {
+  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_xunion_t);
+  static constexpr size_t inline_size_v2 = sizeof(fidl_xunion_v2_t);
+
+  template <class EncoderImpl>
+  static void Encode(EncoderImpl* encoder, std::unique_ptr<T>* value, size_t offset,
+                     cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    if (*value) {
+      CodingTraits<T>::Encode(encoder, value->get(), offset, maybe_handle_info);
+      return;
+    }
+
+    // Buffer is zero-initialized.
+  }
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder, std::unique_ptr<T>* value, size_t offset) {
+    fidl_xunion_v2_t* u = decoder->template GetPtr<fidl_xunion_v2_t>(offset);
+    if (FidlIsZeroEnvelope(&u->envelope)) {
+      *value = nullptr;
+      return;
+    }
+    *value = std::make_unique<T>();
+    CodingTraits<T>::Decode(decoder, value->get(), offset);
+  }
+};
+
 namespace internal {
 
 // |TypeTraits| contains information about a natural domain object:

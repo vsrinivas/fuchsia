@@ -169,8 +169,6 @@ success("GoldenUnionStruct") {
 }
 
 success("GoldenNullableUnionStructNonNull") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = GoldenNullableUnionStruct{
         v: GoldenUnion{
             v: 1,

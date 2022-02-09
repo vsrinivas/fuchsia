@@ -2739,6 +2739,15 @@ struct CodingTraits<::test_union::Empty> final
 
 template <>
 struct IsFidlType<::test_union::UnionWithAttributes> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::UnionWithAttributes> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::UnionWithAttributes> : public std::true_type {
+};
 
 template <>
 struct CodingTraits<::test_union::UnionWithAttributes> final
@@ -2747,6 +2756,14 @@ struct CodingTraits<::test_union::UnionWithAttributes> final
 
 template <>
 struct IsFidlType<::test_union::Union> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::Union> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::Union> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::Union> final
@@ -2754,6 +2771,14 @@ struct CodingTraits<::test_union::Union> final
 
 template <>
 struct IsFidlType<::test_union::StrictUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::StrictUnion> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::StrictUnion> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::StrictUnion> final
@@ -2762,6 +2787,15 @@ struct CodingTraits<::test_union::StrictUnion> final
 
 template <>
 struct IsFidlType<::test_union::StrictSimpleXUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::StrictSimpleXUnion> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::StrictSimpleXUnion> : public std::true_type {
+};
 
 template <>
 struct CodingTraits<::test_union::StrictSimpleXUnion> final
@@ -2770,6 +2804,14 @@ struct CodingTraits<::test_union::StrictSimpleXUnion> final
 
 template <>
 struct IsFidlType<::test_union::StrictFoo> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::StrictFoo> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::StrictFoo> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::StrictFoo> final
@@ -2778,6 +2820,15 @@ struct CodingTraits<::test_union::StrictFoo> final
 
 template <>
 struct IsFidlType<::test_union::StrictBoundedXUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::StrictBoundedXUnion> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::StrictBoundedXUnion> : public std::true_type {
+};
 
 template <>
 struct CodingTraits<::test_union::StrictBoundedXUnion> final
@@ -2786,6 +2837,15 @@ struct CodingTraits<::test_union::StrictBoundedXUnion> final
 
 template <>
 struct IsFidlType<::test_union::ReverseOrdinalUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::ReverseOrdinalUnion> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::ReverseOrdinalUnion> : public std::true_type {
+};
 
 template <>
 struct CodingTraits<::test_union::ReverseOrdinalUnion> final
@@ -2794,6 +2854,15 @@ struct CodingTraits<::test_union::ReverseOrdinalUnion> final
 
 template <>
 struct IsFidlType<::test_union::StrictPizzaOrPasta> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::StrictPizzaOrPasta> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::StrictPizzaOrPasta> : public std::true_type {
+};
 
 template <>
 struct CodingTraits<::test_union::StrictPizzaOrPasta> final
@@ -2802,6 +2871,14 @@ struct CodingTraits<::test_union::StrictPizzaOrPasta> final
 
 template <>
 struct IsFidlType<::test_union::PizzaOrPasta> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::PizzaOrPasta> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::PizzaOrPasta> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::PizzaOrPasta> final
@@ -2811,6 +2888,15 @@ struct CodingTraits<::test_union::PizzaOrPasta> final
 template <>
 struct IsFidlType<::test_union::FlexiblePizzaOrPasta> : public std::true_type {
 };
+template <>
+struct IsUnion<::test_union::FlexiblePizzaOrPasta> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::FlexiblePizzaOrPasta>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::FlexiblePizzaOrPasta> final
@@ -2820,6 +2906,15 @@ struct CodingTraits<::test_union::FlexiblePizzaOrPasta> final
 template <>
 struct IsFidlType<::test_union::ExplicitPizzaOrPasta> : public std::true_type {
 };
+template <>
+struct IsUnion<::test_union::ExplicitPizzaOrPasta> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::ExplicitPizzaOrPasta>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::ExplicitPizzaOrPasta> final
@@ -2828,6 +2923,14 @@ struct CodingTraits<::test_union::ExplicitPizzaOrPasta> final
 
 template <>
 struct IsFidlType<::test_union::OlderSimpleUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::OlderSimpleUnion> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::OlderSimpleUnion> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::OlderSimpleUnion> final
@@ -2836,6 +2939,14 @@ struct CodingTraits<::test_union::OlderSimpleUnion> final
 
 template <>
 struct IsFidlType<::test_union::NewerSimpleUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::NewerSimpleUnion> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::NewerSimpleUnion> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::NewerSimpleUnion> final
@@ -2844,6 +2955,14 @@ struct CodingTraits<::test_union::NewerSimpleUnion> final
 
 template <>
 struct IsFidlType<::test_union::FlexibleUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::FlexibleUnion> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::FlexibleUnion> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::FlexibleUnion> final
@@ -2852,6 +2971,14 @@ struct CodingTraits<::test_union::FlexibleUnion> final
 
 template <>
 struct IsFidlType<::test_union::FlexibleFoo> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::FlexibleFoo> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::FlexibleFoo> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::FlexibleFoo> final
@@ -2860,6 +2987,14 @@ struct CodingTraits<::test_union::FlexibleFoo> final
 
 template <>
 struct IsFidlType<::test_union::FieldCollision> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::FieldCollision> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::FieldCollision> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::FieldCollision> final
@@ -2868,6 +3003,14 @@ struct CodingTraits<::test_union::FieldCollision> final
 
 template <>
 struct IsFidlType<::test_union::ExplicitXUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::ExplicitXUnion> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::ExplicitXUnion> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::ExplicitXUnion> final
@@ -2876,6 +3019,14 @@ struct CodingTraits<::test_union::ExplicitXUnion> final
 
 template <>
 struct IsFidlType<::test_union::ExplicitUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::ExplicitUnion> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::ExplicitUnion> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::ExplicitUnion> final
@@ -2884,6 +3035,14 @@ struct CodingTraits<::test_union::ExplicitUnion> final
 
 template <>
 struct IsFidlType<::test_union::ExplicitStrictFoo> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::ExplicitStrictFoo> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::ExplicitStrictFoo> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::ExplicitStrictFoo> final
@@ -2892,6 +3051,14 @@ struct CodingTraits<::test_union::ExplicitStrictFoo> final
 
 template <>
 struct IsFidlType<::test_union::ExplicitFoo> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::ExplicitFoo> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::ExplicitFoo> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_union::ExplicitFoo> final
@@ -2900,6 +3067,16 @@ struct CodingTraits<::test_union::ExplicitFoo> final
 
 template <>
 struct IsFidlType<::test_union::XUnionContainingEmptyStruct>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_union::XUnionContainingEmptyStruct>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_union::XUnionContainingEmptyStruct>
     : public std::true_type {};
 
 template <>

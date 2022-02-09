@@ -2267,6 +2267,15 @@ struct CodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
 template <>
 struct IsFidlType<::test_bindingsdenylist::OnlyLlcpp> : public std::true_type {
 };
+template <>
+struct IsUnion<::test_bindingsdenylist::OnlyLlcpp> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_bindingsdenylist::OnlyLlcpp>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_bindingsdenylist::OnlyLlcpp> final
@@ -2275,6 +2284,18 @@ struct CodingTraits<::test_bindingsdenylist::OnlyLlcpp> final
 
 template <>
 struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>
     : public std::true_type {};
 
@@ -2288,6 +2309,17 @@ struct CodingTraits<
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>
     : public std::true_type {};
+template <>
+struct IsUnion<::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<
@@ -2298,6 +2330,18 @@ struct CodingTraits<
 
 template <>
 struct IsFidlType<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>
     : public std::true_type {};
 
@@ -2311,6 +2355,16 @@ struct CodingTraits<
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
     : public std::true_type {};
+template <>
+struct IsUnion<::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
@@ -2319,6 +2373,17 @@ struct CodingTraits<::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>
     : public std::true_type {};
 
 template <>

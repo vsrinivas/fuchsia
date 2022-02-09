@@ -2061,6 +2061,18 @@ template <>
 struct IsFidlType<
     ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result>
     : public std::true_type {};
+template <>
+struct IsUnion<
+    ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<
+    ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<
@@ -2072,6 +2084,17 @@ struct CodingTraits<
 
 template <>
 struct IsFidlType<
+    ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<
     ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result>
     : public std::true_type {};
 
@@ -2086,6 +2109,17 @@ template <>
 struct IsFidlType<
     ::test_protocolpayloads::MainProtocol_OnImportWithError_Result>
     : public std::true_type {};
+template <>
+struct IsUnion<::test_protocolpayloads::MainProtocol_OnImportWithError_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<
+    ::test_protocolpayloads::MainProtocol_OnImportWithError_Result>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<
@@ -2096,6 +2130,17 @@ struct CodingTraits<
 
 template <>
 struct IsFidlType<::test_protocolpayloads::MainProtocol_OnAnonWithError_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_protocolpayloads::MainProtocol_OnAnonWithError_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<
+    ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result>
     : public std::true_type {};
 
 template <>
@@ -2109,6 +2154,18 @@ template <>
 struct IsFidlType<
     ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result>
     : public std::true_type {};
+template <>
+struct IsUnion<
+    ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<
+    ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<
@@ -2119,6 +2176,17 @@ struct CodingTraits<
 
 template <>
 struct IsFidlType<::test_protocolpayloads::MainProtocol_OnLocalWithError_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_protocolpayloads::MainProtocol_OnLocalWithError_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<
+    ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result>
     : public std::true_type {};
 
 template <>

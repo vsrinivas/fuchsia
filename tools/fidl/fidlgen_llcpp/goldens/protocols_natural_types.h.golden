@@ -4084,6 +4084,16 @@ struct IsResource<::test_protocols::WithErrorSyntax_HandleInResult_Result>
 template <>
 struct IsFidlType<::test_protocols::WithErrorSyntax_HandleInResult_Result>
     : public std::true_type {};
+template <>
+struct IsUnion<::test_protocols::WithErrorSyntax_HandleInResult_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_protocols::WithErrorSyntax_HandleInResult_Result>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_protocols::WithErrorSyntax_HandleInResult_Result>
@@ -4092,6 +4102,16 @@ struct CodingTraits<::test_protocols::WithErrorSyntax_HandleInResult_Result>
 
 template <>
 struct IsFidlType<::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
     : public std::true_type {};
 
 template <>
@@ -4102,6 +4122,16 @@ struct CodingTraits<::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
 template <>
 struct IsFidlType<::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
     : public std::true_type {};
+template <>
+struct IsUnion<::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
@@ -4110,6 +4140,14 @@ struct CodingTraits<::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
 
 template <>
 struct IsFidlType<::test_protocols::TheUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_protocols::TheUnion> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_protocols::TheUnion> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_protocols::TheUnion> final
@@ -4118,6 +4156,16 @@ struct CodingTraits<::test_protocols::TheUnion> final
 
 template <>
 struct IsFidlType<::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>
     : public std::true_type {};
 
 template <>

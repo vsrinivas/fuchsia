@@ -857,6 +857,16 @@ struct CodingTraits<::test_unionsandwich::SandwichUnionSize24Alignment8> final
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize8Alignment4>
     : public std::true_type {};
+template <>
+struct IsUnion<::test_unionsandwich::UnionSize8Alignment4>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_unionsandwich::UnionSize8Alignment4>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_unionsandwich::UnionSize8Alignment4> final
@@ -865,6 +875,16 @@ struct CodingTraits<::test_unionsandwich::UnionSize8Alignment4> final
 
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize36Alignment4>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_unionsandwich::UnionSize36Alignment4>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_unionsandwich::UnionSize36Alignment4>
     : public std::true_type {};
 
 template <>
@@ -875,6 +895,16 @@ struct CodingTraits<::test_unionsandwich::UnionSize36Alignment4> final
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize12Alignment4>
     : public std::true_type {};
+template <>
+struct IsUnion<::test_unionsandwich::UnionSize12Alignment4>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_unionsandwich::UnionSize12Alignment4>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_unionsandwich::UnionSize12Alignment4> final
@@ -883,6 +913,16 @@ struct CodingTraits<::test_unionsandwich::UnionSize12Alignment4> final
 
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize24Alignment8>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_unionsandwich::UnionSize24Alignment8>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_unionsandwich::UnionSize24Alignment8>
     : public std::true_type {};
 
 template <>

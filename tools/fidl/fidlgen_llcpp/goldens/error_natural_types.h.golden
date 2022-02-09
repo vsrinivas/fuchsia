@@ -341,6 +341,15 @@ struct CodingTraits<::test_error::ExampleFooRequest> final
 
 template <>
 struct IsFidlType<::test_error::Example_foo_Result> : public std::true_type {};
+template <>
+struct IsUnion<::test_error::Example_foo_Result> : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_error::Example_foo_Result> : public std::true_type {
+};
 
 template <>
 struct CodingTraits<::test_error::Example_foo_Result> final

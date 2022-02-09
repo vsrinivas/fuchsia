@@ -621,6 +621,16 @@ struct CodingTraits<::test_requestflexibleenvelope::
 template <>
 struct IsFidlType<::test_requestflexibleenvelope::StrictFoo>
     : public std::true_type {};
+template <>
+struct IsUnion<::test_requestflexibleenvelope::StrictFoo>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_requestflexibleenvelope::StrictFoo>
+    : public std::true_type {};
 
 template <>
 struct CodingTraits<::test_requestflexibleenvelope::StrictFoo> final
@@ -629,6 +639,16 @@ struct CodingTraits<::test_requestflexibleenvelope::StrictFoo> final
 
 template <>
 struct IsFidlType<::test_requestflexibleenvelope::FlexibleFoo>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_requestflexibleenvelope::FlexibleFoo>
+    : public std::true_type {};
+
+// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
+// because we would like to disable the HLCPP fallback coding trait defined for
+// !IsFidlXUnion.
+template <>
+struct IsFidlXUnion<::test_requestflexibleenvelope::FlexibleFoo>
     : public std::true_type {};
 
 template <>
