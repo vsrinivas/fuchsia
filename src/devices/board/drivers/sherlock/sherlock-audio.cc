@@ -84,8 +84,10 @@ zx_status_t Sherlock::AudioInit() {
 
   bool is_sherlock = board_info.pid == PDEV_PID_SHERLOCK;
   bool is_ernie = board_info.pid != PDEV_PID_SHERLOCK && (board_info.board_revision & (1 << 4));
-  if (is_sherlock && board_info.board_revision < BOARD_REV_EVT1) {
-    // For audio we don't support boards revision lower than EVT.
+  if (is_sherlock &&
+      (board_info.board_revision < BOARD_REV_EVT1 && board_info.board_revision != BOARD_REV_B72)) {
+    // For audio we don't support boards revision lower than EVT with the exception of the B72
+    // board.
     zxlogf(WARNING, "%s: Board revision unsupported, skipping audio initialization.", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
