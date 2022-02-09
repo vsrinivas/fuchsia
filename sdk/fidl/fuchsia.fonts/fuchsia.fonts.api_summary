@@ -37,6 +37,8 @@ const fuchsia.fonts/MAX_FACE_QUERY_CODE_POINTS uint32 128
 const fuchsia.fonts/MAX_FACE_QUERY_LANGUAGES uint32 8
 const fuchsia.fonts/MAX_FAMILY_NAME_LENGTH uint32 128
 const fuchsia.fonts/MAX_FAMILY_STYLES uint32 300
+const fuchsia.fonts/MAX_POSTSCRIPT_TYPEFACE_NAME_LENGTH uint32 63
+const fuchsia.fonts/MAX_TYPEFACE_NAME_LENGTH uint32 128
 protocol/member fuchsia.fonts/Provider.GetFamilyInfo(string:128 family) -> (box<fuchsia.fonts/FamilyInfo> family_info)
 protocol/member fuchsia.fonts/Provider.GetFont(fuchsia.fonts/Request request) -> (box<fuchsia.fonts/Response> response)
 protocol/member fuchsia.fonts/Provider.GetFontFamilyInfo(fuchsia.fonts/FamilyName family) -> (fuchsia.fonts/FontFamilyInfo family_info)
@@ -73,7 +75,9 @@ table fuchsia.fonts/Style2
 table/member fuchsia.fonts/TypefaceQuery.code_points vector<uint32>:128
 table/member fuchsia.fonts/TypefaceQuery.fallback_family fuchsia.fonts/GenericFontFamily
 table/member fuchsia.fonts/TypefaceQuery.family fuchsia.fonts/FamilyName
+table/member fuchsia.fonts/TypefaceQuery.full_name string:128
 table/member fuchsia.fonts/TypefaceQuery.languages vector<fuchsia.intl/LocaleId>:8
+table/member fuchsia.fonts/TypefaceQuery.postscript_name string:63
 table/member fuchsia.fonts/TypefaceQuery.style fuchsia.fonts/Style2
 table fuchsia.fonts/TypefaceQuery
 table/member fuchsia.fonts/TypefaceRequest.cache_miss_policy fuchsia.fonts/CacheMissPolicy

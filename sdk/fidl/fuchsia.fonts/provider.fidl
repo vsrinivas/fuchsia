@@ -18,6 +18,13 @@ const MAX_FACE_QUERY_LANGUAGES uint32 = 8;
 /// The maximum number of styles that will be returned for a font family.
 const MAX_FAMILY_STYLES uint32 = 300;
 
+/// The maximum length of a typeface's full name.
+const MAX_TYPEFACE_NAME_LENGTH uint32 = 128;
+
+/// The maximum length of a typeface's Postscript name. The limit comes from the OpenType `name`
+/// table specification.
+const MAX_POSTSCRIPT_TYPEFACE_NAME_LENGTH uint32 = 63;
+
 /// The name of a family of fonts.
 ///
 /// Examples: "Roboto", "Noto Serif".
@@ -117,6 +124,21 @@ type TypefaceQuery = table {
     /// Specifying `fallback_family` in a query allows the client to override the generic family
     /// that would be used as a fallback.
     5: fallback_family GenericFontFamily;
+
+    /// The exact Postscript name of the typeface to look up. This corresponds to name ID `6` in
+    /// the TrueType/OpenType `name` table.
+    ///
+    /// All characters must be in the printable ASCII range (U+0021 to U+007E), and must not be
+    /// '[', ']', '(', ')', '{', '}', '<', '>', '/', or '%'.
+    ///
+    /// If this field is specified, all the other query fields are ignored.
+    6: postscript_name string:MAX_POSTSCRIPT_TYPEFACE_NAME_LENGTH;
+
+    /// The exact full name of the typeface to look up. This corresponds to name ID `4` in the
+    /// TrueType/OpenType `name` table.
+    ///
+    /// If this field is specified, all the other query fields are ignored.
+    7: full_name string:MAX_TYPEFACE_NAME_LENGTH;
 };
 
 /// Response to a TypefaceRequest. Contains the digital font file and metadata corresponding to a
