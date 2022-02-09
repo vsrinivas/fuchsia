@@ -46,6 +46,7 @@ rustc_library("lib") {
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/lib/inspect:wlan-inspect",
     "//src/connectivity/wlan/lib/stash/:wlan-stash",
+    "//src/diagnostics/persistence/fidl:persist-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
