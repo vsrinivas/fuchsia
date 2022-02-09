@@ -85,7 +85,10 @@ use packet::{Buf, BufferMut, EmptyBuf};
 use crate::context::{InstantContext, RngContext, TimerContext};
 use crate::device::{DeviceLayerState, DeviceLayerTimerId, DeviceStateBuilder};
 use crate::ip::icmp::{BufferIcmpContext, IcmpContext};
-use crate::ip::{device::IpDeviceTimerId, IpLayerTimerId, Ipv4State, Ipv6State};
+use crate::ip::{
+    device::{Ipv4DeviceTimerId, Ipv6DeviceTimerId},
+    IpLayerTimerId, Ipv4State, Ipv6State,
+};
 use crate::transport::{TransportLayerState, TransportLayerTimerId};
 
 /// Map an expression over either version of one or more addresses.
@@ -275,8 +278,10 @@ enum TimerIdInner {
     _TransportLayer(TransportLayerTimerId),
     /// A timer event in the IP layer.
     IpLayer(IpLayerTimerId),
-    /// A timer event for an IP device.
-    IpDevice(IpDeviceTimerId<DeviceId>),
+    /// A timer event for an IPv4 device.
+    Ipv4Device(Ipv4DeviceTimerId<DeviceId>),
+    /// A timer event for an IPv6 device.
+    Ipv6Device(Ipv6DeviceTimerId<DeviceId>),
     /// A no-op timer event (used for tests)
     #[cfg(test)]
     Nop(usize),
@@ -288,14 +293,31 @@ impl From<DeviceLayerTimerId> for TimerId {
     }
 }
 
-impl From<IpDeviceTimerId<DeviceId>> for TimerId {
-    fn from(id: IpDeviceTimerId<DeviceId>) -> TimerId {
-        TimerId(TimerIdInner::IpDevice(id))
+impl From<Ipv4DeviceTimerId<DeviceId>> for TimerId {
+    fn from(id: Ipv4DeviceTimerId<DeviceId>) -> TimerId {
+        TimerId(TimerIdInner::Ipv4Device(id))
+    }
+}
+
+impl From<Ipv6DeviceTimerId<DeviceId>> for TimerId {
+    fn from(id: Ipv6DeviceTimerId<DeviceId>) -> TimerId {
+        TimerId(TimerIdInner::Ipv6Device(id))
     }
 }
 
 impl_timer_context!(TimerId, DeviceLayerTimerId, TimerId(TimerIdInner::DeviceLayer(id)), id);
-impl_timer_context!(TimerId, IpDeviceTimerId<DeviceId>, TimerId(TimerIdInner::IpDevice(id)), id);
+impl_timer_context!(
+    TimerId,
+    Ipv4DeviceTimerId<DeviceId>,
+    TimerId(TimerIdInner::Ipv4Device(id)),
+    id
+);
+impl_timer_context!(
+    TimerId,
+    Ipv6DeviceTimerId<DeviceId>,
+    TimerId(TimerIdInner::Ipv6Device(id)),
+    id
+);
 
 /// Handle a generic timer event.
 pub fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: TimerId) {
@@ -311,8 +333,11 @@ pub fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: TimerId) {
         TimerId(TimerIdInner::IpLayer(x)) => {
             ip::handle_timer(ctx, x);
         }
-        TimerId(TimerIdInner::IpDevice(x)) => {
-            ip::device::handle_timer(ctx, x);
+        TimerId(TimerIdInner::Ipv4Device(x)) => {
+            ip::device::handle_ipv4_timer(ctx, x);
+        }
+        TimerId(TimerIdInner::Ipv6Device(x)) => {
+            ip::device::handle_ipv6_timer(ctx, x);
         }
         #[cfg(test)]
         TimerId(TimerIdInner::Nop(_)) => {

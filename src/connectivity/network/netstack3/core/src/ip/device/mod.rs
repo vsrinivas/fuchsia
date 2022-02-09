@@ -35,56 +35,72 @@ use net_types::{
 use packet::{BufferMut, EmptyBuf, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 
-/// A timer ID for IP devices.
+/// A timer ID for IPv4 devices.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
-pub(crate) enum IpDeviceTimerId<DeviceId> {
-    Igmp(IgmpTimerId<DeviceId>),
+pub(crate) struct Ipv4DeviceTimerId<DeviceId>(IgmpTimerId<DeviceId>);
+
+impl<DeviceId> From<IgmpTimerId<DeviceId>> for Ipv4DeviceTimerId<DeviceId> {
+    fn from(id: IgmpTimerId<DeviceId>) -> Ipv4DeviceTimerId<DeviceId> {
+        Ipv4DeviceTimerId(id)
+    }
+}
+
+// If we are provided with an impl of `TimerContext<Ipv4DeviceTimerId<_>>`, then
+// we can in turn provide an impl of `TimerContext` for IGMP.
+impl_timer_context!(
+    IpDeviceIdContext,
+    Ipv4DeviceTimerId<C::DeviceId>,
+    IgmpTimerId<C::DeviceId>,
+    Ipv4DeviceTimerId(id),
+    id
+);
+
+/// Handle an IPv4 device timer firing.
+pub(crate) fn handle_ipv4_timer<C: BufferIpDeviceContext<EmptyBuf>>(
+    ctx: &mut C,
+    Ipv4DeviceTimerId(id): Ipv4DeviceTimerId<C::DeviceId>,
+) {
+    TimerHandler::handle_timer(ctx, id)
+}
+
+/// A timer ID for IPv6 devices.
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
+pub(crate) enum Ipv6DeviceTimerId<DeviceId> {
     Mld(MldReportDelay<DeviceId>),
 }
 
-impl<DeviceId> From<IgmpTimerId<DeviceId>> for IpDeviceTimerId<DeviceId> {
-    fn from(id: IgmpTimerId<DeviceId>) -> IpDeviceTimerId<DeviceId> {
-        IpDeviceTimerId::Igmp(id)
+impl<DeviceId> From<MldReportDelay<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
+    fn from(id: MldReportDelay<DeviceId>) -> Ipv6DeviceTimerId<DeviceId> {
+        Ipv6DeviceTimerId::Mld(id)
     }
 }
 
-impl<DeviceId> From<MldReportDelay<DeviceId>> for IpDeviceTimerId<DeviceId> {
-    fn from(id: MldReportDelay<DeviceId>) -> IpDeviceTimerId<DeviceId> {
-        IpDeviceTimerId::Mld(id)
-    }
-}
-
-// If we are provided with an impl of `TimerContext<IpDeviceTimerId<_>>`, then
-// we can in turn provide impls of `TimerContext` for IGMP and MLD timers.
+// If we are provided with an impl of `TimerContext<Ipv6DeviceTimerId<_>>`, then
+// we can in turn provide an impl of `TimerContext` for MLD.
 impl_timer_context!(
     IpDeviceIdContext,
-    IpDeviceTimerId<C::DeviceId>,
-    IgmpTimerId<C::DeviceId>,
-    IpDeviceTimerId::Igmp(id),
-    id
-);
-impl_timer_context!(
-    IpDeviceIdContext,
-    IpDeviceTimerId<C::DeviceId>,
+    Ipv6DeviceTimerId<C::DeviceId>,
     MldReportDelay<C::DeviceId>,
-    IpDeviceTimerId::Mld(id),
+    Ipv6DeviceTimerId::Mld(id),
     id
 );
 
-/// Handle an IP device timer firing.
-pub(crate) fn handle_timer<C: BufferIpDeviceContext<EmptyBuf>>(
+/// Handle an IPv6 device timer firing.
+pub(crate) fn handle_ipv6_timer<C: BufferIpDeviceContext<EmptyBuf>>(
     ctx: &mut C,
-    id: IpDeviceTimerId<C::DeviceId>,
+    id: Ipv6DeviceTimerId<C::DeviceId>,
 ) {
     match id {
-        IpDeviceTimerId::Igmp(id) => TimerHandler::handle_timer(ctx, id),
-        IpDeviceTimerId::Mld(id) => TimerHandler::handle_timer(ctx, id),
+        Ipv6DeviceTimerId::Mld(id) => TimerHandler::handle_timer(ctx, id),
     }
 }
 
 /// The execution context for IP devices.
 pub(crate) trait IpDeviceContext:
-    IpDeviceIdContext + TimerContext<IpDeviceTimerId<Self::DeviceId>> + RngContext
+    IpDeviceIdContext
+    + TimerContext<Ipv4DeviceTimerId<Self::DeviceId>>
+    + TimerContext<Ipv6DeviceTimerId<Self::DeviceId>>
+    + RngContext
 {
     /// Gets immutable access to an IP device's state.
     fn get_ip_device_state(
