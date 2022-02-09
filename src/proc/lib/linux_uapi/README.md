@@ -16,3 +16,9 @@ cargo install bindgen
 
 Ideally we would be able to run `bindgen` as part of the build to remove this
 manual step.
+
+## libc types
+
+Linux kernel headers typically do not rely on libc types. However, if a header
+you want to include does, you will need to manually define typedefs in
+`stub/typedefs.h`.

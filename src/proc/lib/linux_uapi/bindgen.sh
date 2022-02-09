@@ -10,7 +10,7 @@ if [[ ! -f src/proc/lib/linux_uapi/wrapper.h ]]; then
   exit 1
 fi
 
-readonly RAW_LINES="// Copyright 2021 The Fuchsia Authors. All rights reserved.
+readonly RAW_LINES="// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 

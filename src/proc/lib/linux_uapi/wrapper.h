@@ -6,6 +6,7 @@
 #define SRC_PROC_LIB_LINUX_UAPI_WRAPPER_H_
 
 #include <stddef.h>
+#include <typedefs.h>
 
 #include <asm/ioctls.h>
 #include <asm/poll.h>
@@ -14,6 +15,7 @@
 #include <asm/signal.h>
 #include <asm/socket.h>
 #include <asm/ucontext.h>
+#include <linux/android/binder.h>
 #include <linux/auxvec.h>
 #include <linux/capability.h>
 #include <linux/errno.h>
