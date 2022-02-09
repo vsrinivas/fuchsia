@@ -997,4 +997,69 @@ TEST_F(VirtioMagmaTest, QueryReturnsBufferMapAndUnmap) {
   ASSERT_NO_FATAL_FAILURE(ReleaseDevice(device));
 }
 
+TEST_F(VirtioMagmaTest, ExecuteCommand) {
+  magma_device_t device{};
+  ASSERT_NO_FATAL_FAILURE(ImportDevice(&device));
+
+  uint64_t connection{};
+  ASSERT_NO_FATAL_FAILURE(CreateConnection(device, &connection));
+
+  magma_buffer_t buffer{};
+  ASSERT_NO_FATAL_FAILURE(CreateBuffer(connection, &buffer));
+
+  {
+    virtio_magma_execute_command_ctrl_t request{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_EXECUTE_COMMAND;
+    request.connection = connection;
+    request.context_id = 0;
+
+    struct WireDescriptor {
+      uint32_t resource_count;
+      uint32_t command_buffer_count;
+      uint32_t wait_semaphore_count;
+      uint32_t signal_semaphore_count;
+      uint64_t flags;
+    };
+    WireDescriptor descriptor = {
+        .resource_count = 1,
+        .command_buffer_count = 1,
+        .wait_semaphore_count = 1,
+        .signal_semaphore_count = 1,
+    };
+
+    std::vector<uint8_t> request_buffer(sizeof(request) + sizeof(WireDescriptor) +
+                                        descriptor.command_buffer_count *
+                                            sizeof(magma_exec_command_buffer) +
+                                        descriptor.resource_count * sizeof(magma_exec_resource) +
+                                        descriptor.wait_semaphore_count * sizeof(uint64_t) +
+                                        descriptor.signal_semaphore_count * sizeof(uint64_t));
+    memset(request_buffer.data(), 0, request_buffer.size());
+    memcpy(request_buffer.data(), &request, sizeof(request));
+
+    uint16_t descriptor_id{};
+    virtio_magma_execute_command_resp_t response{};
+    void* response_ptr;
+    ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                  .AppendReadableDescriptor(request_buffer.data(),
+                                            static_cast<uint32_t>(request_buffer.size()))
+                  .AppendWritableDescriptor(&response_ptr, sizeof(response))
+                  .Build(&descriptor_id),
+              ZX_OK);
+    magma_->NotifyQueue(0);
+
+    auto used_elem = NextUsed(&out_queue_);
+    EXPECT_TRUE(used_elem);
+    EXPECT_EQ(used_elem->id, descriptor_id);
+    EXPECT_EQ(used_elem->len, sizeof(response));
+
+    memcpy(&response, response_ptr, sizeof(response));
+    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_EXECUTE_COMMAND);
+    EXPECT_EQ(response.hdr.flags, 0u);
+  }
+
+  ASSERT_NO_FATAL_FAILURE(ReleaseBuffer(connection, buffer));
+  ASSERT_NO_FATAL_FAILURE(ReleaseConnection(connection));
+  ASSERT_NO_FATAL_FAILURE(ReleaseDevice(device));
+}
+
 }  // namespace
