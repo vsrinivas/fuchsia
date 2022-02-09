@@ -23,6 +23,12 @@ pub const MAX_STRING_LENGTH: usize = 255;
 // The first key in the symbol table. The key increments by 1 with each entry.
 pub const SYMB_TBL_START_KEY: u32 = 1;
 
+// Bytecode boolean value for false.
+pub const FALSE_VAL: u32 = 0x00;
+
+// Bytecode boolean value for true.
+pub const TRUE_VAL: u32 = 0x01;
+
 #[derive(FromPrimitive)]
 pub enum RawOp {
     EqualCondition = 0x01,

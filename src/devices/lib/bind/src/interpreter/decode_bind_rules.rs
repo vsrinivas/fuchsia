@@ -102,14 +102,15 @@ impl DecodedBindRules {
         symbol_table: HashMap<u32, String>,
         inst_bytecode: Vec<u8>,
     ) -> Result<Self, BytecodeError> {
-        // Remove the INST header and check if the section size.
-        // TODO(fxb/78832): Verify that the instructions are valid.
+        // Remove the INST header and check if the section size is correct.
         let (inst_sz, inst_bytecode) =
             read_and_remove_header(inst_bytecode, INSTRUCTION_MAGIC_NUM)?;
         if inst_bytecode.len() != inst_sz as usize {
             return Err(BytecodeError::IncorrectSectionSize);
         }
 
+        let mut verification = InstructionVerification::new(&symbol_table, &inst_bytecode);
+        verification.verify_instruction_bytecode()?;
         Ok(DecodedBindRules { symbol_table: symbol_table, instructions: inst_bytecode })
     }
 
@@ -283,6 +284,87 @@ fn read_symbol_table(bytecode: Vec<u8>) -> Result<HashMap<u32, String>, Bytecode
     }
 
     Ok(symbol_table)
+}
+
+// This is used for verification of the instruction bytecode.
+#[derive(Debug, Clone)]
+pub struct InstructionVerification<'a> {
+    symbol_table: &'a HashMap<u32, String>,
+    inst_iter: BytecodeIter<'a>,
+}
+
+impl<'a> InstructionVerification<'a> {
+    pub fn new(
+        symbol_table: &'a HashMap<u32, String>,
+        instructions: &'a Vec<u8>,
+    ) -> InstructionVerification<'a> {
+        InstructionVerification { symbol_table: symbol_table, inst_iter: instructions.iter() }
+    }
+
+    pub fn verify_instruction_bytecode(&mut self) -> Result<(), BytecodeError> {
+        while let Some(byte) = self.inst_iter.next() {
+            let op_byte = FromPrimitive::from_u8(*byte).ok_or(BytecodeError::InvalidOp(*byte))?;
+            match op_byte {
+                RawOp::UnconditionalJump => {
+                    self.verify_control_flow_statement(false)?;
+                }
+                RawOp::JumpIfEqual | RawOp::JumpIfNotEqual => {
+                    self.verify_control_flow_statement(true)?;
+                }
+                RawOp::EqualCondition | RawOp::InequalCondition => {
+                    self.verify_conditional_statement()?;
+                }
+                RawOp::JumpLandPad | RawOp::Abort => {
+                    // no-op
+                }
+            };
+        }
+
+        Ok(())
+    }
+
+    fn verify_control_flow_statement(&mut self, is_conditional: bool) -> Result<(), BytecodeError> {
+        // TODO(fxb/93278): verify offset amount takes you to a jump landing pad.
+        let offset_amount = next_u32(&mut self.inst_iter)?;
+
+        if is_conditional {
+            self.verify_conditional_statement()?;
+        }
+
+        if self.inst_iter.len() as u32 <= offset_amount {
+            return Err(BytecodeError::InvalidJumpLocation);
+        }
+
+        Ok(())
+    }
+
+    fn verify_conditional_statement(&mut self) -> Result<(), BytecodeError> {
+        self.verify_value()?;
+        self.verify_value()?;
+        Ok(())
+    }
+
+    fn verify_value(&mut self) -> Result<(), BytecodeError> {
+        let val_primitive = *next_u8(&mut self.inst_iter)?;
+        let val_type = FromPrimitive::from_u8(val_primitive)
+            .ok_or(BytecodeError::InvalidValueType(val_primitive))?;
+        let val = next_u32(&mut self.inst_iter)?;
+
+        match val_type {
+            RawValueType::NumberValue => Ok(()),
+            RawValueType::BoolValue => match val {
+                FALSE_VAL | TRUE_VAL => Ok(()),
+                _ => Err(BytecodeError::InvalidBoolValue(val)),
+            },
+            RawValueType::Key | RawValueType::StringValue | RawValueType::EnumValue => {
+                if self.symbol_table.contains_key(&val) {
+                    Ok(())
+                } else {
+                    Err(BytecodeError::MissingEntryInSymbolTable(val))
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -463,7 +545,7 @@ mod test {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
 
-        let instructions = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x10, 0, 0, 0x10];
+        let instructions = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0, 0x10];
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, instructions.len() as u32);
         bytecode.extend_from_slice(&instructions);
 
@@ -472,23 +554,92 @@ mod test {
     }
 
     #[test]
-    fn test_invalid_instructions() {
+    fn test_invalid_value_type() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
 
-        let instructions = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x10, 0];
+        let instructions = [0x01, 0x01, 0, 0, 0, 0x05, 0x10, 0, 0, 0, 0];
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, instructions.len() as u32);
         bytecode.extend_from_slice(&instructions);
 
-        // DecodedBindRules does not validate the instruction bytecode, so it would still store it.
-        // The instruction bytecode is validated when it's evaluated by a matcher.
-        let bind_rules = DecodedRules::new(bytecode).unwrap();
-        match bind_rules {
-            DecodedRules::Normal(rules) => {
-                assert_eq!(instructions.to_vec(), rules.instructions);
-            }
-            _ => panic!("Rules should have been parsed as Normal"),
-        };
+        assert_eq!(Err(BytecodeError::InvalidValueType(0x10)), DecodedRules::new(bytecode));
+    }
+
+    #[test]
+    fn test_value_key_missing_in_symbols() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
+
+        let instructions = [0x01, 0x00, 0, 0, 0, 0x05, 0x10, 0, 0, 0, 0];
+        append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, instructions.len() as u32);
+        bytecode.extend_from_slice(&instructions);
+
+        assert_eq!(
+            Err(BytecodeError::MissingEntryInSymbolTable(0x05000000)),
+            DecodedRules::new(bytecode)
+        );
+    }
+
+    #[test]
+    fn test_value_string_missing_in_symbols() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
+
+        let instructions = [0x01, 0x02, 0, 0, 0, 0x05, 0x10, 0, 0, 0, 0];
+        append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, instructions.len() as u32);
+        bytecode.extend_from_slice(&instructions);
+
+        assert_eq!(
+            Err(BytecodeError::MissingEntryInSymbolTable(0x05000000)),
+            DecodedRules::new(bytecode)
+        );
+    }
+
+    #[test]
+    fn test_value_enum_missing_in_symbols() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
+
+        let instructions = [0x01, 0x04, 0, 0, 0, 0x05, 0x10, 0, 0, 0, 0];
+        append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, instructions.len() as u32);
+        bytecode.extend_from_slice(&instructions);
+
+        assert_eq!(
+            Err(BytecodeError::MissingEntryInSymbolTable(0x05000000)),
+            DecodedRules::new(bytecode)
+        );
+    }
+
+    #[test]
+    fn test_value_invalid_bool() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
+
+        let instructions = [0x01, 0x01, 0, 0, 0, 0x05, 0x03, 0, 0, 0, 0x01];
+        append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, instructions.len() as u32);
+        bytecode.extend_from_slice(&instructions);
+
+        assert_eq!(Err(BytecodeError::InvalidBoolValue(0x01000000)), DecodedRules::new(bytecode));
+    }
+
+    #[test]
+    fn test_invalid_outofbounds_jump_offset() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
+
+        let instructions = [
+            0x11, 0x01, 0, 0, 0, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0,
+            0, // jump 1 if 0x05000000 == 0x10
+            0x30, 0x20, // abort, jump pad
+            0x10, 0x02, 0, 0,
+            0, // jump 2 (this is the invalid jump as there is only 2 bytes left)
+            0x30, 0x20, // abort, jump pad
+        ];
+        append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, instructions.len() as u32);
+        bytecode.extend_from_slice(&instructions);
+
+        // The last jump would put your instruction pointer past the last element.
+        assert_eq!(Err(BytecodeError::InvalidJumpLocation), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -504,7 +655,16 @@ mod test {
         bytecode.extend_from_slice(&[2, 0, 0, 0]);
         bytecode.extend_from_slice(&str_2);
 
-        let instructions = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x10, 0, 0, 0x10];
+        let instructions = [
+            0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0, 0x10, // 0x05000000 == 0x10000010
+            0x11, 0x01, 0, 0, 0, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0,
+            0, // jmp 1 if 0x05000000 == 0x10
+            0x30, 0x20, // abort, jump pad
+            0x11, 0x01, 0, 0, 0, 0x00, 0x01, 0, 0, 0, 0x02, 0x02, 0, 0,
+            0, // jmp 1 if key("WREN") == "DUCK"
+            0x30, 0x20, // abort, jump pad
+            0x10, 0x02, 0, 0, 0, 0x30, 0x30, 0x20, // jump 2, 2 aborts, jump pad
+        ];
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, instructions.len() as u32);
         bytecode.extend_from_slice(&instructions);
 
