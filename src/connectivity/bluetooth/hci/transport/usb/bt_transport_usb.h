@@ -15,6 +15,7 @@
 #include <ddktl/device.h>
 #include <usb/usb.h>
 
+#include "packet_reassembler.h"
 #include "src/lib/listnode/listnode.h"
 
 namespace bt_transport_usb {
@@ -31,7 +32,7 @@ using DeviceType = ddk::Device<Device, ddk::GetProtocolable, ddk::Unbindable>;
 // BtHciProtocol is not a ddk::base_protocol because vendor drivers proxy requests to this driver.
 class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
  public:
-  explicit Device(zx_device_t* parent) : DeviceType(parent) {}
+  explicit Device(zx_device_t* parent);
 
   // Static bind function for the ZIRCON_DRIVER() declaration. Binds a Device and passes ownership
   // to the driver manager.
@@ -73,12 +74,14 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
 
   static const int kEventBufSize = 255 + 2;  // 2 byte header + payload
 
+  static const int kScoMaxPacketSize = 255 + 3;  // 3 byte header + payload
+
   using usb_callback_t = void (*)(void*, usb_request_t*);
 
-  // Reads the configuration descriptor |config_desc_iter| and sets |isoc_out_addr| to the isoc out
-  // endpoint address. |config_desc_iter| must be iterated to the end of interface 0.
-  // Returns true on success.
-  static bool ReadIsocEndpointsFromConfig(usb_desc_iter_t* config_desc_iter,
+  // Reads the configuration descriptor |config_desc_iter|, sets |isoc_out_addr| to the isoc out
+  // endpoint address, and sets |isoc_in_addr| to the isoc in endpoint address. |config_desc_iter|
+  // must be iterated to the end of interface 0. Returns true on success.
+  static bool ReadIsocEndpointsFromConfig(usb_desc_iter_t* config_desc_iter, uint8_t* isoc_in_addr,
                                           uint8_t* isoc_out_addr);
 
   zx_status_t InstrumentedRequestAlloc(usb_request_t** out, uint64_t data_size, uint8_t ep_address,
@@ -92,12 +95,16 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
 
   void QueueAclReadRequestsLocked() __TA_REQUIRES(mutex_);
 
+  void QueueScoReadRequestsLocked() __TA_REQUIRES(mutex_);
+
   void QueueInterruptRequestsLocked() __TA_REQUIRES(mutex_);
 
   void ChannelCleanupLocked(zx::channel* channel) __TA_REQUIRES(mutex_);
 
-  void SnoopChannelWriteLocked(uint8_t flags, uint8_t* bytes, size_t length) __TA_REQUIRES(mutex_);
+  void SnoopChannelWriteLocked(uint8_t flags, const uint8_t* bytes, size_t length)
+      __TA_REQUIRES(mutex_);
 
+  // Requests removal of this device. Idempotent.
   void RemoveDeviceLocked() __TA_REQUIRES(mutex_);
 
   void HciEventComplete(usb_request_t* req);
@@ -105,6 +112,15 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   void HciAclReadComplete(usb_request_t* req);
 
   void HciAclWriteComplete(usb_request_t* req);
+
+  void HciScoReadComplete(usb_request_t* req);
+
+  // Called by sco_reassembler_ when a packet is recombined.
+  // This method assumes mutex_ is held during invocation. We disable thread safety analysis because
+  // the PacketReassembler callback is too complex for Clang. sco_reassembler_ requires mutex_, so
+  // this method effectively requires mutex_.
+  void OnScoReassemblerPacketLocked(cpp20::span<const uint8_t> packet)
+      __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   void HciScoWriteComplete(usb_request_t* req);
 
@@ -129,7 +145,8 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   // Called upon Bind failure.
   void OnBindFailure(zx_status_t status, const char* msg);
 
-  void HandleUsbResponseError(usb_request_t* req, const char* msg) __TA_REQUIRES(mutex_);
+  void HandleUsbResponseError(usb_request_t* req, const char* req_description)
+      __TA_REQUIRES(mutex_);
 
   usb_protocol_t usb_ __TA_GUARDED(mutex_);
 
@@ -160,10 +177,13 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   size_t event_buffer_offset_ __TA_GUARDED(mutex_) = 0u;
   size_t event_buffer_packet_length_ __TA_GUARDED(mutex_) = 0u;
 
+  PacketReassembler<kScoMaxPacketSize> sco_reassembler_ __TA_GUARDED(mutex_);
+
   // pool of free USB requests
   list_node_t free_event_reqs_ __TA_GUARDED(mutex_);
   list_node_t free_acl_read_reqs_ __TA_GUARDED(mutex_);
   list_node_t free_acl_write_reqs_ __TA_GUARDED(mutex_);
+  list_node_t free_sco_read_reqs_ __TA_GUARDED(mutex_);
   list_node_t free_sco_write_reqs_ __TA_GUARDED(mutex_);
 
   mtx_t mutex_;
@@ -175,12 +195,17 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   // Whether or not we are being unbound.
   bool unbound_ __TA_GUARDED(pending_request_lock_) = false;
 
+  // Set to true when RemoveDeviceLocked() has been called.
+  bool remove_requested_ __TA_GUARDED(mutex_) = false;
+
   mtx_t pending_request_lock_ __TA_ACQUIRED_AFTER(mutex_);
 
   // Set during Bind() and never modified.
   std::optional<uint8_t> bulk_in_addr_;
   std::optional<uint8_t> bulk_out_addr_;
   std::optional<uint8_t> intr_addr_;
+  std::optional<uint8_t> isoc_in_addr_;
+  std::optional<uint8_t> isoc_out_addr_;
 
   // Thread to clean up requests on when the driver is unbound. This avoids blocking the main
   // thread.

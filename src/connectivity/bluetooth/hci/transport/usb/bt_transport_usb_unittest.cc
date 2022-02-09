@@ -82,6 +82,7 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
                                                   /*endpoint_index=*/2, /*in=*/true);
     isoc_in_endpoint_builder.set_max_packet_size(kScoMaxPacketSize);
     interface_1_builder.AddEndpoint(isoc_in_endpoint_builder);
+    isoc_in_addr_ = usb::EpIndexToAddress(usb::kInEndpointStart + 2);
 
     usb::ConfigurationBuilder config_builder(/*config_num=*/0);
     config_builder.AddInterface(interface_0_builder);
@@ -107,6 +108,7 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
     ZX_ASSERT(bulk_out_requests_.is_empty());
     ZX_ASSERT(bulk_in_requests_.is_empty());
     ZX_ASSERT(interrupt_requests_.is_empty());
+    ZX_ASSERT(isoc_in_requests_.is_empty());
 
     sync_mutex_unlock(&mutex_);
   }
@@ -226,7 +228,13 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
       return;
     }
 
-    if (request.request()->header.ep_address == isoc_out_addr_) {
+    if (isoc_in_addr_ && request.request()->header.ep_address == *isoc_in_addr_) {
+      isoc_in_requests_.push(std::move(request));
+      sync_mutex_unlock(&mutex_);
+      return;
+    }
+
+    if (isoc_out_addr_ && request.request()->header.ep_address == *isoc_out_addr_) {
       // Alternate setting 0 has no bandwidth (packets can't be written).
       if (isoc_interface_alt_ == 0) {
         sync_mutex_unlock(&mutex_);
@@ -330,6 +338,17 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
       requests.CompleteAll(ZX_ERR_CANCELED, 0);
       return ZX_OK;
     }
+    if (isoc_in_addr_ && ep_address == *isoc_in_addr_) {
+      auto requests = std::move(isoc_in_requests_);
+      sync_mutex_unlock(&mutex_);
+      requests.CompleteAll(ZX_ERR_CANCELED, 0);
+      return ZX_OK;
+    }
+    if (isoc_out_addr_) {
+      // Isoc out requests are completed instantly, so there's nothing to cancel.
+      sync_mutex_unlock(&mutex_);
+      return ZX_OK;
+    }
     sync_mutex_unlock(&mutex_);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -342,6 +361,18 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
     sync_mutex_lock(&mutex_);
 
     std::optional<usb::BorrowedRequest<>> value = bulk_in_requests_.pop();
+    sync_mutex_unlock(&mutex_);
+
+    if (!value) {
+      return;
+    }
+    value->Complete(ZX_ERR_IO_INVALID, /*actual=*/0);
+  }
+
+  void StallOneIsocInRequest() {
+    sync_mutex_lock(&mutex_);
+
+    std::optional<usb::BorrowedRequest<>> value = isoc_in_requests_.pop();
     sync_mutex_unlock(&mutex_);
 
     if (!value) {
@@ -369,6 +400,27 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
     // This calls the request callback and sets response.status and response.actual.
     req->Complete(ZX_OK, /*actual=*/actual_copy_size);
 
+    return true;
+  }
+
+  // Sends 1 SCO data packet.
+  // Returns true if a response was sent.
+  bool SendOneIsocInResponse(std::vector<uint8_t> buffer) {
+    sync_mutex_lock(&mutex_);
+    std::optional<usb::BorrowedRequest<>> req = isoc_in_requests_.pop();
+    sync_mutex_unlock(&mutex_);
+
+    if (!req) {
+      return false;
+    }
+
+    // Copy data into the request's VMO. The request must have been allocated with a large enough
+    // VMO (usb_request_alloc's data_size parameter). bt-transport-usb currently uses the max SCO
+    // frame size for the data_size.
+    ssize_t actual_copy_size = req->CopyTo(buffer.data(), buffer.size(), /*offset=*/0);
+    EXPECT_EQ(actual_copy_size, static_cast<ssize_t>(buffer.size()));
+    // This calls the request callback and sets response.status and response.actual.
+    req->Complete(ZX_OK, /*actual=*/actual_copy_size);
     return true;
   }
 
@@ -432,10 +484,14 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
   // Requests for HCI events
   UnownedRequestQueue interrupt_requests_ __TA_GUARDED(mutex_);
 
+  // Inbound SCO requests.
+  UnownedRequestQueue isoc_in_requests_ __TA_GUARDED(mutex_);
+
   std::vector<uint8_t> device_descriptor_data_;
   std::optional<uint8_t> bulk_in_addr_;
   std::optional<uint8_t> bulk_out_addr_;
   std::optional<uint8_t> isoc_out_addr_;
+  std::optional<uint8_t> isoc_in_addr_;
   std::optional<uint8_t> interrupt_addr_;
   uint8_t isoc_interface_alt_ __TA_GUARDED(mutex_) = 0;
 };
@@ -508,6 +564,11 @@ class BtTransportUsbHciProtocolTest : public BtTransportUsbTest {
     zx_status_t sco_status = bt_hci_open_sco_channel(&hci_proto_, sco_chan_driver_end.release());
     ASSERT_EQ(sco_status, ZX_OK);
 
+    // Configure wait for readable signal on ACL channel.
+    sco_chan_readable_wait_.set_object(sco_chan_.get());
+    wait_begin_status = sco_chan_readable_wait_.Begin(dispatcher());
+    ASSERT_EQ(wait_begin_status, ZX_OK) << zx_status_get_string(wait_begin_status);
+
     configure_snoop_channel();
   }
 
@@ -543,6 +604,10 @@ class BtTransportUsbHciProtocolTest : public BtTransportUsbTest {
 
   const std::vector<std::vector<uint8_t>>& received_acl_packets() const {
     return acl_chan_received_packets_;
+  }
+
+  const std::vector<std::vector<uint8_t>>& received_sco_packets() const {
+    return sco_chan_received_packets_;
   }
 
   zx::channel* cmd_chan() { return &cmd_chan_; }
@@ -587,6 +652,8 @@ class BtTransportUsbHciProtocolTest : public BtTransportUsbTest {
       chan = zx::unowned_channel(snoop_chan_);
     } else if (wait == &acl_chan_readable_wait_) {
       chan = zx::unowned_channel(acl_chan_);
+    } else if (wait == &sco_chan_readable_wait_) {
+      chan = zx::unowned_channel(sco_chan_);
     } else {
       ADD_FAILURE();
       return;
@@ -608,6 +675,8 @@ class BtTransportUsbHciProtocolTest : public BtTransportUsbTest {
         snoop_chan_received_packets_.push_back(std::move(bytes));
       } else if (wait == &acl_chan_readable_wait_) {
         acl_chan_received_packets_.push_back(std::move(bytes));
+      } else if (wait == &sco_chan_readable_wait_) {
+        sco_chan_received_packets_.push_back(std::move(bytes));
       } else {
         ADD_FAILURE();
         return;
@@ -632,10 +701,13 @@ class BtTransportUsbHciProtocolTest : public BtTransportUsbTest {
       snoop_chan_readable_wait_{this, zx_handle_t(), ZX_CHANNEL_READABLE};
   async::WaitMethod<BtTransportUsbHciProtocolTest, &BtTransportUsbHciProtocolTest::OnChannelReady>
       acl_chan_readable_wait_{this, zx_handle_t(), ZX_CHANNEL_READABLE};
+  async::WaitMethod<BtTransportUsbHciProtocolTest, &BtTransportUsbHciProtocolTest::OnChannelReady>
+      sco_chan_readable_wait_{this, zx_handle_t(), ZX_CHANNEL_READABLE};
 
   std::vector<std::vector<uint8_t>> cmd_chan_received_packets_;
   std::vector<std::vector<uint8_t>> snoop_chan_received_packets_;
   std::vector<std::vector<uint8_t>> acl_chan_received_packets_;
+  std::vector<std::vector<uint8_t>> sco_chan_received_packets_;
 };
 
 // This tests the test fixture setup and teardown.
@@ -974,6 +1046,49 @@ TEST_F(BtTransportUsbHciProtocolTest, DropManyScoPacketsDueToNoAltSettingSelecte
   std::vector<std::vector<uint8_t>> packets =
       fake_usb()->wait_for_n_sco_packets(1, kOutboundPacketWaitExpectedToFailTimeout);
   ASSERT_EQ(packets.size(), 0u);
+}
+
+TEST_F(BtTransportUsbHciProtocolTest, ReceiveManyScoPackets) {
+  ConfigureSco(SCO_CODING_FORMAT_CVSD, SCO_ENCODING_BITS_8, SCO_SAMPLE_RATE_KHZ_8);
+
+  const std::vector<uint8_t> kSnoopScoBuffer = {
+      BT_HCI_SNOOP_TYPE_SCO | BT_HCI_SNOOP_FLAG_RECV,  // Snoop packet flag
+      0x01,                                            // arbitrary header fields
+      0x02,
+      0x03,  // payload length
+      0x04,  // arbitrary payload
+      0x05,
+      0x06,
+  };
+  const std::vector<uint8_t> kScoBuffer(kSnoopScoBuffer.begin() + 1, kSnoopScoBuffer.end());
+  // Split the packet into 2 chunks to test recombination.
+  const std::vector<uint8_t> kScoBufferChunk0(kScoBuffer.begin(), kScoBuffer.begin() + 4);
+  const std::vector<uint8_t> kScoBufferChunk1(kScoBuffer.begin() + 4, kScoBuffer.end());
+
+  const int kNumPackets = 25;
+  for (int i = 0; i < kNumPackets; i++) {
+    EXPECT_TRUE(fake_usb()->SendOneIsocInResponse(kScoBufferChunk0));
+    EXPECT_TRUE(fake_usb()->SendOneIsocInResponse(kScoBufferChunk1));
+    RunLoopUntilIdle();
+  }
+
+  ASSERT_EQ(received_sco_packets().size(), static_cast<size_t>(kNumPackets));
+  for (const std::vector<uint8_t>& packet : received_sco_packets()) {
+    EXPECT_EQ(packet.size(), kScoBuffer.size());
+    EXPECT_EQ(packet, kScoBuffer);
+  }
+
+  RunLoopUntilIdle();
+  ASSERT_EQ(snoop_packets().size(), static_cast<size_t>(kNumPackets));
+  for (const std::vector<uint8_t>& packet : snoop_packets()) {
+    EXPECT_EQ(packet, kSnoopScoBuffer);
+  }
+}
+
+TEST_F(BtTransportUsbHciProtocolTest, IgnoresStalledScoRequest) {
+  ConfigureSco(SCO_CODING_FORMAT_CVSD, SCO_ENCODING_BITS_8, SCO_SAMPLE_RATE_KHZ_8);
+  fake_usb()->StallOneIsocInRequest();
+  EXPECT_FALSE(dut()->RemoveCalled());
 }
 
 }  // namespace

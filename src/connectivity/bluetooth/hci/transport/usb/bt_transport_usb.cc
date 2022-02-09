@@ -31,6 +31,7 @@
 #define EVENT_REQ_COUNT 8
 #define ACL_READ_REQ_COUNT 8
 #define ACL_WRITE_REQ_COUNT 8
+#define SCO_READ_REQ_COUNT 8
 
 // The maximum HCI ACL frame size used for data transactions
 #define ACL_MAX_FRAME_SIZE 1028  // (1024 + 4 bytes for the ACL header)
@@ -63,6 +64,12 @@ struct HciEventHeader {
 } __PACKED;
 
 }  // namespace
+
+Device::Device(zx_device_t* parent)
+    : DeviceType(parent),
+      sco_reassembler_(
+          /*length_param_index=*/2, /*header_size=*/3,
+          [this](cpp20::span<const uint8_t> pkt) { OnScoReassemblerPacketLocked(pkt); }) {}
 
 zx_status_t Device::Create(void* ctx, zx_device_t* parent) {
   std::unique_ptr<Device> dev = std::make_unique<Device>(parent);
@@ -150,14 +157,19 @@ zx_status_t Device::Bind() {
   // that the alternate settings use the same endpoint addresses, so we skip them. See Core Spec
   // v5.3, Vol 4, Part B, Sec 2.1.1.
   uint8_t isoc_out_addr = 0;
-  sco_supported_ = ReadIsocEndpointsFromConfig(&config_desc_iter, &isoc_out_addr);
-  if (!sco_supported_) {
+  uint8_t isoc_in_addr = 0;
+  sco_supported_ = ReadIsocEndpointsFromConfig(&config_desc_iter, &isoc_in_addr, &isoc_out_addr);
+  if (sco_supported_) {
+    isoc_in_addr_ = isoc_in_addr;
+    isoc_out_addr_ = isoc_out_addr;
+  } else {
     zxlogf(DEBUG, "SCO is not supported");
   }
 
   list_initialize(&free_event_reqs_);
   list_initialize(&free_acl_read_reqs_);
   list_initialize(&free_acl_write_reqs_);
+  list_initialize(&free_sco_read_reqs_);
   list_initialize(&free_sco_write_reqs_);
 
   // Initialize events used by read thread.
@@ -195,11 +207,19 @@ zx_status_t Device::Bind() {
       OnBindFailure(status, "SCO write USB request allocation failure");
       return status;
     }
+
+    status = AllocBtUsbPackets(SCO_READ_REQ_COUNT, kScoMaxFrameSize, isoc_in_addr, req_size,
+                               &free_sco_read_reqs_);
+    if (status != ZX_OK) {
+      OnBindFailure(status, "SCO read USB request allocation failure");
+      return status;
+    }
   }
 
   mtx_lock(&mutex_);
   QueueInterruptRequestsLocked();
   QueueAclReadRequestsLocked();
+  QueueScoReadRequestsLocked();
   mtx_unlock(&mutex_);
 
   // Copy the PID and VID from the underlying BT so that it can be filtered on
@@ -282,6 +302,20 @@ void Device::DdkUnbind(ddk::UnbindTxn txn) {
       zxlogf(ERROR, "canceling interrupt requests failed with status: %s",
              zx_status_get_string(status));
     }
+    if (isoc_in_addr_) {
+      status = usb_cancel_all(&usb_, isoc_in_addr_.value());
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "canceling isoc in requests failed with status: %s",
+               zx_status_get_string(status));
+      }
+    }
+    if (isoc_out_addr_) {
+      status = usb_cancel_all(&usb_, isoc_out_addr_.value());
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "canceling isoc out requests failed with status: %s",
+               zx_status_get_string(status));
+      }
+    }
 
     zxlogf(DEBUG, "DdkUnbind: waiting for read thread to complete");
     // Signal and wait for the read thread to complete (this is necessary to prevent use-after-free
@@ -306,18 +340,13 @@ void Device::DdkRelease() {
 
   mtx_lock(&mutex_);
 
-  usb_request_t* req;
-  while ((req = usb_req_list_remove_head(&free_event_reqs_, parent_req_size_)) != nullptr) {
-    InstrumentedRequestRelease(req);
-  }
-  while ((req = usb_req_list_remove_head(&free_acl_read_reqs_, parent_req_size_)) != nullptr) {
-    InstrumentedRequestRelease(req);
-  }
-  while ((req = usb_req_list_remove_head(&free_acl_write_reqs_, parent_req_size_)) != nullptr) {
-    InstrumentedRequestRelease(req);
-  }
-  while ((req = usb_req_list_remove_head(&free_sco_write_reqs_, parent_req_size_)) != nullptr) {
-    InstrumentedRequestRelease(req);
+  const auto reqs_lists = {&free_event_reqs_, &free_acl_read_reqs_, &free_acl_write_reqs_,
+                           &free_sco_read_reqs_, &free_sco_write_reqs_};
+  for (list_node_t* list : reqs_lists) {
+    usb_request_t* req;
+    while ((req = usb_req_list_remove_head(list, parent_req_size_)) != nullptr) {
+      InstrumentedRequestRelease(req);
+    }
   }
 
   mtx_unlock(&mutex_);
@@ -334,9 +363,10 @@ void Device::DdkRelease() {
   delete this;
 }
 
-bool Device::ReadIsocEndpointsFromConfig(usb_desc_iter_t* config_desc_iter,
+bool Device::ReadIsocEndpointsFromConfig(usb_desc_iter_t* config_desc_iter, uint8_t* isoc_in_addr,
                                          uint8_t* isoc_out_addr) {
   ZX_ASSERT(config_desc_iter);
+  ZX_ASSERT(isoc_in_addr);
   ZX_ASSERT(isoc_out_addr);
 
   usb_interface_descriptor_t* intf =
@@ -347,19 +377,31 @@ bool Device::ReadIsocEndpointsFromConfig(usb_desc_iter_t* config_desc_iter,
   }
 
   if (intf->b_num_endpoints != kNumInterface1Endpoints) {
-    zxlogf(DEBUG, "USB interface 1 does not have 2 SCO endpoints");
+    zxlogf(DEBUG, "USB interface 1 does not have %hhu SCO endpoints", kNumInterface1Endpoints);
     return false;
   }
 
   usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(config_desc_iter);
+  uint8_t in = 0;
+  uint8_t out = 0;
   while (endp) {
-    if (usb_ep_direction(endp) == USB_ENDPOINT_OUT &&
-        usb_ep_type(endp) == USB_ENDPOINT_ISOCHRONOUS) {
-      *isoc_out_addr = endp->b_endpoint_address;
-      return true;
+    if (usb_ep_type(endp) == USB_ENDPOINT_ISOCHRONOUS) {
+      if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
+        out = endp->b_endpoint_address;
+      } else {
+        ZX_ASSERT(usb_ep_direction(endp) == USB_ENDPOINT_IN);
+        in = endp->b_endpoint_address;
+      }
     }
     endp = usb_desc_iter_next_endpoint(config_desc_iter);
   }
+  if (in && out) {
+    *isoc_in_addr = in;
+    *isoc_out_addr = out;
+    return true;
+  }
+  zxlogf(DEBUG, "Missing directed ISOC endpoint on interface 1: (in addr: %hhu, out addr: %hhu)",
+         in, out);
   return false;
 }
 
@@ -446,6 +488,15 @@ void Device::QueueAclReadRequestsLocked() {
   }
 }
 
+void Device::QueueScoReadRequestsLocked() {
+  usb_request_t* req = nullptr;
+  while ((req = usb_req_list_remove_head(&free_sco_read_reqs_, parent_req_size_)) != nullptr) {
+    UsbRequestSend(&usb_, req, [](void* ctx, usb_request_t* req) {
+      static_cast<Device*>(ctx)->HciScoReadComplete(req);
+    });
+  }
+}
+
 void Device::QueueInterruptRequestsLocked() {
   usb_request_t* req = nullptr;
   while ((req = usb_req_list_remove_head(&free_event_reqs_, parent_req_size_)) != nullptr) {
@@ -457,7 +508,7 @@ void Device::QueueInterruptRequestsLocked() {
 
 void Device::ChannelCleanupLocked(zx::channel* channel) { channel->reset(); }
 
-void Device::SnoopChannelWriteLocked(uint8_t flags, uint8_t* bytes, size_t length) {
+void Device::SnoopChannelWriteLocked(uint8_t flags, const uint8_t* bytes, size_t length) {
   if (snoop_channel_ == ZX_HANDLE_INVALID)
     return;
 
@@ -476,7 +527,12 @@ void Device::SnoopChannelWriteLocked(uint8_t flags, uint8_t* bytes, size_t lengt
   }
 }
 
-void Device::RemoveDeviceLocked() { DdkAsyncRemove(); }
+void Device::RemoveDeviceLocked() {
+  if (!remove_requested_) {
+    DdkAsyncRemove();
+    remove_requested_ = true;
+  }
+}
 
 void Device::HciEventComplete(usb_request_t* req) {
   zxlogf(TRACE, "bt-transport-usb: Event received");
@@ -490,9 +546,9 @@ void Device::HciEventComplete(usb_request_t* req) {
 
   // Handle the interrupt as long as either the command channel or the snoop channel is open.
   if (cmd_channel_ == ZX_HANDLE_INVALID && snoop_channel_ == ZX_HANDLE_INVALID) {
-    zxlogf(
-        DEBUG,
-        "bt-transport-usb: received hci event while command channel and snoop channel are closed");
+    zxlogf(DEBUG,
+           "bt-transport-usb: received hci event while command channel and snoop channel are "
+           "closed");
     // Re-queue the HCI event USB request.
     zx_status_t status = usb_req_list_add_head(&free_event_reqs_, req, parent_req_size_);
     ZX_ASSERT(status == ZX_OK);
@@ -598,7 +654,7 @@ void Device::HciAclReadComplete(usb_request_t* req) {
   }
 
   if (req->response.status != ZX_OK) {
-    HandleUsbResponseError(req, "acl read");
+    HandleUsbResponseError(req, "ACL read");
     mtx_unlock(&mutex_);
     return;
   }
@@ -637,7 +693,7 @@ void Device::HciAclWriteComplete(usb_request_t* req) {
   mtx_lock(&mutex_);
 
   if (req->response.status != ZX_OK) {
-    HandleUsbResponseError(req, "acl write");
+    HandleUsbResponseError(req, "ACL write");
     mtx_unlock(&mutex_);
     return;
   }
@@ -661,16 +717,61 @@ void Device::HciAclWriteComplete(usb_request_t* req) {
   mtx_unlock(&mutex_);
 }
 
+void Device::HciScoReadComplete(usb_request_t* req) {
+  zxlogf(TRACE, "SCO frame received");
+  mtx_lock(&mutex_);
+
+  if (req->response.status == ZX_ERR_IO_INVALID) {
+    zxlogf(TRACE, "SCO request stalled, ignoring.");
+    zx_status_t status = usb_req_list_add_head(&free_sco_read_reqs_, req, parent_req_size_);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    QueueScoReadRequestsLocked();
+    mtx_unlock(&mutex_);
+    return;
+  }
+
+  if (req->response.status != ZX_OK) {
+    HandleUsbResponseError(req, "SCO read");
+    mtx_unlock(&mutex_);
+    return;
+  }
+
+  void* buffer;
+  zx_status_t status = usb_request_mmap(req, &buffer);
+  ZX_ASSERT_MSG(status == ZX_OK, "usb_req_mmap failed: %s", zx_status_get_string(status));
+
+  sco_reassembler_.ProcessData({static_cast<uint8_t*>(buffer), req->response.actual});
+
+  status = usb_req_list_add_head(&free_sco_read_reqs_, req, parent_req_size_);
+  ZX_ASSERT(status == ZX_OK);
+  QueueScoReadRequestsLocked();
+
+  mtx_unlock(&mutex_);
+}
+
+void Device::OnScoReassemblerPacketLocked(cpp20::span<const uint8_t> packet) {
+  if (sco_channel_ == ZX_HANDLE_INVALID) {
+    zxlogf(ERROR, "SCO data received while channel is closed");
+  } else {
+    zx_status_t status = zx_channel_write(sco_channel_.get(), /*options=*/0, packet.data(),
+                                          static_cast<uint32_t>(packet.size()), /*handles=*/nullptr,
+                                          /*num_handles=*/0);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: failed to write SCO packet: %s", __FUNCTION__,
+             zx_status_get_string(status));
+    }
+  }
+
+  // If the snoop channel is open then try to write the packet even if sco_channel_ was closed.
+  SnoopChannelWriteLocked(bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_SCO, /*is_received=*/true),
+                          packet.data(), packet.size());
+}
+
 void Device::HciScoWriteComplete(usb_request_t* req) {
   mtx_lock(&mutex_);
 
   if (req->response.status != ZX_OK) {
-    zxlogf(
-        ERROR,
-        "bt-transport-usb: sco write request completed with error status %d (%s). Removing device",
-        req->response.status, zx_status_get_string(req->response.status));
-    RemoveDeviceLocked();
-    InstrumentedRequestRelease(req);
+    HandleUsbResponseError(req, "SCO write");
     mtx_unlock(&mutex_);
     return;
   }
@@ -895,8 +996,8 @@ void Device::HciHandleScoReadEvents(const zx_port_packet_t& packet) {
 
     node = list_remove_head(&free_sco_write_reqs_);
     mtx_unlock(&mutex_);
-    // The mutex was held between the peek and the remove, so if we got this far the list must have
-    // a node.
+    // The mutex was held between the peek and the remove, so if we got this far the list must
+    // have a node.
     ZX_ASSERT(node);
 
     usb_req_internal_t* req_int = containerof(node, usb_req_internal_t, node);
@@ -1100,9 +1201,9 @@ zx_status_t Device::BtHciOpenSnoopChannel(zx::channel channel) {
       zxlogf(TRACE, "bt-transport-usb: snoop port wait timed out: %s",
              zx_status_get_string(status));
     } else if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
-      zxlogf(
-          TRACE,
-          "previous snoop channel peer closed; proceeding with configuration of new snoop channel");
+      zxlogf(TRACE,
+             "previous snoop channel peer closed; proceeding with configuration of new snoop "
+             "channel");
       snoop_channel_.reset();
     }
   }
@@ -1141,10 +1242,11 @@ void Device::OnBindFailure(zx_status_t status, const char* msg) {
   DdkRelease();
 }
 
-void Device::HandleUsbResponseError(usb_request_t* req, const char* msg) {
-  zxlogf(ERROR, "%s request completed with error status %d (%s). Removing device", msg,
-         req->response.status, zx_status_get_string(req->response.status));
+void Device::HandleUsbResponseError(usb_request_t* req, const char* req_description) {
+  zx_status_t status = req->response.status;
   InstrumentedRequestRelease(req);
+  zxlogf(ERROR, "%s request completed with error status (%s). Removing device", req_description,
+         zx_status_get_string(status));
   RemoveDeviceLocked();
 }
 
