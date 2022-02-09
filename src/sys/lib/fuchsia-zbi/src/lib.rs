@@ -90,6 +90,7 @@ pub struct ZbiItem {
     item_offset: u32,
     item_length: u32,
     extra: u32,
+    raw_type: u32,
 }
 
 #[derive(Debug, PartialEq)]
@@ -256,19 +257,23 @@ impl ZbiParser {
         Ok(result)
     }
 
-    /// Helper function to return the first item matching a given type and extra value. This avoids
-    /// reading unwanted results from the underlying VMO.
-    pub fn try_get_first_matching_item(
+    /// Helper function to return the last item matching a given type and extra value. This avoids
+    /// reading unwanted results from the underlying VMO. The raw type is passed to allow
+    /// differentiating between different types of driver metadata.
+    pub fn try_get_last_matching_item(
         &self,
-        zbi_type: ZbiType,
+        zbi_type_raw: u32,
         extra: u32,
     ) -> Result<ZbiResult, ZbiParserError> {
+        let zbi_type = ZbiParser::get_type(zbi_type_raw);
         if !self.items.contains_key(&zbi_type) {
             return Err(ZbiParserError::ItemNotFound { zbi_type });
         }
 
-        for item in &self.items[&zbi_type] {
-            if item.extra == extra {
+        // TODO(fxb/34597): The ZBI spec doesn't require (type, extra) to be a unique key, so
+        // follow the existing convention of giving the last occurrence priority.
+        for item in self.items[&zbi_type].iter().rev() {
+            if item.extra == extra && item.raw_type == zbi_type_raw {
                 return Ok(self.get_zbi_result(zbi_type, &item)?);
             }
         }
@@ -430,6 +435,7 @@ impl ZbiParser {
                     item_offset: current_offset + header_offset,
                     item_length: header.length.get(),
                     extra: if zbi_type == ZbiType::StorageRamdisk { 0 } else { header.extra.get() },
+                    raw_type: header.zbi_type.get(),
                 });
 
                 // If there is a decommit range, resolve it now so that it doesn't include this
@@ -678,12 +684,12 @@ mod tests {
         let parser = ZbiParser::new(zbi).parse().expect("Failed to parse ZBI");
 
         let item = parser
-            .try_get_first_matching_item(ZbiType::Crashlog, 0xABCD)
+            .try_get_last_matching_item(ZbiType::Crashlog as u32, 0xABCD)
             .expect("Failed to get item");
         assert_eq!(item.extra, 0xABCD);
 
         assert_eq!(
-            parser.try_get_first_matching_item(ZbiType::Crashlog, 0xDEF).unwrap_err(),
+            parser.try_get_last_matching_item(ZbiType::Crashlog as u32, 0xDEF).unwrap_err(),
             ZbiParserError::ItemWithExtraNotFound { zbi_type: ZbiType::Crashlog, extra: 0xDEF }
         );
     }
@@ -739,7 +745,7 @@ mod tests {
 
         // Extra has been set to zero, while it was 0xABCD in the ZBI.
         let item = parser
-            .try_get_first_matching_item(ZbiType::StorageRamdisk, 0x0)
+            .try_get_last_matching_item(ZbiType::StorageRamdisk as u32, 0x0)
             .expect("Failed to get item");
 
         // Bytes include the header.
@@ -838,13 +844,13 @@ mod tests {
 
         let (zbi, builder) = ZbiBuilder::new()
             .add_header(ZbiBuilder::simple_header(ZbiType::Container, 0))
-            .add_header(driver_metadata_header1)
+            .add_header(driver_metadata_header1.clone())
             .add_item(0xFC0)
             .add_header(ZbiBuilder::simple_header(ZbiType::Crashlog, 0xF80))
             .add_item(0xF80)
-            .add_header(driver_metadata_header2)
+            .add_header(driver_metadata_header2.clone())
             .add_item(0x40)
-            .add_header(driver_metadata_header3)
+            .add_header(driver_metadata_header3.clone())
             .add_item(0x40)
             .calculate_item_length()
             .generate()
@@ -862,6 +868,35 @@ mod tests {
         assert_eq!(parser.items.get(&ZbiType::DriverMetadata).unwrap()[2].header_offset, 0x2000);
 
         check_item_bytes(&builder, &parser);
+
+        // We should be able to get specific driver metadata entries indexed by their raw types.
+        // Note that all of the extras are the same, with only the types differing.
+        assert_eq!(
+            parser
+                .try_get_last_matching_item(driver_metadata_header1.zbi_type.get(), 0)
+                .unwrap()
+                .bytes
+                .len(),
+            driver_metadata_header1.length.get() as usize
+        );
+
+        assert_eq!(
+            parser
+                .try_get_last_matching_item(driver_metadata_header2.zbi_type.get(), 0)
+                .unwrap()
+                .bytes
+                .len(),
+            driver_metadata_header2.length.get() as usize
+        );
+
+        assert_eq!(
+            parser
+                .try_get_last_matching_item(driver_metadata_header3.zbi_type.get(), 0)
+                .unwrap()
+                .bytes
+                .len(),
+            driver_metadata_header3.length.get() as usize
+        );
 
         assert!(parser.release_item(ZbiType::DriverMetadata).is_ok());
         assert!(parser.try_get_item(ZbiType::DriverMetadata).is_err());

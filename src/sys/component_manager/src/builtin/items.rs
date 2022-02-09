@@ -95,8 +95,7 @@ impl BuiltinCapability for Items {
         while let Some(request) = stream.try_next().await? {
             match request {
                 fboot::ItemsRequest::Get { type_, extra, responder } => {
-                    let zbi_type = ZbiParser::get_type(type_);
-                    match self.zbi_parser.try_get_first_matching_item(zbi_type, extra) {
+                    match self.zbi_parser.try_get_last_matching_item(type_, extra) {
                         Ok(result) => {
                             let vmo = zx::Vmo::create(result.bytes.len().try_into()?)?;
                             vmo.write(&result.bytes, 0)?;
