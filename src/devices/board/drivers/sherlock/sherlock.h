@@ -63,6 +63,7 @@ enum {
 enum { SHERLOCK_SPICC0, SHERLOCK_SPICC1 };
 
 // From the schematic.
+constexpr uint8_t BOARD_REV_B72 = 0x01;
 constexpr uint8_t BOARD_REV_P2 = 0x0B;
 constexpr uint8_t BOARD_REV_REWORK = 0x0C;
 constexpr uint8_t BOARD_REV_P21 = 0x0D;
