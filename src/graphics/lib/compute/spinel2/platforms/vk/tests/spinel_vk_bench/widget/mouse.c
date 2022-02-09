@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "common/macros.h"
+#include "roboto_mono_regular.h"
 #include "spinel/spinel_assert.h"
 #include "spinel/spinel_opcodes.h"
 #include "widget_defn.h"
@@ -36,24 +37,57 @@ struct impl_vec2
 //
 //
 
-struct widget_mouse
+union widget_mouse_paths
 {
-  struct widget widget;
-
-  struct impl_vec2 position;
+  struct
+  {
+    struct
+    {
+      spinel_path_t black;
+      spinel_path_t white;
+    } pointer;
+  } named;
 
   struct
   {
-    spinel_path_t extent[2];
+    spinel_path_t handles[2];
     uint32_t      count;
-  } paths;
+  } extent;
+};
+
+//
+//
+//
+
+union widget_mouse_rasters
+{
+  struct
+  {
+    struct
+    {
+      spinel_raster_t black;
+      spinel_raster_t white;
+    } pointer;
+  } named;
 
   struct
   {
-    spinel_raster_t extent[2];
+    spinel_raster_t handles[2];
     uint32_t        count;
     bool            is_valid;
-  } rasters;
+  } extent;
+};
+
+//
+//
+//
+
+struct widget_mouse
+{
+  struct widget              widget;
+  struct impl_vec2           position;
+  union widget_mouse_paths   paths;
+  union widget_mouse_rasters rasters;
 
   //
   // FIXME(allanmac): Eventually decide whether or not the mouse always
@@ -70,13 +104,13 @@ static void
 impl_paths_release(struct widget_mouse * impl, struct widget_context * const context)
 {
   // free paths if the paths extent is valid
-  if (impl->paths.count > 0)
+  if (impl->paths.extent.count > 0)
     {
       spinel(path_release(context->context,  //
-                          impl->paths.extent,
-                          ARRAY_LENGTH_MACRO(impl->paths.extent)));
+                          impl->paths.extent.handles,
+                          impl->paths.extent.count));
 
-      impl->paths.count = 0;
+      impl->paths.extent.count = 0;
     }
 }
 
@@ -84,13 +118,13 @@ static void
 impl_rasters_release(struct widget_mouse * impl, struct widget_context * const context)
 {
   // free rasters if the raster extent is valid
-  if (impl->rasters.count > 0)
+  if (impl->rasters.extent.count > 0)
     {
-      spinel(raster_release(context->context,
-                            impl->rasters.extent,
-                            ARRAY_LENGTH_MACRO(impl->rasters.extent)));
+      spinel(raster_release(context->context,  //
+                            impl->rasters.extent.handles,
+                            impl->rasters.extent.count));
 
-      impl->rasters.count = 0;
+      impl->rasters.extent.count = 0;
     }
 }
 
@@ -158,7 +192,7 @@ impl_regen(struct widget *                     widget,
       spinel(path_builder_line_to(pb, +0.0f, 14.5f));
       spinel(path_builder_line_to(pb, +6.0f, 17.0f));
       spinel(path_builder_line_to(pb, +0.0f, 1.0f));
-      spinel(path_builder_end(pb, mouse.impl->paths.extent + 0));  // black
+      spinel(path_builder_end(pb, &mouse.impl->paths.named.pointer.black));  // black
 
       spinel(path_builder_begin(pb));
       spinel(path_builder_move_to(pb, +0.0f, 0.0f));
@@ -166,9 +200,9 @@ impl_regen(struct widget *                     widget,
       spinel(path_builder_line_to(pb, +0.0f, 15.0f));
       spinel(path_builder_line_to(pb, +7.0f, 18.0f));
       spinel(path_builder_line_to(pb, +0.0f, 0.0f));
-      spinel(path_builder_end(pb, mouse.impl->paths.extent + 1));  // white
+      spinel(path_builder_end(pb, &mouse.impl->paths.named.pointer.white));  // white
 
-      mouse.impl->paths.count = ARRAY_LENGTH_MACRO(mouse.impl->paths.extent);
+      mouse.impl->paths.extent.count = ARRAY_LENGTH_MACRO(mouse.impl->paths.extent.handles);
     }
 
   //
@@ -176,9 +210,9 @@ impl_regen(struct widget *                     widget,
   //
   // FIXME(allanmac): raster translation isn't available yet
   //
-  if (control->rasters && !mouse.impl->rasters.is_valid)
+  if (control->rasters && !mouse.impl->rasters.extent.is_valid)
     {
-      assert(mouse.impl->paths.count != 0);
+      assert(mouse.impl->paths.extent.count != 0);
 
       // release existing
       impl_rasters_release(mouse.impl, context);
@@ -196,38 +230,38 @@ impl_regen(struct widget *                     widget,
       spinel_transform_stack_push_rotate(ts, (float)(-M_PI / 6.0));
       spinel_transform_stack_concat(ts);
 
-      spinel_transform_t * tos = (spinel_transform_t *)spinel_transform_stack_top_transform(ts);
+      spinel_transform_t const * tos = spinel_transform_stack_top_transform(ts);
 
       static struct spinel_clip const raster_clips[] = { { 0.0f, 0.0f, FLT_MAX, FLT_MAX } };
 
       // build rasters
       spinel(raster_builder_begin(rb));
       spinel(raster_builder_add(rb,  //
-                                mouse.impl->paths.extent + 0,
+                                &mouse.impl->paths.named.pointer.black,
                                 NULL,
                                 tos,
                                 NULL,
                                 raster_clips,
                                 1));
-      spinel(raster_builder_end(rb, mouse.impl->rasters.extent + 0));
+      spinel(raster_builder_end(rb, &mouse.impl->rasters.named.pointer.black));
 
       spinel(raster_builder_begin(rb));
       spinel(raster_builder_add(rb,  //
-                                mouse.impl->paths.extent + 1,
+                                &mouse.impl->paths.named.pointer.white,
                                 NULL,
                                 tos,
                                 NULL,
                                 raster_clips,
                                 1));
-      spinel(raster_builder_end(rb, mouse.impl->rasters.extent + 1));
+      spinel(raster_builder_end(rb, &mouse.impl->rasters.named.pointer.white));
 
       // restore transform stack
       spinel_transform_stack_restore(ts, ts_save);
 
-      mouse.impl->rasters.count = ARRAY_LENGTH_MACRO(mouse.impl->rasters.extent);
+      mouse.impl->rasters.extent.count = ARRAY_LENGTH_MACRO(mouse.impl->rasters.extent.handles);
 
       // now valid for current position
-      mouse.impl->rasters.is_valid = true;
+      mouse.impl->rasters.extent.is_valid = true;
     }
 
   //
@@ -284,12 +318,12 @@ impl_regen(struct widget *                     widget,
   //
   if (control->composition)
     {
-      assert(mouse.impl->rasters.count != 0);
+      assert(mouse.impl->rasters.extent.count != 0);
 
       spinel_layer_id layer_id = mouse.widget->layout.group.layer.base;
 
       spinel(composition_place(context->composition.curr,
-                               mouse.impl->rasters.extent + 0,
+                               &mouse.impl->rasters.named.pointer.black,
                                &layer_id,
                                NULL,
                                1));
@@ -297,7 +331,7 @@ impl_regen(struct widget *                     widget,
       ++layer_id;
 
       spinel(composition_place(context->composition.curr,
-                               mouse.impl->rasters.extent + 1,
+                               &mouse.impl->rasters.named.pointer.white,
                                &layer_id,
                                NULL,
                                1));
@@ -313,7 +347,7 @@ impl_regen(struct widget *                     widget,
 static void
 impl_rerasterize(widget_mouse_t * const mouse, struct widget_control * const control)
 {
-  mouse->impl->rasters.is_valid = false;
+  mouse->impl->rasters.extent.is_valid = false;
 
   control->rasters     = true;
   control->styling     = true;

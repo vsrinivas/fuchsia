@@ -36,6 +36,7 @@
 #include "spinel/platforms/vk/spinel_vk.h"
 #include "spinel/spinel_assert.h"
 #include "svg/svg.h"
+#include "widget/coords.h"
 #include "widget/fps.h"
 #include "widget/mouse.h"
 #include "widget/svg.h"
@@ -229,6 +230,7 @@ spinel_usage(char * const argv[])
           " -Q                        Disable Vulkan validation layers.  Enabled by default.\n"
           " -D                        Disable Vulkan debug info labels.  Enabled by default.\n"
           " -X                        Skip clearing the image entirely before every render.\n"
+          " -c <x>,<y>:<scale>        (<x>,<y>) is the SVG center. Scale by <scale> and translate to center of surface.\n"
           "\n"
           " * Present Modes\n"
           "   -------------\n"
@@ -262,8 +264,17 @@ struct spinel_state
   uint32_t              image_count;
   struct widget_control initial;
   struct widget_control control;
-  bool                  is_rotate;
-  bool                  is_exit;
+
+  struct
+  {
+    float cx;
+    float cy;
+    float scale;
+  } center;
+
+  bool is_center;
+  bool is_rotate;
+  bool is_exit;
 };
 
 //
@@ -644,22 +655,49 @@ main(int argc, char * const argv[])
   //
   int opt;
 
-  while ((opt = getopt(argc, argv, "d:f:i:n:p:q:s:t:R:rvFQDXh")) != EOF)
+  while ((opt = getopt(argc, argv, "c:d:f:i:n:p:q:s:t:R:rvFQDXh")) != EOF)
     {
       switch (opt)
         {
+          case 'c':
+            // formatting
+            {
+              state.is_center    = true;
+              state.center.scale = 1.0f;
+
+              char * str_comma;
+
+              state.center.cx = strtof(optarg, &str_comma);
+
+              if (str_comma != optarg)
+                {
+                  if (*str_comma == ',')
+                    {
+                      char * str_colon;
+
+                      state.center.cy = strtof(str_comma + 1, &str_colon);
+
+                      if (*str_colon == ':')
+                        {
+                          state.center.scale = strtof(str_colon + 1, NULL);
+                        }
+                    }
+                }
+            }
+            break;
+
           case 'd':
             // formatting
             {
-              char * str_end;
+              char * str_colon;
 
-              vendor_id = (uint32_t)strtoul(optarg, &str_end, 16);  // returns 0 on error
+              vendor_id = (uint32_t)strtoul(optarg, &str_colon, 16);  // returns 0 on error
 
-              if (str_end != optarg)
+              if (str_colon != optarg)
                 {
-                  if (*str_end == ':')
+                  if (*str_colon == ':')
                     {
-                      device_id = (uint32_t)strtoul(str_end + 1, NULL, 16);  // returns 0 on error
+                      device_id = (uint32_t)strtoul(str_colon + 1, NULL, 16);  // returns 0 on error
                     }
                 }
             }
@@ -1259,10 +1297,14 @@ main(int argc, char * const argv[])
   //
   widget_svg_t svg = widget_svg_create(svg_doc, true);
 
-  struct widget * ws[] = {
-    widget_fps_create(16.0f).widget,
-    widget_mouse_create().widget,
-    svg.widget,
+  struct widget * ws[] =
+  {
+#if !defined(__linux__)
+    widget_mouse_create().widget,       // topmost layer
+#endif                                  //
+    widget_coords_create(8.0f).widget,  //
+    widget_fps_create(16.0f).widget,    //
+    svg.widget,                         // bottommost layer
   };
 
   //
@@ -1680,6 +1722,16 @@ main(int argc, char * const argv[])
                            surface,
                            spinel_state_input,
                            &state);
+
+      if (state.is_center)
+        {
+          widget_svg_center(svg,
+                            &w_control,
+                            &state.extent,
+                            state.center.cx,
+                            state.center.cy,
+                            state.center.scale);
+        }
 
       if (state.is_rotate)
         {

@@ -8,8 +8,26 @@
 #include "spinel/spinel_assert.h"
 
 //
-// Google Roboto Mono glyphs [0,9]
+// Google Roboto Mono glyphs
 //
+
+#define FONT_GLYPH_CMDS_PAREN_LEFT()                                                               \
+  m(357, 591) q(0, 143, 22.5, 269) t(60.5, 233.5) t(87.5, 196.5) t(104, 158) t(109.5, 118)         \
+    t(105, 77) l(39, -122) q(-62, -47, -123.5, -128) t(-110, -196.5) t(-79, -266) t(-30.5, -337.5) \
+      v(-14) q(0, -187, 30.5, -338) t(79, -267) t(110, -198.5) t(123.5, -132.5) l(-39, -113)       \
+        q(-50, 28, -105.5, 76.5) t(-110, 118) t(-104, 158) t(-87, 196) t(-60, 233.5) t(-22.5, 269) \
+          v(10) z()
+
+#define FONT_GLYPH_CMDS_PAREN_RIGHT()                                                              \
+  m(849, 581) q(0, -143, -22.5, -269) t(-60.5, -233.5) t(-87.5, -196) t(-104, -158) t(-110, -118)  \
+    t(-105.5, -76.5) l(-39, 113) q(62, 46, 123.5, 128.5) t(110, 199.5) t(79, 269) t(30.5, 339)     \
+      v(14) q(0, 187, -32, 339.5) t(-82.5, 270) t(-111, 199.5) t(-117.5, 128) l(39, 113)           \
+        q(50, -28, 105.5, -77) t(110, -118) t(104, -158) t(87.5, -196.5) t(60.5, -233.5)           \
+          t(22.5, -269) v(-10) z()
+
+#define FONT_GLYPH_CMDS_COMMA()                                                                    \
+  m(643, 43) q(0, -47, -11.5, -98.5) t(-34, -102) t(-54.5, -96.5) t(-74, -82) l(-115, 63)          \
+    q(48, 70, 68, 149) t(20, 164) v(179) h(201) v(-176) z()
 
 #define FONT_GLYPH_CMDS_ZERO()                                                                     \
   m(1088, 557) q(0, -139, -32, -246.5) t(-92, -181) t(-147, -111.5) t(-199, -38)                   \
@@ -201,16 +219,19 @@ FONT_METRICS_PROTO(roboto_mono_regular)
 //
 
 // clang-format off
-FONT_GLYPH_DEFN(roboto_mono_regular, zero,  FONT_GLYPH_CMDS_ZERO())
-FONT_GLYPH_DEFN(roboto_mono_regular, one,   FONT_GLYPH_CMDS_ONE())
-FONT_GLYPH_DEFN(roboto_mono_regular, two,   FONT_GLYPH_CMDS_TWO())
-FONT_GLYPH_DEFN(roboto_mono_regular, three, FONT_GLYPH_CMDS_THREE())
-FONT_GLYPH_DEFN(roboto_mono_regular, four,  FONT_GLYPH_CMDS_FOUR())
-FONT_GLYPH_DEFN(roboto_mono_regular, five,  FONT_GLYPH_CMDS_FIVE())
-FONT_GLYPH_DEFN(roboto_mono_regular, six,   FONT_GLYPH_CMDS_SIX())
-FONT_GLYPH_DEFN(roboto_mono_regular, seven, FONT_GLYPH_CMDS_SEVEN())
-FONT_GLYPH_DEFN(roboto_mono_regular, eight, FONT_GLYPH_CMDS_EIGHT())
-FONT_GLYPH_DEFN(roboto_mono_regular, nine,  FONT_GLYPH_CMDS_NINE())
+FONT_GLYPH_DEFN(roboto_mono_regular, paren_left,  FONT_GLYPH_CMDS_PAREN_LEFT())
+FONT_GLYPH_DEFN(roboto_mono_regular, paren_right, FONT_GLYPH_CMDS_PAREN_RIGHT())
+FONT_GLYPH_DEFN(roboto_mono_regular, comma,       FONT_GLYPH_CMDS_COMMA())
+FONT_GLYPH_DEFN(roboto_mono_regular, zero,        FONT_GLYPH_CMDS_ZERO())
+FONT_GLYPH_DEFN(roboto_mono_regular, one,         FONT_GLYPH_CMDS_ONE())
+FONT_GLYPH_DEFN(roboto_mono_regular, two,         FONT_GLYPH_CMDS_TWO())
+FONT_GLYPH_DEFN(roboto_mono_regular, three,       FONT_GLYPH_CMDS_THREE())
+FONT_GLYPH_DEFN(roboto_mono_regular, four,        FONT_GLYPH_CMDS_FOUR())
+FONT_GLYPH_DEFN(roboto_mono_regular, five,        FONT_GLYPH_CMDS_FIVE())
+FONT_GLYPH_DEFN(roboto_mono_regular, six,         FONT_GLYPH_CMDS_SIX())
+FONT_GLYPH_DEFN(roboto_mono_regular, seven,       FONT_GLYPH_CMDS_SEVEN())
+FONT_GLYPH_DEFN(roboto_mono_regular, eight,       FONT_GLYPH_CMDS_EIGHT())
+FONT_GLYPH_DEFN(roboto_mono_regular, nine,        FONT_GLYPH_CMDS_NINE())
 // clang-format on
 
 //

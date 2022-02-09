@@ -24,8 +24,7 @@
 
 struct widget_fps
 {
-  struct widget         widget;
-  struct widget_control control;
+  struct widget widget;
 
   float glyph_width;
 
@@ -249,7 +248,8 @@ impl_regen(struct widget *                     widget,
   //
   // regen rasters?
   //
-  // FIXME(allanmac): raster translation isn't available yet
+  // FIXME(allanmac): raster translation isn't available yet but we work around
+  // that (for now) by rasterizing 10 numbers at all four digit positions.
   //
   if (control->rasters)
     {
@@ -287,15 +287,13 @@ impl_regen(struct widget *                     widget,
           spinel_transform_stack_push_translate(ts, (float)(metrics.advance.width * ii), 0);
           spinel_transform_stack_concat(ts);
 
-          spinel_transform_t * tos = (spinel_transform_t *)spinel_transform_stack_top_transform(ts);
-
           for (uint32_t jj = 0; jj < 10; jj++)
             {
               spinel(raster_builder_begin(rb));
               spinel(raster_builder_add(rb,
                                         fps.impl->paths.extent + jj,
                                         NULL,
-                                        tos,
+                                        spinel_transform_stack_top_transform(ts),
                                         NULL,
                                         raster_clips,
                                         1));
@@ -328,6 +326,7 @@ impl_regen(struct widget *                     widget,
       spinel_styling_cmd_t cmds_from[] = {
 
         [0] = SPN_STYLING_OPCODE_COVER_NONZERO,
+        // [1][2][3] is rgba
         [4] = SPN_STYLING_OPCODE_BLEND_OVER
       };
 
@@ -366,7 +365,9 @@ impl_regen(struct widget *                     widget,
           fps_quot /= 10;
 
           if (fps_quot == 0)
-            break;
+            {
+              break;
+            }
         }
     }
 }

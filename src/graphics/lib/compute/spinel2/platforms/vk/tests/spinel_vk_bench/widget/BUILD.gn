@@ -15,6 +15,7 @@ config("widget_config") {
 
 source_set("widget") {
   public = [
+    "include/widget/coords.h",
     "include/widget/fps.h",
     "include/widget/mouse.h",
     "include/widget/svg.h",
@@ -23,6 +24,7 @@ source_set("widget") {
   ]
 
   sources = [
+    "coords.c",
     "fps.c",
     "mouse.c",
     "roboto_mono_regular.c",

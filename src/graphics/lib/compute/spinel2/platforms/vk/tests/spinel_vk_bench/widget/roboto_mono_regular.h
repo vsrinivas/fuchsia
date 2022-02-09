@@ -53,6 +53,9 @@ struct font_metrics
 
 FONT_METRICS_PROTO(roboto_mono_regular);
 
+FONT_GLYPH_PROTO(roboto_mono_regular, paren_left);
+FONT_GLYPH_PROTO(roboto_mono_regular, paren_right);
+FONT_GLYPH_PROTO(roboto_mono_regular, comma);
 FONT_GLYPH_PROTO(roboto_mono_regular, zero);
 FONT_GLYPH_PROTO(roboto_mono_regular, one);
 FONT_GLYPH_PROTO(roboto_mono_regular, two);

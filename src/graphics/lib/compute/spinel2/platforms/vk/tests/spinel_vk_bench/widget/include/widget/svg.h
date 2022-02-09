@@ -40,7 +40,18 @@ widget_svg_create(struct svg * svg_doc, bool is_srgb);
 //
 
 void
-widget_svg_rotate(widget_svg_t svg, struct widget_control * const control, float theta);
+widget_svg_center(widget_svg_t            svg,  //
+                  struct widget_control * control,
+                  VkExtent2D const *      extent,
+                  float                   cx,
+                  float                   cy,
+                  float                   scale);
+//
+//
+//
+
+void
+widget_svg_rotate(widget_svg_t svg, struct widget_control * control, float theta);
 
 //
 //

@@ -88,19 +88,12 @@ struct impl_input
 
 struct widget_svg
 {
-  // clang-format off
-  struct widget           widget;
-
-  struct svg *            svg;
-
-  struct impl_input       input;
-
-  spinel_path_t *         paths;
-
-  spinel_raster_t *       rasters;
-
-  bool                    is_srgb;
-  // clang-format on
+  struct widget     widget;
+  struct svg *      svg;
+  struct impl_input input;
+  spinel_path_t *   paths;
+  spinel_raster_t * rasters;
+  bool              is_srgb;
 
   //
   // FIXME(allanmac): Eventually decide whether or not the svg always
@@ -375,7 +368,33 @@ impl_rerasterize(widget_svg_t * const svg, struct widget_control * const control
 //
 
 void
-widget_svg_rotate(widget_svg_t svg, struct widget_control * const control, float theta)
+widget_svg_center(widget_svg_t            svg,  //
+                  struct widget_control * control,
+                  VkExtent2D const *      extent,
+                  float                   cx,
+                  float                   cy,
+                  float                   scale)
+{
+  float const extent_cx = (float)(extent->width / 2);
+  float const extent_cy = (float)(extent->height / 2);
+
+  svg.impl->input.xform.center.x = extent_cx;
+  svg.impl->input.xform.center.y = extent_cy;
+
+  svg.impl->input.xform.origin.x = extent_cx - cx;
+  svg.impl->input.xform.origin.y = extent_cy - cy;
+
+  svg.impl->input.xform.scale = scale;
+
+  impl_rerasterize(&svg, control);
+}
+
+//
+//
+//
+
+void
+widget_svg_rotate(widget_svg_t svg, struct widget_control * control, float theta)
 {
   if (svg.impl->input.xform.rotate != theta)
     {
@@ -427,8 +446,8 @@ impl_input(struct widget *                    widget,
                 if (svg.impl->input.is_control)
                   {
                     svg.impl->input.xform.rotate += (float)(M_PI / 180.0);
-                    svg.impl->input.xform.rotate =
-                      fmodf(svg.impl->input.xform.rotate, (float)(M_PI * 2.0));
+                    svg.impl->input.xform.rotate = fmodf(svg.impl->input.xform.rotate,  //
+                                                         (float)(M_PI * 2.0));
                   }
                 else
                   {
@@ -537,8 +556,8 @@ impl_input(struct widget *                    widget,
           if (svg.impl->input.is_control)
             {
               svg.impl->input.xform.rotate += (float)event->pointer.v * (float)(M_PI / 180.0);
-              svg.impl->input.xform.rotate =
-                fmodf(svg.impl->input.xform.rotate, (float)(M_PI * 2.0));
+              svg.impl->input.xform.rotate = fmodf(svg.impl->input.xform.rotate,  //
+                                                   (float)(M_PI * 2.0));
             }
           else
             {
