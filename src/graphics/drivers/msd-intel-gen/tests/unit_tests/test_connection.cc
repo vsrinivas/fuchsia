@@ -12,9 +12,8 @@
 
 class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection::Owner {
  public:
-  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
+  void SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
     // Destroy the batch - needed for ReleaseBufferWhileMapped*
-    return MAGMA_STATUS_OK;
   }
 
   void DestroyContext(std::shared_ptr<MsdIntelContext> client_context) override {}
@@ -103,11 +102,23 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     ASSERT_TRUE(mapping);
     EXPECT_TRUE(connection->per_process_gtt()->AddMapping(mapping));
 
+    uint32_t wait_callback_count = 0;
     auto wait_callback = [&](magma::PlatformEvent* event, uint32_t timeout_ms) {
+      wait_callback_count += 1;
+
+      if (wait_callback_count == 1) {
+        // First time through, say the event hasn't fired to check the wait callback
+        // gets called again.
+        return magma::Status(MAGMA_STATUS_TIMED_OUT);
+      }
+
+      EXPECT_EQ(2u, wait_callback_count);
+
       // The pipeline flush batch is submitted, then destroyed by the submit handler
       // in the test harness.
       EXPECT_EQ(MAGMA_STATUS_OK, event->Wait(timeout_ms).get());
       mapping.reset();
+      return magma::Status(MAGMA_STATUS_OK);
     };
 
     connection->ReleaseBuffer(buffer->platform_buffer(), wait_callback);
@@ -122,7 +133,7 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     connection->DestroyContext(context);
   }
 
-  void ReleaseBufferWhileMappedContextKilled() {
+  void ReleaseBufferWhileMappedMultiContext() {
     auto connection = std::shared_ptr<MsdIntelConnection>(MsdIntelConnection::Create(this, 0));
     ASSERT_TRUE(connection);
 
@@ -147,11 +158,71 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     auto wait_callback = [&](magma::PlatformEvent* event, uint32_t timeout_ms) {
       EXPECT_EQ(MAGMA_STATUS_OK, event->Wait(timeout_ms).get());
       wait_callback_count += 1;
+      if (wait_callback_count == contexts.size()) {
+        mapping.reset();
+      }
+      return magma::Status(MAGMA_STATUS_OK);
     };
 
     connection->ReleaseBuffer(buffer->platform_buffer(), wait_callback);
 
     EXPECT_EQ(wait_callback_count, contexts.size());
+    EXPECT_EQ(0u, callback_count_);
+    EXPECT_FALSE(connection->sent_context_killed());
+
+    const std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>>& mappings =
+        connection->mappings_to_release();
+    EXPECT_EQ(1u, mappings.size());
+
+    for (auto& context : contexts) {
+      connection->DestroyContext(context);
+    }
+  }
+
+  void ReleaseBufferStuckCommandBuffer() {
+    auto connection = std::shared_ptr<MsdIntelConnection>(MsdIntelConnection::Create(this, 0));
+    ASSERT_TRUE(connection);
+
+    connection->SetNotificationCallback(KillCallbackStatic, this);
+
+    auto context = MsdIntelConnection::CreateContext(connection);
+    context->SetTargetCommandStreamer(RENDER_COMMAND_STREAMER);
+
+    std::shared_ptr<MsdIntelBuffer> buffer = MsdIntelBuffer::Create(PAGE_SIZE, "test");
+    std::shared_ptr<GpuMapping> mapping;
+    EXPECT_TRUE(
+        AddressSpace::MapBufferGpu(connection->per_process_gtt(), buffer, 0x10000, 0, 1, &mapping));
+    ASSERT_TRUE(mapping);
+    EXPECT_TRUE(connection->per_process_gtt()->AddMapping(mapping));
+
+    // Send a command buffer that waits forever
+    auto command = std::make_unique<magma_command_buffer>();
+    command->resource_count = 1;
+    command->batch_buffer_resource_index = 0;
+    command->batch_start_offset = 0;
+    command->wait_semaphore_count = 1;
+    command->signal_semaphore_count = 0;
+
+    auto command_buffer = std::make_unique<CommandBuffer>(context, std::move(command));
+
+    auto resource = CommandBuffer::ExecResource{.buffer = buffer};
+
+    auto wait_semaphore =
+        std::shared_ptr<magma::PlatformSemaphore>(magma::PlatformSemaphore::Create());
+
+    ASSERT_TRUE(command_buffer->InitializeResources({resource}, {wait_semaphore}, {}));
+    ASSERT_TRUE(command_buffer->PrepareForExecution());
+    ASSERT_EQ(MAGMA_STATUS_OK, context->SubmitCommandBuffer(std::move(command_buffer)).get());
+
+    uint32_t wait_callback_count = 0;
+    auto wait_callback = [&](magma::PlatformEvent* event, uint32_t timeout_ms) {
+      wait_callback_count += 1;
+      return MAGMA_STATUS_TIMED_OUT;
+    };
+
+    connection->ReleaseBuffer(buffer->platform_buffer(), wait_callback);
+
+    EXPECT_EQ(1u, wait_callback_count);
     EXPECT_EQ(1u, callback_count_);
     EXPECT_TRUE(connection->sent_context_killed());
 
@@ -159,9 +230,9 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
         connection->mappings_to_release();
     EXPECT_EQ(0u, mappings.size());
 
-    for (auto& context : contexts) {
-      connection->DestroyContext(context);
-    }
+    connection->SetNotificationCallback(nullptr, nullptr);
+
+    connection->DestroyContext(context);
   }
 
   void ReuseGpuAddrWithoutRelease() {
@@ -200,8 +271,12 @@ TEST_F(TestMsdIntelConnection, ReleaseBuffer) { ReleaseBuffer(); }
 
 TEST_F(TestMsdIntelConnection, ReleaseBufferWhileMapped) { ReleaseBufferWhileMapped(); }
 
-TEST_F(TestMsdIntelConnection, ReleaseBufferWhileMappedContextKilled) {
-  ReleaseBufferWhileMappedContextKilled();
+TEST_F(TestMsdIntelConnection, ReleaseBufferWhileMappedMultiContext) {
+  ReleaseBufferWhileMappedMultiContext();
+}
+
+TEST_F(TestMsdIntelConnection, ReleaseBufferStuckCommandBuffer) {
+  ReleaseBufferStuckCommandBuffer();
 }
 
 TEST_F(TestMsdIntelConnection, ReuseGpuAddrWithoutRelease) { ReuseGpuAddrWithoutRelease(); }

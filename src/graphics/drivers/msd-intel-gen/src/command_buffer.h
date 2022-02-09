@@ -66,7 +66,6 @@ class CommandBuffer : public MappedBatch {
 
   uint64_t GetFlags() const { return command_buffer_->flags; }
 
- private:
   CommandBuffer(std::weak_ptr<MsdIntelContext> context,
                 std::unique_ptr<magma_command_buffer> command_buffer);
 
@@ -107,6 +106,7 @@ class CommandBuffer : public MappedBatch {
       std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
       std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores);
 
+ private:
   const std::weak_ptr<MsdIntelContext> context_;
   const std::unique_ptr<magma_command_buffer> command_buffer_;
   const uint64_t nonce_;

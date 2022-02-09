@@ -22,7 +22,7 @@ class MsdIntelConnection {
    public:
     virtual ~Owner() = default;
 
-    virtual magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) = 0;
+    virtual void SubmitBatch(std::unique_ptr<MappedBatch> batch) = 0;
     virtual void DestroyContext(std::shared_ptr<MsdIntelContext> client_context) = 0;
   };
 
@@ -34,9 +34,7 @@ class MsdIntelConnection {
 
   msd_client_id_t client_id() { return client_id_; }
 
-  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) {
-    return owner_->SubmitBatch(std::move(batch));
-  }
+  void SubmitBatch(std::unique_ptr<MappedBatch> batch) { owner_->SubmitBatch(std::move(batch)); }
 
   static std::shared_ptr<MsdIntelContext> CreateContext(
       std::shared_ptr<MsdIntelConnection> connection);
@@ -80,7 +78,7 @@ class MsdIntelConnection {
 
   void ReleaseBuffer(
       magma::PlatformBuffer* buffer,
-      std::function<void(magma::PlatformEvent* event, uint32_t timeout_ms)> wait_callback);
+      std::function<magma::Status(magma::PlatformEvent* event, uint32_t timeout_ms)> wait_callback);
 
   static const uint32_t kMagic = 0x636f6e6e;  // "conn" (Connection)
 

@@ -116,19 +116,20 @@ void msd_connection_release_buffer(msd_connection_t* connection, msd_buffer_t* b
 }
 
 void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer) {
-  ReleaseBuffer(buffer,
-                [](magma::PlatformEvent* event, uint32_t timeout_ms) { event->Wait(timeout_ms); });
+  ReleaseBuffer(buffer, [](magma::PlatformEvent* event, uint32_t timeout_ms) {
+    return event->Wait(timeout_ms);
+  });
 }
 
 void MsdIntelConnection::ReleaseBuffer(
     magma::PlatformBuffer* buffer,
-    std::function<void(magma::PlatformEvent* event, uint32_t timeout_ms)> wait_callback) {
+    std::function<magma::Status(magma::PlatformEvent* event, uint32_t timeout_ms)> wait_callback) {
   std::vector<std::shared_ptr<GpuMapping>> mappings;
   per_process_gtt()->ReleaseBuffer(buffer, &mappings);
 
   DLOG("ReleaseBuffer %lu\n", buffer->id());
 
-  bool do_stall = false;
+  size_t excess_use_count = 0;
 
   for (const auto& mapping : mappings) {
     size_t use_count = mapping.use_count();
@@ -142,15 +143,12 @@ void MsdIntelConnection::ReleaseBuffer(
       // a) apps should be sub-allocating instead b) their DRM system driver will stall to handle
       // this case, so we do the same.
       DLOG("ReleaseBuffer %lu mapping has use count %zu", mapping->BufferId(), use_count);
-
-      do_stall = true;
     }
+    DASSERT(use_count > 0);
+    excess_use_count += use_count - 1;
   }
 
-  size_t max_queue_size = 0;
-  uint64_t stall_ns = 0;
-
-  if (do_stall) {
+  if (excess_use_count) {
     uint64_t start_ns = magma::get_monotonic_ns();
 
     // Send pipeline fence batch for each context which may have queued command buffers.
@@ -160,19 +158,47 @@ void MsdIntelConnection::ReleaseBuffer(
 
       auto event = std::shared_ptr<magma::PlatformEvent>(magma::PlatformEvent::Create());
 
-      magma::Status status =
-          context->SubmitBatch(std::make_unique<PipelineFenceBatch>(context, event));
+      context->SubmitBatch(std::make_unique<PipelineFenceBatch>(context, event));
 
-      if (status.ok()) {
-        TRACE_DURATION("magma", "stall on release");
-        constexpr uint32_t kStallMaxMs = 1000;
-        wait_callback(event.get(), kStallMaxMs);
+      // Wait for the event to signal.  There can be lots of work queued up and it can take an
+      // unpredictable amount of time for it to complete because other contexts may be competing
+      // for the hardware, so we wait forever (unless there's a stuck command buffer).
+      while (true) {
+        {
+          TRACE_DURATION("magma", "stall on release");
+          constexpr uint32_t kStallMaxMs = 1000;
+          auto status = wait_callback(event.get(), kStallMaxMs);
+          if (status.ok()) {
+            // Event signaled
+            break;
+          }
+        }
 
-        max_queue_size = std::max(max_queue_size, context->GetQueueSize());
+        uint64_t stall_ns = magma::get_monotonic_ns() - start_ns;
+
+        excess_use_count = 0;
+        for (const auto& mapping : mappings) {
+          excess_use_count += mapping.use_count() - 1;
+        }
+
+        // If queue has size > 0 after the stall, there's probably a stuck command buffer that
+        // will prevent the pipeline fence batch from ever completing.
+        size_t queue_size = context->GetQueueSize();
+
+        if (queue_size) {
+          MAGMA_LOG(WARNING,
+                    "ReleaseBuffer %lu excess_use_count %zd after stall (%lu us) context queue "
+                    "size %zd - probable stuck command buffer, closing connection",
+                    buffer->id(), excess_use_count, stall_ns / 1000, queue_size);
+          if (!sent_context_killed())
+            SendContextKilled();
+          return;
+        }
+
+        DMESSAGE("ReleaseBuffer %lu excess_use_count %zd after stall (%lu us)", buffer->id(),
+                 excess_use_count, stall_ns / 1000);
       }
     }
-
-    stall_ns = magma::get_monotonic_ns() - start_ns;
   }
 
   for (const auto& mapping : mappings) {
@@ -187,25 +213,18 @@ void MsdIntelConnection::ReleaseBuffer(
       for (uint32_t i = 0; i < bus_mappings.size(); i++) {
         mappings_to_release_.emplace_back(std::move(bus_mappings[i]));
       }
-    } else if (!sent_context_killed()) {
-      // If any queue has size > 0 after the stall, there is a stuck command buffer.
-      MAGMA_LOG(
-          WARNING,
-          "ReleaseBuffer %lu mapping has use count %zu after total stall (%lu us) %zd context(s) "
-          "max queue size %zd - sending context killed",
-          mapping->BufferId(), use_count, stall_ns / 1000, context_list_.size(), max_queue_size);
-      SendContextKilled();
+    } else {
+      // Since all events have signaled, all inflight mappings should be destroyed so
+      // there should be no excess use count.
+      DASSERT(false);
     }
   }
 }
 
 bool MsdIntelConnection::SubmitPendingReleaseMappings(std::shared_ptr<MsdIntelContext> context) {
   if (!mappings_to_release_.empty()) {
-    magma::Status status = SubmitBatch(
-        std::make_unique<MappingReleaseBatch>(context, std::move(mappings_to_release_)));
+    SubmitBatch(std::make_unique<MappingReleaseBatch>(context, std::move(mappings_to_release_)));
     mappings_to_release_.clear();
-    if (!status.ok())
-      return DRETF(false, "Failed to submit mapping release batch: %d", status.get());
   }
   return true;
 }

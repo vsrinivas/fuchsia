@@ -123,7 +123,7 @@ class MsdIntelDevice : public msd_device_t,
   }
 
   // MsdIntelConnection::Owner
-  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
+  void SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
   void DestroyContext(std::shared_ptr<MsdIntelContext> client_context) override;
   magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
 

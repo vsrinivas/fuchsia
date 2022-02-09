@@ -159,11 +159,10 @@ class MsdIntelContextSubmit : public testing::TestWithParam<Param> {
       address_space_owner_ = std::make_unique<TestContext::AddressSpaceOwner>();
     }
 
-    magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
+    void SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
       DASSERT(batch->IsCommandBuffer());
       auto command_buffer = static_cast<CommandBuffer*>(batch.release());
       callback_(std::unique_ptr<CommandBuffer>(command_buffer));
-      return MAGMA_STATUS_OK;
     }
 
     void DestroyContext(std::shared_ptr<MsdIntelContext> client_context) override {}

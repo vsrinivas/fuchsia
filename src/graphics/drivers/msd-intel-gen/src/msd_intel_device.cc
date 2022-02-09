@@ -379,12 +379,11 @@ void MsdIntelDevice::InterruptCallback(void* data, uint32_t master_interrupt_con
 
 void MsdIntelDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
 
-magma::Status MsdIntelDevice::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
+void MsdIntelDevice::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
   DLOG("SubmitBatch");
   CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
   EnqueueDeviceRequest(std::make_unique<BatchRequest>(std::move(batch)));
-  return MAGMA_STATUS_OK;
 }
 
 void MsdIntelDevice::DestroyContext(std::shared_ptr<MsdIntelContext> client_context) {
