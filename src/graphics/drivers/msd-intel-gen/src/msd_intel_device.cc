@@ -942,17 +942,28 @@ void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {
 magma_status_t msd_device_get_icd_list(struct msd_device_t* abi_device, uint64_t count,
                                        msd_icd_info_t* icd_info_out, uint64_t* actual_count_out) {
   const char* kSuffixes[] = {"_test", ""};
-  if (icd_info_out && count < std::size(kSuffixes)) {
+  constexpr uint32_t kMediaIcdCount = 1;
+  constexpr uint32_t kTotalIcdCount = std::size(kSuffixes) + kMediaIcdCount;
+
+  if (icd_info_out && count < kTotalIcdCount) {
     return MAGMA_STATUS_INVALID_ARGS;
   }
-  *actual_count_out = std::size(kSuffixes);
+  *actual_count_out = kTotalIcdCount;
   if (icd_info_out) {
     for (uint32_t i = 0; i < std::size(kSuffixes); i++) {
-      strcpy(icd_info_out[i].component_url,
-             fbl::StringPrintf("fuchsia-pkg://fuchsia.com/libvulkan_intel_gen%s#meta/vulkan.cm",
-                               kSuffixes[i])
-                 .c_str());
+      strncpy(icd_info_out[i].component_url,
+              fbl::StringPrintf("fuchsia-pkg://fuchsia.com/libvulkan_intel_gen%s#meta/vulkan.cm",
+                                kSuffixes[i])
+                  .c_str(),
+              sizeof(icd_info_out[i].component_url) - 1);
       icd_info_out[i].support_flags = ICD_SUPPORT_FLAG_VULKAN;
+    }
+    {
+      size_t media_index = std::size(kSuffixes);
+      strncpy(icd_info_out[media_index].component_url,
+              "fuchsia-pkg://fuchsia.com/codec_runner_intel_gen#meta/codec_runner_intel_gen.cm",
+              sizeof(icd_info_out[media_index].component_url) - 1);
+      icd_info_out[media_index].support_flags = ICD_SUPPORT_FLAG_MEDIA_CODEC_FACTORY;
     }
   }
   return MAGMA_STATUS_OK;

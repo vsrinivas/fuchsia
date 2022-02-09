@@ -21,7 +21,7 @@ TEST(Intel, IcdList) {
   magma::TestDeviceBase test_device(MAGMA_VENDOR_ID_INTEL);
   auto rsp = fidl::WireCall<fuchsia_gpu_magma::Device>(test_device.channel())->GetIcdList();
   EXPECT_TRUE(rsp.ok());
-  EXPECT_EQ(rsp->icd_list.count(), 2u);
+  EXPECT_EQ(rsp->icd_list.count(), 3u);
   auto& icd_item = rsp->icd_list[0];
   EXPECT_TRUE(icd_item.has_flags());
   EXPECT_TRUE(icd_item.flags() & fuchsia_gpu_magma::wire::IcdFlags::kSupportsVulkan);
