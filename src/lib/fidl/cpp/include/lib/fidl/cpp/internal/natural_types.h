@@ -270,7 +270,7 @@ struct NaturalTableCodingTraits {
       auto T::Storage_::*member_ptr = std::get<I>(T::kMembers).member_ptr;
       const auto& member = value->storage_.*member_ptr;
       if (member.has_value()) {
-        return I + 1;
+        return std::get<I>(T::kMembers).ordinal;
       }
       return MaxOrdinal<I - 1>(value);
     }
