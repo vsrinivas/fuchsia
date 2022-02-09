@@ -16,12 +16,12 @@ pub struct Error;
 #[async_trait(?Send)]
 impl Bridge for Error {
     async fn get_opt_out(&self) -> Result<OptOutPreference, BridgeError> {
-        Err(BridgeError::Todo)
+        Err(BridgeError::Busy)
     }
 
     async fn set_opt_out(&mut self, value: OptOutPreference) -> Result<(), BridgeError> {
         let _ = value;
-        Err(BridgeError::Todo)
+        Err(BridgeError::Busy)
     }
 }
 
@@ -69,7 +69,7 @@ impl Fake {
 impl Bridge for Fake {
     async fn get_opt_out(&self) -> Result<OptOutPreference, BridgeError> {
         if self.error_toggle.get() {
-            Err(BridgeError::Todo)
+            Err(BridgeError::Busy)
         } else {
             Ok(self.value)
         }
@@ -77,7 +77,7 @@ impl Bridge for Fake {
 
     async fn set_opt_out(&mut self, value: OptOutPreference) -> Result<(), BridgeError> {
         if self.error_toggle.get() {
-            Err(BridgeError::Todo)
+            Err(BridgeError::Busy)
         } else {
             self.value = value;
             Ok(())

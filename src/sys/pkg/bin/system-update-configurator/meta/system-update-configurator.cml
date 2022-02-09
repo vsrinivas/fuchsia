@@ -11,6 +11,14 @@
         { protocol: "fuchsia.update.config.OptOut" },
         { protocol: "fuchsia.update.config.OptOutAdmin" },
     ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.tee.Application.99dc95b2-938e-47eb-80e8-9404ae8a1385",
+                "fuchsia.tee.DeviceInfo",
+            ],
+        },
+    ],
     expose: [
         {
             protocol: "fuchsia.update.config.OptOut",
