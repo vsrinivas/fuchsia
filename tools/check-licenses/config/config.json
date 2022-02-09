@@ -111,6 +111,10 @@
       "licenseLocation": "repo/apache-2.0.txt"
     },
     {
+      "projectRoot": "third_party/openthread/third_party/tcplp",
+      "licenseLocation": "tcplp.h"
+    },
+    {
       "projectRoot": "third_party/zlib",
       "licenseLocation": "README"
     },
