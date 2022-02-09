@@ -5,7 +5,7 @@
 use {
     crate::terminal_view::TerminalViewAssistant,
     anyhow::Error,
-    carnelian::{AppAssistant, AppContext, ViewAssistantPtr, ViewKey},
+    carnelian::{AppAssistant, AppSender, ViewAssistantPtr, ViewKey},
     std::ffi::CString,
 };
 
@@ -14,19 +14,19 @@ const TERMINAL_ENVIRON: &[&str; 1] = &["TERM=xterm-256color"];
 const TERMINAL_SCROLL_TO_BOTTOM_ON_INPUT: bool = true;
 
 pub struct TerminalAssistant {
-    app_context: AppContext,
+    app_sender: AppSender,
     cmd: Vec<CString>,
 }
 
 impl TerminalAssistant {
-    pub fn new(app_context: &AppContext, cmd: Vec<CString>) -> TerminalAssistant {
-        TerminalAssistant { app_context: app_context.clone(), cmd }
+    pub fn new(app_sender: &AppSender, cmd: Vec<CString>) -> TerminalAssistant {
+        TerminalAssistant { app_sender: app_sender.clone(), cmd }
     }
 
     #[cfg(test)]
     fn new_for_test() -> TerminalAssistant {
-        let app_context = AppContext::new_for_testing_purposes_only();
-        Self::new(&app_context, vec![])
+        let app_sender = AppSender::new_for_testing_purposes_only();
+        Self::new(&app_sender, vec![])
     }
 }
 
@@ -39,7 +39,7 @@ impl AppAssistant for TerminalAssistant {
         let environ =
             TERMINAL_ENVIRON.iter().map(|s| CString::new(*s).unwrap()).collect::<Vec<_>>();
         Ok(Box::new(TerminalViewAssistant::new(
-            &self.app_context,
+            &self.app_sender,
             view_key,
             TERMINAL_SCROLL_TO_BOTTOM_ON_INPUT,
             self.cmd.clone(),

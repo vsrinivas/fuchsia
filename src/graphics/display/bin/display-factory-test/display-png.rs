@@ -8,7 +8,7 @@ use {
     carnelian::{
         color::Color,
         render::{Composition, Context, CopyRegion, Image, PreClear, PreCopy, RenderExt},
-        App, AppAssistant, AppAssistantPtr, AppContext, IntSize, ViewAssistant,
+        App, AppAssistant, AppAssistantPtr, AppSender, IntSize, ViewAssistant,
         ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     euclid::default::{Point2D, Rect},
@@ -133,7 +133,7 @@ impl GammaValues {
 }
 
 struct DisplayPngAppAssistant {
-    app_context: AppContext,
+    app_sender: AppSender,
     png_source: Option<PngSourceInfo>,
     gamma_values: Option<GammaValues>,
     background: Option<Color>,
@@ -141,8 +141,8 @@ struct DisplayPngAppAssistant {
 }
 
 impl DisplayPngAppAssistant {
-    fn new(app_context: AppContext) -> Self {
-        Self { app_context, png_source: None, gamma_values: None, background: None, position: None }
+    fn new(app_sender: AppSender) -> Self {
+        Self { app_sender, png_source: None, gamma_values: None, background: None, position: None }
     }
 }
 
@@ -189,7 +189,7 @@ impl AppAssistant for DisplayPngAppAssistant {
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         let png_source = self.png_source.take();
         Ok(Box::new(DisplayPngViewAssistant::new(
-            self.app_context.clone(),
+            self.app_sender.clone(),
             png_source,
             self.gamma_values.clone(),
             self.background.take().unwrap_or(WHITE_COLOR),
@@ -201,7 +201,7 @@ impl AppAssistant for DisplayPngAppAssistant {
 const GAMMA_TABLE_ID: u64 = 100;
 
 struct DisplayPngViewAssistant {
-    app_context: AppContext,
+    app_sender: AppSender,
     png_source: Option<PngSourceInfo>,
     gamma_values: Option<GammaValues>,
     background: Color,
@@ -212,7 +212,7 @@ struct DisplayPngViewAssistant {
 
 impl DisplayPngViewAssistant {
     pub fn new(
-        app_context: AppContext,
+        app_sender: AppSender,
         png_source: Option<PngSourceInfo>,
         gamma_values: Option<GammaValues>,
         background: Color,
@@ -220,7 +220,7 @@ impl DisplayPngViewAssistant {
     ) -> Self {
         let background = Color { r: background.r, g: background.g, b: background.b, a: 255 };
         let composition = Composition::new(background);
-        Self { app_context, png_source, gamma_values, background, png: None, composition, position }
+        Self { app_sender, png_source, gamma_values, background, png: None, composition, position }
     }
 }
 
@@ -235,7 +235,7 @@ impl ViewAssistant for DisplayPngViewAssistant {
                 g.copy_from_slice(&gamma_values.green);
                 let mut b: [f32; 256] = [0.0; 256];
                 b.copy_from_slice(&gamma_values.blue);
-                self.app_context.import_and_set_gamma_table(info.id, GAMMA_TABLE_ID, r, g, b);
+                self.app_sender.import_and_set_gamma_table(info.id, GAMMA_TABLE_ID, r, g, b);
             }
         }
         let timer = fasync::Timer::new(fasync::Time::after(Duration::from_seconds(args.timeout)));
@@ -358,9 +358,9 @@ mod test {
 }
 
 fn main() -> Result<(), Error> {
-    App::run(Box::new(|app_context| {
+    App::run(Box::new(|app_sender| {
         let f = async move {
-            let assistant = Box::new(DisplayPngAppAssistant::new(app_context.clone()));
+            let assistant = Box::new(DisplayPngAppAssistant::new(app_sender.clone()));
             Ok::<AppAssistantPtr, Error>(assistant)
         };
         Box::pin(f)

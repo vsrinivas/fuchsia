@@ -23,7 +23,7 @@ use carnelian::{
         },
         scene::{Scene, SceneBuilder},
     },
-    AppContext, Message, MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewKey,
+    AppSender, Message, MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewKey,
 };
 use euclid::{size2, Size2D};
 use fuchsia_zircon::{Duration, Event, Time};
@@ -254,7 +254,7 @@ pub struct SceneDetails {
 }
 
 pub struct KeyboardViewAssistant {
-    app_context: AppContext,
+    app_sender: AppSender,
     view_key: ViewKey,
     focused: bool,
     bg_color: Color,
@@ -274,10 +274,10 @@ pub struct KeyboardViewAssistant {
 
 impl KeyboardViewAssistant {
     #[allow(unused)]
-    pub fn new(app_context: AppContext, view_key: ViewKey) -> Result<KeyboardViewAssistant, Error> {
+    pub fn new(app_sender: AppSender, view_key: ViewKey) -> Result<KeyboardViewAssistant, Error> {
         let bg_color = Color::from_hash_code("#EBD5B3")?;
         Ok(KeyboardViewAssistant {
-            app_context: app_context.clone(),
+            app_sender: app_sender.clone(),
             view_key,
             focused: false,
             bg_color,
@@ -367,12 +367,12 @@ impl KeyboardViewAssistant {
                 }
                 SpecialKey::ENTER => {
                     // Finish this view and return to the calling view
-                    self.app_context.queue_message(
+                    self.app_sender.queue_message(
                         MessageTarget::View(self.view_key),
                         make_message(ProxyMessages::PopViewAssistant),
                     );
                     // Send the calling view the result
-                    self.app_context.queue_message(
+                    self.app_sender.queue_message(
                         MessageTarget::View(self.view_key),
                         make_message(KeyboardMessages::Result(
                             self.field_name,

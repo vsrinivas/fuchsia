@@ -11,7 +11,7 @@ use carnelian::{
     color::Color,
     drawing::{load_font, measure_text_width, DisplayRotation, FontFace},
     input::{self},
-    make_message,
+    make_app_assistant, make_message,
     render::Context as RenderContext,
     scene::{
         facets::{
@@ -24,15 +24,15 @@ use carnelian::{
         },
         scene::{Scene, SceneBuilder},
     },
-    App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture, Message,
-    MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    App, AppAssistant, AppSender, Message, MessageTarget, Point, Size, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::size2;
-use fuchsia_async::{self as fasync};
 use fuchsia_zircon::{Event, Time};
 use std::{
     f32::consts::PI,
     path::PathBuf,
+    thread,
     time::{Duration, Instant},
 };
 
@@ -53,14 +53,13 @@ pub enum ButtonMessages {
 }
 
 struct ButtonAppAssistant {
-    app_context: AppContext,
     display_rotation: DisplayRotation,
 }
 
-impl ButtonAppAssistant {
-    fn new(app_context: AppContext) -> Self {
+impl Default for ButtonAppAssistant {
+    fn default() -> Self {
         let args: Args = argh::from_env();
-        Self { app_context, display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg0) }
+        Self { display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg0) }
     }
 }
 
@@ -69,8 +68,12 @@ impl AppAssistant for ButtonAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(ButtonViewAssistant::new(self.app_context.clone(), view_key)?))
+    fn create_view_assistant_with_sender(
+        &mut self,
+        view_key: ViewKey,
+        app_sender: AppSender,
+    ) -> Result<ViewAssistantPtr, Error> {
+        Ok(Box::new(ButtonViewAssistant::new(app_sender, view_key)?))
     }
 
     fn filter_config(&mut self, config: &mut Config) {
@@ -236,7 +239,7 @@ struct SceneDetails {
 }
 
 struct ButtonViewAssistant {
-    app_context: AppContext,
+    app_sender: AppSender,
     view_key: ViewKey,
     focused: bool,
     bg_color: Color,
@@ -264,10 +267,10 @@ const MAIN_AXIS_ALIGNMENTS: &'static [MainAxisAlignment] = &[
 ];
 
 impl ButtonViewAssistant {
-    fn new(app_context: AppContext, view_key: ViewKey) -> Result<ButtonViewAssistant, Error> {
+    fn new(app_sender: AppSender, view_key: ViewKey) -> Result<ButtonViewAssistant, Error> {
         let bg_color = Color::from_hash_code("#EBD5B3")?;
         let mut b = ButtonViewAssistant {
-            app_context,
+            app_sender,
             view_key,
             focused: false,
             bg_color,
@@ -285,16 +288,15 @@ impl ButtonViewAssistant {
     }
 
     fn schedule_resize_timer(&mut self) {
-        let timer =
-            fasync::Timer::new(fuchsia_async::Time::after(Duration::from_millis(16).into()));
-        let timer_context = self.app_context.clone();
-        let view_key = self.view_key;
-        fasync::Task::local(async move {
-            timer.await;
-            timer_context
-                .queue_message(MessageTarget::View(view_key), make_message(ButtonMessages::Resize));
-        })
-        .detach();
+        // use a thread to drive the button resize timer as a way to demonstrate the cross thread
+        // sender.
+        let sender = self
+            .app_sender
+            .create_cross_thread_sender::<ButtonMessages>(MessageTarget::View(self.view_key));
+        thread::spawn(move || loop {
+            sender.unbounded_send(ButtonMessages::Resize).expect("unbounded_send");
+            thread::sleep(Duration::from_millis(16));
+        });
     }
 
     fn set_red_light(&mut self, red_light: bool) {
@@ -420,8 +422,7 @@ impl ViewAssistant for ButtonViewAssistant {
                         self.original_indicator_size.width + ratio * 80.0,
                         self.indicator_size.height,
                     ));
-                    self.schedule_resize_timer();
-                    self.app_context.request_render(self.view_key);
+                    self.app_sender.request_render(self.view_key);
                 }
             }
         }
@@ -487,21 +488,7 @@ impl ViewAssistant for ButtonViewAssistant {
     }
 }
 
-fn make_app_assistant_fut(
-    app_context: &AppContext,
-) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
-    let f = async move {
-        let assistant = Box::new(ButtonAppAssistant::new(app_context.clone()));
-        Ok::<AppAssistantPtr, Error>(assistant)
-    };
-    Box::pin(f)
-}
-
-fn make_app_assistant() -> AssistantCreatorFunc {
-    Box::new(make_app_assistant_fut)
-}
-
 fn main() -> Result<(), Error> {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
-    App::run(make_app_assistant())
+    App::run(make_app_assistant::<ButtonAppAssistant>())
 }

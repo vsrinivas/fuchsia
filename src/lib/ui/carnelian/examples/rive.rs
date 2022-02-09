@@ -10,13 +10,14 @@ use {
         color::Color,
         drawing::DisplayRotation,
         input::{self},
+        make_app_assistant,
         render::{rive::load_rive, Context as RenderContext},
         scene::{
             facets::{FacetId, RiveFacet, SetSizeMessage},
             scene::{Scene, SceneBuilder},
         },
-        App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture, Size,
-        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+        App, AppAssistant, AppSender, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+        ViewKey,
     },
     fuchsia_trace::{duration, duration_begin, duration_end},
     fuchsia_trace_provider,
@@ -55,7 +56,6 @@ fn color_from_str(value: &str) -> Result<Color, String> {
 }
 
 struct RiveAppAssistant {
-    app_context: AppContext,
     display_rotation: DisplayRotation,
     filename: String,
     playback_speed: f32,
@@ -63,8 +63,8 @@ struct RiveAppAssistant {
     artboard: Option<String>,
 }
 
-impl RiveAppAssistant {
-    fn new(app_context: &AppContext) -> Self {
+impl Default for RiveAppAssistant {
+    fn default() -> Self {
         let args: Args = argh::from_env();
         let display_rotation = args.rotation.unwrap_or(DisplayRotation::Deg0);
         let filename = args.file;
@@ -72,14 +72,7 @@ impl RiveAppAssistant {
         let background = args.background.unwrap_or(Color::white());
         let artboard = args.artboard;
 
-        Self {
-            app_context: app_context.clone(),
-            display_rotation,
-            filename,
-            playback_speed,
-            background,
-            artboard,
-        }
+        Self { display_rotation, filename, playback_speed, background, artboard }
     }
 }
 
@@ -88,14 +81,18 @@ impl AppAssistant for RiveAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant_with_sender(
+        &mut self,
+        view_key: ViewKey,
+        app_sender: AppSender,
+    ) -> Result<ViewAssistantPtr, Error> {
         let file = load_rive(&Path::new("/pkg/data/static").join(self.filename.clone()))?;
         let playback_speed = self.playback_speed;
         let background = self.background;
         let artboard = self.artboard.clone();
 
         Ok(Box::new(RiveViewAssistant::new(
-            &self.app_context,
+            app_sender,
             view_key,
             file,
             playback_speed,
@@ -117,7 +114,7 @@ struct SceneDetails {
 }
 
 struct RiveViewAssistant {
-    app_context: AppContext,
+    app_sender: AppSender,
     view_key: ViewKey,
     file: rive::File,
     playback_speed: f32,
@@ -129,7 +126,7 @@ struct RiveViewAssistant {
 
 impl RiveViewAssistant {
     fn new(
-        app_context: &AppContext,
+        app_sender: AppSender,
         view_key: ViewKey,
         file: rive::File,
         playback_speed: f32,
@@ -139,7 +136,7 @@ impl RiveViewAssistant {
         let background = Color { r: background.r, g: background.g, b: background.b, a: 255 };
 
         RiveViewAssistant {
-            app_context: app_context.clone(),
+            app_sender: app_sender.clone(),
             view_key,
             file,
             playback_speed,
@@ -162,14 +159,14 @@ impl RiveViewAssistant {
         if let Some(scene_details) = self.scene_details.as_mut() {
             if index < scene_details.animations.len() {
                 scene_details.animations[index].1 = !scene_details.animations[index].1;
-                self.app_context.request_render(self.view_key);
+                self.app_sender.request_render(self.view_key);
             }
         }
     }
 
     fn adjust_playback_speed(&mut self, factor: f32) {
         self.playback_speed *= factor;
-        self.app_context.request_render(self.view_key);
+        self.app_sender.request_render(self.view_key);
     }
 }
 
@@ -290,21 +287,7 @@ impl ViewAssistant for RiveViewAssistant {
     }
 }
 
-fn make_app_assistant_fut(
-    app_context: &AppContext,
-) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
-    let f = async move {
-        let assistant = Box::new(RiveAppAssistant::new(app_context));
-        Ok::<AppAssistantPtr, Error>(assistant)
-    };
-    Box::pin(f)
-}
-
-fn make_app_assistant() -> AssistantCreatorFunc {
-    Box::new(make_app_assistant_fut)
-}
-
 fn main() -> Result<(), Error> {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
-    App::run(make_app_assistant())
+    App::run(make_app_assistant::<RiveAppAssistant>())
 }

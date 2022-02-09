@@ -18,7 +18,7 @@ use {
             facets::FacetId,
             scene::{Scene, SceneBuilder, SceneOrder},
         },
-        AppContext, Message, Size, ViewAssistant, ViewAssistantContext, ViewKey,
+        AppSender, Message, Size, ViewAssistant, ViewAssistantContext, ViewKey,
     },
     euclid::size2,
     fidl_fuchsia_hardware_pty::WindowSize,
@@ -78,15 +78,15 @@ struct ResizeEvent {
 }
 
 #[derive(Clone)]
-struct AppContextWrapper {
-    app_context: Option<AppContext>,
+struct AppSenderWrapper {
+    app_sender: Option<AppSender>,
     test_sender: Option<mpsc::UnboundedSender<Message>>,
 }
 
-impl AppContextWrapper {
+impl AppSenderWrapper {
     fn request_render(&self, target: ViewKey) {
-        if let Some(app_context) = &self.app_context {
-            app_context.request_render(target);
+        if let Some(app_sender) = &self.app_sender {
+            app_sender.request_render(target);
         } else if let Some(sender) = &self.test_sender {
             sender
                 .unbounded_send(Box::new("request_render"))
@@ -95,9 +95,9 @@ impl AppContextWrapper {
     }
 
     #[cfg(test)]
-    // Allows tests to observe what is sent to the app_context.
+    // Allows tests to observe what is sent to the app_sender.
     fn use_test_sender(&mut self, sender: mpsc::UnboundedSender<Message>) {
-        self.app_context = None;
+        self.app_sender = None;
         self.test_sender = Some(sender);
     }
 }
@@ -147,7 +147,7 @@ impl Write for PtyContext {
 }
 
 struct EventProxy {
-    app_context: AppContextWrapper,
+    app_sender: AppSenderWrapper,
     view_key: ViewKey,
 }
 
@@ -155,7 +155,7 @@ impl EventListener for EventProxy {
     fn send_event(&self, event: Event) {
         match event {
             Event::MouseCursorDirty => {
-                self.app_context.request_render(self.view_key);
+                self.app_sender.request_render(self.view_key);
             }
             _ => (),
         }
@@ -196,7 +196,7 @@ pub struct TerminalViewAssistant {
     pty_context: Option<PtyContext>,
     terminal_scene: TerminalScene,
     term: Rc<RefCell<Term<EventProxy>>>,
-    app_context: AppContextWrapper,
+    app_sender: AppSenderWrapper,
     view_key: ViewKey,
     scroll_to_bottom_on_input: bool,
     font_set: FontSet,
@@ -213,7 +213,7 @@ pub struct TerminalViewAssistant {
 impl TerminalViewAssistant {
     /// Creates a new instance of the TerminalViewAssistant.
     pub fn new(
-        app_context: &AppContext,
+        app_sender: &AppSender,
         view_key: ViewKey,
         scroll_to_bottom_on_input: bool,
         spawn_command: Vec<CString>,
@@ -253,12 +253,12 @@ impl TerminalViewAssistant {
             dpr: 1.0,
         };
 
-        let terminal_scene = TerminalScene::new(app_context.clone(), view_key);
+        let terminal_scene = TerminalScene::new(app_sender.clone(), view_key);
 
-        let app_context =
-            AppContextWrapper { app_context: Some(app_context.clone()), test_sender: None };
+        let app_sender =
+            AppSenderWrapper { app_sender: Some(app_sender.clone()), test_sender: None };
 
-        let event_proxy = EventProxy { app_context: app_context.clone(), view_key };
+        let event_proxy = EventProxy { app_sender: app_sender.clone(), view_key };
 
         let term = Term::new(&TerminalConfig::default(), &size_info, Clipboard::new(), event_proxy);
 
@@ -268,7 +268,7 @@ impl TerminalViewAssistant {
             pty_context: None,
             term: Rc::new(RefCell::new(term)),
             terminal_scene,
-            app_context,
+            app_sender,
             view_key,
             font_set,
             font_size: FONT_SIZE,
@@ -281,8 +281,8 @@ impl TerminalViewAssistant {
 
     #[cfg(test)]
     pub fn new_for_test() -> TerminalViewAssistant {
-        let app_context = AppContext::new_for_testing_purposes_only();
-        Self::new(&app_context, 1, false, vec![cstr!("/pkg/bin/sh").to_owned()], vec![])
+        let app_sender = AppSender::new_for_testing_purposes_only();
+        Self::new(&app_sender, 1, false, vec![cstr!("/pkg/bin/sh").to_owned()], vec![])
     }
 
     /// Checks if we need to perform a resize based on a new size.
@@ -373,7 +373,7 @@ impl TerminalViewAssistant {
         let mut pty_context = PtyContext::from_pty(&pty)?;
         let mut resize_receiver = pty_context.take_resize_receiver();
 
-        let app_context = self.app_context.clone();
+        let app_sender = self.app_sender.clone();
         let view_key = self.view_key;
 
         let term_clone = self.term.clone();
@@ -424,7 +424,7 @@ impl TerminalViewAssistant {
                             for byte in &read_buf[0..read_count] {
                                 parser.advance(&mut *term, *byte, &mut write_fd);
                             }
-                            app_context.request_render(view_key);
+                            app_sender.request_render(view_key);
                         }
                     },
                     result = resize_receiver.next().fuse() => {
@@ -432,7 +432,7 @@ impl TerminalViewAssistant {
                             pty.resize(event.window_size).await.unwrap_or_else(|e: anyhow::Error| {
                                 error!("failed to send resize message to pty: {:?}", e)
                             });
-                            app_context.request_render(view_key);
+                            app_sender.request_render(view_key);
                         }
                     }
                 );
@@ -469,7 +469,7 @@ impl TerminalViewAssistant {
     fn set_font_size(&mut self, font_size: f32) {
         self.font_size = font_size;
         self.last_known_size = Size::zero();
-        self.app_context.request_render(self.view_key);
+        self.app_sender.request_render(self.view_key);
     }
 
     // This method is overloaded from the ViewAssistant trait so we can test the method.
@@ -798,9 +798,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn event_proxy_calls_view_update_on_dirty_mouse_cursor() -> Result<(), Error> {
         let (sender, mut receiver) = mpsc::unbounded();
-        let app_context = AppContextWrapper { app_context: None, test_sender: Some(sender) };
+        let app_sender = AppSenderWrapper { app_sender: None, test_sender: Some(sender) };
 
-        let event_proxy = EventProxy { app_context, view_key: 0 };
+        let event_proxy = EventProxy { app_sender, view_key: 0 };
 
         event_proxy.send_event(Event::MouseCursorDirty);
 
@@ -816,7 +816,7 @@ mod tests {
         let (view, mut receiver) = make_test_view_with_spawned_pty_loop().await?;
 
         let event_proxy =
-            EventProxy { app_context: view.app_context.clone(), view_key: view.view_key };
+            EventProxy { app_sender: view.app_sender.clone(), view_key: view.view_key };
 
         let mut term = Term::new(
             &TerminalConfig::default(),
@@ -881,7 +881,7 @@ mod tests {
         pty_context.allow_dual_write_for_test();
 
         let (sender, mut _receiver) = mpsc::unbounded();
-        view.app_context = AppContextWrapper { app_context: None, test_sender: Some(sender) };
+        view.app_sender = AppSenderWrapper { app_sender: None, test_sender: Some(sender) };
         view.pty_context = Some(pty_context);
 
         let equal = 61;
@@ -994,7 +994,7 @@ mod tests {
         let (sender, mut receiver) = mpsc::unbounded();
 
         let mut view = TerminalViewAssistant::new_for_test();
-        view.app_context.use_test_sender(sender);
+        view.app_sender.use_test_sender(sender);
 
         let _ = view.spawn_pty_loop();
 

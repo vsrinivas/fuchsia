@@ -55,10 +55,10 @@ fn main() -> Result<(), Error> {
         executor.run_singlethreaded(get_read_only_debuglog)?
     };
 
-    App::run(Box::new(|app_context| {
+    App::run(Box::new(|app_sender| {
         let f = async move {
             let assistant = Box::new(VirtualConsoleAppAssistant::new(
-                app_context,
+                app_sender,
                 args,
                 Some(read_only_debuglog),
             )?);

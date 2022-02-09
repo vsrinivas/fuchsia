@@ -17,7 +17,7 @@ use {
             facets::{FacetId, RiveFacet},
             scene::{Scene, SceneBuilder, SceneOrder},
         },
-        AppContext, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+        AppSender, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     fidl_fuchsia_hardware_display::VirtconMode,
     fidl_fuchsia_hardware_power_statecontrol::{AdminMarker, AdminSynchronousProxy, RebootReason},
@@ -105,7 +105,7 @@ struct TerminalStatus {
 }
 
 pub struct VirtualConsoleViewAssistant {
-    app_context: AppContext,
+    app_sender: AppSender,
     view_key: ViewKey,
     color_scheme: ColorScheme,
     round_scene_corners: bool,
@@ -135,7 +135,7 @@ const FALLBACK_FONT_PREFIX: &'static str = "/pkg/data/fallback-font";
 
 impl VirtualConsoleViewAssistant {
     pub fn new(
-        app_context: &AppContext,
+        app_sender: &AppSender,
         view_key: ViewKey,
         color_scheme: ColorScheme,
         round_scene_corners: bool,
@@ -197,7 +197,7 @@ impl VirtualConsoleViewAssistant {
         let start_pointer_location = Point::zero();
 
         Ok(Box::new(VirtualConsoleViewAssistant {
-            app_context: app_context.clone(),
+            app_sender: app_sender.clone(),
             view_key,
             color_scheme,
             round_scene_corners,
@@ -221,9 +221,9 @@ impl VirtualConsoleViewAssistant {
 
     #[cfg(test)]
     fn new_for_test(animation: bool) -> Result<ViewAssistantPtr, Error> {
-        let app_context = AppContext::new_for_testing_purposes_only();
+        let app_sender = AppSender::new_for_testing_purposes_only();
         let dpi: BTreeSet<u32> = [160, 320, 480, 640].iter().cloned().collect();
-        Self::new(&app_context, 1, ColorScheme::default(), false, 14.0, dpi, animation, true)
+        Self::new(&app_sender, 1, ColorScheme::default(), false, 14.0, dpi, animation, true)
     }
 
     // Resize all terminals for 'new_size'.
@@ -312,7 +312,7 @@ impl VirtualConsoleViewAssistant {
             self.desired_virtcon_mode = VirtconMode::Fallback;
             self.scene_details = None;
             self.animation = None;
-            self.app_context.request_render(self.view_key);
+            self.app_sender.request_render(self.view_key);
         }
     }
 
@@ -323,7 +323,7 @@ impl VirtualConsoleViewAssistant {
             // coordination between views to determine virtcon mode can be added
             // in the future when it becomes a requirement.
             if self.is_primary {
-                self.app_context.set_virtcon_mode(self.virtcon_mode);
+                self.app_sender.set_virtcon_mode(self.virtcon_mode);
             }
         }
         Ok(())
@@ -345,7 +345,7 @@ impl VirtualConsoleViewAssistant {
                         textgrid,
                         Box::new(TextGridMessages::SetTermMessage(terminal)),
                     );
-                    self.app_context.request_render(self.view_key);
+                    self.app_sender.request_render(self.view_key);
                 }
             }
         }
@@ -379,7 +379,7 @@ impl VirtualConsoleViewAssistant {
                     textgrid,
                     Box::new(TextGridMessages::<EventProxy>::ChangeStatusMessage(new_status)),
                 );
-                self.app_context.request_render(self.view_key);
+                self.app_sender.request_render(self.view_key);
             }
         }
     }
@@ -387,7 +387,7 @@ impl VirtualConsoleViewAssistant {
     fn set_font_size(&mut self, font_size: f32) {
         self.font_size = font_size;
         self.scene_details = None;
-        self.app_context.request_render(self.view_key);
+        self.app_sender.request_render(self.view_key);
     }
 
     fn scroll_active_terminal(&mut self, scroll: Scroll) {
@@ -757,7 +757,7 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                     // be fine as it is rare that a terminal is added.
                     if self.animation.is_none() {
                         self.scene_details = None;
-                        self.app_context.request_render(self.view_key);
+                        self.app_sender.request_render(self.view_key);
                     }
                     if *make_active {
                         self.set_active_terminal(*id);
@@ -766,7 +766,7 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 ViewMessages::RequestTerminalUpdateMessage(id) => {
                     if let Some((terminal, status)) = self.terminals.get_mut(id) {
                         let has_output = if *id == self.active_terminal_id {
-                            self.app_context.request_render(self.view_key);
+                            self.app_sender.request_render(self.view_key);
                             false
                         } else {
                             true

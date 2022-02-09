@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    carnelian::{App, AppAssistantPtr, AppContext, AssistantCreator, AssistantCreatorFunc},
+    carnelian::{App, AppAssistantPtr, AppSender, AssistantCreator, AssistantCreatorFunc},
     fuchsia_syslog as syslog,
     fuchsia_trace_provider::trace_provider_create_with_fdio,
     std::env,
@@ -12,10 +12,10 @@ use {
     terminal_lib::TerminalAssistant,
 };
 
-fn make_app_assistant_fut(cmd: Vec<CString>) -> impl FnOnce(&AppContext) -> AssistantCreator<'_> {
-    move |app_context: &AppContext| {
+fn make_app_assistant_fut(cmd: Vec<CString>) -> impl FnOnce(&AppSender) -> AssistantCreator<'_> {
+    move |app_sender: &AppSender| {
         let f = async move {
-            let assistant = Box::new(TerminalAssistant::new(app_context, cmd));
+            let assistant = Box::new(TerminalAssistant::new(app_sender, cmd));
             Ok::<AppAssistantPtr, Error>(assistant)
         };
         Box::pin(f)

@@ -6,7 +6,7 @@ use {
     crate::ui::terminal_views::{GridView, ScrollBar},
     carnelian::{
         input::{self},
-        AppContext, Coord, Point, Rect, Size, ViewAssistantContext, ViewKey,
+        AppSender, Coord, Point, Rect, Size, ViewAssistantContext, ViewKey,
     },
     fuchsia_trace as ftrace,
 };
@@ -32,11 +32,11 @@ pub enum PointerEventResponse {
 }
 
 impl TerminalScene {
-    pub fn new(app_context: AppContext, view_key: ViewKey) -> Self {
+    pub fn new(app_sender: AppSender, view_key: ViewKey) -> Self {
         TerminalScene {
             size: Size::zero(),
             grid_view: GridView::default(),
-            scroll_bar: ScrollBar::new(app_context, view_key),
+            scroll_bar: ScrollBar::new(app_sender, view_key),
             scroll_context: ScrollContext::default(),
             active_pointer_id: None,
             start_pointer_location: Point::zero(),

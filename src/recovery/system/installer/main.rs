@@ -14,7 +14,7 @@ use carnelian::{
         facets::{RiveFacet, TextFacet, TextFacetOptions, TextHorizontalAlignment},
         scene::{Scene, SceneBuilder},
     },
-    App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture, Point,
+    App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, LocalBoxFuture, Point,
     Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::{point2, size2};
@@ -54,14 +54,14 @@ struct Args {
 }
 
 struct InstallerAppAssistant {
-    app_context: AppContext,
+    app_sender: AppSender,
     display_rotation: DisplayRotation,
 }
 
 impl InstallerAppAssistant {
-    fn new(app_context: AppContext) -> Self {
+    fn new(app_sender: AppSender) -> Self {
         let args: Args = argh::from_env();
-        Self { app_context, display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg0) }
+        Self { app_sender, display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg0) }
     }
 }
 
@@ -73,7 +73,7 @@ impl AppAssistant for InstallerAppAssistant {
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
         let file = load_rive(LOGO_IMAGE_PATH).ok();
         Ok(Box::new(InstallerViewAssistant::new(
-            &self.app_context,
+            &self.app_sender,
             view_key,
             file,
             INSTALLER_HEADLINE,
@@ -153,7 +153,7 @@ struct InstallerViewAssistant {
     face: FontFace,
     heading: &'static str,
     menu_state_machine: MenuStateMachine,
-    app_context: AppContext,
+    app_sender: AppSender,
     view_key: ViewKey,
     file: Option<rive::File>,
     render_resources: Option<RenderResources>,
@@ -161,26 +161,26 @@ struct InstallerViewAssistant {
 
 impl InstallerViewAssistant {
     fn new(
-        app_context: &AppContext,
+        app_sender: &AppSender,
         view_key: ViewKey,
         file: Option<rive::File>,
         heading: &'static str,
     ) -> Result<InstallerViewAssistant, Error> {
-        InstallerViewAssistant::setup(app_context, view_key)?;
+        InstallerViewAssistant::setup(app_sender, view_key)?;
 
         let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
         Ok(InstallerViewAssistant {
             face,
             heading: heading,
             menu_state_machine: MenuStateMachine::new(),
-            app_context: app_context.clone(),
+            app_sender: app_sender.clone(),
             view_key: 0,
             file,
             render_resources: None,
         })
     }
 
-    fn setup(_: &AppContext, _: ViewKey) -> Result<(), Error> {
+    fn setup(_: &AppSender, _: ViewKey) -> Result<(), Error> {
         Ok(())
     }
 
@@ -200,7 +200,7 @@ impl InstallerViewAssistant {
 
         // Render menu changes
         self.render_resources = None;
-        self.app_context.request_render(self.view_key);
+        self.app_sender.request_render(self.view_key);
     }
 }
 
@@ -269,10 +269,10 @@ impl ViewAssistant for InstallerViewAssistant {
 }
 
 fn make_app_assistant_fut(
-    app_context: &AppContext,
+    app_sender: &AppSender,
 ) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
     let f = async move {
-        let assistant = Box::new(InstallerAppAssistant::new(app_context.clone()));
+        let assistant = Box::new(InstallerAppAssistant::new(app_sender.clone()));
         Ok::<AppAssistantPtr, Error>(assistant)
     };
     Box::pin(f)

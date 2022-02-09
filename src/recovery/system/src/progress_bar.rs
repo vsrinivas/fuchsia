@@ -167,7 +167,7 @@ pub(crate) mod stand_alone {
             layout::MainAxisAlignment,
             scene::{Scene, SceneBuilder},
         },
-        App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture,
+        App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, LocalBoxFuture,
         Message, MessageTarget, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
         ViewKey,
     };
@@ -182,7 +182,7 @@ pub(crate) mod stand_alone {
 
     // This assistant is for using as an example
     pub struct ProgressBarViewAssistant {
-        app_context: AppContext,
+        app_sender: AppSender,
         view_key: ViewKey,
         scene: Option<Scene>,
         progress_bar: Option<ProgressBar>,
@@ -192,12 +192,12 @@ pub(crate) mod stand_alone {
 
     impl ProgressBarViewAssistant {
         pub fn new(
-            app_context: AppContext,
+            app_sender: AppSender,
             view_key: ViewKey,
             percent_complete: f32,
         ) -> Result<ProgressBarViewAssistant, Error> {
             Ok(ProgressBarViewAssistant {
-                app_context: app_context.clone(),
+                app_sender: app_sender.clone(),
                 view_key,
                 scene: None,
                 progress_bar: None,
@@ -289,19 +289,19 @@ pub(crate) mod stand_alone {
             if !self.demo_running {
                 self.demo_running = true;
                 let view_key = self.view_key;
-                let app_context = self.app_context.clone();
+                let app_sender = self.app_sender.clone();
                 let f = async move {
                     let sleep_time = Duration::from_millis(50);
                     let mut count = 0.0;
                     while count <= 1.0 {
-                        app_context.queue_message(
+                        app_sender.queue_message(
                             MessageTarget::View(view_key),
                             make_message(ProgressBarMessages::SetProgress(count as f32)),
                         );
                         fuchsia_async::Timer::new(sleep_time.after_now()).await;
                         count += 0.0025;
                     }
-                    app_context.queue_message(
+                    app_sender.queue_message(
                         MessageTarget::View(view_key),
                         make_message(ProgressBarMessages::EndTask),
                     );
@@ -313,12 +313,12 @@ pub(crate) mod stand_alone {
     }
 
     struct ProgressBarAppAssistant {
-        app_context: AppContext,
+        app_sender: AppSender,
     }
 
     impl ProgressBarAppAssistant {
-        pub fn new(app_context: &AppContext) -> Self {
-            Self { app_context: app_context.clone() }
+        pub fn new(app_sender: &AppSender) -> Self {
+            Self { app_sender: app_sender.clone() }
         }
     }
 
@@ -328,7 +328,7 @@ pub(crate) mod stand_alone {
         }
 
         fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
-            Ok(Box::new(ProgressBarViewAssistant::new(self.app_context.clone(), view_key, 0.0)?))
+            Ok(Box::new(ProgressBarViewAssistant::new(self.app_sender.clone(), view_key, 0.0)?))
         }
 
         fn filter_config(&mut self, config: &mut Config) {
@@ -337,10 +337,10 @@ pub(crate) mod stand_alone {
     }
 
     fn make_app_assistant_fut(
-        app_context: &AppContext,
+        app_sender: &AppSender,
     ) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
         let f = async move {
-            let assistant = Box::new(ProgressBarAppAssistant::new(app_context));
+            let assistant = Box::new(ProgressBarAppAssistant::new(app_sender));
             Ok::<AppAssistantPtr, Error>(assistant)
         };
         Box::pin(f)

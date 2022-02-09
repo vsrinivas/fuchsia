@@ -17,7 +17,7 @@ use carnelian::{
         },
         scene::{Scene, SceneBuilder},
     },
-    App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, Coord, LocalBoxFuture,
+    App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, Coord, LocalBoxFuture,
     MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::{point2, size2, vec2};
@@ -134,17 +134,17 @@ impl FdrRestriction {
 }
 
 struct RecoveryAppAssistant {
-    app_context: AppContext,
+    app_sender: AppSender,
     display_rotation: DisplayRotation,
     fdr_restriction: FdrRestriction,
 }
 
 impl RecoveryAppAssistant {
-    pub fn new(app_context: &AppContext, fdr_restriction: FdrRestriction) -> Self {
+    pub fn new(app_sender: &AppSender, fdr_restriction: FdrRestriction) -> Self {
         let args: Args = argh::from_env();
 
         Self {
-            app_context: app_context.clone(),
+            app_sender: app_sender.clone(),
             display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg90),
             fdr_restriction,
         }
@@ -160,7 +160,7 @@ impl AppAssistant for RecoveryAppAssistant {
         let body = get_recovery_body(self.fdr_restriction.is_initially_enabled());
         let file = load_rive(LOGO_IMAGE_PATH).ok();
         let view_assistant_ptr = Box::new(RecoveryViewAssistant::new(
-            &self.app_context,
+            &self.app_sender,
             view_key,
             file,
             RECOVERY_MODE_HEADLINE,
@@ -330,7 +330,7 @@ struct RecoveryViewAssistant {
     body: Option<Cow<'static, str>>,
     fdr_restriction: FdrRestriction,
     reset_state_machine: fdr::FactoryResetStateMachine,
-    app_context: AppContext,
+    app_sender: AppSender,
     view_key: ViewKey,
     file: Option<rive::File>,
     countdown_task: Option<Task<()>>,
@@ -344,14 +344,14 @@ struct RecoveryViewAssistant {
 
 impl RecoveryViewAssistant {
     fn new(
-        app_context: &AppContext,
+        app_sender: &AppSender,
         view_key: ViewKey,
         file: Option<rive::File>,
         heading: &'static str,
         body: Option<Cow<'static, str>>,
         fdr_restriction: FdrRestriction,
     ) -> Result<RecoveryViewAssistant, Error> {
-        RecoveryViewAssistant::setup(app_context, view_key)?;
+        RecoveryViewAssistant::setup(app_sender, view_key)?;
 
         let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
         Ok(RecoveryViewAssistant {
@@ -360,7 +360,7 @@ impl RecoveryViewAssistant {
             body,
             fdr_restriction,
             reset_state_machine: fdr::FactoryResetStateMachine::new(),
-            app_context: app_context.clone(),
+            app_sender: app_sender.clone(),
             view_key: 0,
             file,
             countdown_task: None,
@@ -374,16 +374,16 @@ impl RecoveryViewAssistant {
     }
 
     #[cfg(not(feature = "http_setup_server"))]
-    fn setup(_: &AppContext, _: ViewKey) -> Result<(), Error> {
+    fn setup(_: &AppSender, _: ViewKey) -> Result<(), Error> {
         Ok(())
     }
 
     #[cfg(feature = "http_setup_server")]
-    fn setup(app_context: &AppContext, view_key: ViewKey) -> Result<(), Error> {
+    fn setup(app_sender: &AppSender, view_key: ViewKey) -> Result<(), Error> {
         use futures::FutureExt as _;
 
         // TODO: it should be possible to pass a handler function and avoid the need for message
-        // passing, but AppContext eventually contains carnelian::FrameBufferPtr which is an alias
+        // passing, but AppSender eventually contains carnelian::FrameBufferPtr which is an alias
         // for Rc<_> which is !Send.
         let (sender, receiver) = async_channel::unbounded();
         fasync::Task::local(
@@ -398,28 +398,28 @@ impl RecoveryViewAssistant {
 
         fasync::Task::local(
             receiver
-                .fold(app_context.clone(), move |local_app_context, event| async move {
+                .fold(app_sender.clone(), move |local_app_sender, event| async move {
                     println!("recovery: received request");
                     match event {
-                        SetupEvent::Root => local_app_context.queue_message(
+                        SetupEvent::Root => local_app_sender.queue_message(
                             MessageTarget::View(view_key),
                             make_message(RecoveryMessages::EventReceived),
                         ),
                         SetupEvent::DevhostOta { cfg } => {
-                            local_app_context.queue_message(
+                            local_app_sender.queue_message(
                                 MessageTarget::View(view_key),
                                 make_message(RecoveryMessages::StartingOta),
                             );
                             let result = ota::run_devhost_ota(cfg).await;
-                            local_app_context.queue_message(
+                            local_app_sender.queue_message(
                                 MessageTarget::View(view_key),
                                 make_message(RecoveryMessages::OtaFinished { result }),
                             );
                         }
                     }
-                    local_app_context
+                    local_app_sender
                 })
-                .map(|_: AppContext| ()),
+                .map(|_: AppSender| ()),
         )
         .detach();
 
@@ -428,27 +428,23 @@ impl RecoveryViewAssistant {
 
     /// Checks whether fdr policy allows factory reset to be performed. If not, then it will not
     /// move forward with the reset. If it is, then it will forward the message to begin reset.
-    async fn check_fdr_and_maybe_reset(
-        view_key: ViewKey,
-        app_context: AppContext,
-        check_id: usize,
-    ) {
+    async fn check_fdr_and_maybe_reset(view_key: ViewKey, app_sender: AppSender, check_id: usize) {
         let fdr_enabled = check_fdr_enabled().await.unwrap_or_else(|error| {
             eprintln!("recovery: Error occurred, but proceeding with reset: {:?}", error);
             true
         });
-        app_context.queue_message(
+        app_sender.queue_message(
             MessageTarget::View(view_key),
             make_message(RecoveryMessages::PolicyResult(check_id, fdr_enabled)),
         );
     }
 
-    async fn execute_reset(view_key: ViewKey, app_context: AppContext) {
+    async fn execute_reset(view_key: ViewKey, app_sender: AppSender) {
         let factory_reset_service = connect_to_protocol::<FactoryResetMarker>();
         let proxy = match factory_reset_service {
             Ok(marker) => marker.clone(),
             Err(error) => {
-                app_context.queue_message(
+                app_sender.queue_message(
                     MessageTarget::View(view_key),
                     make_message(RecoveryMessages::ResetFailed),
                 );
@@ -462,7 +458,7 @@ impl RecoveryViewAssistant {
         match res {
             Ok(_) => {}
             Err(error) => {
-                app_context.queue_message(
+                app_sender.queue_message(
                     MessageTarget::View(view_key),
                     make_message(RecoveryMessages::ResetFailed),
                 );
@@ -493,7 +489,7 @@ impl RecoveryViewAssistant {
                 let state = self
                     .reset_state_machine
                     .handle_event(ResetEvent::AwaitPolicyResult(*check_id, *fdr_enabled));
-                self.app_context.queue_message(
+                self.app_sender.queue_message(
                     MessageTarget::View(self.view_key),
                     make_message(RecoveryMessages::ResetMessage(state)),
                 );
@@ -505,15 +501,15 @@ impl RecoveryViewAssistant {
                         self.body = get_recovery_body(self.fdr_restriction.is_initially_enabled())
                             .map(Into::into);
                         self.render_resources = None;
-                        self.app_context.request_render(self.view_key);
+                        self.app_sender.request_render(self.view_key);
                     }
                     FactoryResetState::AwaitingPolicy(_) => {} // no-op
                     FactoryResetState::StartCountdown => {
                         let view_key = self.view_key;
-                        let local_app_context = self.app_context.clone();
+                        let local_app_sender = self.app_sender.clone();
 
                         let mut counter = FACTORY_RESET_TIMER_IN_SECONDS;
-                        local_app_context.queue_message(
+                        local_app_sender.queue_message(
                             MessageTarget::View(view_key),
                             make_message(RecoveryMessages::CountdownTick(counter)),
                         );
@@ -524,7 +520,7 @@ impl RecoveryViewAssistant {
                                 fasync::Interval::new(Duration::from_seconds(1));
                             while let Some(()) = interval_timer.next().await {
                                 counter -= 1;
-                                local_app_context.queue_message(
+                                local_app_sender.queue_message(
                                     MessageTarget::View(view_key),
                                     make_message(RecoveryMessages::CountdownTick(counter)),
                                 );
@@ -542,16 +538,16 @@ impl RecoveryViewAssistant {
                         let state =
                             self.reset_state_machine.handle_event(ResetEvent::CountdownCancelled);
                         assert_eq!(state, fdr::FactoryResetState::Waiting);
-                        self.app_context.queue_message(
+                        self.app_sender.queue_message(
                             MessageTarget::View(self.view_key),
                             make_message(RecoveryMessages::ResetMessage(state)),
                         );
                     }
                     FactoryResetState::ExecuteReset => {
                         let view_key = self.view_key;
-                        let local_app_context = self.app_context.clone();
+                        let local_app_sender = self.app_sender.clone();
                         let f = async move {
-                            RecoveryViewAssistant::execute_reset(view_key, local_app_context).await;
+                            RecoveryViewAssistant::execute_reset(view_key, local_app_sender).await;
                         };
                         fasync::Task::local(f).detach();
                     }
@@ -565,7 +561,7 @@ impl RecoveryViewAssistant {
                     let state =
                         self.reset_state_machine.handle_event(ResetEvent::CountdownFinished);
                     assert_eq!(state, FactoryResetState::ExecuteReset);
-                    self.app_context.queue_message(
+                    self.app_sender.queue_message(
                         MessageTarget::View(self.view_key),
                         make_message(RecoveryMessages::ResetMessage(state)),
                     );
@@ -573,13 +569,13 @@ impl RecoveryViewAssistant {
                     self.body = Some(COUNTDOWN_MODE_BODY.into());
                 }
                 self.render_resources = None;
-                self.app_context.request_render(self.view_key);
+                self.app_sender.request_render(self.view_key);
             }
             RecoveryMessages::ResetFailed => {
                 self.heading = "Reset failed";
                 self.body = Some("Please restart device to try again".into());
                 self.render_resources = None;
-                self.app_context.request_render(self.view_key);
+                self.app_sender.request_render(self.view_key);
             }
         }
     }
@@ -637,12 +633,12 @@ impl RecoveryViewAssistant {
                         }
                         // Fire up a new keyboard
                         let mut view_assistant_ptr = Box::new(
-                            KeyboardViewAssistant::new(self.app_context.clone(), self.view_key)
+                            KeyboardViewAssistant::new(self.app_sender.clone(), self.view_key)
                                 .unwrap(),
                         );
                         view_assistant_ptr.set_field_name(field_text);
                         view_assistant_ptr.set_text_field(entry_text);
-                        self.app_context.queue_message(
+                        self.app_sender.queue_message(
                             MessageTarget::View(self.view_key),
                             make_message(ProxyMessages::NewViewAssistant(Some(view_assistant_ptr))),
                         );
@@ -718,7 +714,7 @@ impl ViewAssistant for RecoveryViewAssistant {
                         FdrRestriction::Restricted { .. } => {
                             fasync::Task::local(RecoveryViewAssistant::check_fdr_and_maybe_reset(
                                 self.view_key,
-                                self.app_context.clone(),
+                                self.app_sender.clone(),
                                 check_id,
                             ))
                             .detach();
@@ -833,7 +829,7 @@ const fn get_recovery_body(fdr_enabled: bool) -> Option<&'static str> {
 }
 
 fn make_app_assistant_fut(
-    app_context: &AppContext,
+    app_sender: &AppSender,
 ) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
     let f = async move {
         // Build the fdr restriction depending on whether the fdr restriction config exists,
@@ -851,7 +847,7 @@ fn make_app_assistant_fut(
             }
         };
 
-        let assistant = Box::new(RecoveryAppAssistant::new(app_context, fdr_restriction));
+        let assistant = Box::new(RecoveryAppAssistant::new(app_sender, fdr_restriction));
         Ok::<AppAssistantPtr, Error>(assistant)
     };
     Box::pin(f)

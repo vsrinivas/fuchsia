@@ -11,7 +11,7 @@ use {
     crate::view::{ViewMessages, VirtualConsoleViewAssistant},
     anyhow::Error,
     carnelian::{
-        app::Config, make_message, AppAssistant, AppContext, MessageTarget, ViewAssistantPtr,
+        app::Config, make_message, AppAssistant, AppSender, MessageTarget, ViewAssistantPtr,
         ViewKey,
     },
     fidl::endpoints::ProtocolMarker,
@@ -26,13 +26,13 @@ const DEBUGLOG_ID: u32 = 0;
 const FIRST_SESSION_ID: u32 = 1;
 
 pub struct EventProxy {
-    app_context: AppContext,
+    app_sender: AppSender,
     id: u32,
 }
 
 impl EventProxy {
-    pub fn new(app_context: &AppContext, id: u32) -> Self {
-        Self { app_context: app_context.clone(), id }
+    pub fn new(app_sender: &AppSender, id: u32) -> Self {
+        Self { app_sender: app_sender.clone(), id }
     }
 }
 
@@ -40,7 +40,7 @@ impl EventListener for EventProxy {
     fn send_event(&self, event: Event) {
         match event {
             Event::MouseCursorDirty => {
-                self.app_context.queue_message(
+                self.app_sender.queue_message(
                     MessageTarget::Application,
                     make_message(AppMessages::RequestTerminalUpdateMessage(self.id)),
                 );
@@ -57,7 +57,7 @@ enum AppMessages {
 
 #[derive(Clone)]
 struct VirtualConsoleClient {
-    app_context: AppContext,
+    app_sender: AppSender,
     color_scheme: ColorScheme,
     scrollback_rows: u32,
 }
@@ -70,11 +70,11 @@ impl VirtualConsoleClient {
         make_active: bool,
         pty_fd: Option<File>,
     ) -> Result<Terminal<EventProxy>, Error> {
-        let event_proxy = EventProxy::new(&self.app_context, id);
+        let event_proxy = EventProxy::new(&self.app_sender, id);
         let terminal =
             Terminal::new(event_proxy, title, self.color_scheme, self.scrollback_rows, pty_fd);
         let terminal_clone = terminal.try_clone()?;
-        self.app_context.queue_message(
+        self.app_sender.queue_message(
             MessageTarget::Application,
             make_message(AppMessages::AddTerminalMessage(id, terminal_clone, make_active)),
         );
@@ -82,7 +82,7 @@ impl VirtualConsoleClient {
     }
 
     fn request_update(&self, id: u32) {
-        self.app_context.queue_message(
+        self.app_sender.queue_message(
             MessageTarget::Application,
             make_message(AppMessages::RequestTerminalUpdateMessage(id)),
         );
@@ -120,7 +120,7 @@ impl SessionManagerClient for VirtualConsoleClient {
 }
 
 pub struct VirtualConsoleAppAssistant {
-    app_context: AppContext,
+    app_sender: AppSender,
     view_key: ViewKey,
     args: VirtualConsoleArgs,
     read_only_debuglog: Option<zx::DebugLog>,
@@ -130,16 +130,16 @@ pub struct VirtualConsoleAppAssistant {
 
 impl VirtualConsoleAppAssistant {
     pub fn new(
-        app_context: &AppContext,
+        app_sender: &AppSender,
         args: VirtualConsoleArgs,
         read_only_debuglog: Option<zx::DebugLog>,
     ) -> Result<VirtualConsoleAppAssistant, Error> {
-        let app_context = app_context.clone();
+        let app_sender = app_sender.clone();
         let session_manager = SessionManager::new(args.keep_log_visible, FIRST_SESSION_ID);
         let terminals = BTreeMap::new();
 
         Ok(VirtualConsoleAppAssistant {
-            app_context,
+            app_sender,
             view_key: 0,
             args,
             read_only_debuglog,
@@ -149,17 +149,17 @@ impl VirtualConsoleAppAssistant {
     }
 
     fn start_log(&self, read_only_debuglog: zx::DebugLog) -> Result<(), Error> {
-        let app_context = self.app_context.clone();
+        let app_sender = self.app_sender.clone();
         let color_scheme = self.args.color_scheme;
         let scrollback_rows = self.args.scrollback_rows;
-        let client = VirtualConsoleClient { app_context, color_scheme, scrollback_rows };
+        let client = VirtualConsoleClient { app_sender, color_scheme, scrollback_rows };
         Log::start(read_only_debuglog, &client, DEBUGLOG_ID)
     }
 
     #[cfg(test)]
     fn new_for_test() -> Result<VirtualConsoleAppAssistant, Error> {
-        let app_context = AppContext::new_for_testing_purposes_only();
-        Self::new(&app_context, VirtualConsoleArgs::default(), None)
+        let app_sender = AppSender::new_for_testing_purposes_only();
+        Self::new(&app_sender, VirtualConsoleArgs::default(), None)
     }
 }
 
@@ -176,7 +176,7 @@ impl AppAssistant for VirtualConsoleAppAssistant {
         let is_primary = self.view_key == 0;
 
         let view_assistant = VirtualConsoleViewAssistant::new(
-            &self.app_context,
+            &self.app_sender,
             view_key,
             self.args.color_scheme,
             self.args.rounded_corners,
@@ -198,7 +198,7 @@ impl AppAssistant for VirtualConsoleAppAssistant {
         // Add all terminals to this view.
         for (id, (terminal, make_active)) in &self.terminals {
             let terminal_clone = terminal.try_clone().expect("failed to clone terminal");
-            self.app_context.queue_message(
+            self.app_sender.queue_message(
                 MessageTarget::View(view_key),
                 make_message(ViewMessages::AddTerminalMessage(*id, terminal_clone, *make_active)),
             );
@@ -219,10 +219,10 @@ impl AppAssistant for VirtualConsoleAppAssistant {
         _service_name: &str,
         channel: fasync::Channel,
     ) -> Result<(), Error> {
-        let app_context = self.app_context.clone();
+        let app_sender = self.app_sender.clone();
         let color_scheme = self.args.color_scheme;
         let scrollback_rows = self.args.scrollback_rows;
-        let client = VirtualConsoleClient { app_context, color_scheme, scrollback_rows };
+        let client = VirtualConsoleClient { app_sender, color_scheme, scrollback_rows };
         self.session_manager.bind(&client, channel);
         Ok(())
     }
@@ -246,7 +246,7 @@ impl AppAssistant for VirtualConsoleAppAssistant {
                         return;
                     }
                     let terminal_clone = terminal.try_clone().expect("failed to clone terminal");
-                    self.app_context.queue_message(
+                    self.app_sender.queue_message(
                         MessageTarget::View(self.view_key),
                         make_message(ViewMessages::AddTerminalMessage(
                             *id,
@@ -259,7 +259,7 @@ impl AppAssistant for VirtualConsoleAppAssistant {
                     if self.view_key == 0 {
                         return;
                     }
-                    self.app_context.queue_message(
+                    self.app_sender.queue_message(
                         MessageTarget::View(self.view_key),
                         make_message(ViewMessages::RequestTerminalUpdateMessage(*id)),
                     );

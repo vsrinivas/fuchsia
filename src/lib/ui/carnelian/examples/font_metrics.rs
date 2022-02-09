@@ -7,6 +7,7 @@ use carnelian::{
     color::Color,
     drawing::{load_font, FontFace},
     input::{self},
+    make_app_assistant,
     render::Context as RenderContext,
     scene::{
         facets::{
@@ -16,8 +17,8 @@ use carnelian::{
         layout::{Alignment, StackMemberDataBuilder},
         scene::{Scene, SceneBuilder},
     },
-    App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, Coord, LocalBoxFuture,
-    Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    App, AppAssistant, AppSender, Coord, Point, Size, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr, ViewKey,
 };
 use euclid::point2;
 use fuchsia_zircon::Event;
@@ -28,17 +29,20 @@ const LINE_THICKNESS: Coord = 2.0;
 const BASELINE_INDENT: Coord = 0.15;
 const PADDING: Coord = 0.005;
 
-struct FontAppAssistant {
-    app_context: AppContext,
-}
+#[derive(Default)]
+struct FontAppAssistant;
 
 impl AppAssistant for FontAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        Ok(FontMetricsViewAssistant::new(&self.app_context, view_key)?)
+    fn create_view_assistant_with_sender(
+        &mut self,
+        view_key: ViewKey,
+        app_sender: AppSender,
+    ) -> Result<ViewAssistantPtr, Error> {
+        Ok(FontMetricsViewAssistant::new(app_sender, view_key)?)
     }
 }
 
@@ -50,7 +54,7 @@ struct SceneDetails {
 }
 
 struct FontMetricsViewAssistant {
-    app_context: AppContext,
+    app_sender: AppSender,
     view_key: ViewKey,
     sample_title: String,
     sample_paragraph: String,
@@ -66,7 +70,7 @@ struct FontMetricsViewAssistant {
 }
 
 impl FontMetricsViewAssistant {
-    fn new(app_context: &AppContext, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn new(app_sender: AppSender, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
         let ss = load_font(PathBuf::from("/pkg/data/fonts/ShortStack-Regular.ttf"))?;
         let ds = load_font(PathBuf::from("/pkg/data/fonts/DroidSerif-Regular.ttf"))?;
         let qr = load_font(PathBuf::from("/pkg/data/fonts/Quintessential-Regular.ttf"))?;
@@ -74,7 +78,7 @@ impl FontMetricsViewAssistant {
         let label_face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
         let (title, para) = Self::new_sample_pair();
         Ok(Box::new(Self {
-            app_context: app_context.clone(),
+            app_sender: app_sender.clone(),
             view_key,
             sample_title: title,
             sample_paragraph: para,
@@ -96,7 +100,7 @@ impl FontMetricsViewAssistant {
 
     fn update(&mut self) {
         self.scene_details = None;
-        self.app_context.request_render(self.view_key);
+        self.app_sender.request_render(self.view_key);
     }
 
     fn update_text(&mut self, title: String, para: String) {
@@ -112,7 +116,7 @@ impl FontMetricsViewAssistant {
                 Box::new(SetTextMessage { text: self.sample_paragraph.clone() }),
             );
         }
-        self.app_context.request_render(self.view_key);
+        self.app_sender.request_render(self.view_key);
     }
 
     fn new_sample_text(&mut self) {
@@ -156,7 +160,7 @@ impl FontMetricsViewAssistant {
                     .send_message(&target, Box::new(SetColorMessage { color: self.line_color }));
             }
         }
-        self.app_context.request_render(self.view_key);
+        self.app_sender.request_render(self.view_key);
     }
 
     fn toggle_round_scene_corners(&mut self) {
@@ -164,7 +168,7 @@ impl FontMetricsViewAssistant {
         if let Some(scene_details) = self.scene_details.as_mut() {
             scene_details.scene.round_scene_corners(self.round_scene_corners);
         }
-        self.app_context.request_render(self.view_key);
+        self.app_sender.request_render(self.view_key);
     }
 
     fn optional_bg_color(&self) -> Option<Color> {
@@ -184,7 +188,7 @@ impl FontMetricsViewAssistant {
                 Box::new(SetBackgroundColorMessage { color: optional_bg_color }),
             );
         }
-        self.app_context.request_render(self.view_key);
+        self.app_sender.request_render(self.view_key);
     }
 }
 
@@ -387,20 +391,6 @@ impl ViewAssistant for FontMetricsViewAssistant {
     }
 }
 
-fn make_app_assistant_fut(
-    app_context: &AppContext,
-) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
-    let f = async move {
-        let assistant = Box::new(FontAppAssistant { app_context: app_context.clone() });
-        Ok::<AppAssistantPtr, Error>(assistant)
-    };
-    Box::pin(f)
-}
-
-pub fn make_app_assistant() -> AssistantCreatorFunc {
-    Box::new(make_app_assistant_fut)
-}
-
 fn main() -> Result<(), Error> {
-    App::run(make_app_assistant())
+    App::run(make_app_assistant::<FontAppAssistant>())
 }

@@ -190,7 +190,7 @@ pub(crate) type InternalSender = UnboundedSender<MessageInternal>;
 
 pub(crate) const FIRST_VIEW_KEY: ViewKey = 100;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum MessageTarget {
     View(ViewKey),
     Application,
@@ -199,29 +199,55 @@ pub enum MessageTarget {
 /// Context struct passed to the application assistant creator
 // function.
 #[derive(Clone)]
-pub struct AppContext {
+pub struct AppSender {
     sender: InternalSender,
 }
 
-impl AppContext {
+impl AppSender {
     /// Send a message to a view controller.
     pub fn queue_message(&self, target: MessageTarget, message: Message) {
         self.sender
             .unbounded_send(MessageInternal::TargetedMessage(target, message))
-            .expect("AppContext::queue_message - unbounded_send");
+            .expect("AppSender::queue_message - unbounded_send");
     }
 
     /// Request that a frame be rendered at the next appropriate time.
     pub fn request_render(&self, target: ViewKey) {
         self.sender
             .unbounded_send(MessageInternal::RequestRender(target))
-            .expect("AppContext::request_render - unbounded_send");
+            .expect("AppSender::request_render - unbounded_send");
     }
 
     pub fn set_virtcon_mode(&self, virtcon_mode: VirtconMode) {
         self.sender
             .unbounded_send(MessageInternal::SetVirtconMode(virtcon_mode))
-            .expect("AppContext::set_virtcon_mode - unbounded_send");
+            .expect("AppSender::set_virtcon_mode - unbounded_send");
+    }
+
+    /// Create an futures mpsc sender and a task to poll the receiver and
+    /// forward the message to the app sender. This setup works around the problem
+    /// that dyn Any references cannot be `Send` at the cost of an extra trip through
+    /// the executor.
+    /// The 'static trait bounds here means that messages send across thread may not
+    /// contain any non-static references. The data in the messages must be owned, but
+    /// no not themselves need to be static.
+    pub fn create_cross_thread_sender<T: 'static + Send>(
+        &self,
+        target: MessageTarget,
+    ) -> UnboundedSender<T> {
+        let (sender, mut receiver) = unbounded::<T>();
+        let app_sender = self.sender.clone();
+        let f = async move {
+            while let Some(message) = receiver.next().await {
+                app_sender
+                    .unbounded_send(MessageInternal::TargetedMessage(target, Box::new(message)))
+                    .expect("unbounded_send");
+            }
+        };
+        // This task can be detached as it will exit when the unbounded sender
+        // it provides is dropped.
+        fasync::Task::local(f).detach();
+        sender
     }
 
     /// Set the display's gamma table. Used only for factory diagnostics.
@@ -241,18 +267,18 @@ impl AppContext {
                 Box::new(g),
                 Box::new(b),
             ))
-            .expect("AppContext::import_gamma_table - unbounded_send");
+            .expect("AppSender::import_gamma_table - unbounded_send");
     }
 
     /// Create an context for testing things that need an app context.
-    pub fn new_for_testing_purposes_only() -> AppContext {
+    pub fn new_for_testing_purposes_only() -> AppSender {
         let (internal_sender, _) = unbounded::<MessageInternal>();
-        AppContext { sender: internal_sender }
+        AppSender { sender: internal_sender }
     }
 }
 
 fn make_app_assistant_fut<T: AppAssistant + Default + 'static>(
-    _: &AppContext,
+    _: &AppSender,
 ) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
     let f = async move {
         let assistant = Box::new(T::default());
@@ -278,7 +304,19 @@ pub trait AppAssistant {
 
     /// Called when the Fuchsia view system requests that a view be created, or once at startup
     /// when running without Scenic.
-    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error>;
+    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        todo!("Must implement create_view_assistant_with_sender or create_view_assistant");
+    }
+
+    /// Called when the Fuchsia view system requests that a view be created, or once at startup
+    /// when running without Scenic. Provides the app context in case the view needs it.
+    fn create_view_assistant_with_sender(
+        &mut self,
+        view_key: ViewKey,
+        _: AppSender,
+    ) -> Result<ViewAssistantPtr, Error> {
+        self.create_view_assistant(view_key)
+    }
 
     /// Return the list of names of services this app wants to provide
     fn outgoing_services_names(&self) -> Vec<&'static str> {
@@ -352,7 +390,7 @@ pub(crate) enum MessageInternal {
 /// Future that returns an application assistant.
 pub type AssistantCreator<'a> = LocalBoxFuture<'a, Result<AppAssistantPtr, Error>>;
 /// Function that creates an AssistantCreator future.
-pub type AssistantCreatorFunc = Box<dyn FnOnce(&AppContext) -> AssistantCreator<'_>>;
+pub type AssistantCreatorFunc = Box<dyn FnOnce(&AppSender) -> AssistantCreator<'_>>;
 
 impl App {
     fn new(sender: InternalSender, strategy: AppStrategyPtr, assistant: AppAssistantPtr) -> App {
@@ -379,8 +417,8 @@ impl App {
         let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
         let (internal_sender, mut internal_receiver) = unbounded::<MessageInternal>();
         let f = async {
-            let app_context = AppContext { sender: internal_sender.clone() };
-            let assistant_creator = assistant_creator_func(&app_context);
+            let app_sender = AppSender { sender: internal_sender.clone() };
+            let assistant_creator = assistant_creator_func(&app_sender);
             let mut assistant = assistant_creator.await?;
             Self::load_and_filter_config(&mut assistant)?;
             let strat = create_app_strategy(&internal_sender).await?;
@@ -536,8 +574,8 @@ impl App {
         let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
         let (internal_sender, mut internal_receiver) = unbounded::<MessageInternal>();
         let f = async {
-            let app_context = AppContext { sender: internal_sender.clone() };
-            let assistant_creator = assistant_creator_func(&app_context);
+            let app_sender = AppSender { sender: internal_sender.clone() };
+            let assistant_creator = assistant_creator_func(&app_sender);
             let mut assistant = assistant_creator.await?;
             Self::load_and_filter_config(&mut assistant)?;
             let strat = create_app_strategy(&internal_sender).await?;
@@ -614,7 +652,10 @@ impl App {
     // Creates a view assistant for views that are using the render view mode feature, either
     // in hosted or direct mode.
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        Ok(self.assistant.create_view_assistant(view_key)?)
+        Ok(self.assistant.create_view_assistant_with_sender(
+            view_key,
+            AppSender { sender: self.sender.clone() },
+        )?)
     }
 
     async fn create_view_with_params(&mut self, params: ViewStrategyParams) -> Result<(), Error> {

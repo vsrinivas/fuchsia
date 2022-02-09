@@ -4,7 +4,7 @@
 
 use {
     crate::ui::TerminalMessages,
-    carnelian::{make_message, AppContext, Coord, MessageTarget, Point, Rect, Size, ViewKey},
+    carnelian::{make_message, AppSender, Coord, MessageTarget, Point, Rect, Size, ViewKey},
 };
 
 pub struct GridView {
@@ -38,15 +38,15 @@ pub struct ScrollBar {
     /// input events.
     pointer_tracking_start: Option<(Point, Coord)>,
 
-    // AppContext used to update scroll thumb rendering.
-    app_context: Option<AppContext>,
+    // AppSender used to update scroll thumb rendering.
+    app_sender: Option<AppSender>,
     view_key: ViewKey,
 }
 
 impl Default for ScrollBar {
     fn default() -> Self {
         ScrollBar {
-            app_context: None,
+            app_sender: None,
             view_key: 0,
             frame: Rect::zero(),
             content_height: 0.0,
@@ -58,9 +58,9 @@ impl Default for ScrollBar {
 }
 
 impl ScrollBar {
-    pub fn new(app_context: AppContext, view_key: ViewKey) -> Self {
+    pub fn new(app_sender: AppSender, view_key: ViewKey) -> Self {
         ScrollBar {
-            app_context: Some(app_context),
+            app_sender: Some(app_sender),
             view_key,
             frame: Rect::zero(),
             content_height: 0.0,
@@ -146,12 +146,12 @@ impl ScrollBar {
 
         if self.thumb_frame != thumb_frame {
             self.thumb_frame = thumb_frame;
-            if let Some(app_context) = &self.app_context {
-                app_context.queue_message(
+            if let Some(app_sender) = &self.app_sender {
+                app_sender.queue_message(
                     MessageTarget::View(self.view_key),
                     make_message(TerminalMessages::SetScrollThumbMessage(thumb_frame)),
                 );
-                app_context.request_render(self.view_key);
+                app_sender.request_render(self.view_key);
             }
         }
     }
