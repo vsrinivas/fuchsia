@@ -19,6 +19,13 @@ namespace forensics {
 namespace feedback {
 namespace {
 
+// The kernel adds this line to indicate which process caused the root job to terminate.
+//
+// It can be found at
+// https://osscs.corp.google.com/fuchsia/fuchsia/+/main:zircon/kernel/lib/crashlog/crashlog.cc;l=146;drc=e81b291e80479976c2cca9f87b600917fda48475
+constexpr std::string_view kCriticalProcessPrefix =
+    "ROOT JOB TERMINATED BY CRITICAL PROCESS DEATH: ";
+
 enum class ZirconRebootReason {
   kNotSet,
   kCold,
@@ -63,7 +70,8 @@ ZirconRebootReason ExtractZirconRebootReason(const std::string_view line) {
 
 ZirconRebootReason ExtractZirconRebootInfo(const std::string& path,
                                            std::optional<std::string>* content,
-                                           std::optional<zx::duration>* uptime) {
+                                           std::optional<zx::duration>* uptime,
+                                           std::optional<std::string>* crashed_process) {
   if (!files::IsFile(path)) {
     return ZirconRebootReason::kCold;
   }
@@ -105,6 +113,31 @@ ZirconRebootReason ExtractZirconRebootInfo(const std::string& path,
     FX_LOGS(ERROR) << "'UPTIME(ms)' not present, found '" << lines[1] << "'";
   } else {
     *uptime = ExtractUptime(lines[2]);
+  }
+
+  // We expect the critical process to look like:
+  //
+  // ROOT JOB TERMINATED BY CRITICAL PROCESS DEATH: <PROCESS> (<KOID>)
+  for (auto line : lines) {
+    if (line.substr(0, kCriticalProcessPrefix.size()) != kCriticalProcessPrefix) {
+      continue;
+    }
+
+    line.remove_prefix(kCriticalProcessPrefix.size());
+
+    if (const auto r_paren = line.find_last_of('('); r_paren == line.npos) {
+      continue;
+    } else {
+      line.remove_suffix(line.size() - r_paren);
+    }
+
+    if (line.empty() || line.back() != ' ') {
+      continue;
+    }
+    line.remove_suffix(1);
+
+    *crashed_process = line;
+    break;
   }
 
   return reason;
@@ -211,8 +244,9 @@ RebootLog RebootLog::ParseRebootLog(const std::string& zircon_reboot_log_path,
                                     const bool not_a_fdr) {
   std::optional<std::string> zircon_reboot_log;
   std::optional<zx::duration> last_boot_uptime;
-  const auto zircon_reason =
-      ExtractZirconRebootInfo(zircon_reboot_log_path, &zircon_reboot_log, &last_boot_uptime);
+  std::optional<std::string> critical_process;
+  const auto zircon_reason = ExtractZirconRebootInfo(zircon_reboot_log_path, &zircon_reboot_log,
+                                                     &last_boot_uptime, &critical_process);
 
   const auto graceful_reason = ExtractGracefulRebootInfo(graceful_reboot_log_path);
 
@@ -221,14 +255,16 @@ RebootLog RebootLog::ParseRebootLog(const std::string& zircon_reboot_log_path,
 
   FX_LOGS(INFO) << "Reboot info:\n" << reboot_log;
 
-  return RebootLog(reboot_reason, reboot_log, last_boot_uptime);
+  return RebootLog(reboot_reason, reboot_log, last_boot_uptime, critical_process);
 }
 
 RebootLog::RebootLog(enum RebootReason reboot_reason, std::string reboot_log_str,
-                     std::optional<zx::duration> last_boot_uptime)
+                     std::optional<zx::duration> last_boot_uptime,
+                     std::optional<std::string> critical_process)
     : reboot_reason_(reboot_reason),
       reboot_log_str_(reboot_log_str),
-      last_boot_uptime_(last_boot_uptime) {}
+      last_boot_uptime_(last_boot_uptime),
+      critical_process_(critical_process) {}
 
 }  // namespace feedback
 }  // namespace forensics

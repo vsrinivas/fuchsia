@@ -21,7 +21,8 @@ namespace {
 fuchsia::feedback::LastReboot GetLastReboot(
     const feedback::RebootReason reboot_reason,
     const std::optional<zx::duration> uptime = std::nullopt) {
-  const feedback::RebootLog reboot_log(reboot_reason, "", uptime);
+  const feedback::RebootLog reboot_log(reboot_reason, "", uptime, std::nullopt);
+
   fuchsia::feedback::LastReboot out_last_reboot;
 
   LastRebootInfoProvider last_reboot_info_provider(reboot_log);

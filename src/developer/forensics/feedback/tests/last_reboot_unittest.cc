@@ -67,7 +67,7 @@ class LastRebootTest : public UnitTestFixture {
 
 TEST_F(LastRebootTest, FirstInstance) {
   const zx::duration oom_crash_reporting_delay = zx::sec(90);
-  const RebootLog reboot_log(RebootReason::kOOM, "reboot log", zx::sec(1));
+  const RebootLog reboot_log(RebootReason::kOOM, "reboot log", zx::sec(1), std::nullopt);
 
   SetUpCrashReporterServer(
       std::make_unique<stubs::CrashReporter>(stubs::CrashReporter::Expectations{
@@ -97,7 +97,7 @@ TEST_F(LastRebootTest, FirstInstance) {
 
 TEST_F(LastRebootTest, IsNotFirstInstance) {
   const zx::duration oom_crash_reporting_delay = zx::sec(90);
-  const RebootLog reboot_log(RebootReason::kOOM, "reboot log", zx::sec(1));
+  const RebootLog reboot_log(RebootReason::kOOM, "reboot log", zx::sec(1), std::nullopt);
 
   SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
 
@@ -117,7 +117,7 @@ TEST_F(LastRebootTest, IsNotFirstInstance) {
 
 TEST_F(LastRebootTest, ReportsOnReboot) {
   const zx::duration oom_crash_reporting_delay = zx::sec(90);
-  const RebootLog reboot_log(RebootReason::kOOM, "reboot log", zx::sec(1));
+  const RebootLog reboot_log(RebootReason::kOOM, "reboot log", zx::sec(1), std::nullopt);
 
   LastReboot last_reboot(dispatcher(), services(), Cobalt(), CrashReporter(),
                          LastReboot::Options{

@@ -46,7 +46,7 @@ class StartupAnnotationsTest : public ::testing::Test {
 };
 
 TEST_F(StartupAnnotationsTest, Keys) {
-  const RebootLog reboot_log(RebootReason::kOOM, "", std::nullopt);
+  const RebootLog reboot_log(RebootReason::kOOM, "", std::nullopt, std::nullopt);
   const auto startup_annotations = GetStartupAnnotations(reboot_log);
 
   EXPECT_THAT(startup_annotations, UnorderedElementsAreArray({
@@ -82,7 +82,7 @@ TEST_F(StartupAnnotationsTest, Values_FilesPresent) {
       {kPreviousBootIdPath, "previous-boot-id"},
   });
 
-  const RebootLog reboot_log(RebootReason::kOOM, "", std::nullopt);
+  const RebootLog reboot_log(RebootReason::kOOM, "", std::nullopt, std::nullopt);
   const auto startup_annotations = GetStartupAnnotations(reboot_log);
 
   EXPECT_THAT(
@@ -98,7 +98,7 @@ TEST_F(StartupAnnotationsTest, Values_FilesPresent) {
 }
 
 TEST_F(StartupAnnotationsTest, Values_FilesMissing) {
-  const RebootLog reboot_log(RebootReason::kOOM, "", std::nullopt);
+  const RebootLog reboot_log(RebootReason::kOOM, "", std::nullopt, std::nullopt);
   const auto startup_annotations = GetStartupAnnotations(reboot_log);
 
   EXPECT_THAT(

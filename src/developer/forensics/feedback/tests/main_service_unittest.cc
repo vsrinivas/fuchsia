@@ -35,30 +35,31 @@ class MainServiceTest : public UnitTestFixture {
   MainServiceTest()
       : clock_(dispatcher()),
         cobalt_(dispatcher(), services(), &clock_),
-        main_service_(
-            dispatcher(), services(), &clock_, &InspectRoot(), &cobalt_, /*startup_annotations=*/{},
-            MainService::Options{
-                "",
-                LastReboot::Options{
-                    .is_first_instance = kIsFirstInstance,
-                    .reboot_log = RebootLog(RebootReason::kUserRequest, "reboot log", zx::sec(100)),
-                    .graceful_reboot_reason_write_path = "n/a",
-                    .oom_crash_reporting_delay = zx::sec(1),
-                },
-                CrashReports::Options{
-                    .config = {},
-                    .snapshot_manager_max_annotations_size = StorageSize::Bytes(0),
-                    .snapshot_manager_max_archives_size = StorageSize::Bytes(0),
-                    .snapshot_manager_window_duration = zx::sec(0),
-                },
-                FeedbackData::Options{
-                    .config{},
-                    .is_first_instance = kIsFirstInstance,
-                    .limit_inspect_data = false,
-                    .spawn_system_log_recorder = false,
-                    .delete_previous_boot_logs_time = std::nullopt,
-                },
-            }) {
+        main_service_(dispatcher(), services(), &clock_, &InspectRoot(), &cobalt_,
+                      /*startup_annotations=*/{},
+                      MainService::Options{
+                          "",
+                          LastReboot::Options{
+                              .is_first_instance = kIsFirstInstance,
+                              .reboot_log = RebootLog(RebootReason::kUserRequest, "reboot log",
+                                                      zx::sec(100), std::nullopt),
+                              .graceful_reboot_reason_write_path = "n/a",
+                              .oom_crash_reporting_delay = zx::sec(1),
+                          },
+                          CrashReports::Options{
+                              .config = {},
+                              .snapshot_manager_max_annotations_size = StorageSize::Bytes(0),
+                              .snapshot_manager_max_archives_size = StorageSize::Bytes(0),
+                              .snapshot_manager_window_duration = zx::sec(0),
+                          },
+                          FeedbackData::Options{
+                              .config{},
+                              .is_first_instance = kIsFirstInstance,
+                              .limit_inspect_data = false,
+                              .spawn_system_log_recorder = false,
+                              .delete_previous_boot_logs_time = std::nullopt,
+                          },
+                      }) {
     AddHandler(main_service_.GetHandler<fuchsia::feedback::LastRebootInfoProvider>());
     AddHandler(main_service_.GetHandler<fuchsia::feedback::CrashReporter>());
     AddHandler(main_service_.GetHandler<fuchsia::feedback::CrashReportingProductRegister>());

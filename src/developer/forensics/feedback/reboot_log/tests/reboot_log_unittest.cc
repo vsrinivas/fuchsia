@@ -38,6 +38,12 @@ struct UptimeTestParam {
   std::optional<zx::duration> output_uptime;
 };
 
+struct CriticalProcessTestParam {
+  std::string test_name;
+  std::optional<std::string> zircon_reboot_log;
+  std::optional<std::string> output_critical_process;
+};
+
 struct RebootLogStrTestParam {
   std::string test_name;
   std::optional<std::string> zircon_reboot_log;
@@ -211,8 +217,8 @@ TEST_F(RebootLogReasonTest, Succeed_ZirconCleanGracefulNotParseable) {
 
   EXPECT_EQ(reboot_log.RebootReason(), RebootReason::kGenericGraceful);
 
-  ASSERT_TRUE(reboot_log.HasUptime());
-  EXPECT_EQ(reboot_log.Uptime(), zx::msec(1234));
+  ASSERT_TRUE(reboot_log.Uptime().has_value());
+  EXPECT_EQ(*reboot_log.Uptime(), zx::msec(1234));
 }
 
 using RebootLogUptimeTest = RebootLogTest<UptimeTestParam>;
@@ -259,10 +265,63 @@ TEST_P(RebootLogUptimeTest, Succeed) {
       zircon_reboot_log_path_, graceful_reboot_log_path_, /*not_a_fdr=*/true));
 
   if (param.output_uptime.has_value()) {
-    ASSERT_TRUE(reboot_log.HasUptime());
-    EXPECT_EQ(reboot_log.Uptime(), param.output_uptime.value());
+    ASSERT_TRUE(reboot_log.Uptime().has_value());
+    EXPECT_EQ(*reboot_log.Uptime(), param.output_uptime.value());
   } else {
-    EXPECT_FALSE(reboot_log.HasUptime());
+    EXPECT_FALSE(reboot_log.Uptime().has_value());
+  }
+}
+
+using RebootLogCriticalProcessTest = RebootLogTest<CriticalProcessTestParam>;
+
+INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, RebootLogCriticalProcessTest,
+                         ::testing::ValuesIn(std::vector<CriticalProcessTestParam>({
+                             {
+                                 "WellFormedLog",
+                                 "ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n1234\n"
+                                 "ROOT JOB TERMINATED BY CRITICAL PROCESS DEATH: foo (1)",
+                                 "foo",
+                             },
+                             {
+                                 "NoZirconRebootLog",
+                                 std::nullopt,
+                                 std::nullopt,
+                             },
+                             {
+                                 "EmptyZirconRebootLog",
+                                 "",
+                                 std::nullopt,
+                             },
+                             {
+                                 "TooFewLines",
+                                 "BAD REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n",
+                                 std::nullopt,
+                             },
+                             {
+                                 "BadCriticalProcessString",
+                                 "ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n1234\n"
+                                 "ROOT JOB TERMINATED BY CRITICAL PROCESS ALIVE: foo (1)",
+                                 std::nullopt,
+                             },
+                         })),
+                         [](const testing::TestParamInfo<CriticalProcessTestParam>& info) {
+                           return info.param.test_name;
+                         });
+
+TEST_P(RebootLogCriticalProcessTest, Succeed) {
+  const auto param = GetParam();
+  if (param.zircon_reboot_log.has_value()) {
+    WriteZirconRebootLogContents(param.zircon_reboot_log.value());
+  }
+
+  const RebootLog reboot_log(RebootLog::ParseRebootLog(
+      zircon_reboot_log_path_, graceful_reboot_log_path_, /*not_a_fdr=*/true));
+
+  if (param.output_critical_process.has_value()) {
+    ASSERT_TRUE(reboot_log.CriticalProcess().has_value());
+    EXPECT_EQ(*reboot_log.CriticalProcess(), param.output_critical_process.value());
+  } else {
+    EXPECT_FALSE(reboot_log.CriticalProcess().has_value());
   }
 }
 

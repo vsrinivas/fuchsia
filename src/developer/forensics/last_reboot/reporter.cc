@@ -47,7 +47,8 @@ void Reporter::ReportOn(const feedback::RebootLog& reboot_log, zx::duration cras
     FX_LOGS(ERROR) << "Failed to record reboot log as reported on";
   }
 
-  const zx::duration uptime = (reboot_log.HasUptime()) ? reboot_log.Uptime() : zx::usec(0);
+  const zx::duration uptime =
+      (reboot_log.Uptime().has_value()) ? *reboot_log.Uptime() : zx::usec(0);
   cobalt_->LogDuration(ToCobaltLastRebootReason(reboot_log.RebootReason()), uptime);
 
   if (!IsCrash(reboot_log.RebootReason())) {
@@ -63,10 +64,11 @@ fuchsia::feedback::CrashReport CreateCrashReport(const feedback::RebootLog& rebo
   // Build the crash report.
   fuchsia::feedback::CrashReport report;
   report.set_program_name(ToCrashProgramName(reboot_log.RebootReason()))
-      .set_crash_signature(ToCrashSignature(reboot_log.RebootReason()))
+      .set_crash_signature(
+          ToCrashSignature(reboot_log.RebootReason(), reboot_log.CriticalProcess()))
       .set_is_fatal(IsFatal(reboot_log.RebootReason()));
-  if (reboot_log.HasUptime()) {
-    report.set_program_uptime(reboot_log.Uptime().get());
+  if (reboot_log.Uptime().has_value()) {
+    report.set_program_uptime(reboot_log.Uptime()->get());
   }
 
   // Build the crash report attachments.

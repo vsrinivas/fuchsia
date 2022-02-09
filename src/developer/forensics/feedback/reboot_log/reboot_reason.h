@@ -55,9 +55,14 @@ bool IsFatal(RebootReason reason);
 std::optional<bool> OptionallyGraceful(RebootReason reason);
 
 cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reason);
-std::string ToCrashSignature(RebootReason reason);
 std::string ToCrashProgramName(RebootReason reason);
 std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(RebootReason reason);
+
+// Creates a crash signature for |reason|.
+//
+// Note: |critical_process| is only supported for |kRootJobTermination|.
+std::string ToCrashSignature(RebootReason reason,
+                             const std::optional<std::string>& critical_process = std::nullopt);
 
 }  // namespace feedback
 }  // namespace forensics

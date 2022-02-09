@@ -120,7 +120,7 @@ TEST_F(GenericReporterTest, Succeed_WellFormedRebootLog) {
   const zx::duration uptime = zx::msec(74715002);
   const feedback::RebootLog reboot_log(
       feedback::RebootReason::kKernelPanic,
-      "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002", uptime);
+      "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002", uptime, std::nullopt);
 
   SetUpCrashReporterServer(
       std::make_unique<stubs::CrashReporter>(stubs::CrashReporter::Expectations{
@@ -140,9 +140,37 @@ TEST_F(GenericReporterTest, Succeed_WellFormedRebootLog) {
   EXPECT_TRUE(files::IsFile(kHasReportedOnPath));
 }
 
+TEST_F(GenericReporterTest, Succeed_RootJobTerminationRebootLog) {
+  const zx::duration uptime = zx::msec(74715002);
+  const feedback::RebootLog reboot_log(
+      feedback::RebootReason::kRootJobTermination,
+      "ZIRCON REBOOT REASON (USERSPACE ROOT JOB TERMINATION)\n\nUPTIME (ms)\n74715002\n"
+      "ROOT JOB TERMINATED BY CRITICAL PROCESS DEATH: foo (1)",
+      uptime, "foo");
+
+  SetUpCrashReporterServer(
+      std::make_unique<stubs::CrashReporter>(stubs::CrashReporter::Expectations{
+          .crash_signature =
+              ToCrashSignature(reboot_log.RebootReason(), reboot_log.CriticalProcess()),
+          .reboot_log = reboot_log.RebootLogStr(),
+          .uptime = reboot_log.Uptime(),
+          .is_fatal = true,
+      }));
+  SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
+
+  ReportOn(reboot_log);
+
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::LastRebootReason::kRootJobTermination, uptime.to_usecs()),
+              }));
+  EXPECT_TRUE(files::IsFile(kHasReportedOnPath));
+}
+
 TEST_F(GenericReporterTest, Succeed_NoUptime) {
   const feedback::RebootLog reboot_log(feedback::RebootReason::kKernelPanic,
-                                       "ZIRCON REBOOT REASON (KERNEL PANIC)\n", std::nullopt);
+                                       "ZIRCON REBOOT REASON (KERNEL PANIC)\n", std::nullopt,
+                                       std::nullopt);
 
   SetUpCrashReporterServer(
       std::make_unique<stubs::CrashReporter>(stubs::CrashReporter::Expectations{
@@ -165,7 +193,7 @@ TEST_F(GenericReporterTest, Succeed_NoCrashReportFiledCleanReboot) {
   const zx::duration uptime = zx::msec(74715002);
   const feedback::RebootLog reboot_log(feedback::RebootReason::kGenericGraceful,
                                        "ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n74715002",
-                                       uptime);
+                                       uptime, std::nullopt);
 
   SetUpCrashReporterServer(
       std::make_unique<stubs::CrashReporter>(stubs::CrashReporter::Expectations{
@@ -185,7 +213,8 @@ TEST_F(GenericReporterTest, Succeed_NoCrashReportFiledCleanReboot) {
 }
 
 TEST_F(GenericReporterTest, Succeed_NoCrashReportFiledColdReboot) {
-  const feedback::RebootLog reboot_log(feedback::RebootReason::kCold, "", std::nullopt);
+  const feedback::RebootLog reboot_log(feedback::RebootReason::kCold, "", std::nullopt,
+                                       std::nullopt);
 
   SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
@@ -202,7 +231,7 @@ TEST_F(GenericReporterTest, Fail_CrashReporterFailsToFile) {
   const zx::duration uptime = zx::msec(74715002);
   const feedback::RebootLog reboot_log(
       feedback::RebootReason::kKernelPanic,
-      "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002", uptime);
+      "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002", uptime, std::nullopt);
   SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterAlwaysReturnsError>());
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
@@ -219,7 +248,8 @@ TEST_F(GenericReporterTest, Succeed_DoesNothingIfAlreadyReportedOn) {
 
   const feedback::RebootLog reboot_log(
       feedback::RebootReason::kKernelPanic,
-      "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002", zx::msec(74715002));
+      "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002", zx::msec(74715002),
+      std::nullopt);
 
   SetUpCrashReporterServer(std::make_unique<stubs::CrashReporterNoFileExpected>());
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());

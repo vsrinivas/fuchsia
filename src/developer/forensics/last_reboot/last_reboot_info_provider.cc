@@ -12,8 +12,8 @@ namespace forensics {
 namespace last_reboot {
 
 LastRebootInfoProvider::LastRebootInfoProvider(const feedback::RebootLog& reboot_log) {
-  if (reboot_log.HasUptime()) {
-    last_reboot_.set_uptime(reboot_log.Uptime().get());
+  if (reboot_log.Uptime().has_value()) {
+    last_reboot_.set_uptime(reboot_log.Uptime()->get());
   }
 
   if (const auto graceful = OptionallyGraceful(reboot_log.RebootReason()); graceful.has_value()) {

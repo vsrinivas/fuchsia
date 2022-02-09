@@ -177,7 +177,8 @@ cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reason) {
   }
 }
 
-std::string ToCrashSignature(const RebootReason reason) {
+std::string ToCrashSignature(const RebootReason reason,
+                             const std::optional<std::string>& critical_process) {
   switch (reason) {
     case RebootReason::kNotParseable:
       return "fuchsia-reboot-log-not-parseable";
@@ -194,7 +195,10 @@ std::string ToCrashSignature(const RebootReason reason) {
     case RebootReason::kBrownout:
       return "fuchsia-brownout";
     case RebootReason::kRootJobTermination:
-      return "fuchsia-root-job-termination";
+      return (!critical_process.has_value())
+                 ? "fuchsia-root-job-termination"
+                 : std::string("fuchsia-reboot-").append(*critical_process).append("-terminated");
+
     case RebootReason::kSessionFailure:
       return "fuchsia-session-failure";
     case RebootReason::kSysmgrFailure:
