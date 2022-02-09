@@ -46,7 +46,6 @@ use {
     fidl_fuchsia_wlan_sme as fidl_sme,
 };
 
-use std::fmt;
 pub use time::TimeUnit;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -73,22 +72,5 @@ impl From<fidl_sme::RadioConfig> for RadioConfig {
 impl RadioConfig {
     pub fn new(phy: Phy, cbw: Cbw, primary_channel: u8) -> Self {
         RadioConfig { phy, channel: Channel::new(primary_channel, cbw) }
-    }
-}
-
-#[derive(Copy, Clone)]
-pub enum StationMode {
-    Client,
-    Ap,
-    Mesh,
-}
-
-impl fmt::Display for StationMode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            StationMode::Client => f.write_str("client"),
-            StationMode::Ap => f.write_str("AP"),
-            StationMode::Mesh => f.write_str("mesh"),
-        }
     }
 }
