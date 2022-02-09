@@ -547,7 +547,7 @@ where
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use net_types::ip::{Ip, Ipv4, Ipv6};
     use net_types::Witness;
 
