@@ -18,8 +18,14 @@ void TransferRing::AdvancePointer() {
   } else {
     trbs_++;
   }
+
+  // In some cases empty segments (segments containing only a link TRB)
+  // may be generated. When advancing to the next segment, this needs to
+  // account for empty segments.
+  // See the test "CanHandleConsecutiveLinks" in xhci-transfer-ring-test.cc for an
+  // example that triggers this scenario.
   Control control = Control::FromTRB(trbs_);
-  if (control.Type() == Control::Link) {
+  while (control.Type() == Control::Link) {
     zx_paddr_t ptr = trbs_->ptr;
     control.set_Cycle(pcs_).ToTrb(trbs_);
     // Read link pointer
@@ -30,6 +36,7 @@ void TransferRing::AdvancePointer() {
     zx_vaddr_t base_virt = reinterpret_cast<zx_vaddr_t>(
         (*(phys_to_buffer_.find(ptr / zx_system_get_page_size())->second)).virt());
     trbs_ = reinterpret_cast<TRB*>(base_virt + (ptr % zx_system_get_page_size()));
+    control = Control::FromTRB(trbs_);
   }
 }
 

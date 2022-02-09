@@ -7,6 +7,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/promise.h>
+#include <zircon/syscalls.h>
 
 #include <atomic>
 #include <thread>
@@ -252,6 +253,93 @@ TEST_F(TransferRingHarness, AllocateContiguousAllocatesContiguousBlocks) {
     for (size_t c = 0; c < kContiguousCount; c++) {
       ASSERT_NE(Control::FromTRB(trb_start + c).Type(), Control::Link);
     }
+  }
+}
+
+TEST_F(TransferRingHarness, CanHandleConsecutiveLinks) {
+  auto ring = this->ring();
+  const size_t trb_per_segment = zx_system_get_page_size() / sizeof(TRB);
+  // 1 TRB is the link TRB, and TransferRing::AllocInternal() will allocate if there's not 2
+  // available TRBs.
+  const size_t trb_per_segment_no_alloc = trb_per_segment - 3;
+  std::deque<TRB*> pending_trbs;
+  // Fill up a segment.
+  for (size_t i = 0; i < trb_per_segment_no_alloc; i++) {
+    auto context = ring->AllocateContext();
+    TRBContext* ref = context.get();
+    ASSERT_OK(ring->AddTRB(TRB(), std::move(context)));
+
+    pending_trbs.emplace_back(ref->trb);
+  }
+
+  // Move the dequeue pointer forward two steps, to TRB 2.
+  for (size_t i = 0; i < 3; i++) {
+    std::unique_ptr<TRBContext> ctx;
+    ring->CompleteTRB(pending_trbs.front(), &ctx);
+    pending_trbs.pop_front();
+  }
+
+  // Finish filling up the segment. This will allocate a new link TRB (TRB 0) and we'll start
+  // filling up a new segment.
+  for (size_t i = 0; i < 4; i++) {
+    auto context = ring->AllocateContext();
+    TRBContext* ref = context.get();
+    ASSERT_OK(ring->AddTRB(TRB(), std::move(context)));
+
+    pending_trbs.emplace_back(ref->trb);
+  }
+
+  // Move the dequeue pointer forward again - to TRB 3.
+  for (size_t i = 0; i < 1; i++) {
+    std::unique_ptr<TRBContext> ctx;
+    ring->CompleteTRB(pending_trbs.front(), &ctx);
+    pending_trbs.pop_front();
+  }
+
+  // This will allocate a new link TRB at 1.
+  for (size_t i = 0; i < trb_per_segment_no_alloc; i++) {
+    auto context = ring->AllocateContext();
+    TRBContext* ref = context.get();
+    ASSERT_OK(ring->AddTRB(TRB(), std::move(context)));
+
+    pending_trbs.emplace_back(ref->trb);
+  }
+
+  // At this stage, we have 3 TRB segments.
+  // Segment 0 looks like this:
+  // 0 // link to seg#1,0
+  // 1 // link to seg#2,0
+  // ...
+  // 255 // link to seg#0,0
+  //
+  // Segment 1 looks like this:
+  // 0
+  // ...
+  // 255 // link to seg#0,1
+  //
+  // Segment 2 looks like this:
+  // 0
+  // ...
+  // 255 // link to seg#1,2
+  //
+  // Notice that there are two consecutive links here - one between seg#1,255 -> seg#0,1 and then
+  // seg#0,1 -> seg#2,0.
+
+  // Clean up all the pending TRBs.
+  while (!pending_trbs.empty()) {
+    std::unique_ptr<TRBContext> ctx;
+    ASSERT_OK(ring->CompleteTRB(pending_trbs.front(), &ctx));
+    pending_trbs.pop_front();
+  }
+
+  // Move through, allocating and deallocating TRBs.
+  // This will eventually hit the consecutive links.
+  for (size_t i = 0; i < 3 * trb_per_segment; i++) {
+    auto context = ring->AllocateContext();
+    TRBContext* ref = context.get();
+    ASSERT_OK(ring->AddTRB(TRB(), std::move(context)));
+    std::unique_ptr<TRBContext> ctx;
+    ASSERT_OK(ring->CompleteTRB(ref->trb, &ctx));
   }
 }
 
