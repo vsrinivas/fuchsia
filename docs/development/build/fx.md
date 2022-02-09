@@ -11,7 +11,7 @@ It is strongly recommended that you `source scripts/fx-env.sh` into your
 shell. This is tested and regularly used with Bash and ZSH. It may work for
 other compatible shells.
 
-```shell
+```none {:.devsite-disable-click-to-copy}
 # In your fuchsia checkout:
 $ cd fuchsia
 # Add a configuration to your shell to include fx-env.sh
@@ -75,8 +75,8 @@ First let's configure the build. To do this you need to make a few choices:
 Armed with our above choices (if you didn't read above, do so now), you are
 ready to configure your build:
 
-```shell
-$ fx set workstation.x64 --with //bundles:tests
+```posix-terminal
+fx set workstation.x64 --with //bundles:tests
 ```
 
 This command stores the configuration in an `args.gn` file in the build
@@ -409,8 +409,8 @@ Some users find that an effective high focus workflow is to have the system
 build, push and execute tests whenever they save their source code. This can
 be achieved with `fx` very easily, for example:
 
-```shell
-$ fx -i test hello-world-rust-tests
+```posix-terminal
+fx -i test hello-world-rust-tests
 ```
 
 The above command will execute the tests every time a change is made
@@ -471,7 +471,7 @@ See [Viewing Logs](/docs/development/diagnostics/logs/viewing.md) for more infor
 `fx cp` provides a basic wrapper around `scp`, similar to how `fx shell` is a
 wrapper around `ssh`.
 
-```shell
+```none {:.devsite-disable-click-to-copy}
 # copy ./book.txt from the host, to /tmp/book.txt on the target
 $ fx cp book.txt /tmp/book.txt
 # copy /tmp/poem.txt on the target to poem.txt on the host
@@ -505,7 +505,7 @@ particular build directory. This is particularly useful when a user wishes to
 keep several different devices in several build configurations, and could be
 setup as follows:
 
-```shell
+```none {:.devsite-disable-click-to-copy}
 $ fx --dir out/workstation set workstation.x64
 $ fx build
 $ fx set-device <workstation-node-name>
@@ -544,7 +544,7 @@ This command tells whether the given change is merged, and if so whether it pass
 Global Integration. The query can be either a Gerrit review URL, a change number, a
 `Change-Id`, or a git revision.
 
-```shell
+```none {:.devsite-disable-click-to-copy}
 $ fx whereiscl fxr/286748
 CL status: MERGED
 GI status: PASSED
