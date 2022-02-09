@@ -10,6 +10,7 @@ use fidl_fuchsia_debugdata as fdebug;
 use fidl_fuchsia_sys2 as fsys;
 use fidl_fuchsia_test_internal as ftest_internal;
 use fidl_fuchsia_test_manager as ftest_manager;
+use fuchsia_inspect::types::Node;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, lock::Mutex, SinkExt, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use log::{error, warn};
@@ -48,6 +49,7 @@ pub async fn handle_debug_data_controller_and_events<CS, D>(
     controller_requests: CS,
     events: fsys::EventStreamRequestStream,
     debug_request_handler: D,
+    inspect_node: &Node,
 ) where
     CS: Stream<Item = Result<ftest_internal::DebugDataControllerRequest, fidl::Error>>
         + std::marker::Unpin,
@@ -57,22 +59,30 @@ pub async fn handle_debug_data_controller_and_events<CS, D>(
     let debug_data_sets_ref = &debug_data_sets;
     let debug_request_handler_ref = &debug_request_handler;
 
+    let inspect_node_count = std::sync::atomic::AtomicU32::new(0);
+    let inspect_node_count_ref = &inspect_node_count;
+
     let controller_fut = controller_requests.for_each_concurrent(None, |request_result| {
-        let fut = async move {
+        async move {
             let ftest_internal::DebugDataControllerRequest::NewSet { iter, controller, .. } =
                 request_result?;
             let iter = iter.into_stream()?;
             let controller = controller.into_stream()?;
             let controller_handle = controller.control_handle();
             let (debug_request_send, debug_request_recv) = mpsc::channel(5);
-            let debug_data_set = Arc::new(Mutex::new(inner::DebugDataSet::new(
-                debug_request_send,
-                move |debug_data_requested| {
+            let debug_data_set =
+                inner::DebugDataSet::new(debug_request_send, move |debug_data_requested| {
                     if debug_data_requested {
                         let _ = controller_handle.send_on_debug_data_produced();
                     }
-                },
-            )));
+                })
+                .with_inspect(
+                    inspect_node,
+                    &format!(
+                        "{:?}",
+                        inspect_node_count_ref.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+                    ),
+                );
             debug_data_sets_ref.lock().await.push(Arc::downgrade(&debug_data_set));
             futures::future::try_join(
                 serve_debug_data_set_controller(&*debug_data_set, controller),
@@ -80,8 +90,8 @@ pub async fn handle_debug_data_controller_and_events<CS, D>(
             )
             .await?;
             Result::<(), Error>::Ok(())
-        };
-        fut.unwrap_or_else(|e| warn!("Error serving debug data set: {:?}", e))
+        }
+        .unwrap_or_else(|e| warn!("Error serving debug data set: {:?}", e))
     });
     let event_fut = route_events(events, debug_data_sets_ref)
         .unwrap_or_else(|e| error!("Error routing debug data events: {:?}", e));
@@ -184,11 +194,16 @@ async fn serve_debug_data_set_controller(
 }
 
 mod inner {
-    use super::*;
+    use {
+        super::*,
+        fuchsia_inspect::{ArrayProperty, LazyNode},
+        futures::FutureExt,
+        moniker::ChildMonikerBase,
+    };
 
     /// Callback invoked when the DataSet determines that there is or is not any debug data
     /// produced. The parameter is true iff debug data was produced.
-    type Callback = Box<dyn 'static + Fn(bool)>;
+    type Callback = Box<dyn 'static + Fn(bool) + Send + Sync>;
 
     /// A container that tracks the current known state of realms in a debug data set.
     pub(super) struct DebugDataSet {
@@ -199,10 +214,12 @@ mod inner {
         done_adding_realms: bool,
         sender: mpsc::Sender<DebugDataRequestMessage>,
         on_capability_event: Option<Callback>,
+        inspect_node: Option<LazyNode>,
     }
 
     impl DebugDataSet {
-        pub fn new<F: 'static + Fn(bool)>(
+        /// Create a new DebugDataSet.
+        pub fn new<F: 'static + Fn(bool) + Send + Sync>(
             sender: mpsc::Sender<DebugDataRequestMessage>,
             on_capability_event: F,
         ) -> Self {
@@ -214,7 +231,96 @@ mod inner {
                 done_adding_realms: false,
                 sender,
                 on_capability_event: Some(Box::new(on_capability_event)),
+                inspect_node: None,
             }
+        }
+
+        // TODO(fxbug.dev/93280): array creation panics if a slot size larger than
+        // 255 is specified. Remove this maximum once this is fixed in fuchsia_inspect.
+        const MAX_INSPECT_ARRAY_SIZE: usize = u8::MAX as usize;
+
+        /// Attach an inspect node to the DebugDataSet under |parent_node|.
+        pub fn with_inspect(self, parent_node: &Node, name: &str) -> Arc<Mutex<Self>> {
+            let arc_self = Arc::new(Mutex::new(self));
+            let weak_self = Arc::downgrade(&arc_self);
+            let lazy_node_fn = move || {
+                let weak_clone = weak_self.clone();
+                async move {
+                    let inspector = fuchsia_inspect::Inspector::new();
+                    let root = inspector.root();
+                    if let Some(this_mutex) = weak_clone.upgrade() {
+                        let this_lock = this_mutex.lock().await;
+                        let this = &*this_lock;
+                        root.record_child("realms", |realm_node| {
+                            for (realm, url) in this.realms.iter() {
+                                realm_node.record_string(realm.as_str(), &url);
+                            }
+                        });
+                        root.record_int(
+                            "num_running_components",
+                            this.running_components.len() as i64,
+                        );
+                        let running_components = root.create_string_array(
+                            "running_components",
+                            std::cmp::min(
+                                this.running_components.len(),
+                                Self::MAX_INSPECT_ARRAY_SIZE,
+                            ),
+                        );
+                        for (idx, cmp) in this
+                            .running_components
+                            .iter()
+                            .take(Self::MAX_INSPECT_ARRAY_SIZE)
+                            .enumerate()
+                        {
+                            running_components.set(idx, format!("{}", cmp))
+                        }
+                        root.record(running_components);
+                        root.record_int(
+                            "num_destroyed_before_start",
+                            this.destroyed_before_start.len() as i64,
+                        );
+                        let destroyed_before_start = root.create_string_array(
+                            "destroyed_before_start",
+                            std::cmp::min(
+                                this.destroyed_before_start.len(),
+                                Self::MAX_INSPECT_ARRAY_SIZE,
+                            ),
+                        );
+                        for (idx, cmp) in this
+                            .destroyed_before_start
+                            .iter()
+                            .take(Self::MAX_INSPECT_ARRAY_SIZE)
+                            .enumerate()
+                        {
+                            destroyed_before_start.set(idx, format!("{}", cmp))
+                        }
+                        root.record(destroyed_before_start);
+                        root.record_int("num_seen_realms", this.seen_realms.len() as i64);
+                        let seen_realms = root.create_string_array(
+                            "seen_realms",
+                            std::cmp::min(this.seen_realms.len(), Self::MAX_INSPECT_ARRAY_SIZE),
+                        );
+                        for (idx, cmp) in
+                            this.seen_realms.iter().take(Self::MAX_INSPECT_ARRAY_SIZE).enumerate()
+                        {
+                            seen_realms.set(idx, format!("{}", cmp))
+                        }
+                        root.record(seen_realms);
+                        root.record_bool("done_adding_realms", this.done_adding_realms);
+                    }
+                    Ok(inspector)
+                }
+                .boxed()
+            };
+
+            // Lock can't fail since we created the mutex above and control all the handles.
+            arc_self
+                .try_lock()
+                .unwrap()
+                .inspect_node
+                .replace(parent_node.create_lazy_child(name, lazy_node_fn));
+            arc_self
         }
 
         pub fn includes_moniker(&self, moniker: &RelativeMoniker) -> bool {
@@ -330,6 +436,7 @@ mod inner {
     mod test {
         use super::super::testing::*;
         use super::*;
+        use fuchsia_inspect::assert_data_tree;
         use maplit::hashmap;
 
         #[fuchsia::test]
@@ -514,6 +621,206 @@ mod inner {
                 }
             );
         }
+
+        #[fuchsia::test]
+        async fn export_inspect() {
+            let inspector = fuchsia_inspect::Inspector::new();
+            let (send, recv) = mpsc::channel(10);
+            let set = DebugDataSet::new(send, |got_data| assert!(!got_data))
+                .with_inspect(inspector.root(), "set");
+            assert_data_tree!(
+                inspector,
+                root: {
+                    set: contains {
+                        realms: {},
+                        running_components: Vec::<String>::new(),
+                        seen_realms: Vec::<String>::new(),
+                        done_adding_realms: false,
+                        destroyed_before_start: Vec::<String>::new()
+                    }
+                }
+            );
+
+            set.lock()
+                .await
+                .add_realm("./test:realm-1".to_string(), "test-url-1".to_string())
+                .expect("add realm");
+            assert_data_tree!(
+                inspector,
+                root: {
+                    set: contains {
+                        realms: {
+                            "test:realm-1": "test-url-1"
+                        },
+                        done_adding_realms: false,
+                        num_running_components: 0i64,
+                        running_components: Vec::<String>::new(),
+                        num_seen_realms: 0i64,
+                        seen_realms: Vec::<String>::new(),
+                    }
+                }
+            );
+
+            set.lock()
+                .await
+                .handle_event(start_event("./test:realm-1"))
+                .await
+                .expect("handle event");
+            assert_data_tree!(
+                inspector,
+                root: {
+                    set: contains {
+                        realms: {
+                            "test:realm-1": "test-url-1"
+                        },
+                        done_adding_realms: false,
+                        num_running_components: 1i64,
+                        running_components: vec!["./test:realm-1"],
+                        num_seen_realms: 1i64,
+                        seen_realms: vec!["test:realm-1"]
+                    }
+                }
+            );
+
+            set.lock()
+                .await
+                .handle_event(destroy_event("./test:realm-1"))
+                .await
+                .expect("handle event");
+            assert_data_tree!(
+                inspector,
+                root: {
+                    set: contains {
+                        realms: {
+                            "test:realm-1": "test-url-1"
+                        },
+                        done_adding_realms: false,
+                        running_components: Vec::<String>::new(),
+                        seen_realms: vec!["test:realm-1"]
+                    }
+                }
+            );
+
+            set.lock().await.complete_set();
+            assert_data_tree!(
+                inspector,
+                root: {
+                    set: contains {
+                        realms: {
+                            "test:realm-1": "test-url-1"
+                        },
+                        done_adding_realms: true,
+                        running_components: Vec::<String>::new(),
+                        seen_realms: vec!["test:realm-1"]
+                    }
+                }
+            );
+            // Requests for only the realm that wasn't removed should be present.
+            assert!(collect_requests_to_count(recv).await.is_empty());
+
+            drop(set);
+            assert_data_tree!(
+                inspector,
+                root: {}
+            );
+        }
+
+        /// A PropertyAssertion impl that expects an array property to contain a subset of some
+        /// string values.
+        struct SubsetProperty {
+            expected_superset: HashSet<String>,
+            expected_size: usize,
+        }
+
+        impl SubsetProperty {
+            fn new(expected_superset: HashSet<String>, expected_size: usize) -> Self {
+                Self { expected_superset, expected_size }
+            }
+        }
+
+        impl<K> fuchsia_inspect::testing::PropertyAssertion<K> for SubsetProperty {
+            fn run(&self, actual: &fuchsia_inspect::hierarchy::Property<K>) -> Result<(), Error> {
+                match actual {
+                    fuchsia_inspect::hierarchy::Property::StringList(_, ref string_list) => {
+                        let set: HashSet<String> = string_list.iter().cloned().collect();
+                        match set.is_subset(&self.expected_superset) {
+                            true => match set.len() == self.expected_size {
+                                true => Ok(()),
+                                false => Err(anyhow!(
+                                    "Expected a set of size {:?} but got set {:?}",
+                                    self.expected_size,
+                                    set
+                                )),
+                            },
+                            false => Err(anyhow!(
+                                "Expected a subset of {:?} but got {:?}",
+                                self.expected_superset,
+                                set
+                            )),
+                        }
+                    }
+                    _ => Err(anyhow!("Expected a string list")),
+                }
+            }
+        }
+
+        #[fuchsia::test]
+        async fn export_inspect_truncate_on_overflow() {
+            let inspector = fuchsia_inspect::Inspector::new();
+            let (send, _) = mpsc::channel(10);
+            let set = DebugDataSet::new(send, |got_data| assert!(!got_data))
+                .with_inspect(inspector.root(), "set");
+            assert_data_tree!(
+                inspector,
+                root: {
+                    set: contains {
+                        realms: {},
+                        running_components: Vec::<String>::new(),
+                        seen_realms: Vec::<String>::new(),
+                        done_adding_realms: false,
+                        destroyed_before_start: Vec::<String>::new()
+                    }
+                }
+            );
+
+            const OVERFLOW_COUNT: usize = DebugDataSet::MAX_INSPECT_ARRAY_SIZE + 1;
+            for idx in 0..OVERFLOW_COUNT {
+                let realm = format!("./test:{:?}", idx);
+                let url = format!("url-{:?}", idx);
+                set.lock().await.add_realm(realm, url).expect("add realm");
+            }
+
+            for idx in 0..OVERFLOW_COUNT {
+                // add destroyed child realms first to test destroyed_before_start
+                let realm = format!("./test:{:?}", idx);
+                let moniker = format!("./test:{:?}/child", idx);
+                set.lock().await.handle_event(destroy_event(&moniker)).await.expect("handle event");
+                set.lock().await.handle_event(start_event(&realm)).await.expect("handle event");
+            }
+
+            assert_data_tree!(
+                inspector,
+                root: {
+                    set: contains {
+                        num_destroyed_before_start: OVERFLOW_COUNT as i64,
+                        destroyed_before_start: SubsetProperty::new(
+                            (0..OVERFLOW_COUNT).map(|idx| format!("./test:{:?}/child", idx)).collect(),
+                            DebugDataSet::MAX_INSPECT_ARRAY_SIZE
+                        ),
+                        num_running_components: OVERFLOW_COUNT as i64,
+                        running_components: SubsetProperty::new(
+                            (0..OVERFLOW_COUNT).map(|idx| format!("./test:{:?}", idx)).collect(),
+                            DebugDataSet::MAX_INSPECT_ARRAY_SIZE
+                        ),
+                        num_seen_realms: OVERFLOW_COUNT as i64,
+                        seen_realms: SubsetProperty::new(
+                            (0..OVERFLOW_COUNT).map(|idx| format!("test:{:?}", idx)).collect(),
+                            DebugDataSet::MAX_INSPECT_ARRAY_SIZE
+                        ),
+                    }
+                }
+            );
+        }
     }
 }
 
@@ -642,6 +949,7 @@ mod test {
                 controller_request_stream,
                 event_request_stream,
                 request_handler,
+                fuchsia_inspect::Inspector::new().root(),
             ),
             test_fn(controller_request_proxy, event_proxy, request_recv),
         )
