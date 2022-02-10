@@ -1216,6 +1216,8 @@ struct iwl_mvm {
 
   /* does a monitor vif exist (only one can exist hence bool) */
   bool monitor_on;
+  // To ensure mac is started (load ucode, etc.) just once. TODO(fxbug.dev/93496).
+  bool mac_started;
 #ifdef CONFIG_ACPI
   struct iwl_mvm_sar_profile sar_profiles[ACPI_SAR_PROFILE_NUM];
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS

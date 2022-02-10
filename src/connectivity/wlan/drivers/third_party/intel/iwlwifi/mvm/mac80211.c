@@ -970,6 +970,11 @@ static void iwl_mvm_restart_cleanup(struct iwl_mvm* mvm) {
 zx_status_t __iwl_mvm_mac_start(struct iwl_mvm* mvm) {
   zx_status_t ret;
 
+  if (mvm->mac_started) {
+    // Silently return ZX_OK for now. TODO(fxbug.dev/93496).
+    return ZX_OK;
+  }
+  
   iwl_assert_lock_held(&mvm->mutex);
 
   if (test_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status)) {
@@ -1006,6 +1011,8 @@ zx_status_t __iwl_mvm_mac_start(struct iwl_mvm* mvm) {
     iwl_mvm_d0i3_enable_tx(mvm, NULL);
 #endif
   }
+  if (ret == ZX_OK)
+    mvm->mac_started = true;
 
   return ret;
 }
