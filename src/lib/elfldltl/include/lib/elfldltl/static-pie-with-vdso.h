@@ -130,7 +130,8 @@ inline std::pair<SymbolInfo<Elf>, uintptr_t> GetVdsoSymbols(DiagnosticsType& dia
       0);
 
   const Ehdr& vdso_ehdr = *vdso_image.ReadFromFile<Ehdr>(0);
-  auto vdso_phdrs = *vdso_image.ReadArrayFromFile<Phdr, 0>(vdso_ehdr.phoff, vdso_ehdr.phnum);
+  cpp20::span<const Phdr> vdso_phdrs = *vdso_image.ReadArrayFromFile<Phdr>(
+      vdso_ehdr.phoff, NoArrayFromFile<Phdr>(), vdso_ehdr.phnum);
 
   constexpr uintptr_t kNoAddr = ~uintptr_t{};
   uintptr_t vdso_image_vaddr = kNoAddr;

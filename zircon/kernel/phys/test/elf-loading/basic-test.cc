@@ -90,9 +90,10 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
   // TODO(fxbug.dev/91400): Handle this case.
   ZX_ASSERT(ehdr.phnum != Ehdr::kPnXnum);
 
+  auto phdr_allocator = elfldltl::NoArrayFromFile<Phdr>();
   ktl::span<const Phdr> phdrs;
-  if (auto result = file.ReadArrayFromFile<Phdr, 0>(
-          ehdr.phoff(), ehdr.phnum() * ehdr.phentsize() / sizeof(Phdr))) {
+  if (auto result = file.ReadArrayFromFile<Phdr>(ehdr.phoff(), phdr_allocator,
+                                                 ehdr.phnum() * ehdr.phentsize() / sizeof(Phdr))) {
     phdrs = *result;
   } else {
     printf("FAILED: to read phdrs\n");
@@ -125,9 +126,10 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
     return 1;
   }
 
+  auto dyn_allocator = elfldltl::NoArrayFromFile<Dyn>();
   ktl::span<const Dyn> dyn;
-  if (auto result =
-          file.ReadArrayFromFile<Dyn, 0>(dyn_phdr->offset(), dyn_phdr->filesz() / sizeof(Dyn));
+  if (auto result = file.ReadArrayFromFile<Dyn>(dyn_phdr->offset(), dyn_allocator,
+                                                dyn_phdr->filesz() / sizeof(Dyn));
       !result) {
     printf("FAILED: to read dynamic sections\n");
     return 1;
