@@ -806,7 +806,6 @@ pub struct ConfigField {
     pub type_: ConfigValueType,
 }
 
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConfigNestedValueType {
     Bool,
@@ -821,7 +820,6 @@ pub enum ConfigNestedValueType {
     String { max_size: u32 },
 }
 
-#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConfigValueType {
     Bool,

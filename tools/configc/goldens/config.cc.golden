@@ -1,3 +1,4 @@
+
 #include <fidl/my.config.lib/cpp/wire.h>
 #include <fidl/my.config.lib/cpp/wire_types.h>
 #include <lib/fidl/llcpp/coding.h>
@@ -111,28 +112,18 @@ cpp_elf_config_lib::Config cpp_elf_config_lib::Config::from_args() noexcept {
 
   return c;
 }
-
 void cpp_elf_config_lib::Config::record_to_inspect(
     sys::ComponentInspector* inspector) {
   inspect::Node inspect_config = inspector->root().CreateChild("config");
   inspect_config.CreateBool("my_flag", this->my_flag, inspector);
-
   inspect_config.CreateInt("my_int16", this->my_int16, inspector);
-
   inspect_config.CreateInt("my_int32", this->my_int32, inspector);
-
   inspect_config.CreateInt("my_int64", this->my_int64, inspector);
-
   inspect_config.CreateInt("my_int8", this->my_int8, inspector);
-
   inspect_config.CreateString("my_string", this->my_string, inspector);
-
   inspect_config.CreateUint("my_uint16", this->my_uint16, inspector);
-
   inspect_config.CreateUint("my_uint32", this->my_uint32, inspector);
-
   inspect_config.CreateUint("my_uint64", this->my_uint64, inspector);
-
   inspect_config.CreateUint("my_uint8", this->my_uint8, inspector);
 
   auto my_vector_of_flag = inspect_config.CreateUintArray(
