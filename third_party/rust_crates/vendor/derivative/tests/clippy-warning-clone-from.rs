@@ -1,3 +1,5 @@
+#![deny(clippy::all)]
+
 #[cfg(feature = "use_core")]
 extern crate core;
 
@@ -5,7 +7,7 @@ extern crate core;
 extern crate derivative;
 
 #[derive(Derivative)]
-#[derivative(Hash)]
-enum _Enumeration<T> {
-    _Variant(T),
-}
+#[derivative(Clone(clone_from = "true"))]
+pub struct Foo {}
+
+fn main() {}

@@ -1,3 +1,5 @@
+# extern crate derivative;
+# use derivative::Derivative;
 #[derive(Derivative)]
 #[derivative(Default(bound=""))]
 pub enum Option<T> {

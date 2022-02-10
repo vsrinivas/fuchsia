@@ -1,50 +1,21 @@
-#![allow(clippy::eq_op, clippy::trivially_copy_pass_by_ref, dead_code)]
+#![allow(clippy::eq_op, clippy::trivially_copy_pass_by_ref)]
 
 #[cfg(feature = "use_core")]
 extern crate core;
-
-use std::marker::PhantomData;
 
 #[macro_use]
 extern crate derivative;
 
 #[derive(Derivative)]
 #[derivative(PartialEq)]
+#[repr(C, packed)]
 struct Foo {
     foo: u8,
 }
 
-/// Test for backward compatibility.
-#[derive(Derivative)]
-#[derivative(PartialEq = "feature_allow_slow_enum")]
-#[allow(unused)]
-enum AllowsFeature<T> {
-    Some(T),
-    None,
-}
-
 #[derive(Derivative)]
 #[derivative(PartialEq)]
-enum Option<T> {
-    Some(T),
-    None,
-}
-
-#[derive(Derivative)]
-#[derivative(PartialEq)]
-enum SimpleEnum {
-    Some,
-    None,
-}
-
-#[derive(Derivative)]
-#[derivative(PartialEq)]
-enum UnitEnum {
-    Single,
-}
-
-#[derive(Derivative)]
-#[derivative(PartialEq)]
+#[repr(C, packed)]
 struct WithPtr<T: ?Sized> {
     #[derivative(PartialEq(bound = ""))]
     foo: *const T,
@@ -52,10 +23,12 @@ struct WithPtr<T: ?Sized> {
 
 #[derive(Derivative)]
 #[derivative(PartialEq)]
+#[repr(C, packed)]
 struct Empty;
 
 #[derive(Derivative)]
 #[derivative(PartialEq)]
+#[repr(C, packed)]
 struct AllIgnored {
     #[derivative(PartialEq = "ignore")]
     foo: u8,
@@ -63,6 +36,7 @@ struct AllIgnored {
 
 #[derive(Derivative)]
 #[derivative(PartialEq)]
+#[repr(C, packed)]
 struct OneIgnored {
     #[derivative(PartialEq = "ignore")]
     foo: u8,
@@ -71,6 +45,7 @@ struct OneIgnored {
 
 #[derive(Derivative)]
 #[derivative(PartialEq)]
+#[repr(C, packed)]
 struct Parity(#[derivative(PartialEq(compare_with = "same_parity"))] u8);
 
 fn same_parity(lhs: &u8, rhs: &u8) -> bool {
@@ -79,6 +54,7 @@ fn same_parity(lhs: &u8, rhs: &u8) -> bool {
 
 #[derive(Derivative)]
 #[derivative(PartialEq)]
+#[repr(C, packed)]
 struct Generic<T>(#[derivative(PartialEq(compare_with = "dummy_cmp", bound = ""))] T);
 
 fn dummy_cmp<T>(_: &T, _: &T) -> bool {
@@ -89,13 +65,16 @@ struct NonPartialEq;
 
 #[derive(Derivative)]
 #[derivative(PartialEq, Eq)]
+#[repr(C, packed)]
 struct GenericIgnore<T> {
     f: u32,
     #[derivative(PartialEq = "ignore")]
-    t: PhantomData<T>,
+    t: T,
 }
 
 trait SomeTrait {}
+
+#[derive(Copy, Clone)]
 struct SomeType {
     #[allow(dead_code)]
     foo: u8,
@@ -123,13 +102,6 @@ fn main() {
     assert!(Option::None != Option::Some(42));
     assert!(Option::None::<u8> == Option::None::<u8>);
 
-    assert!(SimpleEnum::Some == SimpleEnum::Some);
-    assert!(SimpleEnum::None == SimpleEnum::None);
-    assert!(SimpleEnum::Some != SimpleEnum::None);
-    assert!(SimpleEnum::None != SimpleEnum::Some);
-
-    assert!(UnitEnum::Single == UnitEnum::Single);
-
     assert!(Parity(3) == Parity(7));
     assert!(Parity(2) == Parity(42));
     assert!(Parity(3) != Parity(42));
@@ -139,10 +111,10 @@ fn main() {
     assert!(
         GenericIgnore {
             f: 123,
-            t: PhantomData::<NonPartialEq>::default()
+            t: NonPartialEq
         } == GenericIgnore {
             f: 123,
-            t: PhantomData::<NonPartialEq>::default()
+            t: NonPartialEq
         }
     );
 }

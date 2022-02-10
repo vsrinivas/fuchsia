@@ -203,7 +203,7 @@ group("deepsize") {
 }
 
 group("derivative") {
-  deps = [ ":derivative-v2_1_1($host_toolchain)" ]
+  deps = [ ":derivative-v2_2_0($host_toolchain)" ]
 }
 
 group("derp") {
@@ -3541,10 +3541,10 @@ rust_library("deflate-v0_7_19") {
   visibility = [ ":*" ]
 }
 
-rust_proc_macro("derivative-v2_1_1") {
+rust_proc_macro("derivative-v2_2_0") {
   crate_name = "derivative"
   crate_root = "//third_party/rust_crates/vendor/derivative/src/lib.rs"
-  output_name = "derivative-e4b38514ab785324"
+  output_name = "derivative-ecd51d3b9027d2b0"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -3560,8 +3560,8 @@ rust_proc_macro("derivative-v2_1_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=e4b38514ab785324",
-    "-Cextra-filename=-e4b38514ab785324",
+    "-Cmetadata=ecd51d3b9027d2b0",
+    "-Cextra-filename=-ecd51d3b9027d2b0",
   ]
 
   visibility = [ ":*" ]

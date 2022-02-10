@@ -7,29 +7,19 @@
 #[cfg(feature = "use_core")]
 extern crate core;
 
-use std::marker::PhantomData;
-
 #[macro_use]
 extern crate derivative;
 
 #[derive(PartialEq, Eq, Derivative)]
 #[derivative(PartialOrd, Ord)]
+#[repr(C, packed)]
 struct Foo {
     foo: u8,
 }
 
-#[derive(PartialEq, Eq, Derivative)]
-#[derivative(
-    PartialOrd = "feature_allow_slow_enum",
-    Ord = "feature_allow_slow_enum"
-)]
-enum Option<T> {
-    None,
-    Some(T),
-}
-
 #[derive(Derivative)]
 #[derivative(PartialEq, PartialOrd, Ord, Eq)]
+#[repr(C, packed)]
 struct WithPtr<T: ?Sized> {
     #[derivative(PartialEq(bound = ""))]
     #[derivative(PartialOrd(bound = ""))]
@@ -40,10 +30,12 @@ struct WithPtr<T: ?Sized> {
 
 #[derive(PartialEq, Eq, Derivative)]
 #[derivative(PartialOrd, Ord)]
+#[repr(C, packed)]
 struct Empty;
 
 #[derive(PartialEq, Eq, Derivative)]
 #[derivative(PartialOrd, Ord)]
+#[repr(C, packed)]
 struct AllIgnored {
     #[derivative(PartialOrd = "ignore")]
     #[derivative(Ord = "ignore")]
@@ -52,6 +44,7 @@ struct AllIgnored {
 
 #[derive(PartialEq, Eq, Derivative)]
 #[derivative(PartialOrd, Ord)]
+#[repr(C, packed)]
 struct OneIgnored {
     #[derivative(PartialOrd = "ignore")]
     #[derivative(Ord = "ignore")]
@@ -61,6 +54,7 @@ struct OneIgnored {
 
 #[derive(PartialEq, Eq, Derivative)]
 #[derivative(PartialOrd, Ord)]
+#[repr(C, packed)]
 struct Tenth(
     #[derivative(
         PartialOrd(compare_with = "partial_cmp_tenth"),
@@ -82,6 +76,7 @@ fn cmp_tenth(lhs: &u8, rhs: &u8) -> std::cmp::Ordering {
 
 #[derive(Derivative)]
 #[derivative(PartialOrd, Ord, PartialEq, Eq)]
+#[repr(C, packed)]
 struct Generic<T>(
     #[derivative(
         PartialEq = "ignore",
@@ -102,15 +97,18 @@ struct NonPartialOrd;
 
 #[derive(Derivative)]
 #[derivative(PartialEq, PartialOrd, Ord, Eq)]
+#[repr(C, packed)]
 struct GenericIgnore<T> {
     f: u32,
     #[derivative(PartialEq = "ignore")]
     #[derivative(PartialOrd = "ignore")]
     #[derivative(Ord = "ignore")]
-    t: PhantomData<T>,
+    t: T,
 }
 
 trait SomeTrait {}
+
+#[derive(Clone, Copy)]
 struct SomeType {
     #[allow(dead_code)]
     foo: u8,
@@ -244,22 +242,22 @@ fn main() {
     assert_eq!(
         GenericIgnore {
             f: 123,
-            t: PhantomData::<NonPartialOrd>::default()
+            t: NonPartialOrd
         }
         .cmp(&GenericIgnore {
             f: 123,
-            t: PhantomData::<NonPartialOrd>::default()
+            t: NonPartialOrd
         }),
         Ordering::Equal
     );
     assert_eq!(
         GenericIgnore {
             f: 123,
-            t: PhantomData::<NonPartialOrd>::default()
+            t: NonPartialOrd
         }
         .partial_cmp(&GenericIgnore {
             f: 123,
-            t: PhantomData::<NonPartialOrd>::default()
+            t: NonPartialOrd
         }),
         Some(Ordering::Equal)
     );

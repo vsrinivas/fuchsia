@@ -59,7 +59,7 @@ impl<'a> Input<'a> {
             syn::Data::Union(..) => {
                 errors.extend(
                     syn::Error::new_spanned(item, "derivative does not support unions")
-                        .to_compile_error()
+                        .to_compile_error(),
                 );
                 return Err(());
             }
@@ -91,6 +91,13 @@ impl<'a> Body<'a> {
                 .flat_map(|variant| variant.fields.iter())
                 .collect(),
             Body::Struct(_, ref fields) => fields.iter().collect(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        match *self {
+            Body::Enum(ref variants) => variants.is_empty(),
+            Body::Struct(_, ref fields) => fields.is_empty(),
         }
     }
 }

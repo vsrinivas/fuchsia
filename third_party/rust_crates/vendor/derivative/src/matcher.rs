@@ -27,6 +27,17 @@ pub enum BindingStyle {
     RefMut,
 }
 
+impl BindingStyle {
+    fn with_packed(self, is_packed: bool) -> BindingStyle {
+        match self {
+            BindingStyle::Move | BindingStyle::MoveMut => self,
+            BindingStyle::Ref if is_packed => BindingStyle::Move,
+            BindingStyle::RefMut if is_packed => BindingStyle::MoveMut,
+            BindingStyle::Ref | BindingStyle::RefMut => self,
+        }
+    }
+}
+
 impl quote::ToTokens for BindingStyle {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match *self {
@@ -42,6 +53,7 @@ impl quote::ToTokens for BindingStyle {
 
 #[derive(Debug)]
 pub struct BindingInfo<'a> {
+    pub expr: TokenStream,
     pub ident: syn::Ident,
     pub field: &'a ast::Field<'a>,
 }
@@ -54,23 +66,38 @@ pub struct CommonVariant<'a> {
     attrs: &'a attr::Input,
 }
 
-pub struct Matcher {
+pub struct Matcher<T> {
     binding_name: String,
     binding_style: BindingStyle,
+    is_packed: bool,
+    field_filter: T,
 }
 
-impl Matcher {
-    pub fn new(style: BindingStyle) -> Self {
+impl Matcher<fn (&ast::Field) -> bool> {
+    pub fn new(style: BindingStyle, is_packed: bool) -> Self {
         Matcher {
             binding_name: "__arg".into(),
-            binding_style: style,
+            binding_style: style.with_packed(is_packed),
+            is_packed,
+            field_filter: |_| true,
         }
     }
+}
 
+impl<T: Fn (&ast::Field) -> bool> Matcher<T> {
     pub fn with_name(self, name: String) -> Self {
         Matcher {
             binding_name: name,
             ..self
+        }
+    }
+
+    pub fn with_field_filter<P>(self, field_filter: P) -> Matcher<P> {
+        Matcher {
+            field_filter,
+            binding_name: self.binding_name,
+            binding_style: self.binding_style,
+            is_packed: self.is_packed,
         }
     }
 
@@ -107,6 +134,7 @@ impl Matcher {
 
     pub fn build_2_arms<F>(
         self,
+        (left_matched_expr, right_matched_expr): (TokenStream, TokenStream),
         left: (&ast::Input, &str),
         right: (&ast::Input, &str),
         f: F,
@@ -124,18 +152,38 @@ impl Matcher {
 
         assert_eq!(left_variants.len(), right_variants.len());
 
-        // Now that we have the patterns, generate the actual branches of the match
-        // expression
-        let mut t = TokenStream::new();
-        for (i, (left, right)) in left_variants.into_iter().zip(right_variants).enumerate() {
-            let (left, (left_pat, left_bindings)) = left;
-            let (right, (right_pat, right_bindings)) = right;
+        if left_variants.len() == 1 {
+            let (left, (left_pat, left_bindings)) = left_variants.into_iter().next().unwrap();
+            let (right, (right_pat, right_bindings)) = right_variants.into_iter().next().unwrap();
 
-            let body = f(i, left, right, (left_bindings, right_bindings));
-            quote!((#left_pat, #right_pat) => { #body }).to_tokens(&mut t);
+            let body = f(0, left, right, (left_bindings, right_bindings));
+
+            quote! {
+                match #left_matched_expr {
+                    #left_pat => match #right_matched_expr {
+                        #right_pat => #body,
+                    },
+                }
+            }
+        } else {
+            // Now that we have the patterns, generate the actual branches of the match
+            // expression
+            let mut t = TokenStream::new();
+            for (i, (left, right)) in left_variants.into_iter().zip(right_variants).enumerate() {
+                let (left, (left_pat, left_bindings)) = left;
+                let (right, (right_pat, right_bindings)) = right;
+
+                let body = f(i, left, right, (left_bindings, right_bindings));
+                quote!((#left_pat, #right_pat) => { #body }).to_tokens(&mut t);
+            }
+
+            quote! {
+                match (&#left_matched_expr, &#right_matched_expr) {
+                    #t
+                    _ => unreachable!(),
+                }
+            }
         }
-
-        t
     }
 
     /// Generate patterns for matching against all of the variants
@@ -206,7 +254,13 @@ impl Matcher {
                             (stream, matches),
                             field,
                             binding_name,
-                            |_, ident, binding| quote!(#binding #ident ,),
+                            |f, ident, binding| {
+                                if (self.field_filter)(f) {
+                                    quote!(#binding #ident ,)
+                                } else {
+                                    quote!(_ ,)
+                                }
+                            },
                         )
                     },
                 );
@@ -223,7 +277,11 @@ impl Matcher {
                             binding_name,
                             |field, ident, binding| {
                                 let field_name = field.ident.as_ref().unwrap();
-                                quote!(#field_name : #binding #ident ,)
+                                if (self.field_filter)(field) {
+                                    quote!(#field_name : #binding #ident ,)
+                                } else {
+                                    quote!(#field_name : _ ,)
+                                }
                             },
                         )
                     },
@@ -253,10 +311,22 @@ impl Matcher {
             &format!("{}_{}", binding_name, i),
             proc_macro2::Span::call_site(),
         );
+        let expr = syn::Expr::Path(syn::ExprPath {
+            attrs: vec![],
+            qself: None,
+            path: syn::Path::from(ident.clone())
+        });
+
+        let expr = if self.is_packed {
+            expr.into_token_stream()
+        } else {
+            quote!((*#expr))
+        };
 
         f(field, &ident, binding_style).to_tokens(&mut stream);
 
         matches.push(BindingInfo {
+            expr,
             ident,
             field,
         });

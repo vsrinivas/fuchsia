@@ -25,7 +25,6 @@ skip_updating = [
     "cxxbridge-cmd",
     "darling",
     "data-encoding",
-    "derivative",
     "derp",
     "euclid",
     "eui48",

@@ -12,7 +12,7 @@
 
 [package]
 name = "derivative"
-version = "2.1.1"
+version = "2.2.0"
 authors = ["mcarton <cartonmartin+git@gmail.com>"]
 description = "A set of alternative `derive` attributes for Rust"
 documentation = "https://mcarton.github.io/rust-derivative/"
@@ -34,12 +34,7 @@ version = "1.0"
 version = "1.0.3"
 features = ["visit", "extra-traits"]
 [dev-dependencies.trybuild]
-version = "1.0.18"
+version = "1.0.18, <1.0.23"
 
 [features]
 use_core = []
-[badges.appveyor]
-repository = "mcarton/rust-derivative"
-
-[badges.travis-ci]
-repository = "mcarton/rust-derivative"

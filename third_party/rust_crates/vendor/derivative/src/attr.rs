@@ -23,6 +23,7 @@ pub struct Input {
     pub partial_ord: Option<InputPartialOrd>,
     /// Whether `Ord` is present and its specific attributes.
     pub ord: Option<InputOrd>,
+    pub is_packed: bool,
 }
 
 #[derive(Debug, Default)]
@@ -197,7 +198,7 @@ pub struct FieldOrd {
 macro_rules! for_all_attr {
     ($errors:ident; for ($name:ident, $value:ident) in $attrs:expr; $($body:tt)*) => {
         for meta_items in $attrs.iter() {
-            let meta_items = derivative_attribute(meta_items.parse_meta(), $errors);
+            let meta_items = derivative_attribute(meta_items, $errors);
             if let Some(meta_items) = meta_items {
                 for meta_item in meta_items.iter() {
                     let meta_item = read_items(meta_item, $errors);
@@ -263,7 +264,10 @@ impl Input {
         attrs: &[syn::Attribute],
         errors: &mut proc_macro2::TokenStream,
     ) -> Result<Input, ()> {
-        let mut input = Input::default();
+        let mut input = Input {
+            is_packed: attrs.iter().any(has_repr_packed_attr),
+            ..Default::default()
+        };
 
         for_all_attr! {
             errors;
@@ -734,22 +738,14 @@ fn read_items<'a>(item: &'a syn::NestedMeta, errors: &mut proc_macro2::TokenStre
 
 /// Filter the `derivative` items from an attribute.
 fn derivative_attribute(
-    meta: syn::parse::Result<syn::Meta>,
+    attribute: &syn::Attribute,
     errors: &mut proc_macro2::TokenStream,
 ) -> Option<syn::punctuated::Punctuated<syn::NestedMeta, syn::token::Comma>> {
-    match meta {
-        Ok(syn::Meta::List(syn::MetaList {
-            path, nested: mis, ..
-        })) => {
-            if path
-                .get_ident()
-                .map_or(false, |ident| ident == "derivative")
-            {
-                Some(mis)
-            } else {
-                None
-            }
-        }
+    if !attribute.path.is_ident("derivative") {
+        return None;
+    }
+    match attribute.parse_meta() {
+        Ok(syn::Meta::List(meta_list)) => Some(meta_list.nested),
         Ok(_) => None,
         Err(e) => {
             let message = format!("invalid attribute: {}", e);
@@ -870,4 +866,22 @@ fn ensure_str_lit<'a>(
         });
         Err(())
     }
+}
+
+pub fn has_repr_packed_attr(attr: &syn::Attribute) -> bool {
+    if let Ok(attr) = attr.parse_meta() {
+        if attr.path().get_ident().map(|i| i == "repr") == Some(true) {
+            if let syn::Meta::List(items) = attr {
+                for item in items.nested {
+                    if let syn::NestedMeta::Meta(item) = item {
+                        if item.path().get_ident().map(|i| i == "packed") == Some(true) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    false
 }

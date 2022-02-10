@@ -8,12 +8,14 @@ extern crate derivative;
 
 #[derive(Derivative, PartialEq)]
 #[derivative(Eq)]
+#[repr(C, packed)]
 struct Foo {
     foo: u8
 }
 
 #[derive(Derivative)]
 #[derivative(Eq)]
+#[repr(C, packed)]
 struct WithPtr<T: ?Sized> {
     #[derivative(Eq(bound=""))]
     foo: *const T
@@ -25,7 +27,13 @@ impl<T: ?Sized> PartialEq for WithPtr<T> {
     }
 }
 
+#[derive(Derivative)]
+#[derivative(PartialEq, Eq)]
+#[repr(C, packed)]
+struct Generic<T>(T);
+
 trait SomeTrait {}
+#[derive(Clone, Copy, PartialEq, Eq)]
 struct SomeType {
     #[allow(dead_code)]
     foo: u8
@@ -47,4 +55,7 @@ fn main() {
     assert!(WithPtr { foo: ptr1 } != WithPtr { foo: ptr2 });
 
     assert_eq(WithPtr { foo: ptr1 });
+
+    assert!(Generic(SomeType { foo: 0 }) == Generic(SomeType { foo: 0 }));
+    assert_eq(Generic(SomeType { foo: 0 }));
 }

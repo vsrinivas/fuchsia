@@ -13,10 +13,9 @@ pub fn derive(input: &ast::Input) -> proc_macro2::TokenStream {
 
     let formatter = quote_spanned! {input.span=> __f};
 
-    let body = matcher::Matcher::new(matcher::BindingStyle::Ref).build_arms(
-        input,
-        "__arg",
-        |_, _, arm_name, style, attrs, bis| {
+    let body = matcher::Matcher::new(matcher::BindingStyle::Ref, input.attrs.is_packed)
+        .with_field_filter(|f: &ast::Field| !f.attrs.ignore_debug())
+        .build_arms(input, "__arg", |_, _, arm_name, style, attrs, bis| {
             let field_prints = bis.iter().filter_map(|bi| {
                 if bi.field.attrs.ignore_debug() {
                     return None;
@@ -28,22 +27,39 @@ pub fn derive(input: &ast::Input) -> proc_macro2::TokenStream {
                     });
                 }
 
-                let arg = &bi.ident;
+                let arg_expr = &bi.expr;
+                let arg_ident = &bi.ident;
 
                 let dummy_debug = bi.field.attrs.debug_format_with().map(|format_fn| {
-                    format_with(bi.field, &arg, format_fn, input.generics.clone())
+                    format_with(
+                        bi.field,
+                        &input.attrs.debug_bound(),
+                        &arg_expr,
+                        &arg_ident,
+                        format_fn,
+                        input.generics.clone(),
+                    )
                 });
+                let expr = if bi.field.attrs.debug_format_with().is_some() {
+                    quote_spanned! {arm_name.span()=>
+                        &#arg_ident
+                    }
+                } else {
+                    quote_spanned! {arm_name.span()=>
+                        &&#arg_expr
+                    }
+                };
 
                 let builder = if let Some(ref name) = bi.field.ident {
                     let name = name.to_string();
                     quote_spanned! {arm_name.span()=>
                         #dummy_debug
-                        let _ = __debug_trait_builder.field(#name, &#arg);
+                        let _ = __debug_trait_builder.field(#name, #expr);
                     }
                 } else {
                     quote_spanned! {arm_name.span()=>
                         #dummy_debug
-                        let _ = __debug_trait_builder.field(&#arg);
+                        let _ = __debug_trait_builder.field(#expr);
                     }
                 };
 
@@ -68,8 +84,7 @@ pub fn derive(input: &ast::Input) -> proc_macro2::TokenStream {
                     __debug_trait_builder.finish()
                 }
             }
-        },
-    );
+        });
 
     let name = &input.ident;
 
@@ -86,6 +101,7 @@ pub fn derive(input: &ast::Input) -> proc_macro2::TokenStream {
     let match_self = quote!(match *self);
     quote_spanned! {input.span=>
         #[allow(unused_qualifications)]
+        #[allow(clippy::unneeded_field_pattern)]
         impl #impl_generics #debug_trait_path for #name #ty_generics #where_clause {
             fn fmt(&self, #formatter: &mut #fmt_path::Formatter) -> #fmt_path::Result {
                 #match_self {
@@ -129,7 +145,9 @@ fn phantom_path() -> syn::Path {
 
 fn format_with(
     f: &ast::Field,
-    arg_n: &syn::Ident,
+    bounds: &Option<&[syn::WherePredicate]>,
+    arg_expr: &proc_macro2::TokenStream,
+    arg_ident: &syn::Ident,
     format_fn: &syn::Path,
     mut generics: syn::Generics,
 ) -> proc_macro2::TokenStream {
@@ -160,14 +178,12 @@ fn format_with(
 
             syn::WherePredicate::Type(syn::PredicateType {
                 lifetimes: None,
-                bounded_ty: syn::Type::Path(syn::TypePath {
-                    qself: None,
-                    path,
-                }),
+                bounded_ty: syn::Type::Path(syn::TypePath { qself: None, path }),
                 colon_token: Default::default(),
                 bounds,
             })
         })
+        .chain(bounds.iter().flat_map(|b| b.iter().cloned()))
         .collect::<Vec<_>>();
     generics
         .make_where_clause()
@@ -189,17 +205,21 @@ fn format_with(
     let (_, ctor_ty_generics, _) = ctor_generics.split_for_impl();
     let ctor_ty_generics = ctor_ty_generics.as_turbofish();
 
+    // don't attach a span to prevent issue #58
+    let match_self = quote!(match self.0);
     quote_spanned!(format_fn.span()=>
-        let #arg_n = {
+        let #arg_ident = {
             struct Dummy #impl_generics (&'_derivative #ty, #phantom_path <(#(#phantom,)*)>) #where_clause;
 
             impl #impl_generics #debug_trait_path for Dummy #ty_generics #where_clause {
                 fn fmt(&self, __f: &mut #fmt_path::Formatter) -> #fmt_path::Result {
-                    #format_fn(&self.0, __f)
+                    #match_self {
+                        this => #format_fn(this, __f)
+                    }
                 }
             }
 
-            Dummy #ctor_ty_generics (#arg_n, #phantom_path)
+            Dummy #ctor_ty_generics (&&#arg_expr, #phantom_path)
         };
     )
 }

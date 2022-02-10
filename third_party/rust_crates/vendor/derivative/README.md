@@ -1,9 +1,8 @@
 # Derivative
 
-[![Travis](https://travis-ci.org/mcarton/rust-derivative.svg?branch=master)](https://travis-ci.org/mcarton/rust-derivative)
-[![Build status](https://ci.appveyor.com/api/projects/status/github/mcarton/rust-derivative?svg=true&branch=master)](https://ci.appveyor.com/project/mcarton/rust-derivative)
 [![Crates.io](https://img.shields.io/crates/v/derivative.svg?maxAge=3600)](https://crates.io/crates/derivative)
 [![Crates.io](https://img.shields.io/crates/l/derivative.svg?maxAge=3600)](https://github.com/mcarton/rust-derivative#license)
+![Continuous integration](https://github.com/mcarton/rust-derivative/workflows/Continuous%20integration/badge.svg)
 
 This crate provides a set of alternative customizable `#[derive]` attributes for Rust.
 
@@ -52,5 +51,5 @@ for inclusion in the work by you, as defined in the Apache-2.0 license, shall
 be dual licensed as above, without any additional terms or conditions.
 
 [`serde`]: https://crates.io/crates/serde
-[documentation]: https://mcarton.github.io/rust-derivative/
+[documentation]: https://mcarton.github.io/rust-derivative/latest/index.html
 [rustc]: https://github.com/rust-lang/rust
