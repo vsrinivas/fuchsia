@@ -35,14 +35,20 @@ const PROXY_TIMEOUT_SECS: &str = "proxy.timeout_secs";
 
 const CURRENT_EXE_BUILDID: &str = "current.buildid";
 
+fn is_default_target() -> bool {
+    let app: Ffx = argh::from_env();
+    app.target.is_none()
+}
+
 struct Injection {
     daemon_once: Once<DaemonProxy>,
     remote_once: Once<RemoteControlProxy>,
+    target: Once<Option<String>>,
 }
 
 impl Default for Injection {
     fn default() -> Self {
-        Self { daemon_once: Once::new(), remote_once: Once::new() }
+        Self { target: Once::new(), daemon_once: Once::new(), remote_once: Once::new() }
     }
 }
 
@@ -88,15 +94,24 @@ fn open_target_with_fut<'a>(
 }
 
 impl Injection {
+    async fn target(&self) -> Result<Option<String>> {
+        self.target
+            .get_or_try_init(async {
+                let app: Ffx = argh::from_env();
+                app.target().await
+            })
+            .await
+            .map(|s| s.clone())
+    }
+
     async fn init_remote_proxy(&self) -> Result<RemoteControlProxy> {
-        let app: Ffx = argh::from_env();
         let daemon_proxy = self.daemon_factory().await?;
-        let target = app.target().await?;
+        let target = self.target().await?;
         let proxy_timeout = proxy_timeout().await?;
-        let is_default_target = app.target.is_none();
+        let timeout_error = self.daemon_timeout_error().await?;
         let (target_proxy, target_proxy_fut) = open_target_with_fut(
-            target.clone(),
-            is_default_target,
+            target,
+            is_default_target(),
             daemon_proxy.clone(),
             proxy_timeout.clone(),
         )?;
@@ -109,17 +124,49 @@ impl Injection {
         loop {
             select! {
                 res = open_remote_control_fut => {
-                    res.map_err(|_| FfxError::DaemonError {
-                        err: DaemonError::Timeout,
-                        target: target.clone(),
-                        is_default_target: app.target.is_none(),
-                    })??;
+                    res.map_err(|_| timeout_error)??;
                     break;
                 }
                 res = target_proxy_fut => res?
             }
         }
         Ok(remote_proxy)
+    }
+
+    async fn fastboot_factory_inner(&self) -> Result<FastbootProxy> {
+        let daemon_proxy = self.daemon_factory().await?;
+        let target = self.target().await?;
+        let (target_proxy, target_proxy_fut) = open_target_with_fut(
+            target,
+            is_default_target(),
+            daemon_proxy.clone(),
+            proxy_timeout().await?,
+        )?;
+        target_proxy_fut.await?;
+        let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
+        target_proxy.open_fastboot(fastboot_server_end)?;
+        Ok(fastboot_proxy)
+    }
+
+    async fn target_factory_inner(&self) -> Result<TargetHandleProxy> {
+        let target = self.target().await?;
+        let daemon_proxy = self.daemon_factory().await?;
+        let (target_proxy, target_proxy_fut) = open_target_with_fut(
+            target,
+            is_default_target(),
+            daemon_proxy.clone(),
+            proxy_timeout().await?,
+        )?;
+        target_proxy_fut.await?;
+        Ok(target_proxy)
+    }
+
+    async fn daemon_timeout_error(&self) -> Result<FfxError> {
+        Ok(FfxError::DaemonError {
+            err: DaemonError::Timeout,
+            target: self.target().await?,
+            is_default_target: is_default_target(),
+        })
     }
 }
 
@@ -132,39 +179,37 @@ impl Injector for Injection {
     }
 
     async fn fastboot_factory(&self) -> Result<FastbootProxy> {
-        let daemon_proxy = self.daemon_factory().await?;
-        let app: Ffx = argh::from_env();
-        let target = app.target().await?;
-        let is_default_target = app.target.is_none();
-        let (target_proxy, target_proxy_fut) = open_target_with_fut(
-            target.clone(),
-            is_default_target,
-            daemon_proxy.clone(),
-            proxy_timeout().await?,
-        )?;
-        target_proxy_fut.await?;
-        let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
-        target_proxy.open_fastboot(fastboot_server_end)?;
-        Ok(fastboot_proxy)
+        let target = self.target().await?;
+        let timeout_error = self.daemon_timeout_error().await?;
+        timeout(proxy_timeout().await?, self.fastboot_factory_inner()).await.map_err(|_| {
+            log::warn!("Timed out getting fastboot proxy for: {:?}", target);
+            timeout_error
+        })?
     }
 
     async fn target_factory(&self) -> Result<TargetHandleProxy> {
-        let app: Ffx = argh::from_env();
-        let target = app.target().await?;
-        let is_default_target = app.target.is_none();
-        let daemon_proxy = self.daemon_factory().await?;
-        let (target_proxy, target_proxy_fut) = open_target_with_fut(
-            target.clone(),
-            is_default_target,
-            daemon_proxy.clone(),
-            proxy_timeout().await?,
-        )?;
-        target_proxy_fut.await?;
-        Ok(target_proxy)
+        let target = self.target().await?;
+        let timeout_error = self.daemon_timeout_error().await?;
+        timeout(proxy_timeout().await?, self.target_factory_inner()).await.map_err(|_| {
+            log::warn!("Timed out getting fastboot proxy for: {:?}", target);
+            timeout_error
+        })?
     }
 
     async fn remote_factory(&self) -> Result<RemoteControlProxy> {
-        self.remote_once.get_or_try_init(self.init_remote_proxy()).await.map(|proxy| proxy.clone())
+        let target = self.target().await?;
+        let timeout_error = self.daemon_timeout_error().await?;
+        timeout(proxy_timeout().await?, async {
+            self.remote_once
+                .get_or_try_init(self.init_remote_proxy())
+                .await
+                .map(|proxy| proxy.clone())
+        })
+        .await
+        .map_err(|_| {
+            log::warn!("Timed out getting remote control proxy for: {:?}", target);
+            timeout_error
+        })?
     }
 
     async fn is_experiment(&self, key: &str) -> bool {

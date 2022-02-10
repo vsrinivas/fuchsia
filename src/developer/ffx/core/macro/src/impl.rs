@@ -568,7 +568,7 @@ fn generate_proxy_from_selector(
                 }
             }?;
 
-            __remote_factory.connect(#selector, #server_end.into_channel())
+            timeout::timeout(std::time::Duration::from_secs(10), __remote_factory.connect(#selector, #server_end.into_channel())
             .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
                 fidl_result
                 .map(|_| ())
@@ -598,7 +598,14 @@ Plugin developers: you can use `ffx component select '{}'` to see which services
                         }
                     }
                 })
-            }).await
+            }))
+            .await
+            .map_err(|_| errors::ffx_error!("Timed out connecting to service: '{}'.
+This is likely due to a sudden shutdown or disconnect of the target.
+If you have encountered what you think is a bug, Please report it at http://fxbug.dev/new/ffx+User+Bug
+
+To diagnose the issue, use `ffx doctor`.", #mapping).into())
+            .and_then(|r| r)
         };
     }
 }
