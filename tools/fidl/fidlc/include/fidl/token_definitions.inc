@@ -60,9 +60,12 @@ TOKEN_SUBKIND(Vector, "vector")
 // MAX is not a real keyword, but it effectively works like one. It can be used
 // as vector<T>:MAX or string:MAX. See Library::ResolveSizeBound in flat_ast.cc.
 
+TOKEN_SUBKIND(Ajar, "ajar")
 TOKEN_SUBKIND(Bits, "bits")
+TOKEN_SUBKIND(Closed, "closed")
 TOKEN_SUBKIND(Const, "const")
 TOKEN_SUBKIND(Enum, "enum")
+TOKEN_SUBKIND(Open, "open")
 TOKEN_SUBKIND(Protocol, "protocol")
 TOKEN_SUBKIND(Resource, "resource")
 TOKEN_SUBKIND(ResourceDefinition, "resource_definition")

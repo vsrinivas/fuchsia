@@ -613,10 +613,12 @@ struct Protocol final : public TypeDecl {
     Method(Method&&) = default;
     Method& operator=(Method&&) = default;
 
-    Method(std::unique_ptr<AttributeList> attributes, std::unique_ptr<raw::Identifier> identifier,
-           SourceSpan name, bool has_request, std::unique_ptr<TypeConstructor> maybe_request,
-           bool has_response, std::unique_ptr<TypeConstructor> maybe_response, bool has_error)
+    Method(std::unique_ptr<AttributeList> attributes, types::Strictness strictness,
+           std::unique_ptr<raw::Identifier> identifier, SourceSpan name, bool has_request,
+           std::unique_ptr<TypeConstructor> maybe_request, bool has_response,
+           std::unique_ptr<TypeConstructor> maybe_response, bool has_error)
         : Element(Element::Kind::kProtocolMethod, std::move(attributes)),
+          strictness(strictness),
           identifier(std::move(identifier)),
           name(name),
           has_request(has_request),
@@ -628,6 +630,7 @@ struct Protocol final : public TypeDecl {
       assert(this->has_request || this->has_response);
     }
 
+    types::Strictness strictness;
     std::unique_ptr<raw::Identifier> identifier;
     SourceSpan name;
     bool has_request;
@@ -660,9 +663,10 @@ struct Protocol final : public TypeDecl {
     Name name;
   };
 
-  Protocol(std::unique_ptr<AttributeList> attributes, Name name,
+  Protocol(std::unique_ptr<AttributeList> attributes, types::Openness openness, Name name,
            std::vector<ComposedProtocol> composed_protocols, std::vector<Method> methods)
       : TypeDecl(Kind::kProtocol, std::move(attributes), std::move(name)),
+        openness(openness),
         composed_protocols(std::move(composed_protocols)),
         methods(std::move(methods)) {
     for (auto& method : this->methods) {
@@ -670,6 +674,7 @@ struct Protocol final : public TypeDecl {
     }
   }
 
+  types::Openness openness;
   std::vector<ComposedProtocol> composed_protocols;
   std::vector<Method> methods;
   std::vector<MethodWithInfo> all_methods;

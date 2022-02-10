@@ -130,6 +130,9 @@ void ProtocolMethod::Accept(TreeVisitor* visitor) const {
   if (attributes != nullptr) {
     visitor->OnAttributeList(attributes);
   }
+  if (modifiers != nullptr) {
+    visitor->OnModifiers(modifiers);
+  }
   visitor->OnIdentifier(identifier);
   if (maybe_request != nullptr) {
     visitor->OnParameterList(maybe_request);
@@ -154,6 +157,9 @@ void ProtocolDeclaration::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {
     visitor->OnAttributeList(attributes);
+  }
+  if (modifiers != nullptr) {
+    visitor->OnModifiers(modifiers);
   }
   visitor->OnIdentifier(identifier);
   for (auto composed_protocol = composed_protocols.begin();

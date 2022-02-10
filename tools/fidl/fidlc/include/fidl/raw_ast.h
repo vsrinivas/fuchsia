@@ -391,6 +391,58 @@ class ConstDeclaration final : public SourceElement {
   std::unique_ptr<Constant> constant;
 };
 
+// A single modifier applied to a layout, protocol, or method.
+template <typename T>
+class Modifier final {
+ public:
+  Modifier(T value, Token token) : value(value), token(token) {}
+
+  // Value of the modifier
+  T value;
+  // Token that the modifier is from.
+  Token token;
+};
+
+class Modifiers final : public SourceElement {
+ public:
+  // Constructor for Layouts (has resourceness and strictness, but not openness).
+  Modifiers(SourceElement const& element,
+            std::optional<Modifier<types::Resourceness>> maybe_resourceness,
+            std::optional<Modifier<types::Strictness>> maybe_strictness,
+            bool resourceness_comes_first)
+      : SourceElement(element),
+        maybe_resourceness(maybe_resourceness),
+        maybe_strictness(maybe_strictness),
+        maybe_openness(std::nullopt),
+        resourceness_comes_first(resourceness_comes_first) {}
+
+  // Constructor for Protocols (only has openness).
+  Modifiers(SourceElement const& element, std::optional<Modifier<types::Openness>> maybe_openness)
+      : SourceElement(element),
+        maybe_resourceness(std::nullopt),
+        maybe_strictness(std::nullopt),
+        maybe_openness(maybe_openness),
+        resourceness_comes_first(false) {}
+
+  // Constructor for Protocol methods (only has strictness).
+  Modifiers(SourceElement const& element,
+            std::optional<Modifier<types::Strictness>> maybe_strictness)
+      : SourceElement(element),
+        maybe_resourceness(std::nullopt),
+        maybe_strictness(maybe_strictness),
+        maybe_openness(std::nullopt),
+        resourceness_comes_first(false) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::optional<Modifier<types::Resourceness>> maybe_resourceness;
+  std::optional<Modifier<types::Strictness>> maybe_strictness;
+  std::optional<Modifier<types::Openness>> maybe_openness;
+  // Whether the resourceness modifier for a layout was before the strictness
+  // modifier, used for linting.
+  bool resourceness_comes_first;
+};
+
 class ParameterList final : public SourceElement {
  public:
   ParameterList(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor)
@@ -404,12 +456,13 @@ class ParameterList final : public SourceElement {
 class ProtocolMethod : public SourceElement {
  public:
   ProtocolMethod(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
-                 std::unique_ptr<Identifier> identifier,
+                 std::unique_ptr<Modifiers> modifiers, std::unique_ptr<Identifier> identifier,
                  std::unique_ptr<ParameterList> maybe_request,
                  std::unique_ptr<ParameterList> maybe_response,
                  std::unique_ptr<TypeConstructor> maybe_error_ctor)
       : SourceElement(element),
         attributes(std::move(attributes)),
+        modifiers(std::move(modifiers)),
         identifier(std::move(identifier)),
         maybe_request(std::move(maybe_request)),
         maybe_response(std::move(maybe_response)),
@@ -418,6 +471,7 @@ class ProtocolMethod : public SourceElement {
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<AttributeList> attributes;
+  std::unique_ptr<Modifiers> modifiers;
   std::unique_ptr<Identifier> identifier;
   std::unique_ptr<ParameterList> maybe_request;
   std::unique_ptr<ParameterList> maybe_response;
@@ -441,11 +495,12 @@ class ProtocolCompose final : public SourceElement {
 class ProtocolDeclaration final : public SourceElement {
  public:
   ProtocolDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
-                      std::unique_ptr<Identifier> identifier,
+                      std::unique_ptr<Modifiers> modifiers, std::unique_ptr<Identifier> identifier,
                       std::vector<std::unique_ptr<ProtocolCompose>> composed_protocols,
                       std::vector<std::unique_ptr<ProtocolMethod>> methods)
       : SourceElement(element),
         attributes(std::move(attributes)),
+        modifiers(std::move(modifiers)),
         identifier(std::move(identifier)),
         composed_protocols(std::move(composed_protocols)),
         methods(std::move(methods)) {}
@@ -453,6 +508,7 @@ class ProtocolDeclaration final : public SourceElement {
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<AttributeList> attributes;
+  std::unique_ptr<Modifiers> modifiers;
   std::unique_ptr<Identifier> identifier;
   std::vector<std::unique_ptr<ProtocolCompose>> composed_protocols;
   std::vector<std::unique_ptr<ProtocolMethod>> methods;
@@ -604,28 +660,6 @@ class StructLayoutMember final : public LayoutMember {
 
   std::unique_ptr<TypeConstructor> type_ctor;
   std::unique_ptr<Constant> default_value;
-};
-
-class Modifiers final : public SourceElement {
- public:
-  Modifiers(SourceElement const& element, std::optional<types::Resourceness> maybe_resourceness,
-            std::optional<Token> maybe_resourceness_token,
-            std::optional<types::Strictness> maybe_strictness,
-            std::optional<Token> maybe_strictness_token, bool resourceness_comes_first)
-      : SourceElement(element),
-        maybe_resourceness(maybe_resourceness),
-        maybe_resourceness_token(maybe_resourceness_token),
-        maybe_strictness(maybe_strictness),
-        maybe_strictness_token(maybe_strictness_token),
-        resourceness_comes_first(resourceness_comes_first) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::optional<types::Resourceness> maybe_resourceness;
-  std::optional<Token> maybe_resourceness_token;
-  std::optional<types::Strictness> maybe_strictness;
-  std::optional<Token> maybe_strictness_token;
-  bool resourceness_comes_first;
 };
 
 class Layout final : public SourceElement {

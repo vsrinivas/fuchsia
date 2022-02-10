@@ -664,7 +664,7 @@ Linter::Linter()
               {
                   {"TYPE", layout_kind},
                   {"STRICTNESS",
-                   std::string(element.modifiers->maybe_strictness_token->span().data())},
+                   std::string(element.modifiers->maybe_strictness->token.span().data())},
               },
               "move '${STRICTNESS}' modifier before resource modifier for ${TYPE}", "");
         }

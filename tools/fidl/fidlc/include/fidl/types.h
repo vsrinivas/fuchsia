@@ -30,6 +30,12 @@ enum struct Resourceness {
   kResource,
 };
 
+enum struct Openness {
+  kClosed,
+  kAjar,
+  kOpen,
+};
+
 // TODO(fxbug.dev/51002): zircon/types.h's zx_obj_type_t and related values must be
 // kept in sync with this. Eventually, they will be generated from
 // fidl declarations. This is currently tested by fidl-compiler's

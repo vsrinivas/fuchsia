@@ -222,9 +222,8 @@ class Parser {
     return [expected_subkind](const Token& actual) -> std::unique_ptr<Diagnostic> {
       auto expected = Token::KindAndSubkind(Token::Kind::kIdentifier, expected_subkind);
       if (actual.kind_and_subkind().combined() != expected.combined()) {
-        return Diagnostic::MakeError(
-            ErrUnexpectedIdentifier, actual.span(), actual.kind_and_subkind(),
-            Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::kNone));
+        return Diagnostic::MakeError(ErrUnexpectedIdentifier, actual.span(),
+                                     actual.kind_and_subkind(), expected);
       }
       return nullptr;
     };
@@ -256,11 +255,15 @@ class Parser {
     };
     if (!(std::is_same_v<types::Strictness, Allowlist> || ...) &&
         modifiers->maybe_strictness != std::nullopt) {
-      fail(modifiers->maybe_strictness_token);
+      fail(modifiers->maybe_strictness->token);
     }
     if (!(std::is_same_v<types::Resourceness, Allowlist> || ...) &&
         modifiers->maybe_resourceness != std::nullopt) {
-      fail(modifiers->maybe_resourceness_token);
+      fail(modifiers->maybe_resourceness->token);
+    }
+    if (!(std::is_same_v<types::Openness, Allowlist> || ...) &&
+        modifiers->maybe_openness != std::nullopt) {
+      fail(modifiers->maybe_openness->token);
     }
   }
 
@@ -286,10 +289,11 @@ class Parser {
 
   std::unique_ptr<raw::ParameterList> ParseParameterList();
   std::unique_ptr<raw::ProtocolMethod> ParseProtocolEvent(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope);
+      std::unique_ptr<raw::AttributeList> attributes, std::unique_ptr<raw::Modifiers> modifiers,
+      ASTScope& scope);
   std::unique_ptr<raw::ProtocolMethod> ParseProtocolMethod(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
-      std::unique_ptr<raw::Identifier> method_name);
+      std::unique_ptr<raw::AttributeList> attributes, std::unique_ptr<raw::Modifiers> modifiers,
+      std::unique_ptr<raw::Identifier> method_name, ASTScope& scope);
   std::unique_ptr<raw::ProtocolCompose> ParseProtocolCompose(
       std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope);
   // ParseProtocolMember parses any one protocol member, i.e. an event,

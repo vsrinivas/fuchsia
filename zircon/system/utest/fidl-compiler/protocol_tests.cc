@@ -27,31 +27,115 @@ protocol Empty {};
   ASSERT_NOT_NULL(protocol);
 
   EXPECT_EQ(protocol->methods.size(), 0);
+  EXPECT_EQ(protocol->openness, fidl::types::Openness::kAjar);
   EXPECT_EQ(protocol->all_methods.size(), 0);
 }
 
-TEST(ProtocolTests, GoodValidComposeMethod) {
+TEST(ProtocolTests, GoodValidEmptyOpenProtocol) {
   TestLibrary library(R"FIDL(library example;
 
-protocol HasComposeMethod1 {
-    compose();
-};
-
-protocol HasComposeMethod2 {
-    compose() -> ();
-};
+open protocol Empty {};
 )FIDL");
   ASSERT_COMPILED(library);
 
-  auto protocol1 = library.LookupProtocol("HasComposeMethod1");
-  ASSERT_NOT_NULL(protocol1);
-  EXPECT_EQ(protocol1->methods.size(), 1);
-  EXPECT_EQ(protocol1->all_methods.size(), 1);
+  auto protocol = library.LookupProtocol("Empty");
+  ASSERT_NOT_NULL(protocol);
 
-  auto protocol2 = library.LookupProtocol("HasComposeMethod2");
-  ASSERT_NOT_NULL(protocol2);
-  EXPECT_EQ(protocol2->methods.size(), 1);
-  EXPECT_EQ(protocol2->all_methods.size(), 1);
+  EXPECT_EQ(protocol->methods.size(), 0);
+  EXPECT_EQ(protocol->openness, fidl::types::Openness::kOpen);
+  EXPECT_EQ(protocol->all_methods.size(), 0);
+}
+
+TEST(ProtocolTests, GoodValidEmptyAjarProtocol) {
+  TestLibrary library(R"FIDL(library example;
+
+ajar protocol Empty {};
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto protocol = library.LookupProtocol("Empty");
+  ASSERT_NOT_NULL(protocol);
+
+  EXPECT_EQ(protocol->methods.size(), 0);
+  EXPECT_EQ(protocol->openness, fidl::types::Openness::kAjar);
+  EXPECT_EQ(protocol->all_methods.size(), 0);
+}
+
+TEST(ProtocolTests, GoodValidEmptyClosedProtocol) {
+  TestLibrary library(R"FIDL(library example;
+
+closed protocol Empty {};
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto protocol = library.LookupProtocol("Empty");
+  ASSERT_NOT_NULL(protocol);
+
+  EXPECT_EQ(protocol->methods.size(), 0);
+  EXPECT_EQ(protocol->openness, fidl::types::Openness::kClosed);
+  EXPECT_EQ(protocol->all_methods.size(), 0);
+}
+
+TEST(ProtocolTests, BadEmptyStrictProtocol) {
+  TestLibrary library(R"FIDL(
+library example;
+
+strict protocol Empty {};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
+}
+
+TEST(ProtocolTests, BadEmptyFlexibleProtocol) {
+  TestLibrary library(R"FIDL(
+library example;
+
+flexible protocol Empty {};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
+}
+
+TEST(ProtocolTests, BadOpenMissingProtocolToken) {
+  TestLibrary library(R"FIDL(
+library example;
+
+open Empty {};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
+}
+
+TEST(ProtocolTests, BadAjarMissingProtocolToken) {
+  TestLibrary library(R"FIDL(
+library example;
+
+ajar Empty {};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
+}
+
+TEST(ProtocolTests, BadClosedMissingProtocolToken) {
+  TestLibrary library(R"FIDL(
+library example;
+
+closed Empty {};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
+}
+
+TEST(ProtocolTests, BadEmptyProtocolMember) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Example {
+  ;
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
 }
 
 TEST(ProtocolTests, GoodValidProtocolComposition) {
@@ -98,6 +182,58 @@ protocol D {
   ASSERT_NOT_NULL(protocol_d);
   EXPECT_EQ(protocol_d->methods.size(), 1);
   EXPECT_EQ(protocol_d->all_methods.size(), 4);
+}
+
+TEST(ProtocolTests, BadModifierStrictOnCompose) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol A {};
+
+protocol B {
+  strict compose A;
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+TEST(ProtocolTests, BadModifierFlexibleOnCompose) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol A {};
+
+protocol B {
+  flexible compose A;
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+TEST(ProtocolTests, BadModifierStrictOnInvalidMember) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Example {
+  strict;
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
+}
+
+TEST(ProtocolTests, BadModifierFlexibleOnInvalidMember) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Example {
+  flexible;
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
 }
 
 TEST(ProtocolTests, BadColonNotSupported) {
@@ -247,6 +383,18 @@ protocol NoMoreOrdinals {
 
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
+}
+
+TEST(ProtocolTests, BadEmptyNamedItem) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol NoMoreOrdinals {
+    NotActuallyAMethod;
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
 }
 
 TEST(ProtocolTests, BadNoOtherPragmaThanCompose) {

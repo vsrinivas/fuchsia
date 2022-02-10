@@ -553,16 +553,25 @@ void ConsumeStep::ConsumeProtocolDeclaration(
       }
     }
 
+    auto strictness = types::Strictness::kFlexible;
+    if (method->modifiers != nullptr && method->modifiers->maybe_strictness.has_value())
+      strictness = method->modifiers->maybe_strictness->value;
+
     assert(has_request || has_response);
-    methods.emplace_back(std::move(attributes), std::move(method->identifier), method_name,
-                         has_request, std::move(maybe_request), has_response,
+    methods.emplace_back(std::move(attributes), strictness, std::move(method->identifier),
+                         method_name, has_request, std::move(maybe_request), has_response,
                          std::move(maybe_response), has_error);
   }
 
   std::unique_ptr<AttributeList> attributes;
   ConsumeAttributeList(std::move(protocol_declaration->attributes), &attributes);
 
-  RegisterDecl(std::make_unique<Protocol>(std::move(attributes), std::move(protocol_name),
+  auto openness = types::Openness::kAjar;
+  if (protocol_declaration->modifiers != nullptr &&
+      protocol_declaration->modifiers->maybe_openness.has_value())
+    openness = protocol_declaration->modifiers->maybe_openness->value;
+
+  RegisterDecl(std::make_unique<Protocol>(std::move(attributes), openness, std::move(protocol_name),
                                           std::move(composed_protocols), std::move(methods)));
 }
 
@@ -702,8 +711,8 @@ bool ConsumeStep::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
   MaybeOverrideName(*attributes, context.get());
 
   auto strictness = types::Strictness::kFlexible;
-  if (layout->modifiers != nullptr)
-    strictness = layout->modifiers->maybe_strictness.value_or(types::Strictness::kFlexible);
+  if (layout->modifiers != nullptr && layout->modifiers->maybe_strictness.has_value())
+    strictness = layout->modifiers->maybe_strictness->value;
 
   if (layout->members.size() == 0) {
     if (!std::is_same<T, Enum>::value || strictness != types::Strictness::kFlexible)
@@ -748,12 +757,12 @@ bool ConsumeStep::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
   MaybeOverrideName(*attributes, context.get());
 
   auto strictness = types::Strictness::kFlexible;
-  if (layout->modifiers != nullptr)
-    strictness = layout->modifiers->maybe_strictness.value_or(types::Strictness::kFlexible);
+  if (layout->modifiers != nullptr && layout->modifiers->maybe_strictness.has_value())
+    strictness = layout->modifiers->maybe_strictness->value;
 
   auto resourceness = types::Resourceness::kValue;
-  if (layout->modifiers != nullptr && layout->modifiers->maybe_resourceness != std::nullopt)
-    resourceness = layout->modifiers->maybe_resourceness.value_or(types::Resourceness::kValue);
+  if (layout->modifiers != nullptr && layout->modifiers->maybe_resourceness.has_value())
+    resourceness = layout->modifiers->maybe_resourceness->value;
 
   Decl* decl = RegisterDecl(std::make_unique<T>(std::move(attributes),
                                                 context->ToName(library(), layout->span()),
@@ -794,8 +803,8 @@ bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
   MaybeOverrideName(*attributes, context.get());
 
   auto resourceness = types::Resourceness::kValue;
-  if (layout->modifiers != nullptr && layout->modifiers->maybe_resourceness != std::nullopt)
-    resourceness = layout->modifiers->maybe_resourceness.value_or(types::Resourceness::kValue);
+  if (layout->modifiers != nullptr && layout->modifiers->maybe_resourceness.has_value())
+    resourceness = layout->modifiers->maybe_resourceness->value;
 
   Decl* decl = RegisterDecl(std::make_unique<Struct>(std::move(attributes),
                                                      context->ToName(library(), layout->span()),

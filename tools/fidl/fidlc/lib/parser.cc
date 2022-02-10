@@ -606,7 +606,8 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
 }
 
 std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+    std::unique_ptr<raw::AttributeList> attributes, std::unique_ptr<raw::Modifiers> modifiers,
+    ASTScope& scope) {
   ConsumeToken(OfKind(Token::Kind::kArrow));
   if (!Ok())
     return Fail();
@@ -640,14 +641,14 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(
   assert(method_name);
   assert(response != nullptr);
 
-  return std::make_unique<raw::ProtocolMethod>(scope.GetSourceElement(), std::move(attributes),
-                                               std::move(method_name), std::move(request),
-                                               std::move(response), std::move(maybe_error));
+  return std::make_unique<raw::ProtocolMethod>(
+      scope.GetSourceElement(), std::move(attributes), std::move(modifiers), std::move(method_name),
+      std::move(request), std::move(response), std::move(maybe_error));
 }
 
 std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
-    std::unique_ptr<raw::Identifier> method_name) {
+    std::unique_ptr<raw::AttributeList> attributes, std::unique_ptr<raw::Modifiers> modifiers,
+    std::unique_ptr<raw::Identifier> method_name, ASTScope& scope) {
   auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
     *params_out = ParseParameterList();
     if (!Ok())
@@ -676,9 +677,9 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
   assert(method_name);
   assert(request != nullptr);
 
-  return std::make_unique<raw::ProtocolMethod>(scope.GetSourceElement(), std::move(attributes),
-                                               std::move(method_name), std::move(request),
-                                               std::move(maybe_response), std::move(maybe_error));
+  return std::make_unique<raw::ProtocolMethod>(
+      scope.GetSourceElement(), std::move(attributes), std::move(modifiers), std::move(method_name),
+      std::move(request), std::move(maybe_response), std::move(maybe_error));
 }
 
 std::unique_ptr<raw::ProtocolCompose> Parser::ParseProtocolCompose(
@@ -703,10 +704,13 @@ void Parser::ParseProtocolMember(
 
   switch (Peek().kind()) {
     case Token::Kind::kArrow: {
-      add(methods, [&] { return ParseProtocolEvent(std::move(attributes), scope); });
-      break;
+      add(methods, [&] {
+        return ParseProtocolEvent(std::move(attributes), /* modifiers= */ nullptr, scope);
+      });
+      return;
     }
     case Token::Kind::kIdentifier: {
+      std::unique_ptr<raw::Modifiers> modifiers;
       std::unique_ptr<raw::Identifier> method_name;
       if (Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kCompose)) {
         // There are two possibilities here: we are looking at the first token in a compose
@@ -717,7 +721,7 @@ void Parser::ParseProtocolMember(
         const auto compose_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kCompose));
         if (!Ok()) {
           Fail();
-          break;
+          return;
         }
 
         // If the `compose` identifier is not immediately followed by a left paren we assume that we
@@ -734,6 +738,54 @@ void Parser::ParseProtocolMember(
         // an Identifier source element.
         method_name = std::make_unique<raw::Identifier>(
             raw::SourceElement(compose_token.value(), compose_token.value()));
+      } else if (Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kStrict) ||
+                 Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kFlexible)) {
+        // There are two possibilities here: we are looking at a method or event with strictness
+        // modifier like `strict MyMethod(...);` or we are looking at a method
+        // that has unfortunately been named `flexible/strict(...);`. In either case we only expect
+        // one identifier, not a compound identifier, so we can just parse the identifier.
+        auto modifier_subkind = Peek().subkind();
+        auto maybe_modifier = ParseIdentifier();
+        if (!Ok()) {
+          Fail();
+          return;
+        }
+
+        if (Peek().kind() == Token::Kind::kLeftParen) {
+          // This is actually a method named `strict` or `flexible`.
+          method_name = std::move(maybe_modifier);
+        } else {
+          // This is a modifier on either an event or a method.
+          auto as_strictness = modifier_subkind == Token::Subkind::kFlexible
+                                   ? types::Strictness::kFlexible
+                                   : types::Strictness::kStrict;
+          modifiers = std::make_unique<raw::Modifiers>(
+              scope.GetSourceElement(),
+              raw::Modifier<types::Strictness>(as_strictness, maybe_modifier->start_));
+          switch (Peek().kind()) {
+            case Token::Kind::kArrow: {
+              add(methods, [&] {
+                return ParseProtocolEvent(std::move(attributes), std::move(modifiers), scope);
+              });
+              return;
+            }
+            case Token::Kind::kIdentifier: {
+              method_name = ParseIdentifier();
+              if (!Ok()) {
+                Fail();
+                return;
+              }
+              if (Peek().kind() != Token::Kind::kLeftParen) {
+                Fail(ErrUnrecognizedProtocolMember);
+                return;
+              }
+              break;
+            }
+            default:
+              Fail(ErrExpectedProtocolMember);
+              return;
+          }
+        }
       } else {
         method_name = ParseIdentifier();
         if (!Ok()) {
@@ -747,9 +799,10 @@ void Parser::ParseProtocolMember(
       }
 
       add(methods, [&] {
-        return ParseProtocolMethod(std::move(attributes), scope, std::move(method_name));
+        return ParseProtocolMethod(std::move(attributes), std::move(modifiers),
+                                   std::move(method_name), scope);
       });
-      break;
+      return;
     }
     default:
       Fail(ErrExpectedProtocolMember);
@@ -759,8 +812,36 @@ void Parser::ParseProtocolMember(
 
 std::unique_ptr<raw::ProtocolDeclaration> Parser::ParseProtocolDeclaration(
     std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+  std::unique_ptr<raw::Modifiers> modifiers;
   std::vector<std::unique_ptr<raw::ProtocolCompose>> composed_protocols;
   std::vector<std::unique_ptr<raw::ProtocolMethod>> methods;
+
+  if (Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kOpen) ||
+      Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kAjar) ||
+      Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kClosed)) {
+    auto modifier_subkind = Peek().subkind();
+    auto modifier = ParseIdentifier();
+    if (!Ok())
+      return Fail();
+
+    types::Openness as_openness;
+    switch (modifier_subkind) {
+      case Token::Subkind::kOpen:
+        as_openness = types::Openness::kOpen;
+        break;
+      case Token::Subkind::kAjar:
+        as_openness = types::Openness::kAjar;
+        break;
+      case Token::Subkind::kClosed:
+        as_openness = types::Openness::kClosed;
+        break;
+      default:
+        assert(false && "expected openness token");
+        return nullptr;
+    }
+    modifiers = std::make_unique<raw::Modifiers>(
+        scope.GetSourceElement(), raw::Modifier<types::Openness>(as_openness, modifier->start_));
+  }
 
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kProtocol));
   if (!Ok())
@@ -799,7 +880,7 @@ std::unique_ptr<raw::ProtocolDeclaration> Parser::ParseProtocolDeclaration(
     Fail();
 
   return std::make_unique<raw::ProtocolDeclaration>(
-      scope.GetSourceElement(), std::move(attributes), std::move(identifier),
+      scope.GetSourceElement(), std::move(attributes), std::move(modifiers), std::move(identifier),
       std::move(composed_protocols), std::move(methods));
 }
 
@@ -1308,10 +1389,8 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
     bool resourceness_comes_first = false;
     std::unique_ptr<raw::Modifiers> modifiers;
     std::unique_ptr<raw::CompoundIdentifier> identifier;
-    std::optional<types::Strictness> maybe_strictness = std::nullopt;
-    std::optional<Token> maybe_strictness_token = std::nullopt;
-    std::optional<types::Resourceness> maybe_resourceness = std::nullopt;
-    std::optional<Token> maybe_resourceness_token = std::nullopt;
+    std::optional<raw::Modifier<types::Strictness>> maybe_strictness = std::nullopt;
+    std::optional<raw::Modifier<types::Resourceness>> maybe_resourceness = std::nullopt;
 
     // Consume tokens until we get one that isn't a modifier, treating duplicates
     // and conflicts as immediately recovered errors. For conflicts (e.g. "strict
@@ -1327,11 +1406,11 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
           return Fail();
 
         // Special case: this is either a reference to a type named "flexible/strict/resource" (ex:
-        // `struct { foo resource; };`, or otherwise the first modifier on an inline type definition
-        // (ex: `struct { foo resource union {...}; };`).  The only way to decide which is which is
-        // to peek ahead: if the next token is not an identifier, we assume that the last parsed
-        // modifier is actually the identifier of a named value instead.  For example, if the next
-        // token after this one isn't an identifier, we're looking at something like:
+        // `struct { foo resource; };`), or otherwise the first modifier on an inline type
+        // definition (ex: `struct { foo resource union {...}; };`).  The only way to decide which
+        // is which is to peek ahead: if the next token is not an identifier, we assume that the
+        // last parsed modifier is actually the identifier of a named value instead.  For example,
+        // if the next token after this one isn't an identifier, we're looking at something like:
         //
         //   strict resource;
         //
@@ -1353,7 +1432,7 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
             auto as_strictness = modifier_subkind == Token::Subkind::kFlexible
                                      ? types::Strictness::kFlexible
                                      : types::Strictness::kStrict;
-            if (maybe_strictness == as_strictness) {
+            if (maybe_strictness.has_value() && maybe_strictness->value == as_strictness) {
               Fail(ErrDuplicateModifier, modifier_token, modifier_token.kind_and_subkind());
               RecoverOneError();
               break;
@@ -1367,12 +1446,12 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
               RecoverOneError();
               break;
             }
-            maybe_strictness = as_strictness;
-            maybe_strictness_token = maybe_modifier->start_;
+            maybe_strictness.emplace(as_strictness, maybe_modifier->start_);
             break;
           }
           case Token::Subkind::kResource: {
-            if (maybe_resourceness == types::Resourceness::kResource) {
+            if (maybe_resourceness.has_value() &&
+                maybe_resourceness->value == types::Resourceness::kResource) {
               Fail(ErrDuplicateModifier, modifier_token, modifier_token.kind_and_subkind());
               RecoverOneError();
               break;
@@ -1380,8 +1459,7 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
             if (maybe_strictness == std::nullopt) {
               resourceness_comes_first = true;
             }
-            maybe_resourceness = types::Resourceness::kResource;
-            maybe_resourceness_token = maybe_modifier->start_;
+            maybe_resourceness.emplace(types::Resourceness::kResource, maybe_modifier->start_);
             break;
           }
           default: {
@@ -1390,9 +1468,9 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
         }
       } else {
         if (maybe_strictness.has_value() || maybe_resourceness.has_value()) {
-          modifiers = std::make_unique<raw::Modifiers>(
-              layout_scope.GetSourceElement(), maybe_resourceness, maybe_resourceness_token,
-              maybe_strictness, maybe_strictness_token, resourceness_comes_first);
+          modifiers =
+              std::make_unique<raw::Modifiers>(layout_scope.GetSourceElement(), maybe_resourceness,
+                                               maybe_strictness, resourceness_comes_first);
         }
         break;
       }
@@ -1564,6 +1642,9 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         return More;
       }
 
+      case CASE_IDENTIFIER(Token::Subkind::kAjar):
+      case CASE_IDENTIFIER(Token::Subkind::kClosed):
+      case CASE_IDENTIFIER(Token::Subkind::kOpen):
       case CASE_IDENTIFIER(Token::Subkind::kProtocol): {
         done_with_library_imports = true;
         add(&protocol_declaration_list,
