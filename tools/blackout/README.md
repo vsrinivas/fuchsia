@@ -7,14 +7,14 @@ TODO(fxbug.dev/34494): write a guide for writing additional power failure tests 
 The tests are not built by default. They need to be included in your fx set line -
 
 ```
-fx set core.x64 --with //tools/blackout:all
+fx set core.x64 --with //tools/blackout
 fx build
 ```
 
 If you are using real hardware, you will likely want to be using a netbooted environment, in which case you will add the `--netboot` flag to your `fx set` line.
 
 ```
-fx set core.x64 --with //tools/blackout:all --netboot
+fx set core.x64 --with //tools/blackout --netboot
 ```
 
 The tests require a spare partition to operate on, because they format it (and partitions can't

@@ -10,7 +10,7 @@ group("tools") {
     ":test_infra",
     "//tools/auto_owners($host_toolchain)",
     "//tools/bindc:host($host_toolchain)",
-    "//tools/blackout:all",
+    "//tools/blackout",
     "//tools/bootserver_old:host($host_toolchain)",
     "//tools/build",
     "//tools/bundle_fetcher($host_toolchain)",

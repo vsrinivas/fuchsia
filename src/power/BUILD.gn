@@ -31,7 +31,7 @@ group("tests") {
     "power-manager:tests",
     "shutdown-shim/tests",
     "temperature-logger:tests",
-    "testing:all",
+    "testing",
     "thermd:tests",
   ]
 }

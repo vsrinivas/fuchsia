@@ -43,6 +43,6 @@ foreach(entry, font_pkg_entries) {
 }
 
 # Group of all the single-font packages.
-group("all") {
+group("packages") {
   deps = all_packages
 }

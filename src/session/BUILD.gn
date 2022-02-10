@@ -4,16 +4,16 @@
 
 group("session") {
   deps = [
-    "//src/session/bin:all",
-    "//src/session/lib:all",
-    "//src/session/tools:all",
+    "//src/session/bin",
+    "//src/session/lib",
+    "//src/session/tools",
   ]
 }
 
 group("examples") {
   testonly = true
 
-  deps = [ "//src/session/examples:all" ]
+  deps = [ "//src/session/examples" ]
 }
 
 group("tests") {
@@ -24,7 +24,7 @@ group("tests") {
     "//src/session/bin:tests",
     "//src/session/examples:tests",
     "//src/session/lib:tests",
-    "//src/session/tests:all",
+    "//src/session/tests",
     "//src/session/tools:tests",
   ]
 }
