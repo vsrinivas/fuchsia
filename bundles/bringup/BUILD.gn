@@ -58,6 +58,7 @@ group("tests") {
     "//zircon/system/utest/core:core-clock-bootfs-test",
     "//zircon/system/utest/core:core-elf-tls-bootfs-test",
     "//zircon/system/utest/core:core-event-pair-bootfs-test",
+    "//zircon/system/utest/core:core-exceptions-bootfs-test",
     "//zircon/system/utest/core:core-fifo-bootfs-test",
     "//zircon/system/utest/core:core-fpu-bootfs-test",
     "//zircon/system/utest/core:core-futex-bootfs-test",
