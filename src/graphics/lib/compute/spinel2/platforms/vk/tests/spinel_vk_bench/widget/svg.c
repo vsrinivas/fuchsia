@@ -439,7 +439,9 @@ impl_input(struct widget *                    widget,
                 fprintf(stdout,
                         "widget/svg.c.%s: %s\n",
                         __func__,
-                        svg.impl->is_srgb ? "SVG colors are sRGB" : "SVG colors are linear");
+                        svg.impl->is_srgb                                 //
+                          ? "SVG colors are sRGB and will be linearized"  //
+                          : "SVG colors will not be linearized");
                 break;
 
               case SURFACE_KEY_RIGHT:

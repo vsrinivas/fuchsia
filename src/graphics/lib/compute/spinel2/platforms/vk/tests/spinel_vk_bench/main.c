@@ -1295,7 +1295,7 @@ main(int argc, char * const argv[])
   //
   // create widgets
   //
-  widget_svg_t svg = widget_svg_create(svg_doc, true);
+  widget_svg_t svg = widget_svg_create(svg_doc, false);  // don't linearize SVG colors
 
   struct widget * ws[] =
   {
