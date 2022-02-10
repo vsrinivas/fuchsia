@@ -8,6 +8,8 @@
 #include <lib/zx/time.h>
 #include <zircon/device/audio.h>
 
+#include <map>
+#include <string>
 #include <vector>
 
 #include "src/media/audio/audio_core/process_config_loader.h"
@@ -35,18 +37,22 @@ class Stats {
     zx::duration max;
   };
 
-  std::vector<Var> Summarize() {
-    std::vector<Var> out;
-    for (auto [name, values] : all_) {
-      std::sort(values.begin(), values.end());
-      out.push_back(Var{
-          .name = name,
-          .min = values.front(),
-          .p10 = PercentileFromSorted(values, 10),
-          .p50 = PercentileFromSorted(values, 50),
-          .p90 = PercentileFromSorted(values, 90),
-          .max = values.back(),
-      });
+  // Returns a mapping from stage name to list of variables measured in that stage.
+  // Use a std::map so the keys are sorted.
+  std::map<std::string, std::vector<Var>> Summarize() {
+    std::map<std::string, std::vector<Var>> out;
+    for (auto& [stage_name, metrics] : all_) {
+      for (auto& [metric_name, values] : metrics) {
+        std::sort(values.begin(), values.end());
+        out[stage_name].push_back(Var{
+            .name = metric_name,
+            .min = values.front(),
+            .p10 = PercentileFromSorted(values, 10),
+            .p50 = PercentileFromSorted(values, 50),
+            .p90 = PercentileFromSorted(values, 90),
+            .max = values.back(),
+        });
+      }
     }
     return out;
   }
@@ -64,11 +70,11 @@ class Stats {
  private:
   void Add(const StageMetrics& metrics) {
     std::string name(std::string_view(metrics.name));
-    all_[name + ".wall"].push_back(metrics.wall_time);
-    all_[name + ".cpu"].push_back(metrics.cpu_time);
-    all_[name + ".queue"].push_back(metrics.queue_time);
-    all_[name + ".page_fault"].push_back(metrics.page_fault_time);
-    all_[name + ".kernel_locks"].push_back(metrics.kernel_lock_contention_time);
+    all_[name]["wall"].push_back(metrics.wall_time);
+    all_[name]["cpu"].push_back(metrics.cpu_time);
+    all_[name]["queue"].push_back(metrics.queue_time);
+    all_[name]["page_fault"].push_back(metrics.page_fault_time);
+    all_[name]["kernel_locks"].push_back(metrics.kernel_lock_contention_time);
   }
 
   static zx::duration PercentileFromSorted(const std::vector<zx::duration>& sorted,
@@ -90,7 +96,9 @@ class Stats {
   }
 
   std::string scenario_name_;
-  std::map<std::string, std::vector<zx::duration>> all_;
+  // Mapping from stage name => variable name => values.
+  // Use a map so keys are sorted.
+  std::map<std::string, std::map<std::string, std::vector<zx::duration>>> all_;
   perftest::TestCaseResults* perftest_result_;
 };
 
@@ -268,12 +276,10 @@ void OutputPipelineBenchmark::PrintLegend(zx::duration mix_period) {
       "    Metrics for a single %.2fms mix job, displayed in the following format:\n"
       "\n"
       "        config(N runs):\n"
-      "          stage1.metric1\n"
-      "            [min, 10pp, 50pp, 90pp, max]\n"
-      "          stage1.metric3\n"
-      "            [min, 10pp, 50pp, 90pp, max]\n"
-      "          stage2.metric1\n"
-      "            [min, 10pp, 50pp, 90pp, max]\n"
+      "          stage1\n"
+      "            metric1 [min, 10pp, 50pp, 90pp, max]\n"
+      "            metric2 [min, 10pp, 50pp, 90pp, max]\n"
+      "            metric3 [min, 10pp, 50pp, 90pp, max]\n"
       "          ...\n"
       "\n"
       "    The \"main\" stage covers the full mix job end-to-end, with\n"
@@ -389,10 +395,13 @@ void OutputPipelineBenchmark::Run(Scenario scenario, int64_t runs_per_scenario,
 
   if (print_summary) {
     printf("%s (%ld runs):\n", scenario.ToString().c_str(), runs_per_scenario);
-    for (auto& var : stats.Summarize()) {
-      printf("  %s\n", var.name.c_str());
-      printf("    [%10.3lf, %10.3lf, %10.3lf, %10.3lf, %10.3lf]\n", to_usecs(var.min),
-             to_usecs(var.p10), to_usecs(var.p50), to_usecs(var.p90), to_usecs(var.max));
+    for (auto& [stage_name, vars] : stats.Summarize()) {
+      printf("  %s\n", stage_name.c_str());
+      for (auto& var : vars) {
+        printf("    %-15s [%10.3lf, %10.3lf, %10.3lf, %10.3lf, %10.3lf]\n", var.name.c_str(),
+               to_usecs(var.min), to_usecs(var.p10), to_usecs(var.p50), to_usecs(var.p90),
+               to_usecs(var.max));
+      }
     }
 
     // This should never happen: we configure each input to cover the infinite past and
