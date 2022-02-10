@@ -220,7 +220,7 @@ impl ObjectManager {
         crypt: Arc<dyn Crypt>,
     ) -> Result<Arc<ObjectStore>, Error> {
         let store = self.store(store_object_id)?;
-        store.unlock(Some(crypt)).await?;
+        store.unlock(crypt).await?;
         Ok(store)
     }
 

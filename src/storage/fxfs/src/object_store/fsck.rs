@@ -369,6 +369,7 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
             .await?;
         }
 
+        // TODO(fxbug.dev/92275): This will panic if the store is already unlocked.
         let store = filesystem.object_manager().open_store(store_id, crypt).await?;
 
         store_scanner::scan_store(self, store.as_ref(), &store.root_objects()).await?;

@@ -539,7 +539,6 @@ impl Journal {
 
         let root_store = self.objects.root_store();
         root_store.on_replay_complete().await?;
-        root_store.unlock(None).await?;
         allocator.open().await?;
 
         // Configure the journal writer so that we can continue.

@@ -23,7 +23,7 @@ use {
             journal::checksum_list::ChecksumList,
             object_manager::ReservationUpdate,
             store_object_handle::DirectWriter,
-            transaction::{AllocatorMutation, AssocObj, Mutation, Options, Transaction},
+            transaction::{AllocatorMutation, AssocObj, LockKey, Mutation, Options, Transaction},
             tree, CachingObjectHandle, HandleOptions, ObjectStore,
         },
         range::RangeExt,
@@ -1005,6 +1005,10 @@ impl Mutations for SimpleAllocator {
         if !object_manager.needs_flush(self.object_id()) {
             return Ok(());
         }
+
+        let keys = [LockKey::flush(self.object_id())];
+        let _guard = debug_assert_not_too_long!(filesystem.write_lock(&keys));
+
         // TODO(csuter): This all needs to be atomic somehow. We'll need to use different
         // transactions for each stage, but we need make sure objects are cleaned up if there's a
         // failure.

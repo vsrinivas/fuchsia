@@ -195,7 +195,7 @@ impl FsckError {
             FsckError::AllocatedSizeMismatch(store_id, oid, expected, actual) => {
                 format!(
                     "Expected {} bytes allocated for object {} in store {}, but found {} bytes",
-                    expected, store_id, oid, actual
+                    expected, oid, store_id, actual
                 )
             }
             FsckError::AttributeOnDirectory(store_id, object_id) => {

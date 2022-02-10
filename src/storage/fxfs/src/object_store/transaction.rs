@@ -336,6 +336,9 @@ pub enum LockKey {
 
     /// Used to lock cached writes to an object attribute.
     CachedWrite { store_object_id: u64, object_id: u64, attribute_id: u64 },
+
+    /// Used to lock flushing an object.
+    Flush { object_id: u64 },
 }
 
 impl LockKey {
@@ -349,6 +352,10 @@ impl LockKey {
 
     pub fn cached_write(store_object_id: u64, object_id: u64, attribute_id: u64) -> Self {
         LockKey::CachedWrite { store_object_id, object_id, attribute_id }
+    }
+
+    pub fn flush(object_id: u64) -> Self {
+        LockKey::Flush { object_id }
     }
 }
 
