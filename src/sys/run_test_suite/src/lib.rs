@@ -143,7 +143,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
     mut running_suite: RunningSuite,
     suite_reporter: &SuiteReporter<'_>,
     log_opts: diagnostics::LogCollectionOptions,
-    cancel_fut: futures::future::Shared<F>,
+    cancel_fut: F,
 ) -> Result<Outcome, RunTestSuiteError> {
     let mut test_cases = HashMap::new();
     let mut test_case_reporters = HashMap::new();
@@ -156,284 +156,312 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
     let mut cancelled = false;
     let mut tasks = vec![];
 
-    loop {
-        let cancellation_or_event_result =
-            running_suite.next_event().boxed_local().or_cancelled(cancel_fut.clone()).await;
-        match cancellation_or_event_result {
-            Err(Cancelled) => {
-                cancelled = true;
-                break;
-            }
-            // stream completes normally.
-            Ok(None) => break,
-            Ok(Some(Err(e))) => {
-                suite_reporter.stopped(&output::ReportedOutcome::Error, Timestamp::Unknown).await?;
-                return Err(e);
-            }
-            Ok(Some(Ok(event))) => {
-                let timestamp = Timestamp::from_nanos(event.timestamp);
-                match event.payload.expect("event cannot be None") {
-                    ftest_manager::SuiteEventPayload::CaseFound(CaseFound {
-                        test_case_name,
-                        identifier,
-                    }) => {
-                        let case_reporter =
-                            suite_reporter.new_case(&test_case_name, &CaseId(identifier)).await?;
-                        test_cases.insert(identifier, test_case_name);
-                        test_case_reporters.insert(identifier, case_reporter);
-                    }
-                    ftest_manager::SuiteEventPayload::CaseStarted(CaseStarted { identifier }) => {
-                        let test_case_name = test_cases
-                            .get(&identifier)
-                            .ok_or(UnexpectedEventError::CaseStartedButNotFound { identifier })?
-                            .clone();
-                        let reporter = test_case_reporters.get(&identifier).unwrap();
-                        // TODO(fxbug.dev/79712): Record per-case runtime once we have an
-                        // accurate way to measure it.
-                        reporter.started(Timestamp::Unknown).await?;
-                        if test_cases_in_progress.contains(&identifier) {
-                            return Err(UnexpectedEventError::CaseStartedTwice {
-                                test_case_name,
-                                identifier,
-                            }
-                            .into());
-                        };
-                        test_cases_in_progress.insert(identifier);
-                    }
-                    ftest_manager::SuiteEventPayload::CaseArtifact(CaseArtifact {
-                        identifier,
-                        artifact,
-                    }) => match artifact {
-                        ftest_manager::Artifact::Stdout(socket) => {
-                            let (sender, mut recv) = mpsc::channel(1024);
-                            let t = fuchsia_async::Task::spawn(
-                                // TODO - this does some buffering that doesn't need to apply to
-                                // the directory reporter, probably move that logic to the live reporter
-                                test_diagnostics::collect_and_send_string_output(socket, sender),
-                            );
+    let colect_results_fut = async {
+        while let Some(event_result) = running_suite.next_event().await {
+            match event_result {
+                Err(e) => {
+                    suite_reporter
+                        .stopped(&output::ReportedOutcome::Error, Timestamp::Unknown)
+                        .await?;
+                    return Err(e);
+                }
+                Ok(event) => {
+                    let timestamp = Timestamp::from_nanos(event.timestamp);
+                    match event.payload.expect("event cannot be None") {
+                        ftest_manager::SuiteEventPayload::CaseFound(CaseFound {
+                            test_case_name,
+                            identifier,
+                        }) => {
+                            let case_reporter = suite_reporter
+                                .new_case(&test_case_name, &CaseId(identifier))
+                                .await?;
+                            test_cases.insert(identifier, test_case_name);
+                            test_case_reporters.insert(identifier, case_reporter);
+                        }
+                        ftest_manager::SuiteEventPayload::CaseStarted(CaseStarted {
+                            identifier,
+                        }) => {
+                            let test_case_name = test_cases
+                                .get(&identifier)
+                                .ok_or(UnexpectedEventError::CaseStartedButNotFound { identifier })?
+                                .clone();
                             let reporter = test_case_reporters.get(&identifier).unwrap();
-                            let mut stdout = reporter.new_artifact(&ArtifactType::Stdout).await?;
-                            let stdout_task = fuchsia_async::Task::spawn(async move {
-                                while let Some(msg) = recv.next().await {
-                                    stdout.write_all(msg.as_bytes())?;
+                            // TODO(fxbug.dev/79712): Record per-case runtime once we have an
+                            // accurate way to measure it.
+                            reporter.started(Timestamp::Unknown).await?;
+                            if test_cases_in_progress.contains(&identifier) {
+                                return Err(UnexpectedEventError::CaseStartedTwice {
+                                    test_case_name,
+                                    identifier,
                                 }
-                                stdout.flush()?;
-                                t.await?;
-                                Result::Ok::<(), anyhow::Error>(())
-                            });
-                            test_cases_output.entry(identifier).or_insert(vec![]).push(stdout_task);
+                                .into());
+                            };
+                            test_cases_in_progress.insert(identifier);
                         }
-                        ftest_manager::Artifact::Stderr(socket) => {
-                            let (sender, mut recv) = mpsc::channel(1024);
-                            let t = fuchsia_async::Task::spawn(
-                                test_diagnostics::collect_and_send_string_output(socket, sender),
-                            );
-                            let reporter = test_case_reporters.get_mut(&identifier).unwrap();
-                            let mut stderr = reporter.new_artifact(&ArtifactType::Stderr).await?;
-                            let stderr_task = fuchsia_async::Task::spawn(async move {
-                                while let Some(msg) = recv.next().await {
-                                    stderr.write_all(msg.as_bytes())?;
-                                }
-                                stderr.flush()?;
-                                t.await?;
-                                Result::Ok::<(), anyhow::Error>(())
-                            });
-                            test_cases_output.entry(identifier).or_insert(vec![]).push(stderr_task);
-                        }
-                        ftest_manager::Artifact::Log(_) => {
-                            warn!("WARN: per test case logs not supported yet")
-                        }
-                        ftest_manager::Artifact::Custom(artifact) => {
-                            warn!("Got a case custom artifact. Ignoring it.");
-                            if let Some(ftest_manager::DirectoryAndToken { token, .. }) =
-                                artifact.directory_and_token
-                            {
-                                // TODO(fxbug.dev/84882): Remove this signal once Overnet
-                                // supports automatically signalling EVENTPAIR_CLOSED when the
-                                // handle is closed.
-                                let _ = token
-                                    .signal_peer(fidl::Signals::empty(), fidl::Signals::USER_0);
-                            }
-                        }
-                        ftest_manager::ArtifactUnknown!() => {
-                            panic!("unknown artifact")
-                        }
-                    },
-                    ftest_manager::SuiteEventPayload::CaseStopped(CaseStopped {
-                        identifier,
-                        status,
-                    }) => {
-                        let test_case_name = test_cases
-                            .get(&identifier)
-                            .ok_or(UnexpectedEventError::CaseStoppedButNotFound { identifier })?;
-                        // when a case errors out we handle it as if it never completed
-                        if status != ftest_manager::CaseStatus::Error {
-                            test_cases_in_progress.remove(&identifier);
-                        }
-                        if let Some(tasks) = test_cases_output.remove(&identifier) {
-                            if status == ftest_manager::CaseStatus::TimedOut {
-                                for t in tasks {
-                                    if let Some(Err(e)) = t.now_or_never() {
-                                        error!(
-                                            "Cannot write output for {}: {:?}",
-                                            test_case_name, e
-                                        );
+                        ftest_manager::SuiteEventPayload::CaseArtifact(CaseArtifact {
+                            identifier,
+                            artifact,
+                        }) => match artifact {
+                            ftest_manager::Artifact::Stdout(socket) => {
+                                let (sender, mut recv) = mpsc::channel(1024);
+                                let t = fuchsia_async::Task::spawn(
+                                    // TODO - this does some buffering that doesn't need to apply to
+                                    // the directory reporter, probably move that logic to the live reporter
+                                    test_diagnostics::collect_and_send_string_output(
+                                        socket, sender,
+                                    ),
+                                );
+                                let reporter = test_case_reporters.get(&identifier).unwrap();
+                                let mut stdout =
+                                    reporter.new_artifact(&ArtifactType::Stdout).await?;
+                                let stdout_task = fuchsia_async::Task::spawn(async move {
+                                    while let Some(msg) = recv.next().await {
+                                        stdout.write_all(msg.as_bytes())?;
                                     }
-                                }
-                            } else {
-                                for t in tasks {
-                                    if let Err(e) = t.await {
-                                        error!(
-                                            "Cannot write output for {}: {:?}",
-                                            test_case_name, e
-                                        )
+                                    stdout.flush()?;
+                                    t.await?;
+                                    Result::Ok::<(), anyhow::Error>(())
+                                });
+                                test_cases_output
+                                    .entry(identifier)
+                                    .or_insert(vec![])
+                                    .push(stdout_task);
+                            }
+                            ftest_manager::Artifact::Stderr(socket) => {
+                                let (sender, mut recv) = mpsc::channel(1024);
+                                let t = fuchsia_async::Task::spawn(
+                                    test_diagnostics::collect_and_send_string_output(
+                                        socket, sender,
+                                    ),
+                                );
+                                let reporter = test_case_reporters.get_mut(&identifier).unwrap();
+                                let mut stderr =
+                                    reporter.new_artifact(&ArtifactType::Stderr).await?;
+                                let stderr_task = fuchsia_async::Task::spawn(async move {
+                                    while let Some(msg) = recv.next().await {
+                                        stderr.write_all(msg.as_bytes())?;
                                     }
-                                }
+                                    stderr.flush()?;
+                                    t.await?;
+                                    Result::Ok::<(), anyhow::Error>(())
+                                });
+                                test_cases_output
+                                    .entry(identifier)
+                                    .or_insert(vec![])
+                                    .push(stderr_task);
                             }
-                        }
-                        let reporter = test_case_reporters.get(&identifier).unwrap();
-                        // TODO(fxbug.dev/79712): Record per-case runtime once we have an
-                        // accurate way to measure it.
-                        reporter.stopped(&status.into(), Timestamp::Unknown).await?;
-                    }
-                    ftest_manager::SuiteEventPayload::CaseFinished(CaseFinished { identifier }) => {
-                        let reporter = test_case_reporters.remove(&identifier).unwrap();
-                        reporter.finished().await?;
-                    }
-                    ftest_manager::SuiteEventPayload::SuiteArtifact(SuiteArtifact { artifact }) => {
-                        match artifact {
-                            ftest_manager::Artifact::Stdout(_) => {
-                                warn!("suite level stdout not supported yet");
+                            ftest_manager::Artifact::Log(_) => {
+                                warn!("WARN: per test case logs not supported yet")
                             }
-                            ftest_manager::Artifact::Stderr(_) => {
-                                warn!("suite level stderr not supported yet");
-                            }
-                            ftest_manager::Artifact::Log(syslog) => {
-                                let log_stream = test_diagnostics::LogStream::from_syslog(syslog)?;
-                                let mut log_artifact =
-                                    suite_reporter.new_artifact(&ArtifactType::Syslog).await?;
-                                let log_opts_clone = log_opts.clone();
-                                suite_log_tasks.push(fuchsia_async::Task::spawn(async move {
-                                    let (send, mut recv) = mpsc::channel(32);
-                                    let fut_1 = diagnostics::collect_logs(
-                                        log_stream,
-                                        send.into(),
-                                        log_opts_clone,
-                                    );
-                                    let fut_2 = async move {
-                                        while let Some(artifact) = recv.next().await {
-                                            let artifact_string = match artifact {
-                                                Artifact::SuiteLogMessage(s) => s,
-                                            };
-                                            writeln!(log_artifact, "{}", artifact_string)?;
-                                        }
-                                        Result::<_, std::io::Error>::Ok(())
-                                    };
-                                    let (outcome, _) = futures::future::join(fut_1, fut_2).await;
-                                    outcome
-                                }));
-                            }
-                            ftest_manager::Artifact::Custom(ftest_manager::CustomArtifact {
-                                directory_and_token,
-                                component_moniker,
-                                ..
-                            }) => {
-                                if let Some(ftest_manager::DirectoryAndToken {
-                                    directory,
-                                    token,
-                                    ..
-                                }) = directory_and_token
+                            ftest_manager::Artifact::Custom(artifact) => {
+                                warn!("Got a case custom artifact. Ignoring it.");
+                                if let Some(ftest_manager::DirectoryAndToken { token, .. }) =
+                                    artifact.directory_and_token
                                 {
-                                    let directory = directory.into_proxy()?;
-                                    let directory_artifact = suite_reporter
-                                        .new_directory_artifact(
-                                            &DirectoryArtifactType::Custom,
-                                            component_moniker,
-                                        )
-                                        .await?;
-
-                                    tasks.push(fasync::Task::spawn(async move {
-                                        if let Err(e) = read_custom_artifact_directory(
-                                            directory,
-                                            directory_artifact,
-                                        )
-                                        .await
-                                        {
-                                            warn!(
-                                                "Error reading suite artifact directory: {:?}",
-                                                e
-                                            );
-                                        }
-                                        // TODO(fxbug.dev/84882): Remove this signal once Overnet
-                                        // supports automatically signalling EVENTPAIR_CLOSED when the
-                                        // handle is closed.
-                                        let _ = token.signal_peer(
-                                            fidl::Signals::empty(),
-                                            fidl::Signals::USER_0,
-                                        );
-                                    }));
+                                    // TODO(fxbug.dev/84882): Remove this signal once Overnet
+                                    // supports automatically signalling EVENTPAIR_CLOSED when the
+                                    // handle is closed.
+                                    let _ = token
+                                        .signal_peer(fidl::Signals::empty(), fidl::Signals::USER_0);
                                 }
                             }
                             ftest_manager::ArtifactUnknown!() => {
                                 panic!("unknown artifact")
                             }
+                        },
+                        ftest_manager::SuiteEventPayload::CaseStopped(CaseStopped {
+                            identifier,
+                            status,
+                        }) => {
+                            let test_case_name = test_cases.get(&identifier).ok_or(
+                                UnexpectedEventError::CaseStoppedButNotFound { identifier },
+                            )?;
+                            // when a case errors out we handle it as if it never completed
+                            if status != ftest_manager::CaseStatus::Error {
+                                test_cases_in_progress.remove(&identifier);
+                            }
+                            if let Some(tasks) = test_cases_output.remove(&identifier) {
+                                if status == ftest_manager::CaseStatus::TimedOut {
+                                    for t in tasks {
+                                        if let Some(Err(e)) = t.now_or_never() {
+                                            error!(
+                                                "Cannot write output for {}: {:?}",
+                                                test_case_name, e
+                                            );
+                                        }
+                                    }
+                                } else {
+                                    for t in tasks {
+                                        if let Err(e) = t.await {
+                                            error!(
+                                                "Cannot write output for {}: {:?}",
+                                                test_case_name, e
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            let reporter = test_case_reporters.get(&identifier).unwrap();
+                            // TODO(fxbug.dev/79712): Record per-case runtime once we have an
+                            // accurate way to measure it.
+                            reporter.stopped(&status.into(), Timestamp::Unknown).await?;
+                        }
+                        ftest_manager::SuiteEventPayload::CaseFinished(CaseFinished {
+                            identifier,
+                        }) => {
+                            let reporter = test_case_reporters.remove(&identifier).unwrap();
+                            reporter.finished().await?;
+                        }
+                        ftest_manager::SuiteEventPayload::SuiteArtifact(SuiteArtifact {
+                            artifact,
+                        }) => {
+                            match artifact {
+                                ftest_manager::Artifact::Stdout(_) => {
+                                    warn!("suite level stdout not supported yet");
+                                }
+                                ftest_manager::Artifact::Stderr(_) => {
+                                    warn!("suite level stderr not supported yet");
+                                }
+                                ftest_manager::Artifact::Log(syslog) => {
+                                    let log_stream =
+                                        test_diagnostics::LogStream::from_syslog(syslog)?;
+                                    let mut log_artifact =
+                                        suite_reporter.new_artifact(&ArtifactType::Syslog).await?;
+                                    let log_opts_clone = log_opts.clone();
+                                    suite_log_tasks.push(fuchsia_async::Task::spawn(async move {
+                                        let (send, mut recv) = mpsc::channel(32);
+                                        let fut_1 = diagnostics::collect_logs(
+                                            log_stream,
+                                            send.into(),
+                                            log_opts_clone,
+                                        );
+                                        let fut_2 = async move {
+                                            while let Some(artifact) = recv.next().await {
+                                                let artifact_string = match artifact {
+                                                    Artifact::SuiteLogMessage(s) => s,
+                                                };
+                                                writeln!(log_artifact, "{}", artifact_string)?;
+                                            }
+                                            Result::<_, std::io::Error>::Ok(())
+                                        };
+                                        let (outcome, _) =
+                                            futures::future::join(fut_1, fut_2).await;
+                                        outcome
+                                    }));
+                                }
+                                ftest_manager::Artifact::Custom(
+                                    ftest_manager::CustomArtifact {
+                                        directory_and_token,
+                                        component_moniker,
+                                        ..
+                                    },
+                                ) => {
+                                    if let Some(ftest_manager::DirectoryAndToken {
+                                        directory,
+                                        token,
+                                        ..
+                                    }) = directory_and_token
+                                    {
+                                        let directory = directory.into_proxy()?;
+                                        let directory_artifact = suite_reporter
+                                            .new_directory_artifact(
+                                                &DirectoryArtifactType::Custom,
+                                                component_moniker,
+                                            )
+                                            .await?;
+
+                                        tasks.push(fasync::Task::spawn(async move {
+                                            if let Err(e) = read_custom_artifact_directory(
+                                                directory,
+                                                directory_artifact,
+                                            )
+                                            .await
+                                            {
+                                                warn!(
+                                                    "Error reading suite artifact directory: {:?}",
+                                                    e
+                                                );
+                                            }
+                                            // TODO(fxbug.dev/84882): Remove this signal once Overnet
+                                            // supports automatically signalling EVENTPAIR_CLOSED when the
+                                            // handle is closed.
+                                            let _ = token.signal_peer(
+                                                fidl::Signals::empty(),
+                                                fidl::Signals::USER_0,
+                                            );
+                                        }));
+                                    }
+                                }
+                                ftest_manager::ArtifactUnknown!() => {
+                                    panic!("unknown artifact")
+                                }
+                            }
+                        }
+                        ftest_manager::SuiteEventPayload::SuiteStarted(_) => {
+                            suite_reporter.started(timestamp).await?;
+                        }
+                        ftest_manager::SuiteEventPayload::SuiteStopped(SuiteStopped { status }) => {
+                            successful_completion = true;
+                            suite_finish_timestamp = timestamp;
+                            outcome = match status {
+                                ftest_manager::SuiteStatus::Passed => Outcome::Passed,
+                                ftest_manager::SuiteStatus::Failed => Outcome::Failed,
+                                ftest_manager::SuiteStatus::DidNotFinish => Outcome::Inconclusive,
+                                ftest_manager::SuiteStatus::TimedOut => Outcome::Timedout,
+                                ftest_manager::SuiteStatus::Stopped => Outcome::Failed,
+                                ftest_manager::SuiteStatus::InternalError => {
+                                    Outcome::error(UnexpectedEventError::InternalErrorSuiteStatus)
+                                }
+                                s => {
+                                    return Err(UnexpectedEventError::UnrecognizedSuiteStatus {
+                                        status: s,
+                                    }
+                                    .into());
+                                }
+                            };
+                        }
+                        ftest_manager::SuiteEventPayloadUnknown!() => {
+                            warn!("Encountered unrecognized suite event");
                         }
                     }
-                    ftest_manager::SuiteEventPayload::SuiteStarted(_) => {
-                        suite_reporter.started(timestamp).await?;
-                    }
-                    ftest_manager::SuiteEventPayload::SuiteStopped(SuiteStopped { status }) => {
-                        successful_completion = true;
-                        suite_finish_timestamp = timestamp;
-                        outcome = match status {
-                            ftest_manager::SuiteStatus::Passed => Outcome::Passed,
-                            ftest_manager::SuiteStatus::Failed => Outcome::Failed,
-                            ftest_manager::SuiteStatus::DidNotFinish => Outcome::Inconclusive,
-                            ftest_manager::SuiteStatus::TimedOut => Outcome::Timedout,
-                            ftest_manager::SuiteStatus::Stopped => Outcome::Failed,
-                            ftest_manager::SuiteStatus::InternalError => {
-                                Outcome::error(UnexpectedEventError::InternalErrorSuiteStatus)
-                            }
-                            s => {
-                                return Err(UnexpectedEventError::UnrecognizedSuiteStatus {
-                                    status: s,
-                                }
-                                .into());
-                            }
-                        };
-                    }
-                    ftest_manager::SuiteEventPayloadUnknown!() => {
-                        warn!("Encountered unrecognized suite event");
-                    }
                 }
             }
         }
-    }
 
-    // collect all logs
-    for t in suite_log_tasks {
-        match t.await {
-            Ok(r) => match r {
-                diagnostics::LogCollectionOutcome::Error { restricted_logs } => {
-                    let mut log_artifact =
-                        suite_reporter.new_artifact(&ArtifactType::RestrictedLog).await?;
-                    for log in restricted_logs.iter() {
-                        writeln!(log_artifact, "{}", log)?;
+        // collect all logs
+        for t in suite_log_tasks {
+            match t.await {
+                Ok(r) => match r {
+                    diagnostics::LogCollectionOutcome::Error { restricted_logs } => {
+                        let mut log_artifact =
+                            suite_reporter.new_artifact(&ArtifactType::RestrictedLog).await?;
+                        for log in restricted_logs.iter() {
+                            writeln!(log_artifact, "{}", log)?;
+                        }
+                        if Outcome::Passed == outcome {
+                            outcome = Outcome::Failed;
+                        }
                     }
-                    if Outcome::Passed == outcome {
-                        outcome = Outcome::Failed;
-                    }
+                    diagnostics::LogCollectionOutcome::Passed => {}
+                },
+                Err(e) => {
+                    println!("Failed to collect logs: {:?}", e);
                 }
-                diagnostics::LogCollectionOutcome::Passed => {}
-            },
-            Err(e) => {
-                println!("Failed to collect logs: {:?}", e);
             }
         }
-    }
 
-    for t in tasks.into_iter() {
-        let _ = t.or_cancelled(cancel_fut.clone()).await;
+        for t in tasks.into_iter() {
+            t.await;
+        }
+        Ok(())
+    };
+
+    match colect_results_fut.boxed_local().or_cancelled(cancel_fut).await {
+        Ok(Ok(())) => (),
+        Ok(Err(e)) => return Err(e),
+        Err(Cancelled) => {
+            cancelled = true;
+        }
     }
 
     // TODO(fxbug.dev/90037) - unless the suite was cancelled, this indicates an internal error.
