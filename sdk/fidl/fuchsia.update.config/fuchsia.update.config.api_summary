@@ -1,0 +1,14 @@
+protocol/member fuchsia.update.config/OptOut.Get() -> (fuchsia.update.config/OptOutPreference value)
+protocol fuchsia.update.config/OptOut
+protocol/member fuchsia.update.config/OptOutAdmin.Set(fuchsia.update.config/OptOutPreference value) -> (fuchsia.update.config/OptOutAdmin_Set_Result result)
+protocol fuchsia.update.config/OptOutAdmin
+enum/member fuchsia.update.config/OptOutAdminError.INTERNAL 1
+flexible enum fuchsia.update.config/OptOutAdminError uint32
+struct fuchsia.update.config/OptOutAdmin_Set_Response
+union/member fuchsia.update.config/OptOutAdmin_Set_Result.err fuchsia.update.config/OptOutAdminError
+union/member fuchsia.update.config/OptOutAdmin_Set_Result.response fuchsia.update.config/OptOutAdmin_Set_Response
+strict union fuchsia.update.config/OptOutAdmin_Set_Result
+enum/member fuchsia.update.config/OptOutPreference.ALLOW_ALL_UPDATES 1
+enum/member fuchsia.update.config/OptOutPreference.ALLOW_ONLY_SECURITY_UPDATES 2
+strict enum fuchsia.update.config/OptOutPreference uint32
+library fuchsia.update.config
