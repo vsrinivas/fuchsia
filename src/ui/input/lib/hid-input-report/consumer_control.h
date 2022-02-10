@@ -16,15 +16,15 @@ class ConsumerControl : public Device {
   ParseResult CreateDescriptor(fidl::AnyArena& allocator,
                                fuchsia_input_report::wire::DeviceDescriptor& descriptor) override;
 
-  ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
-                               fuchsia_input_report::wire::InputReport& inputreport) override;
-
-  uint8_t InputReportId() const override { return input_report_id_; }
+  std::optional<uint8_t> InputReportId() const override { return input_report_id_; }
 
   DeviceType GetDeviceType() const override { return DeviceType::kConsumerControl; }
 
  private:
   ParseResult ParseInputReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor);
+  ParseResult ParseInputReportInternal(
+      const uint8_t* data, size_t len, fidl::AnyArena& allocator,
+      fuchsia_input_report::wire::InputReport& inputreport) override;
 
   // Fields for the input reports.
   size_t num_buttons_ = 0;

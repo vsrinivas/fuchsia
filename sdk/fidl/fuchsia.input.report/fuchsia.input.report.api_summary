@@ -47,6 +47,7 @@ enum/member fuchsia.input.report/DeviceType.SENSOR 1
 enum/member fuchsia.input.report/DeviceType.TOUCH 2
 strict enum fuchsia.input.report/DeviceType uint32
 table/member fuchsia.input.report/FeatureReport.sensor fuchsia.input.report/SensorFeatureReport
+table/member fuchsia.input.report/FeatureReport.touch fuchsia.input.report/TouchFeatureReport
 table fuchsia.input.report/FeatureReport
 protocol/member fuchsia.input.report/InputDevice.GetDescriptor() -> (fuchsia.input.report/DeviceDescriptor descriptor)
 protocol/member fuchsia.input.report/InputDevice.GetFeatureReport() -> (fuchsia.input.report/InputDevice_GetFeatureReport_Result result)
@@ -138,6 +139,9 @@ struct/member fuchsia.input.report/Range.max int64
 struct/member fuchsia.input.report/Range.min int64
 struct fuchsia.input.report/Range
 const fuchsia.input.report/SENSOR_MAX_VALUES uint32 100
+table/member fuchsia.input.report/SelectiveReportingFeatureReport.button_switch bool
+table/member fuchsia.input.report/SelectiveReportingFeatureReport.surface_switch bool
+table fuchsia.input.report/SelectiveReportingFeatureReport
 struct/member fuchsia.input.report/SensorAxis.axis fuchsia.input.report/Axis
 struct/member fuchsia.input.report/SensorAxis.type fuchsia.input.report/SensorType
 struct fuchsia.input.report/SensorAxis
@@ -184,8 +188,18 @@ enum/member fuchsia.input.report/SensorType.MAGNETOMETER_Z 6
 strict enum fuchsia.input.report/SensorType uint32
 const fuchsia.input.report/TOUCH_MAX_CONTACTS uint32 10
 const fuchsia.input.report/TOUCH_MAX_NUM_BUTTONS uint32 10
+enum/member fuchsia.input.report/TouchConfigurationInputMode.MOUSE_COLLECTION 0
+enum/member fuchsia.input.report/TouchConfigurationInputMode.WINDOWS_PRECISION_TOUCHPAD_COLLECTION 3
+strict enum fuchsia.input.report/TouchConfigurationInputMode uint32
+table/member fuchsia.input.report/TouchDescriptor.feature fuchsia.input.report/TouchFeatureDescriptor
 table/member fuchsia.input.report/TouchDescriptor.input fuchsia.input.report/TouchInputDescriptor
 table fuchsia.input.report/TouchDescriptor
+table/member fuchsia.input.report/TouchFeatureDescriptor.supports_input_mode bool
+table/member fuchsia.input.report/TouchFeatureDescriptor.supports_selective_reporting bool
+table fuchsia.input.report/TouchFeatureDescriptor
+table/member fuchsia.input.report/TouchFeatureReport.input_mode fuchsia.input.report/TouchConfigurationInputMode
+table/member fuchsia.input.report/TouchFeatureReport.selective_reporting fuchsia.input.report/SelectiveReportingFeatureReport
+table fuchsia.input.report/TouchFeatureReport
 table/member fuchsia.input.report/TouchInputDescriptor.buttons vector<uint8>:10
 table/member fuchsia.input.report/TouchInputDescriptor.contacts vector<fuchsia.input.report/ContactInputDescriptor>:10
 table/member fuchsia.input.report/TouchInputDescriptor.max_contacts uint32

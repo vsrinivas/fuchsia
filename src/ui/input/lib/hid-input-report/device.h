@@ -51,9 +51,11 @@ class Device {
 
   virtual ParseResult ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) = 0;
 
-  virtual ParseResult SetOutputReport(const fuchsia_input_report::wire::OutputReport* report,
-                                      uint8_t* data, size_t data_size, size_t* data_out_size) {
-    return ParseResult::kNotImplemented;
+  ParseResult SetOutputReport(const fuchsia_input_report::wire::OutputReport* report, uint8_t* data,
+                              size_t data_size, size_t* data_out_size) {
+    return OutputReportId().has_value()
+               ? SetOutputReportInternal(report, data, data_size, data_out_size)
+               : ParseResult::kNotImplemented;
   }
 
   virtual ParseResult CreateDescriptor(fidl::AnyArena& allocator,
@@ -61,13 +63,57 @@ class Device {
     return ParseResult::kNotImplemented;
   }
 
-  virtual ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
-                                       fuchsia_input_report::wire::InputReport& input_report) {
+  ParseResult ParseFeatureReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
+                                 fuchsia_input_report::wire::FeatureReport& feature_report) {
+    return FeatureReportId().has_value()
+               ? ParseFeatureReportInternal(data, len, allocator, feature_report)
+               : ParseResult::kNotImplemented;
+  }
+
+  ParseResult SetFeatureReport(const fuchsia_input_report::wire::FeatureReport* report,
+                               uint8_t* data, size_t data_size, size_t* data_out_size) {
+    return FeatureReportId().has_value()
+               ? SetFeatureReportInternal(report, data, data_size, data_out_size)
+               : ParseResult::kNotImplemented;
+  }
+
+  ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
+                               fuchsia_input_report::wire::InputReport& input_report) {
+    return InputReportId().has_value()
+               ? ParseInputReportInternal(data, len, allocator, input_report)
+               : ParseResult::kNotImplemented;
+  }
+
+  virtual std::optional<uint8_t> InputReportId() const { return std::nullopt; }
+  virtual std::optional<uint8_t> OutputReportId() const { return std::nullopt; }
+  virtual std::optional<uint8_t> FeatureReportId() const { return std::nullopt; }
+
+  virtual DeviceType GetDeviceType() const = 0;
+
+ private:
+  virtual ParseResult SetOutputReportInternal(
+      const fuchsia_input_report::wire::OutputReport* report, uint8_t* data, size_t data_size,
+      size_t* data_out_size) {
     return ParseResult::kNotImplemented;
   }
 
-  virtual uint8_t InputReportId() const = 0;
-  virtual DeviceType GetDeviceType() const = 0;
+  virtual ParseResult ParseFeatureReportInternal(
+      const uint8_t* data, size_t len, fidl::AnyArena& allocator,
+      fuchsia_input_report::wire::FeatureReport& feature_report) {
+    return ParseResult::kNotImplemented;
+  }
+
+  virtual ParseResult SetFeatureReportInternal(
+      const fuchsia_input_report::wire::FeatureReport* report, uint8_t* data, size_t data_size,
+      size_t* data_out_size) {
+    return ParseResult::kNotImplemented;
+  }
+
+  virtual ParseResult ParseInputReportInternal(
+      const uint8_t* data, size_t len, fidl::AnyArena& allocator,
+      fuchsia_input_report::wire::InputReport& input_report) {
+    return ParseResult::kNotImplemented;
+  }
 };
 
 // Create `out_device` from a HID descriptor. `out_device` is returned fully formed,

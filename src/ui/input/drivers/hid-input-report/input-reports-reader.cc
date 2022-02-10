@@ -86,13 +86,18 @@ void InputReportsReader::ReceiveReport(const uint8_t* raw_report, size_t raw_rep
 
   fuchsia_input_report::wire::InputReport report(report_allocator_);
 
+  if (!device->InputReportId().has_value()) {
+    zxlogf(ERROR, "ReceiveReport: Device cannot receive input reports\n");
+    return;
+  }
+
   if (device->ParseInputReport(raw_report, raw_report_size, report_allocator_, report) !=
       hid_input_report::ParseResult::kOk) {
     zxlogf(ERROR, "ReceiveReport: Device failed to parse report correctly\n");
     return;
   }
 
-  report.set_report_id(device->InputReportId());
+  report.set_report_id(*device->InputReportId());
   report.set_event_time(report_allocator_, time);
   report.set_trace_id(report_allocator_, TRACE_NONCE());
 

@@ -16,14 +16,15 @@ class Mouse : public Device {
   ParseResult CreateDescriptor(fidl::AnyArena& allocator,
                                fuchsia_input_report::wire::DeviceDescriptor& descriptor) override;
 
-  ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
-                               fuchsia_input_report::wire::InputReport& input_report) override;
-
-  uint8_t InputReportId() const override { return report_id_; }
+  std::optional<uint8_t> InputReportId() const override { return report_id_; }
 
   DeviceType GetDeviceType() const override { return DeviceType::kMouse; }
 
  private:
+  ParseResult ParseInputReportInternal(
+      const uint8_t* data, size_t len, fidl::AnyArena& allocator,
+      fuchsia_input_report::wire::InputReport& input_report) override;
+
   std::optional<hid::Attributes> movement_x_;
   std::optional<hid::Attributes> movement_y_;
   std::optional<hid::Attributes> position_x_;

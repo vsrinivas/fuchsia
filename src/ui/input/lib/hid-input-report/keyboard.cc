@@ -153,8 +153,9 @@ ParseResult Keyboard::CreateDescriptor(fidl::AnyArena& allocator,
   return ParseResult::kOk;
 }
 
-ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
-                                       fuchsia_input_report::wire::InputReport& input_report) {
+ParseResult Keyboard::ParseInputReportInternal(
+    const uint8_t* data, size_t len, fidl::AnyArena& allocator,
+    fuchsia_input_report::wire::InputReport& input_report) {
   if (len != input_report_size_) {
     return ParseResult::kReportSizeMismatch;
   }
@@ -206,8 +207,9 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, fidl::An
   return ParseResult::kOk;
 }
 
-ParseResult Keyboard::SetOutputReport(const fuchsia_input_report::wire::OutputReport* report,
-                                      uint8_t* data, size_t data_size, size_t* data_out_size) {
+ParseResult Keyboard::SetOutputReportInternal(
+    const fuchsia_input_report::wire::OutputReport* report, uint8_t* data, size_t data_size,
+    size_t* data_out_size) {
   if (!report->has_keyboard()) {
     return ParseResult::kNotImplemented;
   }

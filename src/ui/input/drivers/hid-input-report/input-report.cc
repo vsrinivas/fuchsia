@@ -107,9 +107,13 @@ bool InputReport::ParseHidInputReportDescriptor(const hid::ReportDescriptor* rep
 void InputReport::SendInitialConsumerControlReport(InputReportsReader* reader) {
   for (auto& device : devices_) {
     if (device->GetDeviceType() == hid_input_report::DeviceType::kConsumerControl) {
+      if (!device->InputReportId().has_value()) {
+        continue;
+      }
+
       std::array<uint8_t, HID_MAX_REPORT_LEN> report_data;
       size_t report_size = 0;
-      zx_status_t status = hiddev_.GetReport(HID_REPORT_TYPE_INPUT, device->InputReportId(),
+      zx_status_t status = hiddev_.GetReport(HID_REPORT_TYPE_INPUT, *device->InputReportId(),
                                              report_data.data(), report_data.size(), &report_size);
       if (status != ZX_OK) {
         continue;
@@ -228,6 +232,81 @@ void InputReport::SendOutputReport(SendOutputReportRequestView request,
   completer.ReplySuccess();
 }
 
+void InputReport::GetFeatureReport(GetFeatureReportRequestView request,
+                                   GetFeatureReportCompleter::Sync& completer) {
+  fidl::Arena<kFidlDescriptorBufferSize> allocator;
+  fuchsia_input_report::wire::FeatureReport report(allocator);
+
+  for (auto& device : devices_) {
+    if (!device->FeatureReportId().has_value()) {
+      continue;
+    }
+
+    std::array<uint8_t, HID_MAX_REPORT_LEN> report_data;
+    size_t report_size = 0;
+    auto status = hiddev_.GetReport(HID_REPORT_TYPE_FEATURE, *device->FeatureReportId(),
+                                    report_data.data(), report_data.size(), &report_size);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "GetReport failed %d", status);
+      completer.ReplyError(status);
+      return;
+    }
+
+    auto result = device->ParseFeatureReport(report_data.data(), report_size, allocator, report);
+    if (result != hid_input_report::ParseResult::kOk &&
+        result != hid_input_report::ParseResult::kNotImplemented) {
+      zxlogf(ERROR, "ParseFeatureReport failed with %u", result);
+      completer.ReplyError(ZX_ERR_INTERNAL);
+      return;
+    }
+  }
+
+  fidl::Result result = completer.ReplySuccess(std::move(report));
+  if (result.status() != ZX_OK) {
+    zxlogf(ERROR, "Failed to get feature report: %s\n", result.FormatDescription().c_str());
+  }
+}
+
+void InputReport::SetFeatureReport(SetFeatureReportRequestView request,
+                                   SetFeatureReportCompleter::Sync& completer) {
+  bool found = false;
+  for (auto& device : devices_) {
+    if (!device->FeatureReportId().has_value()) {
+      continue;
+    }
+
+    uint8_t hid_report[HID_MAX_DESC_LEN];
+    size_t size;
+    auto result = device->SetFeatureReport(&request->report, hid_report, sizeof(hid_report), &size);
+    if (result == hid_input_report::ParseResult::kNotImplemented ||
+        result == hid_input_report::ParseResult::kItemNotFound) {
+      continue;
+    }
+    if (result != hid_input_report::ParseResult::kOk) {
+      zxlogf(ERROR, "SetFeatureReport failed with %u", result);
+      completer.ReplyError(ZX_ERR_INTERNAL);
+      return;
+    }
+    zx_status_t status =
+        hiddev_.SetReport(HID_REPORT_TYPE_FEATURE, *device->FeatureReportId(), hid_report, size);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "SetReport failed with %u", status);
+      completer.ReplyError(status);
+      return;
+    }
+    found = true;
+  }
+
+  if (!found) {
+    completer.ReplyError(ZX_ERR_INTERNAL);
+    return;
+  }
+  fidl::Result result = completer.ReplySuccess();
+  if (result.status() != ZX_OK) {
+    zxlogf(ERROR, "Failed to set feature report: %s\n", result.FormatDescription().c_str());
+  }
+}
+
 void InputReport::GetInputReport(GetInputReportRequestView request,
                                  GetInputReportCompleter::Sync& completer) {
   const auto device_type = InputReportDeviceTypeToHid(request->device_type);
@@ -240,6 +319,9 @@ void InputReport::GetInputReport(GetInputReportRequestView request,
   fuchsia_input_report::wire::InputReport report(allocator);
 
   for (auto& device : devices_) {
+    if (!device->InputReportId().has_value()) {
+      continue;
+    }
     if (device->GetDeviceType() != device_type.value()) {
       continue;
     }
@@ -252,7 +334,7 @@ void InputReport::GetInputReport(GetInputReportRequestView request,
 
     std::array<uint8_t, HID_MAX_REPORT_LEN> report_data;
     size_t report_size = 0;
-    zx_status_t status = hiddev_.GetReport(HID_REPORT_TYPE_INPUT, device->InputReportId(),
+    zx_status_t status = hiddev_.GetReport(HID_REPORT_TYPE_INPUT, *device->InputReportId(),
                                            report_data.data(), report_data.size(), &report_size);
     if (status != ZX_OK) {
       completer.ReplyError(status);
@@ -266,7 +348,7 @@ void InputReport::GetInputReport(GetInputReportRequestView request,
       return;
     }
 
-    report.set_report_id(device->InputReportId());
+    report.set_report_id(*device->InputReportId());
     report.set_event_time(allocator, zx_clock_get_monotonic());
     report.set_trace_id(allocator, TRACE_NONCE());
   }
@@ -303,10 +385,8 @@ zx_status_t InputReport::Bind() {
   // Parse each input report.
   for (size_t rep = 0; rep < count; rep++) {
     const hid::ReportDescriptor* desc = &dev_desc->report[rep];
-    if (desc->input_count != 0) {
-      if (!ParseHidInputReportDescriptor(desc)) {
-        continue;
-      }
+    if (!ParseHidInputReportDescriptor(desc)) {
+      continue;
     }
   }
 

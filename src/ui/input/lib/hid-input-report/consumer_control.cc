@@ -109,7 +109,7 @@ ParseResult ConsumerControl::CreateDescriptor(
   return ParseResult::kOk;
 }
 
-ParseResult ConsumerControl::ParseInputReport(
+ParseResult ConsumerControl::ParseInputReportInternal(
     const uint8_t* data, size_t len, fidl::AnyArena& allocator,
     fuchsia_input_report::wire::InputReport& input_report) {
   fuchsia_input_report::wire::ConsumerControlInputReport consumer_report(allocator);

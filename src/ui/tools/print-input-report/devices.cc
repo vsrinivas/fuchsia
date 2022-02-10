@@ -11,6 +11,90 @@
 
 namespace print_input_report {
 
+zx_status_t PrintFeatureReports(std::string filename, Printer* printer,
+                                fidl::WireSharedClient<fuchsia_input_report::InputDevice> client,
+                                fit::closure callback) {
+  client->GetFeatureReport(
+      [filename, printer, callback = std::move(callback), _ = client.Clone()](
+          fidl::WireResponse<fuchsia_input_report::InputDevice::GetFeatureReport>* result) {
+        if (result->result.is_err()) {
+          callback();
+          return;
+        }
+        auto& report = result->result.response().report;
+
+        printer->SetIndent(0);
+        printer->Print("Feature Report from file: %s\n", filename.c_str());
+        printer->IncreaseIndent();
+        if (report.has_sensor()) {
+          printer->Print("Sensor Feature Report:\n");
+          printer->IncreaseIndent();
+          if (report.sensor().has_report_interval()) {
+            printer->Print("Report Interval: %ld\n", report.sensor().report_interval());
+          }
+          if (report.sensor().has_reporting_state()) {
+            printer->Print("Reporting State: %u\n", report.sensor().reporting_state());
+          }
+          if (report.sensor().has_sensitivity()) {
+            printer->Print("Sensitivity:\n");
+            printer->IncreaseIndent();
+            for (size_t i = 0; i < report.sensor().sensitivity().count(); i++) {
+              printer->Print("%ld ", report.sensor().sensitivity().data()[i]);
+            }
+            printer->Print("\n");
+            printer->DecreaseIndent();
+          }
+          if (report.sensor().has_threshold_high()) {
+            printer->Print("Threshold High:\n");
+            printer->IncreaseIndent();
+            for (size_t i = 0; i < report.sensor().threshold_high().count(); i++) {
+              printer->Print("%ld ", report.sensor().threshold_high().data()[i]);
+            }
+            printer->Print("\n");
+            printer->DecreaseIndent();
+          }
+          if (report.sensor().has_threshold_low()) {
+            printer->Print("Threshold Low:\n");
+            printer->IncreaseIndent();
+            for (size_t i = 0; i < report.sensor().threshold_low().count(); i++) {
+              printer->Print("%ld ", report.sensor().threshold_low().data()[i]);
+            }
+            printer->Print("\n");
+            printer->DecreaseIndent();
+          }
+          if (report.sensor().has_sampling_rate()) {
+            printer->Print("Sampling Rate: %u\n", report.sensor().sampling_rate());
+          }
+          printer->DecreaseIndent();
+        }
+
+        if (report.has_touch()) {
+          printer->Print("Touch Feature Report:\n");
+          printer->IncreaseIndent();
+          if (report.touch().has_input_mode()) {
+            printer->Print("Input Mode: %u\n", report.touch().input_mode());
+          }
+          if (report.touch().has_selective_reporting()) {
+            printer->Print("Selective Reporting:\n");
+            printer->IncreaseIndent();
+            if (report.touch().selective_reporting().has_surface_switch()) {
+              printer->Print("Surface Switch: %u\n",
+                             report.touch().selective_reporting().surface_switch());
+            }
+            if (report.touch().selective_reporting().has_button_switch()) {
+              printer->Print("Button Switch: %u\n",
+                             report.touch().selective_reporting().button_switch());
+            }
+            printer->DecreaseIndent();
+          }
+          printer->DecreaseIndent();
+        }
+        printer->DecreaseIndent();
+        callback();
+      });
+  return ZX_OK;
+}
+
 zx_status_t PrintInputDescriptor(std::string filename, Printer* printer,
                                  fidl::WireSharedClient<fuchsia_input_report::InputDevice> client,
                                  fit::closure callback) {
@@ -32,7 +116,7 @@ zx_status_t PrintInputDescriptor(std::string filename, Printer* printer,
           }
         }
         if (result->descriptor.has_touch()) {
-          PrintTouchDesc(printer, result->descriptor.touch().input());
+          PrintTouchDesc(printer, result->descriptor.touch());
         }
         if (result->descriptor.has_keyboard()) {
           PrintKeyboardDesc(printer, result->descriptor.keyboard());
@@ -95,45 +179,64 @@ void PrintSensorDesc(Printer* printer,
 }
 
 void PrintTouchDesc(Printer* printer,
-                    const fuchsia_input_report::wire::TouchInputDescriptor& touch_desc) {
+                    const fuchsia_input_report::wire::TouchDescriptor& touch_desc) {
   printer->Print("Touch Descriptor:\n");
   printer->IncreaseIndent();
-  if (touch_desc.has_touch_type()) {
-    printer->Print("Touch Type: %s\n", printer->TouchTypeToString(touch_desc.touch_type()));
-  }
-  if (touch_desc.has_max_contacts()) {
-    printer->Print("Max Contacts: %ld\n", touch_desc.max_contacts());
-  }
-  if (touch_desc.has_contacts()) {
-    for (size_t i = 0; i < touch_desc.contacts().count(); i++) {
-      const fuchsia_input_report::wire::ContactInputDescriptor& contact = touch_desc.contacts()[i];
-
-      printer->Print("Contact: %02d\n", i);
-      printer->IncreaseIndent();
-
-      if (contact.has_position_x()) {
-        printer->Print("Position X:\n");
-        printer->PrintAxisIndented(contact.position_x());
-      }
-      if (contact.has_position_y()) {
-        printer->Print("Position Y:\n");
-        printer->PrintAxisIndented(contact.position_y());
-      }
-      if (contact.has_pressure()) {
-        printer->Print("Pressure:\n");
-        printer->PrintAxisIndented(contact.pressure());
-      }
-      if (contact.has_contact_width()) {
-        printer->Print("Contact Width:\n");
-        printer->PrintAxisIndented(contact.contact_width());
-      }
-      if (contact.has_contact_height()) {
-        printer->Print("Contact Height:\n");
-        printer->PrintAxisIndented(contact.contact_height());
-      }
-
-      printer->DecreaseIndent();
+  if (touch_desc.has_input()) {
+    printer->Print("Input Report:\n");
+    printer->IncreaseIndent();
+    const auto& input = touch_desc.input();
+    if (input.has_touch_type()) {
+      printer->Print("Touch Type: %s\n", printer->TouchTypeToString(input.touch_type()));
     }
+    if (input.has_max_contacts()) {
+      printer->Print("Max Contacts: %ld\n", input.max_contacts());
+    }
+    if (input.has_contacts()) {
+      for (size_t i = 0; i < input.contacts().count(); i++) {
+        const fuchsia_input_report::wire::ContactInputDescriptor& contact = input.contacts()[i];
+
+        printer->Print("Contact: %02d\n", i);
+        printer->IncreaseIndent();
+
+        if (contact.has_position_x()) {
+          printer->Print("Position X:\n");
+          printer->PrintAxisIndented(contact.position_x());
+        }
+        if (contact.has_position_y()) {
+          printer->Print("Position Y:\n");
+          printer->PrintAxisIndented(contact.position_y());
+        }
+        if (contact.has_pressure()) {
+          printer->Print("Pressure:\n");
+          printer->PrintAxisIndented(contact.pressure());
+        }
+        if (contact.has_contact_width()) {
+          printer->Print("Contact Width:\n");
+          printer->PrintAxisIndented(contact.contact_width());
+        }
+        if (contact.has_contact_height()) {
+          printer->Print("Contact Height:\n");
+          printer->PrintAxisIndented(contact.contact_height());
+        }
+
+        printer->DecreaseIndent();
+      }
+    }
+
+    printer->DecreaseIndent();
+  }
+
+  if (touch_desc.has_feature()) {
+    printer->Print("Feature Report:\n");
+    printer->IncreaseIndent();
+    const auto& feature = touch_desc.feature();
+    printer->Print("Supports InputMode: %u\n",
+                   feature.has_supports_input_mode() ? feature.supports_input_mode() : false);
+    printer->Print("Supports SelectiveReporting: %u\n", feature.has_supports_selective_reporting()
+                                                            ? feature.supports_selective_reporting()
+                                                            : false);
+    printer->DecreaseIndent();
   }
   printer->DecreaseIndent();
 }

@@ -15,22 +15,23 @@ class Keyboard : public Device {
  public:
   ParseResult ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) override;
 
-  ParseResult SetOutputReport(const fuchsia_input_report::wire::OutputReport* report, uint8_t* data,
-                              size_t data_size, size_t* data_out_size) override;
-
   ParseResult CreateDescriptor(fidl::AnyArena& allocator,
                                fuchsia_input_report::wire::DeviceDescriptor& descriptor) override;
 
-  ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
-                               fuchsia_input_report::wire::InputReport& input_report) override;
-
-  uint8_t InputReportId() const override { return input_report_id_; }
+  std::optional<uint8_t> InputReportId() const override { return input_report_id_; }
+  std::optional<uint8_t> OutputReportId() const override { return output_report_id_; }
 
   DeviceType GetDeviceType() const override { return DeviceType::kKeyboard; }
 
  private:
   ParseResult ParseInputReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor);
   ParseResult ParseOutputReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor);
+  ParseResult SetOutputReportInternal(const fuchsia_input_report::wire::OutputReport* report,
+                                      uint8_t* data, size_t data_size,
+                                      size_t* data_out_size) override;
+  ParseResult ParseInputReportInternal(
+      const uint8_t* data, size_t len, fidl::AnyArena& allocator,
+      fuchsia_input_report::wire::InputReport& input_report) override;
 
   // Fields for the input reports.
   // Each item in |key_fields_| represents either a single key or a range of keys.

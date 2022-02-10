@@ -245,6 +245,17 @@ int main(int argc, const char** argv) {
                                              [&loop]() { loop.Shutdown(); });
 
     loop.Run();
+  } else if (args[0] == "feature" && args.size() == 2) {
+    const std::string& device_path = args[1].c_str();
+    auto client = print_input_report::GetClientFromPath(&printer, device_path, loop.dispatcher());
+    if (!client) {
+      return -1;
+    }
+
+    // Get Feature Report and Print
+    print_input_report::PrintFeatureReports(device_path, &printer, std::move(*client),
+                                            [&loop]() { loop.Shutdown(); });
+    loop.Run();
   } else {
     print_input_report::PrintHelp(&printer);
   };

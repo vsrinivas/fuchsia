@@ -899,14 +899,14 @@ TEST_F(HidDevTest, InspectDeviceTypes) {
   inspector.ReadInspect(inspect_vmo);
 
   const inspect::Hierarchy* root =
-      inspector.hierarchy().GetByPath({"hid-input-report-touch,mouse"});
+      inspector.hierarchy().GetByPath({"hid-input-report-touch,touch,mouse"});
   ASSERT_NOT_NULL(root);
 
   const auto* device_types =
       root->node().get_property<inspect::StringPropertyValue>("device_types");
   ASSERT_NOT_NULL(device_types);
 
-  EXPECT_STREQ(device_types->value().c_str(), "touch,mouse");
+  EXPECT_STREQ(device_types->value().c_str(), "touch,touch,mouse");
 }
 
 TEST_F(HidDevTest, GetInputReport) {

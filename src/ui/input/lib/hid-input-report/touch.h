@@ -9,6 +9,38 @@
 
 namespace hid_input_report {
 
+class TouchConfiguration : public Device {
+ public:
+  ParseResult ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) override;
+
+  ParseResult CreateDescriptor(fidl::AnyArena& allocator,
+                               fuchsia_input_report::wire::DeviceDescriptor& descriptor) override;
+
+  std::optional<uint8_t> FeatureReportId() const override { return report_id_; }
+
+  DeviceType GetDeviceType() const override { return DeviceType::kTouch; }
+
+ private:
+  ParseResult ParseFeatureReportInternal(
+      const uint8_t* data, size_t len, fidl::AnyArena& allocator,
+      fuchsia_input_report::wire::FeatureReport& feature_report) override;
+  ParseResult SetFeatureReportInternal(const fuchsia_input_report::wire::FeatureReport* report,
+                                       uint8_t* data, size_t data_size,
+                                       size_t* data_out_size) override;
+
+  struct SelectiveReporting {
+    // If this is true, reports surface contacts
+    hid::Attributes surface_switch;
+    // If this is true, reports button state
+    hid::Attributes button_switch;
+  };
+  std::optional<hid::Attributes> input_mode_;
+  std::optional<SelectiveReporting> selective_reporting_;
+
+  size_t report_size_ = 0;
+  uint8_t report_id_ = 0;
+};
+
 class Touch : public Device {
  public:
   ParseResult ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) override;
@@ -16,14 +48,15 @@ class Touch : public Device {
   ParseResult CreateDescriptor(fidl::AnyArena& allocator,
                                fuchsia_input_report::wire::DeviceDescriptor& descriptor) override;
 
-  ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
-                               fuchsia_input_report::wire::InputReport& input_report) override;
-
-  uint8_t InputReportId() const override { return report_id_; }
+  std::optional<uint8_t> InputReportId() const override { return report_id_; }
 
   DeviceType GetDeviceType() const override { return DeviceType::kTouch; }
 
  private:
+  ParseResult ParseInputReportInternal(
+      const uint8_t* data, size_t len, fidl::AnyArena& allocator,
+      fuchsia_input_report::wire::InputReport& input_report) override;
+
   struct ContactConfig {
     std::optional<hid::Attributes> contact_id;
     std::optional<hid::Attributes> tip_switch;

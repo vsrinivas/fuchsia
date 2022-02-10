@@ -42,6 +42,10 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
     num_values++;
   }
 
+  if (num_values == 0) {
+    return ParseResult::kItemNotFound;
+  }
+
   // No error, write to class members.
   num_values_ = num_values;
   for (size_t i = 0; i < num_values; i++) {
@@ -83,8 +87,9 @@ ParseResult Sensor::CreateDescriptor(fidl::AnyArena& allocator,
   return ParseResult::kOk;
 }
 
-ParseResult Sensor::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
-                                     fuchsia_input_report::wire::InputReport& input_report) {
+ParseResult Sensor::ParseInputReportInternal(
+    const uint8_t* data, size_t len, fidl::AnyArena& allocator,
+    fuchsia_input_report::wire::InputReport& input_report) {
   fuchsia_input_report::wire::SensorInputReport sensor_report(allocator);
 
   fidl::VectorView<int64_t> values(allocator, num_values_);

@@ -42,6 +42,9 @@ ParseResult CreateDevice(const hid::ReportDescriptor* descriptor,
   } else if (page == ::hid::usage::Page::kDigitizer &&
              (usage == ::hid::usage::Digitizer::kTouchPad)) {
     parse_device = std::make_unique<hid_input_report::Touch>();
+  } else if (page == ::hid::usage::Page::kDigitizer &&
+             (usage == ::hid::usage::Digitizer::kTouchScreenConfiguration)) {
+    parse_device = std::make_unique<hid_input_report::TouchConfiguration>();
   } else if (page == ::hid::usage::Page::kGenericDesktop &&
              (usage == ::hid::usage::GenericDesktop::kKeyboard)) {
     parse_device = std::make_unique<hid_input_report::Keyboard>();

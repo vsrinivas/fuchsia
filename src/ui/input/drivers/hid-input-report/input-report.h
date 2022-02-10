@@ -56,13 +56,9 @@ class InputReport : public DeviceType,
   void SendOutputReport(SendOutputReportRequestView request,
                         SendOutputReportCompleter::Sync& completer) override;
   void GetFeatureReport(GetFeatureReportRequestView request,
-                        GetFeatureReportCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  }
+                        GetFeatureReportCompleter::Sync& completer) override;
   void SetFeatureReport(SetFeatureReportRequestView request,
-                        SetFeatureReportCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  }
+                        SetFeatureReportCompleter::Sync& completer) override;
   void GetInputReport(GetInputReportRequestView request,
                       GetInputReportCompleter::Sync& completer) override;
 

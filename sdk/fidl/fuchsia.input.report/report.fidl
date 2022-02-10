@@ -41,4 +41,6 @@ type OutputReport = table {
 /// state.
 type FeatureReport = table {
     1: sensor SensorFeatureReport;
+
+    2: touch TouchFeatureReport;
 };

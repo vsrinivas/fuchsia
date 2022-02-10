@@ -50,9 +50,34 @@ type TouchInputDescriptor = table {
     4: buttons vector<uint8>:TOUCH_MAX_NUM_BUTTONS;
 };
 
+/// Input mode indicating which top-level collection should be used for input reporting.
+/// These values must correspond to the input modes defined in 16.7 of the HID Usage Tables
+/// for Universal Serial Bus (USB) Spec (https://usb.org/sites/default/files/hut1_22.pdf).
+type TouchConfigurationInputMode = strict enum : uint32 {
+    /// Use the Mouse Collection for reporting data.
+    MOUSE_COLLECTION = 0;
+    /// Use the Windows Precision Touchpad Collection for reporting data. Defined by Windows
+    /// Precision Touchpad Required HID Top-Level Collections: https://docs.microsoft.com/
+    /// en-us/windows-hardware/design/component-guidelines/windows-precision-touchpad-required
+    /// -hid-top-level-collections).
+    WINDOWS_PRECISION_TOUCHPAD_COLLECTION = 3;
+};
+
+/// Describes the format of the touchpad configuration's feature report. Feature reports
+/// can be requested from the touchpad, or sent to the touchpad.
+type TouchFeatureDescriptor = table {
+    /// Indicates whether or not touch feature descriptor supports different input modes.
+    1: supports_input_mode bool;
+
+    /// Indicates whether or not touch feature descriptor supports selective reporting.
+    2: supports_selective_reporting bool;
+};
+
 /// The capabilities of a touch device.
 type TouchDescriptor = table {
     1: input TouchInputDescriptor;
+
+    2: feature TouchFeatureDescriptor;
 };
 
 /// `ContactInputReport` describes one touch on a touch device.
@@ -89,4 +114,25 @@ type TouchInputReport = table {
 
     /// Identifiers for currently pressed buttons.
     2: pressed_buttons vector<uint8>:TOUCH_MAX_NUM_BUTTONS;
+};
+
+/// Selective Reporting Feature Report indicating which types of input are reported.
+type SelectiveReportingFeatureReport = table {
+    /// If this is true, the device will report surface contacts.
+    1: surface_switch bool;
+
+    /// If this is true, the device will report button state.
+    2: button_switch bool;
+};
+
+/// A TouchFeatureReport describes the features of a given touch device. If a
+/// FeatureReport is sent to the Input Device it sets the configuration of the device.
+/// If a FeatureReport is requested from the Input Device it shows the device's
+/// current configuration.
+type TouchFeatureReport = table {
+    /// The input mode currently reporting.
+    1: input_mode TouchConfigurationInputMode;
+
+    /// The current report types being reported.
+    2: selective_reporting SelectiveReportingFeatureReport;
 };

@@ -15,6 +15,174 @@
 
 namespace hid_input_report {
 
+ParseResult TouchConfiguration::ParseReportDescriptor(
+    const hid::ReportDescriptor& hid_report_descriptor) {
+  hid::Attributes input_mode;
+  bool has_input_mode = false;
+  SelectiveReporting selective_reporting;
+  bool has_selective_reporting = false;
+
+  // Traverse up the nested collections to the Application collection.
+  hid::Collection* main_collection = hid_report_descriptor.input_fields[0].col;
+  while (main_collection != nullptr) {
+    if (main_collection->type == hid::CollectionType::kApplication) {
+      break;
+    }
+    main_collection = main_collection->parent;
+  }
+  if (!main_collection) {
+    return ParseResult::kNoCollection;
+  }
+
+  if (main_collection->usage !=
+      hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchScreenConfiguration)) {
+    return ParseResult::kNoCollection;
+  }
+
+  for (size_t i = 0; i < hid_report_descriptor.feature_count; i++) {
+    const hid::ReportField field = hid_report_descriptor.feature_fields[i];
+    if (field.attr.usage ==
+        hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchScreenInputMode)) {
+      input_mode = field.attr;
+      has_input_mode = true;
+    }
+    if (field.attr.usage ==
+        hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kSurfaceSwitch)) {
+      selective_reporting.surface_switch = field.attr;
+      has_selective_reporting = true;
+    }
+    if (field.attr.usage ==
+        hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kButtonSwitch)) {
+      selective_reporting.button_switch = field.attr;
+      has_selective_reporting = true;
+    }
+  }
+
+  if (!has_input_mode && !has_selective_reporting) {
+    return ParseResult::kNoCollection;
+  }
+
+  // No error, write to class members.
+  if (has_input_mode) {
+    input_mode_.emplace(std::move(input_mode));
+  }
+  if (has_selective_reporting) {
+    selective_reporting_.emplace(std::move(selective_reporting));
+  }
+
+  report_size_ = hid_report_descriptor.feature_byte_sz;
+  report_id_ = hid_report_descriptor.report_id;
+
+  return ParseResult::kOk;
+}
+
+ParseResult TouchConfiguration::CreateDescriptor(
+    fidl::AnyArena& allocator, fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
+  if (!descriptor.has_touch()) {
+    fuchsia_input_report::wire::TouchDescriptor touch(allocator);
+    descriptor.set_touch(allocator, std::move(touch));
+  }
+  // Create feature descriptor
+  if (input_mode_.has_value() || selective_reporting_.has_value()) {
+    if (!descriptor.touch().has_feature()) {
+      fuchsia_input_report::wire::TouchFeatureDescriptor feature(allocator);
+      descriptor.touch().set_feature(allocator, std::move(feature));
+    }
+
+    if (input_mode_.has_value()) {
+      descriptor.touch().feature().set_supports_input_mode(true);
+    }
+    if (selective_reporting_.has_value()) {
+      descriptor.touch().feature().set_supports_selective_reporting(true);
+    }
+  }
+
+  return ParseResult::kOk;
+}
+
+ParseResult TouchConfiguration::ParseFeatureReportInternal(
+    const uint8_t* data, size_t len, fidl::AnyArena& allocator,
+    fuchsia_input_report::wire::FeatureReport& feature_report) {
+  if (len != report_size_) {
+    return ParseResult::kReportSizeMismatch;
+  }
+
+  if (!feature_report.has_touch()) {
+    fuchsia_input_report::wire::TouchFeatureReport touch(allocator);
+    feature_report.set_touch(allocator, touch);
+  }
+  uint32_t val_out;
+  if (input_mode_.has_value() && ExtractUint(data, len, *input_mode_, &val_out)) {
+    feature_report.touch().set_input_mode(
+        static_cast<fuchsia_input_report::wire::TouchConfigurationInputMode>(val_out));
+  }
+  if (selective_reporting_.has_value()) {
+    fuchsia_input_report::wire::SelectiveReportingFeatureReport selective_reporting(allocator);
+    if (ExtractUint(data, len, selective_reporting_->surface_switch, &val_out)) {
+      selective_reporting.set_surface_switch(static_cast<bool>(val_out));
+    }
+    if (ExtractUint(data, len, selective_reporting_->button_switch, &val_out)) {
+      selective_reporting.set_button_switch(static_cast<bool>(val_out));
+    }
+    feature_report.touch().set_selective_reporting(allocator, std::move(selective_reporting));
+  }
+
+  return ParseResult::kOk;
+}
+
+ParseResult TouchConfiguration::SetFeatureReportInternal(
+    const fuchsia_input_report::wire::FeatureReport* report, uint8_t* data, size_t data_size,
+    size_t* data_out_size) {
+  if (!report->has_touch()) {
+    return ParseResult::kItemNotFound;
+  }
+  if (!report->touch().has_input_mode() && !report->touch().has_selective_reporting()) {
+    return ParseResult::kBadReport;
+  }
+  if (data_size < report_size_) {
+    return ParseResult::kNoMemory;
+  }
+  for (size_t i = 0; i < data_size; i++) {
+    data[i] = 0;
+  }
+
+  bool found = false;
+  if (report->touch().has_input_mode() && input_mode_.has_value()) {
+    if (!hid::InsertUint(data, data_size, *input_mode_,
+                         static_cast<uint32_t>(report->touch().input_mode()))) {
+      return ParseResult::kBadReport;
+    }
+    found = true;
+  }
+
+  if (report->touch().has_selective_reporting() && selective_reporting_.has_value()) {
+    if (report->touch().selective_reporting().has_surface_switch()) {
+      if (!hid::InsertUint(
+              data, data_size, selective_reporting_->surface_switch,
+              static_cast<uint32_t>(report->touch().selective_reporting().surface_switch()))) {
+        return ParseResult::kBadReport;
+      }
+      found = true;
+    }
+
+    if (report->touch().selective_reporting().has_button_switch()) {
+      if (!hid::InsertUint(
+              data, data_size, selective_reporting_->button_switch,
+              static_cast<uint32_t>(report->touch().selective_reporting().button_switch()))) {
+        return ParseResult::kBadReport;
+      }
+      found = true;
+    }
+  }
+
+  if (!found) {
+    return ParseResult::kItemNotFound;
+  }
+  data[0] = report_id_;
+  *data_out_size = report_size_;
+  return ParseResult::kOk;
+}
+
 ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
   ContactConfig contacts[fuchsia_input_report::wire::kTouchMaxContacts];
   size_t num_contacts = 0;
@@ -108,6 +276,10 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
     }
   }
 
+  if (num_contacts == 0 && num_buttons == 0) {
+    return ParseResult::kItemNotFound;
+  }
+
   // No error, write to class members.
   for (size_t i = 0; i < num_contacts; i++) {
     contacts_[i] = contacts[i];
@@ -168,15 +340,18 @@ ParseResult Touch::CreateDescriptor(fidl::AnyArena& allocator,
     input.set_buttons(allocator, std::move(buttons));
   }
 
-  fuchsia_input_report::wire::TouchDescriptor touch(allocator);
-  touch.set_input(allocator, std::move(input));
-  descriptor.set_touch(allocator, std::move(touch));
+  if (!descriptor.has_touch()) {
+    fuchsia_input_report::wire::TouchDescriptor touch(allocator);
+    descriptor.set_touch(allocator, std::move(touch));
+  }
+  descriptor.touch().set_input(allocator, std::move(input));
 
   return ParseResult::kOk;
 }
 
-ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
-                                    fuchsia_input_report::wire::InputReport& input_report) {
+ParseResult Touch::ParseInputReportInternal(const uint8_t* data, size_t len,
+                                            fidl::AnyArena& allocator,
+                                            fuchsia_input_report::wire::InputReport& input_report) {
   if (len != report_size_) {
     return ParseResult::kReportSizeMismatch;
   }

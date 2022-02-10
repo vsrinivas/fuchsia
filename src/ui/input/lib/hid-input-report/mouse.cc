@@ -52,6 +52,10 @@ ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
     }
   }
 
+  if (!movement_x && !movement_y && !position_x && !position_y && !scroll_v && (num_buttons == 0)) {
+    return ParseResult::kItemNotFound;
+  }
+
   // No error, write to class members.
   if (movement_x) {
     movement_x_ = movement_x;
@@ -120,8 +124,9 @@ ParseResult Mouse::CreateDescriptor(fidl::AnyArena& allocator,
   return ParseResult::kOk;
 }
 
-ParseResult Mouse::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
-                                    fuchsia_input_report::wire::InputReport& input_report) {
+ParseResult Mouse::ParseInputReportInternal(const uint8_t* data, size_t len,
+                                            fidl::AnyArena& allocator,
+                                            fuchsia_input_report::wire::InputReport& input_report) {
   if (len != report_size_) {
     return ParseResult::kReportSizeMismatch;
   }

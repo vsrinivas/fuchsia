@@ -16,6 +16,10 @@ zx::status<fidl::WireSharedClient<fuchsia_input_report::InputReportsReader>> Get
     fidl::WireSharedClient<fuchsia_input_report::InputDevice>* client,
     async_dispatcher_t* dispatcher);
 
+zx_status_t PrintFeatureReports(
+    std::string filename, Printer* printer,
+    fidl::WireSharedClient<fuchsia_input_report::InputDevice> client,
+    fit::closure callback = [] {});
 zx_status_t PrintInputDescriptor(
     std::string filename, Printer* printer,
     fidl::WireSharedClient<fuchsia_input_report::InputDevice> client,
@@ -40,7 +44,7 @@ void PrintSensorInputReport(Printer* printer,
                             const fuchsia_input_report::wire::SensorInputReport& sensor_report);
 
 void PrintTouchDesc(Printer* printer,
-                    const fuchsia_input_report::wire::TouchInputDescriptor& touch_desc);
+                    const fuchsia_input_report::wire::TouchDescriptor& touch_desc);
 void PrintTouchInputReport(Printer* printer,
                            const fuchsia_input_report::wire::TouchInputReport& touch_report);
 

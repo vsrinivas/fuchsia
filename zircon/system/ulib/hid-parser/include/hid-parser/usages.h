@@ -348,6 +348,9 @@ enum class TouchScreenInputMode : uint32_t {
   kMouse = 0x00,
   kSingleInput = 0x01,
   kMultipleInput = 0x02,
+  // kWindowsPrecisionTouchpad defined here:
+  // https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/windows-precision-touchpad-required-hid-top-level-collections
+  kWindowsPrecisionTouchpad = 0x03,
 };
 
 enum class Digitizer : uint32_t {
@@ -403,6 +406,8 @@ enum class Digitizer : uint32_t {
   kTouchScreenInputMode = 0x52,
   kContactCount = 0x54,
   kScanTime = 0x56,
+  kSurfaceSwitch = 0x57,
+  kButtonSwitch = 0x58,
 };
 
 enum class Sensor : uint32_t {
