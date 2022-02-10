@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/task.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/gtest/real_loop_fixture.h>
 
 #include "src/lib/testing/predicates/status.h"
 #include "sync_manager.h"
@@ -16,14 +16,10 @@
 namespace netemul {
 namespace testing {
 
-using gtest::TestWithEnvironmentFixture;
-using sys::testing::EnclosingEnvironment;
-using sys::testing::EnvironmentServices;
-
 static const char* kMainTestBus = "test-bus";
 static const char* kAltTestBus = "alt-bus";
 
-class BusTest : public TestWithEnvironmentFixture {
+class BusTest : public gtest::RealLoopFixture {
  public:
   using SyncManagerSync = fidl::SynchronousInterfacePtr<SyncManager::FSyncManager>;
   using BusSync = fidl::SynchronousInterfacePtr<Bus::FBus>;
@@ -31,19 +27,9 @@ class BusTest : public TestWithEnvironmentFixture {
 
  protected:
   void SetUp() override {
-    fuchsia::sys::EnvironmentPtr parent_env;
-    real_services()->Connect(parent_env.NewRequest());
-
     svc_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_OK(svc_loop_->StartThread("testloop"));
     svc_ = std::make_unique<SyncManager>(svc_loop_->dispatcher());
-
-    auto services = EnvironmentServices::Create(parent_env, svc_loop_->dispatcher());
-
-    services->AddService(svc_->GetHandler());
-    test_env_ = CreateNewEnclosingEnvironment("env", std::move(services));
-
-    WaitForEnclosingEnvToStart(test_env_.get());
   }
 
   void TearDown() override {
@@ -55,7 +41,7 @@ class BusTest : public TestWithEnvironmentFixture {
   }
 
   void GetSyncManager(fidl::InterfaceRequest<SyncManager::FSyncManager> manager) {
-    test_env_->ConnectToService(std::move(manager));
+    svc_->GetHandler()(std::move(manager));
   }
 
   void FillEventData(Bus::FEvent* event, int32_t code = 0, const std::string& name = "",
@@ -179,7 +165,6 @@ class BusTest : public TestWithEnvironmentFixture {
     WAIT_FOR_OK(got_callback);
   }
 
-  std::unique_ptr<EnclosingEnvironment> test_env_;
   std::unique_ptr<async::Loop> svc_loop_;
   std::unique_ptr<SyncManager> svc_;
 };

@@ -17,7 +17,7 @@ fuchsia_component("network-test") {
 
 fuchsia_component("sync-test") {
   testonly = true
-  manifest = "meta/sync_test.cmx"
+  manifest = "meta/sync-test.cml"
 
   deps = [ "sync:sync_test_bin" ]
 }
