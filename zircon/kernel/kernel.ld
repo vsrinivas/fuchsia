@@ -91,14 +91,14 @@ SECTIONS
      */
     .kcounter.desc : ALIGN(4096) {
         PROVIDE_HIDDEN(k_counter_desc_vmo_begin = .);
-        KEEP(*(.kcounter.desc.header))
+        *(.kcounter.desc.header)
         ASSERT(. - k_counter_desc_vmo_begin == 16,
                "lib/counters/counters.cc and kernel.ld mismatch");
         QUAD(kcountdesc_end - kcountdesc_begin);
         PROVIDE_HIDDEN(kcountdesc_begin = .);
         ASSERT(kcountdesc_begin - k_counter_desc_vmo_begin == 24,
                "lib/counters/counters.cc and kernel.ld mismatch");
-        KEEP(*(SORT_BY_NAME(kcountdesc.*)))
+        *(SORT_BY_NAME(kcountdesc.*))
         PROVIDE_HIDDEN(kcountdesc_end = .);
         . = ALIGN(4096);
         PROVIDE_HIDDEN(k_counter_desc_vmo_end = .);
@@ -121,7 +121,7 @@ SECTIONS
 
     BootCpuidLeaf : {
         PROVIDE_HIDDEN(__start_BootCpuidLeaf = .);
-        KEEP(*(BootCpuidLeaf))
+        *(BootCpuidLeaf)
         PROVIDE_HIDDEN(__stop_BootCpuidLeaf = .);
     }
 
@@ -152,7 +152,7 @@ SECTIONS
 
     .data.rel.ro.commands : {
         PROVIDE_HIDDEN(__start_commands = .);
-        KEEP(*(.data.rel.ro.commands))
+        *(.data.rel.ro.commands)
         PROVIDE_HIDDEN(__stop_commands = .);
         ASSERT(ALIGNOF(.data.rel.ro.commands) == 8 ||
                SIZEOF(.data.rel.ro.commands) == 0,
@@ -161,7 +161,7 @@ SECTIONS
 
     .data.rel.ro.lk_init : {
         PROVIDE_HIDDEN(__start_lk_init = .);
-        KEEP(*(.data.rel.ro.lk_init))
+        *(.data.rel.ro.lk_init)
         PROVIDE_HIDDEN(__stop_lk_init = .);
         ASSERT(ALIGNOF(.data.rel.ro.lk_init) == 8,
                ".data.rel.ro.lk_init overalignment -> padding gaps");
@@ -169,7 +169,7 @@ SECTIONS
 
     .data.rel.ro.unittest_testcases : {
         PROVIDE_HIDDEN(__start_unittest_testcases = .);
-        KEEP(*(.data.rel.ro.unittest_testcases))
+        *(.data.rel.ro.unittest_testcases)
         PROVIDE_HIDDEN(__stop_unittest_testcases = .);
         ASSERT(ALIGNOF(.data.rel.ro.unittest_testcases) == 8 ||
                SIZEOF(.data.rel.ro.unittest_testcases) == 0,
@@ -240,7 +240,7 @@ SECTIONS
 
     BootCpuidData : {
         PROVIDE_HIDDEN(__start_BootCpuidData = .);
-        KEEP(*(BootCpuidData))
+        *(BootCpuidData)
         PROVIDE_HIDDEN(__stop_BootCpuidData = .);
     }
     ASSERT(SIZEOF(BootCpuidData) ==  2 * SIZEOF(BootCpuidLeaf),
@@ -302,7 +302,7 @@ SECTIONS
          */
         . = ALIGN(4096);
         PROVIDE_HIDDEN(kcounters_arena = .);
-        KEEP(*(SORT_BY_NAME(.bss.kcounter.*)))
+        *(SORT_BY_NAME(.bss.kcounter.*))
         PROVIDE_HIDDEN(kcounters_arena_end = .);
         . = ALIGN(4096);
         PROVIDE_HIDDEN(kcounters_arena_page_end = .);

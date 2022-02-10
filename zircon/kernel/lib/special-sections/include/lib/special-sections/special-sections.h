@@ -8,13 +8,18 @@
 #define ZIRCON_KERNEL_LIB_SPECIAL_SECTIONS_INCLUDE_LIB_SPECIAL_SECTIONS_SPECIAL_SECTIONS_H_
 
 // This is used as a C++ attribute on a variable definition to specify it goes
-// into a special section.  The section name is given as a string.  The type
-// is the element type of the section, for determining alignment.  Variables
-// in special sections get precise alignment so that the whole section is
-// packed as an array.  Without the alignas attribute, the compiler is allowed
-// to overalign any variable, which would break the array-like layout.
+// into a special section.  The section name is given as a string.  The type is
+// the element type of the section, for determining alignment.  Variables in
+// special sections get precise alignment so that the whole section is packed
+// as an array.  Without the alignas attribute, the compiler is allowed to
+// overalign any variable, which would break the array-like layout.  Without
+// the used attribute, the compiler will remove it (and maybe warn) if it's not
+// referenced in the file.  Without the retain attribute, the linker might
+// remove it if it's not referenced by anything else in the link.  Using them
+// all ensures that just the declaration being compiled in will guarantee the
+// element appears in the special section at runtime.
 #define SPECIAL_SECTION(name, type) \
-  alignas(type) [[gnu::used, gnu::section(name), SPECIAL_SECTION_NO_ASAN]]
+  alignas(type) [[gnu::used, gnu::retain, gnu::section(name), SPECIAL_SECTION_NO_ASAN]]
 
 // AddressSanitizer instrumentation normally places red zones around global
 // variables.  This must be suppressed in special sections so as not to break

@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_LIB_ARCH_X86_INCLUDE_LIB_ARCH_X86_BOOT_CPUID_H_
 
 #include <lib/arch/x86/cpuid.h>
+#include <lib/special-sections/special-sections.h>
 
 // Easy access to CPUID results collected for the boot CPU at boot time.
 //
@@ -94,9 +95,9 @@ class BootCpuidIo {
     // "used" for kCpuidLeaf to prevent compiler-GC; "used" for kCpuidIo to be
     // doubly sure that every BootCpuidLeaf entry has an associated one in
     // BootCpuidData.
-    [[gnu::section("BootCpuidData"), gnu::used]] alignas(uint32_t) static CpuidIo gCpuidIo;
-    [[gnu::section("BootCpuidLeaf"), gnu::used]] alignas(
-        uint32_t) static const uint32_t kCpuidLeaf[2] = {Leaf, Subleaf};
+    SPECIAL_SECTION("BootCpuidData", uint32_t) static CpuidIo gCpuidIo;
+    SPECIAL_SECTION("BootCpuidLeaf", uint32_t)
+    static const uint32_t kCpuidLeaf[2] = {Leaf, Subleaf};
 #else
     // TODO(fxbug.dev/27083): GCC doesn't honor the section attribute in a
     // COMDAT context.  Instead, just do on-demand initialization right here.

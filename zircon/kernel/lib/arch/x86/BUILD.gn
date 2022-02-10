@@ -12,6 +12,9 @@ zx_library("x86") {
   visibility = [ "../*" ]
   sources = []
   public_deps = [
+    # <lib/arch/x86/boot-cpuid.h> has #include <lib/special-sections/special-sections.h>.
+    "//zircon/kernel/lib/special-sections",
+
     # <lib/arch/x86/cpuid.h> has #include <hwreg/bitfields.h>.
     "//zircon/system/ulib/hwreg:headers",
   ]
