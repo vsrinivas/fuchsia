@@ -21,13 +21,9 @@ protocol DirectoryIterator {
     /// in the [`Directory.Enumerate`] call.
     @selector("fuchsia.io/DirectoryIterator.GetNext")
     GetNext() -> (struct {
-        entries vector<DirectoryEntry>:MAX_DIRECTORY_BATCH_SIZE;
+        entries vector<DirectoryEntry>:8192;
     }) error zx.status;
 };
-
-/// The maximum number of directory entires or watcher events returned
-/// in a batch by a hanging-get pattern.
-const MAX_DIRECTORY_BATCH_SIZE uint64 = 8192;
 
 /// Options to pass to [`fuchsia.io/Directory.Enumerate`].
 type DirectoryEnumerateOptions = table {};

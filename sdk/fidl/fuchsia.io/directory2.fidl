@@ -158,21 +158,6 @@ protocol Directory2 {
         dst_parent_token Token;
         dst Name;
     }) -> (struct {}) error zx.status;
-
-    /// Watches a directory, monitoring events for children being added or
-    /// removed on the server end of the `watcher` channel.
-    ///
-    /// Mask specifies a bit mask of events to observe.
-    ///
-    /// This method requires the [`Rights.ENUMERATE`] right. If this right is
-    /// absent, `watcher` will be closed with a `ZX_ERR_ACCESS_DENIED` epitaph.
-    @transitional
-    @selector("fuchsia.io/Directory.Watch")
-    Watch2(resource struct {
-        mask DirectoryWatchMask;
-        options DirectoryWatchOptions;
-        watcher server_end:DirectoryWatcher2;
-    });
 };
 
 /// Options related to node creation during [`Directory.Open`].

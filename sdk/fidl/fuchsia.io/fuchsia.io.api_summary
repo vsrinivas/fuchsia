@@ -93,7 +93,6 @@ protocol/member fuchsia.io/Directory.Sync2() -> (fuchsia.io/Node2_Sync2_Result r
 protocol/member fuchsia.io/Directory.Unlink(string:255 name,fuchsia.io/UnlinkOptions options) -> (fuchsia.io/Directory2_Unlink_Result result)
 protocol/member fuchsia.io/Directory.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
 protocol/member fuchsia.io/Directory.Watch(uint32 mask,uint32 options,zx/handle:CHANNEL watcher) -> (int32 s)
-protocol/member fuchsia.io/Directory.Watch2(fuchsia.io/DirectoryWatchMask mask,fuchsia.io/DirectoryWatchOptions options,server_end:fuchsia.io/DirectoryWatcher2 watcher)
 protocol fuchsia.io/Directory
 protocol/member fuchsia.io/Directory1.Clone(uint32 flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Directory1.Close() -> (int32 s)
@@ -136,7 +135,6 @@ protocol/member fuchsia.io/Directory2.Reopen(fuchsia.io/ConnectionOptions option
 protocol/member fuchsia.io/Directory2.Sync2() -> (fuchsia.io/Node2_Sync2_Result result)
 protocol/member fuchsia.io/Directory2.Unlink(string:255 name,fuchsia.io/UnlinkOptions options) -> (fuchsia.io/Directory2_Unlink_Result result)
 protocol/member fuchsia.io/Directory2.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
-protocol/member fuchsia.io/Directory2.Watch2(fuchsia.io/DirectoryWatchMask mask,fuchsia.io/DirectoryWatchOptions options,server_end:fuchsia.io/DirectoryWatcher2 watcher)
 protocol fuchsia.io/Directory2
 struct fuchsia.io/Directory2_Link2_Response
 union/member fuchsia.io/Directory2_Link2_Result.err int32
@@ -165,21 +163,8 @@ union/member fuchsia.io/DirectoryIterator_GetNext_Result.err int32
 union/member fuchsia.io/DirectoryIterator_GetNext_Result.response fuchsia.io/DirectoryIterator_GetNext_Response
 strict union fuchsia.io/DirectoryIterator_GetNext_Result
 struct fuchsia.io/DirectoryObject
-bits/member fuchsia.io/DirectoryWatchMask.ADDED 4
-bits/member fuchsia.io/DirectoryWatchMask.EXISTING 1
-bits/member fuchsia.io/DirectoryWatchMask.IDLE 2
-bits/member fuchsia.io/DirectoryWatchMask.REMOVED 8
-strict bits fuchsia.io/DirectoryWatchMask uint64
-table fuchsia.io/DirectoryWatchOptions
-union/member fuchsia.io/DirectoryWatchedEvent.added fuchsia.io/DirectoryEntry
-union/member fuchsia.io/DirectoryWatchedEvent.existing fuchsia.io/DirectoryEntry
-union/member fuchsia.io/DirectoryWatchedEvent.idle fuchsia.io/IdleEvent
-union/member fuchsia.io/DirectoryWatchedEvent.removed string:255
-flexible union fuchsia.io/DirectoryWatchedEvent
 protocol/member fuchsia.io/DirectoryWatcher.OnEvent(vector<uint8>:8192 events)
 protocol fuchsia.io/DirectoryWatcher
-protocol/member fuchsia.io/DirectoryWatcher2.GetNext() -> (vector<fuchsia.io/DirectoryWatchedEvent>:8192 events)
-protocol fuchsia.io/DirectoryWatcher2
 protocol/member fuchsia.io/File.AdvisoryLock(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)
 protocol/member fuchsia.io/File.Clone(uint32 flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/File.Close() -> (int32 s)
@@ -320,7 +305,6 @@ struct/member fuchsia.io/FilesystemInfo.used_bytes uint64
 struct/member fuchsia.io/FilesystemInfo.used_nodes uint64
 struct fuchsia.io/FilesystemInfo
 const fuchsia.io/INO_UNKNOWN uint64 18446744073709551615
-struct fuchsia.io/IdleEvent
 protocol fuchsia.io/Inotifier
 struct/member fuchsia.io/InotifyEvent.cookie uint32
 struct/member fuchsia.io/InotifyEvent.filename string:4095
@@ -352,7 +336,6 @@ bits/member fuchsia.io/InotifyWatchMask.Q_OVERFLOW 16384
 bits/member fuchsia.io/InotifyWatchMask.UNMOUNT 8192
 strict bits fuchsia.io/InotifyWatchMask uint32
 const fuchsia.io/MAX_BUF uint64 8192
-const fuchsia.io/MAX_DIRECTORY_BATCH_SIZE uint64 8192
 const fuchsia.io/MAX_FILENAME uint64 255
 const fuchsia.io/MAX_FS_NAME_BUFFER uint64 32
 const fuchsia.io/MAX_NAME_LENGTH uint64 255

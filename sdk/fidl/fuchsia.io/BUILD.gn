@@ -15,7 +15,6 @@ fidl("fuchsia.io") {
     "deprecated.fidl",
     "directory-entry.fidl",
     "directory-iterator.fidl",
-    "directory-watcher.fidl",
     "directory.fidl",
     "directory2.fidl",
     "file.fidl",
