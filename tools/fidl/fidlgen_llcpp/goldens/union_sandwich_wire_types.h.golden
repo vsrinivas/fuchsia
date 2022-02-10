@@ -87,7 +87,6 @@ class UnionSize8Alignment4 {
         ::test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::kVariant);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_variant() { return variant(); }
   const uint32_t& variant() const {
     ZX_ASSERT(
         ordinal_ ==
@@ -176,7 +175,6 @@ class UnionSize36Alignment4 {
         ::test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::kVariant);
     return envelope_.As<::fidl::Array<uint8_t, 32>>().get_data();
   }
-  ::fidl::Array<uint8_t, 32>& mutable_variant() { return variant(); }
   const ::fidl::Array<uint8_t, 32>& variant() const {
     ZX_ASSERT(
         ordinal_ ==
@@ -265,7 +263,6 @@ class UnionSize12Alignment4 {
         ::test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::kVariant);
     return envelope_.As<::fidl::Array<uint8_t, 6>>().get_data();
   }
-  ::fidl::Array<uint8_t, 6>& mutable_variant() { return variant(); }
   const ::fidl::Array<uint8_t, 6>& variant() const {
     ZX_ASSERT(
         ordinal_ ==
@@ -360,9 +357,6 @@ class UnionSize24Alignment8 {
         ::test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::kVariant);
     return envelope_.As<::test_unionsandwich::wire::StructSize16Alignment8>()
         .get_data();
-  }
-  ::test_unionsandwich::wire::StructSize16Alignment8& mutable_variant() {
-    return variant();
   }
   const ::test_unionsandwich::wire::StructSize16Alignment8& variant() const {
     ZX_ASSERT(

@@ -88,7 +88,6 @@ class StrictFoo {
               ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
-  ::fidl::StringView& mutable_s() { return s(); }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ ==
               ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS);
@@ -115,7 +114,6 @@ class StrictFoo {
               ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  int32_t& mutable_i() { return i(); }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ ==
               ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI);
@@ -201,7 +199,6 @@ class FlexibleFoo {
               ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
-  ::fidl::StringView& mutable_s() { return s(); }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ ==
               ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS);
@@ -228,7 +225,6 @@ class FlexibleFoo {
               ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  int32_t& mutable_i() { return i(); }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ ==
               ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI);

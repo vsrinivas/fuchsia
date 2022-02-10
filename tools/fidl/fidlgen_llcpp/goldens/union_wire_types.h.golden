@@ -141,7 +141,6 @@ class UnionWithAttributes {
     ZX_ASSERT(ordinal_ == ::test_union::wire::UnionWithAttributes::Ordinal::kX);
     return envelope_.As<int64_t>().get_data();
   }
-  int64_t& mutable_x() { return x(); }
   const int64_t& x() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::UnionWithAttributes::Ordinal::kX);
     return envelope_.As<int64_t>().get_data();
@@ -200,7 +199,6 @@ class Union {
     ZX_ASSERT(ordinal_ == ::test_union::wire::Union::Ordinal::kPrimitive);
     return envelope_.As<int32_t>().get_data();
   }
-  int32_t& mutable_primitive() { return primitive(); }
   const int32_t& primitive() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::Union::Ordinal::kPrimitive);
     return envelope_.As<int32_t>().get_data();
@@ -244,9 +242,6 @@ class Union {
     ZX_ASSERT(ordinal_ ==
               ::test_union::wire::Union::Ordinal::kStringNeedsConstructor);
     return envelope_.As<::fidl::StringView>().get_data();
-  }
-  ::fidl::StringView& mutable_string_needs_constructor() {
-    return string_needs_constructor();
   }
   const ::fidl::StringView& string_needs_constructor() const {
     ZX_ASSERT(ordinal_ ==
@@ -299,10 +294,6 @@ class Union {
         ordinal_ ==
         ::test_union::wire::Union::Ordinal::kVectorStringAlsoNeedsConstructor);
     return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
-  }
-  ::fidl::VectorView<::fidl::StringView>&
-  mutable_vector_string_also_needs_constructor() {
-    return vector_string_also_needs_constructor();
   }
   const ::fidl::VectorView<::fidl::StringView>&
   vector_string_also_needs_constructor() const {
@@ -372,7 +363,6 @@ class StrictUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictUnion::Ordinal::kPrimitive);
     return envelope_.As<int32_t>().get_data();
   }
-  int32_t& mutable_primitive() { return primitive(); }
   const int32_t& primitive() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictUnion::Ordinal::kPrimitive);
     return envelope_.As<int32_t>().get_data();
@@ -419,9 +409,6 @@ class StrictUnion {
         ordinal_ ==
         ::test_union::wire::StrictUnion::Ordinal::kStringNeedsConstructor);
     return envelope_.As<::fidl::StringView>().get_data();
-  }
-  ::fidl::StringView& mutable_string_needs_constructor() {
-    return string_needs_constructor();
   }
   const ::fidl::StringView& string_needs_constructor() const {
     ZX_ASSERT(
@@ -474,10 +461,6 @@ class StrictUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictUnion::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
     return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
-  }
-  ::fidl::VectorView<::fidl::StringView>&
-  mutable_vector_string_also_needs_constructor() {
-    return vector_string_also_needs_constructor();
   }
   const ::fidl::VectorView<::fidl::StringView>&
   vector_string_also_needs_constructor() const {
@@ -546,7 +529,6 @@ class StrictSimpleXUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictSimpleXUnion::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  int32_t& mutable_i() { return i(); }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictSimpleXUnion::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
@@ -570,7 +552,6 @@ class StrictSimpleXUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictSimpleXUnion::Ordinal::kF);
     return envelope_.As<float>().get_data();
   }
-  float& mutable_f() { return f(); }
   const float& f() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictSimpleXUnion::Ordinal::kF);
     return envelope_.As<float>().get_data();
@@ -609,7 +590,6 @@ class StrictSimpleXUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictSimpleXUnion::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
-  ::fidl::StringView& mutable_s() { return s(); }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictSimpleXUnion::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
@@ -688,7 +668,6 @@ class StrictFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
-  ::fidl::StringView& mutable_s() { return s(); }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
@@ -712,7 +691,6 @@ class StrictFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  int32_t& mutable_i() { return i(); }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
@@ -793,7 +771,6 @@ class StrictBoundedXUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictBoundedXUnion::Ordinal::kV);
     return envelope_.As<::fidl::VectorView<uint8_t>>().get_data();
   }
-  ::fidl::VectorView<uint8_t>& mutable_v() { return v(); }
   const ::fidl::VectorView<uint8_t>& v() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::StrictBoundedXUnion::Ordinal::kV);
     return envelope_.As<::fidl::VectorView<uint8_t>>().get_data();
@@ -859,7 +836,6 @@ class ReverseOrdinalUnion {
               ::test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_second() { return second(); }
   const uint32_t& second() const {
     ZX_ASSERT(ordinal_ ==
               ::test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond);
@@ -885,7 +861,6 @@ class ReverseOrdinalUnion {
               ::test_union::wire::ReverseOrdinalUnion::Ordinal::kFirst);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_first() { return first(); }
   const uint32_t& first() const {
     ZX_ASSERT(ordinal_ ==
               ::test_union::wire::ReverseOrdinalUnion::Ordinal::kFirst);
@@ -968,7 +943,6 @@ class StrictPizzaOrPasta {
               ::test_union::wire::StrictPizzaOrPasta::Ordinal::kPizza);
     return envelope_.As<::test_union::wire::Pizza>().get_data();
   }
-  ::test_union::wire::Pizza& mutable_pizza() { return pizza(); }
   const ::test_union::wire::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ ==
               ::test_union::wire::StrictPizzaOrPasta::Ordinal::kPizza);
@@ -1011,7 +985,6 @@ class StrictPizzaOrPasta {
               ::test_union::wire::StrictPizzaOrPasta::Ordinal::kPasta);
     return envelope_.As<::test_union::wire::Pasta>().get_data();
   }
-  ::test_union::wire::Pasta& mutable_pasta() { return pasta(); }
   const ::test_union::wire::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ ==
               ::test_union::wire::StrictPizzaOrPasta::Ordinal::kPasta);
@@ -1092,7 +1065,6 @@ class PizzaOrPasta {
     ZX_ASSERT(ordinal_ == ::test_union::wire::PizzaOrPasta::Ordinal::kPizza);
     return envelope_.As<::test_union::wire::Pizza>().get_data();
   }
-  ::test_union::wire::Pizza& mutable_pizza() { return pizza(); }
   const ::test_union::wire::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::PizzaOrPasta::Ordinal::kPizza);
     return envelope_.As<::test_union::wire::Pizza>().get_data();
@@ -1132,7 +1104,6 @@ class PizzaOrPasta {
     ZX_ASSERT(ordinal_ == ::test_union::wire::PizzaOrPasta::Ordinal::kPasta);
     return envelope_.As<::test_union::wire::Pasta>().get_data();
   }
-  ::test_union::wire::Pasta& mutable_pasta() { return pasta(); }
   const ::test_union::wire::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::PizzaOrPasta::Ordinal::kPasta);
     return envelope_.As<::test_union::wire::Pasta>().get_data();
@@ -1217,7 +1188,6 @@ class FlexiblePizzaOrPasta {
               ::test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPizza);
     return envelope_.As<::test_union::wire::Pizza>().get_data();
   }
-  ::test_union::wire::Pizza& mutable_pizza() { return pizza(); }
   const ::test_union::wire::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ ==
               ::test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPizza);
@@ -1261,7 +1231,6 @@ class FlexiblePizzaOrPasta {
               ::test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPasta);
     return envelope_.As<::test_union::wire::Pasta>().get_data();
   }
-  ::test_union::wire::Pasta& mutable_pasta() { return pasta(); }
   const ::test_union::wire::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ ==
               ::test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPasta);
@@ -1343,7 +1312,6 @@ class ExplicitPizzaOrPasta {
               ::test_union::wire::ExplicitPizzaOrPasta::Ordinal::kPizza);
     return envelope_.As<::test_union::wire::Pizza>().get_data();
   }
-  ::test_union::wire::Pizza& mutable_pizza() { return pizza(); }
   const ::test_union::wire::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ ==
               ::test_union::wire::ExplicitPizzaOrPasta::Ordinal::kPizza);
@@ -1387,7 +1355,6 @@ class ExplicitPizzaOrPasta {
               ::test_union::wire::ExplicitPizzaOrPasta::Ordinal::kPasta);
     return envelope_.As<::test_union::wire::Pasta>().get_data();
   }
-  ::test_union::wire::Pasta& mutable_pasta() { return pasta(); }
   const ::test_union::wire::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ ==
               ::test_union::wire::ExplicitPizzaOrPasta::Ordinal::kPasta);
@@ -1467,7 +1434,6 @@ class OlderSimpleUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::OlderSimpleUnion::Ordinal::kI);
     return envelope_.As<int64_t>().get_data();
   }
-  int64_t& mutable_i() { return i(); }
   const int64_t& i() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::OlderSimpleUnion::Ordinal::kI);
     return envelope_.As<int64_t>().get_data();
@@ -1491,7 +1457,6 @@ class OlderSimpleUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::OlderSimpleUnion::Ordinal::kF);
     return envelope_.As<float>().get_data();
   }
-  float& mutable_f() { return f(); }
   const float& f() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::OlderSimpleUnion::Ordinal::kF);
     return envelope_.As<float>().get_data();
@@ -1568,7 +1533,6 @@ class NewerSimpleUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::NewerSimpleUnion::Ordinal::kI);
     return envelope_.As<int64_t>().get_data();
   }
-  int64_t& mutable_i() { return i(); }
   const int64_t& i() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::NewerSimpleUnion::Ordinal::kI);
     return envelope_.As<int64_t>().get_data();
@@ -1607,7 +1571,6 @@ class NewerSimpleUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::NewerSimpleUnion::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
-  ::fidl::StringView& mutable_s() { return s(); }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::NewerSimpleUnion::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
@@ -1648,7 +1611,6 @@ class NewerSimpleUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::NewerSimpleUnion::Ordinal::kV);
     return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
   }
-  ::fidl::VectorView<::fidl::StringView>& mutable_v() { return v(); }
   const ::fidl::VectorView<::fidl::StringView>& v() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::NewerSimpleUnion::Ordinal::kV);
     return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
@@ -1713,7 +1675,6 @@ class FlexibleUnion {
               ::test_union::wire::FlexibleUnion::Ordinal::kPrimitive);
     return envelope_.As<int32_t>().get_data();
   }
-  int32_t& mutable_primitive() { return primitive(); }
   const int32_t& primitive() const {
     ZX_ASSERT(ordinal_ ==
               ::test_union::wire::FlexibleUnion::Ordinal::kPrimitive);
@@ -1761,9 +1722,6 @@ class FlexibleUnion {
         ordinal_ ==
         ::test_union::wire::FlexibleUnion::Ordinal::kStringNeedsConstructor);
     return envelope_.As<::fidl::StringView>().get_data();
-  }
-  ::fidl::StringView& mutable_string_needs_constructor() {
-    return string_needs_constructor();
   }
   const ::fidl::StringView& string_needs_constructor() const {
     ZX_ASSERT(
@@ -1816,10 +1774,6 @@ class FlexibleUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::FlexibleUnion::Ordinal::
                               kVectorStringAlsoNeedsConstructor);
     return envelope_.As<::fidl::VectorView<::fidl::StringView>>().get_data();
-  }
-  ::fidl::VectorView<::fidl::StringView>&
-  mutable_vector_string_also_needs_constructor() {
-    return vector_string_also_needs_constructor();
   }
   const ::fidl::VectorView<::fidl::StringView>&
   vector_string_also_needs_constructor() const {
@@ -1900,7 +1854,6 @@ class FlexibleFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::FlexibleFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
-  ::fidl::StringView& mutable_s() { return s(); }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::FlexibleFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
@@ -1924,7 +1877,6 @@ class FlexibleFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::FlexibleFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  int32_t& mutable_i() { return i(); }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::FlexibleFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
@@ -1986,7 +1938,6 @@ class FieldCollision {
               ::test_union::wire::FieldCollision::Ordinal::kFieldCollisionTag);
     return envelope_.As<int32_t>().get_data();
   }
-  int32_t& mutable_field_collision_tag() { return field_collision_tag(); }
   const int32_t& field_collision_tag() const {
     ZX_ASSERT(ordinal_ ==
               ::test_union::wire::FieldCollision::Ordinal::kFieldCollisionTag);
@@ -2065,7 +2016,6 @@ class ExplicitXUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitXUnion::Ordinal::kI);
     return envelope_.As<int64_t>().get_data();
   }
-  int64_t& mutable_i() { return i(); }
   const int64_t& i() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitXUnion::Ordinal::kI);
     return envelope_.As<int64_t>().get_data();
@@ -2089,7 +2039,6 @@ class ExplicitXUnion {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitXUnion::Ordinal::kF);
     return envelope_.As<float>().get_data();
   }
-  float& mutable_f() { return f(); }
   const float& f() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitXUnion::Ordinal::kF);
     return envelope_.As<float>().get_data();
@@ -2151,7 +2100,6 @@ class ExplicitUnion {
               ::test_union::wire::ExplicitUnion::Ordinal::kPrimitive);
     return envelope_.As<int32_t>().get_data();
   }
-  int32_t& mutable_primitive() { return primitive(); }
   const int32_t& primitive() const {
     ZX_ASSERT(ordinal_ ==
               ::test_union::wire::ExplicitUnion::Ordinal::kPrimitive);
@@ -2199,9 +2147,6 @@ class ExplicitUnion {
         ordinal_ ==
         ::test_union::wire::ExplicitUnion::Ordinal::kStringNeedsConstructor);
     return envelope_.As<::fidl::StringView>().get_data();
-  }
-  ::fidl::StringView& mutable_string_needs_constructor() {
-    return string_needs_constructor();
   }
   const ::fidl::StringView& string_needs_constructor() const {
     ZX_ASSERT(
@@ -2283,7 +2228,6 @@ class ExplicitStrictFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
-  ::fidl::StringView& mutable_s() { return s(); }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
@@ -2307,7 +2251,6 @@ class ExplicitStrictFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  int32_t& mutable_i() { return i(); }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitStrictFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
@@ -2387,7 +2330,6 @@ class ExplicitFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
-  ::fidl::StringView& mutable_s() { return s(); }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
@@ -2411,7 +2353,6 @@ class ExplicitFoo {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  int32_t& mutable_i() { return i(); }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
@@ -2478,7 +2419,6 @@ class XUnionContainingEmptyStruct {
               ::test_union::wire::XUnionContainingEmptyStruct::Ordinal::kEmpty);
     return envelope_.As<::test_union::wire::Empty>().get_data();
   }
-  ::test_union::wire::Empty& mutable_empty() { return empty(); }
   const ::test_union::wire::Empty& empty() const {
     ZX_ASSERT(ordinal_ ==
               ::test_union::wire::XUnionContainingEmptyStruct::Ordinal::kEmpty);

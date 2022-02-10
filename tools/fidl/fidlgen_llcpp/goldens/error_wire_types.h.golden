@@ -92,9 +92,6 @@ class ExampleFooResult {
               ::test_error::wire::ExampleFooResult::Ordinal::kResponse);
     return envelope_.As<::test_error::wire::ExampleFooResponse>().get_data();
   }
-  ::test_error::wire::ExampleFooResponse& mutable_response() {
-    return response();
-  }
   const ::test_error::wire::ExampleFooResponse& response() const {
     ZX_ASSERT(ordinal_ ==
               ::test_error::wire::ExampleFooResult::Ordinal::kResponse);
@@ -119,7 +116,6 @@ class ExampleFooResult {
     ZX_ASSERT(ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();

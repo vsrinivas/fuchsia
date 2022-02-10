@@ -178,7 +178,6 @@ class UnionWithHandle {
               ::test_handlesintypes::wire::UnionWithHandle::Ordinal::kH);
     return envelope_.As<::zx::vmo>().get_data();
   }
-  ::zx::vmo& mutable_h() { return h(); }
   const ::zx::vmo& h() const {
     ZX_ASSERT(ordinal_ ==
               ::test_handlesintypes::wire::UnionWithHandle::Ordinal::kH);

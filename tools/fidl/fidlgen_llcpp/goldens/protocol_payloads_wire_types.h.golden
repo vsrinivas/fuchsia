@@ -102,10 +102,6 @@ class MainProtocolTwoWayImportWithErrorResult {
         .As<::test_protocolpayloads_imported::wire::ImportStructPayload>()
         .get_data();
   }
-  ::test_protocolpayloads_imported::wire::ImportStructPayload&
-  mutable_response() {
-    return response();
-  }
   const ::test_protocolpayloads_imported::wire::ImportStructPayload& response()
       const {
     ZX_ASSERT(ordinal_ ==
@@ -139,7 +135,6 @@ class MainProtocolTwoWayImportWithErrorResult {
                   MainProtocolTwoWayImportWithErrorResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
               ::test_protocolpayloads::wire::
@@ -259,10 +254,6 @@ class MainProtocolTwoWayAnonWithErrorResult {
                 MainProtocolTwoWayAnonWithErrorResponse>()
         .get_data();
   }
-  ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse&
-  mutable_response() {
-    return response();
-  }
   const ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse&
   response() const {
     ZX_ASSERT(ordinal_ ==
@@ -296,7 +287,6 @@ class MainProtocolTwoWayAnonWithErrorResult {
                   MainProtocolTwoWayAnonWithErrorResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
               ::test_protocolpayloads::wire::
@@ -384,10 +374,6 @@ class MainProtocolOnImportWithErrorResult {
         .As<::test_protocolpayloads_imported::wire::ImportStructPayload>()
         .get_data();
   }
-  ::test_protocolpayloads_imported::wire::ImportStructPayload&
-  mutable_response() {
-    return response();
-  }
   const ::test_protocolpayloads_imported::wire::ImportStructPayload& response()
       const {
     ZX_ASSERT(ordinal_ ==
@@ -420,7 +406,6 @@ class MainProtocolOnImportWithErrorResult {
                   MainProtocolOnImportWithErrorResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
               ::test_protocolpayloads::wire::
@@ -538,10 +523,6 @@ class MainProtocolOnAnonWithErrorResult {
                 MainProtocolOnAnonWithErrorResponse>()
         .get_data();
   }
-  ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResponse&
-  mutable_response() {
-    return response();
-  }
   const ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResponse&
   response() const {
     ZX_ASSERT(ordinal_ ==
@@ -574,7 +555,6 @@ class MainProtocolOnAnonWithErrorResult {
                               MainProtocolOnAnonWithErrorResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ == ::test_protocolpayloads::wire::
                               MainProtocolOnAnonWithErrorResult::Ordinal::kErr);
@@ -681,9 +661,6 @@ class MainProtocolTwoWayLocalWithErrorResult {
     return envelope_.As<::test_protocolpayloads::wire::LocalStructPayload>()
         .get_data();
   }
-  ::test_protocolpayloads::wire::LocalStructPayload& mutable_response() {
-    return response();
-  }
   const ::test_protocolpayloads::wire::LocalStructPayload& response() const {
     ZX_ASSERT(ordinal_ ==
               ::test_protocolpayloads::wire::
@@ -715,7 +692,6 @@ class MainProtocolTwoWayLocalWithErrorResult {
                   MainProtocolTwoWayLocalWithErrorResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
               ::test_protocolpayloads::wire::
@@ -822,9 +798,6 @@ class MainProtocolOnLocalWithErrorResult {
     return envelope_.As<::test_protocolpayloads::wire::LocalStructPayload>()
         .get_data();
   }
-  ::test_protocolpayloads::wire::LocalStructPayload& mutable_response() {
-    return response();
-  }
   const ::test_protocolpayloads::wire::LocalStructPayload& response() const {
     ZX_ASSERT(ordinal_ ==
               ::test_protocolpayloads::wire::
@@ -855,7 +828,6 @@ class MainProtocolOnLocalWithErrorResult {
                   MainProtocolOnLocalWithErrorResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
               ::test_protocolpayloads::wire::

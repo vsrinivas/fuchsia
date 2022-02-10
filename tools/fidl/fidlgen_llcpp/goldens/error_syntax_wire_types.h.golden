@@ -122,10 +122,6 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
                 ExampleUseOfErrorSyntaxCallWhichMayFailResponse>()
         .get_data();
   }
-  ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse&
-  mutable_response() {
-    return response();
-  }
   const ::test_errorsyntax::wire::
       ExampleUseOfErrorSyntaxCallWhichMayFailResponse&
       response() const {
@@ -162,7 +158,6 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
                   ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
               ::test_errorsyntax::wire::

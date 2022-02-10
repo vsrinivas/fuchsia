@@ -397,7 +397,6 @@ class UnionMember {
               ::test_anonymous::wire::UnionMember::Ordinal::kUnionData);
     return envelope_.As<uint8_t>().get_data();
   }
-  uint8_t& mutable_union_data() { return union_data(); }
   const uint8_t& union_data() const {
     ZX_ASSERT(ordinal_ ==
               ::test_anonymous::wire::UnionMember::Ordinal::kUnionData);
@@ -478,7 +477,6 @@ class Expression {
     ZX_ASSERT(ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kValue);
     return envelope_.As<uint64_t>().get_data();
   }
-  uint64_t& mutable_value() { return value(); }
   const uint64_t& value() const {
     ZX_ASSERT(ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kValue);
     return envelope_.As<uint64_t>().get_data();
@@ -520,7 +518,6 @@ class Expression {
     ZX_ASSERT(ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kBinOp);
     return envelope_.As<::test_anonymous::wire::OverrideTest>().get_data();
   }
-  ::test_anonymous::wire::OverrideTest& mutable_bin_op() { return bin_op(); }
   const ::test_anonymous::wire::OverrideTest& bin_op() const {
     ZX_ASSERT(ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kBinOp);
     return envelope_.As<::test_anonymous::wire::OverrideTest>().get_data();
@@ -570,9 +567,6 @@ class Expression {
         ::test_anonymous::wire::Expression::Ordinal::kFunctionApplication);
     return envelope_.As<::test_anonymous::wire::FunctionApplication>()
         .get_data();
-  }
-  ::test_anonymous::wire::FunctionApplication& mutable_function_application() {
-    return function_application();
   }
   const ::test_anonymous::wire::FunctionApplication& function_application()
       const {
@@ -654,9 +648,6 @@ class SomeProtocolSomeMethodResult {
         .As<::test_anonymous::wire::SomeProtocolSomeMethodResponse>()
         .get_data();
   }
-  ::test_anonymous::wire::SomeProtocolSomeMethodResponse& mutable_response() {
-    return response();
-  }
   const ::test_anonymous::wire::SomeProtocolSomeMethodResponse& response()
       const {
     ZX_ASSERT(ordinal_ == ::test_anonymous::wire::SomeProtocolSomeMethodResult::
@@ -690,9 +681,6 @@ class SomeProtocolSomeMethodResult {
         ::test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal::kErr);
     return envelope_.As<::test_anonymous::wire::SomeProtocolSomeMethodError>()
         .get_data();
-  }
-  ::test_anonymous::wire::SomeProtocolSomeMethodError& mutable_err() {
-    return err();
   }
   const ::test_anonymous::wire::SomeProtocolSomeMethodError& err() const {
     ZX_ASSERT(

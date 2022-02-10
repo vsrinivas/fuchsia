@@ -184,7 +184,6 @@ class ExampleXUnion {
         ::test_placementofattributes::wire::ExampleXUnion::Ordinal::kVariant);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_variant() { return variant(); }
   const uint32_t& variant() const {
     ZX_ASSERT(
         ordinal_ ==
@@ -251,7 +250,6 @@ class ExampleUnion {
         ::test_placementofattributes::wire::ExampleUnion::Ordinal::kVariant);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_variant() { return variant(); }
   const uint32_t& variant() const {
     ZX_ASSERT(
         ordinal_ ==

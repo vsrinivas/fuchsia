@@ -146,7 +146,6 @@ class OnlyLlcpp {
               ::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_x() { return x(); }
   const uint32_t& x() const {
     ZX_ASSERT(ordinal_ ==
               ::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX);
@@ -237,10 +236,6 @@ class DenyEachBindingOnlyDenySyzkallerResult {
                 DenyEachBindingOnlyDenySyzkallerResponse>()
         .get_data();
   }
-  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse&
-  mutable_response() {
-    return response();
-  }
   const ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse&
   response() const {
     ZX_ASSERT(ordinal_ ==
@@ -275,7 +270,6 @@ class DenyEachBindingOnlyDenySyzkallerResult {
                   DenyEachBindingOnlyDenySyzkallerResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
               ::test_bindingsdenylist::wire::
@@ -369,10 +363,6 @@ class DenyEachBindingOnlyDenyRustResult {
                 DenyEachBindingOnlyDenyRustResponse>()
         .get_data();
   }
-  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse&
-  mutable_response() {
-    return response();
-  }
   const ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse&
   response() const {
     ZX_ASSERT(ordinal_ ==
@@ -405,7 +395,6 @@ class DenyEachBindingOnlyDenyRustResult {
                               DenyEachBindingOnlyDenyRustResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ == ::test_bindingsdenylist::wire::
                               DenyEachBindingOnlyDenyRustResult::Ordinal::kErr);
@@ -501,10 +490,6 @@ class DenyEachBindingOnlyDenyLibfuzzerResult {
                 DenyEachBindingOnlyDenyLibfuzzerResponse>()
         .get_data();
   }
-  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse&
-  mutable_response() {
-    return response();
-  }
   const ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse&
   response() const {
     ZX_ASSERT(ordinal_ ==
@@ -539,7 +524,6 @@ class DenyEachBindingOnlyDenyLibfuzzerResult {
                   DenyEachBindingOnlyDenyLibfuzzerResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
               ::test_bindingsdenylist::wire::
@@ -628,10 +612,6 @@ class DenyEachBindingOnlyDenyGoResult {
         .As<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse>()
         .get_data();
   }
-  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse&
-  mutable_response() {
-    return response();
-  }
   const ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse&
   response() const {
     ZX_ASSERT(ordinal_ ==
@@ -663,7 +643,6 @@ class DenyEachBindingOnlyDenyGoResult {
                               DenyEachBindingOnlyDenyGoResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ == ::test_bindingsdenylist::wire::
                               DenyEachBindingOnlyDenyGoResult::Ordinal::kErr);
@@ -756,10 +735,6 @@ class DenyEachBindingOnlyDenyDartResult {
                 DenyEachBindingOnlyDenyDartResponse>()
         .get_data();
   }
-  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse&
-  mutable_response() {
-    return response();
-  }
   const ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse&
   response() const {
     ZX_ASSERT(ordinal_ ==
@@ -792,7 +767,6 @@ class DenyEachBindingOnlyDenyDartResult {
                               DenyEachBindingOnlyDenyDartResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  uint32_t& mutable_err() { return err(); }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ == ::test_bindingsdenylist::wire::
                               DenyEachBindingOnlyDenyDartResult::Ordinal::kErr);

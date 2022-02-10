@@ -110,10 +110,6 @@ class {{ .Name }} {
     return envelope_.As<{{ .Type }}>().get_data();
   }
   {{- .Docs }}
-  {{ .Type }}& mutable_{{ .Name }}() {
-    return {{ .Name }}();
-  }
-  {{- .Docs }}
   const {{ .Type }}& {{ .Name }}() const {
     ZX_ASSERT(ordinal_ == {{ .WireOrdinalName }});
     return envelope_.As<{{ .Type }}>().get_data();

@@ -300,7 +300,6 @@ class UnionSmallArray {
     ZX_ASSERT(ordinal_ == ::test_arrays::wire::UnionSmallArray::Ordinal::kA);
     return envelope_.As<::fidl::Array<uint32_t, 2>>().get_data();
   }
-  ::fidl::Array<uint32_t, 2>& mutable_a() { return a(); }
   const ::fidl::Array<uint32_t, 2>& a() const {
     ZX_ASSERT(ordinal_ == ::test_arrays::wire::UnionSmallArray::Ordinal::kA);
     return envelope_.As<::fidl::Array<uint32_t, 2>>().get_data();
@@ -378,7 +377,6 @@ class UnionLargeArray {
     ZX_ASSERT(ordinal_ == ::test_arrays::wire::UnionLargeArray::Ordinal::kA);
     return envelope_.As<::fidl::Array<uint32_t, 100>>().get_data();
   }
-  ::fidl::Array<uint32_t, 100>& mutable_a() { return a(); }
   const ::fidl::Array<uint32_t, 100>& a() const {
     ZX_ASSERT(ordinal_ == ::test_arrays::wire::UnionLargeArray::Ordinal::kA);
     return envelope_.As<::fidl::Array<uint32_t, 100>>().get_data();
