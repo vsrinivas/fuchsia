@@ -204,12 +204,12 @@ GlobalMatrixVector ComputeGlobalMatrices(
     const size_t parent_index = parent_indices[i];
 
     // Every entry in the global topology comes from an UberStruct.
-    const auto uber_stuct_kv = uber_structs.find(handle.GetInstanceId());
-    FX_DCHECK(uber_stuct_kv != uber_structs.end());
+    const auto uber_struct_kv = uber_structs.find(handle.GetInstanceId());
+    FX_DCHECK(uber_struct_kv != uber_structs.end());
 
-    const auto matrix_kv = uber_stuct_kv->second->local_matrices.find(handle);
+    const auto matrix_kv = uber_struct_kv->second->local_matrices.find(handle);
 
-    if (matrix_kv == uber_stuct_kv->second->local_matrices.end()) {
+    if (matrix_kv == uber_struct_kv->second->local_matrices.end()) {
       matrices.emplace_back(matrices[parent_index]);
     } else {
       matrices.emplace_back(matrices[parent_index] * matrix_kv->second);
@@ -305,6 +305,43 @@ GlobalTransformClipRegionVector ComputeGlobalTransformClipRegions(
   }
 
   return clip_regions;
+}
+
+GlobalHitRegionsMap ComputeGlobalHitRegions(
+    const GlobalTopologyData::TopologyVector& global_topology,
+    const GlobalTopologyData::ParentIndexVector& parent_indices,
+    const GlobalMatrixVector& matrix_vector,
+    const GlobalTransformClipRegionVector& global_clip_regions,
+    const UberStruct::InstanceMap& uber_structs) {
+  FX_DCHECK(global_topology.size() == parent_indices.size());
+  FX_DCHECK(global_topology.size() == matrix_vector.size());
+
+  GlobalHitRegionsMap global_hit_regions;
+
+  for (size_t i = 0; i < global_topology.size(); ++i) {
+    const TransformHandle& handle = global_topology[i];
+
+    // Every entry in the global topology comes from an UberStruct.
+    const auto uber_struct_kv = uber_structs.find(handle.GetInstanceId());
+    FX_DCHECK(uber_struct_kv != uber_structs.end());
+
+    const auto regions_vec_kv = uber_struct_kv->second->local_hit_regions_map.find(handle);
+
+    if (regions_vec_kv != uber_struct_kv->second->local_hit_regions_map.end()) {
+      for (auto& local_hit_region : regions_vec_kv->second) {
+        auto local_rect = local_hit_region.region;
+        auto global_clip = global_clip_regions[i];
+        // TODO(fxbug.dev/82678) Hit regions are described in each instance's local coordinate
+        // space. They should be converted to global coordinates. Hit regions should be clipped
+        // according to their view boundaries as well.
+        auto global_clipped_rect = local_rect;
+
+        global_hit_regions[handle].push_back({global_clipped_rect, local_hit_region.hit_test});
+      }
+    }
+  }
+
+  return global_hit_regions;
 }
 
 // static

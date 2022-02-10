@@ -131,8 +131,17 @@ view_tree::SubtreeSnapshot Engine::GenerateViewTreeSnapshot(const FlatlandDispla
   const auto child_view_watcher_mapping =
       link_system_->GetChildViewWatcherToParentViewportWatcherMapping();
   const auto link_system_id = link_system_->GetInstanceId();
-  const auto topology_data = flatland::GlobalTopologyData::ComputeGlobalTopologyData(
+  auto topology_data = flatland::GlobalTopologyData::ComputeGlobalTopologyData(
       uber_struct_snapshot, links, link_system_id, display.root_transform());
+
+  const auto matrix_vector = ComputeGlobalMatrices(
+      topology_data.topology_vector, topology_data.parent_indices, uber_struct_snapshot);
+  const auto global_clip_regions =
+      ComputeGlobalTransformClipRegions(topology_data.topology_vector, topology_data.parent_indices,
+                                        matrix_vector, uber_struct_snapshot);
+  topology_data.hit_regions =
+      ComputeGlobalHitRegions(topology_data.topology_vector, topology_data.parent_indices,
+                              matrix_vector, global_clip_regions, uber_struct_snapshot);
 
   // TODO(fxbug.dev/82677): Get real bounding boxes inside of
   // topology_data.GenerateViewTreeSnapshot() function instead of grabbing the full display size

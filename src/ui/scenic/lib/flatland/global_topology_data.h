@@ -46,8 +46,14 @@ struct GlobalTopologyData {
   // The set of TransformHandles in the |topology_vector| (provided for convenience).
   std::unordered_set<TransformHandle> live_handles;
 
-  // ViewRef for each TransformHandle.
+  // ViewRef for each root TransformHandle.
   std::unordered_map<TransformHandle, std::shared_ptr<const fuchsia::ui::views::ViewRef>> view_refs;
+
+  // Map of TransformHandle to its local root TransformHandle. Needed for hit testing.
+  std::unordered_map<TransformHandle, TransformHandle> root_transforms;
+
+  // HitRegions for each TransformHandle.
+  std::unordered_map<TransformHandle, std::vector<fuchsia::ui::composition::HitRegion>> hit_regions;
 
   // Debug name for each transform handle, if present.
   std::unordered_map<TransformHandle, std::string> debug_names;
@@ -78,7 +84,7 @@ struct GlobalTopologyData {
 
   static view_tree::SubtreeSnapshot GenerateViewTreeSnapshot(
       float display_width, float display_height, const GlobalTopologyData& data,
-      const std::unordered_set<zx_koid_t>& view_ref_koids,
+      const std::unordered_set<zx_koid_t>& unconnected_view_refs,
       // Set from |LinkSystem::GetChildViewWatcherToParentViewportWatcherMapping|. Used to get the
       // parent viewport watcher handle for a child view watcher handle to fetch its viewport
       // properties from |viewport_properties|.

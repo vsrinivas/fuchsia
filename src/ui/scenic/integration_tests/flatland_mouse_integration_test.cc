@@ -339,6 +339,9 @@ TEST_F(FlatlandMouseIntegrationTest, ChildReceivesFocus_OnMouseLatch) {
   protocols.set_view_ref_focused(child_focused_ptr.NewRequest());
   child_session->CreateView2(std::move(child_token), std::move(identity), std::move(protocols),
                              parent_viewport_watcher.NewRequest());
+  const fuchsia::ui::composition::TransformId kTransform{.value = 42};
+  child_session->CreateTransform(kTransform);
+  child_session->SetRootTransform(kTransform);
   BlockingPresent(child_session);
 
   // Listen for input events.

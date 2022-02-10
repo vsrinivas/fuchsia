@@ -29,6 +29,13 @@ std::optional<zx_koid_t> GetViewRefKoid(
   return utils::ExtractKoid(*kv->second);
 }
 
+// Account for floating point rounding errors.
+bool RectFContainsPoint(const fuchsia::math::RectF& rect, float x, float y) {
+  constexpr float kEpsilon = 1e-3f;
+  return rect.x - kEpsilon <= x && x <= rect.x + rect.width + kEpsilon && rect.y - kEpsilon <= y &&
+         y <= rect.y + rect.height + kEpsilon;
+}
+
 }  // namespace
 
 namespace flatland {
@@ -69,6 +76,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
   ParentIndexVector parent_indices;
   std::unordered_set<TransformHandle> live_transforms;
   std::unordered_map<TransformHandle, std::shared_ptr<const fuchsia::ui::views::ViewRef>> view_refs;
+  std::unordered_map<TransformHandle, TransformHandle> root_transforms;
   std::unordered_map<TransformHandle, std::string> debug_names;
   std::unordered_map<TransformHandle, fuc_ViewportProperties> viewport_properties;
 
@@ -89,6 +97,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
     }
 
     const auto& current_entry = vector[iterator_index];
+
     FLATLAND_VERBOSE_LOG << "GlobalTopologyData processing current_entry=" << current_entry.handle
                          << "  child-count: " << current_entry.child_count;
     ++iterator_index;
@@ -179,6 +188,9 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
     // Push the current transform and update the "iterator".
     const size_t new_parent_index = topology_vector.size();
     topology_vector.push_back(current_entry.handle);
+    // For each transform in the local topology, record its root.
+    root_transforms.emplace(current_entry.handle, vector[0].handle);
+
     child_counts.push_back(current_entry.child_count);
     parent_indices.push_back(parent_counts.empty() ? 0 : parent_counts.back().parent_index);
     live_transforms.insert(current_entry.handle);
@@ -242,13 +254,14 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
           .parent_indices = std::move(parent_indices),
           .live_handles = std::move(live_transforms),
           .view_refs = std::move(view_refs),
+          .root_transforms = std::move(root_transforms),
           .debug_names = std::move(debug_names),
           .viewport_properties = std::move(viewport_properties)};
 }
 
 view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
     float display_width, float display_height, const GlobalTopologyData& data,
-    const std::unordered_set<zx_koid_t>& view_ref_koids,
+    const std::unordered_set<zx_koid_t>& unconnected_view_refs,
     const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping) {
   // Find the first node with a ViewRef set. This is the root of the ViewTree.
   size_t root_index = 0;
@@ -326,29 +339,45 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
     }
   }
 
-  // TODO(fxbug.dev/72075): The hit tester currently directly returns the last leaf View instead of
-  // doing a full hit test. This is a stopgap solution until we've designed the full hit testing API
-  // for Flatland.
-  zx_koid_t leaf_node_koid = ZX_KOID_INVALID;
-  for (auto it = data.topology_vector.rbegin(); it != data.topology_vector.rend(); it++) {
-    const std::optional<zx_koid_t> koid = GetViewRefKoid(*it, data.view_refs);
-    if (koid.has_value()) {
-      leaf_node_koid = koid.value();
-      break;
-    }
-  }
-  FX_DCHECK(leaf_node_koid != ZX_KOID_INVALID);
   // Note: The ViewTree represents a snapshot of the scene at a specific time. Because of this it's
   // important that it contains no references to live data. This means the hit testing closure must
   // contain only plain values or data with value semantics like shared_ptr<const>, to ensure that
   // it's safe to call from any thread.
-  hit_tester = [leaf_node_koid](zx_koid_t start_node, glm::vec2 world_point,
-                                bool is_semantic_hit_test) {
-    return view_tree::SubtreeHitTestResult{.hits = {leaf_node_koid}};
+  hit_tester = [transforms = data.topology_vector, view_refs = data.view_refs,
+                parent_indices = data.parent_indices, hit_regions = data.hit_regions,
+                root_transforms = data.root_transforms](zx_koid_t start_node, glm::vec2 world_point,
+                                                        bool is_semantic_hit_test) {
+    const auto x = world_point[0];
+    const auto y = world_point[1];
+    std::vector<zx_koid_t> hits = {};
+
+    for (size_t i = 0; i < transforms.size(); ++i) {
+      const auto& transform = transforms[i];
+      FX_DCHECK(root_transforms.find(transform) != root_transforms.end());
+      const auto& root_transform = root_transforms.at(transform);
+
+      if (const auto local_root = view_refs.find(root_transform); local_root != view_refs.end()) {
+        if (const auto hit_region_vec = hit_regions.find(transform);
+            hit_region_vec != hit_regions.end()) {
+          for (const auto& region : hit_region_vec->second) {
+            const auto rect = region.region;
+
+            // TODO(fxbug.dev/92476): Handle semantic invisibility.
+            if (RectFContainsPoint(rect, x, y)) {
+              hits.push_back(utils::ExtractKoid(*(local_root->second)));
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    std::reverse(hits.begin(), hits.end());
+    return view_tree::SubtreeHitTestResult{.hits = hits};
   };
 
   // Add unconnected views to the snapshot.
-  for (const auto view_ref_koid : view_ref_koids) {
+  for (const auto view_ref_koid : unconnected_view_refs) {
     if (view_tree.count(view_ref_koid) == 0) {
       unconnected_views.insert(view_ref_koid);
     }

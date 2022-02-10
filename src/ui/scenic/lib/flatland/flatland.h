@@ -371,6 +371,17 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // all child nodes of the transform handle have their rectangular views clipped to.
   std::unordered_map<TransformHandle, TransformClipRegion> clip_regions_;
 
+  // A map of transform handles to hit regions. Each transform's set of hit regions indicate which
+  // parts of the transform are user-interactive.
+  std::unordered_map<TransformHandle, std::vector<fuchsia::ui::composition::HitRegion>>
+      hit_regions_;
+
+  // TODO(fxbug.dev/93005) Remove this once clients are responsible for setting their own hit
+  // regions.
+  //
+  // This becomes false once the client calls SetHitRegions() with any valid arguments.
+  bool has_default_hit_region_ = true;
+
   // A map of content (image) transform handles to ImageSampleRegion structs which are used
   // to determine the portion of an image that is actually used for rendering.
   std::unordered_map<TransformHandle, ImageSampleRegion> image_sample_regions_;

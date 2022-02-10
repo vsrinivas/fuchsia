@@ -23,6 +23,10 @@ using GlobalImageSampleRegionVector = std::vector<ImageSampleRegion>;
 // The list of global transform clip regions for a particular global topology.
 using GlobalTransformClipRegionVector = std::vector<TransformClipRegion>;
 
+// The set of per-transform hit regions for a particular global topology.
+using GlobalHitRegionsMap =
+    std::unordered_map<TransformHandle, std::vector<fuchsia::ui::composition::HitRegion>>;
+
 const extern ImageSampleRegion kInvalidSampleRegion;
 const extern TransformClipRegion kUnclippedRegion;
 
@@ -54,6 +58,17 @@ GlobalTransformClipRegionVector ComputeGlobalTransformClipRegions(
     const GlobalTopologyData::TopologyVector& global_topology,
     const GlobalTopologyData::ParentIndexVector& parent_indices,
     const GlobalMatrixVector& matrix_vector, const UberStruct::InstanceMap& uber_structs);
+
+// Aggregates the set of local hit regions for each transform in |global_topology| into a map of
+// global hit regions. This process involves two steps: first, convert all hit regions which are
+// in each transform's local space into world space, and then clip the hit regions to the
+// transform's clip region.
+GlobalHitRegionsMap ComputeGlobalHitRegions(
+    const GlobalTopologyData::TopologyVector& global_topology,
+    const GlobalTopologyData::ParentIndexVector& parent_indices,
+    const GlobalMatrixVector& matrix_vector,
+    const GlobalTransformClipRegionVector& global_clip_regions,
+    const UberStruct::InstanceMap& uber_structs);
 
 // The list of global rectangles for a particular global topology. Each entry is the global
 // rectangle (i.e. relative to the root TransformHandle) of the transform in the corresponding

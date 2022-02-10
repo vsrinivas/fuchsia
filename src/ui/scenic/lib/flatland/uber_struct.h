@@ -57,6 +57,10 @@ struct UberStruct {
   // The images associated with each TransformHandle.
   std::unordered_map<TransformHandle, allocation::ImageMetadata> images;
 
+  // Map of local hit regions.
+  std::unordered_map<TransformHandle, std::vector<fuchsia::ui::composition::HitRegion>>
+      local_hit_regions_map;
+
   // The ViewRef for the root (View) of this Flatland instance.
   // Can be nullptr when not attached to the scene, otherwise must be set.
   std::shared_ptr<const fuchsia::ui::views::ViewRef> view_ref = nullptr;

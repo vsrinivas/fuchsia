@@ -162,6 +162,7 @@ class FlatlandTouchIntegrationTest : public gtest::TestWithEnvironmentFixture {
     root_view_ref_ = fidl::Clone(identity.view_ref);
     root_session_->CreateView2(std::move(child_token), std::move(identity), {},
                                parent_viewport_watcher.NewRequest());
+
     parent_viewport_watcher->GetLayout([this](auto layout_info) {
       ASSERT_TRUE(layout_info.has_logical_size());
       const auto [width, height] = layout_info.logical_size();
@@ -363,6 +364,9 @@ TEST_F(FlatlandTouchIntegrationTest, BasicInputTest) {
   protocols.set_touch_source(child_touch_source.NewRequest());
   child_session->CreateView2(std::move(child_token), std::move(identity), std::move(protocols),
                              parent_viewport_watcher.NewRequest());
+  const TransformId kTransform{.value = 42};
+  child_session->CreateTransform(kTransform);
+  child_session->SetRootTransform(kTransform);
   BlockingPresent(child_session);
 
   // Listen for input events.

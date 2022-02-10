@@ -246,6 +246,10 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
     uber_struct->local_clip_regions[handle] = clip_region;
   }
 
+  for (const auto& [handle, hit_regions] : hit_regions_) {
+    uber_struct->local_hit_regions_map[handle] = hit_regions;
+  }
+
   uber_struct->images = image_metadatas_;
 
   if (parent_link_.has_value() && parent_link_->view_ref != nullptr) {
@@ -673,6 +677,15 @@ void Flatland::SetRootTransform(TransformId transform_id) {
 
   bool added = transform_graph_.AddChild(local_root_, global_kv->second);
   FX_DCHECK(added);
+
+  // TODO(fxbug.dev/93005) Remove this line once clients are responsible for calling SetHitRegions()
+  // themselves.
+  if (has_default_hit_region_) {
+    hit_regions_.clear();
+
+    hit_regions_[global_kv->second] = {
+        {{0, 0, FLT_MAX, FLT_MAX}, fuchsia::ui::composition::HitTestInteraction::DEFAULT}};
+  }
 }
 
 void Flatland::CreateViewport(ContentId link_id, ViewportCreationToken token,
@@ -1089,7 +1102,18 @@ void Flatland::SetHitRegions(TransformId transform_id, std::vector<HitRegion> re
     }
   }
 
-  // TODO(fxbug.dev/72075) Finish implementation.
+  // A one time only operation. The idea is that once the client takes ownership of its own hit
+  // regions, Flatland should remove the ones it installed in the beginning.
+  if (has_default_hit_region_) {
+    // Check to ensure we only had at most one hit region for at most one transform.
+    FX_DCHECK(hit_regions_.size() == 0 ||
+              (hit_regions_.size() == 1 && hit_regions_.begin()->second.size() == 1));
+
+    has_default_hit_region_ = false;
+    hit_regions_.clear();
+  }
+
+  hit_regions_[transform_kv->second] = regions;
 }
 
 void Flatland::SetContent(TransformId transform_id, ContentId content_id) {
