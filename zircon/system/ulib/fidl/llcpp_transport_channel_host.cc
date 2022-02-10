@@ -30,6 +30,7 @@ const TransportVTable ChannelTransport::VTable = {
 };
 
 const CodingConfig ChannelTransport::EncodingConfiguration = {
+    .max_iovecs_write = ZX_CHANNEL_MAX_MSG_IOVECS,
     .encode_process_handle = channel_encode_process_handle,
     .decode_process_handle = channel_decode_process_handle,
 };

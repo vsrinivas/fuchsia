@@ -18,7 +18,9 @@ protocol TwoWayTest {
 @transport("Driver")
 protocol OneWayTest {
     OneWay(struct {
-        payload uint32;
+        // The choice of byte vectors is intentional:
+        // It gives coverage to a case which potentially uses multiple iovec entries.
+        payload bytes;
     });
 };
 

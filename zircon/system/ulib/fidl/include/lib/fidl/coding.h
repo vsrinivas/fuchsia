@@ -142,12 +142,17 @@ struct HandleAttributes {
 // Options controlling FIDL encode and decode.
 // These are fixed and specified on the transport-level.
 struct CodingConfig {
+  // Max supported number of iovecs on the write path.
+  // Used to limit the number produced by encode_process_handle.
+  uint32_t max_iovecs_write;
+
   // Callback to process a single handle during encode.
   // |out_metadata_array| contains an array of transport-specific metadata being outputted.
   // |metadata_index| contains an index to a specific metadata item corresponding to the current
   // handle. The implementation should populate out_metadata_array[metadata_index].
   zx_status_t (*encode_process_handle)(HandleAttributes attr, uint32_t metadata_index,
                                        void* out_metadata_array, const char** out_error);
+
   // Callback to process a single handle during decode.
   // |metadata_array| contains an array of transport-specific metadata.
   // |metadata_index| contains an index to a specific metadata item corresponding to the current

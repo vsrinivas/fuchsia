@@ -13,6 +13,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -465,7 +466,7 @@ zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fid
       .backing_buffer = static_cast<uint8_t*>(backing_buffer),
       .backing_buffer_capacity = num_backing_buffer,
       .iovecs = iovecs,
-      .iovecs_capacity = num_iovecs,
+      .iovecs_capacity = std::min(num_iovecs, encoding_configuration.max_iovecs_write),
       .handles = handles,
       .handle_metadata = handle_metadata,
       .handles_capacity = num_handles,

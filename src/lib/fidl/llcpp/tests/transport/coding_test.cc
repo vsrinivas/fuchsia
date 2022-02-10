@@ -31,6 +31,7 @@ zx_status_t decode_process_handle(fidl_handle_t* handle, fidl::internal::HandleA
 struct TestTransport {
   using HandleMetadata = TestHandleMetadata;
   static constexpr const fidl::internal::CodingConfig EncodingConfiguration = {
+      .max_iovecs_write = 256,
       .encode_process_handle = encode_process_handle,
       .decode_process_handle = decode_process_handle,
   };

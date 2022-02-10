@@ -195,7 +195,9 @@ zx_status_t DriverWaiter::Cancel() {
   return ZX_OK;
 }
 
-const CodingConfig DriverTransport::EncodingConfiguration = {};
+const CodingConfig DriverTransport::EncodingConfiguration = {
+    .max_iovecs_write = 1,
+};
 
 }  // namespace internal
 }  // namespace fidl

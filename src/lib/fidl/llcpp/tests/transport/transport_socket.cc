@@ -88,7 +88,9 @@ void SocketWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status_
   return success_handler_(msg, internal::IncomingTransportContext());
 }
 
-const CodingConfig SocketTransport::EncodingConfiguration = {};
+const CodingConfig SocketTransport::EncodingConfiguration = {
+    .max_iovecs_write = 1,
+};
 
 }  // namespace internal
 }  // namespace fidl

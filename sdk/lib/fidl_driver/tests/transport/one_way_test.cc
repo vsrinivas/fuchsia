@@ -16,12 +16,13 @@
 
 namespace {
 
-constexpr uint32_t kRequestPayload = 1234;
+std::array<uint8_t, 4> kRequestPayload = {1, 2, 3, 4};
 
 struct TestServer : public fdf::WireServer<test_transport::OneWayTest> {
   void OneWay(OneWayRequestView request, fdf::Arena arena,
               OneWayCompleter::Sync& completer) override {
-    ASSERT_EQ(kRequestPayload, request->payload);
+    ASSERT_EQ(kRequestPayload.size(), request->payload.count());
+    ASSERT_BYTES_EQ(kRequestPayload.data(), request->payload.data(), kRequestPayload.size());
     ASSERT_EQ(fdf_request_arena, arena.get());
 
     sync_completion_signal(&done);
@@ -32,7 +33,7 @@ struct TestServer : public fdf::WireServer<test_transport::OneWayTest> {
 };
 
 // TODO(fxbug.dev/92488): Investigate use-after-free in |driver_runtime::Dispatcher|.
-TEST(DriverTransport, DISABLED_OneWay) {
+TEST(DriverTransport, DISABLED_OneWayVector) {
   void* driver = reinterpret_cast<void*>(uintptr_t(1));
   fdf_internal_push_driver(driver);
   auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });
@@ -57,7 +58,8 @@ TEST(DriverTransport, DISABLED_OneWay) {
   server->fdf_request_arena = arena->get();
   // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
   // The arena is consumed after a single call.
-  client.buffer(std::move(*arena))->OneWay(kRequestPayload);
+  client.buffer(std::move(*arena))
+      ->OneWay(fidl::VectorView<uint8_t>::FromExternal(kRequestPayload));
 
   ASSERT_OK(sync_completion_wait(&server->done, ZX_TIME_INFINITE));
 }
