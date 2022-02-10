@@ -410,14 +410,14 @@ impl<I: IcmpIpExt, B: BufferMut, D: EventDispatcher + BufferIcmpContext<I, B>>
 pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt>:
     IcmpContext<I>
     + IpSocketHandler<I>
-    + IpDeviceIdContext
+    + IpDeviceIdContext<I>
     + CounterContext
     + InstantContext
     + StateContext<
         IcmpState<
             I::Addr,
             <Self as InstantContext>::Instant,
-            IpSock<I, <Self as IpDeviceIdContext>::DeviceId>,
+            IpSock<I, <Self as IpDeviceIdContext<I>>::DeviceId>,
         >,
     >
 {
@@ -516,7 +516,7 @@ pub(crate) trait InnerIcmpv4Context:
     + StateContext<
         Icmpv4State<
             <Self as InstantContext>::Instant,
-            IpSock<Ipv4, <Self as IpDeviceIdContext>::DeviceId>,
+            IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>,
         >,
     >
 {
@@ -527,7 +527,7 @@ impl<
             + StateContext<
                 Icmpv4State<
                     <Self as InstantContext>::Instant,
-                    IpSock<Ipv4, <Self as IpDeviceIdContext>::DeviceId>,
+                    IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>,
                 >,
             >,
     > InnerIcmpv4Context for C
@@ -552,7 +552,7 @@ impl<C>
         IcmpState<
             Ipv4Addr,
             <Self as InstantContext>::Instant,
-            IpSock<Ipv4, <Self as IpDeviceIdContext>::DeviceId>,
+            IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>,
         >,
     > for C
 where
@@ -561,7 +561,7 @@ where
         + StateContext<
             Icmpv4State<
                 <Self as InstantContext>::Instant,
-                IpSock<Ipv4, <Self as IpDeviceIdContext>::DeviceId>,
+                IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>,
             >,
         >,
 {
@@ -571,7 +571,7 @@ where
     ) -> &IcmpState<
         Ipv4Addr,
         <Self as InstantContext>::Instant,
-        IpSock<Ipv4, <Self as IpDeviceIdContext>::DeviceId>,
+        IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>,
     > {
         &self.get_state().inner
     }
@@ -582,7 +582,7 @@ where
     ) -> &mut IcmpState<
         Ipv4Addr,
         <Self as InstantContext>::Instant,
-        IpSock<Ipv4, <Self as IpDeviceIdContext>::DeviceId>,
+        IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>,
     > {
         &mut self.get_state_mut().inner
     }
@@ -596,7 +596,7 @@ pub(crate) trait InnerIcmpv6Context:
     + StateContext<
         Icmpv6State<
             <Self as InstantContext>::Instant,
-            IpSock<Ipv6, <Self as IpDeviceIdContext>::DeviceId>,
+            IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>,
         >,
     >
 {
@@ -607,7 +607,7 @@ impl<C> InnerIcmpv6Context for C where
         + StateContext<
             Icmpv6State<
                 <Self as InstantContext>::Instant,
-                IpSock<Ipv6, <Self as IpDeviceIdContext>::DeviceId>,
+                IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>,
             >,
         >
 {
@@ -631,7 +631,7 @@ impl<C>
         IcmpState<
             Ipv6Addr,
             <Self as InstantContext>::Instant,
-            IpSock<Ipv6, <Self as IpDeviceIdContext>::DeviceId>,
+            IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>,
         >,
     > for C
 where
@@ -640,7 +640,7 @@ where
         + StateContext<
             Icmpv6State<
                 <Self as InstantContext>::Instant,
-                IpSock<Ipv6, <Self as IpDeviceIdContext>::DeviceId>,
+                IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>,
             >,
         >,
 {
@@ -650,7 +650,7 @@ where
     ) -> &IcmpState<
         Ipv6Addr,
         <Self as InstantContext>::Instant,
-        IpSock<Ipv6, <Self as IpDeviceIdContext>::DeviceId>,
+        IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>,
     > {
         &self.get_state().inner
     }
@@ -661,7 +661,7 @@ where
     ) -> &mut IcmpState<
         Ipv6Addr,
         <Self as InstantContext>::Instant,
-        IpSock<Ipv6, <Self as IpDeviceIdContext>::DeviceId>,
+        IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>,
     > {
         &mut self.get_state_mut().inner
     }
@@ -954,8 +954,8 @@ impl<
         C: InnerIcmpv6Context
             + InnerBufferIcmpContext<Ipv6, B>
             + PmtuHandler<Ipv6>
-            + MldPacketHandler<<C as IpDeviceIdContext>::DeviceId>
-            + NdpPacketHandler<<C as IpDeviceIdContext>::DeviceId>,
+            + MldPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>
+            + NdpPacketHandler<<C as IpDeviceIdContext<Ipv6>>::DeviceId>,
     > BufferIpTransportContext<Ipv6, B, C> for IcmpIpTransportContext
 {
     fn receive_ip_packet(
@@ -1089,7 +1089,7 @@ impl<
 fn send_icmp_reply<
     I: crate::ip::IpExt,
     B: BufferMut,
-    C: BufferIpSocketHandler<I, B> + IpDeviceIdContext + CounterContext,
+    C: BufferIpSocketHandler<I, B> + IpDeviceIdContext<I> + CounterContext,
     S: Serializer<Buffer = B>,
     F: FnOnce(SpecifiedAddr<I::Addr>) -> S,
 >(

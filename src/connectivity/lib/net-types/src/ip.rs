@@ -1079,6 +1079,12 @@ macro_rules! impl_from_witness {
                 unsafe { Witness::new_unchecked(addr.to_ip_addr()) }
             }
         }
+        impl<A: IpAddress> From<$witness<A>> for IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>> {
+            fn from(addr: $witness<A>) -> IpAddr<$witness<Ipv4Addr>, $witness<Ipv6Addr>> {
+                let addr: $witness<IpAddr> = addr.into();
+                addr.into()
+            }
+        }
         // NOTE: Orphan rules prevent implementing `From` for `A: IpAddress`.
         impl From<$witness<Ipv4Addr>> for Ipv4Addr {
             fn from(addr: $witness<Ipv4Addr>) -> Ipv4Addr {

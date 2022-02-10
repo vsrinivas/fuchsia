@@ -1247,7 +1247,7 @@ mod tests {
     use packet::{Buf, Serializer};
     use packet_formats::icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode};
     use packet_formats::ip::Ipv4Proto;
-    use specialize_ip_macro::ip_test;
+    use specialize_ip_macro::{ip_test, specialize_ip_address};
 
     use super::*;
     use crate::ip::socket::BufferIpSocketHandler;
@@ -1522,13 +1522,28 @@ mod tests {
 
     #[ip_test]
     fn test_send_to_many<I: Ip + TestIpExt>() {
+        #[specialize_ip_address]
         fn send_packet<A: IpAddress>(
             ctx: &mut Ctx<DummyEventDispatcher>,
             src_ip: SpecifiedAddr<A>,
             dst_ip: SpecifiedAddr<A>,
             device: DeviceId,
         ) {
-            crate::ip::send_ip_packet_from_device(
+            #[ipv4addr]
+            crate::ip::send_ipv4_packet_from_device(
+                ctx,
+                device,
+                src_ip.get(),
+                dst_ip.get(),
+                dst_ip,
+                IpProto::Udp.into(),
+                Buf::new(vec![1, 2, 3, 4], ..),
+                None,
+            )
+            .unwrap();
+
+            #[ipv6addr]
+            crate::ip::send_ipv6_packet_from_device(
                 ctx,
                 device,
                 src_ip.get(),

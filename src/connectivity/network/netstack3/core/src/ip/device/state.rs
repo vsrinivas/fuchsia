@@ -68,6 +68,7 @@ impl<I: Instant> AssignedAddress<Ipv6Addr> for Ipv6AddressEntry<I> {
 }
 
 /// The state common to all IP devices.
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct IpDeviceState<Instant, I: IpDeviceStateIpExt<Instant>> {
     /// IP addresses assigned to this device.
     ///

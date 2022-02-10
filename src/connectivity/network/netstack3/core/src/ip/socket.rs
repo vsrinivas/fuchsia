@@ -43,7 +43,7 @@ pub(crate) trait IpSocket<I: Ip>: Socket<UpdateError = IpSockCreationError> {
 }
 
 /// An execution context defining a type of IP socket.
-pub trait IpSocketHandler<I: IpExt>: IpDeviceIdContext {
+pub trait IpSocketHandler<I: IpExt>: IpDeviceIdContext<I> {
     /// A builder carrying optional parameters passed to [`new_ip_socket`].
     ///
     /// [`new_ip_socket`]: crate::ip::socket::IpSocketHandler::new_ip_socket
@@ -428,7 +428,7 @@ pub(crate) fn update_all_ipv6_sockets<D: EventDispatcher>(
 /// Blanket impls of `IpSocketHandler` are provided in terms of
 /// `IpSocketContext` and [`Ipv4SocketContext`].
 pub(crate) trait IpSocketContext<I>:
-    IpDeviceIdContext + InstantContext + CounterContext + RngContext
+    IpDeviceIdContext<I> + InstantContext + CounterContext + RngContext
 where
     I: IpDeviceStateIpExt<<Self as InstantContext>::Instant>,
 {
@@ -463,7 +463,7 @@ pub(crate) trait Ipv4SocketContext: IpSocketContext<Ipv4> {
 /// Blanket impls of `BufferIpSocketHandler` are provided in terms of
 /// `BufferIpSocketContext`.
 pub(crate) trait BufferIpSocketContext<I, B: BufferMut>:
-    IpSocketContext<I> + FrameContext<B, IpFrameMeta<I::Addr, <Self as IpDeviceIdContext>::DeviceId>>
+    IpSocketContext<I> + FrameContext<B, IpFrameMeta<I::Addr, <Self as IpDeviceIdContext<I>>::DeviceId>>
 where
     I: IpDeviceStateIpExt<<Self as InstantContext>::Instant>,
 {
@@ -1294,14 +1294,28 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::from_config(cfg).build::<DummyEventDispatcher>();
         let NewSocketTestCase { local_ip_type, remote_ip_type, expected_result } = test_case;
 
+        #[ipv4]
         let remove_all_local_addrs = |ctx: &mut Ctx<DummyEventDispatcher>| {
-            let mut devices = crate::ip::device::iter_devices(ctx);
-            let device = devices.next().unwrap();
-            assert_eq!(devices.next(), None);
+            let mut devices = crate::ip::device::iter_ipv4_devices(ctx);
+            let (device, _state) = devices.next().unwrap();
+            assert_matches::assert_matches!(devices.next(), None);
             drop(devices);
             let subnets =
-                crate::ip::device::get_assigned_ip_addr_subnets::<_, I::Addr>(ctx, device)
-                    .collect::<Vec<AddrSubnet<I::Addr>>>();
+                crate::ip::device::get_assigned_ipv4_addr_subnets(ctx, device).collect::<Vec<_>>();
+            for subnet in subnets {
+                crate::device::del_ip_addr(ctx, device, &subnet.addr())
+                    .expect("failed to remove addr from device");
+            }
+        };
+
+        #[ipv6]
+        let remove_all_local_addrs = |ctx: &mut Ctx<DummyEventDispatcher>| {
+            let mut devices = crate::ip::device::iter_ipv6_devices(ctx);
+            let (device, _state) = devices.next().unwrap();
+            assert_matches::assert_matches!(devices.next(), None);
+            drop(devices);
+            let subnets =
+                crate::ip::device::get_assigned_ipv6_addr_subnets(ctx, device).collect::<Vec<_>>();
             for subnet in subnets {
                 crate::device::del_ip_addr(ctx, device, &subnet.addr())
                     .expect("failed to remove addr from device");

@@ -150,7 +150,7 @@ pub(crate) trait IpTransportContext<I: IcmpIpExt, C: ?Sized> {
 
 /// The execution context provided by a transport layer protocol to the IP layer
 /// when a buffer is required.
-pub(crate) trait BufferIpTransportContext<I: IpExt, B: BufferMut, C: IpDeviceIdContext + ?Sized>:
+pub(crate) trait BufferIpTransportContext<I: IpExt, B: BufferMut, C: IpDeviceIdContext<I> + ?Sized>:
     IpTransportContext<I, C>
 {
     /// Receive a transport layer packet in an IP packet.
@@ -179,7 +179,7 @@ impl<I: IcmpIpExt, C: ?Sized> IpTransportContext<I, C> for () {
     }
 }
 
-impl<I: IpExt, B: BufferMut, C: IpDeviceIdContext + ?Sized> BufferIpTransportContext<I, B, C>
+impl<I: IpExt, B: BufferMut, C: IpDeviceIdContext<I> + ?Sized> BufferIpTransportContext<I, B, C>
     for ()
 {
     fn receive_ip_packet(
@@ -197,7 +197,7 @@ impl<I: IpExt, B: BufferMut, C: IpDeviceIdContext + ?Sized> BufferIpTransportCon
 }
 
 /// The execution context provided by the IP layer to transport layer protocols.
-pub trait TransportIpContext<I: IpExt>: IpDeviceIdContext + IpSocketHandler<I> {
+pub trait TransportIpContext<I: IpExt>: IpDeviceIdContext<I> + IpSocketHandler<I> {
     /// Is this one of our local addresses, and is it in the assigned state?
     ///
     /// `is_assigned_local_addr` returns whether `addr` is the address
@@ -291,7 +291,7 @@ where
 /// the same `DeviceId` type rather than each providing their own, which would
 /// require lots of verbose type bounds when they need to be interoperable (such
 /// as when ICMP delivers an MLD packet to the `mld` module for processing).
-pub trait IpDeviceIdContext {
+pub trait IpDeviceIdContext<I: Ip> {
     type DeviceId: Copy + Display + Debug + PartialEq + Send + Sync + 'static;
 }
 
@@ -305,7 +305,7 @@ pub trait IpDeviceIdContext {
 pub(crate) struct DummyDeviceId;
 
 #[cfg(test)]
-impl<S, Id, Meta> IpDeviceIdContext for crate::context::testutil::DummyCtx<S, Id, Meta> {
+impl<I: Ip, S, Id, Meta> IpDeviceIdContext<I> for crate::context::testutil::DummyCtx<S, Id, Meta> {
     type DeviceId = DummyDeviceId;
 }
 
@@ -314,12 +314,6 @@ impl Display for DummyDeviceId {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "DummyDeviceId")
     }
-}
-
-// Temporary blanket impl until we switch over entirely to the traits defined in
-// the `context` module.
-impl<D: EventDispatcher> IpDeviceIdContext for Ctx<D> {
-    type DeviceId = DeviceId;
 }
 
 /// A builder for IPv4 state.
@@ -1054,7 +1048,12 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 packet.set_ttl(ttl - 1);
                 let _: (Ipv4Addr, Ipv4Addr, Ipv4Proto, ParseMetadata) =
                     drop_packet_and_undo_parse!(packet, buffer);
-                match crate::ip::device::send_ip_frame(ctx, dst.device, dst.next_hop, buffer) {
+                match crate::ip::device::send_ip_frame::<Ipv4, _, _, _>(
+                    ctx,
+                    dst.device,
+                    dst.next_hop,
+                    buffer,
+                ) {
                     Ok(()) => (),
                     Err(b) => {
                         let _: B = b;
@@ -1310,9 +1309,12 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 packet.set_ttl(ttl - 1);
                 let (_, _, proto, meta): (Ipv6Addr, Ipv6Addr, _, _) =
                     drop_packet_and_undo_parse!(packet, buffer);
-                if let Err(buffer) =
-                    crate::ip::device::send_ip_frame(ctx, dst.device, dst.next_hop, buffer)
-                {
+                if let Err(buffer) = crate::ip::device::send_ip_frame::<Ipv6, _, _, _>(
+                    ctx,
+                    dst.device,
+                    dst.next_hop,
+                    buffer,
+                ) {
                     // TODO(https://fxbug.dev/86247): Encode the MTU error more
                     // obviously in the type system.
                     debug!("failed to forward IPv6 packet: MTU exceeded");
@@ -1327,7 +1329,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                         // the sender's ability to figure out the minimum path
                         // MTU. This may break other logic, though, so we should
                         // still fix it eventually.
-                        let mtu = crate::ip::device::get_mtu(ctx, device);
+                        let mtu = crate::ip::device::get_mtu::<Ipv6, _>(ctx, device);
                         crate::ip::icmp::send_icmpv6_packet_too_big(
                             ctx,
                             device,
@@ -1457,7 +1459,11 @@ fn receive_ipv4_packet_action<D: EventDispatcher>(
         increment_counter!(ctx, "receive_ipv4_packet_action::deliver");
         ReceivePacketAction::Deliver
     } else {
-        receive_ip_packet_action_common(ctx, device, dst_ip)
+        receive_ip_packet_action_common(
+            ctx,
+            dst_ip,
+            crate::ip::device::is_ipv4_routing_enabled(ctx, device),
+        )
     }
 }
 
@@ -1517,7 +1523,11 @@ fn receive_ipv6_packet_action<D: EventDispatcher>(
             }
         }
     } else {
-        receive_ip_packet_action_common(ctx, device, dst_ip)
+        receive_ip_packet_action_common(
+            ctx,
+            dst_ip,
+            crate::ip::device::is_ipv6_routing_enabled(ctx, device),
+        )
     }
 }
 
@@ -1525,8 +1535,8 @@ fn receive_ipv6_packet_action<D: EventDispatcher>(
 /// [`receive_ipv4_packet_action`] and [`receive_ipv6_packet_action`].
 fn receive_ip_packet_action_common<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Ctx<D>,
-    device: DeviceId,
     dst_ip: SpecifiedAddr<A>,
+    is_device_routing_enabled: bool,
 ) -> ReceivePacketAction<A> {
     // The packet is not destined locally, so we attempt to forward it.
     if !crate::ip::is_routing_enabled::<_, A::Version>(ctx) {
@@ -1544,7 +1554,7 @@ fn receive_ip_packet_action_common<D: EventDispatcher, A: IpAddress>(
         // discard the packet in this case.
         increment_counter!(ctx, "receive_ip_packet_action_common::routing_disabled_globally");
         ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabled }
-    } else if !crate::ip::device::is_routing_enabled::<_, A::Version>(ctx, device) {
+    } else if !is_device_routing_enabled {
         increment_counter!(ctx, "receive_ip_packet_action_common::routing_disabled_per_device");
         ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabledInboundIface }
     } else {
@@ -1650,55 +1660,72 @@ pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
 ///
 /// Panics if either `src_ip` or `dst_ip` is the loopback address and the device
 /// is a non-loopback device.
-#[specialize_ip_address]
-pub(crate) fn send_ip_packet_from_device<
+pub(crate) fn send_ipv4_packet_from_device<
     B: BufferMut,
     D: BufferDispatcher<B>,
-    A: IpAddress,
     S: Serializer<Buffer = B>,
 >(
     ctx: &mut Ctx<D>,
     device: DeviceId,
-    src_ip: A,
-    dst_ip: A,
-    next_hop: SpecifiedAddr<A>,
-    proto: <A::Version as packet_formats::ip::IpExt>::Proto,
+    src_ip: Ipv4Addr,
+    dst_ip: Ipv4Addr,
+    next_hop: SpecifiedAddr<Ipv4Addr>,
+    proto: Ipv4Proto,
     body: S,
     mtu: Option<u32>,
 ) -> Result<(), S> {
-    #[ipv4addr]
     let builder = {
         assert!(
             (!Ipv4::LOOPBACK_SUBNET.contains(&src_ip) && !Ipv4::LOOPBACK_SUBNET.contains(&dst_ip))
                 || device.is_loopback()
         );
-        let mut builder = Ipv4PacketBuilder::new(
-            src_ip,
-            dst_ip,
-            get_hop_limit::<_, A::Version>(ctx, device),
-            proto,
-        );
+        let mut builder =
+            Ipv4PacketBuilder::new(src_ip, dst_ip, get_hop_limit::<_, Ipv4>(ctx, device), proto);
         builder.id(ctx.gen_ipv4_packet_id());
         builder
     };
+    let body = body.encapsulate(builder);
 
-    #[ipv6addr]
+    if let Some(mtu) = mtu {
+        let body = body.with_mtu(mtu as usize);
+        crate::ip::device::send_ip_frame::<Ipv4, _, _, _>(ctx, device, next_hop, body)
+            .map_err(|ser| ser.into_inner().into_inner())
+    } else {
+        crate::ip::device::send_ip_frame::<Ipv4, _, _, _>(ctx, device, next_hop, body)
+            .map_err(|ser| ser.into_inner())
+    }
+}
+
+pub(crate) fn send_ipv6_packet_from_device<
+    B: BufferMut,
+    D: BufferDispatcher<B>,
+    S: Serializer<Buffer = B>,
+>(
+    ctx: &mut Ctx<D>,
+    device: DeviceId,
+    src_ip: Ipv6Addr,
+    dst_ip: Ipv6Addr,
+    next_hop: SpecifiedAddr<Ipv6Addr>,
+    proto: Ipv6Proto,
+    body: S,
+    mtu: Option<u32>,
+) -> Result<(), S> {
     let builder = {
         assert!(
             (!Ipv6::LOOPBACK_SUBNET.contains(&src_ip) && !Ipv6::LOOPBACK_SUBNET.contains(&dst_ip))
                 || device.is_loopback()
         );
-        Ipv6PacketBuilder::new(src_ip, dst_ip, get_hop_limit::<_, A::Version>(ctx, device), proto)
+        Ipv6PacketBuilder::new(src_ip, dst_ip, get_hop_limit::<_, Ipv6>(ctx, device), proto)
     };
 
     let body = body.encapsulate(builder);
 
     if let Some(mtu) = mtu {
         let body = body.with_mtu(mtu as usize);
-        crate::ip::device::send_ip_frame(ctx, device, next_hop, body)
+        crate::ip::device::send_ip_frame::<Ipv6, _, _, _>(ctx, device, next_hop, body)
             .map_err(|ser| ser.into_inner().into_inner())
     } else {
-        crate::ip::device::send_ip_frame(ctx, device, next_hop, body)
+        crate::ip::device::send_ip_frame::<Ipv6, _, _, _>(ctx, device, next_hop, body)
             .map_err(|ser| ser.into_inner())
     }
 }
@@ -1851,10 +1878,14 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv4, B> for C
             return Ok(());
         }
 
-        if let Some((device, local_ip, next_hop)) =
-            get_icmp_error_message_destination(self, device, original_src_ip, original_dst_ip)
-        {
-            send_ip_packet_from_device(
+        if let Some((device, local_ip, next_hop)) = get_icmp_error_message_destination(
+            self,
+            device,
+            original_src_ip,
+            original_dst_ip,
+            |device_id| crate::ip::device::get_ipv4_addr_subnet(self, device_id),
+        ) {
+            send_ipv4_packet_from_device(
                 self,
                 device,
                 local_ip.get(),
@@ -1936,9 +1967,11 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv6, B> for C
         }
 
         if let Some((device, local_ip, next_hop)) =
-            get_icmp_error_message_destination(self, device, src_ip, dst_ip)
+            get_icmp_error_message_destination(self, device, src_ip, dst_ip, |device_id| {
+                crate::ip::device::get_ipv6_addr_subnet(self, device_id)
+            })
         {
-            send_ip_packet_from_device(
+            send_ipv6_packet_from_device(
                 self,
                 device,
                 local_ip.get(),
@@ -1967,11 +2000,16 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv6, B> for C
 /// this does not call `crate::ip::icmp::should_send_icmpv{4,6}_error`; it is
 /// the caller's responsibility to call that function and not send an error
 /// message if it returns false.
-fn get_icmp_error_message_destination<D: EventDispatcher, A: IpAddress>(
+fn get_icmp_error_message_destination<
+    D: EventDispatcher,
+    A: IpAddress,
+    F: FnOnce(DeviceId) -> Option<AddrSubnet<A>>,
+>(
     ctx: &Ctx<D>,
     _device: DeviceId,
     src_ip: SpecifiedAddr<A>,
     _dst_ip: SpecifiedAddr<A>,
+    get_ip_addr_subnet: F,
 ) -> Option<(DeviceId, SpecifiedAddr<A>, SpecifiedAddr<A>)> {
     // TODO(joshlf): Come up with rules for when to send ICMP error messages.
     // E.g., should we send a response over a different device than the device
@@ -1979,9 +2017,7 @@ fn get_icmp_error_message_destination<D: EventDispatcher, A: IpAddress>(
     // BCP 38 (aka RFC 2827) and RFC 3704.
 
     if let Some(route) = lookup_route(ctx, src_ip) {
-        if let Some(local_ip) =
-            crate::ip::device::get_ip_addr_subnet(ctx, route.device).as_ref().map(AddrSubnet::addr)
-        {
+        if let Some(local_ip) = get_ip_addr_subnet(route.device).as_ref().map(AddrSubnet::addr) {
             Some((route.device, local_ip, route.next_hop))
         } else {
             // TODO(joshlf): We need a general-purpose mechanism for choosing a

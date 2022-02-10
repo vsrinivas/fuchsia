@@ -2676,8 +2676,8 @@ mod tests {
         assert_empty,
         context::InstantContext as _,
         ip::device::{
-            get_assigned_ip_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
-            is_routing_enabled, state::Ipv6AddressEntry,
+            get_assigned_ipv6_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
+            is_ipv6_routing_enabled, state::Ipv6AddressEntry,
         },
         Ctx, Instant, Ipv6StateBuilder, StackStateBuilder, TimerId, TimerIdInner,
     };
@@ -2902,7 +2902,7 @@ mod tests {
         assert_empty(net.context("local").dispatcher.frames_sent());
         assert_empty(net.context("remote").dispatcher.frames_sent());
 
-        crate::ip::send_ip_packet_from_device(
+        crate::ip::send_ipv6_packet_from_device(
             net.context("local"),
             device_id,
             local_ip().get(),
@@ -3099,8 +3099,8 @@ mod tests {
 
         // They should now realize the address they intend to use has a
         // duplicate in the local network.
-        assert_empty(get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("local"), device_id));
-        assert_empty(get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id));
+        assert_empty(get_assigned_ipv6_addr_subnets(net.context("local"), device_id));
+        assert_empty(get_assigned_ipv6_addr_subnets(net.context("remote"), device_id));
 
         // Both devices should not be in the multicast group
         assert!(!get_ipv6_device_state(net.context("local"), device_id)
@@ -3192,10 +3192,7 @@ mod tests {
 
         let _: StepResult = net.step();
 
-        assert_eq!(
-            get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(),
-            1
-        );
+        assert_eq!(get_assigned_ipv6_addr_subnets(net.context("remote"), device_id).count(), 1);
         // Let's make sure that our local node still can use that address.
         assert!(NdpContext::<EthernetLinkDevice>::get_ip_device_state(
             net.context("local"),
@@ -3356,14 +3353,8 @@ mod tests {
 
         // They should now realize the address they intend to use has a
         // duplicate in the local network.
-        assert_eq!(
-            get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("local"), device_id).count(),
-            1
-        );
-        assert_eq!(
-            get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(),
-            1
-        );
+        assert_eq!(get_assigned_ipv6_addr_subnets(net.context("local"), device_id).count(), 1);
+        assert_eq!(get_assigned_ipv6_addr_subnets(net.context("remote"), device_id).count(), 1);
     }
 
     #[test]
@@ -3984,7 +3975,7 @@ mod tests {
                 icmpv6_packet.unwrap_ndp(),
             );
             assert_eq!(get_ipv6_hop_limit(ctx, device_id).get(), hop_limit);
-            crate::ip::send_ip_packet_from_device(
+            crate::ip::send_ipv6_packet_from_device(
                 ctx,
                 device_id,
                 config.local_ip.get(),
@@ -4162,7 +4153,7 @@ mod tests {
             &mut ctx, device_id,
         );
         assert!(ndp_state.has_default_router(&src_ip));
-        assert_eq!(get_mtu(&ctx, device), hw_mtu);
+        assert_eq!(get_mtu::<Ipv6, _>(&ctx, device), hw_mtu);
 
         // Receive a new RA with an invalid MTU option (value is lower than IPv6
         // min MTU).
@@ -4183,7 +4174,7 @@ mod tests {
             &mut ctx, device_id,
         );
         assert!(ndp_state.has_default_router(&src_ip));
-        assert_eq!(get_mtu(&ctx, device), hw_mtu);
+        assert_eq!(get_mtu::<Ipv6, _>(&ctx, device), hw_mtu);
 
         // Receive a new RA with a valid MTU option (value is exactly IPv6 min
         // MTU).
@@ -4204,7 +4195,7 @@ mod tests {
             &mut ctx, device_id,
         );
         assert!(ndp_state.has_default_router(&src_ip));
-        assert_eq!(get_mtu(&ctx, device), Ipv6::MINIMUM_LINK_MTU.into());
+        assert_eq!(get_mtu::<Ipv6, _>(&ctx, device), Ipv6::MINIMUM_LINK_MTU.into());
     }
 
     #[test]
@@ -4586,7 +4577,7 @@ mod tests {
         // Enable routing on device.
         set_routing_enabled::<_, Ipv6>(&mut ctx, device, true)
             .expect("error setting routing enabled");
-        assert!(is_routing_enabled::<_, Ipv6>(&ctx, device));
+        assert!(is_ipv6_routing_enabled(&ctx, device));
 
         // Should have not send any new packets and still have the original
         // router solicitation timer set.
@@ -4638,7 +4629,7 @@ mod tests {
         // Enable routing on the device.
         set_routing_enabled::<_, Ipv6>(&mut ctx, device, true)
             .expect("error setting routing enabled");
-        assert!(is_routing_enabled::<_, Ipv6>(&ctx, device));
+        assert!(is_ipv6_routing_enabled(&ctx, device));
 
         // Should have not sent any new packets, but unset the router
         // solicitation timer.
@@ -4648,7 +4639,7 @@ mod tests {
         // Unsetting routing should succeed.
         set_routing_enabled::<_, Ipv6>(&mut ctx, device, false)
             .expect("error setting routing enabled");
-        assert!(!is_routing_enabled::<_, Ipv6>(&ctx, device));
+        assert!(!is_ipv6_routing_enabled(&ctx, device));
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         let timers: Vec<(&DummyInstant, &TimerId)> =
             ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id).collect();

@@ -38,9 +38,7 @@ pub(crate) mod igmp;
 pub(crate) mod mld;
 
 use alloc::vec::{self, Vec};
-use core::convert::TryFrom;
-use core::time::Duration;
-
+use core::{convert::TryFrom, fmt::Debug, time::Duration};
 use net_types::ip::{Ip, IpAddress};
 use net_types::{MulticastAddr, SpecifiedAddress as _};
 use rand::Rng;
@@ -131,6 +129,7 @@ impl<T> From<RemoveResult<T>> for GroupLeaveResult<T> {
 /// `MulticastGroupSet` is a set of multicast groups, each with associated data
 /// `T`. Each group is reference-counted, only being removed once its reference
 /// count reaches zero.
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct MulticastGroupSet<A: IpAddress, T> {
     inner: RefCountedHashMap<MulticastAddr<A>, T>,
 }
@@ -219,7 +218,7 @@ impl<A: IpAddress, T> MulticastGroupSet<A, T> {
 /// An implementation of a Group Management Protocol (GMP) such as the Internet
 /// Group Management Protocol, Version 2 (IGMPv2) for IPv4 or the Multicast
 /// Listener Discovery (MLD) protocol for IPv6.
-pub(crate) trait GmpHandler<I: Ip>: IpDeviceIdContext {
+pub(crate) trait GmpHandler<I: Ip>: IpDeviceIdContext<I> {
     /// Joins the given multicast group.
     fn gmp_join_group(
         &mut self,
@@ -243,7 +242,7 @@ trait ProtocolSpecific: Copy {
     /// The type for protocol-specific actions.
     type Action;
     /// The type for protocol-specific configs.
-    type Config;
+    type Config: Debug;
 
     /// The maximum delay to wait to send an unsolicited report.
     fn cfg_unsolicited_report_interval(cfg: &Self::Config) -> Duration;
@@ -278,6 +277,7 @@ trait ProtocolSpecific: Copy {
 ///
 /// [RFC 2236 page 10]: https://tools.ietf.org/html/rfc2236#page-10
 /// [RFC 2710 page 10]: https://tools.ietf.org/html/rfc2710#page-10
+#[cfg_attr(test, derive(Debug))]
 struct GmpHostState<State, P: ProtocolSpecific> {
     state: State,
     /// `protocol_specific` are the value(s) you don't want the users to have a
@@ -369,6 +369,7 @@ impl<P: ProtocolSpecific> IntoIterator for Actions<P> {
 ///
 /// [IGMPv2]: https://tools.ietf.org/html/rfc2236
 /// [MLD]: https://tools.ietf.org/html/rfc2710
+#[cfg_attr(test, derive(Debug))]
 enum MemberState<I: Instant, P: ProtocolSpecific> {
     Delaying(GmpHostState<DelayingMember<I>, P>),
     Idle(GmpHostState<IdleMember, P>),
@@ -384,6 +385,7 @@ struct Transition<S, P: ProtocolSpecific>(GmpHostState<S, P>, Actions<P>);
 struct NonMember;
 
 /// Represents Delaying Member-specific state variables.
+#[cfg_attr(test, derive(Debug))]
 struct DelayingMember<I: Instant> {
     /// The expiration time for the current timer. Useful to check if the timer
     /// needs to be reset when a query arrives.
@@ -396,6 +398,7 @@ struct DelayingMember<I: Instant> {
 }
 
 /// Represents Idle Member-specific state variables.
+#[cfg_attr(test, derive(Debug))]
 struct IdleMember {
     /// Used to indicate whether we need to send out a Leave message when we are
     /// leaving the group.
@@ -682,6 +685,7 @@ impl<I: Instant, P: ProtocolSpecific> MemberState<I, P> {
     }
 }
 
+#[cfg_attr(test, derive(Debug))]
 struct GmpStateMachine<I: Instant, P: ProtocolSpecific> {
     // Invariant: `inner` is always `Some`. It is stored as an `Option` so that
     // methods can `.take()` the `MemberState` in order to perform transitions
@@ -774,7 +778,9 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
 /// Provides common functionality for GMP context implementations.
 ///
 /// This trait implements portions of a group management protocol.
-trait GmpContext<I: Ip, PS: ProtocolSpecific>: IpDeviceIdContext + RngContext + InstantContext {
+trait GmpContext<I: Ip, PS: ProtocolSpecific>:
+    IpDeviceIdContext<I> + RngContext + InstantContext
+{
     type Err;
     type GroupState: From<GmpStateMachine<Self::Instant, PS>>
         + Into<GmpStateMachine<Self::Instant, PS>>;

@@ -454,9 +454,9 @@ pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher>(
     ctx: &'a Ctx<D>,
     device: DeviceId,
 ) -> impl 'a + Iterator<Item = AddrSubnetEither> {
-    let addr_v4 = crate::ip::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(ctx, device)
+    let addr_v4 = crate::ip::device::get_assigned_ipv4_addr_subnets(ctx, device)
         .map(|a| AddrSubnetEither::V4(a));
-    let addr_v6 = crate::ip::device::get_assigned_ip_addr_subnets::<_, Ipv6Addr>(ctx, device)
+    let addr_v6 = crate::ip::device::get_assigned_ipv6_addr_subnets(ctx, device)
         .map(|a| AddrSubnetEither::V6(a));
 
     addr_v4.chain(addr_v6)

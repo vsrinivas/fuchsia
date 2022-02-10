@@ -62,7 +62,7 @@ impl<D> MldFrameMetadata<D> {
 
 /// The execution context for the Multicast Listener Discovery (MLD) protocol.
 pub(crate) trait MldContext:
-    IpDeviceIdContext
+    IpDeviceIdContext<Ipv6>
     + RngContext
     + TimerContext<MldReportDelay<Self::DeviceId>>
     + FrameContext<EmptyBuf, MldFrameMetadata<Self::DeviceId>>
@@ -238,6 +238,7 @@ pub(crate) type MldResult<T> = Result<T, MldError>;
 #[derive(PartialEq, Eq, Clone, Copy, Default, Debug)]
 pub(crate) struct MldProtocolSpecific;
 
+#[derive(Debug)]
 pub(crate) struct MldConfig {
     unsolicited_report_interval: Duration,
     send_leave_anyway: bool,
@@ -291,6 +292,7 @@ impl ProtocolSpecific for MldProtocolSpecific {
 }
 
 /// The state on a multicast address.
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct MldGroupState<I: Instant>(GmpStateMachine<I, MldProtocolSpecific>);
 
 impl<I: Instant> From<GmpStateMachine<I, MldProtocolSpecific>> for MldGroupState<I> {

@@ -27,6 +27,7 @@ pub(crate) enum RemoveResult<V> {
 }
 
 /// A [`HashMap`] which keeps a reference count for each entry.
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct RefCountedHashMap<K, V> {
     inner: HashMap<K, (usize, V)>,
 }

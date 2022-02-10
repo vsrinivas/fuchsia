@@ -86,7 +86,7 @@ pub(crate) trait EthernetIpLinkDeviceContext:
     fn del_ipv6_addr(
         &mut self,
         device_id: Self::DeviceId,
-        addr: &Ipv6Addr,
+        addr: &SpecifiedAddr<Ipv6Addr>,
     ) -> Result<(), NotFoundError>;
 
     /// Joins an IPv6 multicast group.
@@ -115,15 +115,15 @@ impl<D: EventDispatcher> EthernetIpLinkDeviceContext for Ctx<D> {
         addr_sub: AddrSubnet<Ipv6Addr>,
         config: AddrConfig<D::Instant>,
     ) -> Result<(), ExistsError> {
-        crate::ip::device::add_ip_addr_subnet(self, device_id.into(), addr_sub, config)
+        crate::ip::device::add_ipv6_addr_subnet(self, device_id.into(), addr_sub, config)
     }
 
     fn del_ipv6_addr(
         &mut self,
         device_id: EthernetDeviceId,
-        addr: &Ipv6Addr,
+        addr: &SpecifiedAddr<Ipv6Addr>,
     ) -> Result<(), NotFoundError> {
-        crate::ip::device::del_ip_addr(self, device_id.into(), addr)
+        crate::ip::device::del_ipv6_addr(self, device_id.into(), addr)
     }
 
     fn join_ipv6_multicast(
@@ -131,7 +131,7 @@ impl<D: EventDispatcher> EthernetIpLinkDeviceContext for Ctx<D> {
         device_id: Self::DeviceId,
         multicast_addr: MulticastAddr<Ipv6Addr>,
     ) {
-        crate::ip::device::join_ip_multicast(self, device_id.into(), multicast_addr)
+        crate::ip::device::join_ip_multicast::<Ipv6, _>(self, device_id.into(), multicast_addr)
     }
 
     fn leave_ipv6_multicast(
@@ -139,7 +139,7 @@ impl<D: EventDispatcher> EthernetIpLinkDeviceContext for Ctx<D> {
         device_id: Self::DeviceId,
         multicast_addr: MulticastAddr<Ipv6Addr>,
     ) {
-        crate::ip::device::leave_ip_multicast(self, device_id.into(), multicast_addr)
+        crate::ip::device::leave_ip_multicast::<Ipv6, _>(self, device_id.into(), multicast_addr)
     }
 }
 
@@ -981,7 +981,7 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
     fn duplicate_address_detected(&mut self, device_id: C::DeviceId, addr: UnicastAddr<Ipv6Addr>) {
         let () = self
-            .del_ipv6_addr(device_id, &addr.get())
+            .del_ipv6_addr(device_id, &addr.into_specified())
             .expect("expected to delete an address we are performing DAD on");
 
         // TODO: we need to pick a different address depending on what flow we
@@ -1078,7 +1078,7 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
         // `unwrap` will panic if `addr` is not an address configured via SLAAC
         // on `device_id`.
-        self.del_ipv6_addr(device_id, &addr.get()).unwrap();
+        self.del_ipv6_addr(device_id, &addr.into_specified()).unwrap();
     }
 
     fn is_router(&self) -> bool {
@@ -1181,7 +1181,7 @@ mod tests {
             DeviceIdInner, EthernetDeviceId, IpLinkDeviceState,
         },
         ip::{
-            device::{is_routing_enabled, state::AssignedAddress},
+            device::{is_ipv4_routing_enabled, is_ipv6_routing_enabled, state::AssignedAddress},
             dispatch_receive_ip_packet_name, receive_ip_packet, DummyDeviceId,
         },
         testutil::{
@@ -1252,7 +1252,7 @@ mod tests {
         fn del_ipv6_addr(
             &mut self,
             _device_id: DummyDeviceId,
-            _addr: &Ipv6Addr,
+            _addr: &SpecifiedAddr<Ipv6Addr>,
         ) -> Result<(), NotFoundError> {
             unimplemented!()
         }
@@ -1436,12 +1436,22 @@ mod tests {
         }
 
         // Will panic if we do not initialize.
-        let _ = crate::ip::device::send_ip_frame(
-            &mut ctx,
-            device,
-            config.remote_ip,
-            Buf::new(bytes, ..),
-        );
+        match config.remote_ip.into() {
+            IpAddr::V4(addr) => crate::ip::device::send_ip_frame::<Ipv4, _, _, _>(
+                &mut ctx,
+                device,
+                addr,
+                Buf::new(bytes, ..),
+            )
+            .expect("error sending IPv4 frame"),
+            IpAddr::V6(addr) => crate::ip::device::send_ip_frame::<Ipv6, _, _, _>(
+                &mut ctx,
+                device,
+                addr,
+                Buf::new(bytes, ..),
+            )
+            .expect("error sending IPv6 frame"),
+        }
     }
 
     #[ip_test]
@@ -1475,6 +1485,13 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
     }
 
+    fn is_routing_enabled<I: Ip>(ctx: &Ctx<DummyEventDispatcher>, device: DeviceId) -> bool {
+        match I::VERSION {
+            IpVersion::V4 => is_ipv4_routing_enabled(ctx, device),
+            IpVersion::V6 => is_ipv6_routing_enabled(ctx, device),
+        }
+    }
+
     #[ip_test]
     fn test_set_ip_routing<I: Ip + TestIpExt + IcmpIpExt + IpExt>() {
         fn check_other_is_routing_enabled<I: Ip>(
@@ -1483,8 +1500,8 @@ mod tests {
             expected: bool,
         ) {
             let enabled = match I::VERSION {
-                IpVersion::V4 => is_routing_enabled::<_, Ipv6>(ctx, device),
-                IpVersion::V6 => is_routing_enabled::<_, Ipv4>(ctx, device),
+                IpVersion::V4 => is_routing_enabled::<Ipv6>(ctx, device),
+                IpVersion::V6 => is_routing_enabled::<Ipv4>(ctx, device),
             };
 
             assert_eq!(enabled, expected);
@@ -1540,7 +1557,7 @@ mod tests {
         let mut ctx = builder.build();
 
         // Should not be a router (default).
-        assert!(!is_routing_enabled::<_, I>(&ctx, device));
+        assert!(!is_routing_enabled::<I>(&ctx, device));
         check_other_is_routing_enabled::<I>(&ctx, device, false);
 
         // Receiving a packet not destined for the node should only result in a
@@ -1551,7 +1568,7 @@ mod tests {
         // Attempting to set router should work, but it still won't be able to
         // route packets.
         set_routing_enabled::<_, I>(&mut ctx, device, true).expect("error setting routing enabled");
-        assert!(is_routing_enabled::<_, I>(&ctx, device));
+        assert!(is_routing_enabled::<I>(&ctx, device));
         // Should not update other Ip routing status.
         check_other_is_routing_enabled::<I>(&ctx, device, false);
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
@@ -1576,7 +1593,7 @@ mod tests {
         let mut ctx = builder.build_with(state_builder, DummyEventDispatcher::default());
 
         // Should not be a router (default).
-        assert!(!is_routing_enabled::<_, I>(&ctx, device));
+        assert!(!is_routing_enabled::<I>(&ctx, device));
         check_other_is_routing_enabled::<I>(&ctx, device, false);
 
         // Receiving a packet not destined for the node should not result in an
@@ -1586,7 +1603,7 @@ mod tests {
 
         // Attempting to set router should work
         set_routing_enabled::<_, I>(&mut ctx, device, true).expect("error setting routing enabled");
-        assert!(is_routing_enabled::<_, I>(&ctx, device));
+        assert!(is_routing_enabled::<I>(&ctx, device));
         // Should not update other Ip routing status.
         check_other_is_routing_enabled::<I>(&ctx, device, false);
 
@@ -1623,7 +1640,7 @@ mod tests {
         // Attempt to unset router
         set_routing_enabled::<_, I>(&mut ctx, device, false)
             .expect("error setting routing enabled");
-        assert!(!is_routing_enabled::<_, I>(&ctx, device));
+        assert!(!is_routing_enabled::<I>(&ctx, device));
         check_other_is_routing_enabled::<I>(&ctx, device, false);
 
         // Should not route packets anymore

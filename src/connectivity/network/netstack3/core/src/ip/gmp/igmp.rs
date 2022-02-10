@@ -59,7 +59,7 @@ impl<D> IgmpPacketMetadata<D> {
 
 /// The execution context for the Internet Group Management Protocol (IGMP).
 pub(crate) trait IgmpContext:
-    IpDeviceIdContext
+    IpDeviceIdContext<Ipv4>
     + TimerContext<IgmpTimerId<Self::DeviceId>>
     + FrameContext<EmptyBuf, IgmpPacketMetadata<Self::DeviceId>>
     + RngContext
@@ -321,6 +321,7 @@ enum Igmpv2Actions {
     ScheduleV1RouterPresentTimer(Duration),
 }
 
+#[derive(Debug)]
 struct Igmpv2HostConfig {
     // When a host wants to send a report not because of a query, this value is
     // used as the delay timer.
@@ -400,6 +401,7 @@ impl ProtocolSpecific for Igmpv2ProtocolSpecific {
     }
 }
 
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct IgmpGroupState<I: Instant>(GmpStateMachine<I, Igmpv2ProtocolSpecific>);
 
 impl<I: Instant> From<GmpStateMachine<I, Igmpv2ProtocolSpecific>> for IgmpGroupState<I> {

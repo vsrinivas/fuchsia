@@ -7,7 +7,7 @@
 use crate::{
     context::{FrameContext, InstantContext},
     ip::{
-        device::{get_ip_addr_subnet, get_ipv6_device_state, BufferIpDeviceContext},
+        device::{get_ipv4_addr_subnet, get_ipv6_device_state, BufferIpDeviceContext},
         gmp::{
             igmp::{IgmpContext, IgmpGroupState, IgmpPacketMetadata},
             mld::{MldContext, MldFrameMetadata, MldGroupState},
@@ -16,18 +16,18 @@ use crate::{
     },
 };
 use net_types::{
-    ip::{AddrSubnet, Ipv4Addr, Ipv6Addr},
+    ip::{AddrSubnet, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
     LinkLocalUnicastAddr,
 };
 use packet::{EmptyBuf, Serializer};
 
-impl<C: BufferIpDeviceContext<EmptyBuf>> IgmpContext for C {
+impl<C: BufferIpDeviceContext<Ipv4, EmptyBuf>> IgmpContext for C {
     fn get_ip_addr_subnet(&self, device: C::DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
-        get_ip_addr_subnet(self, device)
+        get_ipv4_addr_subnet(self, device)
     }
 
     fn igmp_enabled(&self, device: C::DeviceId) -> bool {
-        C::get_ip_device_state(self, device).ipv4.config.ip_config.gmp_enabled
+        C::get_ip_device_state(self, device).config.ip_config.gmp_enabled
     }
 
     fn get_state_mut_and_rng(
@@ -38,12 +38,12 @@ impl<C: BufferIpDeviceContext<EmptyBuf>> IgmpContext for C {
         &mut C::Rng,
     ) {
         let (state, rng) = self.get_ip_device_state_mut_and_rng(device);
-        (&mut state.ipv4.ip_state.multicast_groups, rng)
+        (&mut state.ip_state.multicast_groups, rng)
     }
 }
 
-impl<C: BufferIpDeviceContext<EmptyBuf>> FrameContext<EmptyBuf, IgmpPacketMetadata<C::DeviceId>>
-    for C
+impl<C: BufferIpDeviceContext<Ipv4, EmptyBuf>>
+    FrameContext<EmptyBuf, IgmpPacketMetadata<C::DeviceId>> for C
 {
     fn send_frame<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
@@ -54,7 +54,7 @@ impl<C: BufferIpDeviceContext<EmptyBuf>> FrameContext<EmptyBuf, IgmpPacketMetada
     }
 }
 
-impl<C: BufferIpDeviceContext<EmptyBuf>> MldContext for C {
+impl<C: BufferIpDeviceContext<Ipv6, EmptyBuf>> MldContext for C {
     fn get_ipv6_link_local_addr(
         &self,
         device: C::DeviceId,
@@ -69,7 +69,7 @@ impl<C: BufferIpDeviceContext<EmptyBuf>> MldContext for C {
     }
 
     fn mld_enabled(&self, device: C::DeviceId) -> bool {
-        C::get_ip_device_state(self, device).ipv6.config.ip_config.gmp_enabled
+        C::get_ip_device_state(self, device).config.ip_config.gmp_enabled
     }
 
     fn get_state_mut_and_rng(
@@ -80,11 +80,11 @@ impl<C: BufferIpDeviceContext<EmptyBuf>> MldContext for C {
         &mut C::Rng,
     ) {
         let (state, rng) = self.get_ip_device_state_mut_and_rng(device);
-        (&mut state.ipv6.ip_state.multicast_groups, rng)
+        (&mut state.ip_state.multicast_groups, rng)
     }
 }
 
-impl<C: BufferIpDeviceContext<EmptyBuf>> FrameContext<EmptyBuf, MldFrameMetadata<C::DeviceId>>
+impl<C: BufferIpDeviceContext<Ipv6, EmptyBuf>> FrameContext<EmptyBuf, MldFrameMetadata<C::DeviceId>>
     for C
 {
     fn send_frame<S: Serializer<Buffer = EmptyBuf>>(

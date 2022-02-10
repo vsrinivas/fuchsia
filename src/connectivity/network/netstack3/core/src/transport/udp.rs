@@ -467,7 +467,7 @@ pub trait UdpStateContext<I: IpExt>:
     UdpContext<I>
     + CounterContext
     + TransportIpContext<I>
-    + RngStateContext<UdpState<I, <Self as IpDeviceIdContext>::DeviceId>>
+    + RngStateContext<UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>>
 {
 }
 
