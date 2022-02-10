@@ -673,7 +673,7 @@ sdk_molecule("ddk_fidl") {
 sdk("ddk") {
   id = sdk_id
 
-  category = "partner"
+  category = "experimental"
 
   api = "manifests/ddk.manifest"
 
