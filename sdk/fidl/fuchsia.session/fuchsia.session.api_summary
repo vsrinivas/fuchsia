@@ -1,0 +1,25 @@
+table/member fuchsia.session/LaunchConfiguration.session_url string:4096
+table fuchsia.session/LaunchConfiguration
+enum/member fuchsia.session/LaunchError.CREATE_COMPONENT_FAILED 4
+enum/member fuchsia.session/LaunchError.DESTROY_COMPONENT_FAILED 3
+enum/member fuchsia.session/LaunchError.INVALID_ARGS 1
+enum/member fuchsia.session/LaunchError.NOT_FOUND 2
+flexible enum fuchsia.session/LaunchError uint32
+protocol/member fuchsia.session/Launcher.Launch(fuchsia.session/LaunchConfiguration configuration) -> (fuchsia.session/Launcher_Launch_Result result)
+protocol fuchsia.session/Launcher
+struct fuchsia.session/Launcher_Launch_Response
+union/member fuchsia.session/Launcher_Launch_Result.err fuchsia.session/LaunchError
+union/member fuchsia.session/Launcher_Launch_Result.response fuchsia.session/Launcher_Launch_Response
+strict union fuchsia.session/Launcher_Launch_Result
+enum/member fuchsia.session/RestartError.CREATE_COMPONENT_FAILED 4
+enum/member fuchsia.session/RestartError.DESTROY_COMPONENT_FAILED 3
+enum/member fuchsia.session/RestartError.NOT_FOUND 2
+enum/member fuchsia.session/RestartError.NOT_RUNNING 1
+flexible enum fuchsia.session/RestartError uint32
+protocol/member fuchsia.session/Restarter.Restart() -> (fuchsia.session/Restarter_Restart_Result result)
+protocol fuchsia.session/Restarter
+struct fuchsia.session/Restarter_Restart_Response
+union/member fuchsia.session/Restarter_Restart_Result.err fuchsia.session/RestartError
+union/member fuchsia.session/Restarter_Restart_Result.response fuchsia.session/Restarter_Restart_Response
+strict union fuchsia.session/Restarter_Restart_Result
+library fuchsia.session

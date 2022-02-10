@@ -27,7 +27,7 @@ protocol Launcher {
 };
 
 /// An error that occurs when launching a session.
-type LaunchError = strict enum {
+type LaunchError = flexible enum {
     /// The session's `LaunchConfiguration` is malformed.
     INVALID_ARGS = 1;
 
@@ -56,7 +56,7 @@ protocol Restarter {
 };
 
 /// An error that occurs when restarting a session.
-type RestartError = strict enum {
+type RestartError = flexible enum {
     /// There is no currently running session to restart.
     NOT_RUNNING = 1;
 

@@ -96,6 +96,7 @@ sdk://fidl/fuchsia.process.lifecycle
 sdk://fidl/fuchsia.recovery
 sdk://fidl/fuchsia.recovery.ui
 sdk://fidl/fuchsia.scenic.scheduling
+sdk://fidl/fuchsia.session
 sdk://fidl/fuchsia.settings
 sdk://fidl/fuchsia.settings.policy
 sdk://fidl/fuchsia.sys

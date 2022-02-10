@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.session") {
+  sdk_category = "partner"
+
   sources = [ "launcher.fidl" ]
 
   public_deps = [ "//sdk/fidl/fuchsia.url" ]
