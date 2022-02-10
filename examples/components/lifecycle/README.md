@@ -18,8 +18,16 @@ $ fx build
 Use `ffx component run` to launch this component into a restricted realm
 for development purposes:
 
+-  **C++**
+
+```bash
+ffx component run fuchsia-pkg://fuchsia.com/lifecycle-example#meta/lifecycle_cpp.cm
 ```
-$ ffx component run fuchsia-pkg://fuchsia.com/lifecycle-example#meta/lifecycle.cm
+
+-  **Rust**
+
+```bash
+$ ffx component run fuchsia-pkg://fuchsia.com/lifecycle-example#meta/lifecycle_rust.cm
 ```
 
 When the above command is run, you can see the following output with `fx log`:
@@ -31,12 +39,28 @@ When the above command is run, you can see the following output with `fx log`:
 
 To stop the component, use `ffx component stop`:
 
+-  **C++**
+
+```bash
+ffx component stop /core/ffx-laboratory:lifecycle_cpp
 ```
-$ ffx component stop core/ffx-laboratory:lifecycle
+
+-  **Rust**
+
+```bash
+$ ffx component stop /core/ffx-laboratory:lifecycle_rust
 ```
 
 When the above command is run, you can see the following output with `fx log`:
 
+-  **C++**
+
+```bash
+[lifecycle] INFO: Received request to stop, adios!
 ```
+
+-  **Rust**
+
+```bash
 [lifecycle] INFO: Received request to stop, bye bye!
 ```

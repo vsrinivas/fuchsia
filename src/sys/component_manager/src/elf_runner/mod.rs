@@ -799,7 +799,7 @@ mod tests {
 
         fcrunner::ComponentStartInfo {
             resolved_url: Some(
-                "fuchsia-pkg://fuchsia.com/lifecycle-example#meta/lifecycle.cm".to_string(),
+                "fuchsia-pkg://fuchsia.com/lifecycle-example#meta/lifecycle_rust.cm".to_string(),
             ),
             program: Some(fdata::Dictionary {
                 entries: Some(vec![
@@ -813,7 +813,7 @@ mod tests {
                     fdata::DictionaryEntry {
                         key: "binary".to_string(),
                         value: Some(Box::new(fdata::DictionaryValue::Str(
-                            "bin/lifecycle".to_string(),
+                            "bin/lifecycle_example_rust".to_string(),
                         ))),
                     },
                     fdata::DictionaryEntry {

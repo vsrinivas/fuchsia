@@ -1,0 +1,26 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("lifecycle_example_cpp") {
+  output_name = "lifecycle_example_cpp"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.process.lifecycle",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("cpp-component") {
+  component_name = "lifecycle_cpp"
+  manifest = "meta/lifecycle.cml"
+  deps = [ ":lifecycle_example_cpp" ]
+}

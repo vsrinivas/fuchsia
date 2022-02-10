@@ -5,7 +5,7 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/lifecycle",
+        binary: "bin/lifecycle_example_rust",
         lifecycle: { stop_event: "notify" },
     },
 }

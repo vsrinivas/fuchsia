@@ -198,7 +198,9 @@ fuchsia_component("lifecycle_timeout_root") {
 
 fuchsia_component("lifecycle_timeout_node") {
   testonly = true
-  deps = [ "//examples/components/lifecycle:lifecycle_example" ]
+
+  #TODO(https://fxbug.dev/93065): Create common component manifest(s) for tests that depend on //examples/components
+  deps = [ "//examples/components/lifecycle/rust:lifecycle_example_rust" ]
   manifest = "meta/lifecycle_timeout_node.cml"
 }
 
@@ -229,7 +231,9 @@ fuchsia_test_package("elf_runner_lifecycle_test") {
     ":lifecycle_timeout_unresponsive_node",
     ":lifecycle_timeout_unresponsive_root",
     ":rendezvous_exit_component",
-    "//examples/components/lifecycle:lifecycle_example_component",
+
+    #TODO(https://fxbug.dev/93065): Create common component manifest(s) for tests that depend on //examples/components
+    "//examples/components/lifecycle/rust:rust-component",
   ]
   test_specs = {
     # `component_exit` fails when test cases are executed in parallel.
