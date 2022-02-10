@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+
 use anyhow::{Context, Error};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
