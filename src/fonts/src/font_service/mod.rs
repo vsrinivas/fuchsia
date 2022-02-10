@@ -16,7 +16,7 @@ use {
         asset::AssetCollection,
         debug::{TypefaceRequestFormatter, TypefaceResponseFormatter},
         family::{FamilyOrAlias, FontFamily, TypefaceQueryOverrides},
-        typeface::{Collection as TypefaceCollection, TypefaceInfoAndCharSet},
+        typeface::{Collection as TypefaceCollection, Typeface, TypefaceInfoAndCharSet},
     },
     anyhow::{format_err, Context as _, Error},
     fidl::{self, endpoints::ServerEnd},
@@ -72,6 +72,10 @@ where
     /// Maps the font family name from the manifest (`families[x].name`) to a FamilyOrAlias.
     families: BTreeMap<UniCase<String>, FamilyOrAlias>,
     fallback_collection: TypefaceCollection,
+    /// Maps from a unique "Postscript name" to a typeface
+    postscript_name_lookup: BTreeMap<String, Arc<Typeface>>,
+    /// Maps from a unique "full name" to a typeface
+    full_name_lookup: BTreeMap<String, Arc<Typeface>>,
     /// Holds Inspect data about manifests, families, and the fallback collection.
     // TODO(fxbug.dev/84729)
     #[allow(unused)]
@@ -166,13 +170,59 @@ where
     ) -> Result<fonts::TypefaceResponse, Error> {
         fx_log_debug!("match_request: {:?}", &TypefaceRequestFormatter(&request));
 
+        let (typeface, request) =
+            if let Some(postscript_name) = query_field!(request, postscript_name) {
+                (self.postscript_name_lookup.get(postscript_name).map(Arc::as_ref), request)
+            } else if let Some(full_name) = query_field!(request, full_name) {
+                (self.full_name_lookup.get(full_name).map(Arc::as_ref), request)
+            } else {
+                self.match_non_unique_typeface_request(request)?
+            };
+
+        let typeface_response = match typeface {
+            Some(typeface) => self
+                .assets
+                .get_asset(typeface.asset_id, request.cache_miss_policy())
+                .await
+                .and_then(|buffer| {
+                    Ok(fonts::TypefaceResponse {
+                        buffer: Some(buffer),
+                        buffer_id: Some(typeface.asset_id.into()),
+                        font_index: Some(typeface.font_index),
+                        ..fonts::TypefaceResponse::EMPTY
+                    })
+                })
+                .ok(),
+            None => None,
+        };
+
+        if typeface_response.is_none() && self.is_internal_build {
+            fx_log_warn!("Unfulfilled request {:?}", &TypefaceRequestFormatter(&request));
+        }
+
+        let typeface_response = typeface_response.unwrap_or(fonts::TypefaceResponse::EMPTY);
+
+        fx_log_debug!("Response: {:?}", &TypefaceResponseFormatter(&typeface_response));
+
+        // Note that not finding a typeface is not an error, as long as the query was legal.
+        Ok(typeface_response)
+    }
+
+    /// This is the general case for typeface requests: lookups that are not by unique name.
+    ///
+    /// `request` is taken as an argument and returned because it may be modified in the process.
+    fn match_non_unique_typeface_request(
+        &self,
+        request: fonts::TypefaceRequest,
+    ) -> Result<(Option<&Typeface>, fonts::TypefaceRequest), Error> {
         let query_family = query_field!(request, family);
         let query_family_string =
             (&query_family).map(|family| family.name.clone()).unwrap_or_default();
         trace::duration!(
             "fonts",
-            "service:match_request",
-            "family" => &query_family_string[..]);
+            "service:match_non_unique_typeface_request",
+            "family" => &query_family_string[..]
+        );
         // TODO(fxbug.dev/44328): If support for lazy trace args is added, include more query params, e.g.
         // code points.
 
@@ -208,34 +258,7 @@ where
             }
             typeface = self.fallback_collection.match_request(&request)?;
         }
-
-        let typeface_response = match typeface {
-            Some(typeface) => self
-                .assets
-                .get_asset(typeface.asset_id, request.cache_miss_policy())
-                .await
-                .and_then(|buffer| {
-                    Ok(fonts::TypefaceResponse {
-                        buffer: Some(buffer),
-                        buffer_id: Some(typeface.asset_id.into()),
-                        font_index: Some(typeface.font_index),
-                        ..fonts::TypefaceResponse::EMPTY
-                    })
-                })
-                .ok(),
-            None => None,
-        };
-
-        if typeface_response.is_none() && self.is_internal_build {
-            fx_log_warn!("Unfulfilled request {:?}", &TypefaceRequestFormatter(&request));
-        }
-
-        let typeface_response = typeface_response.unwrap_or(fonts::TypefaceResponse::EMPTY);
-
-        fx_log_debug!("Response: {:?}", &TypefaceResponseFormatter(&typeface_response));
-
-        // Note that not finding a typeface is not an error, as long as the query was legal.
-        Ok(typeface_response)
+        Ok((typeface, request))
     }
 
     fn get_family_info(&self, family_name: fonts::FamilyName) -> fonts::FontFamilyInfo {

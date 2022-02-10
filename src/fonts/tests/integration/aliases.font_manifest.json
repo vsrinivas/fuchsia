@@ -39,7 +39,9 @@
               "slant": "upright",
               "weight": 400,
               "width": "normal",
-              "code_points": "0+1,48+9,38,2+25"
+              "code_points": "0+1,48+9,38,2+25",
+              "postscript_name": "AlphaSans-Regular",
+              "full_name": "Alpha Sans"
             }
           ]
         },
@@ -58,7 +60,9 @@
               "slant": "upright",
               "weight": 400,
               "width": "condensed",
-              "code_points": "0+1,48+9,38,2+25"
+              "code_points": "0+1,48+9,38,2+25",
+              "postscript_name": "AlphaSans-Condensed",
+              "full_name": "Alpha Sans Condensed"
             }
           ]
         },
@@ -80,7 +84,9 @@
               "slant": "upright",
               "weight": 400,
               "width": "normal",
-              "code_points": "0+1,48+9,38,2+25"
+              "code_points": "0+1,48+9,38,2+25",
+              "postscript_name": "AlphaSansHebrew-Regular",
+              "full_name": "Alpha Sans Hebrew"
             }
           ]
         }

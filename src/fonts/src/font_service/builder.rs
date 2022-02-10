@@ -8,7 +8,7 @@ use {
         debug,
         family::{FamilyOrAliasBuilder, FontFamilyBuilder},
         inspect::ServiceInspectData,
-        typeface::{Typeface, TypefaceCollectionBuilder, TypefaceId},
+        typeface::{Typeface, TypefaceCollectionBuilder, TypefaceError, TypefaceId},
         FontService,
     },
     anyhow::{format_err, Error},
@@ -43,6 +43,8 @@ where
     assets: AssetCollectionBuilder<L>,
     /// Maps the font family name from the manifest (`families.family`) to a FamilyOrAlias.
     families: BTreeMap<UniCase<String>, FamilyOrAliasBuilder>,
+    postscript_name_lookup: BTreeMap<String, Arc<Typeface>>,
+    full_name_lookup: BTreeMap<String, Arc<Typeface>>,
     fallback_collection: TypefaceCollectionBuilder,
     inspect_root: &'a finspect::Node,
 }
@@ -79,6 +81,8 @@ where
                 inspect_root,
             ),
             families: BTreeMap::new(),
+            postscript_name_lookup: BTreeMap::new(),
+            full_name_lookup: BTreeMap::new(),
             fallback_collection: TypefaceCollectionBuilder::new(),
             inspect_root,
         }
@@ -155,7 +159,15 @@ where
 
         let is_internal_build = debug::is_internal_build();
 
-        Ok(FontService { assets, families, fallback_collection, inspect_data, is_internal_build })
+        Ok(FontService {
+            assets,
+            families,
+            fallback_collection,
+            postscript_name_lookup: self.postscript_name_lookup,
+            full_name_lookup: self.full_name_lookup,
+            inspect_data,
+            is_internal_build,
+        })
     }
 
     async fn add_fonts_from_manifest_v2(
@@ -192,25 +204,48 @@ where
             // `manifest_family` in a valid state to be able to keep using it further down.
             for manifest_asset in manifest_family.assets.drain(..) {
                 let asset_id = self.assets.add_or_get_asset_id(&manifest_asset);
+                let file_name = manifest_asset.file_name;
+
                 for manifest_typeface in manifest_asset.typefaces {
-                    if manifest_typeface.code_points.is_empty() {
-                        return Err(FontServiceBuilderError::NoCodePoints {
-                            asset_name: manifest_asset.file_name.to_string(),
-                            typeface_idx: manifest_typeface.index,
+                    let typeface_index = manifest_typeface.index;
+
+                    let postscript_name = manifest_typeface
+                        .postscript_name
+                        .as_ref()
+                        .ok_or_else(|| FontServiceBuilderError::NoPostscriptName {
+                            asset_name: file_name.clone(),
+                            typeface_idx: typeface_index,
                             manifest_path: manifest_path.clone(),
-                        }
-                        .into());
-                    }
+                        })?
+                        .to_owned();
+                    let full_name = manifest_typeface.full_name.clone();
+
                     let generic_family = manifest_family.generic_family;
-                    let typeface_id = TypefaceId { asset_id, index: manifest_typeface.index };
+                    let typeface_id = TypefaceId { asset_id, index: typeface_index };
+
                     // Deduplicate typefaces across multiple manifests
                     if !family.has_typeface_id(&typeface_id) {
-                        // .unwrap() because we already checked for missing code points above
                         let typeface = Arc::new(
-                            Typeface::new(asset_id, manifest_typeface, generic_family).unwrap(),
+                            Typeface::new(asset_id, manifest_typeface, generic_family).map_err(
+                                |e| match e {
+                                    TypefaceError::NoCodePoints => {
+                                        FontServiceBuilderError::NoCodePoints {
+                                            asset_name: file_name.clone(),
+                                            typeface_idx: typeface_index,
+                                            manifest_path: manifest_path.clone(),
+                                        }
+                                    }
+                                },
+                            )?,
                         );
                         manifest_typefaces.insert(typeface_id, typeface.clone());
-                        family.add_typeface_once(typeface);
+                        family.add_typeface_once(typeface.clone());
+
+                        self.postscript_name_lookup.insert(postscript_name, typeface.clone());
+
+                        if full_name.is_some() {
+                            self.full_name_lookup.insert(full_name.unwrap(), typeface.clone());
+                        }
                     }
                 }
             }
@@ -324,6 +359,8 @@ where
                                         .load_font_info(buffer, manifest_typeface.index)?
                                 };
                                 manifest_typeface.code_points = font_info.char_set;
+                                manifest_typeface.postscript_name = font_info.postscript_name;
+                                manifest_typeface.full_name = font_info.full_name;
                             }
                             _ => {
                                 return Err(format_err!(
@@ -362,7 +399,7 @@ impl Display for ManifestOrPath {
 pub enum FontServiceBuilderError {
     /// A name was used as both a canonical family name and a font family alias.
     #[error(
-        "Conflict in {:?}: {} cannot be both a canonical family name and an alias",
+        "Conflict in manifest {:?}: {} cannot be both a canonical family name and an alias",
         manifest_path,
         conflicting_name
     )]
@@ -370,7 +407,7 @@ pub enum FontServiceBuilderError {
 
     /// One string was used as an alias for two different font families.
     #[error(
-        "Conflict in {:?}: {} cannot be an alias for both {} and {}",
+        "Conflict in manifest {:?}: {} cannot be an alias for both {} and {}",
         manifest_path,
         alias,
         canonical_1,
@@ -405,8 +442,22 @@ pub enum FontServiceBuilderError {
     NoFallbackCollection,
 
     /// The manifest did not have defined code points for a particular typeface.
-    #[error("Missing code points for \"{}\"[{}] in {:?}", asset_name, typeface_idx, manifest_path)]
+    #[error(
+        "Missing code points for asset \"{}\"[index={}] in manifest {:?}",
+        asset_name,
+        typeface_idx,
+        manifest_path
+    )]
     NoCodePoints { asset_name: String, typeface_idx: u32, manifest_path: Option<PathBuf> },
+
+    /// The manifest did not have a Postscript name for a particular typeface.
+    #[error(
+        "Missing Postscript name for asset \"{}\"[index={}] in manifest {:?}",
+        asset_name,
+        typeface_idx,
+        manifest_path
+    )]
+    NoPostscriptName { asset_name: String, typeface_idx: u32, manifest_path: Option<PathBuf> },
 }
 
 #[cfg(test)]

@@ -15,7 +15,8 @@
           },
           "typefaces": [
             {
-              "code_points": "0+1,48+9,38,2+25"
+              "code_points": "0+1,48+9,38,2+25",
+              "postscript_name": "Ephemeral-Regular"
             }
           ]
         }

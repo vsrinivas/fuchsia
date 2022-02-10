@@ -4,7 +4,6 @@
 
 use {
     crate::font_service::{inspect::zero_pad, AssetId},
-    anyhow::{format_err, Error},
     char_set::CharSet,
     fidl_fuchsia_fonts::{FamilyName, GenericFontFamily, Slant, Style2, TypefaceRequest, Width},
     fidl_fuchsia_fonts_experimental::TypefaceInfo,
@@ -14,6 +13,7 @@ use {
     itertools::Itertools,
     manifest::v2,
     std::collections::BTreeSet,
+    thiserror::Error,
 };
 
 /// Asset ID and font index.
@@ -53,9 +53,9 @@ impl Typeface {
         asset_id: AssetId,
         manifest_typeface: v2::Typeface,
         generic_family: Option<GenericFontFamily>,
-    ) -> Result<Typeface, Error> {
+    ) -> Result<Typeface, TypefaceError> {
         if manifest_typeface.code_points.is_empty() {
-            return Err(format_err!("Can't create Typeface from Font with empty CharSet."));
+            return Err(TypefaceError::NoCodePoints);
         }
         Ok(Typeface {
             asset_id,
@@ -103,6 +103,13 @@ impl Typeface {
 
         best_partial_match_pos.unwrap_or(request_languages.len()) + request_languages.len()
     }
+}
+
+/// Possible errors related to `Typeface`.
+#[derive(Debug, Error)]
+pub enum TypefaceError {
+    #[error("Can't create Typeface with empty CharSet")]
+    NoCodePoints,
 }
 
 #[derive(Debug)]

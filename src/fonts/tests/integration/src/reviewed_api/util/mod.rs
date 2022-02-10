@@ -38,6 +38,26 @@ pub struct TypefaceInfo {
     pub index: u32,
 }
 
+pub async fn get_typeface_info_detailed(
+    font_provider: &fonts::ProviderProxy,
+    request: fonts::TypefaceRequest,
+) -> Result<TypefaceInfo, Error> {
+    let typeface = font_provider.get_typeface(request.clone()).await?;
+
+    assert!(!typeface.is_empty(), "Received empty response for {:?}", request);
+    let buffer = typeface.buffer.unwrap();
+    assert!(buffer.size > 0);
+    assert!(buffer.size <= buffer.vmo.get_size()?);
+
+    let vmo_koid = buffer.vmo.as_handle_ref().get_koid()?;
+    Ok(TypefaceInfo {
+        vmo_koid,
+        buffer_id: typeface.buffer_id.unwrap(),
+        size: buffer.size,
+        index: typeface.font_index.unwrap(),
+    })
+}
+
 pub async fn get_typeface_info(
     font_provider: &fonts::ProviderProxy,
     name: Option<String>,
@@ -45,8 +65,9 @@ pub async fn get_typeface_info(
     languages: Option<Vec<String>>,
     code_points: Option<Vec<char>>,
 ) -> Result<TypefaceInfo, Error> {
-    let typeface = font_provider
-        .get_typeface(fonts::TypefaceRequest {
+    let typeface = get_typeface_info_detailed(
+        font_provider,
+        fonts::TypefaceRequest {
             query: Some(fonts::TypefaceQuery {
                 family: name.as_ref().map(|name| fonts::FamilyName { name: name.to_string() }),
                 style,
@@ -64,21 +85,10 @@ pub async fn get_typeface_info(
             flags: Some(fonts::TypefaceRequestFlags::empty()),
             cache_miss_policy: None,
             ..fonts::TypefaceRequest::EMPTY
-        })
-        .await?;
-
-    assert!(!typeface.is_empty(), "Received empty response for {:?}", name);
-    let buffer = typeface.buffer.unwrap();
-    assert!(buffer.size > 0);
-    assert!(buffer.size <= buffer.vmo.get_size()?);
-
-    let vmo_koid = buffer.vmo.as_handle_ref().get_koid()?;
-    Ok(TypefaceInfo {
-        vmo_koid,
-        buffer_id: typeface.buffer_id.unwrap(),
-        size: buffer.size,
-        index: typeface.font_index.unwrap(),
-    })
+        },
+    )
+    .await?;
+    Ok(typeface)
 }
 
 pub async fn get_typeface_info_basic(

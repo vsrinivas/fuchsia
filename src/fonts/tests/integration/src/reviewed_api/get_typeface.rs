@@ -5,7 +5,8 @@
 use {
     super::util::*,
     crate::{FONTS_ALIASED_CM, FONTS_MEDIUM_CM, FONTS_SMALL_CM},
-    fidl_fuchsia_fonts::{Style2, Width},
+    fidl_fuchsia_fonts::{self as fonts, Style2, Width},
+    fidl_fuchsia_intl::LocaleId,
 };
 
 // Add new tests here so we don't overload component manager with requests (58150)
@@ -19,6 +20,9 @@ async fn test_get_typeface() -> Result<(), Error> {
     test_font_collections(&factory).await?;
     test_fallback(&factory).await?;
     test_fallback_group(&factory).await?;
+    test_postscript_and_full_name(&factory).await?;
+    test_postscript_name_ignores_full_name(&factory).await?;
+    test_postscript_name_ignores_other_parameters(&factory).await?;
 
     Ok(())
 }
@@ -202,6 +206,97 @@ async fn test_fallback_group(factory: &ProviderFactory) -> Result<(), Error> {
     // Noto Serif CJK instead of Noto Sans CJK because Roboto Slab and
     // Noto Serif CJK are both in serif fallback group.
     assert_buf_eq!(noto_serif_cjk_ja, noto_serif_cjk_ja_by_char);
+
+    Ok(())
+}
+
+/// Verify that querying by Postscript name or by full name works.
+async fn test_postscript_and_full_name(factory: &ProviderFactory) -> Result<(), Error> {
+    let font_provider = factory.get_provider(FONTS_MEDIUM_CM).await?;
+
+    let postscript_name_request = fonts::TypefaceRequest {
+        query: Some(fonts::TypefaceQuery {
+            postscript_name: Some("NotoSansCJKjp-Regular".to_string()),
+            ..fonts::TypefaceQuery::EMPTY
+        }),
+        ..fonts::TypefaceRequest::EMPTY
+    };
+    let postscript_name_response =
+        get_typeface_info_detailed(&font_provider, postscript_name_request).await?;
+
+    let full_name_request = fonts::TypefaceRequest {
+        query: Some(fonts::TypefaceQuery {
+            full_name: Some("Noto Sans CJK JP".to_string()),
+            ..fonts::TypefaceQuery::EMPTY
+        }),
+        ..fonts::TypefaceRequest::EMPTY
+    };
+    let full_name_response = get_typeface_info_detailed(&font_provider, full_name_request).await?;
+
+    assert_buf_eq!(postscript_name_response, full_name_response);
+
+    Ok(())
+}
+
+/// Verify that if both Postscript name and full name are provided, Postscript name wins.
+async fn test_postscript_name_ignores_full_name(factory: &ProviderFactory) -> Result<(), Error> {
+    let font_provider = factory.get_provider(FONTS_MEDIUM_CM).await?;
+
+    let postscript_name_request = fonts::TypefaceRequest {
+        query: Some(fonts::TypefaceQuery {
+            postscript_name: Some("NotoSansCJKjp-Regular".to_string()),
+            ..fonts::TypefaceQuery::EMPTY
+        }),
+        ..fonts::TypefaceRequest::EMPTY
+    };
+    let postscript_name_response =
+        get_typeface_info_detailed(&font_provider, postscript_name_request).await?;
+
+    let contradictory_request = fonts::TypefaceRequest {
+        query: Some(fonts::TypefaceQuery {
+            postscript_name: Some("NotoSansCJKjp-Regular".to_string()),
+            full_name: Some("Roboto Slab".to_string()),
+            ..fonts::TypefaceQuery::EMPTY
+        }),
+        ..fonts::TypefaceRequest::EMPTY
+    };
+    let contradictory_response =
+        get_typeface_info_detailed(&font_provider, contradictory_request).await?;
+
+    assert_buf_eq!(postscript_name_response, contradictory_response);
+
+    Ok(())
+}
+
+/// Verify that if Postscript name is provided, other parameters are ignored.
+async fn test_postscript_name_ignores_other_parameters(
+    factory: &ProviderFactory,
+) -> Result<(), Error> {
+    let font_provider = factory.get_provider(FONTS_MEDIUM_CM).await?;
+
+    let postscript_name_request = fonts::TypefaceRequest {
+        query: Some(fonts::TypefaceQuery {
+            postscript_name: Some("Roboto-Regular".to_string()),
+            ..fonts::TypefaceQuery::EMPTY
+        }),
+        ..fonts::TypefaceRequest::EMPTY
+    };
+    let postscript_name_response =
+        get_typeface_info_detailed(&font_provider, postscript_name_request).await?;
+
+    let contradictory_request = fonts::TypefaceRequest {
+        query: Some(fonts::TypefaceQuery {
+            postscript_name: Some("Roboto-Regular".to_string()),
+            languages: Some(vec![LocaleId { id: "ja".to_string() }]),
+            code_points: Some(vec!['な' as u32]),
+            ..fonts::TypefaceQuery::EMPTY
+        }),
+        ..fonts::TypefaceRequest::EMPTY
+    };
+    let contradictory_response =
+        get_typeface_info_detailed(&font_provider, contradictory_request).await?;
+
+    assert_buf_eq!(postscript_name_response, contradictory_response);
 
     Ok(())
 }
