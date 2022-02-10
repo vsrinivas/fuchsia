@@ -20,6 +20,8 @@
             "fuchsia.lowpan.spinel.Device",
             "fuchsia.net.interfaces.State",
             "fuchsia.net.interfaces.admin.Installer",
+            "fuchsia.net.mdns.Publisher",
+            "fuchsia.net.mdns.Subscriber",
             "fuchsia.net.stack.Stack",
             "fuchsia.net.tun.Control",
             "fuchsia.posix.socket.Provider"
