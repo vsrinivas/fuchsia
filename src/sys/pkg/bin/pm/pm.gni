@@ -113,6 +113,11 @@ template("pm_archive") {
 #   package_api_level (default: the current fuchsia api level)
 #     [unsigned integer] API level of the package
 #
+#   repository (default: "fuchsia.com")
+#     [string] The repository host name part of the package URL.
+#     See https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#repository
+#     for more details.
+#
 #   deps (optional)
 #   test (optional)
 #   visibility (optional)
@@ -122,6 +127,7 @@ template("pm_build") {
                          [
                            "package_api_level",
                            "package_name",
+                           "repository",
                          ])
   if (!defined(package_api_level)) {
     package_api_level = current_fuchsia_api_level
@@ -129,6 +135,10 @@ template("pm_build") {
 
   if (!defined(package_name)) {
     package_name = target_name
+  }
+
+  if (!defined(repository)) {
+    repository = "fuchsia.com"
   }
 
   pkg_out_dir = "$target_out_dir/$target_name"
@@ -199,6 +209,8 @@ template("pm_build") {
       rebase_path(pkg_manifest_file, root_build_dir),
       "-n",
       package_name,
+      "-r",
+      repository,
       "-api-level",
       "$package_api_level",
       "build",

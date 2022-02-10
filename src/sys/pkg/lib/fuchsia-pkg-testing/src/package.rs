@@ -571,6 +571,7 @@ impl PackageBuilder {
             .arg("pm")?
             .arg(format!("-n={}", self.name))?
             .arg("-m=/in/package.manifest")?
+            .arg("-r=fuchsia.com")?
             .arg(format!("-o={}", package_mount_path))?
             .arg("build")?
             .arg("-depfile=false")?

@@ -5,8 +5,10 @@
 package build
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -14,6 +16,27 @@ import (
 
 	versionHistory "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/version-history/go"
 )
+
+func TestRepository(t *testing.T) {
+	cfg := TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+	BuildTestPackage(cfg)
+
+	// Read repository field in the manifest.
+	manifestDir := filepath.Join(cfg.OutputDir, "package_manifest.json")
+	manifest, err := ioutil.ReadFile(manifestDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var packageManifest PackageManifest
+	if err := json.Unmarshal(manifest, &packageManifest); err != nil {
+		t.Fatal(err)
+	}
+
+	if want := cfg.PkgRepository; packageManifest.Repository != cfg.PkgRepository {
+		t.Errorf("got %q, want %q", packageManifest.Repository, want)
+	}
+}
 
 func TestOrderedBlobInfo(t *testing.T) {
 	cfg := TestConfig()

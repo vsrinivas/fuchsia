@@ -269,7 +269,7 @@ func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 
 	logger.Infof(ctx, "Omaha Server URL set in vbmeta to %q", u.omahaServer.URL())
 
-	pkgBuilder, err := packages.NewPackageBuilderFromDir(tempDir, "update_omaha", "0")
+	pkgBuilder, err := packages.NewPackageBuilderFromDir(tempDir, "update_omaha", "0", "testrepository.com")
 	if err != nil {
 		return fmt.Errorf("Failed to parse package from %q: %w", tempDir, err)
 	}

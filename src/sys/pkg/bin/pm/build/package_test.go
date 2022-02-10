@@ -336,3 +336,20 @@ func TestSealCreatesABIRevisionFile(t *testing.T) {
 		t.Fatalf("expected ABI revision to be %x, not %x", testABIRevision, abiRevision)
 	}
 }
+
+func TestSealValidatesInvalidPackageRepository(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatalf("Expected to fail on invalid repository")
+		}
+	}()
+
+	cfg := TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+	cfg.PkgRepository = "x,y"
+	BuildTestPackage(cfg)
+
+	if _, err := Seal(cfg); err == nil {
+		t.Fatalf("Expected invalid package repository to generate error.")
+	}
+}

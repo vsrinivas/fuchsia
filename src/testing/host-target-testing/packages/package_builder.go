@@ -22,10 +22,11 @@ import (
 )
 
 type PackageBuilder struct {
-	Name     string
-	Version  string
-	Cache    string
-	Contents map[string]string
+	Name       string
+	Repository string
+	Version    string
+	Cache      string
+	Contents   map[string]string
 }
 
 func parsePackageJSON(path string) (string, string, error) {
@@ -42,7 +43,7 @@ func parsePackageJSON(path string) (string, string, error) {
 
 // NewPackageBuilder returns a PackageBuilder
 // Must call `Close()` to clean up PackageBuilder
-func NewPackageBuilder(name string, version string) (*PackageBuilder, error) {
+func NewPackageBuilder(name string, version string, repository string) (*PackageBuilder, error) {
 	if name == "" || version == "" {
 		return nil, fmt.Errorf("missing package info and version information")
 	}
@@ -54,17 +55,18 @@ func NewPackageBuilder(name string, version string) (*PackageBuilder, error) {
 	}
 
 	return &PackageBuilder{
-		Name:     name,
-		Version:  version,
-		Cache:    tempDir,
-		Contents: make(map[string]string),
+		Name:       name,
+		Repository: repository,
+		Version:    version,
+		Cache:      tempDir,
+		Contents:   make(map[string]string),
 	}, nil
 }
 
 // NewPackageBuilderFromDir returns a PackageBuilder that initializes from the `dir` package directory.
 // Must call `Close()` to clean up PackageBuilder
-func NewPackageBuilderFromDir(dir string, name string, version string) (*PackageBuilder, error) {
-	pkg, err := NewPackageBuilder(name, version)
+func NewPackageBuilderFromDir(dir string, name string, version string, repository string) (*PackageBuilder, error) {
+	pkg, err := NewPackageBuilder(name, version, repository)
 	if err != nil {
 		return nil, err
 	}
@@ -111,14 +113,15 @@ func (p *PackageBuilder) AddResource(path string, contents io.Reader) error {
 	return nil
 }
 
-func tempConfig(dir string, name string, version string) (*build.Config, error) {
+func tempConfig(dir string, name string, version string, repository string) (*build.Config, error) {
 	cfg := &build.Config{
-		OutputDir:    filepath.Join(dir, "output"),
-		ManifestPath: filepath.Join(dir, "manifest"),
-		KeyPath:      filepath.Join(dir, "key"),
-		TempDir:      filepath.Join(dir, "tmp"),
-		PkgName:      name,
-		PkgVersion:   version,
+		OutputDir:     filepath.Join(dir, "output"),
+		ManifestPath:  filepath.Join(dir, "manifest"),
+		KeyPath:       filepath.Join(dir, "key"),
+		TempDir:       filepath.Join(dir, "tmp"),
+		PkgName:       name,
+		PkgVersion:    version,
+		PkgRepository: repository,
 	}
 
 	for _, d := range []string{cfg.OutputDir, cfg.TempDir} {
@@ -147,7 +150,7 @@ func (p *PackageBuilder) Publish(ctx context.Context, pkgRepo *Repository) (stri
 	}
 	defer os.RemoveAll(dir)
 
-	cfg, err := tempConfig(dir, p.Name, p.Version)
+	cfg, err := tempConfig(dir, p.Name, p.Version, p.Repository)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create temp config to fill with our data: %w", err)
 	}

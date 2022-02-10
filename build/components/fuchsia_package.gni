@@ -98,8 +98,6 @@ template("fuchsia_package") {
     repository = invoker.repository
   }
 
-  # TODO(fxb/88886): pass repository field to pm
-  not_needed([ "repository" ])
   if (current_toolchain == target_toolchain) {
     package_name = target_name
     if (defined(invoker.package_name)) {
@@ -226,6 +224,7 @@ template("fuchsia_package") {
         test_component_manifest_barrier = []
         test_component_manifest_program_barrier = []
       }
+      repository = repository
       if (!defined(deps)) {
         deps = []
       }
@@ -242,5 +241,6 @@ template("fuchsia_package") {
 
     # Suppress unused variable warnings.
     not_needed(invoker, "*")
+    not_needed([ "repository" ])
   }
 }

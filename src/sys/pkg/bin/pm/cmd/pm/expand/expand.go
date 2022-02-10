@@ -67,7 +67,7 @@ func Run(cfg *build.Config, args []string) error {
 
 	outputDir := filepath.Clean(cfg.OutputDir)
 
-	if err := writeMetadataAndManifest(pkgArchive, outputDir); err != nil {
+	if err := writeMetadataAndManifest(cfg, pkgArchive, outputDir); err != nil {
 		return err
 	}
 
@@ -92,7 +92,7 @@ func merkleFor(b []byte) (build.MerkleRoot, error) {
 //     $PKG_NAME.$PKG_VERSION=$outputDir/meta.far
 // `package_manifest.json` contains a package output manifest as built by `pm
 // build -outut-package-manifest`.
-func writeMetadataAndManifest(pkgArchive *far.Reader, outputDir string) error {
+func writeMetadataAndManifest(cfg *build.Config, pkgArchive *far.Reader, outputDir string) error {
 	// First, extract the package info from the archive, or error out if
 	// the meta.far is malformed.
 	pkgMetaBytes, err := pkgArchive.ReadFile(metaFar)
@@ -168,9 +168,10 @@ func writeMetadataAndManifest(pkgArchive *far.Reader, outputDir string) error {
 
 	// Write out package_manifest.json
 	pkgManifest := build.PackageManifest{
-		Version: "1",
-		Package: *p,
-		Blobs:   blobs,
+		Version:    "1",
+		Repository: cfg.PkgRepository,
+		Package:    *p,
+		Blobs:      blobs,
 	}
 	content, err := json.MarshalIndent(pkgManifest, "", "    ")
 	if err != nil {

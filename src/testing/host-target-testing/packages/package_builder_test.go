@@ -107,7 +107,7 @@ func createAndExpandPackage(t *testing.T, parentDir string) (*Repository, string
 func TestAddResource(t *testing.T) {
 	parentDir := t.TempDir()
 	_, expandDir := createAndExpandPackage(t, parentDir)
-	pkgBuilder, err := NewPackageBuilderFromDir(expandDir, "testpackage", "0")
+	pkgBuilder, err := NewPackageBuilderFromDir(expandDir, "testpackage", "0", "testrepository.com")
 	if err != nil {
 		t.Fatalf("Failed to parse package from %s. %s", expandDir, err)
 	}
@@ -165,7 +165,7 @@ func TestPublish(t *testing.T) {
 
 	parentDir := t.TempDir()
 	pkgRepo, expandDir := createAndExpandPackage(t, parentDir)
-	pkgBuilder, err := NewPackageBuilderFromDir(expandDir, "testpackage", "0")
+	pkgBuilder, err := NewPackageBuilderFromDir(expandDir, "testpackage", "0", "testrepository.com")
 	if err != nil {
 		t.Fatalf("Failed to parse package from %s. %s", expandDir, err)
 	}

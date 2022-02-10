@@ -147,6 +147,8 @@ def _fuchsia_package_impl(context):
             package_dir,
             "-m",
             manifest_file.path,
+            "-r",
+            "fuchsia.com",
             "build",
         ],
         inputs = package_contents + [

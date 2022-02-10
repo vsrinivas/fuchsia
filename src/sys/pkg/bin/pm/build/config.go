@@ -24,6 +24,7 @@ type Config struct {
 	KeyPath        string
 	TempDir        string
 	PkgName        string
+	PkgRepository  string
 	PkgVersion     string
 	PkgABIRevision uint64
 
@@ -39,6 +40,7 @@ func NewConfig() *Config {
 		KeyPath:        "",
 		TempDir:        os.TempDir(),
 		PkgName:        "",
+		PkgRepository:  "",
 		PkgVersion:     "0",
 		PkgABIRevision: 0,
 	}
@@ -59,6 +61,7 @@ func TestConfig() *Config {
 		KeyPath:        filepath.Join(d, "key"),
 		TempDir:        filepath.Join(d, "tmp"),
 		PkgName:        "testpackage",
+		PkgRepository:  "testrepository.com",
 		PkgVersion:     "0",
 		PkgABIRevision: 0,
 	}
@@ -75,6 +78,7 @@ func (c *Config) InitFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.KeyPath, "k", c.KeyPath, "deprecated; do not use")
 	fs.StringVar(&c.TempDir, "t", c.TempDir, "temporary directory")
 	fs.StringVar(&c.PkgName, "n", c.PkgName, "name of the packages")
+	fs.StringVar(&c.PkgRepository, "r", c.PkgRepository, "repository of the packages")
 	fs.Func("api-level", "package API level", func(value string) error {
 		if c.PkgABIRevision != 0 {
 			return fmt.Errorf("cannot specify both --api-level and --abi-revision")
@@ -244,8 +248,9 @@ func (c *Config) OutputManifest() (*PackageManifest, error) {
 		return nil, err
 	}
 	return &PackageManifest{
-		Version: "1",
-		Package: p,
-		Blobs:   blobs,
+		Version:    "1",
+		Repository: c.PkgRepository,
+		Package:    p,
+		Blobs:      blobs,
 	}, err
 }

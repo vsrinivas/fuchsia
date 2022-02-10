@@ -11,11 +11,10 @@ import subprocess
 import sys
 
 
-def extract(pm, far_path, workdir, _repository):
+def extract(pm, far_path, workdir, repository):
     if not os.path.exists(workdir):
         os.makedirs(workdir)
-    # TODO(fxb/88886): pass repository field to pm
-    args = [pm, '-o', workdir, 'expand', far_path]
+    args = [pm, '-o', workdir, '-r', repository, 'expand', far_path]
     subprocess.check_output(args, stderr=subprocess.STDOUT)
 
 

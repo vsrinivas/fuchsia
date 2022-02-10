@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sync"
 
@@ -23,12 +24,17 @@ import (
 
 const abiRevisionKey string = "meta/fuchsia.abi/abi-revision"
 
+// invalidRepositoryCharsPattern contains all characters not allowed by the spec in
+// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#repository
+var InvalidRepositoryCharsPattern = regexp.MustCompile("[^a-z0-9-.]").MatchString
+
 // PackageManifest is the json structure representation of a full package
 // manifest.
 type PackageManifest struct {
-	Version string            `json:"version"`
-	Package pkg.Package       `json:"package"`
-	Blobs   []PackageBlobInfo `json:"blobs"`
+	Version    string            `json:"version"`
+	Repository string            `json:"repository,omitempty"`
+	Package    pkg.Package       `json:"package"`
+	Blobs      []PackageBlobInfo `json:"blobs"`
 }
 
 // Init initializes package metadata in the output directory. A manifest
@@ -191,6 +197,9 @@ var RequiredFiles = []string{"meta/contents", "meta/package"}
 
 // Validate ensures that the package contains the required files.
 func Validate(cfg *Config) error {
+	if InvalidRepositoryCharsPattern(cfg.PkgRepository) {
+		return fmt.Errorf("pkg: invalid package repository \"%v\"", cfg.PkgRepository)
+	}
 	manifest, err := cfg.Manifest()
 	if err != nil {
 		return err
