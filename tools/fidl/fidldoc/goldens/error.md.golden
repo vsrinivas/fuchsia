@@ -1,100 +1,75 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.error
 
-
-
 ## **PROTOCOLS**
-
 ## Example {#Example}
 *Defined in [test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=3)*
-
-
-
 ### foo {#Example.foo}
-
-
 
 #### Request {#Example.foo_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
-        </tr></table>
-
+        </tr>
+</table>
 
 #### Response {#Example.foo_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>result</code></td>
             <td>
                 <code><a class='link' href='#Example_foo_Result'>Example_foo_Result</a></code>
             </td>
-        </tr></table>
-
-
+        </tr>
+</table>
 
 ## **STRUCTS**
-
 ### Example_foo_Response  {#Example_foo_Response data-text="Example_foo_Response"}
 *Defined in [test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=6)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Example_foo_Response.y">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="Example_foo_Response.y">
             <td><code>y</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
 
 
 
-
-
-
-
 ## **UNIONS**
-
 ### Example_foo_Result [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#Example_foo_Result data-text="Example_foo_Result"}
 *Defined in [test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=6)*
-
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="Example_foo_Result.response">
-            <td><h3 id="Example_foo_Result.response" class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="Example_foo_Result.response">
+<td><h3 id="Example_foo_Result.response" class="add-link hide-from-toc">1</h3></td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#Example_foo_Response'>Example_foo_Response</a></code>
             </td>
-            <td>
-</td>
-        </tr><tr id="Example_foo_Result.err">
-            <td><h3 id="Example_foo_Result.err" class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="Example_foo_Result.err">
+<td><h3 id="Example_foo_Result.err" class="add-link hide-from-toc">2</h3></td>
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
-
-
-
+            <td></td>
+        </tr>
+</table>
 
 
 

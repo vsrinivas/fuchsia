@@ -74,7 +74,7 @@ fn get_local_path_and_level(paths: &[PathSeg]) -> Option<(usize, String)> {
     paths.get(0).and_then(|seg| {
         if seg == &PathSeg::Ruled(Rule::path_local) {
             let mut level = 0;
-            while paths[level + 1] == PathSeg::Ruled(Rule::path_up) {
+            while paths.get(level + 1)? == &PathSeg::Ruled(Rule::path_up) {
                 level += 1;
             }
             if let Some(PathSeg::Named(name)) = paths.get(level + 1) {
@@ -124,7 +124,7 @@ where
     path_stack
 }
 
-pub(crate) fn merge_json_path<'a>(path_stack: &mut Vec<String>, relative_path: &'a [PathSeg]) {
+pub(crate) fn merge_json_path(path_stack: &mut Vec<String>, relative_path: &[PathSeg]) {
     for seg in relative_path {
         match seg {
             PathSeg::Named(ref s) => {

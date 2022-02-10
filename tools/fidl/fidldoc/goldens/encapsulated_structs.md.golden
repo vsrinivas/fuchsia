@@ -1,177 +1,142 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.encapsulatedstructs
 
 
-
-
-
 ## **STRUCTS**
-
 ### ArrayInt16Int8  {#ArrayInt16Int8 data-text="ArrayInt16Int8"}
 *Defined in [test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=17)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ArrayInt16Int8.arr">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="ArrayInt16Int8.arr">
             <td><code>arr</code></td>
             <td>
                 <code>[3]</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
-
 ### Int16Int8  {#Int16Int8 data-text="Int16Int8"}
 *Defined in [test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=11)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Int16Int8.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="Int16Int8.a">
             <td><code>a</code></td>
             <td>
                 <code>int16</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Int16Int8.b">
+        </tr>
+        <tr id="Int16Int8.b">
             <td><code>b</code></td>
             <td>
                 <code>int8</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
-
 ### Int8Int32  {#Int8Int32 data-text="Int8Int32"}
 *Defined in [test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=5)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Int8Int32.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="Int8Int32.a">
             <td><code>a</code></td>
             <td>
                 <code>int8</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Int8Int32.b">
+        </tr>
+        <tr id="Int8Int32.b">
             <td><code>b</code></td>
             <td>
                 <code>int32</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
-
 ### NonInlineStructTestStruct [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#NonInlineStructTestStruct data-text="NonInlineStructTestStruct"}
 *Defined in [test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=33)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="NonInlineStructTestStruct.element">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="NonInlineStructTestStruct.element">
             <td><code>element</code></td>
             <td>
                 <code><a class='link' href='#Int16Int8'>Int16Int8</a>?</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="NonInlineStructTestStruct.h">
+        </tr>
+        <tr id="NonInlineStructTestStruct.h">
             <td><code>h</code></td>
             <td>
                 <code>handle&lt;handle&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
-
 ### StructPaddingTestStruct  {#StructPaddingTestStruct data-text="StructPaddingTestStruct"}
 *Defined in [test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=22)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructPaddingTestStruct.trailing">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="StructPaddingTestStruct.trailing">
             <td><code>trailing</code></td>
             <td>
                 <code><a class='link' href='#Int16Int8'>Int16Int8</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="StructPaddingTestStruct.inner">
+        </tr>
+        <tr id="StructPaddingTestStruct.inner">
             <td><code>inner</code></td>
             <td>
                 <code><a class='link' href='#Int8Int32'>Int8Int32</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="StructPaddingTestStruct.array">
+        </tr>
+        <tr id="StructPaddingTestStruct.array">
             <td><code>array</code></td>
             <td>
                 <code><a class='link' href='#ArrayInt16Int8'>ArrayInt16Int8</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
-
 ### TopLevelStruct [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#TopLevelStruct data-text="TopLevelStruct"}
 *Defined in [test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=39)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="TopLevelStruct.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="TopLevelStruct.a">
             <td><code>a</code></td>
             <td>
                 <code><a class='link' href='#StructPaddingTestStruct'>StructPaddingTestStruct</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="TopLevelStruct.b">
+        </tr>
+        <tr id="TopLevelStruct.b">
             <td><code>b</code></td>
             <td>
                 <code><a class='link' href='#NonInlineStructTestStruct'>NonInlineStructTestStruct</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
-
-
-
-
-
-
-
 
 
 

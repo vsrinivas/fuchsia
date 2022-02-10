@@ -1,7 +1,6 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.bitsconstants
 
 
@@ -9,66 +8,46 @@
 
 
 
-
-
-
-
-
-
-
 ## **BITS**
-
 ### BitsType [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#BitsType}
 Type: <code>uint32</code>
 
 *Defined in [test.bitsconstants/bits_constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bits_constants.test.fidl;l=3)*
 
-
-
-
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="BitsType.A">
-            <td><h3 id="BitsType.A" class="add-link hide-from-toc">A</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="BitsType.A">
+<td><h3 id="BitsType.A" class="add-link hide-from-toc">A</h3></td>
             <td>1</td>
-            <td>
-</td>
-        </tr><tr id="BitsType.B">
-            <td><h3 id="BitsType.B" class="add-link hide-from-toc">B</h3></td>
+            <td></td>
+        </tr>
+        <tr id="BitsType.B">
+<td><h3 id="BitsType.B" class="add-link hide-from-toc">B</h3></td>
             <td>128</td>
-            <td>
-</td>
-        </tr><tr id="BitsType.C">
-            <td><h3 id="BitsType.C" class="add-link hide-from-toc">C</h3></td>
+            <td></td>
+        </tr>
+        <tr id="BitsType.C">
+<td><h3 id="BitsType.C" class="add-link hide-from-toc">C</h3></td>
             <td>2</td>
-            <td>
-</td>
-        </tr></table>
-
-
+            <td></td>
+        </tr>
+</table>
 
 ## **CONSTANTS**
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr><tr id="Const1">
+    <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr>
+        <tr id="Const1">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bits_constants.test.fidl;l=9">Const1</a></td>
-            
-            <td>
-</td>
+            <td></td>
         </tr>
-    <tr id="Const2">
+        <tr id="Const2">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bits_constants.test.fidl;l=10">Const2</a></td>
-            
-            <td>
-</td>
+            <td></td>
         </tr>
-    <tr id="Const3">
+        <tr id="Const3">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bits_constants.test.fidl;l=11">Const3</a></td>
-            
-            <td>
-</td>
+            <td></td>
         </tr>
-    
 </table>
-
-
 

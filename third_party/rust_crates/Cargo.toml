@@ -256,7 +256,7 @@ cargo_metadata = "0.14.1"
 crossterm = "0.19"
 concurrent-queue = "1.2.2"
 easy-parallel = "3.1"
-handlebars = "3.5.4"
+handlebars = "4.2.1"
 home = "0.5.3"
 hyper-rustls = { version = "0.20.0", default-features = false, features = ["rustls-native-certs"] }
 indoc = "1.0.3"
@@ -556,7 +556,7 @@ configs = [ "//build/config/fuchsia:libunwind" ]
 #
 # Keep this sorted alphabetically, please.
 
-[gn.package.handlebars."3.5.4"]
+[gn.package.handlebars."4.2.1"]
 # pest relies on this being set to find the grammar file
 env_vars = [ "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/handlebars" ]
 

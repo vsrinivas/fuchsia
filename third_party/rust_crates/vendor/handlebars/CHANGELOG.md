@@ -1,5 +1,90 @@
 # Change Log
 
+## [4.2.1](https://github.com/sunng87/handlebars-rust/compare/4.2.0...4.2.1) - 2022-01-17
+
+* [Fixed] Nested partial `@partial-block` referencing issue [#488]
+* [Fixed] Docs generation on docs.rs for `rust-embed` feature
+
+## [4.2.0](https://github.com/sunng87/handlebars-rust/compare/4.1.6...4.2.0) - 2022-01-05
+
+* [Added] RustEmbed support for loading templates from [#484]
+* [Fixed] Parser support for variables begins with digit [#479]
+* [Changed] Keep indent whitespaces for partial expression `{{>
+  partial}}` as default in handlebarsjs. A new option `prevent_indent`
+  is provided on `Handlebars` to turn off this behaviour. [#486]
+* [Changed] Update MSRV to 1.51 due to dependency changes
+
+## [4.1.6](https://github.com/sunng87/handlebars-rust/compare/4.1.5...4.1.6) - 2021-12-03
+
+* [Added] Create `Context` from owned `serde_json::Value` [#477]
+
+## [4.1.5](https://github.com/sunng87/handlebars-rust/compare/4.1.4...4.1.5) - 2021-11-17
+
+* [Fixed] Single-quote string literal is supported, again [#475]
+
+## [4.1.4](https://github.com/sunng87/handlebars-rust/compare/4.1.3...4.1.4) - 2021-11-06
+
+* [Fixed] Corrected empty line stripping strategy [#473]
+
+## [4.1.3](https://github.com/sunng87/handlebars-rust/compare/4.1.2...4.1.3) - 2021-09-10
+
+* [Added] `@last` variable for `each` block with object [#466]
+* [Fixed] Missing whitespaces behind expression [#468]
+
+## [4.1.2](https://github.com/sunng87/handlebars-rust/compare/4.1.1...4.1.2) - 2021-08-11
+
+* [Added] Support for generic types in `handlebars_helper!`.
+* [Added] Getter and setter for rhai `Engine` from registry.
+* [Fixed] Improve doc for `dev_mode` that it has to be enabled before
+  adding templates.
+
+## [4.1.1](https://github.com/sunng87/handlebars-rust/compare/4.1.0...4.1.1) - 2021-07-31
+
+* [Changed] Update rhai to 1.0 [#455]
+* [Fixed] Empty line stripping for partial include statement, and other corner cases [#458]
+
+## [4.1.0](https://github.com/sunng87/handlebars-rust/compare/4.0.1...4.1.0) - 2021-07-05
+
+* [Added] export `StringOutput` as requested in #442
+* [Changed] strict mode now applies to our helper macro `handlebars_helper!` and
+  built-in helpers based on it.
+* [Fixed] Line stripping feature for standalone statment introduced in #404 is now
+  aligned with handlebarsjs. #448
+
+## [4.0.1](https://github.com/sunng87/handlebars-rust/compare/4.0.0...4.0.1) - 2021-06-15
+
+* [Fixed] Each block render error with empty array or object [#445]
+
+## [4.0.0](https://github.com/sunng87/handlebars-rust/compare/3.4.0...4.0.0) - 2021-05-25
+
+* [Added] `dev_mode` for registry: templates and scripts loaded from file are always
+  reloaded when dev mode enabled [#395]
+* [Added] Registry is now `Clone` [#395]
+* [Added] New built-in helper `len` [#421]
+* [Changed] Updated `rhai` to 0.19 and then 0.20 [#391]
+* [Changed] `#each` helper now renders else block for non-iterable data [#380]
+* [Changed] `TemplateError` and `ScriptError` is now a cause of `RenderError` [#395]
+* [Changed] Empty lines around block helpers are now stripped [#404]
+* [Changed] **Breaking** `RenderContext::get_partial` now returns `Option<&Template>`
+* [Changed] **Breaking** Capitalize names like `HtmlExpression` and `IoError` based on clippy recommendations [#424]
+* [Changed] **Breaking** Improved return type of `call_inner` from `HelperDef` to avoid misleading [#437]
+* [Fixed] reference starts with `null`, `true` and `false` were parsed incorrectly [#382]
+* [Fixed] dir source path separator bug on windows [#389] [#405]
+* [Fixed] stack overflow with nested `@partial-block` [#401]
+* [Fixed] value access issue when upper block has a base value [#419]
+* [Fixed] escape rules for Json string literal [#423]
+* [Fixed] **Breaking** zero-arity subexpressions support [#433]
+  Zero-arity subexpression no longer resolved as variable. The behaviour is now aligned with handlebarsjs.
+  For instance, `{{(parent)}}` can no longer access `parent` field of the context object, use
+  `{{lookup this "parent"}}` instead. This change applies to partial inclusion, too.
+* [Removed] **Breaking** option to disable source map is removed [#395]
+* [Removed] **Breaking** `TemplateFileError` and `TemplateRenderError` are removed and merged into
+  `TemplateError` and `RenderError` [#395]
+
+## [3.5.5](https://github.com/sunng87/handlebars-rust/compare/3.5.4...3.5.5) - 2021-05-03
+
+* [Fixed] Panic on reporting invalid tag name [#427]
+
 ## [3.5.4](https://github.com/sunng87/handlebars-rust/compare/3.5.3...3.5.4) - 2021-03-27
 
 * [Fixed] Json string literal with escape char [#422]

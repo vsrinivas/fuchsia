@@ -1,783 +1,740 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.table
 
 
 
 
-
-
-
-
-
 ## **TABLES**
-
 ### EmptyTable  {#EmptyTable data-text="EmptyTable"}
 
 
 *Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=3)*
 
-
-
-
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    </table>
-
+</table>
 ### ExtensionTable  {#ExtensionTable data-text="ExtensionTable"}
 
 
 *Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=43)*
 
-
-
-
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    </table>
-
+</table>
 ### NewerSimpleTable  {#NewerSimpleTable data-text="NewerSimpleTable"}
 
 
 *Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=18)*
 
-
-
-
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    <tr id="NewerSimpleTable.x">
-            <td><h3 id="NewerSimpleTable.x" class="add-link hide-from-toc">1</h3></td>
+        <tr id="NewerSimpleTable.x">
+<td><h3 id="NewerSimpleTable.x" class="add-link hide-from-toc">1</h3></td>
             <td><code>x</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="NewerSimpleTable.">
-            <td><h3 id="NewerSimpleTable." class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="NewerSimpleTable.">
+<td><h3 id="NewerSimpleTable." class="add-link hide-from-toc">2</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td>
-</td>
-        </tr><tr id="NewerSimpleTable.">
-            <td><h3 id="NewerSimpleTable." class="add-link hide-from-toc">3</h3></td>
+            <td></td>
+        </tr>
+        <tr id="NewerSimpleTable.">
+<td><h3 id="NewerSimpleTable." class="add-link hide-from-toc">3</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td>
-</td>
-        </tr><tr id="NewerSimpleTable.">
-            <td><h3 id="NewerSimpleTable." class="add-link hide-from-toc">4</h3></td>
+            <td></td>
+        </tr>
+        <tr id="NewerSimpleTable.">
+<td><h3 id="NewerSimpleTable." class="add-link hide-from-toc">4</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td>
-</td>
-        </tr><tr id="NewerSimpleTable.y">
-            <td><h3 id="NewerSimpleTable.y" class="add-link hide-from-toc">5</h3></td>
+            <td></td>
+        </tr>
+        <tr id="NewerSimpleTable.y">
+<td><h3 id="NewerSimpleTable.y" class="add-link hide-from-toc">5</h3></td>
             <td><code>y</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="NewerSimpleTable.z">
-            <td><h3 id="NewerSimpleTable.z" class="add-link hide-from-toc">6</h3></td>
+            <td></td>
+        </tr>
+        <tr id="NewerSimpleTable.z">
+<td><h3 id="NewerSimpleTable.z" class="add-link hide-from-toc">6</h3></td>
             <td><code>z</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="NewerSimpleTable.">
-            <td><h3 id="NewerSimpleTable." class="add-link hide-from-toc">7</h3></td>
+            <td></td>
+        </tr>
+        <tr id="NewerSimpleTable.">
+<td><h3 id="NewerSimpleTable." class="add-link hide-from-toc">7</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
+            <td></td>
+        </tr>
+</table>
 ### OlderSimpleTable  {#OlderSimpleTable data-text="OlderSimpleTable"}
 
 
 *Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=13)*
 
-
-
-
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    <tr id="OlderSimpleTable.x">
-            <td><h3 id="OlderSimpleTable.x" class="add-link hide-from-toc">1</h3></td>
+        <tr id="OlderSimpleTable.x">
+<td><h3 id="OlderSimpleTable.x" class="add-link hide-from-toc">1</h3></td>
             <td><code>x</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="OlderSimpleTable.">
-            <td><h3 id="OlderSimpleTable." class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="OlderSimpleTable.">
+<td><h3 id="OlderSimpleTable." class="add-link hide-from-toc">2</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
+            <td></td>
+        </tr>
+</table>
 ### ReverseOrdinalTable  {#ReverseOrdinalTable data-text="ReverseOrdinalTable"}
 
 
 *Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=28)*
 
-
-
-
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    <tr id="ReverseOrdinalTable.x">
-            <td><h3 id="ReverseOrdinalTable.x" class="add-link hide-from-toc">3</h3></td>
+        <tr id="ReverseOrdinalTable.x">
+<td><h3 id="ReverseOrdinalTable.x" class="add-link hide-from-toc">3</h3></td>
             <td><code>x</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="ReverseOrdinalTable.y">
-            <td><h3 id="ReverseOrdinalTable.y" class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="ReverseOrdinalTable.y">
+<td><h3 id="ReverseOrdinalTable.y" class="add-link hide-from-toc">2</h3></td>
             <td><code>y</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="ReverseOrdinalTable.z">
-            <td><h3 id="ReverseOrdinalTable.z" class="add-link hide-from-toc">1</h3></td>
+            <td></td>
+        </tr>
+        <tr id="ReverseOrdinalTable.z">
+<td><h3 id="ReverseOrdinalTable.z" class="add-link hide-from-toc">1</h3></td>
             <td><code>z</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
+            <td></td>
+        </tr>
+</table>
 ### SimpleTable  {#SimpleTable data-text="SimpleTable"}
 
 
 *Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=5)*
 
-
-
-
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    <tr id="SimpleTable.x">
-            <td><h3 id="SimpleTable.x" class="add-link hide-from-toc">1</h3></td>
+        <tr id="SimpleTable.x">
+<td><h3 id="SimpleTable.x" class="add-link hide-from-toc">1</h3></td>
             <td><code>x</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SimpleTable.">
-            <td><h3 id="SimpleTable." class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SimpleTable.">
+<td><h3 id="SimpleTable." class="add-link hide-from-toc">2</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SimpleTable.">
-            <td><h3 id="SimpleTable." class="add-link hide-from-toc">3</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SimpleTable.">
+<td><h3 id="SimpleTable." class="add-link hide-from-toc">3</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SimpleTable.">
-            <td><h3 id="SimpleTable." class="add-link hide-from-toc">4</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SimpleTable.">
+<td><h3 id="SimpleTable." class="add-link hide-from-toc">4</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SimpleTable.y">
-            <td><h3 id="SimpleTable.y" class="add-link hide-from-toc">5</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SimpleTable.y">
+<td><h3 id="SimpleTable.y" class="add-link hide-from-toc">5</h3></td>
             <td><code>y</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
+            <td></td>
+        </tr>
+</table>
 ### SixtyFourOrdinalTable  {#SixtyFourOrdinalTable data-text="SixtyFourOrdinalTable"}
 
 
 *Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=45)*
 
-
-
-
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    <tr id="SixtyFourOrdinalTable.v1">
-            <td><h3 id="SixtyFourOrdinalTable.v1" class="add-link hide-from-toc">1</h3></td>
+        <tr id="SixtyFourOrdinalTable.v1">
+<td><h3 id="SixtyFourOrdinalTable.v1" class="add-link hide-from-toc">1</h3></td>
             <td><code>v1</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v2">
-            <td><h3 id="SixtyFourOrdinalTable.v2" class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v2">
+<td><h3 id="SixtyFourOrdinalTable.v2" class="add-link hide-from-toc">2</h3></td>
             <td><code>v2</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v3">
-            <td><h3 id="SixtyFourOrdinalTable.v3" class="add-link hide-from-toc">3</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v3">
+<td><h3 id="SixtyFourOrdinalTable.v3" class="add-link hide-from-toc">3</h3></td>
             <td><code>v3</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v4">
-            <td><h3 id="SixtyFourOrdinalTable.v4" class="add-link hide-from-toc">4</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v4">
+<td><h3 id="SixtyFourOrdinalTable.v4" class="add-link hide-from-toc">4</h3></td>
             <td><code>v4</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v5">
-            <td><h3 id="SixtyFourOrdinalTable.v5" class="add-link hide-from-toc">5</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v5">
+<td><h3 id="SixtyFourOrdinalTable.v5" class="add-link hide-from-toc">5</h3></td>
             <td><code>v5</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v6">
-            <td><h3 id="SixtyFourOrdinalTable.v6" class="add-link hide-from-toc">6</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v6">
+<td><h3 id="SixtyFourOrdinalTable.v6" class="add-link hide-from-toc">6</h3></td>
             <td><code>v6</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v7">
-            <td><h3 id="SixtyFourOrdinalTable.v7" class="add-link hide-from-toc">7</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v7">
+<td><h3 id="SixtyFourOrdinalTable.v7" class="add-link hide-from-toc">7</h3></td>
             <td><code>v7</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v8">
-            <td><h3 id="SixtyFourOrdinalTable.v8" class="add-link hide-from-toc">8</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v8">
+<td><h3 id="SixtyFourOrdinalTable.v8" class="add-link hide-from-toc">8</h3></td>
             <td><code>v8</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v9">
-            <td><h3 id="SixtyFourOrdinalTable.v9" class="add-link hide-from-toc">9</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v9">
+<td><h3 id="SixtyFourOrdinalTable.v9" class="add-link hide-from-toc">9</h3></td>
             <td><code>v9</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v10">
-            <td><h3 id="SixtyFourOrdinalTable.v10" class="add-link hide-from-toc">10</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v10">
+<td><h3 id="SixtyFourOrdinalTable.v10" class="add-link hide-from-toc">10</h3></td>
             <td><code>v10</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v11">
-            <td><h3 id="SixtyFourOrdinalTable.v11" class="add-link hide-from-toc">11</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v11">
+<td><h3 id="SixtyFourOrdinalTable.v11" class="add-link hide-from-toc">11</h3></td>
             <td><code>v11</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v12">
-            <td><h3 id="SixtyFourOrdinalTable.v12" class="add-link hide-from-toc">12</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v12">
+<td><h3 id="SixtyFourOrdinalTable.v12" class="add-link hide-from-toc">12</h3></td>
             <td><code>v12</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v13">
-            <td><h3 id="SixtyFourOrdinalTable.v13" class="add-link hide-from-toc">13</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v13">
+<td><h3 id="SixtyFourOrdinalTable.v13" class="add-link hide-from-toc">13</h3></td>
             <td><code>v13</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v14">
-            <td><h3 id="SixtyFourOrdinalTable.v14" class="add-link hide-from-toc">14</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v14">
+<td><h3 id="SixtyFourOrdinalTable.v14" class="add-link hide-from-toc">14</h3></td>
             <td><code>v14</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v15">
-            <td><h3 id="SixtyFourOrdinalTable.v15" class="add-link hide-from-toc">15</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v15">
+<td><h3 id="SixtyFourOrdinalTable.v15" class="add-link hide-from-toc">15</h3></td>
             <td><code>v15</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v16">
-            <td><h3 id="SixtyFourOrdinalTable.v16" class="add-link hide-from-toc">16</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v16">
+<td><h3 id="SixtyFourOrdinalTable.v16" class="add-link hide-from-toc">16</h3></td>
             <td><code>v16</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v17">
-            <td><h3 id="SixtyFourOrdinalTable.v17" class="add-link hide-from-toc">17</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v17">
+<td><h3 id="SixtyFourOrdinalTable.v17" class="add-link hide-from-toc">17</h3></td>
             <td><code>v17</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v18">
-            <td><h3 id="SixtyFourOrdinalTable.v18" class="add-link hide-from-toc">18</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v18">
+<td><h3 id="SixtyFourOrdinalTable.v18" class="add-link hide-from-toc">18</h3></td>
             <td><code>v18</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v19">
-            <td><h3 id="SixtyFourOrdinalTable.v19" class="add-link hide-from-toc">19</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v19">
+<td><h3 id="SixtyFourOrdinalTable.v19" class="add-link hide-from-toc">19</h3></td>
             <td><code>v19</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v20">
-            <td><h3 id="SixtyFourOrdinalTable.v20" class="add-link hide-from-toc">20</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v20">
+<td><h3 id="SixtyFourOrdinalTable.v20" class="add-link hide-from-toc">20</h3></td>
             <td><code>v20</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v21">
-            <td><h3 id="SixtyFourOrdinalTable.v21" class="add-link hide-from-toc">21</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v21">
+<td><h3 id="SixtyFourOrdinalTable.v21" class="add-link hide-from-toc">21</h3></td>
             <td><code>v21</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v22">
-            <td><h3 id="SixtyFourOrdinalTable.v22" class="add-link hide-from-toc">22</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v22">
+<td><h3 id="SixtyFourOrdinalTable.v22" class="add-link hide-from-toc">22</h3></td>
             <td><code>v22</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v23">
-            <td><h3 id="SixtyFourOrdinalTable.v23" class="add-link hide-from-toc">23</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v23">
+<td><h3 id="SixtyFourOrdinalTable.v23" class="add-link hide-from-toc">23</h3></td>
             <td><code>v23</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v24">
-            <td><h3 id="SixtyFourOrdinalTable.v24" class="add-link hide-from-toc">24</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v24">
+<td><h3 id="SixtyFourOrdinalTable.v24" class="add-link hide-from-toc">24</h3></td>
             <td><code>v24</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v25">
-            <td><h3 id="SixtyFourOrdinalTable.v25" class="add-link hide-from-toc">25</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v25">
+<td><h3 id="SixtyFourOrdinalTable.v25" class="add-link hide-from-toc">25</h3></td>
             <td><code>v25</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v26">
-            <td><h3 id="SixtyFourOrdinalTable.v26" class="add-link hide-from-toc">26</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v26">
+<td><h3 id="SixtyFourOrdinalTable.v26" class="add-link hide-from-toc">26</h3></td>
             <td><code>v26</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v27">
-            <td><h3 id="SixtyFourOrdinalTable.v27" class="add-link hide-from-toc">27</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v27">
+<td><h3 id="SixtyFourOrdinalTable.v27" class="add-link hide-from-toc">27</h3></td>
             <td><code>v27</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v28">
-            <td><h3 id="SixtyFourOrdinalTable.v28" class="add-link hide-from-toc">28</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v28">
+<td><h3 id="SixtyFourOrdinalTable.v28" class="add-link hide-from-toc">28</h3></td>
             <td><code>v28</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v29">
-            <td><h3 id="SixtyFourOrdinalTable.v29" class="add-link hide-from-toc">29</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v29">
+<td><h3 id="SixtyFourOrdinalTable.v29" class="add-link hide-from-toc">29</h3></td>
             <td><code>v29</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v30">
-            <td><h3 id="SixtyFourOrdinalTable.v30" class="add-link hide-from-toc">30</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v30">
+<td><h3 id="SixtyFourOrdinalTable.v30" class="add-link hide-from-toc">30</h3></td>
             <td><code>v30</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v31">
-            <td><h3 id="SixtyFourOrdinalTable.v31" class="add-link hide-from-toc">31</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v31">
+<td><h3 id="SixtyFourOrdinalTable.v31" class="add-link hide-from-toc">31</h3></td>
             <td><code>v31</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v32">
-            <td><h3 id="SixtyFourOrdinalTable.v32" class="add-link hide-from-toc">32</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v32">
+<td><h3 id="SixtyFourOrdinalTable.v32" class="add-link hide-from-toc">32</h3></td>
             <td><code>v32</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v33">
-            <td><h3 id="SixtyFourOrdinalTable.v33" class="add-link hide-from-toc">33</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v33">
+<td><h3 id="SixtyFourOrdinalTable.v33" class="add-link hide-from-toc">33</h3></td>
             <td><code>v33</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v34">
-            <td><h3 id="SixtyFourOrdinalTable.v34" class="add-link hide-from-toc">34</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v34">
+<td><h3 id="SixtyFourOrdinalTable.v34" class="add-link hide-from-toc">34</h3></td>
             <td><code>v34</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v35">
-            <td><h3 id="SixtyFourOrdinalTable.v35" class="add-link hide-from-toc">35</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v35">
+<td><h3 id="SixtyFourOrdinalTable.v35" class="add-link hide-from-toc">35</h3></td>
             <td><code>v35</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v36">
-            <td><h3 id="SixtyFourOrdinalTable.v36" class="add-link hide-from-toc">36</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v36">
+<td><h3 id="SixtyFourOrdinalTable.v36" class="add-link hide-from-toc">36</h3></td>
             <td><code>v36</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v37">
-            <td><h3 id="SixtyFourOrdinalTable.v37" class="add-link hide-from-toc">37</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v37">
+<td><h3 id="SixtyFourOrdinalTable.v37" class="add-link hide-from-toc">37</h3></td>
             <td><code>v37</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v38">
-            <td><h3 id="SixtyFourOrdinalTable.v38" class="add-link hide-from-toc">38</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v38">
+<td><h3 id="SixtyFourOrdinalTable.v38" class="add-link hide-from-toc">38</h3></td>
             <td><code>v38</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v39">
-            <td><h3 id="SixtyFourOrdinalTable.v39" class="add-link hide-from-toc">39</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v39">
+<td><h3 id="SixtyFourOrdinalTable.v39" class="add-link hide-from-toc">39</h3></td>
             <td><code>v39</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v40">
-            <td><h3 id="SixtyFourOrdinalTable.v40" class="add-link hide-from-toc">40</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v40">
+<td><h3 id="SixtyFourOrdinalTable.v40" class="add-link hide-from-toc">40</h3></td>
             <td><code>v40</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v41">
-            <td><h3 id="SixtyFourOrdinalTable.v41" class="add-link hide-from-toc">41</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v41">
+<td><h3 id="SixtyFourOrdinalTable.v41" class="add-link hide-from-toc">41</h3></td>
             <td><code>v41</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v42">
-            <td><h3 id="SixtyFourOrdinalTable.v42" class="add-link hide-from-toc">42</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v42">
+<td><h3 id="SixtyFourOrdinalTable.v42" class="add-link hide-from-toc">42</h3></td>
             <td><code>v42</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v43">
-            <td><h3 id="SixtyFourOrdinalTable.v43" class="add-link hide-from-toc">43</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v43">
+<td><h3 id="SixtyFourOrdinalTable.v43" class="add-link hide-from-toc">43</h3></td>
             <td><code>v43</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v44">
-            <td><h3 id="SixtyFourOrdinalTable.v44" class="add-link hide-from-toc">44</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v44">
+<td><h3 id="SixtyFourOrdinalTable.v44" class="add-link hide-from-toc">44</h3></td>
             <td><code>v44</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v45">
-            <td><h3 id="SixtyFourOrdinalTable.v45" class="add-link hide-from-toc">45</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v45">
+<td><h3 id="SixtyFourOrdinalTable.v45" class="add-link hide-from-toc">45</h3></td>
             <td><code>v45</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v46">
-            <td><h3 id="SixtyFourOrdinalTable.v46" class="add-link hide-from-toc">46</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v46">
+<td><h3 id="SixtyFourOrdinalTable.v46" class="add-link hide-from-toc">46</h3></td>
             <td><code>v46</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v47">
-            <td><h3 id="SixtyFourOrdinalTable.v47" class="add-link hide-from-toc">47</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v47">
+<td><h3 id="SixtyFourOrdinalTable.v47" class="add-link hide-from-toc">47</h3></td>
             <td><code>v47</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v48">
-            <td><h3 id="SixtyFourOrdinalTable.v48" class="add-link hide-from-toc">48</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v48">
+<td><h3 id="SixtyFourOrdinalTable.v48" class="add-link hide-from-toc">48</h3></td>
             <td><code>v48</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v49">
-            <td><h3 id="SixtyFourOrdinalTable.v49" class="add-link hide-from-toc">49</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v49">
+<td><h3 id="SixtyFourOrdinalTable.v49" class="add-link hide-from-toc">49</h3></td>
             <td><code>v49</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v50">
-            <td><h3 id="SixtyFourOrdinalTable.v50" class="add-link hide-from-toc">50</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v50">
+<td><h3 id="SixtyFourOrdinalTable.v50" class="add-link hide-from-toc">50</h3></td>
             <td><code>v50</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v51">
-            <td><h3 id="SixtyFourOrdinalTable.v51" class="add-link hide-from-toc">51</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v51">
+<td><h3 id="SixtyFourOrdinalTable.v51" class="add-link hide-from-toc">51</h3></td>
             <td><code>v51</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v52">
-            <td><h3 id="SixtyFourOrdinalTable.v52" class="add-link hide-from-toc">52</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v52">
+<td><h3 id="SixtyFourOrdinalTable.v52" class="add-link hide-from-toc">52</h3></td>
             <td><code>v52</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v53">
-            <td><h3 id="SixtyFourOrdinalTable.v53" class="add-link hide-from-toc">53</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v53">
+<td><h3 id="SixtyFourOrdinalTable.v53" class="add-link hide-from-toc">53</h3></td>
             <td><code>v53</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v54">
-            <td><h3 id="SixtyFourOrdinalTable.v54" class="add-link hide-from-toc">54</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v54">
+<td><h3 id="SixtyFourOrdinalTable.v54" class="add-link hide-from-toc">54</h3></td>
             <td><code>v54</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v55">
-            <td><h3 id="SixtyFourOrdinalTable.v55" class="add-link hide-from-toc">55</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v55">
+<td><h3 id="SixtyFourOrdinalTable.v55" class="add-link hide-from-toc">55</h3></td>
             <td><code>v55</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v56">
-            <td><h3 id="SixtyFourOrdinalTable.v56" class="add-link hide-from-toc">56</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v56">
+<td><h3 id="SixtyFourOrdinalTable.v56" class="add-link hide-from-toc">56</h3></td>
             <td><code>v56</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v57">
-            <td><h3 id="SixtyFourOrdinalTable.v57" class="add-link hide-from-toc">57</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v57">
+<td><h3 id="SixtyFourOrdinalTable.v57" class="add-link hide-from-toc">57</h3></td>
             <td><code>v57</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v58">
-            <td><h3 id="SixtyFourOrdinalTable.v58" class="add-link hide-from-toc">58</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v58">
+<td><h3 id="SixtyFourOrdinalTable.v58" class="add-link hide-from-toc">58</h3></td>
             <td><code>v58</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v59">
-            <td><h3 id="SixtyFourOrdinalTable.v59" class="add-link hide-from-toc">59</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v59">
+<td><h3 id="SixtyFourOrdinalTable.v59" class="add-link hide-from-toc">59</h3></td>
             <td><code>v59</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v60">
-            <td><h3 id="SixtyFourOrdinalTable.v60" class="add-link hide-from-toc">60</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v60">
+<td><h3 id="SixtyFourOrdinalTable.v60" class="add-link hide-from-toc">60</h3></td>
             <td><code>v60</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v61">
-            <td><h3 id="SixtyFourOrdinalTable.v61" class="add-link hide-from-toc">61</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v61">
+<td><h3 id="SixtyFourOrdinalTable.v61" class="add-link hide-from-toc">61</h3></td>
             <td><code>v61</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v62">
-            <td><h3 id="SixtyFourOrdinalTable.v62" class="add-link hide-from-toc">62</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v62">
+<td><h3 id="SixtyFourOrdinalTable.v62" class="add-link hide-from-toc">62</h3></td>
             <td><code>v62</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v63">
-            <td><h3 id="SixtyFourOrdinalTable.v63" class="add-link hide-from-toc">63</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v63">
+<td><h3 id="SixtyFourOrdinalTable.v63" class="add-link hide-from-toc">63</h3></td>
             <td><code>v63</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SixtyFourOrdinalTable.v64">
-            <td><h3 id="SixtyFourOrdinalTable.v64" class="add-link hide-from-toc">64</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SixtyFourOrdinalTable.v64">
+<td><h3 id="SixtyFourOrdinalTable.v64" class="add-link hide-from-toc">64</h3></td>
             <td><code>v64</code></td>
             <td>
                 <code><a class='link' href='#ExtensionTable'>ExtensionTable</a></code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
+            <td></td>
+        </tr>
+</table>
 ### TableWithAttributes  {#TableWithAttributes data-text="TableWithAttributes"}
 
 
 *Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=35)*
 
-
-
-
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    <tr id="TableWithAttributes.x">
-            <td><h3 id="TableWithAttributes.x" class="add-link hide-from-toc">1</h3></td>
+        <tr id="TableWithAttributes.x">
+<td><h3 id="TableWithAttributes.x" class="add-link hide-from-toc">1</h3></td>
             <td><code>x</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="TableWithAttributes.">
-            <td><h3 id="TableWithAttributes." class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="TableWithAttributes.">
+<td><h3 id="TableWithAttributes." class="add-link hide-from-toc">2</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
-
-
-
-
+            <td></td>
+        </tr>
+</table>
 
 
 

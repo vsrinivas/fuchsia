@@ -1,375 +1,314 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.anonymous
 
-
-
 ## **PROTOCOLS**
-
 ## SomeProtocol {#SomeProtocol}
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=25)*
-
-
-
 ### SomeMethod {#SomeProtocol.SomeMethod}
-
-
 
 #### Request {#SomeProtocol.SomeMethod_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>union_member</code></td>
             <td>
                 <code><a class='link' href='#UnionMember'>UnionMember</a></code>
             </td>
-        </tr><tr>
+        </tr>
+        <tr>
             <td><code>table_member</code></td>
             <td>
                 <code><a class='link' href='#TableMember'>TableMember</a></code>
             </td>
-        </tr></table>
-
+        </tr>
+</table>
 
 #### Response {#SomeProtocol.SomeMethod_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>result</code></td>
             <td>
                 <code><a class='link' href='#SomeProtocol_SomeMethod_Result'>SomeProtocol_SomeMethod_Result</a></code>
             </td>
-        </tr></table>
-
-
+        </tr>
+</table>
 
 ## **STRUCTS**
-
 ### OverrideTest  {#OverrideTest data-text="OverrideTest"}
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=6)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="OverrideTest.op">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="OverrideTest.op">
             <td><code>op</code></td>
             <td>
                 <code><a class='link' href='#Op'>Op</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="OverrideTest.left">
+        </tr>
+        <tr id="OverrideTest.left">
             <td><code>left</code></td>
             <td>
                 <code><a class='link' href='#Expression'>Expression</a>?</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="OverrideTest.right">
+        </tr>
+        <tr id="OverrideTest.right">
             <td><code>right</code></td>
             <td>
                 <code><a class='link' href='#Expression'>Expression</a>?</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
-
 ### SomeProtocol_SomeMethod_Response  {#SomeProtocol_SomeMethod_Response data-text="SomeProtocol_SomeMethod_Response"}
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=37)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SomeProtocol_SomeMethod_Response.bits_member">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="SomeProtocol_SomeMethod_Response.bits_member">
             <td><code>bits_member</code></td>
             <td>
                 <code><a class='link' href='#BitsMember'>BitsMember</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
-
 ### TableData  {#TableData data-text="TableData"}
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=33)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="TableData.data">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="TableData.data">
             <td><code>data</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
 
-
-
 ## **ENUMS**
-
 ### Op [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Op}
 Type: <code>uint32</code>
 
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=7)*
 
-
-
-
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Op.ADD">
-            <td><h3 id="Op.ADD" class="add-link hide-from-toc">ADD</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="Op.ADD">
+<td><h3 id="Op.ADD" class="add-link hide-from-toc">ADD</h3></td>
             <td><code>1</code></td>
-            <td>
-</td>
-        </tr><tr id="Op.MUL">
-            <td><h3 id="Op.MUL" class="add-link hide-from-toc">MUL</h3></td>
+            <td></td>
+        </tr>
+        <tr id="Op.MUL">
+<td><h3 id="Op.MUL" class="add-link hide-from-toc">MUL</h3></td>
             <td><code>2</code></td>
-            <td>
-</td>
-        </tr><tr id="Op.DIV">
-            <td><h3 id="Op.DIV" class="add-link hide-from-toc">DIV</h3></td>
+            <td></td>
+        </tr>
+        <tr id="Op.DIV">
+<td><h3 id="Op.DIV" class="add-link hide-from-toc">DIV</h3></td>
             <td><code>3</code></td>
-            <td>
-</td>
-        </tr></table>
-
+            <td></td>
+        </tr>
+</table>
 ### SomeProtocol_SomeMethod_Error [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#SomeProtocol_SomeMethod_Error}
 Type: <code>uint32</code>
 
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=42)*
 
-
-
-
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="SomeProtocol_SomeMethod_Error.ERROR_ONE">
-            <td><h3 id="SomeProtocol_SomeMethod_Error.ERROR_ONE" class="add-link hide-from-toc">ERROR_ONE</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="SomeProtocol_SomeMethod_Error.ERROR_ONE">
+<td><h3 id="SomeProtocol_SomeMethod_Error.ERROR_ONE" class="add-link hide-from-toc">ERROR_ONE</h3></td>
             <td><code>1</code></td>
-            <td>
-</td>
-        </tr><tr id="SomeProtocol_SomeMethod_Error.ERROR_TWO">
-            <td><h3 id="SomeProtocol_SomeMethod_Error.ERROR_TWO" class="add-link hide-from-toc">ERROR_TWO</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SomeProtocol_SomeMethod_Error.ERROR_TWO">
+<td><h3 id="SomeProtocol_SomeMethod_Error.ERROR_TWO" class="add-link hide-from-toc">ERROR_TWO</h3></td>
             <td><code>2</code></td>
-            <td>
-</td>
-        </tr></table>
-
-
+            <td></td>
+        </tr>
+</table>
 
 ## **TABLES**
-
 ### FunctionApplication  {#FunctionApplication data-text="FunctionApplication"}
 
 
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=15)*
 
-
-
-
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    <tr id="FunctionApplication.func">
-            <td><h3 id="FunctionApplication.func" class="add-link hide-from-toc">1</h3></td>
+        <tr id="FunctionApplication.func">
+<td><h3 id="FunctionApplication.func" class="add-link hide-from-toc">1</h3></td>
             <td><code>func</code></td>
             <td>
                 <code>string[100]</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="FunctionApplication.">
-            <td><h3 id="FunctionApplication." class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="FunctionApplication.">
+<td><h3 id="FunctionApplication." class="add-link hide-from-toc">2</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td>
-</td>
-        </tr><tr id="FunctionApplication.args">
-            <td><h3 id="FunctionApplication.args" class="add-link hide-from-toc">3</h3></td>
+            <td></td>
+        </tr>
+        <tr id="FunctionApplication.args">
+<td><h3 id="FunctionApplication.args" class="add-link hide-from-toc">3</h3></td>
             <td><code>args</code></td>
             <td>
                 <code>vector&lt;<a class='link' href='#Expression'>Expression</a>&gt;[5]</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="FunctionApplication.flags">
-            <td><h3 id="FunctionApplication.flags" class="add-link hide-from-toc">4</h3></td>
+            <td></td>
+        </tr>
+        <tr id="FunctionApplication.flags">
+<td><h3 id="FunctionApplication.flags" class="add-link hide-from-toc">4</h3></td>
             <td><code>flags</code></td>
             <td>
                 <code><a class='link' href='#Flags'>Flags</a></code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
+            <td></td>
+        </tr>
+</table>
 ### TableMember  {#TableMember data-text="TableMember"}
 
 
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=31)*
 
-
-
-
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    <tr id="TableMember.">
-            <td><h3 id="TableMember." class="add-link hide-from-toc">1</h3></td>
+        <tr id="TableMember.">
+<td><h3 id="TableMember." class="add-link hide-from-toc">1</h3></td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td>
-</td>
-        </tr><tr id="TableMember.table_data">
-            <td><h3 id="TableMember.table_data" class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="TableMember.table_data">
+<td><h3 id="TableMember.table_data" class="add-link hide-from-toc">2</h3></td>
             <td><code>table_data</code></td>
             <td>
                 <code>vector&lt;<a class='link' href='#TableData'>TableData</a>&gt;[10]</code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
-
+            <td></td>
+        </tr>
+</table>
 
 ## **UNIONS**
-
 ### Expression [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#Expression data-text="Expression"}
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=4)*
-
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="Expression.value">
-            <td><h3 id="Expression.value" class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="Expression.value">
+<td><h3 id="Expression.value" class="add-link hide-from-toc">1</h3></td>
             <td><code>value</code></td>
             <td>
                 <code>uint64</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="Expression.bin_op">
-            <td><h3 id="Expression.bin_op" class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="Expression.bin_op">
+<td><h3 id="Expression.bin_op" class="add-link hide-from-toc">2</h3></td>
             <td><code>bin_op</code></td>
             <td>
                 <code><a class='link' href='#OverrideTest'>OverrideTest</a></code>
             </td>
-            <td>
-</td>
-        </tr><tr id="Expression.function_application">
-            <td><h3 id="Expression.function_application" class="add-link hide-from-toc">3</h3></td>
+            <td></td>
+        </tr>
+        <tr id="Expression.function_application">
+<td><h3 id="Expression.function_application" class="add-link hide-from-toc">3</h3></td>
             <td><code>function_application</code></td>
             <td>
                 <code><a class='link' href='#FunctionApplication'>FunctionApplication</a></code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
+            <td></td>
+        </tr>
+</table>
 ### SomeProtocol_SomeMethod_Result [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#SomeProtocol_SomeMethod_Result data-text="SomeProtocol_SomeMethod_Result"}
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=37)*
-
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="SomeProtocol_SomeMethod_Result.response">
-            <td><h3 id="SomeProtocol_SomeMethod_Result.response" class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="SomeProtocol_SomeMethod_Result.response">
+<td><h3 id="SomeProtocol_SomeMethod_Result.response" class="add-link hide-from-toc">1</h3></td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#SomeProtocol_SomeMethod_Response'>SomeProtocol_SomeMethod_Response</a></code>
             </td>
-            <td>
-</td>
-        </tr><tr id="SomeProtocol_SomeMethod_Result.err">
-            <td><h3 id="SomeProtocol_SomeMethod_Result.err" class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="SomeProtocol_SomeMethod_Result.err">
+<td><h3 id="SomeProtocol_SomeMethod_Result.err" class="add-link hide-from-toc">2</h3></td>
             <td><code>err</code></td>
             <td>
                 <code><a class='link' href='#SomeProtocol_SomeMethod_Error'>SomeProtocol_SomeMethod_Error</a></code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
+            <td></td>
+        </tr>
+</table>
 ### UnionMember [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#UnionMember data-text="UnionMember"}
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=27)*
-
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionMember.">
-            <td><h3 id="UnionMember." class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="UnionMember.">
+<td><h3 id="UnionMember." class="add-link hide-from-toc">1</h3></td>
             <td><code></code></td>
             <td>
                 <code></code>
             </td>
-            <td>
-</td>
-        </tr><tr id="UnionMember.union_data">
-            <td><h3 id="UnionMember.union_data" class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="UnionMember.union_data">
+<td><h3 id="UnionMember.union_data" class="add-link hide-from-toc">2</h3></td>
             <td><code>union_data</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
-
+            <td></td>
+        </tr>
+</table>
 
 ## **BITS**
-
 ### BitsMember [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#BitsMember}
 Type: <code>uint32</code>
 
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=38)*
 
-
-
-
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="BitsMember.BIT_ONE">
-            <td><h3 id="BitsMember.BIT_ONE" class="add-link hide-from-toc">BIT_ONE</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="BitsMember.BIT_ONE">
+<td><h3 id="BitsMember.BIT_ONE" class="add-link hide-from-toc">BIT_ONE</h3></td>
             <td>1</td>
-            <td>
-</td>
-        </tr><tr id="BitsMember.BIT_TWO">
-            <td><h3 id="BitsMember.BIT_TWO" class="add-link hide-from-toc">BIT_TWO</h3></td>
+            <td></td>
+        </tr>
+        <tr id="BitsMember.BIT_TWO">
+<td><h3 id="BitsMember.BIT_TWO" class="add-link hide-from-toc">BIT_TWO</h3></td>
             <td>2</td>
-            <td>
-</td>
-        </tr></table>
-
+            <td></td>
+        </tr>
+</table>
 ### Flags [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Flags}
 Type: <code>uint16</code>
 
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=19)*
 
-
-
-
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Flags.INLINE">
-            <td><h3 id="Flags.INLINE" class="add-link hide-from-toc">INLINE</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="Flags.INLINE">
+<td><h3 id="Flags.INLINE" class="add-link hide-from-toc">INLINE</h3></td>
             <td>1</td>
-            <td>
-</td>
-        </tr></table>
-
-
-
+            <td></td>
+        </tr>
+</table>
 
 

@@ -1,47 +1,32 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.vectors
 
 
-
-
-
 ## **STRUCTS**
-
 ### ExampleUseOfVectors  {#ExampleUseOfVectors data-text="ExampleUseOfVectors"}
 *Defined in [test.vectors/vectors.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/vectors.test.fidl;l=6)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ExampleUseOfVectors.vector_of_uint8">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="ExampleUseOfVectors.vector_of_uint8">
             <td><code>vector_of_uint8</code></td>
             <td>
                 <code>vector&lt;uint8&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="ExampleUseOfVectors.vector_of_vector_of_bool">
+        </tr>
+        <tr id="ExampleUseOfVectors.vector_of_vector_of_bool">
             <td><code>vector_of_vector_of_bool</code></td>
             <td>
                 <code>vector&lt;vector&lt;bool&gt;&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
-
-
-
-
-
-
-
 
 
 

@@ -1,7 +1,6 @@
 <link rel="stylesheet" href="style.css" />
 
 [TOC]
-
 <div>
 <devsite-filter>
 <input type="text" placeholder="Type a keyword here to find a FIDL">

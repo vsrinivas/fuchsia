@@ -1,73 +1,54 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.struct
 
 
-
-
-
 ## **STRUCTS**
-
 ### BasicStruct  {#BasicStruct data-text="BasicStruct"}
 *Defined in [test.struct/struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/struct.test.fidl;l=8)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="BasicStruct.x">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="BasicStruct.x">
             <td><code>x</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="BasicStruct.y">
+        </tr>
+        <tr id="BasicStruct.y">
             <td><code>y</code></td>
             <td>
                 <code>string</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
-
 ### Simple  {#Simple data-text="Simple"}
 *Defined in [test.struct/struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/struct.test.fidl;l=3)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Simple.f1">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="Simple.f1">
             <td><code>f1</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Simple.f2">
+        </tr>
+        <tr id="Simple.f2">
             <td><code>f2</code></td>
             <td>
                 <code>bool</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
-
-
-
-
-
-
-
 
 
 

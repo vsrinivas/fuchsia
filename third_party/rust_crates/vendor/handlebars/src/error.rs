@@ -12,13 +12,14 @@ use walkdir::Error as WalkdirError;
 use rhai::{EvalAltResult, ParseError};
 
 /// Error when rendering data on template.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct RenderError {
     pub desc: String,
     pub template_name: Option<String>,
     pub line_no: Option<usize>,
     pub column_no: Option<usize>,
     cause: Option<Box<dyn Error + Send + Sync + 'static>>,
+    unimplemented: bool,
 }
 
 impl fmt::Display for RenderError {
@@ -27,9 +28,7 @@ impl fmt::Display for RenderError {
             (Some(line), Some(col)) => write!(
                 f,
                 "Error rendering \"{}\" line {}, col {}: {}",
-                self.template_name
-                    .as_ref()
-                    .unwrap_or(&"Unnamed template".to_owned(),),
+                self.template_name.as_deref().unwrap_or("Unnamed template"),
                 line,
                 col,
                 self.desc
@@ -41,38 +40,53 @@ impl fmt::Display for RenderError {
 
 impl Error for RenderError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        self.cause.as_ref().map(|e| &**e as &(dyn Error + 'static))
+        self.cause
+            .as_ref()
+            .map(|e| e.as_ref() as &(dyn Error + 'static))
     }
 }
 
 impl From<IOError> for RenderError {
     fn from(e: IOError) -> RenderError {
-        RenderError::from_error("Error on output generation.", e)
+        RenderError::from_error("Cannot generate output.", e)
     }
 }
 
 impl From<SerdeError> for RenderError {
     fn from(e: SerdeError) -> RenderError {
-        RenderError::from_error("Error when accessing JSON data.", e)
+        RenderError::from_error("Failed to access JSON data.", e)
     }
 }
 
 impl From<FromUtf8Error> for RenderError {
     fn from(e: FromUtf8Error) -> RenderError {
-        RenderError::from_error("Error on bytes generation.", e)
+        RenderError::from_error("Failed to generate bytes.", e)
     }
 }
 
 impl From<ParseIntError> for RenderError {
     fn from(e: ParseIntError) -> RenderError {
-        RenderError::from_error("Error on accessing array/vector with string index.", e)
+        RenderError::from_error("Cannot access array/vector with string index.", e)
+    }
+}
+
+impl From<TemplateError> for RenderError {
+    fn from(e: TemplateError) -> RenderError {
+        RenderError::from_error("Failed to parse template.", e)
     }
 }
 
 #[cfg(feature = "script_helper")]
 impl From<Box<EvalAltResult>> for RenderError {
     fn from(e: Box<EvalAltResult>) -> RenderError {
-        RenderError::from_error("Error on converting data to Rhai dynamic.", e)
+        RenderError::from_error("Cannot convert data to Rhai dynamic", e)
+    }
+}
+
+#[cfg(feature = "script_helper")]
+impl From<ScriptError> for RenderError {
+    fn from(e: ScriptError) -> RenderError {
+        RenderError::from_error("Failed to load rhai script", e)
     }
 }
 
@@ -80,10 +94,14 @@ impl RenderError {
     pub fn new<T: AsRef<str>>(desc: T) -> RenderError {
         RenderError {
             desc: desc.as_ref().to_owned(),
-            template_name: None,
-            line_no: None,
-            column_no: None,
-            cause: None,
+            ..Default::default()
+        }
+    }
+
+    pub(crate) fn unimplemented() -> RenderError {
+        RenderError {
+            unimplemented: true,
+            ..Default::default()
         }
     }
 
@@ -95,31 +113,25 @@ impl RenderError {
         RenderError::new(&msg)
     }
 
-    #[deprecated]
-    pub fn with<E>(cause: E) -> RenderError
+    pub fn from_error<E>(error_info: &str, cause: E) -> RenderError
     where
         E: Error + Send + Sync + 'static,
     {
-        let mut e = RenderError::new(cause.to_string());
+        let mut e = RenderError::new(error_info);
         e.cause = Some(Box::new(cause));
 
         e
     }
 
-    pub fn from_error<E>(error_kind: &str, cause: E) -> RenderError
-    where
-        E: Error + Send + Sync + 'static,
-    {
-        let mut e = RenderError::new(format!("{}: {}", error_kind, cause.to_string()));
-        e.cause = Some(Box::new(cause));
-
-        e
+    #[inline]
+    pub(crate) fn is_unimplemented(&self) -> bool {
+        self.unimplemented
     }
 }
 
 quick_error! {
 /// Template parsing error
-    #[derive(PartialEq, Debug, Clone)]
+    #[derive(Debug)]
     pub enum TemplateErrorReason {
         MismatchingClosedHelper(open: String, closed: String) {
             display("helper {:?} was opened, but {:?} is closing",
@@ -138,11 +150,18 @@ quick_error! {
         NestedSubexpression {
             display("nested subexpression is not supported")
         }
+        IoError(err: IOError, name: String) {
+             display("Template \"{}\": {}", name, err)
+        }
+        #[cfg(feature = "dir_source")]
+        WalkdirError(err: WalkdirError) {
+             display("Walk dir error: {}", err)
+        }
     }
 }
 
 /// Error on parsing template.
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct TemplateError {
     pub reason: TemplateErrorReason,
     pub template_name: Option<String>,
@@ -177,6 +196,20 @@ impl TemplateError {
 
 impl Error for TemplateError {}
 
+impl From<(IOError, String)> for TemplateError {
+    fn from(err_info: (IOError, String)) -> TemplateError {
+        let (e, name) = err_info;
+        TemplateError::of(TemplateErrorReason::IoError(e, name))
+    }
+}
+
+#[cfg(feature = "dir_source")]
+impl From<WalkdirError> for TemplateError {
+    fn from(e: WalkdirError) -> TemplateError {
+        TemplateError::of(TemplateErrorReason::WalkdirError(e))
+    }
+}
+
 fn template_segment(template_str: &str, line: usize, col: usize) -> String {
     let range = 3;
     let line_start = if line >= range { line - range } else { 0 };
@@ -190,12 +223,12 @@ fn template_segment(template_str: &str, line: usize, col: usize) -> String {
                 buf.push_str("     |");
                 for c in 0..line_content.len() {
                     if c != col {
-                        buf.push_str("-");
+                        buf.push('-');
                     } else {
-                        buf.push_str("^");
+                        buf.push('^');
                     }
                 }
-                buf.push_str("\n");
+                buf.push('\n');
             }
         }
     }
@@ -223,69 +256,11 @@ impl fmt::Display for TemplateError {
     }
 }
 
-quick_error! {
-    /// A combined error type for `TemplateError` and `IOError`
-    #[derive(Debug)]
-    pub enum TemplateFileError {
-        TemplateError(err: TemplateError) {
-            from()
-            source(err)
-            display("{}", err)
-        }
-        IOError(err: IOError, name: String) {
-            source(err)
-            display("Template \"{}\": {}", name, err)
-        }
-    }
-}
-
-#[cfg(feature = "dir_source")]
-impl From<WalkdirError> for TemplateFileError {
-    fn from(error: WalkdirError) -> TemplateFileError {
-        let path_string: String = error
-            .path()
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_default();
-        TemplateFileError::IOError(IOError::from(error), path_string)
-    }
-}
-
-quick_error! {
-    /// A combined error type for `TemplateError`, `IOError` and `RenderError`
-    #[derive(Debug)]
-    pub enum TemplateRenderError {
-        TemplateError(err: TemplateError) {
-            from()
-            source(err)
-            display("{}", err)
-        }
-        RenderError(err: RenderError) {
-            from()
-            source(err)
-            display("{}", err)
-        }
-        IOError(err: IOError, name: String) {
-            source(err)
-            display("Template \"{}\": {}", name, err)
-        }
-    }
-}
-
-impl TemplateRenderError {
-    pub fn as_render_error(&self) -> Option<&RenderError> {
-        if let TemplateRenderError::RenderError(ref e) = *self {
-            Some(&e)
-        } else {
-            None
-        }
-    }
-}
-
 #[cfg(feature = "script_helper")]
 quick_error! {
     #[derive(Debug)]
     pub enum ScriptError {
-        IOError(err: IOError) {
+        IoError(err: IOError) {
             from()
             source(err)
         }

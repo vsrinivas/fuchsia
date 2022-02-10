@@ -7,12 +7,13 @@ use crate::render::{Decorator, RenderContext};
 #[derive(Clone, Copy)]
 pub struct InlineDecorator;
 
-fn get_name<'reg: 'rc, 'rc>(d: &'rc Decorator<'reg, 'rc>) -> Result<&'rc str, RenderError> {
+fn get_name<'reg: 'rc, 'rc>(d: &Decorator<'reg, 'rc>) -> Result<String, RenderError> {
     d.param(0)
         .ok_or_else(|| RenderError::new("Param required for decorator \"inline\""))
         .and_then(|v| {
             v.value()
                 .as_str()
+                .map(|v| v.to_owned())
                 .ok_or_else(|| RenderError::new("inline name must be string"))
         })
 }
@@ -31,7 +32,7 @@ impl DecoratorDef for InlineDecorator {
             .template()
             .ok_or_else(|| RenderError::new("inline should have a block"))?;
 
-        rc.set_partial(name.to_owned(), template);
+        rc.set_partial(name, template);
         Ok(())
     }
 }
@@ -47,11 +48,10 @@ mod test {
 
     #[test]
     fn test_inline() {
-        let t0 = Template::compile(
-            "{{#*inline \"hello\"}}the hello world inline partial.{{/inline}}".to_string(),
-        )
-        .ok()
-        .unwrap();
+        let t0 =
+            Template::compile("{{#*inline \"hello\"}}the hello world inline partial.{{/inline}}")
+                .ok()
+                .unwrap();
 
         let hbs = Registry::new();
 

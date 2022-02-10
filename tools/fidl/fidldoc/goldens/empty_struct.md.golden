@@ -1,93 +1,66 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.emptystruct
 
-
-
 ## **PROTOCOLS**
-
 ## EmptyProtocol {#EmptyProtocol}
 *Defined in [test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=5)*
-
-
-
 ### Receive {#EmptyProtocol.Receive}
-
-
-
 
 
 #### Response {#EmptyProtocol.Receive_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>e</code></td>
             <td>
                 <code><a class='link' href='#Empty'>Empty</a></code>
             </td>
-        </tr></table>
-
+        </tr>
+</table>
 ### Send {#EmptyProtocol.Send}
-
-
 
 #### Request {#EmptyProtocol.Send_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>e</code></td>
             <td>
                 <code><a class='link' href='#Empty'>Empty</a></code>
             </td>
-        </tr></table>
-
-
+        </tr>
+</table>
 
 ### SendAndReceive {#EmptyProtocol.SendAndReceive}
-
-
 
 #### Request {#EmptyProtocol.SendAndReceive_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>e</code></td>
             <td>
                 <code><a class='link' href='#Empty'>Empty</a></code>
             </td>
-        </tr></table>
-
+        </tr>
+</table>
 
 #### Response {#EmptyProtocol.SendAndReceive_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>e</code></td>
             <td>
                 <code><a class='link' href='#Empty'>Empty</a></code>
             </td>
-        </tr></table>
-
-
+        </tr>
+</table>
 
 ## **STRUCTS**
-
 ### Empty  {#Empty data-text="Empty"}
 *Defined in [test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=3)*
 
-
-
-
 &lt;EMPTY&gt;
-
-
-
-
-
-
-
 
 
 

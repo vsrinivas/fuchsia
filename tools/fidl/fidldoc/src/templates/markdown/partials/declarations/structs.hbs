@@ -9,7 +9,7 @@
 {{#if members ~}}
 <table>
     <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-    {{~ #each members ~}}
+    {{#each members}}
         <tr id="{{rpn ../name}}.{{~ name ~}}">
             <td><code>{{~ name ~}}</code></td>
             <td>
@@ -38,10 +38,10 @@
                 {{~ /if ~}}
             </td>
         </tr>
-    {{~ /each}}
+    {{/each}}
 </table>
-{{~ else ~}}
+{{else}}
 &lt;EMPTY&gt;
-{{~ /if}}
-{{/each ~}}
-{{~ /if ~}}
+{{/if}}
+{{/each}}
+{{/if}}

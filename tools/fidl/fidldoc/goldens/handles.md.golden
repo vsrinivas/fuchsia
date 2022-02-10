@@ -1,453 +1,430 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.handles
 
-
-
 ## **PROTOCOLS**
-
 ## SomeProtocol {#SomeProtocol}
 *Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=47)*
 
-
-
-
-
 ## **STRUCTS**
-
 ### Handles [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#Handles data-text="Handles"}
 *Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=53)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Handles.plain_handle">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="Handles.plain_handle">
             <td><code>plain_handle</code></td>
             <td>
                 <code>handle&lt;handle&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.bti_handle">
+        </tr>
+        <tr id="Handles.bti_handle">
             <td><code>bti_handle</code></td>
             <td>
                 <code>handle&lt;bti&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.channel_handle">
+        </tr>
+        <tr id="Handles.channel_handle">
             <td><code>channel_handle</code></td>
             <td>
                 <code>handle&lt;channel&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.clock_handle">
+        </tr>
+        <tr id="Handles.clock_handle">
             <td><code>clock_handle</code></td>
             <td>
                 <code>handle&lt;clock&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.debuglog_handle">
+        </tr>
+        <tr id="Handles.debuglog_handle">
             <td><code>debuglog_handle</code></td>
             <td>
                 <code>handle&lt;debuglog&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.event_handle">
+        </tr>
+        <tr id="Handles.event_handle">
             <td><code>event_handle</code></td>
             <td>
                 <code>handle&lt;event&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.eventpair_handle">
+        </tr>
+        <tr id="Handles.eventpair_handle">
             <td><code>eventpair_handle</code></td>
             <td>
                 <code>handle&lt;eventpair&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.exception_handle">
+        </tr>
+        <tr id="Handles.exception_handle">
             <td><code>exception_handle</code></td>
             <td>
                 <code>handle&lt;exception&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.fifo_handle">
+        </tr>
+        <tr id="Handles.fifo_handle">
             <td><code>fifo_handle</code></td>
             <td>
                 <code>handle&lt;fifo&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.guest_handle">
+        </tr>
+        <tr id="Handles.guest_handle">
             <td><code>guest_handle</code></td>
             <td>
                 <code>handle&lt;guest&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.interrupt_handle">
+        </tr>
+        <tr id="Handles.interrupt_handle">
             <td><code>interrupt_handle</code></td>
             <td>
                 <code>handle&lt;interrupt&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.iommu_handle">
+        </tr>
+        <tr id="Handles.iommu_handle">
             <td><code>iommu_handle</code></td>
             <td>
                 <code>handle&lt;iommu&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.job_handle">
+        </tr>
+        <tr id="Handles.job_handle">
             <td><code>job_handle</code></td>
             <td>
                 <code>handle&lt;job&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.pager_handle">
+        </tr>
+        <tr id="Handles.pager_handle">
             <td><code>pager_handle</code></td>
             <td>
                 <code>handle&lt;pager&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.pmt_handle">
+        </tr>
+        <tr id="Handles.pmt_handle">
             <td><code>pmt_handle</code></td>
             <td>
                 <code>handle&lt;pmt&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.port_handle">
+        </tr>
+        <tr id="Handles.port_handle">
             <td><code>port_handle</code></td>
             <td>
                 <code>handle&lt;port&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.process_handle">
+        </tr>
+        <tr id="Handles.process_handle">
             <td><code>process_handle</code></td>
             <td>
                 <code>handle&lt;process&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.profile_handle">
+        </tr>
+        <tr id="Handles.profile_handle">
             <td><code>profile_handle</code></td>
             <td>
                 <code>handle&lt;profile&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.resource_handle">
+        </tr>
+        <tr id="Handles.resource_handle">
             <td><code>resource_handle</code></td>
             <td>
                 <code>handle&lt;resource&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.socket_handle">
+        </tr>
+        <tr id="Handles.socket_handle">
             <td><code>socket_handle</code></td>
             <td>
                 <code>handle&lt;socket&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.suspendtoken_handle">
+        </tr>
+        <tr id="Handles.suspendtoken_handle">
             <td><code>suspendtoken_handle</code></td>
             <td>
                 <code>handle&lt;suspendtoken&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.thread_handle">
+        </tr>
+        <tr id="Handles.thread_handle">
             <td><code>thread_handle</code></td>
             <td>
                 <code>handle&lt;thread&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.timer_handle">
+        </tr>
+        <tr id="Handles.timer_handle">
             <td><code>timer_handle</code></td>
             <td>
                 <code>handle&lt;timer&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.vcpu_handle">
+        </tr>
+        <tr id="Handles.vcpu_handle">
             <td><code>vcpu_handle</code></td>
             <td>
                 <code>handle&lt;vcpu&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.vmar_handle">
+        </tr>
+        <tr id="Handles.vmar_handle">
             <td><code>vmar_handle</code></td>
             <td>
                 <code>handle&lt;vmar&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.vmo_handle">
+        </tr>
+        <tr id="Handles.vmo_handle">
             <td><code>vmo_handle</code></td>
             <td>
                 <code>handle&lt;vmo&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.rights_handle">
+        </tr>
+        <tr id="Handles.rights_handle">
             <td><code>rights_handle</code></td>
             <td>
                 <code>handle&lt;vmo&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.aliased_plain_handle_field">
+        </tr>
+        <tr id="Handles.aliased_plain_handle_field">
             <td><code>aliased_plain_handle_field</code></td>
             <td>
                 <code><a class='link' href='#aliased_plain_handle'>aliased_plain_handle</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.aliased_subtype_handle_field">
+        </tr>
+        <tr id="Handles.aliased_subtype_handle_field">
             <td><code>aliased_subtype_handle_field</code></td>
             <td>
                 <code><a class='link' href='#aliased_subtype_handle'>aliased_subtype_handle</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.aliased_rights_handle_field">
+        </tr>
+        <tr id="Handles.aliased_rights_handle_field">
             <td><code>aliased_rights_handle_field</code></td>
             <td>
                 <code><a class='link' href='#aliased_rights_handle'>aliased_rights_handle</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.some_protocol">
+        </tr>
+        <tr id="Handles.some_protocol">
             <td><code>some_protocol</code></td>
             <td>
                 <code><a class='link' href='#SomeProtocol'>SomeProtocol</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="Handles.request_some_protocol">
+        </tr>
+        <tr id="Handles.request_some_protocol">
             <td><code>request_some_protocol</code></td>
             <td>
                 <code>request&lt;<a class='link' href='#SomeProtocol'>SomeProtocol</a>&gt;</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
 
-
-
 ## **ENUMS**
-
 ### obj_type [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#obj_type}
 Type: <code>uint32</code>
 
 *Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=8)*
 
-
-
-
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="obj_type.NONE">
-            <td><h3 id="obj_type.NONE" class="add-link hide-from-toc">NONE</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="obj_type.NONE">
+<td><h3 id="obj_type.NONE" class="add-link hide-from-toc">NONE</h3></td>
             <td><code>0</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.PROCESS">
-            <td><h3 id="obj_type.PROCESS" class="add-link hide-from-toc">PROCESS</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.PROCESS">
+<td><h3 id="obj_type.PROCESS" class="add-link hide-from-toc">PROCESS</h3></td>
             <td><code>1</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.THREAD">
-            <td><h3 id="obj_type.THREAD" class="add-link hide-from-toc">THREAD</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.THREAD">
+<td><h3 id="obj_type.THREAD" class="add-link hide-from-toc">THREAD</h3></td>
             <td><code>2</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.VMO">
-            <td><h3 id="obj_type.VMO" class="add-link hide-from-toc">VMO</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.VMO">
+<td><h3 id="obj_type.VMO" class="add-link hide-from-toc">VMO</h3></td>
             <td><code>3</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.CHANNEL">
-            <td><h3 id="obj_type.CHANNEL" class="add-link hide-from-toc">CHANNEL</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.CHANNEL">
+<td><h3 id="obj_type.CHANNEL" class="add-link hide-from-toc">CHANNEL</h3></td>
             <td><code>4</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.EVENT">
-            <td><h3 id="obj_type.EVENT" class="add-link hide-from-toc">EVENT</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.EVENT">
+<td><h3 id="obj_type.EVENT" class="add-link hide-from-toc">EVENT</h3></td>
             <td><code>5</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.PORT">
-            <td><h3 id="obj_type.PORT" class="add-link hide-from-toc">PORT</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.PORT">
+<td><h3 id="obj_type.PORT" class="add-link hide-from-toc">PORT</h3></td>
             <td><code>6</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.INTERRUPT">
-            <td><h3 id="obj_type.INTERRUPT" class="add-link hide-from-toc">INTERRUPT</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.INTERRUPT">
+<td><h3 id="obj_type.INTERRUPT" class="add-link hide-from-toc">INTERRUPT</h3></td>
             <td><code>9</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.LOG">
-            <td><h3 id="obj_type.LOG" class="add-link hide-from-toc">LOG</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.LOG">
+<td><h3 id="obj_type.LOG" class="add-link hide-from-toc">LOG</h3></td>
             <td><code>12</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.SOCKET">
-            <td><h3 id="obj_type.SOCKET" class="add-link hide-from-toc">SOCKET</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.SOCKET">
+<td><h3 id="obj_type.SOCKET" class="add-link hide-from-toc">SOCKET</h3></td>
             <td><code>14</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.RESOURCE">
-            <td><h3 id="obj_type.RESOURCE" class="add-link hide-from-toc">RESOURCE</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.RESOURCE">
+<td><h3 id="obj_type.RESOURCE" class="add-link hide-from-toc">RESOURCE</h3></td>
             <td><code>15</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.EVENTPAIR">
-            <td><h3 id="obj_type.EVENTPAIR" class="add-link hide-from-toc">EVENTPAIR</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.EVENTPAIR">
+<td><h3 id="obj_type.EVENTPAIR" class="add-link hide-from-toc">EVENTPAIR</h3></td>
             <td><code>16</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.JOB">
-            <td><h3 id="obj_type.JOB" class="add-link hide-from-toc">JOB</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.JOB">
+<td><h3 id="obj_type.JOB" class="add-link hide-from-toc">JOB</h3></td>
             <td><code>17</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.VMAR">
-            <td><h3 id="obj_type.VMAR" class="add-link hide-from-toc">VMAR</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.VMAR">
+<td><h3 id="obj_type.VMAR" class="add-link hide-from-toc">VMAR</h3></td>
             <td><code>18</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.FIFO">
-            <td><h3 id="obj_type.FIFO" class="add-link hide-from-toc">FIFO</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.FIFO">
+<td><h3 id="obj_type.FIFO" class="add-link hide-from-toc">FIFO</h3></td>
             <td><code>19</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.GUEST">
-            <td><h3 id="obj_type.GUEST" class="add-link hide-from-toc">GUEST</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.GUEST">
+<td><h3 id="obj_type.GUEST" class="add-link hide-from-toc">GUEST</h3></td>
             <td><code>20</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.VCPU">
-            <td><h3 id="obj_type.VCPU" class="add-link hide-from-toc">VCPU</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.VCPU">
+<td><h3 id="obj_type.VCPU" class="add-link hide-from-toc">VCPU</h3></td>
             <td><code>21</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.TIMER">
-            <td><h3 id="obj_type.TIMER" class="add-link hide-from-toc">TIMER</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.TIMER">
+<td><h3 id="obj_type.TIMER" class="add-link hide-from-toc">TIMER</h3></td>
             <td><code>22</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.IOMMU">
-            <td><h3 id="obj_type.IOMMU" class="add-link hide-from-toc">IOMMU</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.IOMMU">
+<td><h3 id="obj_type.IOMMU" class="add-link hide-from-toc">IOMMU</h3></td>
             <td><code>23</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.BTI">
-            <td><h3 id="obj_type.BTI" class="add-link hide-from-toc">BTI</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.BTI">
+<td><h3 id="obj_type.BTI" class="add-link hide-from-toc">BTI</h3></td>
             <td><code>24</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.PROFILE">
-            <td><h3 id="obj_type.PROFILE" class="add-link hide-from-toc">PROFILE</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.PROFILE">
+<td><h3 id="obj_type.PROFILE" class="add-link hide-from-toc">PROFILE</h3></td>
             <td><code>25</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.PMT">
-            <td><h3 id="obj_type.PMT" class="add-link hide-from-toc">PMT</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.PMT">
+<td><h3 id="obj_type.PMT" class="add-link hide-from-toc">PMT</h3></td>
             <td><code>26</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.SUSPEND_TOKEN">
-            <td><h3 id="obj_type.SUSPEND_TOKEN" class="add-link hide-from-toc">SUSPEND_TOKEN</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.SUSPEND_TOKEN">
+<td><h3 id="obj_type.SUSPEND_TOKEN" class="add-link hide-from-toc">SUSPEND_TOKEN</h3></td>
             <td><code>27</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.PAGER">
-            <td><h3 id="obj_type.PAGER" class="add-link hide-from-toc">PAGER</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.PAGER">
+<td><h3 id="obj_type.PAGER" class="add-link hide-from-toc">PAGER</h3></td>
             <td><code>28</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.EXCEPTION">
-            <td><h3 id="obj_type.EXCEPTION" class="add-link hide-from-toc">EXCEPTION</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.EXCEPTION">
+<td><h3 id="obj_type.EXCEPTION" class="add-link hide-from-toc">EXCEPTION</h3></td>
             <td><code>29</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.CLOCK">
-            <td><h3 id="obj_type.CLOCK" class="add-link hide-from-toc">CLOCK</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.CLOCK">
+<td><h3 id="obj_type.CLOCK" class="add-link hide-from-toc">CLOCK</h3></td>
             <td><code>30</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.STREAM">
-            <td><h3 id="obj_type.STREAM" class="add-link hide-from-toc">STREAM</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.STREAM">
+<td><h3 id="obj_type.STREAM" class="add-link hide-from-toc">STREAM</h3></td>
             <td><code>31</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.MSI_ALLOCATION">
-            <td><h3 id="obj_type.MSI_ALLOCATION" class="add-link hide-from-toc">MSI_ALLOCATION</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.MSI_ALLOCATION">
+<td><h3 id="obj_type.MSI_ALLOCATION" class="add-link hide-from-toc">MSI_ALLOCATION</h3></td>
             <td><code>32</code></td>
-            <td>
-</td>
-        </tr><tr id="obj_type.MSI_INTERRUPT">
-            <td><h3 id="obj_type.MSI_INTERRUPT" class="add-link hide-from-toc">MSI_INTERRUPT</h3></td>
+            <td></td>
+        </tr>
+        <tr id="obj_type.MSI_INTERRUPT">
+<td><h3 id="obj_type.MSI_INTERRUPT" class="add-link hide-from-toc">MSI_INTERRUPT</h3></td>
             <td><code>33</code></td>
-            <td>
-</td>
-        </tr></table>
-
-
-
-
-
-
+            <td></td>
+        </tr>
+</table>
 
 
 
@@ -456,23 +433,23 @@ Type: <code>uint32</code>
 ## **TYPE ALIASES**
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="aliased_plain_handle">
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="aliased_plain_handle">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=49">aliased_plain_handle</a></td>
             <td>
                 <code>test.handles/handle</code></td>
-            <td>
-</td>
-        </tr><tr id="aliased_rights_handle">
+            <td></td>
+        </tr>
+        <tr id="aliased_rights_handle">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=51">aliased_rights_handle</a></td>
             <td>
                 <code>test.handles/handle</code></td>
-            <td>
-</td>
-        </tr><tr id="aliased_subtype_handle">
+            <td></td>
+        </tr>
+        <tr id="aliased_subtype_handle">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=50">aliased_subtype_handle</a></td>
             <td>
                 <code>test.handles/handle</code></td>
-            <td>
-</td>
-        </tr></table>
-
+            <td></td>
+        </tr>
+</table>
