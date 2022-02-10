@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <memory>
+#include <unordered_map>
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
@@ -432,12 +433,22 @@ void RecommendWipe(const char* problem) {
 // Deletes all partitions within the FVM with a type GUID matching |type_guid|
 // until there are none left.
 zx_status_t WipeAllFvmPartitionsWithGUID(const fbl::unique_fd& fvm_fd, const uint8_t type_guid[]) {
+  char fvm_topo_path[PATH_MAX] = {0};
   fbl::unique_fd old_part;
+  zx_status_t status;
+  if ((status = GetTopoPathFromFd(fvm_fd, fvm_topo_path, sizeof(fvm_topo_path))) != ZX_OK) {
+    ERROR("Couldn't get topological path of FVM!\n");
+    return status;
+  }
+
   fs_management::PartitionMatcher matcher{
       .type_guid = type_guid,
+      .parent_device = fvm_topo_path,
   };
+  std::unordered_map<std::string, bool> seen_partitions;
   for (;;) {
-    auto old_part_or = fs_management::OpenPartition(&matcher, ZX_MSEC(500), nullptr);
+    std::string name;
+    auto old_part_or = fs_management::OpenPartition(&matcher, ZX_MSEC(500), &name);
     if (old_part_or.is_error())
       break;
     old_part = *std::move(old_part_or);
