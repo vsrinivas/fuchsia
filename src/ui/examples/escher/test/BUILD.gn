@@ -33,8 +33,5 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
     if (is_host) {
       deps += [ "//src/ui/examples/escher/common:host_test_data" ]
     }
-
-    # TODO(fxbug.dev/46717): Fix the leaks and remove this.
-    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
   }
 }
