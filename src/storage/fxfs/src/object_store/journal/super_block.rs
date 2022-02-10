@@ -189,6 +189,19 @@ impl SuperBlock {
         }
     }
 
+    /// Shreds the super-block, rendering it unreadable.  This is used in mkfs to ensure that we
+    /// wipe out any stale super-blocks when rewriting Fxfs.
+    /// This isn't a secure shred in any way, it just ensures the super-block is not recognized as a
+    /// super-block.
+    pub(super) async fn shred<S: AsRef<ObjectStore> + Send + Sync + 'static>(
+        handle: StoreObjectHandle<S>,
+    ) -> Result<(), Error> {
+        let mut buf =
+            handle.store().device().allocate_buffer(handle.store().device().block_size() as usize);
+        buf.as_mut_slice().fill(0u8);
+        handle.overwrite(0, buf.as_ref()).await
+    }
+
     /// Read the super-block header, and return it and a reader that produces the records that are
     /// to be replayed in to the root parent object store.
     pub async fn read(

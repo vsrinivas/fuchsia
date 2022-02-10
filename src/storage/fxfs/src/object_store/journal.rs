@@ -711,7 +711,8 @@ impl Journal {
         // Initialize the journal writer.
         let _ = self.handle.set(journal_handle);
 
-        self.write_super_block().await
+        self.write_super_block().await?;
+        SuperBlock::shred(super_block_b_handle).await
     }
 
     /// Commits a transaction.
@@ -1192,6 +1193,50 @@ mod tests {
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_init_wipes_superblocks() {
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
+
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let root_store = fs.root_store();
+        // Generate enough work to induce a journal flush and thus a new superblock being written.
+        for _ in 0..8000 {
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            ObjectStore::create_object(
+                &root_store,
+                &mut transaction,
+                HandleOptions::default(),
+                None,
+            )
+            .await
+            .expect("create_object failed");
+            transaction.commit().await.expect("commit failed");
+        }
+        fs.close().await.expect("Close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+
+        SuperBlock::read(device.clone(), SuperBlockCopy::A).await.expect("read failed");
+        SuperBlock::read(device.clone(), SuperBlockCopy::B).await.expect("read failed");
+
+        // Re-initialize the filesystem.  The A block should be reset and the B block should be
+        // wiped.
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        fs.close().await.expect("Close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+
+        SuperBlock::read(device.clone(), SuperBlockCopy::A).await.expect("read failed");
+        SuperBlock::read(device.clone(), SuperBlockCopy::B)
+            .await
+            .map(|_| ())
+            .expect_err("Super-block B was readable after a re-format");
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_alternating_super_blocks() {
