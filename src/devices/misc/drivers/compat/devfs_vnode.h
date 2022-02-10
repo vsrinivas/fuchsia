@@ -15,6 +15,11 @@
 #include "src/devices/lib/driver2/logger.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
+std::variant<fidl::Transaction*, std::unique_ptr<fidl::Transaction>> FromDdkInternalTransaction(
+    ddk::internal::Transaction* txn);
+ddk::internal::Transaction MakeDdkInternalTransaction(fidl::Transaction* txn);
+ddk::internal::Transaction MakeDdkInternalTransaction(std::unique_ptr<fidl::Transaction> txn);
+
 class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Controller> {
  public:
   // Create a DevfsVnode. `dev` is unowned, so the Device must outlive the Vnode.

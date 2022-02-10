@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_driver_test::DriverTestRealmBuilder;
 use futures::FutureExt;
 use vfs::directory::entry::DirectoryEntry;
 use {
@@ -203,6 +204,45 @@ async fn load_package_firmware_test() -> Result<(), Error> {
     assert!(
         driver_proxy.load_firmware_async("test-bad").await?
             == Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND)
+    );
+    Ok(())
+}
+
+#[fuchsia::test]
+async fn load_package_firmware_test_dfv2() -> Result<(), Error> {
+    // Create the RealmBuilder.
+    let builder = RealmBuilder::new().await?;
+    builder.driver_test_realm_setup().await?;
+    let instance = builder.build().await?;
+
+    // Start DriverTestRealm
+    let args = fdt::RealmArgs {
+        use_driver_framework_v2: Some(true),
+        root_driver: Some("fuchsia-boot:///#meta/test-parent-sys.cm".to_string()),
+        ..fdt::RealmArgs::EMPTY
+    };
+    instance.driver_test_realm_start(args).await?;
+
+    // Connect to our driver.
+    let dev = instance.driver_test_realm_connect_to_dev()?;
+    let driver_service =
+        device_watcher::recursive_wait_and_open_node(&dev, "sys/test/ddk-firmware-test").await?;
+    let driver_proxy = fidl_fuchsia_device_firmware_test::TestDeviceProxy::from_channel(
+        driver_service.into_channel().unwrap(),
+    );
+
+    // Check that we can load firmware from our package.
+    driver_proxy.load_firmware("test-firmware").await?.unwrap();
+    driver_proxy.load_firmware_async("test-firmware").await?.unwrap();
+
+    // Check that loading unknown name fails.
+    assert_eq!(
+        driver_proxy.load_firmware("test-bad").await?,
+        Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND)
+    );
+    assert_eq!(
+        driver_proxy.load_firmware_async("test-bad").await?,
+        Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND)
     );
     Ok(())
 }

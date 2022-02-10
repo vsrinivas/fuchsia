@@ -42,6 +42,10 @@ class Driver {
   void Log(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
            const char* msg, va_list args);
 
+  zx::status<zx::vmo> LoadFirmware(Device* device, const char* filename, size_t* size);
+  void LoadFirmwareAsync(Device* device, const char* filename, load_firmware_callback_t callback,
+                         void* ctx);
+
   zx_status_t AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out);
 
  private:
@@ -52,15 +56,20 @@ class Driver {
   // Gets the root resource for the DFv1 driver.
   fpromise::promise<zx::resource, zx_status_t> GetRootResource(
       const fidl::WireSharedClient<fuchsia_boot::RootResource>& root_resource);
+
+  struct FileVmo {
+    zx::vmo vmo;
+    size_t size;
+  };
   // Gets the underlying buffer for a given file.
-  fpromise::promise<zx::vmo, zx_status_t> GetBuffer(
+  fpromise::promise<FileVmo, zx_status_t> GetBuffer(
       const fidl::WireSharedClient<fuchsia_io::File>& file);
   // Joins the results of getting the root resource, as well as the getting the
   // buffers for the compatibility driver and DFv1 driver.
   fpromise::result<std::tuple<zx::vmo, zx::vmo>, zx_status_t> Join(
       fpromise::result<std::tuple<fpromise::result<zx::resource, zx_status_t>,
-                                  fpromise::result<zx::vmo, zx_status_t>,
-                                  fpromise::result<zx::vmo, zx_status_t>>>& results);
+                                  fpromise::result<FileVmo, zx_status_t>,
+                                  fpromise::result<FileVmo, zx_status_t>>>& results);
   // Loads the driver using the provided `vmos`.
   fpromise::result<void, zx_status_t> LoadDriver(std::tuple<zx::vmo, zx::vmo>& vmos);
   // Starts the DFv1 driver.

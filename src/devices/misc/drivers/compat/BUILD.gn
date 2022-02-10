@@ -130,6 +130,11 @@ fuchsia_driver_component("compat_v1_device_add_null_test") {
   colocate = true
 }
 
+resource("test-firmware-file") {
+  sources = [ "test-firmware.txt" ]
+  outputs = [ "lib/firmware/test" ]
+}
+
 executable("unittests") {
   testonly = true
   output_name = "compat_test"
@@ -141,6 +146,7 @@ executable("unittests") {
   ]
   deps = [
     ":lib",
+    ":test-firmware-file",
     "//src/devices/lib/compat",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

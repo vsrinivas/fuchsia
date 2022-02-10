@@ -155,12 +155,15 @@ class DriverTest : public gtest::TestLoopFixture {
     // Setup and bind "/pkg" directory.
     compat_file_.SetBuffer(GetBuffer("/pkg/driver/compat.so"));
     v1_test_file_.SetBuffer(GetBuffer(v1_driver_path));
+    firmware_file_.SetBuffer(GetBuffer("/pkg/lib/firmware/test"));
     pkg_directory_.SetOpenHandler([this](TestDirectory::OpenRequestView request) {
       fidl::ServerEnd<fio::File> server_end(request->object.TakeChannel());
       if (request->path.get() == "driver/compat.so") {
         fidl::BindServer(dispatcher(), std::move(server_end), &compat_file_);
       } else if (request->path.get() == "driver/v1_test.so") {
         fidl::BindServer(dispatcher(), std::move(server_end), &v1_test_file_);
+      } else if (request->path.get() == "lib/firmware/test") {
+        fidl::BindServer(dispatcher(), std::move(server_end), &firmware_file_);
       } else {
         FAIL() << "Unexpected file: " << request->path.get();
       }
@@ -235,6 +238,7 @@ class DriverTest : public gtest::TestLoopFixture {
   TestItems items_;
   TestFile compat_file_;
   TestFile v1_test_file_;
+  TestFile firmware_file_;
   TestDirectory pkg_directory_;
   TestDirectory svc_directory_;
 };
@@ -372,4 +376,40 @@ TEST_F(DriverTest, Start_BindFailed) {
   driver.reset();
   ASSERT_TRUE(RunLoopUntilIdle());
   EXPECT_TRUE(v1_test->did_release);
+}
+
+TEST_F(DriverTest, LoadFirwmareAsync) {
+  zx_protocol_device_t ops{};
+  auto driver = StartDriver("/pkg/driver/v1_test.so", &ops);
+
+  // Verify that v1_test.so has added a child device.
+  EXPECT_FALSE(node().HasChildren());
+  ASSERT_TRUE(RunLoopUntilIdle());
+  EXPECT_FALSE(node().HasChildren());
+
+  // Verify that v1_test.so has set a context.
+  std::unique_ptr<V1Test> v1_test(static_cast<V1Test*>(driver->Context()));
+  ASSERT_NE(nullptr, v1_test.get());
+
+  bool was_called = false;
+
+  driver->LoadFirmwareAsync(
+      nullptr, "test",
+      [](void* ctx, zx_status_t status, zx_handle_t fw, size_t size) {
+        ASSERT_EQ(status, ZX_OK);
+        ASSERT_EQ(size, 16ul);
+        zx::vmo vmo(fw);
+        auto buf = std::vector<char>(size);
+        vmo.read(buf.data(), 0, size);
+        buf.push_back('\0');
+        ASSERT_STREQ(buf.data(), "Hello, firmware!");
+
+        *reinterpret_cast<bool*>(ctx) = true;
+      },
+      &was_called);
+  ASSERT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(was_called);
+
+  driver.reset();
+  ASSERT_TRUE(RunLoopUntilIdle());
 }

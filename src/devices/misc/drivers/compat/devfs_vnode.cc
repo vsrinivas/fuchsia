@@ -21,6 +21,18 @@ namespace {
 static_assert(alignof(fidl::Transaction) > 1);
 constexpr uintptr_t kTransactionIsBoxed = 0x1;
 
+// Reply originating from driver.
+zx_status_t DdkReply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
+  auto message = fidl::OutgoingMessage::FromEncodedCMessage(msg);
+  // If FromDdkInternalTransaction returns a unique_ptr variant, it will be destroyed when exiting
+  // this scope.
+  auto fidl_txn = FromDdkInternalTransaction(ddk::internal::Transaction::FromTxn(txn));
+  std::visit([&](auto&& arg) { arg->Reply(&message); }, fidl_txn);
+  return ZX_OK;
+}
+
+}  // namespace
+
 std::variant<fidl::Transaction*, std::unique_ptr<fidl::Transaction>> FromDdkInternalTransaction(
     ddk::internal::Transaction* txn) {
   uintptr_t raw = txn->DriverHostCtx();
@@ -36,16 +48,6 @@ std::variant<fidl::Transaction*, std::unique_ptr<fidl::Transaction>> FromDdkInte
   return ptr;
 }
 
-// Reply originating from driver.
-zx_status_t DdkReply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
-  auto message = fidl::OutgoingMessage::FromEncodedCMessage(msg);
-  // If FromDdkInternalTransaction returns a unique_ptr variant, it will be destroyed when exiting
-  // this scope.
-  auto fidl_txn = FromDdkInternalTransaction(ddk::internal::Transaction::FromTxn(txn));
-  std::visit([&](auto&& arg) { arg->Reply(&message); }, fidl_txn);
-  return ZX_OK;
-}
-
 ddk::internal::Transaction MakeDdkInternalTransaction(fidl::Transaction* txn) {
   device_fidl_txn_t fidl_txn = {};
   fidl_txn.txn = {
@@ -55,7 +57,14 @@ ddk::internal::Transaction MakeDdkInternalTransaction(fidl::Transaction* txn) {
   return ddk::internal::Transaction(fidl_txn);
 }
 
-}  // namespace
+ddk::internal::Transaction MakeDdkInternalTransaction(std::unique_ptr<fidl::Transaction> txn) {
+  device_fidl_txn_t fidl_txn = {};
+  fidl_txn.txn = {
+      .reply = DdkReply,
+  };
+  fidl_txn.driver_host_context = reinterpret_cast<uintptr_t>(txn.release()) | kTransactionIsBoxed;
+  return ddk::internal::Transaction(fidl_txn);
+}
 
 zx_status_t DevfsVnode::GetAttributes(fs::VnodeAttributes* a) {
   a->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;

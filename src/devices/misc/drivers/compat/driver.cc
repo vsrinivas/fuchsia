@@ -9,6 +9,7 @@
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/promise.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/dlfcn.h>
 
@@ -189,8 +190,9 @@ promise<zx::resource, zx_status_t> Driver::GetRootResource(
   return bridge.consumer.promise_or(error(ZX_ERR_UNAVAILABLE));
 }
 
-promise<zx::vmo, zx_status_t> Driver::GetBuffer(const fidl::WireSharedClient<fio::File>& file) {
-  bridge<zx::vmo, zx_status_t> bridge;
+promise<Driver::FileVmo, zx_status_t> Driver::GetBuffer(
+    const fidl::WireSharedClient<fio::File>& file) {
+  bridge<FileVmo, zx_status_t> bridge;
   auto callback = [completer = std::move(bridge.completer)](
                       fidl::WireUnownedResult<fio::File::GetBuffer>& result) mutable {
     if (!result.ok()) {
@@ -201,18 +203,18 @@ promise<zx::vmo, zx_status_t> Driver::GetBuffer(const fidl::WireSharedClient<fio
       completer.complete_error(result->s);
       return;
     }
-    completer.complete_ok(std::move(result->buffer->vmo));
+    completer.complete_ok(FileVmo{std::move(result->buffer->vmo), result->buffer->size});
   };
   file->GetBuffer(kVmoFlags, std::move(callback));
   return bridge.consumer.promise_or(error(ZX_ERR_UNAVAILABLE)).or_else([this](zx_status_t& status) {
-    FDF_LOG(ERROR, "Failed to get buffer: %s", zx_status_get_string(status));
+    FDF_LOG(WARNING, "Failed to get buffer: %s", zx_status_get_string(status));
     return error(status);
   });
 }
 
 result<std::tuple<zx::vmo, zx::vmo>, zx_status_t> Driver::Join(
-    result<std::tuple<result<zx::resource, zx_status_t>, result<zx::vmo, zx_status_t>,
-                      result<zx::vmo, zx_status_t>>>& results) {
+    result<std::tuple<result<zx::resource, zx_status_t>, result<FileVmo, zx_status_t>,
+                      result<FileVmo, zx_status_t>>>& results) {
   if (results.is_error()) {
     return error(ZX_ERR_INTERNAL);
   }
@@ -229,7 +231,8 @@ result<std::tuple<zx::vmo, zx::vmo>, zx_status_t> Driver::Join(
   if (driver_vmo.is_error()) {
     return driver_vmo.take_error_result();
   }
-  return fpromise::ok(std::make_tuple(loader_vmo.take_value(), driver_vmo.take_value()));
+  return fpromise::ok(
+      std::make_tuple(std::move((loader_vmo.value().vmo)), std::move((driver_vmo.value().vmo))));
 }
 
 result<void, zx_status_t> Driver::LoadDriver(std::tuple<zx::vmo, zx::vmo>& vmos) {
@@ -420,6 +423,46 @@ void* Driver::Context() const { return context_; }
 void Driver::Log(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
                  const char* msg, va_list args) {
   inner_logger_.logvf(severity, tag, file, line, msg, args);
+}
+
+zx::status<zx::vmo> Driver::LoadFirmware(Device* device, const char* filename, size_t* size) {
+  std::string full_filename = "/pkg/lib/firmware/";
+  full_filename.append(filename);
+  auto firmware_vmo = driver::Connect<fio::File>(ns_, dispatcher_, full_filename, kOpenFlags);
+  auto result = fpromise::run_single_threaded(std::move(firmware_vmo));
+  if (result.is_error()) {
+    zx_status_t error = result.take_error();
+    return zx::error(error);
+  }
+
+  auto buffer = result.take_value().sync()->GetBuffer(fio::wire::kVmoFlagRead);
+  if (!buffer.ok()) {
+    if (buffer.is_peer_closed()) {
+      return zx::error(ZX_ERR_NOT_FOUND);
+    }
+    return zx::error(buffer.status());
+  }
+  if (buffer->s != ZX_OK) {
+    return zx::error(buffer->s);
+  }
+
+  *size = buffer->buffer->size;
+  return zx::ok(std::move(buffer->buffer->vmo));
+}
+
+void Driver::LoadFirmwareAsync(Device* device, const char* filename,
+                               load_firmware_callback_t callback, void* ctx) {
+  std::string firmware_path = "/pkg/lib/firmware/";
+  firmware_path.append(filename);
+  executor_.schedule_task(driver::Connect<fio::File>(ns_, dispatcher_, firmware_path, kOpenFlags)
+                              .and_then(fit::bind_member<&Driver::GetBuffer>(this))
+                              .and_then([callback, ctx](FileVmo& result) {
+                                callback(ctx, ZX_OK, result.vmo.release(), result.size);
+                              })
+                              .or_else([callback, ctx](zx_status_t& status) {
+                                callback(ctx, ZX_ERR_NOT_FOUND, ZX_HANDLE_INVALID, 0);
+                              })
+                              .wrap_with(scope_));
 }
 
 zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out) {
