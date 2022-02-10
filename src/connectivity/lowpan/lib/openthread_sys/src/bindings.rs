@@ -81,7 +81,7 @@ pub const OT_LOG_LEVEL_WARN: u32 = 2;
 pub const OT_LOG_LEVEL_NOTE: u32 = 3;
 pub const OT_LOG_LEVEL_INFO: u32 = 4;
 pub const OT_LOG_LEVEL_DEBG: u32 = 5;
-pub const OPENTHREAD_API_VERSION: u32 = 175;
+pub const OPENTHREAD_API_VERSION: u32 = 190;
 pub const OT_UPTIME_STRING_SIZE: u32 = 24;
 pub const OT_PANID_BROADCAST: u32 = 65535;
 pub const OT_EXT_ADDRESS_SIZE: u32 = 8;
@@ -141,12 +141,18 @@ pub const OT_PROVISIONING_URL_MAX_SIZE: u32 = 64;
 pub const OT_STEERING_DATA_MAX_LENGTH: u32 = 16;
 pub const OT_JOINER_MAX_PSKD_LENGTH: u32 = 32;
 pub const OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE: u32 = 1;
+pub const OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE: u32 = 0;
+pub const OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE: u32 = 0;
+pub const OPENTHREAD_CONFIG_SRP_SERVER_ENABLE: u32 = 1;
+pub const OPENTHREAD_CONFIG_ECDSA_ENABLE: u32 = 1;
+pub const OPENTHREAD_CONFIG_TCP_ENABLE: u32 = 0;
 pub const OPENTHREAD_CONFIG_CHANNEL_MANAGER_ENABLE: u32 = 0;
 pub const OPENTHREAD_CONFIG_CHANNEL_MONITOR_ENABLE: u32 = 0;
 pub const OPENTHREAD_CONFIG_CHILD_SUPERVISION_ENABLE: u32 = 1;
 pub const OPENTHREAD_CONFIG_DTLS_ENABLE: u32 = 1;
 pub const OPENTHREAD_CONFIG_JAM_DETECTION_ENABLE: u32 = 1;
 pub const OPENTHREAD_CONFIG_JOINER_ENABLE: u32 = 1;
+pub const OPENTHREAD_CONFIG_COMMISSIONER_ENABLE: u32 = 1;
 pub const OPENTHREAD_CONFIG_NCP_HDLC_ENABLE: u32 = 0;
 pub const OPENTHREAD_PLATFORM_POSIX: u32 = 0;
 pub const OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE: u32 = 1;
@@ -180,8 +186,12 @@ pub const OT_NETWORK_DIAGNOSTIC_ITERATOR_INIT: u32 = 0;
 pub const OT_TIME_SYNC_INVALID_SEQ: u32 = 0;
 pub const OT_SNTP_DEFAULT_SERVER_IP: &'static [u8; 19usize] = b"2001:4860:4806:8::\0";
 pub const OT_SNTP_DEFAULT_SERVER_PORT: u32 = 123;
+pub const OT_TCP_ENDPOINT_TCB_SIZE_BASE: u32 = 368;
+pub const OT_TCP_ENDPOINT_TCB_NUM_PTR: u32 = 36;
 pub const OT_TCP_RECEIVE_BUFFER_SIZE_FEW_HOPS: u32 = 2599;
 pub const OT_TCP_RECEIVE_BUFFER_SIZE_MANY_HOPS: u32 = 4158;
+pub const OT_TCP_LISTENER_TCB_SIZE_BASE: u32 = 16;
+pub const OT_TCP_LISTENER_TCB_NUM_PTR: u32 = 3;
 pub const OT_CHILD_IP6_ADDRESS_ITERATOR_INIT: u32 = 0;
 pub type __darwin_size_t = ::std::os::raw::c_ulong;
 #[doc = " No error."]
@@ -344,9 +354,6 @@ extern "C" {
 }
 extern "C" {
     #[doc = " This (optional) platform function outputs a prepared log line."]
-    #[doc = ""]
-    #[doc = " This platform function is used by OpenThread core when `OPENTHREAD_CONFIG_LOG_DEFINE_AS_MACRO_ONLY` is not enabled"]
-    #[doc = " (in this case, the OT core itself will prepare a full log line)."]
     #[doc = ""]
     #[doc = " Note that this function is optional and if not provided by platform layer, a default (weak) implementation is"]
     #[doc = " provided and used by OpenThread core as `otPlatLog(aLogLevel, aLogResion, \"%s\", aLogLine)`."]
@@ -1096,10 +1103,7 @@ impl Default for otCryptoContext {
 extern "C" {
     #[doc = " Initialize the Crypto module."]
     #[doc = ""]
-    #[doc = " @retval OT_ERROR_NONE          Successfully initialized Crypto module."]
-    #[doc = " @retval OT_ERROR_FAILED        Failed to initialize Crypto module."]
-    #[doc = ""]
-    pub fn otPlatCryptoInit() -> otError;
+    pub fn otPlatCryptoInit();
 }
 extern "C" {
     #[doc = " Import a key into PSA ITS."]
@@ -1446,6 +1450,27 @@ extern "C" {
         aHashSize: u16,
     ) -> otError;
 }
+extern "C" {
+    #[doc = " Initialize cryptographically-secure pseudorandom number generator (CSPRNG)."]
+    #[doc = ""]
+    pub fn otPlatCryptoRandomInit();
+}
+extern "C" {
+    #[doc = " Deinitialize cryptographically-secure pseudorandom number generator (CSPRNG)."]
+    #[doc = ""]
+    pub fn otPlatCryptoRandomDeinit();
+}
+extern "C" {
+    #[doc = " Fills a given buffer with cryptographically secure random bytes."]
+    #[doc = ""]
+    #[doc = " @param[out] aBuffer  A pointer to a buffer to fill with the random bytes."]
+    #[doc = " @param[in]  aSize    Size of buffer (number of bytes to fill)."]
+    #[doc = ""]
+    #[doc = " @retval OT_ERROR_NONE     Successfully filled buffer with random values."]
+    #[doc = " @retval OT_ERROR_FAILED   Operation failed."]
+    #[doc = ""]
+    pub fn otPlatCryptoRandomGet(aBuffer: *mut u8, aSize: u16) -> otError;
+}
 #[doc = "< aMaxPHYPacketSize (IEEE 802.15.4-2006)"]
 pub const OT_RADIO_FRAME_MAX_SIZE: ::std::os::raw::c_uint = 127;
 #[doc = "< Minimal size of frame FCS + CONTROL"]
@@ -1463,7 +1488,7 @@ pub const OT_RADIO_LQI_NONE: ::std::os::raw::c_uint = 0;
 pub const OT_RADIO_RSSI_INVALID: ::std::os::raw::c_uint = 127;
 #[doc = "< Invalid or unknown power value"]
 pub const OT_RADIO_POWER_INVALID: ::std::os::raw::c_uint = 127;
-#[doc = " @defgroup radio-types Types"]
+#[doc = " @defgroup radio-types Radio Types"]
 #[doc = ""]
 #[doc = " @brief"]
 #[doc = "   This module includes the platform abstraction for a radio frame."]
@@ -3203,8 +3228,8 @@ extern "C" {
     #[doc = ""]
     #[doc = " @retval OT_ERROR_NONE           Successfully subscribed to the Network Interface Multicast Address."]
     #[doc = " @retval OT_ERROR_ALREADY        The multicast address is already subscribed."]
-    #[doc = " @retval OT_ERROR_INVALID_ARGS   The IP Address indicated by @p aAddress is invalid address."]
-    #[doc = " @retval OT_ERROR_INVALID_STATE  The Network Interface is not up."]
+    #[doc = " @retval OT_ERROR_INVALID_ARGS   The IP Address indicated by @p aAddress is an invalid multicast address."]
+    #[doc = " @retval OT_ERROR_REJECTED       The IP Address indicated by @p aAddress is an internal multicast address."]
     #[doc = " @retval OT_ERROR_NO_BUFS        The Network Interface is already storing the maximum allowed external multicast"]
     #[doc = "                                 addresses."]
     #[doc = ""]
@@ -4303,6 +4328,25 @@ extern "C" {
     #[doc = " @retval  OT_ERROR_NONE           Successfully retrieved the on-link prefix."]
     #[doc = ""]
     pub fn otBorderRoutingGetOnLinkPrefix(
+        aInstance: *mut otInstance,
+        aPrefix: *mut otIp6Prefix,
+    ) -> otError;
+}
+extern "C" {
+    #[doc = " This function returns the local NAT64 prefix."]
+    #[doc = ""]
+    #[doc = " This prefix might not be advertised in the Thread network."]
+    #[doc = ""]
+    #[doc = " This function is only available when `OPENTHREAD_CONFIG_BORDER_ROUTING_NAT64_ENABLE`"]
+    #[doc = " is enabled."]
+    #[doc = ""]
+    #[doc = " @param[in]   aInstance   A pointer to an OpenThread instance."]
+    #[doc = " @param[out]  aPrefix     A pointer to where the prefix will be output to."]
+    #[doc = ""]
+    #[doc = " @retval  OT_ERROR_INVALID_STATE  The Border Routing Manager is not initialized yet."]
+    #[doc = " @retval  OT_ERROR_NONE           Successfully retrieved the NAT64 prefix."]
+    #[doc = ""]
+    pub fn otBorderRoutingGetNat64Prefix(
         aInstance: *mut otInstance,
         aPrefix: *mut otIp6Prefix,
     ) -> otError;
@@ -5476,6 +5520,14 @@ extern "C" {
     #[doc = " @returns The Code value."]
     #[doc = ""]
     pub fn otCoapMessageGetCode(aMessage: *const otMessage) -> otCoapCode;
+}
+extern "C" {
+    #[doc = " This function sets the Code value."]
+    #[doc = ""]
+    #[doc = " @param[inout]  aMessage  A pointer to the CoAP message to initialize."]
+    #[doc = " @param[in]     aCode     CoAP message code."]
+    #[doc = ""]
+    pub fn otCoapMessageSetCode(aMessage: *mut otMessage, aCode: otCoapCode);
 }
 extern "C" {
     #[doc = " This method returns the CoAP Code as human readable string."]
@@ -7018,7 +7070,7 @@ extern "C" {
     pub fn otJoinerGetState(aInstance: *mut otInstance) -> otJoinerState;
 }
 extern "C" {
-    #[doc = " This method gets the Joiner ID."]
+    #[doc = " This function gets the Joiner ID."]
     #[doc = ""]
     #[doc = " If a Joiner Discerner is not set, Joiner ID is the first 64 bits of the result of computing SHA-256 over"]
     #[doc = " factory-assigned IEEE EUI-64. Otherwise the Joiner ID is calculated from the Joiner Discerner value."]
@@ -7032,7 +7084,7 @@ extern "C" {
     pub fn otJoinerGetId(aInstance: *mut otInstance) -> *const otExtAddress;
 }
 extern "C" {
-    #[doc = " This method sets the Joiner Discerner."]
+    #[doc = " This function sets the Joiner Discerner."]
     #[doc = ""]
     #[doc = " The Joiner Discerner is used to calculate the Joiner ID used during commissioning/joining process."]
     #[doc = ""]
@@ -7053,13 +7105,22 @@ extern "C" {
     ) -> otError;
 }
 extern "C" {
-    #[doc = " This method gets the Joiner Discerner."]
+    #[doc = " This function gets the Joiner Discerner."]
     #[doc = ""]
     #[doc = " @param[in]   aInstance       A pointer to the OpenThread instance."]
     #[doc = ""]
     #[doc = " @returns A pointer to Joiner Discerner or NULL if none is set."]
     #[doc = ""]
     pub fn otJoinerGetDiscerner(aInstance: *mut otInstance) -> *const otJoinerDiscerner;
+}
+extern "C" {
+    #[doc = " This function converts a given joiner state enumeration value to a human-readable string."]
+    #[doc = ""]
+    #[doc = " @param[in] aState   The joiner state."]
+    #[doc = ""]
+    #[doc = " @returns A human-readable string representation of @p aState."]
+    #[doc = ""]
+    pub fn otJoinerStateToString(aState: otJoinerState) -> *const ::std::os::raw::c_char;
 }
 #[doc = "< Commissioner role is disabled."]
 pub const otCommissionerState_OT_COMMISSIONER_STATE_DISABLED: otCommissionerState = 0;
@@ -9586,6 +9647,31 @@ extern "C" {
         aIterator: *mut otMacFilterIterator,
         aEntry: *mut otMacFilterEntry,
     ) -> otError;
+}
+extern "C" {
+    #[doc = " This function enables/disables IEEE 802.15.4 radio filter mode."]
+    #[doc = ""]
+    #[doc = " This function is available when OPENTHREAD_CONFIG_MAC_FILTER_ENABLE configuration is enabled."]
+    #[doc = ""]
+    #[doc = " The radio filter is mainly intended for testing. It can be used to temporarily block all tx/rx on the 802.15.4 radio."]
+    #[doc = " When radio filter is enabled, radio is put to sleep instead of receive (to ensure device does not receive any frame"]
+    #[doc = " and/or potentially send ack). Also the frame transmission requests return immediately without sending the frame over"]
+    #[doc = " the air (return \"no ack\" error if ack is requested, otherwise return success)."]
+    #[doc = ""]
+    #[doc = " @param[in] aInstance         A pointer to an OpenThread instance."]
+    #[doc = " @param[in] aFilterEnabled    TRUE to enable radio filter, FALSE to disable"]
+    #[doc = ""]
+    pub fn otLinkSetRadioFilterEnabled(aInstance: *mut otInstance, aFilterEnabled: bool);
+}
+extern "C" {
+    #[doc = " This function indicates whether the IEEE 802.15.4 radio filter is enabled or not."]
+    #[doc = ""]
+    #[doc = " This function is available when OPENTHREAD_CONFIG_MAC_FILTER_ENABLE configuration is enabled."]
+    #[doc = ""]
+    #[doc = " @retval TRUE   If the radio filter is enabled."]
+    #[doc = " @retval FALSE  If the radio filter is disabled."]
+    #[doc = ""]
+    pub fn otLinkIsRadioFilterEnabled(aInstance: *mut otInstance) -> bool;
 }
 extern "C" {
     #[doc = " This method converts received signal strength to link quality."]
@@ -12859,9 +12945,11 @@ pub const OT_SETTINGS_KEY_SRP_ECDSA_KEY: ::std::os::raw::c_uint = 11;
 pub const OT_SETTINGS_KEY_SRP_CLIENT_INFO: ::std::os::raw::c_uint = 12;
 #[doc = "< The SRP server info (UDP port)."]
 pub const OT_SETTINGS_KEY_SRP_SERVER_INFO: ::std::os::raw::c_uint = 13;
+#[doc = "< NAT64 prefix."]
+pub const OT_SETTINGS_KEY_NAT64_PREFIX: ::std::os::raw::c_uint = 14;
 #[doc = " This enumeration defines the keys of settings."]
 #[doc = ""]
-#[doc = " Note: When adding a new setings key, if the settings corresponding to the key contains security sensitive"]
+#[doc = " Note: When adding a new settings key, if the settings corresponding to the key contains security sensitive"]
 #[doc = "       information, the developer MUST add the key to the array `kCriticalKeys`."]
 #[doc = ""]
 pub type _bindgen_ty_12 = ::std::os::raw::c_uint;
@@ -13156,96 +13244,147 @@ extern "C" {
     pub fn otPlatTimeGetXtalAccuracy() -> u16;
 }
 extern "C" {
-    #[doc = " This function initializes the TREL IPv6/UDP interface."]
+    #[doc = " This function initializes and enables TREL platform layer."]
     #[doc = ""]
-    #[doc = " This function is called before any other TREL platform functions."]
+    #[doc = " Upon this call, the platform layer MUST perform the following:"]
     #[doc = ""]
-    #[doc = " @param[in] aInstance        The OpenThread instance structure."]
-    #[doc = " @param[in] aUnicastAddress  The unicast address to add to interface and use as tx source and rx destination."]
-    #[doc = " @param[in] aUdpPort         A UDP port number to use."]
+    #[doc = " 1) TREL platform layer MUST open a UDP socket to listen for and receive TREL messages from peers. The socket is"]
+    #[doc = " bound to an ephemeral port number chosen by the platform layer. The port number MUST be returned in @p aUdpPort."]
+    #[doc = " The socket is also bound to network interface(s) on which TREL is to be supported. The socket and the chosen port"]
+    #[doc = " should stay valid while TREL is enabled."]
     #[doc = ""]
-    pub fn otPlatTrelUdp6Init(
+    #[doc = " 2) Platform layer MUST initiate an ongoing DNS-SD browse on the service name \"_trel._udp\" within the local browsing"]
+    #[doc = " domain to discover other devices supporting TREL. The ongoing browse will produce two different types of events:"]
+    #[doc = " \"add\" events and \"remove\" events.  When the browse is started, it should produce an \"add\" event for every TREL peer"]
+    #[doc = " currently present on the network.  Whenever a TREL peer goes offline, a \"remove\" event should be produced. \"remove\""]
+    #[doc = " events are not guaranteed, however. When a TREL service instance is discovered, a new ongoing DNS-SD query for an"]
+    #[doc = " AAAA record should be started on the hostname indicated in the SRV record of the discovered instance. If multiple"]
+    #[doc = " host IPv6 addressees are discovered for a peer, one with highest scope among all addresses MUST be reported (if"]
+    #[doc = " there are multiple address at same scope, one must be selected randomly)."]
+    #[doc = ""]
+    #[doc = " TREL platform MUST signal back the discovered peer info using `otPlatTrelHandleDiscoveredPeerInfo()` callback. This"]
+    #[doc = " callback MUST be invoked when a new peer is discovered, when there is a change in an existing entry (e.g., new"]
+    #[doc = " TXT record or new port number or new IPv6 address), or when the peer is removed."]
+    #[doc = ""]
+    #[doc = " @param[in]  aInstance  The OpenThread instance."]
+    #[doc = " @param[out] aUdpPort   A pointer to return the selected port number by platform layer."]
+    #[doc = ""]
+    pub fn otPlatTrelEnable(aInstance: *mut otInstance, aUdpPort: *mut u16);
+}
+extern "C" {
+    #[doc = " This function disables TREL platform layer."]
+    #[doc = ""]
+    #[doc = " After this call, the platform layer MUST stop DNS-SD browse on the service name \"_trel._udp\", stop advertising the"]
+    #[doc = " TREL DNS-SD service (from `otPlatTrelRegisterService()`) and MUST close the UDP socket used to receive TREL messages."]
+    #[doc = ""]
+    #[doc = " @pram[in]  aInstance  The OpenThread instance."]
+    #[doc = ""]
+    pub fn otPlatTrelDisable(aInstance: *mut otInstance);
+}
+#[doc = " This structure represents a TREL peer info discovered using DNS-SD browse on the service name \"_trel._udp\"."]
+#[doc = ""]
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct otPlatTrelPeerInfo {
+    #[doc = " This boolean flag indicates whether the entry is being removed or added."]
+    #[doc = ""]
+    #[doc = " - TRUE indicates that peer is removed."]
+    #[doc = " - FALSE indicates that it is a new entry or an update to an existing entry."]
+    #[doc = ""]
+    pub mRemoved: bool,
+    #[doc = " The TXT record data (encoded as specified by DNS-SD) from the SRV record of the discovered TREL peer service"]
+    #[doc = " instance."]
+    #[doc = ""]
+    pub mTxtData: *const u8,
+    #[doc = "< Number of bytes in @p mTxtData buffer."]
+    pub mTxtLength: u16,
+    #[doc = " The TREL peer socket address (IPv6 address and port number)."]
+    #[doc = ""]
+    #[doc = " The port number is determined from the SRV record of the discovered TREL peer service instance. The IPv6 address"]
+    #[doc = " is determined from the DNS-SD query for AAAA records on the hostname indicated in the SRV record of the"]
+    #[doc = " discovered service instance. If multiple host IPv6 addressees are discovered, one with highest scope is used."]
+    #[doc = ""]
+    pub mSockAddr: otSockAddr,
+}
+impl Default for otPlatTrelPeerInfo {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+extern "C" {
+    #[doc = " This is a callback function from platform layer to report a discovered TREL peer info."]
+    #[doc = ""]
+    #[doc = " @note The @p aInfo structure and its content (e.g., the `mTxtData` buffer) does not need to persist after returning"]
+    #[doc = " from this call. OpenThread code will make a copy of all the info it needs."]
+    #[doc = ""]
+    #[doc = " @param[in] aInstance   The OpenThread instance."]
+    #[doc = " @param[in] aInfo       A pointer to the TREL peer info."]
+    #[doc = ""]
+    pub fn otPlatTrelHandleDiscoveredPeerInfo(
         aInstance: *mut otInstance,
-        aUnicastAddress: *const otIp6Address,
-        aUdpPort: u16,
+        aInfo: *const otPlatTrelPeerInfo,
     );
 }
 extern "C" {
-    #[doc = " This function updates the unicast IPv6 address for TREL IPv6/UDP interface."]
+    #[doc = " This function registers a new service to be advertised using DNS-SD [RFC6763]."]
     #[doc = ""]
-    #[doc = " The interface should only have one unicast IPv6 address. Calling this function replaces any previously set unicast"]
-    #[doc = " IPv6 address (during initialization from `otPlatTrelUdp6Init` or earlier calls to `otPlatTrelUdp6UpdateAddress()`)."]
+    #[doc = " The service name is \"_trel._udp\". The platform should use its own hostname, which when combined with the service"]
+    #[doc = " name and the local DNS-SD domain name will produce the full service instance name, for example"]
+    #[doc = " \"example-host._trel._udp.local.\"."]
     #[doc = ""]
-    #[doc = " @param[in] aInstance        The OpenThread instance structure."]
-    #[doc = " @param[in] aUnicastAddress  The unicast address to add to interface and use for as tx source and rx destination."]
+    #[doc = " The domain under which the service instance name appears will be 'local' for mDNS, and will be whatever domain is"]
+    #[doc = " used for service registration in the case of a non-mDNS local DNS-SD service."]
     #[doc = ""]
-    pub fn otPlatTrelUdp6UpdateAddress(
+    #[doc = " A subsequent call to this function updates the previous service. It is used to update the TXT record data and/or the"]
+    #[doc = " port number."]
+    #[doc = ""]
+    #[doc = " The @p aTxtData buffer is not persisted after the return from this function. The platform layer MUST NOT keep the"]
+    #[doc = " pointer and instead copy the content if needed."]
+    #[doc = ""]
+    #[doc = " @param[in] aInstance   The OpenThread instance."]
+    #[doc = " @param[in] aPort       The port number to include in the SRV record of the advertised service."]
+    #[doc = " @param[in] aTxtData    A pointer to the TXT record data (encoded) to be include in the advertised service."]
+    #[doc = " @param[in] aTxtLength  The length of @p aTxtData (number of bytes)."]
+    #[doc = ""]
+    #[doc = ""]
+    pub fn otPlatTrelRegisterService(
         aInstance: *mut otInstance,
-        aUnicastAddress: *const otIp6Address,
+        aPort: u16,
+        aTxtData: *const u8,
+        aTxtLength: u8,
     );
 }
 extern "C" {
-    #[doc = " This function subscribes the TREL IPv6/UDP interface to a new multicast address."]
+    #[doc = " This function requests a TREL UDP packet to be sent to a given destination."]
     #[doc = ""]
-    #[doc = " This function may be called multiple times to subscribe to different addresses. The interface should accept/receive"]
-    #[doc = " packets destined to any previously subscribed multicast address in addition to the unicast address added from the"]
-    #[doc = " `otPlatTrelUdp6Init()` function when interface was initialized."]
+    #[doc = " @param[in] aInstance        The OpenThread instance structure."]
+    #[doc = " @param[in] aUdpPayload      A pointer to UDP payload."]
+    #[doc = " @param[in] aUdpPayloadLen   The payload length (number of bytes)."]
+    #[doc = " @param[in] aDestSockAddr    The destination socket address."]
     #[doc = ""]
-    #[doc = " @param[in] aInstance          The OpenThread instance structure."]
-    #[doc = " @param[in] aMulticastAddress  A multicast IPv6 address."]
-    #[doc = ""]
-    pub fn otPlatTrelUdp6SubscribeMulticastAddress(
+    pub fn otPlatTrelSend(
         aInstance: *mut otInstance,
-        aMulticastAddress: *const otIp6Address,
+        aUdpPayload: *const u8,
+        aUdpPayloadLen: u16,
+        aDestSockAddr: *const otSockAddr,
     );
 }
 extern "C" {
-    #[doc = " This function requests a packet to be sent to a given destination."]
-    #[doc = ""]
-    #[doc = " @param[in] aInstance        The OpenThread instance structure."]
-    #[doc = " @param[in] aBuffer          A pointer to buffer containing the packet to send."]
-    #[doc = " @param[in] aLength          Packet length (number of bytes)."]
-    #[doc = " @param[in] aDestAddress     The destination IPv6 address (can be a unicast or a multicast IPv6 address)."]
-    #[doc = ""]
-    #[doc = " @retval OT_ERROR_NONE    The tx request was handled successfully."]
-    #[doc = " @retval OT_ERROR_ABORT   The interface is not ready and tx was aborted"]
-    #[doc = ""]
-    pub fn otPlatTrelUdp6SendTo(
-        aInstance: *mut otInstance,
-        aBuffer: *const u8,
-        aLength: u16,
-        aDestAddress: *const otIp6Address,
-    ) -> otError;
-}
-extern "C" {
-    #[doc = " This function is a callback from platform to notify of a received packet."]
+    #[doc = " This function is a callback from platform to notify of a received TREL UDP packet."]
     #[doc = ""]
     #[doc = " @note The buffer content (up to its specified length) may get changed during processing by OpenThread core (e.g.,"]
     #[doc = " decrypted in place), so the platform implementation should expect that after returning from this function the"]
-    #[doc = " packet @p aBuffer content may have been altered."]
+    #[doc = " @p aBuffer content may have been altered."]
     #[doc = ""]
     #[doc = " @param[in] aInstance        The OpenThread instance structure."]
-    #[doc = " @param[in] aBuffer          A buffer containing the received packet."]
-    #[doc = " @param[in] aLength          Packet length (number of bytes)."]
+    #[doc = " @param[in] aBuffer          A buffer containing the received UDP payload."]
+    #[doc = " @param[in] aLength          UDP payload length (number of bytes)."]
     #[doc = ""]
-    pub fn otPlatTrelUdp6HandleReceived(aInstance: *mut otInstance, aBuffer: *mut u8, aLength: u16);
-}
-extern "C" {
-    #[doc = " This optional function is intended for testing only. It changes the test mode status for TREL interface."]
-    #[doc = ""]
-    #[doc = " This function requests TREL interface to be temporarily disabled or enabled. When disabled all traffic flow through"]
-    #[doc = " the TREL interface should be silently dropped."]
-    #[doc = ""]
-    #[doc = " A default weak implementation of this method is provided by OpenThread (returning NOT_IMPLEMENTED)."]
-    #[doc = ""]
-    #[doc = " @param[in] aInstance        The OpenThread instance structure."]
-    #[doc = " @param[in] aEnable          Indicates whether to enable/disable the TREL interface."]
-    #[doc = ""]
-    #[doc = " @retval OT_ERROR_NONE             Successfully changed the TREL interface test status (enabled/disabled)."]
-    #[doc = " @retval OT_ERROR_FAILED           Failed to enable the TREL interface."]
-    #[doc = " @retval OT_ERROR_NOT_IMPLEMENTED  This function is not provided by the platform."]
-    #[doc = ""]
-    pub fn otPlatTrelUdp6SetTestMode(aInstance: *mut otInstance, aEnable: bool) -> otError;
+    pub fn otPlatTrelHandleReceived(aInstance: *mut otInstance, aBuffer: *mut u8, aLength: u16);
 }
 #[doc = " This callback allows OpenThread to provide specific handlers for certain UDP messages."]
 #[doc = ""]
@@ -15314,12 +15453,11 @@ pub type otTcpDisconnected = ::std::option::Option<
 #[doc = " provided in this file."]
 #[doc = ""]
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct otTcpEndpoint {
+    pub mTcb: otTcpEndpoint__bindgen_ty_1,
     #[doc = "< A pointer to the next TCP endpoint (internal use only)"]
     pub mNext: *mut otTcpEndpoint,
-    #[doc = "< A pointer to the OpenThread instance associated with this TCP endpoint"]
-    pub mInstance: *mut otInstance,
     #[doc = "< A pointer to application-specific context"]
     pub mContext: *mut ::std::os::raw::c_void,
     #[doc = "< \"Established\" callback function"]
@@ -15333,6 +15471,23 @@ pub struct otTcpEndpoint {
     #[doc = "< \"Disconnected\" callback function"]
     pub mDisconnectedCallback: otTcpDisconnected,
     pub mTimers: [u32; 4usize],
+    pub mReceiveLinks: [otLinkedBuffer; 2usize],
+    pub mSockAddr: otSockAddr,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union otTcpEndpoint__bindgen_ty_1 {
+    pub mSize: [u8; 656usize],
+    pub mAlign: u64,
+}
+impl Default for otTcpEndpoint__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
 }
 impl Default for otTcpEndpoint {
     fn default() -> Self {
@@ -15547,7 +15702,7 @@ extern "C" {
     #[doc = " @retval OT_ERROR_FAILED  Failed to complete the operation."]
     #[doc = ""]
     pub fn otTcpReceiveByReference(
-        aEndpoint: *const otTcpEndpoint,
+        aEndpoint: *mut otTcpEndpoint,
         aBuffer: *mut *const otLinkedBuffer,
     ) -> otError;
 }
@@ -15719,18 +15874,32 @@ pub type otTcpAcceptDone = ::std::option::Option<
 #[doc = " provided in this file."]
 #[doc = ""]
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct otTcpListener {
+    pub mTcbListen: otTcpListener__bindgen_ty_1,
     #[doc = "< A pointer to the next TCP listener (internal use only)"]
     pub mNext: *mut otTcpListener,
-    #[doc = "< A pointer to the OpenThread instance associated with this TCP listener"]
-    pub mInstance: *mut otInstance,
     #[doc = "< A pointer to application-specific context"]
     pub mContext: *mut ::std::os::raw::c_void,
     #[doc = "< \"Accept ready\" callback function"]
     pub mAcceptReadyCallback: otTcpAcceptReady,
     #[doc = "< \"Accept done\" callback function"]
     pub mAcceptDoneCallback: otTcpAcceptDone,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union otTcpListener__bindgen_ty_1 {
+    pub mSize: [u8; 40usize],
+    pub mAlign: *mut ::std::os::raw::c_void,
+}
+impl Default for otTcpListener__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
 }
 impl Default for otTcpListener {
     fn default() -> Self {
@@ -16685,6 +16854,17 @@ extern "C" {
     pub fn otThreadSetCcmEnabled(aInstance: *mut otInstance, aEnabled: bool);
 }
 extern "C" {
+    #[doc = " This function sets whether the Security Policy TLV version-threshold for routing (VR field) is enabled."]
+    #[doc = ""]
+    #[doc = " @note This API requires `OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE`, and is only used by Thread Test Harness"]
+    #[doc = "       to indicate that thread protocol version check VR should be skipped."]
+    #[doc = ""]
+    #[doc = " @param[in]  aInstance  A pointer to an OpenThread instance."]
+    #[doc = " @param[in]  aEnabled   TRUE to enable Security Policy TLV version-threshold for routing, FALSE otherwise."]
+    #[doc = ""]
+    pub fn otThreadSetThreadVersionCheckEnabled(aInstance: *mut otInstance, aEnabled: bool);
+}
+extern "C" {
     #[doc = " This function gets the range of router IDs that are allowed to assign to nodes within the thread network."]
     #[doc = ""]
     #[doc = " @note This API requires `OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE`, and is only used for test purpose. All the"]
@@ -16722,6 +16902,109 @@ extern "C" {
         aMinRouterId: u8,
         aMaxRouterId: u8,
     ) -> otError;
+}
+#[doc = " This struct represents a TREL peer."]
+#[doc = ""]
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct otTrelPeer {
+    #[doc = "< The Extended MAC Address of TREL peer."]
+    pub mExtAddress: otExtAddress,
+    #[doc = "< The Extended PAN Identifier of TREL peer."]
+    pub mExtPanId: otExtendedPanId,
+    #[doc = "< The IPv6 socket address of TREL peer."]
+    pub mSockAddr: otSockAddr,
+}
+impl Default for otTrelPeer {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[doc = " This type represents an iterator for iterating over TREL peer table entries."]
+#[doc = ""]
+pub type otTrelPeerIterator = u16;
+extern "C" {
+    #[doc = " This function enables TREL operation."]
+    #[doc = ""]
+    #[doc = " This function initiates an ongoing DNS-SD browse on the service name \"_trel._udp\" within the local browsing domain"]
+    #[doc = " to discover other devices supporting TREL. Device also registers a new service to be advertised using DNS-SD,"]
+    #[doc = " with the service name is \"_trel._udp\" indicating its support for TREL. Device is then ready to receive TREL messages"]
+    #[doc = " from peers."]
+    #[doc = ""]
+    #[doc = " @note By default the OpenThread stack enables the TREL operation on start."]
+    #[doc = ""]
+    #[doc = " @param[in] aInstance   The OpenThread instance."]
+    #[doc = ""]
+    pub fn otTrelEnable(aInstance: *mut otInstance);
+}
+extern "C" {
+    #[doc = " This function disables TREL operation."]
+    #[doc = ""]
+    #[doc = " This function stops the DNS-SD browse on the service name \"_trel._udp\", stops advertising TREL DNS-SD service, and"]
+    #[doc = " clears the TREL peer table."]
+    #[doc = ""]
+    #[doc = " @param[in] aInstance   The OpenThread instance."]
+    #[doc = ""]
+    pub fn otTrelDisable(aInstance: *mut otInstance);
+}
+extern "C" {
+    #[doc = " This function indicates whether the TREL operation is enabled."]
+    #[doc = ""]
+    #[doc = " @param[in] aInstance   The OpenThread instance."]
+    #[doc = ""]
+    #[doc = " @retval TRUE if the TREL operation is enabled."]
+    #[doc = " @retval FALSE if the TREL operation is disabled."]
+    #[doc = ""]
+    pub fn otTrelIsEnabled(aInstance: *mut otInstance) -> bool;
+}
+extern "C" {
+    #[doc = " This function initializes a peer table iterator."]
+    #[doc = ""]
+    #[doc = " @param[in] aInstance   The OpenThread instance."]
+    #[doc = " @param[in] aIterator   The iterator to initialize."]
+    #[doc = ""]
+    pub fn otTrelInitPeerIterator(aInstance: *mut otInstance, aIterator: *mut otTrelPeerIterator);
+}
+extern "C" {
+    #[doc = " This function iterates over the peer table entries and get the next entry from the table"]
+    #[doc = ""]
+    #[doc = " @param[in] aInstance   The OpenThread instance."]
+    #[doc = " @param[in] aIterator   The iterator. MUST be initialized."]
+    #[doc = ""]
+    #[doc = " @returns A pointer to the next `otTrelPeer` entry or `NULL` if no more entries in the table."]
+    #[doc = ""]
+    pub fn otTrelGetNextPeer(
+        aInstance: *mut otInstance,
+        aIterator: *mut otTrelPeerIterator,
+    ) -> *const otTrelPeer;
+}
+extern "C" {
+    #[doc = " This function sets the filter mode (enables/disables filtering)."]
+    #[doc = ""]
+    #[doc = " When filter mode is enabled, any rx and tx traffic through TREL interface is silently dropped. This is mainly"]
+    #[doc = " intended for use during testing."]
+    #[doc = ""]
+    #[doc = " Unlike `otTrel{Enable/Disable}()` which fully starts/stops the TREL operation, when filter mode is enabled the"]
+    #[doc = " TREL interface continues to be enabled."]
+    #[doc = ""]
+    #[doc = " @param[in] aInstance   The OpenThread instance."]
+    #[doc = " @param[in] aFiltered   TRUE to enable filter mode, FALSE to disable filter mode."]
+    #[doc = ""]
+    pub fn otTrelSetFilterEnabled(aInstance: *mut otInstance, aEnable: bool);
+}
+extern "C" {
+    #[doc = " This function indicates whether or not the filter mode is enabled."]
+    #[doc = ""]
+    #[doc = " @param[in] aInstance   The OpenThread instance."]
+    #[doc = ""]
+    #[doc = " @retval TRUE if the TREL filter mode is enabled."]
+    #[doc = " @retval FALSE if the TREL filter mode is disabled."]
+    #[doc = ""]
+    pub fn otTrelIsFilterEnabled(aInstance: *mut otInstance) -> bool;
 }
 pub type __builtin_va_list = [__va_list_tag; 1usize];
 #[repr(C)]

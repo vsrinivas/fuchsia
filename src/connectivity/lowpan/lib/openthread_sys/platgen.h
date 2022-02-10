@@ -61,7 +61,7 @@
 #include <openthread/platform/spi-slave.h>
 #include <openthread/platform/time.h>
 #include <openthread/platform/toolchain.h>
-#include <openthread/platform/trel-udp6.h>
+#include <openthread/platform/trel.h>
 #include <openthread/platform/udp.h>
 #include <openthread/random_noncrypto.h>
 #include <openthread/server.h>
@@ -73,6 +73,7 @@
 #include <openthread/tcp.h>
 #include <openthread/thread.h>
 #include <openthread/thread_ftd.h>
+#include <openthread/trel.h>
 #include <openthread/udp.h>
 
 #endif  // SRC_CONNECTIVITY_LOWPAN_LIB_OPENTHREAD_SYS_PLATGEN_H_
