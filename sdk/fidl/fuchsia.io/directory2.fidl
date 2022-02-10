@@ -5,6 +5,43 @@ library fuchsia.io;
 
 using zx;
 
+protocol DirectoryIterator {
+    /// Reads a collection of variably sized directory entries into a buffer.
+    ///
+    /// The number of entries in a directory may be very large: akin to
+    /// calling read multiple times on a file, directories have a seek
+    /// offset which is updated on subsequent calls to `Enumerate`.
+    /// The caller should always use a receiving buffer size as large as the
+    /// maximum channel limit.
+    ///
+    /// When the end of iteration is reached, the returned `entries` vector
+    /// will be empty.
+    ///
+    /// This method does not require any rights, as the rights are checked
+    /// in the [`Directory.Enumerate`] call.
+    @selector("fuchsia.io/DirectoryIterator.GetNext")
+    GetNext() -> (struct {
+        /// Information about an immediate child node of a directory.
+        ///
+        /// If a particular attribute is not applicable or not supported,
+        /// implementations should leave the corresponding field absent.
+        entries vector<@generated_name("DirectoryEntry") table {
+            /// Name of the node. This field must be present.
+            1: name Name;
+
+            /// Describes the kinds of representations supported by the node.
+            2: protocols NodeProtocols;
+
+            /// Describes the kinds of operations supported by the node.
+            3: abilities Abilities;
+
+            /// An ID for the node. See [`Id`].
+            /// This `id` should be unique among all entries of a directory.
+            4: id Id;
+        }>:8192;
+    }) error zx.status;
+};
+
 /// A [`Node2`] that is capable of containing other nodes.
 protocol Directory2 {
     compose Node2;
@@ -111,7 +148,7 @@ protocol Directory2 {
     @transitional
     @selector("fuchsia.io/Directory.Enumerate")
     Enumerate(resource struct {
-        options DirectoryEnumerateOptions;
+        options @generated_name("DirectoryEnumerateOptions") table {};
         iterator server_end:DirectoryIterator;
     });
 
@@ -180,11 +217,6 @@ type OpenMode = strict enum : uint32 {
     @deprecated("Mount points will be replaced by components.")
     OPEN_MOUNT_POINT = 0x10000000;
 };
-
-/// Auxiliary data for the directory representation of a node.
-/// The selection of this variant in [`Representation`] implies that the
-/// connection speaks the [`Directory`] protocol.
-type DirectoryInfo = table {};
 
 /// Options for [`Directory.Unlink`].
 type UnlinkOptions = table {

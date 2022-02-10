@@ -222,38 +222,6 @@ type VmoFlags = strict bits : uint64 {
     SHARED_BUFFER = 0x00020000;
 };
 
-/// Auxiliary data for the file representation of a node.
-/// The selection of this variant in [`Representation`] implies that the
-/// connection speaks the [`File`] protocol.
-type FileInfo = resource table {
-    /// An optional event which transmits information about an object's
-    /// readability or writability. This event relays information about the
-    /// underlying object, not the capability granted to client: this event
-    /// may be signalled "readable" on a connection that does not have
-    /// the capability to read.
-    ///
-    /// This event will be present if the following conditions are met:
-    ///
-    /// - The `available_operations` on the file connection is not empty.
-    /// - The filesystem supports signalling readability/writability events.
-    ///
-    /// The [`FileSignal`] values may be observed on this event.
-    1: observer zx.handle:EVENT;
-
-    /// Returns if the file is opened in append mode.
-    /// In append mode, the seek offset is moved to the end before every
-    /// write, the two steps performed in an atomic manner.
-    2: is_append bool;
-
-    /// An optional stream object, which can be used to read to and write from
-    /// the file.
-    ///
-    /// Reading and writing the file using the stream object can be up to 20x
-    /// faster than reading and writing the file using the Read and Write
-    /// operations in the [`File`] protocol.
-    3: stream zx.handle:STREAM;
-};
-
 type FileSignal = strict bits : uint32 {
     /// Indicates the file is ready for reading.
     READABLE = 0x01000000; // ZX_USER_SIGNAL_0

@@ -350,15 +350,6 @@ const fuchsia.io/MODE_TYPE_MASK uint32 1044480
 const fuchsia.io/MODE_TYPE_SERVICE uint32 65536
 const fuchsia.io/MODE_TYPE_SOCKET uint32 49152
 const fuchsia.io/MOVE fuchsia.io/InotifyWatchMask 192
-protocol/member fuchsia.io/Memory.Close2() -> (fuchsia.io/Node2_Close2_Result result)
-protocol/member fuchsia.io/Memory.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
-protocol/member fuchsia.io/Memory.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
-protocol/member fuchsia.io/Memory.GetToken2() -> (fuchsia.io/Node2_GetToken2_Result result)
-protocol/member fuchsia.io/Memory.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
-protocol/member fuchsia.io/Memory.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
-protocol/member fuchsia.io/Memory.Sync2() -> (fuchsia.io/Node2_Sync2_Result result)
-protocol/member fuchsia.io/Memory.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
-protocol fuchsia.io/Memory
 table/member fuchsia.io/MemoryInfo.buffer fuchsia.mem/Range
 resource table fuchsia.io/MemoryInfo
 const fuchsia.io/NODE_ATTRIBUTE_FLAG_CREATION_TIME uint32 1
@@ -516,15 +507,6 @@ bits/member fuchsia.io/Operations.WRITE_BYTES 4
 strict bits fuchsia.io/Operations uint64
 struct/member fuchsia.io/PacketSocket.event zx/handle:<EVENTPAIR,zx.TRANSFER,zx.WAIT>
 resource struct fuchsia.io/PacketSocket
-protocol/member fuchsia.io/Pipe.Close2() -> (fuchsia.io/Node2_Close2_Result result)
-protocol/member fuchsia.io/Pipe.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
-protocol/member fuchsia.io/Pipe.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
-protocol/member fuchsia.io/Pipe.GetToken2() -> (fuchsia.io/Node2_GetToken2_Result result)
-protocol/member fuchsia.io/Pipe.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
-protocol/member fuchsia.io/Pipe.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
-protocol/member fuchsia.io/Pipe.Sync2() -> (fuchsia.io/Node2_Sync2_Result result)
-protocol/member fuchsia.io/Pipe.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
-protocol fuchsia.io/Pipe
 table/member fuchsia.io/PipeInfo.socket zx/handle:SOCKET
 resource table fuchsia.io/PipeInfo
 struct/member fuchsia.io/PipeObject.socket zx/handle:SOCKET

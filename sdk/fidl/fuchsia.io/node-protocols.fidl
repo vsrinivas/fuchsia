@@ -1,0 +1,64 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.io;
+
+/// A node may have multiple supported representations when opening, even though
+/// it may have a fixed underlying identity.
+///
+/// Today, a file is accessed via the [`File`] protocol, and sends a
+/// [`Representation.FileInfo`] when opened with `GET_CONNECTION_INFO`. However,
+/// in the future we might introduce a more sophisticated `FileV2` protocol, or
+/// a more efficient `SuperFastFile` backed by a specialized kernel object.
+/// New clients can request the more advanced representations by specifying
+/// the corresponding bits in [`NodeProtocols`], whereas existing clients
+/// would continue to talk to the node via the old representation.
+///
+/// [`NodeProtocols`] enables forward-compatibility through a form of protocol
+/// negotiation.
+///
+/// The elements have one-to-one correspondence with the members of
+/// [`Representation`].
+type NodeProtocols = strict bits : uint64 {
+    /// The connector representation of a node.
+    /// The connection will speak either [`Node`], or some custom
+    /// protocol, depending on the flags used during opening and reopening.
+    CONNECTOR = 0x1;
+
+    /// The directory representation of a node.
+    /// The connection will speak the [`Directory`] protocol.
+    DIRECTORY = 0x2;
+
+    /// The file representation of a node.
+    /// The connection will speak the [`File`] protocol.
+    FILE = 0x4;
+
+    /// The memory representation of a node. A memory object is a file whose
+    /// contents are explicitly backed by some VMO.
+    /// The connection will speak the [`Memory`] protocol, and
+    /// [`Representation`] would contain a [`fuchsia.mem/Range`] object
+    /// representing the contents of the file.
+    MEMORY = 0x8;
+
+    /// The pipe representation of a node.
+    /// The connection will speak the [`Pipe`] protocol.
+    PIPE = 0x10;
+
+    /// The datagram socket representation of a node.
+    /// The connection will speak the [`fuchsia.posix.socket/DatagramSocket`] protocol.
+    DATAGRAM_SOCKET = 0x20;
+
+    /// The stream socket representation of a node.
+    /// The connection will speak the [`fuchsia.posix.socket/StreamSocket`] protocol.
+    STREAM_SOCKET = 0x40;
+
+    /// The raw socket representation of a node.
+    /// The connection will speak the [`fuchsia.posix.socket.raw/Socket`] protocol.
+    RAW_SOCKET = 0x80;
+
+    @deprecated("devices will be services in the future")
+    DEVICE = 0x10000000;
+
+    @deprecated("tty functionalities may be covered by a tty service")
+    TTY = 0x20000000;
+};

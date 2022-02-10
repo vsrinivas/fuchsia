@@ -5,6 +5,57 @@ library fuchsia.io;
 
 using zx;
 
+/// Objective information about a filesystem node.
+/// See [`Node.GetAttributes`] and [`Node.UpdateAttributes`].
+///
+/// The attributes of a node should be stable, independent of the
+/// specific protocol used to access it.
+///
+/// If a particular attribute is not applicable or not supported,
+/// filesystems should leave the corresponding field absent.
+type NodeAttributes2 = table {
+    /// Describes the kinds of representations supported by the node.
+    /// Note: This is not the result of the connection-time negotiation,
+    /// which is conveyed via `representation`.
+    ///
+    /// This attribute is read-only.
+    1: protocols NodeProtocols;
+
+    /// Describes the kinds of operations supported by the node.
+    /// Note: This is distinct from the rights used at connection time.
+    ///
+    /// This attribute is read-only.
+    2: abilities Abilities;
+
+    /// Node size, in bytes.
+    ///
+    /// This attribute is read-only.
+    3: content_size uint64;
+
+    /// Space needed to store the node (possibly larger than size), in bytes.
+    ///
+    /// This attribute is read-only.
+    4: storage_size uint64;
+
+    /// Number of hard links to the node. It must be at least one.
+    ///
+    /// This attribute is read-only.
+    5: link_count uint64;
+
+    /// Time of creation in nanoseconds since the Unix epoch, UTC.
+    /// It may be updated manually after creation.
+    6: creation_time uint64;
+
+    /// Time of last modification in nanoseconds since the Unix epoch, UTC.
+    7: modification_time uint64;
+
+    /// An ID for the node. See [`Id`].
+    /// This `id` should be unique among all entries of a directory.
+    ///
+    /// This attribute is read-only.
+    8: id Id;
+};
+
 /// Node defines the minimal protocol for entities which can be accessed
 /// in a filesystem.
 protocol Node2 {
@@ -56,7 +107,16 @@ protocol Node2 {
     @transitional
     @selector("fuchsia.io/Node.Describe")
     Describe2(struct {
-        query ConnectionInfoQuery;
+        query @generated_name("ConnectionInfoQuery") strict bits : uint64 {
+            /// Requests [`ConnectionInfo.representation`].
+            REPRESENTATION = 0x1;
+
+            /// Requests [`ConnectionInfo.rights`].
+            RIGHTS = 0x2;
+
+            /// Requests [`ConnectionInfo.available_operations`].
+            AVAILABLE_OPERATIONS = 0x4;
+        };
     }) -> (resource struct {
         info ConnectionInfo;
     });
@@ -99,7 +159,34 @@ protocol Node2 {
     @transitional
     @selector("fuchsia.io/Node.GetAttributes")
     GetAttributes(struct {
-        query NodeAttributesQuery;
+        /// Set the corresponding bit to one to query that particular attribute.
+        ///
+        /// The elements here correspond one-to-one with [`NodeAttributes`].
+        query @generated_name("NodeAttributesQuery") strict bits : uint64 {
+            /// Requests [`NodeAttributes.protocols`].
+            PROTOCOLS = 0x1;
+
+            /// Requests [`NodeAttributes.abilities`].
+            ABILITIES = 0x2;
+
+            /// Requests [`NodeAttributes.content_size`].
+            CONTENT_SIZE = 0x4;
+
+            /// Requests [`NodeAttributes.storage_size`].
+            STORAGE_SIZE = 0x8;
+
+            /// Requests [`NodeAttributes.link_count`].
+            LINK_COUNT = 0x10;
+
+            /// Requests [`NodeAttributes.creation_time`].
+            CREATION_TIME = 0x20;
+
+            /// Requests [`NodeAttributes.modification_time`].
+            MODIFICATION_TIME = 0x40;
+
+            /// Requests [`NodeAttributes.id`].
+            ID = 0x80;
+        };
     }) -> (struct {
         attributes NodeAttributes2;
     }) error zx.status;

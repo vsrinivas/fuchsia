@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 library fuchsia.io;
 
-using zx;
-
 /// Indicates the device is ready for reading.
 const DEVICE_SIGNAL_READABLE uint32 = 0x01000000; // ZX_USER_SIGNAL_0
 /// Indicates an out-of-band state transition has occurred.
@@ -47,22 +45,4 @@ type DeviceSignal2 = strict bits : uint32 {
     ERROR = 0x08000000; // ZX_USER_SIGNAL_3
     /// Indicates the device has hung up on the current connection.
     HANGUP = 0x10000000; // ZX_USER_SIGNAL_4
-};
-
-/// The object may be cast to the shared interface of devices.
-@deprecated("devices will be services in the future")
-type DeviceInfo = resource table {
-    /// An optional event which transmits information about a device's state.
-    ///
-    /// The [`DeviceSignal`] values may be observed on this event.
-    1: unused zx.handle:EVENTPAIR;
-};
-
-/// The object may be cast to a Tty interface.
-@deprecated("tty functionalities may be covered by a tty service")
-type TtyInfo = resource table {
-    /// An optional event which transmits information about a device's state.
-    ///
-    /// The [`DeviceSignal`] values may be observed on this event.
-    1: event zx.handle:EVENTPAIR;
 };
