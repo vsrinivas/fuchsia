@@ -45,7 +45,7 @@ void CreateRing(std::vector<Rectangle2D>& renderables,
 
 }  // anonymous namespace
 
-FlatlandDemoScene1::FlatlandDemoScene1(RainfallDemo* demo) : Scene(demo) {}
+FlatlandDemoScene1::FlatlandDemoScene1(RainfallDemo* demo) : RainfallScene(demo) {}
 
 FlatlandDemoScene1::~FlatlandDemoScene1() {}
 

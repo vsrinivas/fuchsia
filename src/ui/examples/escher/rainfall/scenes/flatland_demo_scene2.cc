@@ -6,7 +6,7 @@
 
 using namespace escher;
 
-FlatlandDemoScene2::FlatlandDemoScene2(RainfallDemo* demo) : Scene(demo) {}
+FlatlandDemoScene2::FlatlandDemoScene2(RainfallDemo* demo) : RainfallScene(demo) {}
 
 FlatlandDemoScene2::~FlatlandDemoScene2() {}
 

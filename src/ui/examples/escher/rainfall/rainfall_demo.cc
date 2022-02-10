@@ -92,8 +92,8 @@ void RainfallDemo::SetWindowSize(vk::Extent2D window_size) {
 
 void RainfallDemo::InitializeDemoScenes() {
   demo_scenes_.clear();
-  demo_scenes_.emplace_back(new FlatlandDemoScene1(this));
-  demo_scenes_.emplace_back(new FlatlandDemoScene2(this));
+  demo_scenes_.emplace_back(std::make_unique<FlatlandDemoScene1>(this));
+  demo_scenes_.emplace_back(std::make_unique<FlatlandDemoScene2>(this));
   for (auto& scene : demo_scenes_) {
     scene->Init();
   }

@@ -16,7 +16,7 @@
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
 
-class Scene;
+class RainfallScene;
 
 class RainfallDemo : public Demo {
  public:
@@ -46,7 +46,7 @@ class RainfallDemo : public Demo {
   escher::TexturePtr depth_buffer_;
 
   uint32_t current_scene_ = 0;
-  std::vector<Scene*> demo_scenes_;
+  std::vector<std::unique_ptr<RainfallScene>> demo_scenes_;
   escher::Stopwatch stopwatch_;
 };
 

@@ -14,10 +14,10 @@ class Stopwatch;
 
 // Base scene class for Rainfall Demo Scenes. New scenes
 // should inherit from this class.
-class Scene {
+class RainfallScene {
  public:
-  Scene(RainfallDemo* demo) : demo_(demo) {}
-  virtual ~Scene() {}
+  RainfallScene(RainfallDemo* demo) : demo_(demo) {}
+  virtual ~RainfallScene() {}
 
   // Convenience method for initializing scene.
   virtual void Init() = 0;
@@ -35,7 +35,7 @@ class Scene {
 
   RainfallDemo* demo_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Scene);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RainfallScene);
 };
 
 #endif  // SRC_UI_EXAMPLES_ESCHER_RAINFALL_SCENES_SCENE_H_

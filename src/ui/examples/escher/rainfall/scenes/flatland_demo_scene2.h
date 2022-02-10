@@ -9,15 +9,15 @@
 
 // Flatland Demo Scene which gives the illusion of endlessly
 // falling rectangles.
-class FlatlandDemoScene2 : public Scene {
+class FlatlandDemoScene2 : public RainfallScene {
  public:
   explicit FlatlandDemoScene2(RainfallDemo* demo);
-  ~FlatlandDemoScene2();
+  ~FlatlandDemoScene2() override;
 
-  // |Scene|
+  // |RainfallScene|
   void Init() override;
 
-  // |Scene|
+  // |RainfallScene|
   void Update(const escher::Stopwatch& stopwatch) override;
 
   std::vector<escher::Rectangle2D>& renderables() override { return renderables_; }
