@@ -17,26 +17,25 @@ group("tests") {
 # into two parts. This is necessary because OOT environments won't be able to
 # include the Realm Builder Server in their test package.
 #
-# In order to remedy this problem, the shard is split into a base shard
-# and an internal one. The base portion contains all the shared routing and
-# capability declaration that is used by the test component's environment.
+# In order to remedy this problem, the shard is split into a base shard,
+# an internal one and an SDK one. The base portion contains all the shared
+# routing and capability declaration that is used by the test component's
+# environment.
 # The internal one inherits from the base shard, and extends it by declaring
 # the necessary child based off a relative URL.
-#
-# This is viable in-tree because it can be enforced with internal build rules.
-# OOT, a similar shard will be necessary to allow for OOT test components to
-# use Realm Builder.
+# The SDK one inherits from the base shard, and extends it by declaring
+# the necessary child based off an absolute URL.
 #
 # TODO(https://fxbug.dev/89252): Remove this workaround once sub-packages
 # support has landed.
-sdk_component_manifests("realm_builder_base_shard_sdk") {
-  name = "sys/component"
-  manifests = [ "realm_builder_base.shard.cml" ]
-  category = "partner"
-}
-
 sdk_component_manifests("realm_builder_shard") {
   name = "sys/component"
   manifests = [ "realm_builder.shard.cml" ]
   category = "internal"
+}
+
+sdk_component_manifests("realm_builder_absolute_shard_sdk") {
+  name = "sys/component"
+  manifests = [ "realm_builder_absolute.shard.cml" ]
+  category = "partner"
 }
