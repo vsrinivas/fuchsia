@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package main
@@ -23,7 +24,7 @@ var gidlTmpl = template.Must(template.New("gidlTmpl").Parse(
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
+// GENERATED FILE: Regen with "fx regen_fidl_benchmark_suite"
 
 {{- range .Benchmarks }}
 

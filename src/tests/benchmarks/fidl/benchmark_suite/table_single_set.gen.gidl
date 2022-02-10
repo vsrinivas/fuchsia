@@ -1,8 +1,8 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
+// GENERATED FILE: Regen with "fx regen_fidl_benchmark_suite"
 
 // Table with 1 field with the 1st field set
 benchmark("Table/SingleSet/1_of_1") {
