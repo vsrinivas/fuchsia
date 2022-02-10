@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
@@ -268,6 +269,23 @@ bool PartitionMatches(zx::unowned_channel& partition_channel, const PartitionMat
       }
     }
     if (!matches_label) {
+      return false;
+    }
+  }
+  if (matcher.parent_device) {
+    auto resp = fidl::WireCall<fuchsia_device::Controller>(partition_channel)->GetTopologicalPath();
+    if (!resp.ok() || resp->result.is_err()) {
+      return false;
+    }
+
+    fidl::StringView& path = resp->result.response().path;
+    size_t len = strlen(matcher.parent_device);
+    if (path.size() <= len) {
+      // device path is shorter than parent's path, can't be right.
+      return false;
+    }
+
+    if (strncmp(matcher.parent_device, path.data(), len) != 0) {
       return false;
     }
   }

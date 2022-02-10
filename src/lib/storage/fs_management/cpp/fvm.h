@@ -53,6 +53,8 @@ struct PartitionMatcher {
   const uint8_t* instance_guid;
   const char* const* labels;
   size_t num_labels;
+  // partition must be a child of this device.
+  const char* parent_device;
 };
 
 // Waits for a partition with a GUID pair to appear, and opens it.
