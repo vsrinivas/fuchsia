@@ -4,29 +4,61 @@
 
 use crate::normalize_field_key;
 use cm_rust::{ConfigDecl, ConfigField, ConfigNestedValueType, ConfigValueType};
+use handlebars::Handlebars;
+use serde::Serialize;
 
 /// Create a custom FIDL library source file containing all the fields of a config declaration
 pub fn create_fidl_source(config_decl: &ConfigDecl, library_name: String) -> String {
-    let mut fidl_struct_fields = vec![];
-    for ConfigField { key, type_ } in &config_decl.fields {
-        let fidl_type = config_value_type_to_fidl_type(&type_);
-        let key = normalize_field_key(key);
-        let fidl_struct_field = format!("{} {};", key, fidl_type);
-        fidl_struct_fields.push(fidl_struct_field);
-    }
+    let fidl_library = FidlLibrary::new(config_decl, library_name);
+    let mut hbars = Handlebars::new();
+    hbars.set_strict_mode(true);
+    hbars.register_escape_fn(handlebars::no_escape);
+    hbars
+        .register_template_string("fidl_library", FIDL_CLIENT_TEMPLATE)
+        .expect("known good template should parse");
+    hbars.render("fidl_library", &fidl_library).unwrap()
+}
 
-    // TODO(http://fxbug.dev/90690): The type identifier for the configuration fields struct
-    // should be user-definable
-    // TODO(http://fxbug.dev/93026): Use a templating library instead of the format macro.
-    let output = format!(
-        "library {};
-type Config = struct {{
-{}
-}};",
-        library_name,
-        fidl_struct_fields.join("\n")
-    );
-    output
+// TODO(http://fxbug.dev/90690): The type identifier for the configuration fields struct
+// should be user-definable
+static FIDL_CLIENT_TEMPLATE: &str = "
+library {{library_name}};
+
+type Config = struct {
+{{#each struct_fields}}
+  {{key}} {{type_}};
+{{/each}}
+};
+";
+
+#[derive(Debug, Serialize)]
+struct FidlLibrary {
+    library_name: String,
+    struct_fields: Vec<FidlStructField>,
+}
+
+impl FidlLibrary {
+    fn new(config_decl: &ConfigDecl, library_name: String) -> Self {
+        FidlLibrary {
+            library_name,
+            struct_fields: config_decl.fields.iter().map(FidlStructField::from_decl).collect(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct FidlStructField {
+    key: String,
+    type_: String,
+}
+
+impl FidlStructField {
+    fn from_decl(field: &ConfigField) -> Self {
+        FidlStructField {
+            key: normalize_field_key(&field.key),
+            type_: config_value_type_to_fidl_type(&field.type_),
+        }
+    }
 }
 
 fn config_value_type_to_fidl_type(value_type: &ConfigValueType) -> String {

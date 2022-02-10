@@ -1,0 +1,21 @@
+#ifndef __{{header_guard}}_H__
+#define __{{header_guard}}_H__
+
+#include <string>
+#include <vector>
+
+#include <lib/sys/inspect/cpp/component.h>
+
+namespace {{cpp_namespace}} {
+struct Config {
+  {{#each fields}}
+    {{(cpp_type type_)}} {{ident}};
+  {{/each}}
+
+  static Config from_args() noexcept;
+
+  void record_to_inspect(sys::ComponentInspector * inspector);
+};
+}
+
+#endif
