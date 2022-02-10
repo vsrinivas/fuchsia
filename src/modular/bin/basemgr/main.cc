@@ -34,7 +34,7 @@ constexpr std::string_view kDeletePersistentConfigCommand = "delete_persistent_c
 constexpr std::string_view kArrestedFlag = "arrested";
 // Command-line flag that specifies the name of a v2 child that basemgr will
 // start and monitor for crashes.
-constexpr std::string_view kChildFlag = "child";
+constexpr std::string_view kEagerChildFlag = "eager-child";
 
 fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatcher_t* dispatcher,
                                                sys::ComponentContext* component_context) {
@@ -116,7 +116,7 @@ std::string GetUsage() {
     basemgr will continue to serve the fuchsia.modular.session.Launcher protocol that can be
     used to launch a Modular session.
 
-  --child
+  --eager-child
 
     Child component which basemgr will launch and monitor for crashes. basemgr
     will start the child component by connecting to the FIDL Protocol `fuchsia.component.Binder`
@@ -174,7 +174,7 @@ int main(int argc, const char** argv) {
   inspector->AddConfig(config_reader.GetConfig());
 
   // Child components to start.
-  auto children = command_line.GetOptionValues(kChildFlag);
+  auto children = command_line.GetOptionValues(kEagerChildFlag);
   auto basemgr_impl = CreateBasemgrImpl(modular::ModularConfigAccessor(config_result.take_value()),
                                         children, component_context.get(), inspector.get(), &loop);
 

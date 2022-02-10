@@ -5,8 +5,8 @@
     include: [ "//src/modular/bin/basemgr/meta/basemgr.cml" ],
     program: {
         args: [
-            "--child=foo",
-            "--child=bar",
+            "--eager-child=foo",
+            "--eager-child=bar",
         ],
     },
 

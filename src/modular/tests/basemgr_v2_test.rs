@@ -253,7 +253,7 @@ async fn sys_launcher_local_child(
 }
 
 // Tests that basemgr will launch all of connect to all Binder connections
-// in its namespace by passing in in child names via the "--child" flag.
+// in its namespace by passing in in child names via the "--eager-child" flag.
 // In production, basemgr will have actual child components and will have
 // fuchsia.component.Binder entries as a result of "use from child" clauses.
 // However, in this test, basemgr will not have any child components but will
