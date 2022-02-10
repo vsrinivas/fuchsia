@@ -38,6 +38,26 @@ service FOoBAR {};
   ASSERT_COMPILED(library);
 }
 
+TEST(CanonicalNamesTests, GoodAttributes) {
+  TestLibrary library(R"FIDL(library example;
+
+@foobar
+@foo_bar
+@f_o_o_b_a_r
+type Example = struct {};
+)FIDL");
+  ASSERT_COMPILED(library);
+}
+
+TEST(CanonicalNamesTests, GoodAttributeArguments) {
+  TestLibrary library(R"FIDL(library example;
+
+@some_attribute(foobar="", foo_bar="", f_o_o_b_a_r="")
+type Example = struct {};
+)FIDL");
+  ASSERT_COMPILED(library);
+}
+
 TEST(CanonicalNamesTests, GoodStructMembers) {
   TestLibrary library(R"FIDL(library example;
 
@@ -151,6 +171,20 @@ service Example {
   ASSERT_COMPILED(library);
 }
 
+TEST(CanonicalNamesTests, GoodResourceProperties) {
+  TestLibrary library(R"FIDL(library example;
+
+resource_definition Example {
+    properties {
+        foobar uint32;
+        foo_bar uint32;
+        f_o_o_b_a_r uint32;
+    };
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+}
+
 TEST(CanonicalNamesTests, GoodUpperAcronym) {
   TestLibrary library(R"FIDL(library example;
 
@@ -238,6 +272,33 @@ TEST(CanonicalNamesTests, BadTopLevel) {
       ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar", "%s", fidl.c_str());
     }
   }
+}
+
+TEST(CanonicalNamesTests, BadAttributes) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@fooBar
+@FooBar
+type Example = struct {};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttributeCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
+}
+
+TEST(CanonicalNamesTests, BadAttributeArguments) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@some_attribute(fooBar="", FooBar="")
+type Example = struct {};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttributeArgCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
 TEST(CanonicalNamesTests, BadStructMembers) {
@@ -369,6 +430,23 @@ service Example {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateServiceMemberNameCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
+}
+
+TEST(CanonicalNamesTests, BadResourceProperties) {
+  TestLibrary library(R"FIDL(
+library example;
+
+resource_definition Example {
+    properties {
+        fooBar uint32;
+        FooBar uint32;
+    };
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateResourcePropertyNameCanonical);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");

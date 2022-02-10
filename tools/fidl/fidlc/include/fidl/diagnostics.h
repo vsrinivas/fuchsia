@@ -230,8 +230,12 @@ constexpr ErrorDef<std::string_view, std::string_view, std::string_view, SourceS
 constexpr ErrorDef<std::string_view, std::string_view, std::string_view, SourceSpan>
     ErrDuplicateMemberValue(
         "value of {} member '{}' conflicts with previously declared member '{}' at {}");
-constexpr ErrorDef<SourceSpan> ErrDuplicateResourcePropertyName(
-    "multiple resource properties with the same name; previous was at {}");
+constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateResourcePropertyName(
+    "multiple resource properties named '{}'; previous was at {}");
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string_view>
+    ErrDuplicateResourcePropertyNameCanonical(
+        "resource property '{}' conflicts with property '{}' from {}; both are "
+        "represented by the canonical form '{}'");
 constexpr ErrorDef<flat::Name, std::string_view, std::string_view, flat::Name>
     ErrTypeMustBeResource(
         "'{}' may contain handles (due to member '{}'), so it must "

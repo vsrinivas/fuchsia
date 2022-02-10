@@ -895,7 +895,7 @@ void CompileStep::CompileEnum(Enum* enum_declaration) {
 }
 
 void CompileStep::CompileResource(Resource* resource_declaration) {
-  Scope<std::string_view> scope;
+  Scope<std::string> scope;
 
   CompileAttributeList(resource_declaration->attributes.get());
   CompileTypeConstructor(resource_declaration->subtype_ctor.get());
@@ -908,15 +908,21 @@ void CompileStep::CompileResource(Resource* resource_declaration) {
           types::PrimitiveSubtype::kUint32) {
     Fail(ErrResourceMustBeUint32Derived, resource_declaration->name.span().value(),
          resource_declaration->name);
-    return;
   }
 
   for (auto& property : resource_declaration->properties) {
     CompileAttributeList(property.attributes.get());
-    auto name_result = scope.Insert(property.name.data(), property.name);
+    const auto original_name = property.name.data();
+    const auto canonical_name = utils::canonicalize(original_name);
+    const auto name_result = scope.Insert(canonical_name, property.name);
     if (!name_result.ok()) {
-      Fail(ErrDuplicateResourcePropertyName, property.name, name_result.previous_occurrence());
-      return;
+      const auto previous_span = name_result.previous_occurrence();
+      if (original_name == previous_span.data()) {
+        Fail(ErrDuplicateResourcePropertyName, property.name, original_name, previous_span);
+      } else {
+        Fail(ErrDuplicateResourcePropertyNameCanonical, property.name, original_name,
+             previous_span.data(), previous_span, canonical_name);
+      }
     }
     CompileTypeConstructor(property.type_ctor.get());
   }
