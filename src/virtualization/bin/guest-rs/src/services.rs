@@ -29,6 +29,7 @@ pub fn connect_to_env(env_id: u32) -> Result<RealmProxy, Error> {
     Ok(realm)
 }
 
+#[allow(dead_code)] // TODO(fxbug.dev/89427): Implement guest tool
 pub fn connect_to_guest(env_id: u32, cid: u32) -> Result<GuestProxy, Error> {
     let realm = connect_to_env(env_id)?;
     // Connect guest, like realm

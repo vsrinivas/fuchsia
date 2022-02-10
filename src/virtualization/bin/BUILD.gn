@@ -22,6 +22,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "guest-rs:tests",
     "guest_manager:tests",
     "linux_runner:tests",
     "vmm:tests",

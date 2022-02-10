@@ -1,8 +1,10 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 use {anyhow::Error, argh::FromArgs, fuchsia_async as fasync};
+
+mod balloon;
+mod services;
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Top-level command.
@@ -128,6 +130,26 @@ struct Vsh {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let options: GuestOptions = argh::from_env();
-    println!("{:#?}", options);
+
+    match options.nested {
+        SubCommands::Two(balloon_args) => {
+            let balloon_controller =
+                balloon::connect_to_balloon_controller(balloon_args.env_id, balloon_args.cid)
+                    .await?;
+            let output =
+                balloon::handle_balloon(balloon_controller, balloon_args.num_pages).await?;
+            println!("{}", output);
+        }
+        SubCommands::Three(balloon_stat_args) => {
+            let balloon_controller = balloon::connect_to_balloon_controller(
+                balloon_stat_args.env_id,
+                balloon_stat_args.cid,
+            )
+            .await?;
+            let output = balloon::handle_balloon_stats(balloon_controller).await?;
+            println!("{}", output);
+        }
+        _ => unimplemented!(), // TODO(fxbug.dev/89427): Implement guest tool
+    }
     Ok(())
 }
