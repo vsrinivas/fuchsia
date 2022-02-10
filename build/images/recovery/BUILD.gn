@@ -165,6 +165,19 @@ assemble_system("recovery-eng") {
         type = "zbi"
       },
     ]
+
+    if (custom_signing_script != "" || use_vboot) {
+      images += [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = "recovery-eng.signed"
+          path = rebase_path(
+                  "$target_out_dir/recovery-eng/recovery-eng.zbi.signed",
+                  root_build_dir)
+          type = "zbi.signed"
+        },
+      ]
+    }
   }
 }
 
@@ -229,6 +242,19 @@ assemble_system("recovery-installer") {
         type = "zbi"
       },
     ]
+
+    if (custom_signing_script != "" || use_vboot) {
+      images += [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = "recovery-installer.signed"
+          path = rebase_path(
+                  "$target_out_dir/recovery-installer/recovery-installer.zbi.signed",
+                  root_build_dir)
+          type = "zbi.signed"
+        },
+      ]
+    }
   }
 }
 
