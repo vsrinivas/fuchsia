@@ -162,11 +162,12 @@ func (b *equalityCheckBuilder) visitHandle(actualExpr string, expectedValue gidl
 }
 
 func (b *equalityCheckBuilder) visitStruct(actualExpr string, expectedValue gidlir.Record, decl *gidlmixer.StructDecl) {
+	actualVar := b.createAndAssignVar(actualExpr)
 	op := "."
 	if decl.IsNullable() {
 		op = "->"
+		b.assertNotEquals(actualVar, "nullptr")
 	}
-	actualVar := b.createAndAssignVar(actualExpr)
 	for _, field := range expectedValue.Fields {
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {
@@ -202,11 +203,12 @@ func (b *equalityCheckBuilder) visitTable(actualExpr string, expectedValue gidli
 }
 
 func (b *equalityCheckBuilder) visitUnion(actualExpr string, expectedValue gidlir.Record, decl *gidlmixer.UnionDecl) {
+	actualVar := b.createAndAssignVar(actualExpr)
 	op := "."
 	if decl.IsNullable() {
 		op = "->"
+		b.assertNotEquals(actualVar, "nullptr")
 	}
-	actualVar := b.createAndAssignVar(actualExpr)
 	if len(expectedValue.Fields) != 1 {
 		panic("shouldn't happen")
 	}
@@ -221,6 +223,7 @@ func (b *equalityCheckBuilder) visitUnion(actualExpr string, expectedValue gidli
 	b.assertEquals(
 		fmt.Sprintf("%s%sWhich()", actualVar, op),
 		fmt.Sprintf("%s::Tag::k%s", declName(decl), fidlgen.ToUpperCamelCase(field.Key.Name)))
+	b.assertTrue(fmt.Sprintf("%s%s%s().has_value()", actualVar, op, fidlgen.ToSnakeCase(field.Key.Name)))
 	actualFieldExpr := fmt.Sprintf("%s%s%s().value()", actualVar, op, fidlgen.ToSnakeCase(field.Key.Name))
 	b.visit(actualFieldExpr, field.Value, fieldDecl)
 }

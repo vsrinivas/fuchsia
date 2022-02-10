@@ -574,6 +574,7 @@ TEST(Conformance, GoldenUnionStruct_V2_Decode) {
 		[[maybe_unused]] auto& f1 = value;
 [[maybe_unused]] auto& f2 = f1.v();
 ASSERT_EQ(f2.Which(), test_conformance::GoldenUnion::Tag::kV);
+ASSERT_TRUE(f2.v().has_value());
 ASSERT_EQ(f2.v().value(), int16_t(1ull));
 
 	});
@@ -589,7 +590,9 @@ TEST(Conformance, GoldenNullableUnionStructNonNull_V2_Decode) {
 		::fidl::internal::WireFormatVersion::kV2, bytes, handles, [&](test_conformance::GoldenNullableUnionStruct& value) {
 		[[maybe_unused]] auto& f1 = value;
 [[maybe_unused]] auto& f2 = f1.v();
+ASSERT_NE(f2, nullptr);
 ASSERT_EQ(f2->Which(), test_conformance::GoldenUnion::Tag::kV);
+ASSERT_TRUE(f2->v().has_value());
 ASSERT_EQ(f2->v().value(), int16_t(1ull));
 
 	});
@@ -736,6 +739,7 @@ TEST(Conformance, GoldenNullableStructNonNull_V2_Decode) {
 		::fidl::internal::WireFormatVersion::kV2, bytes, handles, [&](test_conformance::GoldenNullableStruct& value) {
 		[[maybe_unused]] auto& f1 = value;
 [[maybe_unused]] auto& f2 = f1.v();
+ASSERT_NE(f2, nullptr);
 ASSERT_EQ(f2->v(), bool(true));
 
 	});
