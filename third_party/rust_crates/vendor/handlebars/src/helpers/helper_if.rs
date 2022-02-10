@@ -36,7 +36,7 @@ impl HelperDef for IfHelper {
 
         let tmpl = if value { h.template() } else { h.inverse() };
         match tmpl {
-            Some(t) => t.render(r, ctx, rc, out),
+            Some(ref t) => t.render(r, ctx, rc, out),
             None => Ok(()),
         }
     }
@@ -124,66 +124,6 @@ mod test {
                     &json!({ "a": f64::NAN })
                 )
                 .unwrap()
-        );
-    }
-
-    #[test]
-    fn test_invisible_line_stripping() {
-        let hbs = Registry::new();
-        assert_eq!(
-            "yes\n",
-            hbs.render_template("{{#if a}}\nyes\n{{/if}}\n", &json!({"a": true}))
-                .unwrap()
-        );
-
-        assert_eq!(
-            "yes\r\n",
-            hbs.render_template("{{#if a}}\r\nyes\r\n{{/if}}\r\n", &json!({"a": true}))
-                .unwrap()
-        );
-
-        assert_eq!(
-            "x\ny",
-            hbs.render_template("{{#if a}}x{{/if}}\ny", &json!({"a": true}))
-                .unwrap()
-        );
-
-        assert_eq!(
-            "y\nz",
-            hbs.render_template("{{#if a}}\nx\n{{^}}\ny\n{{/if}}\nz", &json!({"a": false}))
-                .unwrap()
-        );
-
-        assert_eq!(
-            r#"yes
-  foo
-  bar
-  baz"#,
-            hbs.render_template(
-                r#"yes
-  {{#if true}}
-  foo
-  bar
-  {{/if}}
-  baz"#,
-                &json!({})
-            )
-            .unwrap()
-        );
-
-        assert_eq!(
-            r#"  foo
-  bar
-  baz"#,
-            hbs.render_template(
-                r#"  {{#if true}}
-  foo
-  bar
-  {{/if}}
-  baz"#,
-                &json!({})
-            )
-            .unwrap()
         );
     }
 }

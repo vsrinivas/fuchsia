@@ -1,78 +1,101 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
+
 # test.enum
 
 
 
+
+
+
+
 ## **ENUMS**
+
 ### MyEmptyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyEmptyFlexibleEnum}
 Type: <code>uint32</code>
 
 *Defined in [test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=20)*
 
+
+
+
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-</table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr></table>
+
 ### MyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnum}
 Type: <code>uint32</code>
 
 *Defined in [test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=8)*
 
+
+
+
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="MyFlexibleEnum.FOO">
-<td><h3 id="MyFlexibleEnum.FOO" class="add-link hide-from-toc">FOO</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyFlexibleEnum.FOO">
+            <td><h3 id="MyFlexibleEnum.FOO" class="add-link hide-from-toc">FOO</h3></td>
             <td><code>1</code></td>
-            <td></td>
-        </tr>
-        <tr id="MyFlexibleEnum.BAR">
-<td><h3 id="MyFlexibleEnum.BAR" class="add-link hide-from-toc">BAR</h3></td>
+            <td>
+</td>
+        </tr><tr id="MyFlexibleEnum.BAR">
+            <td><h3 id="MyFlexibleEnum.BAR" class="add-link hide-from-toc">BAR</h3></td>
             <td><code>2</code></td>
-            <td></td>
-        </tr>
-</table>
+            <td>
+</td>
+        </tr></table>
+
 ### MyFlexibleEnumWithCustomUnknown [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnumWithCustomUnknown}
 Type: <code>uint32</code>
 
 *Defined in [test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=13)*
 
+
+
+
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="MyFlexibleEnumWithCustomUnknown.FOO">
-<td><h3 id="MyFlexibleEnumWithCustomUnknown.FOO" class="add-link hide-from-toc">FOO</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyFlexibleEnumWithCustomUnknown.FOO">
+            <td><h3 id="MyFlexibleEnumWithCustomUnknown.FOO" class="add-link hide-from-toc">FOO</h3></td>
             <td><code>1</code></td>
-            <td></td>
-        </tr>
-        <tr id="MyFlexibleEnumWithCustomUnknown.BAR">
-<td><h3 id="MyFlexibleEnumWithCustomUnknown.BAR" class="add-link hide-from-toc">BAR</h3></td>
+            <td>
+</td>
+        </tr><tr id="MyFlexibleEnumWithCustomUnknown.BAR">
+            <td><h3 id="MyFlexibleEnumWithCustomUnknown.BAR" class="add-link hide-from-toc">BAR</h3></td>
             <td><code>2</code></td>
-            <td></td>
-        </tr>
-        <tr id="MyFlexibleEnumWithCustomUnknown.CUSTOM_UNKNOWN">
-<td><h3 id="MyFlexibleEnumWithCustomUnknown.CUSTOM_UNKNOWN" class="add-link hide-from-toc">CUSTOM_UNKNOWN</h3></td>
+            <td>
+</td>
+        </tr><tr id="MyFlexibleEnumWithCustomUnknown.CUSTOM_UNKNOWN">
+            <td><h3 id="MyFlexibleEnumWithCustomUnknown.CUSTOM_UNKNOWN" class="add-link hide-from-toc">CUSTOM_UNKNOWN</h3></td>
             <td><code>3</code></td>
-            <td></td>
-        </tr>
-</table>
+            <td>
+</td>
+        </tr></table>
+
 ### MyStrictEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyStrictEnum}
 Type: <code>uint32</code>
 
 *Defined in [test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=3)*
 
+
+
+
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="MyStrictEnum.FOO">
-<td><h3 id="MyStrictEnum.FOO" class="add-link hide-from-toc">FOO</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyStrictEnum.FOO">
+            <td><h3 id="MyStrictEnum.FOO" class="add-link hide-from-toc">FOO</h3></td>
             <td><code>1</code></td>
-            <td></td>
-        </tr>
-        <tr id="MyStrictEnum.BAR">
-<td><h3 id="MyStrictEnum.BAR" class="add-link hide-from-toc">BAR</h3></td>
+            <td>
+</td>
+        </tr><tr id="MyStrictEnum.BAR">
+            <td><h3 id="MyStrictEnum.BAR" class="add-link hide-from-toc">BAR</h3></td>
             <td><code>2</code></td>
-            <td></td>
-        </tr>
-</table>
+            <td>
+</td>
+        </tr></table>
+
+
+
+
+
+
 
 
 

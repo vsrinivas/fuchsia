@@ -13,10 +13,10 @@
 
 {{#if has_request}}
 #### Request {#{{methodId (rpn name) (rpn ../name)}}_Request}
-{{#if maybe_request}}
+{{#if maybe_request ~}}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    {{#each maybe_request.members}}
+    {{#each maybe_request.members ~}}
         <tr>
             <td><code>{{~ name ~}}</code></td>
             <td>
@@ -25,19 +25,19 @@
                 </code>
             </td>
         </tr>
-    {{/each}}
+    {{~ /each ~}}
 </table>
-{{else}}
+{{~ else ~}}
 &lt;EMPTY&gt;
-{{/if}}
-{{/if}}
+{{~ /if}}
+{{~ /if}}
 
 {{#if has_response}}
 #### Response {#{{methodId (rpn name) (rpn ../name)}}_Response}
-{{#if maybe_response}}
+{{#if maybe_response ~}}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    {{#each maybe_response.members}}
+    {{#each maybe_response.members ~}}
         <tr>
             <td><code>{{~ name ~}}</code></td>
             <td>
@@ -46,12 +46,12 @@
                 </code>
             </td>
         </tr>
-    {{/each}}
+    {{~ /each ~}}
 </table>
-{{else}}
+{{~ else ~}}
 &lt;EMPTY&gt;
-{{/if}}
-{{/if}}
-{{/each}}
-{{/each}}
-{{/if}}
+{{~ /if}}
+{{~ /if}}
+{{/each ~}}
+{{~ /each ~}}
+{{~ /if ~}}

@@ -1,24 +1,39 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
+
 # test.transitivedependencies
 
 
+
+
+
 ## **STRUCTS**
+
 ### Baz  {#Baz data-text="Baz"}
 *Defined in [test.transitivedependencies/top.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl;l=8)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Baz.g">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Baz.g">
             <td><code>g</code></td>
             <td>
                 <code><a class='link' href='../test.middle/'>test.middle</a>/<a class='link' href='../test.middle/#Bar'>Bar</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
+
+
+
+
+
+
 
 
 

@@ -475,7 +475,7 @@ impl TemplateTree {
         &self,
         handlebars: &mut Handlebars<'_>,
         args: &TemplateArgs,
-    ) -> Result<RenderedTree, handlebars::RenderError> {
+    ) -> Result<RenderedTree, handlebars::TemplateRenderError> {
         Ok(match self {
             Self::File { source, content } => {
                 let template_name = source.display().to_string();

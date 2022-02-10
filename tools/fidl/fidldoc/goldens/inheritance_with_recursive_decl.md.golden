@@ -1,51 +1,77 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
+
 # test.inheritancewithrecursivedecl
 
+
+
 ## **PROTOCOLS**
+
 ## Child {#Child}
 *Defined in [test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl;l=9)*
+
+
+
 ### First {#Child.First}
+
+
 
 #### Request {#Child.First_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-        <tr>
+    <tr>
             <td><code>request</code></td>
             <td>
                 <code>request&lt;<a class='link' href='#Parent'>Parent</a>&gt;</code>
             </td>
-        </tr>
-</table>
+        </tr></table>
+
+
 
 ### Second {#Child.Second}
+
+
 
 #### Request {#Child.Second_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-        <tr>
+    <tr>
             <td><code>request</code></td>
             <td>
                 <code>request&lt;<a class='link' href='#Parent'>Parent</a>&gt;</code>
             </td>
-        </tr>
-</table>
+        </tr></table>
+
+
 
 ## Parent {#Parent}
 *Defined in [test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl;l=3)*
+
+
+
 ### First {#Parent.First}
+
+
 
 #### Request {#Parent.First_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-        <tr>
+    <tr>
             <td><code>request</code></td>
             <td>
                 <code>request&lt;<a class='link' href='#Parent'>Parent</a>&gt;</code>
             </td>
-        </tr>
-</table>
+        </tr></table>
+
+
+
+
+
+
+
+
+
 
 
 

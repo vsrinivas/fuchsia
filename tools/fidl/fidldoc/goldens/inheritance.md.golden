@@ -1,59 +1,80 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
+
 # test.inheritance
 
+
+
 ## **PROTOCOLS**
+
 ## sub {#sub}
 *Defined in [test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=11)*
+
+
+
 ### foo {#sub.foo}
+
+
 
 #### Request {#sub.foo_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-        <tr>
+    <tr>
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
-        </tr>
-</table>
+        </tr></table>
+
 
 #### Response {#sub.foo_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-        <tr>
+    <tr>
             <td><code>y</code></td>
             <td>
                 <code>int64</code>
             </td>
-        </tr>
-</table>
+        </tr></table>
+
 ## super {#super}
 *Defined in [test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=3)*
+
+
+
 ### foo {#super.foo}
+
+
 
 #### Request {#super.foo_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-        <tr>
+    <tr>
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
-        </tr>
-</table>
+        </tr></table>
+
 
 #### Response {#super.foo_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-        <tr>
+    <tr>
             <td><code>y</code></td>
             <td>
                 <code>int64</code>
             </td>
-        </tr>
-</table>
+        </tr></table>
+
+
+
+
+
+
+
+
 
 
 

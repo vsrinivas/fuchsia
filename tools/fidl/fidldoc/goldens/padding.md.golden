@@ -1,402 +1,477 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
+
 # test.padding
 
 
+
+
+
 ## **STRUCTS**
+
 ### Padding1ByteEnd  {#Padding1ByteEnd data-text="Padding1ByteEnd"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=3)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding1ByteEnd.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding1ByteEnd.a">
             <td><code>a</code></td>
             <td>
                 <code>uint16</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding1ByteEnd.b">
+        </tr><tr id="Padding1ByteEnd.b">
             <td><code>b</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding1ByteMiddle  {#Padding1ByteMiddle data-text="Padding1ByteMiddle"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=46)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding1ByteMiddle.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding1ByteMiddle.a">
             <td><code>a</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding1ByteMiddle.b">
+        </tr><tr id="Padding1ByteMiddle.b">
             <td><code>b</code></td>
             <td>
                 <code>uint16</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding2ByteAlignmentLength6  {#Padding2ByteAlignmentLength6 data-text="Padding2ByteAlignmentLength6"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=102)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding2ByteAlignmentLength6.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding2ByteAlignmentLength6.a">
             <td><code>a</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding2ByteAlignmentLength6.b">
+        </tr><tr id="Padding2ByteAlignmentLength6.b">
             <td><code>b</code></td>
             <td>
                 <code>uint16</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding2ByteAlignmentLength6.c">
+        </tr><tr id="Padding2ByteAlignmentLength6.c">
             <td><code>c</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding2ByteEnd  {#Padding2ByteEnd data-text="Padding2ByteEnd"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=9)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding2ByteEnd.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding2ByteEnd.a">
             <td><code>a</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding2ByteEnd.b">
+        </tr><tr id="Padding2ByteEnd.b">
             <td><code>b</code></td>
             <td>
                 <code>uint16</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding2ByteMiddle  {#Padding2ByteMiddle data-text="Padding2ByteMiddle"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=52)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding2ByteMiddle.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding2ByteMiddle.a">
             <td><code>a</code></td>
             <td>
                 <code>uint16</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding2ByteMiddle.b">
+        </tr><tr id="Padding2ByteMiddle.b">
             <td><code>b</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding3ByteEnd  {#Padding3ByteEnd data-text="Padding3ByteEnd"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=15)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding3ByteEnd.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding3ByteEnd.a">
             <td><code>a</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding3ByteEnd.b">
+        </tr><tr id="Padding3ByteEnd.b">
             <td><code>b</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding3ByteMiddle  {#Padding3ByteMiddle data-text="Padding3ByteMiddle"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=58)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding3ByteMiddle.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding3ByteMiddle.a">
             <td><code>a</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding3ByteMiddle.b">
+        </tr><tr id="Padding3ByteMiddle.b">
             <td><code>b</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding4ByteAlignmentLength12  {#Padding4ByteAlignmentLength12 data-text="Padding4ByteAlignmentLength12"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=93)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding4ByteAlignmentLength12.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding4ByteAlignmentLength12.a">
             <td><code>a</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding4ByteAlignmentLength12.b">
+        </tr><tr id="Padding4ByteAlignmentLength12.b">
             <td><code>b</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding4ByteAlignmentLength12.c">
+        </tr><tr id="Padding4ByteAlignmentLength12.c">
             <td><code>c</code></td>
             <td>
                 <code>uint16</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding4ByteAlignmentLength12.d">
+        </tr><tr id="Padding4ByteAlignmentLength12.d">
             <td><code>d</code></td>
             <td>
                 <code>uint16</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding4ByteEnd  {#Padding4ByteEnd data-text="Padding4ByteEnd"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=21)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding4ByteEnd.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding4ByteEnd.a">
             <td><code>a</code></td>
             <td>
                 <code>uint64</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding4ByteEnd.b">
+        </tr><tr id="Padding4ByteEnd.b">
             <td><code>b</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding4ByteMiddle  {#Padding4ByteMiddle data-text="Padding4ByteMiddle"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=64)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding4ByteMiddle.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding4ByteMiddle.a">
             <td><code>a</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding4ByteMiddle.b">
+        </tr><tr id="Padding4ByteMiddle.b">
             <td><code>b</code></td>
             <td>
                 <code>uint64</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding5ByteEnd  {#Padding5ByteEnd data-text="Padding5ByteEnd"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=27)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding5ByteEnd.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding5ByteEnd.a">
             <td><code>a</code></td>
             <td>
                 <code>uint64</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding5ByteEnd.b">
+        </tr><tr id="Padding5ByteEnd.b">
             <td><code>b</code></td>
             <td>
                 <code>uint16</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding5ByteEnd.c">
+        </tr><tr id="Padding5ByteEnd.c">
             <td><code>c</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding5ByteMiddle  {#Padding5ByteMiddle data-text="Padding5ByteMiddle"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=70)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding5ByteMiddle.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding5ByteMiddle.a">
             <td><code>a</code></td>
             <td>
                 <code>uint16</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding5ByteMiddle.b">
+        </tr><tr id="Padding5ByteMiddle.b">
             <td><code>b</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding5ByteMiddle.c">
+        </tr><tr id="Padding5ByteMiddle.c">
             <td><code>c</code></td>
             <td>
                 <code>uint64</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding6ByteEnd  {#Padding6ByteEnd data-text="Padding6ByteEnd"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=34)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding6ByteEnd.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding6ByteEnd.a">
             <td><code>a</code></td>
             <td>
                 <code>uint64</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding6ByteEnd.b">
+        </tr><tr id="Padding6ByteEnd.b">
             <td><code>b</code></td>
             <td>
                 <code>uint16</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding6ByteMiddle  {#Padding6ByteMiddle data-text="Padding6ByteMiddle"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=77)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding6ByteMiddle.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding6ByteMiddle.a">
             <td><code>a</code></td>
             <td>
                 <code>uint16</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding6ByteMiddle.b">
+        </tr><tr id="Padding6ByteMiddle.b">
             <td><code>b</code></td>
             <td>
                 <code>uint64</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding7ByteEnd  {#Padding7ByteEnd data-text="Padding7ByteEnd"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=40)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding7ByteEnd.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding7ByteEnd.a">
             <td><code>a</code></td>
             <td>
                 <code>uint64</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding7ByteEnd.b">
+        </tr><tr id="Padding7ByteEnd.b">
             <td><code>b</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
 ### Padding7ByteMiddle  {#Padding7ByteMiddle data-text="Padding7ByteMiddle"}
 *Defined in [test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=83)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Padding7ByteMiddle.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Padding7ByteMiddle.a">
             <td><code>a</code></td>
             <td>
                 <code>uint8</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
-        </tr>
-        <tr id="Padding7ByteMiddle.b">
+        </tr><tr id="Padding7ByteMiddle.b">
             <td><code>b</code></td>
             <td>
                 <code>uint64</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
+
+
+
+
+
+
+
 
 
 

@@ -10,7 +10,7 @@
 
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    {{#each members}}
+    {{#each members ~}}
         <tr id="{{rpn ../name}}.{{~ name ~}}">
             {{!-- This uses h3 since fuchsia.dev does not apply heading style if an h2/h3 is in a table --}}
             <td><h3 id="{{rpn ../name}}.{{~ name ~}}" class="add-link hide-from-toc">{{~ ordinal ~}}</h3></td>
@@ -30,7 +30,7 @@
                 {{~> doc ~}}
             </td>
         </tr>
-    {{/each}}
+    {{~ /each ~}}
 </table>
-{{/each}}
+{{/each ~}}
 {{/if}}

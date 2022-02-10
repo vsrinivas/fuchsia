@@ -3,32 +3,23 @@ extern crate criterion;
 #[macro_use]
 extern crate serde_derive;
 
-use criterion::Criterion;
-use handlebars::{to_json, Context, Handlebars, Template};
-use serde_json::value::Value as Json;
 use std::collections::BTreeMap;
-
-#[cfg(unix)]
-use criterion::profiler::Profiler;
-#[cfg(unix)]
-use pprof::protos::Message;
-#[cfg(unix)]
-use pprof::ProfilerGuard;
-
-#[cfg(unix)]
 use std::fs::{create_dir_all, File};
-#[cfg(unix)]
 use std::io::Write;
-#[cfg(unix)]
 use std::path::Path;
 
-#[cfg(unix)]
+use criterion::profiler::Profiler;
+use criterion::Criterion;
+use handlebars::{to_json, Context, Handlebars, Template};
+use pprof::protos::Message;
+use pprof::ProfilerGuard;
+use serde_json::value::Value as Json;
+
 #[derive(Default)]
 struct CpuProfiler<'a> {
     guard: Option<ProfilerGuard<'a>>,
 }
 
-#[cfg(unix)]
 impl<'a> Profiler for CpuProfiler<'a> {
     fn start_profiling(&mut self, _benchmark_id: &str, benchmark_dir: &Path) {
         create_dir_all(&benchmark_dir).unwrap();
@@ -56,7 +47,6 @@ impl<'a> Profiler for CpuProfiler<'a> {
     }
 }
 
-#[cfg(unix)]
 fn profiled() -> Criterion {
     Criterion::default().with_profiler(CpuProfiler::default())
 }
@@ -215,22 +205,10 @@ fn large_nested_loop(c: &mut Criterion) {
     });
 }
 
-#[cfg(unix)]
 criterion_group!(
     name = benches;
     config = profiled();
     targets = parse_template, render_template, large_loop_helper, large_loop_helper_with_context_creation,
-    large_nested_loop
+              large_nested_loop
 );
-
-#[cfg(not(unix))]
-criterion_group!(
-    benches,
-    parse_template,
-    render_template,
-    large_loop_helper,
-    large_loop_helper_with_context_creation,
-    large_nested_loop
-);
-
 criterion_main!(benches);

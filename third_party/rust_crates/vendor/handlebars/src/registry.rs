@@ -1,9 +1,9 @@
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
-use std::io::{Error as IoError, Write};
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::BufReader;
 use std::path::Path;
-use std::sync::Arc;
 
 use serde::Serialize;
 
@@ -11,13 +11,12 @@ use crate::context::Context;
 use crate::decorators::{self, DecoratorDef};
 #[cfg(feature = "script_helper")]
 use crate::error::ScriptError;
-use crate::error::{RenderError, TemplateError};
+use crate::error::{RenderError, TemplateError, TemplateFileError, TemplateRenderError};
 use crate::helpers::{self, HelperDef};
 use crate::output::{Output, StringOutput, WriteOutput};
 use crate::render::{RenderContext, Renderable};
-use crate::sources::{FileSource, Source};
 use crate::support::str::{self, StringWriter};
-use crate::template::{Template, TemplateOptions};
+use crate::template::Template;
 
 #[cfg(feature = "dir_source")]
 use std::path;
@@ -30,15 +29,12 @@ use rhai::Engine;
 #[cfg(feature = "script_helper")]
 use crate::helpers::scripting::ScriptHelper;
 
-#[cfg(feature = "rust-embed")]
-use rust_embed::RustEmbed;
-
 /// This type represents an *escape fn*, that is a function whose purpose it is
 /// to escape potentially problematic characters in a string.
 ///
 /// An *escape fn* is represented as a `Box` to avoid unnecessary type
 /// parameters (and because traits cannot be aliased using `type`).
-pub type EscapeFn = Arc<dyn Fn(&str) -> String + Send + Sync>;
+pub type EscapeFn = Box<dyn Fn(&str) -> String + Send + Sync>;
 
 /// The default *escape fn* replaces the characters `&"<>`
 /// with the equivalent html / xml entities.
@@ -55,25 +51,15 @@ pub fn no_escape(data: &str) -> String {
 /// The single entry point of your Handlebars templates
 ///
 /// It maintains compiled templates and registered helpers.
-#[derive(Clone)]
 pub struct Registry<'reg> {
     templates: HashMap<String, Template>,
-
-    helpers: HashMap<String, Arc<dyn HelperDef + Send + Sync + 'reg>>,
-    decorators: HashMap<String, Arc<dyn DecoratorDef + Send + Sync + 'reg>>,
-
+    helpers: HashMap<String, Box<dyn HelperDef + Send + Sync + 'reg>>,
+    decorators: HashMap<String, Box<dyn DecoratorDef + Send + Sync + 'reg>>,
     escape_fn: EscapeFn,
+    source_map: bool,
     strict_mode: bool,
-    dev_mode: bool,
-    prevent_indent: bool,
     #[cfg(feature = "script_helper")]
-    pub(crate) engine: Arc<Engine>,
-
-    template_sources:
-        HashMap<String, Arc<dyn Source<Item = String, Error = IoError> + Send + Sync + 'reg>>,
-    #[cfg(feature = "script_helper")]
-    script_sources:
-        HashMap<String, Arc<dyn Source<Item = String, Error = IoError> + Send + Sync + 'reg>>,
+    pub(crate) engine: Engine,
 }
 
 impl<'reg> Debug for Registry<'reg> {
@@ -82,8 +68,7 @@ impl<'reg> Debug for Registry<'reg> {
             .field("templates", &self.templates)
             .field("helpers", &self.helpers.keys())
             .field("decorators", &self.decorators.keys())
-            .field("strict_mode", &self.strict_mode)
-            .field("dev_mode", &self.dev_mode)
+            .field("source_map", &self.source_map)
             .finish()
     }
 }
@@ -118,17 +103,13 @@ impl<'reg> Registry<'reg> {
     pub fn new() -> Registry<'reg> {
         let r = Registry {
             templates: HashMap::new(),
-            template_sources: HashMap::new(),
             helpers: HashMap::new(),
             decorators: HashMap::new(),
-            escape_fn: Arc::new(html_escape),
+            escape_fn: Box::new(html_escape),
+            source_map: true,
             strict_mode: false,
-            dev_mode: false,
-            prevent_indent: false,
             #[cfg(feature = "script_helper")]
-            engine: Arc::new(rhai_engine()),
-            #[cfg(feature = "script_helper")]
-            script_sources: HashMap::new(),
+            engine: rhai_engine(),
         };
 
         r.setup_builtins()
@@ -143,30 +124,39 @@ impl<'reg> Registry<'reg> {
         self.register_helper("raw", Box::new(helpers::RAW_HELPER));
         self.register_helper("log", Box::new(helpers::LOG_HELPER));
 
-        self.register_helper("eq", Box::new(helpers::helper_extras::eq));
-        self.register_helper("ne", Box::new(helpers::helper_extras::ne));
-        self.register_helper("gt", Box::new(helpers::helper_extras::gt));
-        self.register_helper("gte", Box::new(helpers::helper_extras::gte));
-        self.register_helper("lt", Box::new(helpers::helper_extras::lt));
-        self.register_helper("lte", Box::new(helpers::helper_extras::lte));
-        self.register_helper("and", Box::new(helpers::helper_extras::and));
-        self.register_helper("or", Box::new(helpers::helper_extras::or));
-        self.register_helper("not", Box::new(helpers::helper_extras::not));
-        self.register_helper("len", Box::new(helpers::helper_extras::len));
+        self.register_helper("eq", Box::new(helpers::helper_boolean::eq));
+        self.register_helper("ne", Box::new(helpers::helper_boolean::ne));
+        self.register_helper("gt", Box::new(helpers::helper_boolean::gt));
+        self.register_helper("gte", Box::new(helpers::helper_boolean::gte));
+        self.register_helper("lt", Box::new(helpers::helper_boolean::lt));
+        self.register_helper("lte", Box::new(helpers::helper_boolean::lte));
+        self.register_helper("and", Box::new(helpers::helper_boolean::and));
+        self.register_helper("or", Box::new(helpers::helper_boolean::or));
+        self.register_helper("not", Box::new(helpers::helper_boolean::not));
 
         self.register_decorator("inline", Box::new(decorators::INLINE_DECORATOR));
         self
     }
 
-    /// Enable or disable handlebars strict mode
+    /// Enable handlebars template source map
+    ///
+    /// Source map provides line/col reporting on error. It uses slightly
+    /// more memory to maintain the data.
+    ///
+    /// Default is true.
+    pub fn source_map_enabled(&mut self, enable: bool) {
+        self.source_map = enable;
+    }
+
+    /// Enable handlebars strict mode
     ///
     /// By default, handlebars renders empty string for value that
     /// undefined or never exists. Since rust is a static type
     /// language, we offer strict mode in handlebars-rust.  In strict
     /// mode, if you were to render a value that doesn't exist, a
     /// `RenderError` will be raised.
-    pub fn set_strict_mode(&mut self, enabled: bool) {
-        self.strict_mode = enabled;
+    pub fn set_strict_mode(&mut self, enable: bool) {
+        self.strict_mode = enable;
     }
 
     /// Return strict mode state, default is false.
@@ -180,51 +170,11 @@ impl<'reg> Registry<'reg> {
         self.strict_mode
     }
 
-    /// Return dev mode state, default is false
-    ///
-    /// With dev mode turned on, handlebars enables a set of development
-    /// friendly features, that may affect its performance.
-    pub fn dev_mode(&self) -> bool {
-        self.dev_mode
-    }
-
-    /// Enable or disable dev mode
-    ///
-    /// With dev mode turned on, handlebars enables a set of development
-    /// friendly features, that may affect its performance.
-    ///
-    /// **Note that you have to enable dev mode before adding templates to
-    /// the registry**. Otherwise it won't take effect at all.
-    pub fn set_dev_mode(&mut self, enabled: bool) {
-        self.dev_mode = enabled;
-
-        // clear template source when disabling dev mode
-        if !enabled {
-            self.template_sources.clear();
-        }
-    }
-
-    /// Enable or disable indent for partial include tag `{{>}}`
-    ///
-    /// By default handlebars keeps indent whitespaces for partial
-    /// include tag, to change this behaviour, set this toggle to `true`.
-    pub fn set_prevent_indent(&mut self, enable: bool) {
-        self.prevent_indent = enable;
-    }
-
-    /// Return state for `prevent_indent` option, default to `false`.
-    pub fn prevent_indent(&self) -> bool {
-        self.prevent_indent
-    }
-
     /// Register a `Template`
     ///
     /// This is infallible since the template has already been parsed and
     /// insert cannot fail. If there is an existing template with this name it
     /// will be overwritten.
-    ///
-    /// Dev mode doesn't apply for pre-compiled template because it's lifecycle
-    /// is not managed by the registry.
     pub fn register_template(&mut self, name: &str, tpl: Template) {
         self.templates.insert(name.to_string(), tpl);
     }
@@ -240,13 +190,7 @@ impl<'reg> Registry<'reg> {
     where
         S: AsRef<str>,
     {
-        let template = Template::compile2(
-            tpl_str.as_ref(),
-            TemplateOptions {
-                name: Some(name.to_owned()),
-                prevent_indent: self.prevent_indent,
-            },
-        )?;
+        let template = Template::compile_with_name(tpl_str, name.to_owned(), self.source_map)?;
         self.register_template(name, template);
         Ok(())
     }
@@ -262,30 +206,19 @@ impl<'reg> Registry<'reg> {
         self.register_template_string(name, partial_str)
     }
 
-    /// Register a template from a path on file system
-    ///
-    /// If dev mode is enabled, the registry will keep reading the template file
-    /// from file system everytime it's visited.
+    /// Register a template from a path
     pub fn register_template_file<P>(
         &mut self,
         name: &str,
         tpl_path: P,
-    ) -> Result<(), TemplateError>
+    ) -> Result<(), TemplateFileError>
     where
         P: AsRef<Path>,
     {
-        let source = FileSource::new(tpl_path.as_ref().into());
-        let template_string = source
-            .load()
-            .map_err(|err| TemplateError::from((err, name.to_owned())))?;
-
-        self.register_template_string(name, template_string)?;
-        if self.dev_mode {
-            self.template_sources
-                .insert(name.to_owned(), Arc::new(source));
-        }
-
-        Ok(())
+        let mut reader = BufReader::new(
+            File::open(tpl_path).map_err(|e| TemplateFileError::IOError(e, name.to_owned()))?,
+        );
+        self.register_template_source(name, &mut reader)
     }
 
     /// Register templates from a directory
@@ -300,16 +233,12 @@ impl<'reg> Registry<'reg> {
     ///
     /// This method is not available by default.
     /// You will need to enable the `dir_source` feature to use it.
-    ///
-    /// When dev_mode enabled, like `register_template_file`, templates is reloaded
-    /// from file system everytime it's visied.
     #[cfg(feature = "dir_source")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "dir_source")))]
     pub fn register_templates_directory<P>(
         &mut self,
         tpl_extension: &'static str,
         dir_path: P,
-    ) -> Result<(), TemplateError>
+    ) -> Result<(), TemplateFileError>
     where
         P: AsRef<Path>,
     {
@@ -346,47 +275,35 @@ impl<'reg> Registry<'reg> {
         Ok(())
     }
 
-    /// Register templates using a
-    /// [RustEmbed](https://github.com/pyros2097/rust-embed) type
-    ///
-    /// File names from embed struct are used as template name.
-    ///
-    /// ```skip
-    /// #[derive(RustEmbed)]
-    /// #[folder = "templates"]
-    /// struct Assets;
-    ///
-    /// let mut hbs = Handlebars::new();
-    /// hbs.register_embed_templates::<Assets>();
-    /// ```
-    ///
-    #[cfg(feature = "rust-embed")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "rust-embed")))]
-    pub fn register_embed_templates<E>(&mut self) -> Result<(), TemplateError>
+    /// Register a template from `std::io::Read` source
+    pub fn register_template_source<R>(
+        &mut self,
+        name: &str,
+        tpl_source: &mut R,
+    ) -> Result<(), TemplateFileError>
     where
-        E: RustEmbed,
+        R: Read,
     {
-        for item in E::iter() {
-            let file_name = item.as_ref();
-            if let Some(file) = E::get(file_name) {
-                let data = file.data;
-
-                let tpl_content = String::from_utf8_lossy(data.as_ref());
-                self.register_template_string(&file_name.to_owned(), tpl_content)?;
-            }
-        }
+        let mut buf = String::new();
+        tpl_source
+            .read_to_string(&mut buf)
+            .map_err(|e| TemplateFileError::IOError(e, name.to_owned()))?;
+        self.register_template_string(name, buf)?;
         Ok(())
     }
 
     /// Remove a template from the registry
     pub fn unregister_template(&mut self, name: &str) {
         self.templates.remove(name);
-        self.template_sources.remove(name);
     }
 
     /// Register a helper
-    pub fn register_helper(&mut self, name: &str, def: Box<dyn HelperDef + Send + Sync + 'reg>) {
-        self.helpers.insert(name.to_string(), def.into());
+    pub fn register_helper(
+        &mut self,
+        name: &str,
+        def: Box<dyn HelperDef + Send + Sync + 'reg>,
+    ) -> Option<Box<dyn HelperDef + Send + Sync + 'reg>> {
+        self.helpers.insert(name.to_string(), def)
     }
 
     /// Register a [rhai](https://docs.rs/rhai/) script as handlebars helper
@@ -409,52 +326,37 @@ impl<'reg> Registry<'reg> {
     /// (value * 100).to_string() + label
     /// ```
     ///
+    ///
     #[cfg(feature = "script_helper")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "script_helper")))]
-    pub fn register_script_helper(&mut self, name: &str, script: &str) -> Result<(), ScriptError> {
-        let compiled = self.engine.compile(script)?;
+    pub fn register_script_helper(
+        &mut self,
+        name: &str,
+        script: String,
+    ) -> Result<Option<Box<dyn HelperDef + Send + Sync + 'reg>>, ScriptError> {
+        let compiled = self.engine.compile(&script)?;
         let script_helper = ScriptHelper { script: compiled };
-        self.helpers
-            .insert(name.to_string(), Arc::new(script_helper));
-        Ok(())
+        Ok(self
+            .helpers
+            .insert(name.to_string(), Box::new(script_helper)))
     }
 
     /// Register a [rhai](https://docs.rs/rhai/) script from file
-    ///
-    /// When dev mode is enable, script file is reloaded from original file
-    /// everytime it is called.
     #[cfg(feature = "script_helper")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "script_helper")))]
     pub fn register_script_helper_file<P>(
         &mut self,
         name: &str,
         script_path: P,
-    ) -> Result<(), ScriptError>
+    ) -> Result<Option<Box<dyn HelperDef + Send + Sync + 'reg>>, ScriptError>
     where
         P: AsRef<Path>,
     {
-        let source = FileSource::new(script_path.as_ref().into());
-        let script = source.load()?;
+        let mut script = String::new();
+        {
+            let mut file = File::open(script_path)?;
+            file.read_to_string(&mut script)?;
+        }
 
-        self.script_sources
-            .insert(name.to_owned(), Arc::new(source));
-        self.register_script_helper(name, &script)
-    }
-
-    /// Borrow a read-only reference to current rhai engine
-    #[cfg(feature = "script_helper")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "script_helper")))]
-    pub fn engine(&self) -> &Engine {
-        self.engine.as_ref()
-    }
-
-    /// Set a custom rhai engine for the registry.
-    ///
-    /// *Note that* you need to set custom engine before adding scripts.
-    #[cfg(feature = "script_helper")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "script_helper")))]
-    pub fn set_engine(&mut self, engine: Engine) {
-        self.engine = Arc::new(engine);
+        self.register_script_helper(name, script)
     }
 
     /// Register a decorator
@@ -462,8 +364,8 @@ impl<'reg> Registry<'reg> {
         &mut self,
         name: &str,
         def: Box<dyn DecoratorDef + Send + Sync + 'reg>,
-    ) {
-        self.decorators.insert(name.to_string(), def.into());
+    ) -> Option<Box<dyn DecoratorDef + Send + Sync + 'reg>> {
+        self.decorators.insert(name.to_string(), def)
     }
 
     /// Register a new *escape fn* to be used from now on by this registry.
@@ -471,12 +373,12 @@ impl<'reg> Registry<'reg> {
         &mut self,
         escape_fn: F,
     ) {
-        self.escape_fn = Arc::new(escape_fn);
+        self.escape_fn = Box::new(escape_fn);
     }
 
     /// Restore the default *escape fn*.
     pub fn unregister_escape_fn(&mut self) {
-        self.escape_fn = Arc::new(html_escape);
+        self.escape_fn = Box::new(html_escape);
     }
 
     /// Get a reference to the current *escape fn*.
@@ -494,65 +396,9 @@ impl<'reg> Registry<'reg> {
         self.templates.get(name)
     }
 
-    #[inline]
-    pub(crate) fn get_or_load_template_optional(
-        &'reg self,
-        name: &str,
-    ) -> Option<Result<Cow<'reg, Template>, RenderError>> {
-        if let (true, Some(source)) = (self.dev_mode, self.template_sources.get(name)) {
-            let r = source
-                .load()
-                .map_err(|e| TemplateError::from((e, name.to_owned())))
-                .and_then(|tpl_str| {
-                    Template::compile2(
-                        tpl_str.as_ref(),
-                        TemplateOptions {
-                            name: Some(name.to_owned()),
-                            prevent_indent: self.prevent_indent,
-                        },
-                    )
-                })
-                .map(Cow::Owned)
-                .map_err(RenderError::from);
-            Some(r)
-        } else {
-            self.templates.get(name).map(|t| Ok(Cow::Borrowed(t)))
-        }
-    }
-
-    #[inline]
-    pub(crate) fn get_or_load_template(
-        &'reg self,
-        name: &str,
-    ) -> Result<Cow<'reg, Template>, RenderError> {
-        if let Some(result) = self.get_or_load_template_optional(name) {
-            result
-        } else {
-            Err(RenderError::new(format!("Template not found: {}", name)))
-        }
-    }
-
     /// Return a registered helper
-    #[inline]
-    pub(crate) fn get_or_load_helper(
-        &'reg self,
-        name: &str,
-    ) -> Result<Option<Arc<dyn HelperDef + Send + Sync + 'reg>>, RenderError> {
-        #[cfg(feature = "script_helper")]
-        if let (true, Some(source)) = (self.dev_mode, self.script_sources.get(name)) {
-            return source
-                .load()
-                .map_err(ScriptError::from)
-                .and_then(|s| {
-                    let helper = Box::new(ScriptHelper {
-                        script: self.engine.compile(&s)?,
-                    }) as Box<dyn HelperDef + Send + Sync>;
-                    Ok(Some(helper.into()))
-                })
-                .map_err(RenderError::from);
-        }
-
-        Ok(self.helpers.get(name).cloned())
+    pub fn get_helper(&self, name: &str) -> Option<&(dyn HelperDef + Send + Sync + 'reg)> {
+        self.helpers.get(name).map(|v| v.as_ref())
     }
 
     #[inline]
@@ -561,19 +407,11 @@ impl<'reg> Registry<'reg> {
     }
 
     /// Return a registered decorator
-    #[inline]
-    pub(crate) fn get_decorator(
-        &self,
-        name: &str,
-    ) -> Option<&(dyn DecoratorDef + Send + Sync + 'reg)> {
+    pub fn get_decorator(&self, name: &str) -> Option<&(dyn DecoratorDef + Send + Sync + 'reg)> {
         self.decorators.get(name).map(|v| v.as_ref())
     }
 
     /// Return all templates registered
-    ///
-    /// **Note that** in dev mode, the template returned from this method may
-    /// not reflect its latest state. This method doesn't try to reload templates
-    /// from its source.
     pub fn get_templates(&self) -> &HashMap<String, Template> {
         &self.templates
     }
@@ -581,10 +419,8 @@ impl<'reg> Registry<'reg> {
     /// Unregister all templates
     pub fn clear_templates(&mut self) {
         self.templates.clear();
-        self.template_sources.clear();
     }
 
-    #[inline]
     fn render_to_output<O>(
         &self,
         name: &str,
@@ -594,10 +430,12 @@ impl<'reg> Registry<'reg> {
     where
         O: Output,
     {
-        self.get_or_load_template(name).and_then(|t| {
-            let mut render_context = RenderContext::new(t.name.as_ref());
-            t.render(self, ctx, &mut render_context, output)
-        })
+        self.get_template(name)
+            .ok_or_else(|| RenderError::new(format!("Template not found: {}", name)))
+            .and_then(|t| {
+                let mut render_context = RenderContext::new(t.name.as_ref());
+                t.render(self, &ctx, &mut render_context, output)
+            })
     }
 
     /// Render a registered template with some data into a string
@@ -635,7 +473,11 @@ impl<'reg> Registry<'reg> {
     }
 
     /// Render a template string using current registry without registering it
-    pub fn render_template<T>(&self, template_string: &str, data: &T) -> Result<String, RenderError>
+    pub fn render_template<T>(
+        &self,
+        template_string: &str,
+        data: &T,
+    ) -> Result<String, TemplateRenderError>
     where
         T: Serialize,
     {
@@ -649,22 +491,17 @@ impl<'reg> Registry<'reg> {
         &self,
         template_string: &str,
         ctx: &Context,
-    ) -> Result<String, RenderError> {
-        let tpl = Template::compile2(
-            template_string,
-            TemplateOptions {
-                prevent_indent: self.prevent_indent,
-                ..Default::default()
-            },
-        )?;
+    ) -> Result<String, TemplateRenderError> {
+        let tpl = Template::compile2(template_string, self.source_map)?;
 
         let mut out = StringOutput::new();
         {
             let mut render_context = RenderContext::new(None);
-            tpl.render(self, ctx, &mut render_context, &mut out)?;
+            tpl.render(self, &ctx, &mut render_context, &mut out)?;
         }
 
-        out.into_string().map_err(RenderError::from)
+        out.into_string()
+            .map_err(|e| TemplateRenderError::from(RenderError::from(e)))
     }
 
     /// Render a template string using current registry without registering it
@@ -673,22 +510,36 @@ impl<'reg> Registry<'reg> {
         template_string: &str,
         data: &T,
         writer: W,
-    ) -> Result<(), RenderError>
+    ) -> Result<(), TemplateRenderError>
     where
         T: Serialize,
         W: Write,
     {
-        let tpl = Template::compile2(
-            template_string,
-            TemplateOptions {
-                prevent_indent: self.prevent_indent,
-                ..Default::default()
-            },
-        )?;
+        let tpl = Template::compile2(template_string, self.source_map)?;
         let ctx = Context::wraps(data)?;
         let mut render_context = RenderContext::new(None);
         let mut out = WriteOutput::new(writer);
         tpl.render(self, &ctx, &mut render_context, &mut out)
+            .map_err(TemplateRenderError::from)
+    }
+
+    /// Render a template source using current registry without registering it
+    pub fn render_template_source_to_write<T, R, W>(
+        &self,
+        template_source: &mut R,
+        data: &T,
+        writer: W,
+    ) -> Result<(), TemplateRenderError>
+    where
+        T: Serialize,
+        W: Write,
+        R: Read,
+    {
+        let mut tpl_str = String::new();
+        template_source
+            .read_to_string(&mut tpl_str)
+            .map_err(|e| TemplateRenderError::IOError(e, "Unnamed template source".to_owned()))?;
+        self.render_template_to_write(&tpl_str, data, writer)
     }
 }
 
@@ -702,8 +553,11 @@ mod test {
     use crate::render::{Helper, RenderContext, Renderable};
     use crate::support::str::StringWriter;
     use crate::template::Template;
-    use std::fs::File;
+    #[cfg(feature = "dir_source")]
+    use std::fs::{DirBuilder, File};
+    #[cfg(feature = "dir_source")]
     use std::io::Write;
+    #[cfg(feature = "dir_source")]
     use tempfile::tempdir;
 
     #[derive(Clone, Copy)]
@@ -745,7 +599,7 @@ mod test {
 
         // built-in helpers plus 1
         let num_helpers = 7;
-        let num_boolean_helpers = 10; // stuff like gt and lte
+        let num_boolean_helpers = 9; // stuff like gt and lte
         let num_custom_helpers = 1; // dummy from above
         assert_eq!(
             r.helpers.len(),
@@ -756,8 +610,6 @@ mod test {
     #[test]
     #[cfg(feature = "dir_source")]
     fn test_register_templates_directory() {
-        use std::fs::DirBuilder;
-
         let mut r = Registry::new();
         {
             let dir = tempdir().unwrap();
@@ -957,7 +809,10 @@ mod test {
         let render_error = r
             .render_template("accessing non-exists key {{the_key_never_exists}}", &data)
             .unwrap_err();
-        assert_eq!(render_error.column_no.unwrap(), 26);
+        assert_eq!(
+            render_error.as_render_error().unwrap().column_no.unwrap(),
+            26
+        );
 
         let data2 = json!([1, 2, 3]);
         assert!(r
@@ -969,7 +824,10 @@ mod test {
         let render_error2 = r
             .render_template("accessing invalid array index {{this.[3]}}", &data2)
             .unwrap_err();
-        assert_eq!(render_error2.column_no.unwrap(), 31);
+        assert_eq!(
+            render_error2.as_render_error().unwrap().column_no.unwrap(),
+            31
+        );
     }
 
     use crate::json::value::ScopedJson;
@@ -981,8 +839,8 @@ mod test {
             _: &'reg Registry<'reg>,
             _: &'rc Context,
             _: &mut RenderContext<'reg, 'rc>,
-        ) -> Result<ScopedJson<'reg, 'rc>, RenderError> {
-            Ok(ScopedJson::Missing)
+        ) -> Result<Option<ScopedJson<'reg, 'rc>>, RenderError> {
+            Ok(Some(ScopedJson::Missing))
         }
     }
 
@@ -1063,7 +921,8 @@ mod test {
             .unwrap();
         assert_eq!(
             "0123",
-            reg.render_with_context("t0", &Context::from(data)).unwrap()
+            reg.render_with_context("t0", &Context::wraps(&data).unwrap())
+                .unwrap()
         );
     }
 
@@ -1126,98 +985,5 @@ mod test {
             )
             .unwrap()
         );
-    }
-
-    #[test]
-    fn test_dev_mode_template_reload() {
-        let mut reg = Registry::new();
-        reg.set_dev_mode(true);
-        assert!(reg.dev_mode());
-
-        let dir = tempdir().unwrap();
-        let file1_path = dir.path().join("t1.hbs");
-        {
-            let mut file1: File = File::create(&file1_path).unwrap();
-            write!(file1, "<h1>Hello {{{{name}}}}!</h1>").unwrap();
-        }
-
-        reg.register_template_file("t1", &file1_path).unwrap();
-
-        assert_eq!(
-            reg.render("t1", &json!({"name": "Alex"})).unwrap(),
-            "<h1>Hello Alex!</h1>"
-        );
-
-        {
-            let mut file1: File = File::create(&file1_path).unwrap();
-            write!(file1, "<h1>Privet {{{{name}}}}!</h1>").unwrap();
-        }
-
-        assert_eq!(
-            reg.render("t1", &json!({"name": "Alex"})).unwrap(),
-            "<h1>Privet Alex!</h1>"
-        );
-
-        dir.close().unwrap();
-    }
-
-    #[test]
-    #[cfg(feature = "script_helper")]
-    fn test_script_helper() {
-        let mut reg = Registry::new();
-
-        reg.register_script_helper("acc", "params.reduce(|sum, x| x + sum, 0)")
-            .unwrap();
-
-        assert_eq!(
-            reg.render_template("{{acc 1 2 3 4}}", &json!({})).unwrap(),
-            "10"
-        );
-    }
-
-    #[test]
-    #[cfg(feature = "script_helper")]
-    fn test_script_helper_dev_mode() {
-        let mut reg = Registry::new();
-        reg.set_dev_mode(true);
-
-        let dir = tempdir().unwrap();
-        let file1_path = dir.path().join("acc.rhai");
-        {
-            let mut file1: File = File::create(&file1_path).unwrap();
-            write!(file1, "params.reduce(|sum, x| x + sum, 0)").unwrap();
-        }
-
-        reg.register_script_helper_file("acc", &file1_path).unwrap();
-
-        assert_eq!(
-            reg.render_template("{{acc 1 2 3 4}}", &json!({})).unwrap(),
-            "10"
-        );
-
-        {
-            let mut file1: File = File::create(&file1_path).unwrap();
-            write!(file1, "params.reduce(|sum, x| x * sum, 1)").unwrap();
-        }
-
-        assert_eq!(
-            reg.render_template("{{acc 1 2 3 4}}", &json!({})).unwrap(),
-            "24"
-        );
-
-        dir.close().unwrap();
-    }
-
-    #[test]
-    #[cfg(feature = "script_helper")]
-    fn test_engine_access() {
-        use rhai::Engine;
-
-        let mut registry = Registry::new();
-        let mut eng = Engine::new();
-        eng.set_max_string_size(1000);
-        registry.set_engine(eng);
-
-        assert_eq!(1000, registry.engine().max_string_size());
     }
 }

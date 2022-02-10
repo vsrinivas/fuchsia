@@ -3,30 +3,30 @@
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr>
-    {{#each const_declarations}}
+    {{~ #each const_declarations ~}}
         <tr id="{{rpn name}}">
             <td><a href="{{sl @root.config @root.tag location}}">{{rpn name}}</a></td>
-            {{#if (eq type.kind "primitive")}}
+            {{#if (eq type.kind "primitive") ~}}
                 <td>
                     <code>
-                        {{~ #if (eq value.kind "literal")}}
+                        {{~ #if (eq value.kind "literal") ~}}
                             {{~ value.literal.value ~}}
-                        {{else}}
-                            {{#if (eq value.kind "identifier")}}
+                        {{~ else ~}}
+                            {{~ #if (eq value.kind "identifier") ~}}
                                 {{~ pl value.identifier @root.name ~}}
-                            {{/if}}
-                        {{/if ~}}
+                            {{~ /if ~}}
+                        {{~ /if ~}}
                     </code>
                 </td>
                 <td><code>{{~ type.subtype ~}}</code></td>
-            {{else}}
-                {{#if (eq type.kind "string")}}
+            {{~ else ~}}
+                {{~ #if (eq type.kind "string") ~}}
                     <td><code>{{~ value.literal.value ~}}</code></td>
                     <td><code>String</code></td>
-                {{/if}}
-            {{/if}}
+                {{~ /if ~}}
+            {{~ /if}}
             <td>{{~> doc ~}}</td>
         </tr>
     {{/each}}
 </table>
-{{/if}}
+{{/if ~}}

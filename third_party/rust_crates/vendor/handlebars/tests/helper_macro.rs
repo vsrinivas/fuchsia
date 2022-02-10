@@ -3,7 +3,6 @@ extern crate handlebars;
 #[macro_use]
 extern crate serde_json;
 
-use chrono::{DateTime, FixedOffset};
 use handlebars::Handlebars;
 
 handlebars_helper!(lower: |s: str| s.to_lowercase());
@@ -15,7 +14,6 @@ handlebars_helper!(nargs: |*args| args.len());
 handlebars_helper!(has_a: |{a:i64 = 99}, **kwargs|
                    format!("{}, {}", a, kwargs.get("a").is_some()));
 handlebars_helper!(tag: |t: str| format!("<{}>", t));
-handlebars_helper!(date: |dt: DateTime<FixedOffset>| dt.format("%F").to_string());
 
 #[test]
 fn test_macro_helper() {
@@ -28,7 +26,6 @@ fn test_macro_helper() {
     hbs.register_helper("nargs", Box::new(nargs));
     hbs.register_helper("has_a", Box::new(has_a));
     hbs.register_helper("tag", Box::new(tag));
-    hbs.register_helper("date", Box::new(date));
 
     let data = json!("Teixeira");
 
@@ -70,19 +67,5 @@ fn test_macro_helper() {
     assert_eq!(
         hbs.render_template("{{tag \"html\"}}", &()).unwrap(),
         "&lt;html&gt;"
-    );
-
-    assert_eq!(
-        hbs.render_template("{{{tag \"html\"}}}", &()).unwrap(),
-        "<html>"
-    );
-
-    assert_eq!(
-        hbs.render_template(
-            "{{date this}}",
-            &DateTime::parse_from_rfc2822("Wed, 18 Feb 2015 23:16:09 GMT").unwrap()
-        )
-        .unwrap(),
-        "2015-02-18"
     );
 }

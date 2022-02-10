@@ -1,258 +1,309 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
+
 # test.constants
 
 
+
+
+
 ## **STRUCTS**
+
 ### Struct  {#Struct data-text="Struct"}
 *Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=41)*
 
+
+
+
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
-        <tr id="Struct.int64_with_default">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Struct.int64_with_default">
             <td><code>int64_with_default</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>7</td>
-        </tr>
-        <tr id="Struct.string_with_default">
+        </tr><tr id="Struct.string_with_default">
             <td><code>string_with_default</code></td>
             <td>
                 <code>string</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>stuff</td>
-        </tr>
-        <tr id="Struct.bool_with_default">
+        </tr><tr id="Struct.bool_with_default">
             <td><code>bool_with_default</code></td>
             <td>
                 <code>bool</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>true</td>
-        </tr>
-        <tr id="Struct.enum_with_default">
+        </tr><tr id="Struct.enum_with_default">
             <td><code>enum_with_default</code></td>
             <td>
                 <code><a class='link' href='#Enum'>Enum</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td><a class='link' href='#Enum.E'>Enum.E</a></td>
-        </tr>
-        <tr id="Struct.bits_with_default">
+        </tr><tr id="Struct.bits_with_default">
             <td><code>bits_with_default</code></td>
             <td>
                 <code><a class='link' href='#Bits'>Bits</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td><a class='link' href='#Bits.B'>Bits.B</a></td>
         </tr>
 </table>
 
+
+
 ## **ENUMS**
+
 ### Enum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Enum}
 Type: <code>uint32</code>
 
 *Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=33)*
 
+
+
+
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="Enum.E">
-<td><h3 id="Enum.E" class="add-link hide-from-toc">E</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Enum.E">
+            <td><h3 id="Enum.E" class="add-link hide-from-toc">E</h3></td>
             <td><code>170</code></td>
-            <td></td>
-        </tr>
-</table>
+            <td>
+</td>
+        </tr></table>
+
 ### EnumType [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#EnumType}
 Type: <code>int32</code>
 
 *Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=16)*
 
+
+
+
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="EnumType.VALUE">
-<td><h3 id="EnumType.VALUE" class="add-link hide-from-toc">VALUE</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="EnumType.VALUE">
+            <td><h3 id="EnumType.VALUE" class="add-link hide-from-toc">VALUE</h3></td>
             <td><code>1</code></td>
-            <td></td>
-        </tr>
-</table>
+            <td>
+</td>
+        </tr></table>
+
+
+
+
 
 
 
 ## **BITS**
+
 ### Bits [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Bits}
 Type: <code>uint32</code>
 
 *Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=37)*
 
+
+
+
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="Bits.B">
-<td><h3 id="Bits.B" class="add-link hide-from-toc">B</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Bits.B">
+            <td><h3 id="Bits.B" class="add-link hide-from-toc">B</h3></td>
             <td>8</td>
-            <td></td>
-        </tr>
-</table>
+            <td>
+</td>
+        </tr></table>
+
 ### BitsType [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#BitsType}
 Type: <code>uint32</code>
 
 *Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=22)*
 
+
+
+
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="BitsType.VALUE">
-<td><h3 id="BitsType.VALUE" class="add-link hide-from-toc">VALUE</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="BitsType.VALUE">
+            <td><h3 id="BitsType.VALUE" class="add-link hide-from-toc">VALUE</h3></td>
             <td>1</td>
-            <td></td>
-        </tr>
-        <tr id="BitsType.SECOND_VALUE">
-<td><h3 id="BitsType.SECOND_VALUE" class="add-link hide-from-toc">SECOND_VALUE</h3></td>
+            <td>
+</td>
+        </tr><tr id="BitsType.SECOND_VALUE">
+            <td><h3 id="BitsType.SECOND_VALUE" class="add-link hide-from-toc">SECOND_VALUE</h3></td>
             <td>128</td>
-            <td></td>
-        </tr>
-        <tr id="BitsType.THIRD_VALUE">
-<td><h3 id="BitsType.THIRD_VALUE" class="add-link hide-from-toc">THIRD_VALUE</h3></td>
+            <td>
+</td>
+        </tr><tr id="BitsType.THIRD_VALUE">
+            <td><h3 id="BitsType.THIRD_VALUE" class="add-link hide-from-toc">THIRD_VALUE</h3></td>
             <td>2</td>
-            <td></td>
-        </tr>
-</table>
+            <td>
+</td>
+        </tr></table>
+
+
 
 ## **CONSTANTS**
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr>
-        <tr id="BOOL">
+    <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr><tr id="BOOL">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=13">BOOL</a></td>
-                <td>
+            <td>
                     <code>true</code>
                 </td>
                 <td><code>bool</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="FLOAT32">
+    <tr id="FLOAT32">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=11">FLOAT32</a></td>
-                <td>
+            <td>
                     <code>3.14159</code>
                 </td>
                 <td><code>float32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="FLOAT64">
+    <tr id="FLOAT64">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=12">FLOAT64</a></td>
-                <td>
+            <td>
                     <code>3.14159</code>
                 </td>
                 <td><code>float64</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="INT16">
+    <tr id="INT16">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=8">INT16</a></td>
-                <td>
+            <td>
                     <code>4</code>
                 </td>
                 <td><code>int16</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="INT32">
+    <tr id="INT32">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=9">INT32</a></td>
-                <td>
+            <td>
                     <code>4</code>
                 </td>
                 <td><code>int32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="INT64">
+    <tr id="INT64">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=10">INT64</a></td>
-                <td>
+            <td>
                     <code>4</code>
                 </td>
                 <td><code>int64</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="INT8">
+    <tr id="INT8">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=7">INT8</a></td>
-                <td>
+            <td>
                     <code>4</code>
                 </td>
                 <td><code>int8</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="STRING">
+    <tr id="STRING">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=14">STRING</a></td>
-                    <td><code>string</code></td>
+            <td><code>string</code></td>
                     <td><code>String</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="UINT16">
+    <tr id="UINT16">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=4">UINT16</a></td>
-                <td>
+            <td>
                     <code>4</code>
                 </td>
                 <td><code>uint16</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="UINT32">
+    <tr id="UINT32">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=5">UINT32</a></td>
-                <td>
+            <td>
                     <code>4</code>
                 </td>
                 <td><code>uint32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="UINT64">
+    <tr id="UINT64">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=6">UINT64</a></td>
-                <td>
+            <td>
                     <code>4</code>
                 </td>
                 <td><code>uint64</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="UINT8">
+    <tr id="UINT8">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=3">UINT8</a></td>
-                <td>
+            <td>
                     <code>4</code>
                 </td>
                 <td><code>uint8</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="bitsPrimitiveVal">
+    <tr id="bitsPrimitiveVal">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=28">bitsPrimitiveVal</a></td>
-                <td>
+            <td>
                     <code><a class='link' href='#BitsType.VALUE'>BitsType.VALUE</a></code>
                 </td>
                 <td><code>int32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="bitsVal">
+    <tr id="bitsVal">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=27">bitsVal</a></td>
-            <td></td>
+            
+            <td>
+</td>
         </tr>
-        <tr id="enumPrimitiveVal">
+    <tr id="enumPrimitiveVal">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=20">enumPrimitiveVal</a></td>
-                <td>
+            <td>
                     <code><a class='link' href='#EnumType.VALUE'>EnumType.VALUE</a></code>
                 </td>
                 <td><code>int32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
-        <tr id="enumVal">
+    <tr id="enumVal">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=19">enumVal</a></td>
-            <td></td>
+            
+            <td>
+</td>
         </tr>
-        <tr id="orResult">
+    <tr id="orResult">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=30">orResult</a></td>
-            <td></td>
+            
+            <td>
+</td>
         </tr>
-        <tr id="orResultPrimitiveVal">
+    <tr id="orResultPrimitiveVal">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=31">orResultPrimitiveVal</a></td>
-                <td>
+            <td>
                     <code></code>
                 </td>
                 <td><code>int32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
+    
 </table>
+
+
 

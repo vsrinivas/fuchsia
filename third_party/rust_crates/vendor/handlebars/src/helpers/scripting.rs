@@ -7,22 +7,23 @@ use crate::json::value::{PathAndJson, ScopedJson};
 use crate::registry::Registry;
 use crate::render::{Helper, RenderContext};
 
-use rhai::serde::{from_dynamic, to_dynamic};
+use rhai::de::from_dynamic;
+use rhai::ser::to_dynamic;
 use rhai::{Dynamic, Engine, Scope, AST};
 
 use serde_json::value::Value as Json;
 
-pub(crate) struct ScriptHelper {
+pub struct ScriptHelper {
     pub(crate) script: AST,
 }
 
 #[inline]
 fn call_script_helper<'reg: 'rc, 'rc>(
-    params: &[PathAndJson<'reg, 'rc>],
+    params: &Vec<PathAndJson<'reg, 'rc>>,
     hash: &BTreeMap<&'reg str, PathAndJson<'reg, 'rc>>,
     engine: &Engine,
     script: &AST,
-) -> Result<ScopedJson<'reg, 'rc>, RenderError> {
+) -> Result<Option<ScopedJson<'reg, 'rc>>, RenderError> {
     let params: Dynamic = to_dynamic(params.iter().map(|p| p.value()).collect::<Vec<&Json>>())?;
 
     let hash: Dynamic = to_dynamic(
@@ -41,7 +42,7 @@ fn call_script_helper<'reg: 'rc, 'rc>(
 
     let result_json: Json = from_dynamic(&result)?;
 
-    Ok(ScopedJson::Derived(result_json))
+    Ok(Some(ScopedJson::Derived(result_json)))
 }
 
 impl HelperDef for ScriptHelper {
@@ -51,7 +52,7 @@ impl HelperDef for ScriptHelper {
         reg: &'reg Registry<'reg>,
         _ctx: &'rc Context,
         _rc: &mut RenderContext<'reg, 'rc>,
-    ) -> Result<ScopedJson<'reg, 'rc>, RenderError> {
+    ) -> Result<Option<ScopedJson<'reg, 'rc>>, RenderError> {
         call_script_helper(h.params(), h.hash(), &reg.engine, &self.script)
     }
 }
@@ -104,6 +105,7 @@ mod test {
         };
 
         let result = call_script_helper(&params, &hash, &engine, &ast)
+            .unwrap()
             .unwrap()
             .render();
         assert_eq!("1,true,2,no", &result);

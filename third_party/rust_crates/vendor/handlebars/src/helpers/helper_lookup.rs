@@ -14,10 +14,10 @@ impl HelperDef for LookupHelper {
     fn call_inner<'reg: 'rc, 'rc>(
         &self,
         h: &Helper<'reg, 'rc>,
-        r: &'reg Registry<'reg>,
+        _: &'reg Registry<'reg>,
         _: &'rc Context,
         _: &mut RenderContext<'reg, 'rc>,
-    ) -> Result<ScopedJson<'reg, 'rc>, RenderError> {
+    ) -> Result<Option<ScopedJson<'reg, 'rc>>, RenderError> {
         let collection_value = h
             .param(0)
             .ok_or_else(|| RenderError::new("Param not found for helper \"lookup\""))?;
@@ -30,19 +30,15 @@ impl HelperDef for LookupHelper {
                 .value()
                 .as_u64()
                 .and_then(|u| v.get(u as usize))
-                .unwrap_or(&Json::Null),
+                .map(|i| ScopedJson::Derived(i.clone())),
             Json::Object(ref m) => index
                 .value()
                 .as_str()
                 .and_then(|k| m.get(k))
-                .unwrap_or(&Json::Null),
-            _ => &Json::Null,
+                .map(|i| ScopedJson::Derived(i.clone())),
+            _ => None,
         };
-        if r.strict_mode() && value.is_null() {
-            Err(RenderError::strict_error(None))
-        } else {
-            Ok(value.clone().into())
-        }
+        Ok(value)
     }
 }
 
@@ -83,22 +79,5 @@ mod test {
 
         let r2 = handlebars.render("t2", &m2);
         assert_eq!(r2.ok().unwrap(), "world".to_string());
-    }
-
-    #[test]
-    fn test_strict_lookup() {
-        let mut hbs = Registry::new();
-
-        assert_eq!(
-            hbs.render_template("{{lookup kk 1}}", &json!({"kk": []}))
-                .unwrap(),
-            ""
-        );
-
-        hbs.set_strict_mode(true);
-
-        assert!(hbs
-            .render_template("{{lookup kk 1}}", &json!({"kk": []}))
-            .is_err());
     }
 }

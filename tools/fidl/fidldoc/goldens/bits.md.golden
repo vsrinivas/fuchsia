@@ -1,6 +1,7 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
+
 # test.bits
 
 
@@ -8,65 +9,84 @@
 
 
 
+
+
+
+
+
+
+
 ## **BITS**
+
 ### FlexibleBits [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#FlexibleBits}
 Type: <code>uint64</code>
 
 *Defined in [test.bits/bits.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bits.test.fidl;l=15)*
 
+
+
+
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="FlexibleBits.SMALLEST">
-<td><h3 id="FlexibleBits.SMALLEST" class="add-link hide-from-toc">SMALLEST</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="FlexibleBits.SMALLEST">
+            <td><h3 id="FlexibleBits.SMALLEST" class="add-link hide-from-toc">SMALLEST</h3></td>
             <td>1</td>
-            <td></td>
-        </tr>
-        <tr id="FlexibleBits.BIGGEST">
-<td><h3 id="FlexibleBits.BIGGEST" class="add-link hide-from-toc">BIGGEST</h3></td>
+            <td>
+</td>
+        </tr><tr id="FlexibleBits.BIGGEST">
+            <td><h3 id="FlexibleBits.BIGGEST" class="add-link hide-from-toc">BIGGEST</h3></td>
             <td>9223372036854775808</td>
-            <td></td>
-        </tr>
-</table>
+            <td>
+</td>
+        </tr></table>
+
 ### MyBits [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyBits}
 Type: <code>uint32</code>
 
 *Defined in [test.bits/bits.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bits.test.fidl;l=3)*
 
+
+
+
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="MyBits.MY_FIRST_BIT">
-<td><h3 id="MyBits.MY_FIRST_BIT" class="add-link hide-from-toc">MY_FIRST_BIT</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyBits.MY_FIRST_BIT">
+            <td><h3 id="MyBits.MY_FIRST_BIT" class="add-link hide-from-toc">MY_FIRST_BIT</h3></td>
             <td>1</td>
-            <td></td>
-        </tr>
-        <tr id="MyBits.MY_OTHER_BIT">
-<td><h3 id="MyBits.MY_OTHER_BIT" class="add-link hide-from-toc">MY_OTHER_BIT</h3></td>
+            <td>
+</td>
+        </tr><tr id="MyBits.MY_OTHER_BIT">
+            <td><h3 id="MyBits.MY_OTHER_BIT" class="add-link hide-from-toc">MY_OTHER_BIT</h3></td>
             <td>2</td>
-            <td></td>
-        </tr>
-        <tr id="MyBits.MASK">
-<td><h3 id="MyBits.MASK" class="add-link hide-from-toc">MASK</h3></td>
+            <td>
+</td>
+        </tr><tr id="MyBits.MASK">
+            <td><h3 id="MyBits.MASK" class="add-link hide-from-toc">MASK</h3></td>
             <td>4</td>
-            <td></td>
-        </tr>
-</table>
+            <td>
+</td>
+        </tr></table>
+
 ### StrictBits [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#StrictBits}
 Type: <code>uint64</code>
 
 *Defined in [test.bits/bits.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bits.test.fidl;l=10)*
 
+
+
+
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="StrictBits.SMALLEST">
-<td><h3 id="StrictBits.SMALLEST" class="add-link hide-from-toc">SMALLEST</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="StrictBits.SMALLEST">
+            <td><h3 id="StrictBits.SMALLEST" class="add-link hide-from-toc">SMALLEST</h3></td>
             <td>1</td>
-            <td></td>
-        </tr>
-        <tr id="StrictBits.BIGGEST">
-<td><h3 id="StrictBits.BIGGEST" class="add-link hide-from-toc">BIGGEST</h3></td>
+            <td>
+</td>
+        </tr><tr id="StrictBits.BIGGEST">
+            <td><h3 id="StrictBits.BIGGEST" class="add-link hide-from-toc">BIGGEST</h3></td>
             <td>9223372036854775808</td>
-            <td></td>
-        </tr>
-</table>
+            <td>
+</td>
+        </tr></table>
+
+
+
 
 

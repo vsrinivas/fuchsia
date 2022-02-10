@@ -4,38 +4,6 @@
 #[grammar = "grammar.pest"]
 pub struct HandlebarsParser;
 
-#[inline]
-pub(crate) fn whitespace_matcher(c: char) -> bool {
-    c == ' ' || c == '\t'
-}
-
-#[inline]
-pub(crate) fn newline_matcher(c: char) -> bool {
-    c == '\n' || c == '\r'
-}
-
-#[inline]
-pub(crate) fn strip_first_newline(s: &str) -> &str {
-    if let Some(s) = s.strip_prefix("\r\n") {
-        s
-    } else if let Some(s) = s.strip_prefix('\n') {
-        s
-    } else {
-        s
-    }
-}
-
-pub(crate) fn ends_with_empty_line(text: &str) -> bool {
-    let s = text.trim_end_matches(whitespace_matcher);
-    // also matches when text is just whitespaces
-    s.ends_with(newline_matcher) || s.is_empty()
-}
-
-pub(crate) fn starts_with_empty_line(text: &str) -> bool {
-    text.trim_start_matches(whitespace_matcher)
-        .starts_with(newline_matcher)
-}
-
 #[cfg(test)]
 mod test {
     use super::{HandlebarsParser, Rule};
@@ -175,8 +143,7 @@ mod test {
         let s = vec!["{{!-- <hello {{ a-b c-d}} {{d-c}} ok --}}",
                  "{{!--
                     <li><a href=\"{{up-dir nest-count}}{{base-url}}index.html\">{{this.title}}</a></li>
-                --}}",
-                     "{{!    -- good  --}}"];
+                --}}"];
         for i in s.iter() {
             assert_rule!(Rule::hbs_comment, i);
         }
@@ -203,7 +170,6 @@ mod test {
             "{{exp 1}}",
             "{{exp \"literal\"}}",
             "{{exp \"literal with space\"}}",
-            "{{exp 'literal with space'}}",
             r#"{{exp "literal with escape \\\\"}}"#,
             "{{exp ref}}",
             "{{exp (sub)}}",
@@ -212,8 +178,6 @@ mod test {
             "{{exp {}}}",
             "{{exp key=1}}",
             "{{exp key=ref}}",
-            "{{exp key='literal with space'}}",
-            "{{exp key=\"literal with space\"}}",
             "{{exp key=(sub)}}",
             "{{exp key=(sub 0)}}",
             "{{exp key=(sub 0 key=1)}}",
@@ -233,14 +197,7 @@ mod test {
 
     #[test]
     fn test_html_expression() {
-        let s = vec![
-            "{{{html}}}",
-            "{{{(html)}}}",
-            "{{{(html)}}}",
-            "{{&html}}",
-            "{{{html 1}}}",
-            "{{{html p=true}}}",
-        ];
+        let s = vec!["{{{html}}}", "{{{(html)}}}", "{{{(html)}}}", "{{&html}}"];
         for i in s.iter() {
             assert_rule!(Rule::html_expression, i);
         }
