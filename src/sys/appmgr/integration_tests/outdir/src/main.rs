@@ -54,8 +54,11 @@ async fn main() -> Result<(), Error> {
         appmgr_out_dir_server_end.into_channel().into_handle(),
     ));
 
-    let pkg_dir = io_util::open_directory_in_namespace("/pkg", io_util::OPEN_RIGHT_READABLE)
-        .expect("failed to open /pkg");
+    let pkg_dir = io_util::open_directory_in_namespace(
+        "/pkg",
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
+    )
+    .expect("failed to open /pkg");
     let pkg_c_str = CString::new("/pkg").unwrap();
     spawn_actions.push(fdio::SpawnAction::add_namespace_entry(
         &pkg_c_str,
@@ -75,8 +78,11 @@ async fn main() -> Result<(), Error> {
 
     let (pkgfs_client_end, pkgfs_server_end) = create_endpoints::<fio::NodeMarker>()?;
     fasync::Task::spawn(async move {
-        let pkg_dir = io_util::open_directory_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE)
-            .expect("failed to open /pkg");
+        let pkg_dir = io_util::open_directory_in_namespace(
+            "/pkg",
+            fio::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
+        )
+        .expect("failed to open /pkg");
         let pkg_dir_2 = io_util::clone_directory(&pkg_dir, fio::CLONE_FLAG_SAME_RIGHTS)
             .expect("failed to clone /pkg handle");
         let fake_pkgfs = pseudo_directory! {
@@ -109,7 +115,7 @@ async fn main() -> Result<(), Error> {
         };
         fake_pkgfs.open(
             ExecutionScope::new(),
-            fio::OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             fio::MODE_TYPE_DIRECTORY,
             pfsPath::dot(),
             pkgfs_server_end,
