@@ -59,11 +59,11 @@ wlan_assoc_ctx_t FakeDdkAssocCtx() {
   };
 }
 
-wlan_info_band_info_t FakeBandInfo(wlan_info_band_t band) {
+wlan_softmac_band_capability_t FakeBandCapability(wlan_info_band_t band) {
   ZX_DEBUG_ASSERT(band == WLAN_INFO_BAND_TWO_GHZ || band == WLAN_INFO_BAND_FIVE_GHZ);
 
   // Construct a base
-  wlan_info_band_info_t bi = {
+  wlan_softmac_band_capability_t bc = {
       .band = static_cast<uint8_t>(band),
       .ht_supported = true,
       .ht_caps =
@@ -103,21 +103,21 @@ wlan_info_band_info_t FakeBandInfo(wlan_info_band_t band) {
   };
 
   if (band == WLAN_INFO_BAND_FIVE_GHZ) {
-    bi.supported_channels.base_freq = 5000;
+    bc.supported_channels.base_freq = 5000;
     uint8_t fake[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS] = {36, 40, 44, 48, 149, 153, 157, 161};
-    memcpy(bi.supported_channels.channels, fake,
+    memcpy(bc.supported_channels.channels, fake,
            WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * sizeof(uint8_t));
   } else {
-    bi.supported_channels.base_freq = 2407;
+    bc.supported_channels.base_freq = 2407;
     uint8_t fake[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS] = {1, 2, 3,  4,  5,  6,  7,
                                                          8, 9, 10, 11, 12, 13, 14};
-    memcpy(bi.supported_channels.channels, fake,
+    memcpy(bc.supported_channels.channels, fake,
            WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * sizeof(uint8_t));
 
-    bi.vht_supported = false;
-    bi.vht_caps = {};
+    bc.vht_supported = false;
+    bc.vht_caps = {};
   }
-  return bi;
+  return bc;
 }
 
 }  // namespace test_utils

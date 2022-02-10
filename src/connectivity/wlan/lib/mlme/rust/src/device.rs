@@ -919,9 +919,9 @@ mod test_utils {
     }
 
     pub fn fake_wlan_softmac_info() -> WlanSoftmacInfo {
-        let bands_count = 2;
-        let mut bands = [default_band_info(); WLAN_INFO_MAX_BANDS as usize];
-        bands[0] = WlanInfoBandInfo {
+        let band_cap_count = 2;
+        let mut band_cap_list = [default_band_capability(); WLAN_INFO_MAX_BANDS as usize];
+        band_cap_list[0] = banjo_wlan_softmac::WlanSoftmacBandCapability {
             band: WlanInfoBand::TWO_GHZ,
             rates: arr!(
                 [0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C],
@@ -942,7 +942,7 @@ mod test_utils {
                 supported_vht_mcs_and_nss_set: 0,
             },
         };
-        bands[1] = WlanInfoBandInfo {
+        band_cap_list[1] = banjo_wlan_softmac::WlanSoftmacBandCapability {
             band: WlanInfoBand::FIVE_GHZ,
             rates: arr!([0x7E, 0x7F], WLAN_INFO_BAND_INFO_MAX_RATES as usize),
             supported_channels: WlanInfoChannelList {
@@ -989,8 +989,8 @@ mod test_utils {
             supported_phys_count,
             driver_features: WlanInfoDriverFeature(0),
             caps: WlanInfoHardwareCapability(0),
-            bands,
-            bands_count,
+            band_cap_list,
+            band_cap_count,
         }
     }
 
@@ -1012,10 +1012,10 @@ mod test_utils {
         }
     }
 
-    /// Placeholder for default initialization of WlanInfoBandInfo, used for case where we don't
+    /// Placeholder for default initialization of WlanSoftmacBandCapability, used for case where we don't
     /// care about the exact information, but the type demands it.
-    pub const fn default_band_info() -> WlanInfoBandInfo {
-        WlanInfoBandInfo {
+    pub const fn default_band_capability() -> banjo_wlan_softmac::WlanSoftmacBandCapability {
+        banjo_wlan_softmac::WlanSoftmacBandCapability {
             band: WlanInfoBand(0),
             ht_supported: false,
             ht_caps: Ieee80211HtCapabilities {
@@ -1257,7 +1257,7 @@ mod tests {
         assert_eq!(info.mac_role, banjo_common::WlanMacRole::CLIENT);
         assert_eq!(info.driver_features, WlanInfoDriverFeature(0));
         assert_eq!(info.caps, WlanInfoHardwareCapability(0));
-        assert_eq!(info.bands_count, 2);
+        assert_eq!(info.band_cap_count, 2);
     }
 
     #[test]

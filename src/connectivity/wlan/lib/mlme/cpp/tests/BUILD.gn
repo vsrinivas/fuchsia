@@ -150,7 +150,6 @@ test("common_tests") {
   output_name = "wlan_common_unittest"
 
   sources = [
-    "device_caps_unittest.cc",
     "moving_average_unittest.cc",
     "rates_elements_unittest.cc",
     "stats_unittest.cc",

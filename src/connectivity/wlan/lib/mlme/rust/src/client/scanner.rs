@@ -541,11 +541,11 @@ impl<'a> BoundScanner<'a> {
     }
 }
 
-fn band_info_for_band(
+fn band_cap_for_band(
     wlan_softmac_info: &banjo_wlan_softmac::WlanSoftmacInfo,
     band: banjo_wlan_phyinfo::WlanInfoBand,
-) -> Option<&banjo_wlan_phyinfo::WlanInfoBandInfo> {
-    wlan_softmac_info.bands[..wlan_softmac_info.bands_count as usize]
+) -> Option<&banjo_wlan_softmac::WlanSoftmacBandCapability> {
+    wlan_softmac_info.band_cap_list[..wlan_softmac_info.band_cap_count as usize]
         .iter()
         .filter(|b| b.band == band)
         .next()
@@ -556,9 +556,9 @@ fn supported_rates_for_band(
     wlan_softmac_info: &banjo_wlan_softmac::WlanSoftmacInfo,
     band: banjo_wlan_phyinfo::WlanInfoBand,
 ) -> Result<Vec<u8>, Error> {
-    let band_info = band_info_for_band(&wlan_softmac_info, band)
+    let band_cap = band_cap_for_band(&wlan_softmac_info, band)
         .ok_or(format_err!("no band found for band {:?}", band))?;
-    Ok(band_info.rates.iter().cloned().filter(|r| *r > 0).collect())
+    Ok(band_cap.rates.iter().cloned().filter(|r| *r > 0).collect())
 }
 
 // TODO(fxbug.dev/91038): This is not correct. Channel numbers do not imply band.

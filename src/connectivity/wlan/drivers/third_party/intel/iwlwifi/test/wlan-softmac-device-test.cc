@@ -119,62 +119,62 @@ TEST_F(WlanSoftmacDeviceTest, ComposeBandList) {
   EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, bands[1]);
 }
 
-TEST_F(WlanSoftmacDeviceTest, FillBandInfos) {
+TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
   // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
 
   wlan_info_band_t bands[WLAN_INFO_BAND_COUNT] = {
       WLAN_INFO_BAND_TWO_GHZ,
       WLAN_INFO_BAND_FIVE_GHZ,
   };
-  wlan_info_band_info_t band_infos[WLAN_INFO_BAND_COUNT] = {};
+  wlan_softmac_band_capability_t band_cap_list[WLAN_INFO_BAND_COUNT] = {};
 
-  fill_band_infos(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, std::size(bands),
-                  band_infos);
+  fill_band_cap_list(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, std::size(bands),
+                     band_cap_list);
   // 2.4Ghz
-  wlan_info_band_info_t* exp_band_info = &band_infos[0];
-  EXPECT_EQ(WLAN_INFO_BAND_TWO_GHZ, exp_band_info->band);
-  EXPECT_EQ(true, exp_band_info->ht_supported);
-  EXPECT_EQ(expected_rate(0), exp_band_info->rates[0]);    // 1Mbps
-  EXPECT_EQ(expected_rate(11), exp_band_info->rates[11]);  // 54Mbps
-  EXPECT_EQ(2407, exp_band_info->supported_channels.base_freq);
-  EXPECT_EQ(1, exp_band_info->supported_channels.channels[0]);
-  EXPECT_EQ(13, exp_band_info->supported_channels.channels[12]);
+  wlan_softmac_band_capability_t* band_cap = &band_cap_list[0];
+  EXPECT_EQ(WLAN_INFO_BAND_TWO_GHZ, band_cap->band);
+  EXPECT_EQ(true, band_cap->ht_supported);
+  EXPECT_EQ(expected_rate(0), band_cap->rates[0]);    // 1Mbps
+  EXPECT_EQ(expected_rate(11), band_cap->rates[11]);  // 54Mbps
+  EXPECT_EQ(2407, band_cap->supported_channels.base_freq);
+  EXPECT_EQ(1, band_cap->supported_channels.channels[0]);
+  EXPECT_EQ(13, band_cap->supported_channels.channels[12]);
   // 5GHz
-  exp_band_info = &band_infos[1];
-  EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, exp_band_info->band);
-  EXPECT_EQ(true, exp_band_info->ht_supported);
-  EXPECT_EQ(expected_rate(4), exp_band_info->rates[0]);   // 6Mbps
-  EXPECT_EQ(expected_rate(11), exp_band_info->rates[7]);  // 54Mbps
-  EXPECT_EQ(5000, exp_band_info->supported_channels.base_freq);
-  EXPECT_EQ(36, exp_band_info->supported_channels.channels[0]);
-  EXPECT_EQ(165, exp_band_info->supported_channels.channels[24]);
+  band_cap = &band_cap_list[1];
+  EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, band_cap->band);
+  EXPECT_EQ(true, band_cap->ht_supported);
+  EXPECT_EQ(expected_rate(4), band_cap->rates[0]);   // 6Mbps
+  EXPECT_EQ(expected_rate(11), band_cap->rates[7]);  // 54Mbps
+  EXPECT_EQ(5000, band_cap->supported_channels.base_freq);
+  EXPECT_EQ(36, band_cap->supported_channels.channels[0]);
+  EXPECT_EQ(165, band_cap->supported_channels.channels[24]);
 }
 
-TEST_F(WlanSoftmacDeviceTest, FillBandInfosOnly5GHz) {
+TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityListOnly5GHz) {
   // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
 
   wlan_info_band_t bands[WLAN_INFO_BAND_COUNT] = {
       WLAN_INFO_BAND_FIVE_GHZ,
       0,
   };
-  wlan_info_band_info_t band_infos[WLAN_INFO_BAND_COUNT] = {};
+  wlan_softmac_band_capability_t band_cap_list[WLAN_INFO_BAND_COUNT] = {};
 
-  fill_band_infos(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, 1, band_infos);
+  fill_band_cap_list(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, 1, band_cap_list);
   // 5GHz
-  wlan_info_band_info_t* exp_band_info = &band_infos[0];
-  EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, exp_band_info->band);
-  EXPECT_EQ(true, exp_band_info->ht_supported);
-  EXPECT_EQ(expected_rate(4), exp_band_info->rates[0]);   // 6Mbps
-  EXPECT_EQ(expected_rate(11), exp_band_info->rates[7]);  // 54Mbps
-  EXPECT_EQ(5000, exp_band_info->supported_channels.base_freq);
-  EXPECT_EQ(36, exp_band_info->supported_channels.channels[0]);
-  EXPECT_EQ(165, exp_band_info->supported_channels.channels[24]);
+  wlan_softmac_band_capability_t* band_cap = &band_cap_list[0];
+  EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, band_cap->band);
+  EXPECT_EQ(true, band_cap->ht_supported);
+  EXPECT_EQ(expected_rate(4), band_cap->rates[0]);   // 6Mbps
+  EXPECT_EQ(expected_rate(11), band_cap->rates[7]);  // 54Mbps
+  EXPECT_EQ(5000, band_cap->supported_channels.base_freq);
+  EXPECT_EQ(36, band_cap->supported_channels.channels[0]);
+  EXPECT_EQ(165, band_cap->supported_channels.channels[24]);
   // index 1 should be empty.
-  exp_band_info = &band_infos[1];
-  EXPECT_EQ(false, exp_band_info->ht_supported);
-  EXPECT_EQ(0x00, exp_band_info->rates[0]);
-  EXPECT_EQ(0x00, exp_band_info->rates[7]);
-  EXPECT_EQ(0, exp_band_info->supported_channels.channels[0]);
+  band_cap = &band_cap_list[1];
+  EXPECT_EQ(false, band_cap->ht_supported);
+  EXPECT_EQ(0x00, band_cap->rates[0]);
+  EXPECT_EQ(0x00, band_cap->rates[7]);
+  EXPECT_EQ(0, band_cap->supported_channels.channels[0]);
 }
 
 TEST_F(WlanSoftmacDeviceTest, Query) {
@@ -188,15 +188,15 @@ TEST_F(WlanSoftmacDeviceTest, Query) {
   //
   // The below code assumes the test/sim-default-nvm.cc contains 2 bands.
   //
-  //   .bands[0]: WLAN_INFO_BAND_TWO_GHZ
-  //   .bands[1]: WLAN_INFO_BAND_FIVE_GHZ
+  //   .band_cap_list[0]: WLAN_INFO_BAND_TWO_GHZ
+  //   .band_cap_list[1]: WLAN_INFO_BAND_FIVE_GHZ
   //
-  ASSERT_EQ(2, info.bands_count);
-  EXPECT_EQ(expected_rate(0), info.bands[0].rates[0]);    // 1 Mbps
-  EXPECT_EQ(expected_rate(7), info.bands[0].rates[7]);    // 18 Mbps
-  EXPECT_EQ(expected_rate(11), info.bands[0].rates[11]);  // 54 Mbps
-  EXPECT_EQ(expected_rate(4), info.bands[1].rates[0]);    // 6 Mbps
-  EXPECT_EQ(165, info.bands[1].supported_channels.channels[24]);
+  ASSERT_EQ(2, info.band_cap_count);
+  EXPECT_EQ(expected_rate(0), info.band_cap_list[0].rates[0]);    // 1 Mbps
+  EXPECT_EQ(expected_rate(7), info.band_cap_list[0].rates[7]);    // 18 Mbps
+  EXPECT_EQ(expected_rate(11), info.band_cap_list[0].rates[11]);  // 54 Mbps
+  EXPECT_EQ(expected_rate(4), info.band_cap_list[1].rates[0]);    // 6 Mbps
+  EXPECT_EQ(165, info.band_cap_list[1].supported_channels.channels[24]);
 }
 
 TEST_F(WlanSoftmacDeviceTest, MacStart) {

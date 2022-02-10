@@ -103,33 +103,33 @@ size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
 // - 'bands_count' is the number of bands in 'bands[]'.
 // - 'band_infos[]' must have at least bands_count for this function to write.
 //
-void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t* bands,
-                     size_t bands_count, wlan_info_band_info_t* band_infos) {
-  ZX_ASSERT(bands_count <= std::size(nvm_data->bands));
+void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t* bands,
+                        size_t band_caps_count, wlan_softmac_band_capability_t* band_cap_list) {
+  ZX_ASSERT(band_caps_count <= std::size(nvm_data->bands));
 
-  for (size_t band_idx = 0; band_idx < bands_count; ++band_idx) {
+  for (size_t band_idx = 0; band_idx < band_caps_count; ++band_idx) {
     wlan_info_band_t band_id = bands[band_idx];
     const struct ieee80211_supported_band* sband = &nvm_data->bands[band_id];  // source
-    wlan_info_band_info_t* band_info = &band_infos[band_idx];                  // destination
+    wlan_softmac_band_capability_t* band_cap = &band_cap_list[band_idx];       // destination
 
-    band_info->band = band_id;
-    band_info->ht_supported = sband->ht_cap.ht_supported;
-    band_info->ht_caps.ht_capability_info = sband->ht_cap.cap;
-    band_info->ht_caps.ampdu_params =
+    band_cap->band = band_id;
+    band_cap->ht_supported = sband->ht_cap.ht_supported;
+    band_cap->ht_caps.ht_capability_info = sband->ht_cap.cap;
+    band_cap->ht_caps.ampdu_params =
         (sband->ht_cap.ampdu_factor << IEEE80211_AMPDU_RX_LEN_SHIFT) |   // (64K - 1) bytes
         (sband->ht_cap.ampdu_density << IEEE80211_AMPDU_DENSITY_SHIFT);  // 8 us
-    memcpy(&band_info->ht_caps.supported_mcs_set, &sband->ht_cap.mcs,
+    memcpy(&band_cap->ht_caps.supported_mcs_set, &sband->ht_cap.mcs,
            sizeof(struct ieee80211_mcs_info));
-    // TODO(36684): band_info->vht_caps =
+    // TODO(fxbug.dev/36684): band_info->vht_caps =
 
-    ZX_ASSERT(sband->n_bitrates <= static_cast<int>(std::size(band_info->rates)));
+    ZX_ASSERT(sband->n_bitrates <= static_cast<int>(std::size(band_cap->rates)));
     for (int rate_idx = 0; rate_idx < sband->n_bitrates; ++rate_idx) {
-      band_info->rates[rate_idx] = cfg_rates_to_80211(sband->bitrates[rate_idx]);
+      band_cap->rates[rate_idx] = cfg_rates_to_80211(sband->bitrates[rate_idx]);
     }
 
     // Fill the channel list of this band.
-    wlan_info_channel_list_t* ch_list = &band_info->supported_channels;
-    switch (band_info->band) {
+    wlan_info_channel_list_t* ch_list = &band_cap->supported_channels;
+    switch (band_cap->band) {
       case WLAN_INFO_BAND_TWO_GHZ:
         ch_list->base_freq = 2407;
         break;
@@ -182,9 +182,9 @@ zx_status_t mac_query(void* ctx, wlan_softmac_info_t* info) {
 
   // Determine how many bands this adapter supports.
   wlan_info_band_t bands[WLAN_INFO_BAND_COUNT];
-  info->bands_count = compose_band_list(nvm_data, bands);
+  info->band_cap_count = compose_band_list(nvm_data, bands);
 
-  fill_band_infos(nvm_data, bands, info->bands_count, info->bands);
+  fill_band_cap_list(nvm_data, bands, info->band_cap_count, info->band_cap_list);
 
   return ZX_OK;
 }

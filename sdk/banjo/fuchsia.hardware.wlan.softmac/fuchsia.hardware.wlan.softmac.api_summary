@@ -58,14 +58,22 @@ struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacActiveScanArgs.min_home_t
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacActiveScanArgs.min_probes_per_channel uint8
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacActiveScanArgs.ssids vector<fuchsia.wlan.ieee80211/CSsid>:84
 struct fuchsia.hardware.wlan.softmac/WlanSoftmacActiveScanArgs
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.band fuchsia.hardware.wlan.phyinfo/WlanInfoBand
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.ht_caps ddk.hw.wlan.ieee80211/Ieee80211HtCapabilities
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.ht_supported bool
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.rates array<uint8,12>
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.supported_channels fuchsia.hardware.wlan.phyinfo/WlanInfoChannelList
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.vht_caps ddk.hw.wlan.ieee80211/Ieee80211VhtCapabilities
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.vht_supported bool
+struct fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability
 protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.CompleteTx(fuchsia.hardware.wlan.softmac/WlanTxPacket packet,int32 status) -> ()
 protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.Recv(fuchsia.hardware.wlan.softmac/WlanRxPacket packet)
 protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.ReportTxStatus(fuchsia.wlan.common/WlanTxStatus tx_status)
 protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.ScanComplete(int32 status,uint64 scan_id)
 protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.Status(uint32 status) -> ()
 protocol fuchsia.hardware.wlan.softmac/WlanSoftmacIfc
-struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.bands array<fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo,2>
-struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.bands_count uint32
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.band_cap_count uint8
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.band_cap_list array<fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability,2>
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.caps fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.driver_features fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.mac_role fuchsia.wlan.common/WlanMacRole

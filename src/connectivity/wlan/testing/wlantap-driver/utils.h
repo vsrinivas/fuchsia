@@ -19,7 +19,8 @@ uint32_t ConvertDriverFeatures(const ::std::vector<::fuchsia::wlan::common::Driv
 wlan_mac_role_t ConvertMacRole(::fuchsia::wlan::common::WlanMacRole role);
 ::fuchsia::wlan::common::WlanMacRole ConvertMacRole(uint16_t role);
 uint32_t ConvertCaps(const ::std::vector<::fuchsia::wlan::device::Capability>& caps);
-void ConvertBandInfo(const ::fuchsia::wlan::device::BandInfo& in, wlan_info_band_info_t* out);
+void ConvertBandInfoToCapability(const ::fuchsia::wlan::device::BandInfo& in,
+                                 wlan_softmac_band_capability_t* out);
 zx_status_t ConvertTapPhyConfig(wlan_softmac_info_t* mac_info,
                                 const ::fuchsia::wlan::tap::WlantapPhyConfig& tap_phy_config);
 zx_status_t ConvertTapPhyConfig(

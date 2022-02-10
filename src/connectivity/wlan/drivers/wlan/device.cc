@@ -397,11 +397,11 @@ fbl::RefPtr<DeviceState> Device::GetState() { return state_; }
 const wlan_softmac_info_t& Device::GetWlanSoftmacInfo() const { return wlan_softmac_info_; }
 
 zx_status_t ValidateWlanSoftmacInfo(const wlan_softmac_info& wlan_softmac_info) {
-  for (uint8_t i = 0; i < wlan_softmac_info.bands_count; i++) {
-    auto bandinfo = wlan_softmac_info.bands[i];
+  for (uint8_t i = 0; i < wlan_softmac_info.band_cap_count; i++) {
+    auto band_cap = wlan_softmac_info.band_cap_list[i];
 
     // Validate channels
-    auto& supported_channels = bandinfo.supported_channels;
+    auto& supported_channels = band_cap.supported_channels;
     switch (supported_channels.base_freq) {
       case common::kBaseFreq5Ghz:
         for (auto c : supported_channels.channels) {
@@ -410,7 +410,7 @@ zx_status_t ValidateWlanSoftmacInfo(const wlan_softmac_info& wlan_softmac_info) 
           }
           auto channel = wlan_channel_t{.primary = c, .cbw = CHANNEL_BANDWIDTH_CBW20};
           if (!common::IsValidChan5Ghz(channel)) {
-            errorf("wlan-softmac band info for %u MHz has invalid channel %u\n",
+            errorf("band capability for %u MHz has invalid channel %u\n",
                    supported_channels.base_freq, c);
             return ZX_ERR_NOT_SUPPORTED;
           }
@@ -423,18 +423,17 @@ zx_status_t ValidateWlanSoftmacInfo(const wlan_softmac_info& wlan_softmac_info) 
           }
           auto channel = wlan_channel_t{.primary = c, .cbw = CHANNEL_BANDWIDTH_CBW20};
           if (!common::IsValidChan2Ghz(channel)) {
-            errorf("wlan-softmac band info for %u MHz has invalid cahnnel %u\n",
+            errorf("band capability for %u MHz has invalid cahnnel %u\n",
                    supported_channels.base_freq, c);
             return ZX_ERR_NOT_SUPPORTED;
           }
         }
         break;
       default:
-        errorf("wlan-softmac band info for %u MHz not supported\n", supported_channels.base_freq);
+        errorf("band capability for %u MHz not supported\n", supported_channels.base_freq);
         return ZX_ERR_NOT_SUPPORTED;
     }
   }
-  // Add more sanity check here
 
   return ZX_OK;
 }

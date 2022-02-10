@@ -98,9 +98,9 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
   info->driver_features = WLAN_INFO_DRIVER_FEATURE_SYNTH;
   info->mac_role = role_;
   info->caps = 0;
-  info->bands_count = 2;
+  info->band_cap_count = 2;
   // clang-format off
-    info->bands[0] = {
+    info->band_cap_list[0] = {
         .band = WLAN_INFO_BAND_TWO_GHZ,
         .ht_supported = false,
         .ht_caps = {},
@@ -113,7 +113,7 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
                 .channels = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
            },
     };
-    info->bands[1] = {
+    info->band_cap_list[1] = {
         .band = WLAN_INFO_BAND_FIVE_GHZ,
         .ht_supported = false,
         .ht_caps = {},

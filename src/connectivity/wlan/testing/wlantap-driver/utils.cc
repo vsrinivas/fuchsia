@@ -123,7 +123,8 @@ uint32_t ConvertCaps(const ::std::vector<wlan_device::Capability>& caps) {
   return ret;
 }
 
-void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_info_band_info_t* out) {
+void ConvertBandInfoToCapability(const wlan_device::BandInfo& in,
+                                 wlan_softmac_band_capability_t* out) {
   memset(out, 0, sizeof(*out));
   out->band = static_cast<uint8_t>(wlan::common::BandFromFidl(in.band_id));
 
@@ -161,11 +162,11 @@ zx_status_t ConvertTapPhyConfig(wlan_softmac_info_t* mac_info,
   mac_info->driver_features = ConvertDriverFeatures(tap_phy_config.driver_features);
   mac_info->mac_role = ConvertMacRole(tap_phy_config.mac_role);
   mac_info->caps = ConvertCaps(tap_phy_config.caps);
-  mac_info->bands_count =
+  mac_info->band_cap_count =
       std::min(tap_phy_config.bands.size(), static_cast<size_t>(WLAN_INFO_MAX_BANDS));
 
-  for (size_t i = 0; i < mac_info->bands_count; ++i) {
-    ConvertBandInfo((tap_phy_config.bands)[i], &mac_info->bands[i]);
+  for (size_t i = 0; i < mac_info->band_cap_count; ++i) {
+    ConvertBandInfoToCapability((tap_phy_config.bands)[i], &mac_info->band_cap_list[i]);
   }
   return ZX_OK;
 }

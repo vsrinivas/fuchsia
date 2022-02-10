@@ -3083,8 +3083,8 @@ static void ath10k_get_vht_cap(struct ath10k* ar, ieee80211_vht_capabilities_t* 
   // VHT Extended NSS BW Capable (B61): 0
 }
 
-static void ath10k_band_query_info(struct ath10k* ar, const struct ath10k_band* dev_band,
-                                   wlan_info_band_info_t* wlan_band) {
+static void ath10k_band_query_capability(struct ath10k* ar, const struct ath10k_band* dev_band,
+                                         wlan_softmac_band_capability_t* wlan_band) {
   wlan_band->band = dev_band->band_id;
 
   // ht_caps
@@ -3114,12 +3114,13 @@ static void ath10k_band_query_info(struct ath10k* ar, const struct ath10k_band* 
   ath10k_foreach_channel(dev_band, ath10k_chan_query_info, &next_ch);
 }
 
-static void ath10k_wlan_softmac_band_query_info(struct ath10k* ar,
-                                                const struct ath10k_band* dev_band, void* cookie) {
+static void ath10k_wlan_softmac_band_query_capability(struct ath10k* ar,
+                                                      const struct ath10k_band* dev_band,
+                                                      void* cookie) {
   wlan_softmac_info_t* mac_info = cookie;
 
-  ZX_DEBUG_ASSERT(mac_info->bands_count < WLAN_INFO_MAX_BANDS);
-  ath10k_band_query_info(ar, dev_band, &mac_info->bands[mac_info->bands_count++]);
+  ZX_DEBUG_ASSERT(mac_info->band_cap_count < WLAN_INFO_MAX_BANDS);
+  ath10k_band_query_capability(ar, dev_band, &mac_info->band_cap_list[mac_info->band_cap_count++]);
 }
 
 void ath10k_pci_fill_wlanphy_impl_supported_mac_roles(
@@ -3164,7 +3165,7 @@ void ath10k_pci_fill_wlan_softmac_info(struct ath10k* ar, wlan_softmac_info_t* m
                    WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
 
   // bands
-  ath10k_foreach_band(ar, ath10k_wlan_softmac_band_query_info, mac_info);
+  ath10k_foreach_band(ar, ath10k_wlan_softmac_band_query_capability, mac_info);
 }
 
 static zx_status_t ath10k_pci_mac_query(void* ctx, wlan_softmac_info_t* mac_info) {

@@ -5,14 +5,6 @@ enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoBand.COUNT 2
 enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoBand.FIVE_GHZ 1
 enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoBand.TWO_GHZ 0
 strict enum fuchsia.hardware.wlan.phyinfo/WlanInfoBand uint32
-struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.band fuchsia.hardware.wlan.phyinfo/WlanInfoBand
-struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.ht_caps ddk.hw.wlan.ieee80211/Ieee80211HtCapabilities
-struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.ht_supported bool
-struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.rates array<uint8,12>
-struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.supported_channels fuchsia.hardware.wlan.phyinfo/WlanInfoChannelList
-struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.vht_caps ddk.hw.wlan.ieee80211/Ieee80211VhtCapabilities
-struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.vht_supported bool
-struct fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo
 struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoChannelList.base_freq uint16
 struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoChannelList.channels array<uint8,64>
 struct fuchsia.hardware.wlan.phyinfo/WlanInfoChannelList

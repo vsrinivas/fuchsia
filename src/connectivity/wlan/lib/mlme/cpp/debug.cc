@@ -642,15 +642,15 @@ std::string Describe(const wlan_info_channel_list& wl) {
   return std::string(buf);
 }
 
-std::string Describe(const wlan_info_band_info& bi) {
+std::string Describe(const wlan_softmac_band_capability& bc) {
   char buf[1024];
   size_t offset = 0;
-  BUFFER("band:%s", common::BandStr(bi.band).c_str());
-  BUFFER("ht_caps:[%s]", Describe(bi.ht_caps).c_str());
-  BUFFER("vht_supported:%u", bi.vht_supported);
+  BUFFER("band:%s", common::BandStr(bc.band).c_str());
+  BUFFER("ht_caps:[%s]", Describe(bc.ht_caps).c_str());
+  BUFFER("vht_supported:%u", bc.vht_supported);
   BUFFER("vht_caps:[to implement]");
-  BUFFER("rates:[%s]", DescribeArray(bi.rates, 12).c_str());
-  BUFFER("supported_channels:[%s]", Describe(bi.supported_channels).c_str());
+  BUFFER("rates:[%s]", DescribeArray(bc.rates, 12).c_str());
+  BUFFER("supported_channels:[%s]", Describe(bc.supported_channels).c_str());
   return std::string(buf);
 }
 
@@ -666,9 +666,9 @@ std::string Describe(const wlan_softmac_info& wi) {
   }
   BUFFER("feat:0x%08x", wi.driver_features);
   BUFFER("capability_info:0x%08x", wi.caps);
-  BUFFER("#bands:%du", wi.bands_count);
-  for (uint8_t i = 0; i < wi.bands_count; i++) {
-    BUFFER("[band %u]%s", i, Describe(wi.bands[i]).c_str());
+  BUFFER("#bands:%du", wi.band_cap_count);
+  for (uint8_t i = 0; i < wi.band_cap_count; i++) {
+    BUFFER("[band %u]%s", i, Describe(wi.band_cap_list[i]).c_str());
   }
   return std::string(buf);
 }
