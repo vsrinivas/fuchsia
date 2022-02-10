@@ -40,12 +40,8 @@ List<TestCaseResults> _storageBenchmarksMetricsProcessor(
 }
 
 Future<void> runOdu(
-    PerfTestHelper helper,
-    String filesystem,
-    List<String> extraLauncherArgs,
-    int fileSize,
-    int ioSize,
-    String operation) async {
+    PerfTestHelper helper, String filesystem, List<String> extraLauncherArgs,
+    {int fileSize, int ioSize, bool sequential, String operation}) async {
   // Only read/write the entire file once. Most filesystems cache reads and
   // writes in memory so quickly hitting the same block multiple times would
   // be entirely served from memory and water down the results.
@@ -64,10 +60,10 @@ Future<void> runOdu(
     '--max_io_count=$operationCount',
     '--block_size=$ioSize',
     '--max_io_size=$ioSize',
-    '--sequential=true',
+    '--sequential=$sequential',
     '--log_ftrace=true',
     '--align=true',
-    '--thread_count=1'
+    '--thread_count=1',
   ]);
   if (result != 'Success') {
     throw Exception('Failed to launch $_launcherUrl.');
@@ -87,12 +83,32 @@ void _addOduTest(String filesystem, List<String> extraLauncherArgs) {
     await traceSession.start();
 
     // Run sequential write perf tests.
-    await runOdu(
-        helper, filesystem, extraLauncherArgs, fileSize, ioSize, 'write');
+    await runOdu(helper, filesystem, extraLauncherArgs,
+        fileSize: fileSize,
+        ioSize: ioSize,
+        sequential: true,
+        operation: 'write');
 
     // Run sequential read perf tests.
-    await runOdu(
-        helper, filesystem, extraLauncherArgs, fileSize, ioSize, 'read');
+    await runOdu(helper, filesystem, extraLauncherArgs,
+        fileSize: fileSize,
+        ioSize: ioSize,
+        sequential: true,
+        operation: 'read');
+
+    // Run random write perf tests.
+    await runOdu(helper, filesystem, extraLauncherArgs,
+        fileSize: fileSize,
+        ioSize: ioSize,
+        sequential: false,
+        operation: 'write');
+
+    // Run random read perf tests.
+    await runOdu(helper, filesystem, extraLauncherArgs,
+        fileSize: fileSize,
+        ioSize: ioSize,
+        sequential: false,
+        operation: 'read');
 
     // TODO(fxbug.dev/54931): Explicitly stop tracing.
     // await traceSession.stop();
