@@ -34,7 +34,7 @@ class FuchsiaViewsService {
       // Guard against invalid or missing arguments.
       try {
         // Call the method call handler registered for viewId.
-        int? viewId = call.arguments['viewId'];
+        int? viewId = (call.arguments as Map)['viewId'];
         return _callHandlers[viewId]?.call(call);
         // ignore: avoid_catches_without_on_clauses
       } catch (e) {

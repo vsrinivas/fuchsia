@@ -91,8 +91,9 @@ class FuchsiaViewController implements PlatformViewController {
           onViewDisconnected?.call(this);
           break;
         case 'View.viewStateChanged':
+          final callArgs = call.arguments as Map;
           final state =
-              call.arguments['state'] == 1 || call.arguments['state'] == true;
+              callArgs['state'] == 1 || callArgs['state'] == true;
           onViewStateChanged?.call(this, state);
           break;
         default:
