@@ -15,6 +15,7 @@ group("integration_input_tests") {
     "factory-reset-handler:tests",
     "focus:tests",
     "media-buttons:tests",
+    "mouse:tests",
     "pointerinjector_config:tests",
     "text-input:tests",
     "touch:tests",
@@ -89,7 +90,7 @@ fuchsia_component("workstation-test-realm") {
     ":wrapped-text-manager",
     "//examples/fidl/rust/server:echo-server",
     "//src/lib/ui/input-synthesis:input-synthesis-component",
-    "//src/ui/bin/root_presenter:component_v1_for_test",
+    "//src/ui/bin/scene_manager:scene_manager_component",
     "//src/ui/bin/text:text_manager_comp",
   ]
 }

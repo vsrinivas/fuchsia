@@ -1,0 +1,98 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/config.gni")
+import("//build/flutter/config.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":mouse-input-test",
+    "mouse-input-flutter:mouse-input-flutter-component",
+  ]
+}
+
+fidl("test.mouse") {
+  sdk_category = "internal"
+  sources = [ "response_listener.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+executable("mouse-input-test-bin") {
+  testonly = true
+  sources = [ "mouse-input-test.cc" ]
+  output_name = "mouse-input-test"
+  deps = [
+    ":test.mouse",
+    "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.session.scene",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.tracing.provider",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/fidl/fuchsia.web",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/lib/ui/input-synthesis:test.inputsynthesis",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
+  ]
+
+  configs += [
+    # Allow passing the test even on configs where there is no modern injection.
+    "//src/lib/ui/input-synthesis:use_modern_input_injection",
+  ]
+}
+
+fuchsia_component("mouse-input-test-component") {
+  testonly = true
+  component_name = "mouse_input_test"
+  manifest = "meta/mouse-input-test.cml"
+  deps = [ ":mouse-input-test-bin" ]
+}
+
+fuchsia_test_package("mouse-input-test") {
+  package_deps_for_infra_only = [
+    "//garnet/bin/trace_manager:trace_manager",
+    flutter_default_build_cfg.runner_dep,
+  ]
+  test_components = [ ":mouse-input-test-component" ]
+  deps = [
+    "mouse-input-flutter:mouse-input-flutter-component",
+    "//src/lib/ui/input-synthesis:input-synthesis-component",
+    "//src/ui/tests/integration_input_tests:workstation-test-realm",
+  ]
+  test_specs = {
+    # Do not fail the test if a message with level ERROR is logged.  Several
+    # components will log ERROR if they miss a non-essential FIDL API in the
+    # sandbox, which would make the test fail if it weren't for this. For
+    # example, the flutter runner is noisy like this. Ideally, we should have
+    # a setup that does not have such errors at all, but adding ever more
+    # components to satisfy all FIDL dependencies expands the test graph
+    # beyond what is practical for testing.  In the future we may strike a
+    # balance such that this becomes a non-issue, and that this could be
+    # removed.
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          # Ensure the device has Vulkan.
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
+}

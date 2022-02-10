@@ -380,12 +380,14 @@ class ChildViewWatcherClient {
   fidl::InterfacePtr<ChildViewWatcher> client_end_;
 };
 
-TEST_F(TextInputTest, FlutterTextFieldEntry) {
 #ifndef INPUT_USE_MODERN_INPUT_INJECTION
+TEST_F(TextInputTest, DISABLED_FlutterTextFieldEntry) {
   // Pass the test where modern injection is unavailable.  Modern injection is
   // not available outside of devices that support keyboard, on which this test
   // doesn't apply anyways.
 #else
+TEST_F(TextInputTest, FlutterTextFieldEntry) {
+#endif
   auto scene_manager = realm_->Connect<fuchsia::session::scene::Manager>();
 
   fidl::InterfaceHandle<ViewProvider> view_provider_handle;
@@ -537,7 +539,6 @@ TEST_F(TextInputTest, FlutterTextFieldEntry) {
   RunLoopUntil([&] { return test_response_listener_->HasResponse("Hello world!"); });
 
   FX_LOGS(INFO) << "Done";
-#endif  // INPUT_USE_MODERN_INPUT_INJECTION
 }
 
 }  // namespace

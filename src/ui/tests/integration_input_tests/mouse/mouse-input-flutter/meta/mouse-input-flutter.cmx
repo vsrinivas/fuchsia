@@ -1,0 +1,13 @@
+{
+    "program": {
+        "data": "data/mouse-input-flutter"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.scenic.Scenic",
+            "test.mouse.ResponseListener"
+        ]
+    }
+}

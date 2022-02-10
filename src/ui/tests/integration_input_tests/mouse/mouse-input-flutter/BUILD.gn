@@ -1,0 +1,35 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dart/dart_library.gni")
+import("//build/flutter/flutter_component.gni")
+
+group("mouse-input-flutter") {
+  testonly = true
+  deps = [
+    ":lib",
+    ":mouse-input-flutter-component",
+  ]
+}
+
+dart_library("lib") {
+  package_name = "mouse-input-flutter"
+  sources = [ "mouse-input-flutter.dart" ]
+  deps = [
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
+    "//src/ui/tests/integration_input_tests/mouse:test.mouse",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+  ]
+}
+
+flutter_component("mouse-input-flutter-component") {
+  component_name = "mouse-input-flutter"
+  manifest = "meta/mouse-input-flutter.cmx"
+  main_package = "mouse-input-flutter"
+  main_dart = "mouse-input-flutter.dart"
+  deps = [ ":lib" ]
+}
