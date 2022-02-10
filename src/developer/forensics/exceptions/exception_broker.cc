@@ -70,6 +70,8 @@ void ExceptionBroker::OnException(zx::exception exception, ExceptionInfo info,
   cb();
 }
 
+void ExceptionBroker::IsActive(IsActiveCallback cb) { cb(); }
+
 void ExceptionBroker::AddToLimbo(zx::exception exception, ExceptionInfo info) {
   ProcessException process_exception = {};
   process_exception.set_exception(std::move(exception));

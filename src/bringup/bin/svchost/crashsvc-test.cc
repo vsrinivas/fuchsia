@@ -12,6 +12,7 @@
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <threads.h>
 #include <zircon/syscalls/exception.h>
@@ -162,7 +163,9 @@ void AnalyzeCrash(async::Loop* loop, const zx::job& parent_job, const zx::job& j
   ASSERT_OK(process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr));
 }
 
-// Crashsvc will attemp to connect to a |fuchsia.exception.Handler| when it catches an exception.
+constexpr auto kExceptionHandlerTimeout = zx::sec(3);
+
+// Crashsvc will attempt to connect to a |fuchsia.exception.Handler| when it catches an exception.
 // We use this fake in order to verify that behaviour.
 class StubExceptionHandler final : public fidl::WireServer<fuchsia_exception::Handler> {
  public:
@@ -177,19 +180,40 @@ class StubExceptionHandler final : public fidl::WireServer<fuchsia_exception::Ha
     if (respond_sync_) {
       completer.Reply();
     } else {
-      completers_.push_back(completer.ToAsync());
+      on_exception_completers_.push_back(completer.ToAsync());
+    }
+  }
+
+  void IsActive(IsActiveRequestView request, IsActiveCompleter::Sync& completer) override {
+    if (is_active_) {
+      completer.Reply();
+    } else {
+      is_active_completers_.push_back(completer.ToAsync());
     }
   }
 
   void SendAsyncResponses() {
-    for (auto& completer : completers_) {
+    for (auto& completer : on_exception_completers_) {
       completer.Reply();
     }
 
-    completers_.clear();
+    on_exception_completers_.clear();
   }
 
-  void SetRespondSync(bool val) { respond_sync_ = true; }
+  void SetRespondSync(bool val) { respond_sync_ = val; }
+
+  void SetIsActive(bool val) {
+    is_active_ = val;
+    if (!is_active_) {
+      return;
+    }
+
+    for (auto& completer : is_active_completers_) {
+      completer.Reply();
+    }
+
+    is_active_completers_.clear();
+  }
 
   zx_status_t Unbind() {
     if (!binding_.has_value()) {
@@ -209,7 +233,9 @@ class StubExceptionHandler final : public fidl::WireServer<fuchsia_exception::Ha
 
   int exception_count_ = 0;
   bool respond_sync_{true};
-  std::list<OnExceptionCompleter::Async> completers_;
+  bool is_active_{true};
+  std::list<OnExceptionCompleter::Async> on_exception_completers_;
+  std::list<IsActiveCompleter::Async> is_active_completers_;
 };
 
 // Exposes the services through a virtual directory that crashsvc uses in order to connect to
@@ -360,7 +386,8 @@ TEST(ExceptionHandlerTest, ExceptionHandlerReconnects) {
 
   FakeService test_svc(loop.dispatcher());
 
-  ExceptionHandler handler(loop.dispatcher(), test_svc.service_channel().get());
+  ExceptionHandler handler(loop.dispatcher(), test_svc.service_channel().get(),
+                           kExceptionHandlerTimeout);
 
   RunUntil([&test_svc] { return test_svc.exception_handler().HasClient(); });
   ASSERT_TRUE(test_svc.exception_handler().HasClient());
@@ -376,6 +403,122 @@ TEST(ExceptionHandlerTest, ExceptionHandlerReconnects) {
 
   RunUntil([&test_svc] { return test_svc.exception_handler().HasClient(); });
   ASSERT_TRUE(test_svc.exception_handler().HasClient());
+
+  loop.Shutdown();
+}
+
+TEST(ExceptionHandlerTest, ExceptionHandlerWaitsForIsActive) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  FakeService test_svc(loop.dispatcher());
+
+  auto RunUntil = [&loop](fit::function<bool()> condition) {
+    while (!condition()) {
+      loop.Run(zx::deadline_after(zx::msec(10)));
+    }
+  };
+
+  // Instructs the stub to not respond to calls to IsActive.
+  test_svc.exception_handler().SetIsActive(false);
+
+  ExceptionHandler handler(loop.dispatcher(), test_svc.service_channel().get(),
+                           kExceptionHandlerTimeout);
+
+  RunUntil([&test_svc] { return test_svc.exception_handler().HasClient(); });
+  ASSERT_TRUE(test_svc.exception_handler().HasClient());
+
+  // Generate an exception to give to the handler.
+  zx::job parent_job, job;
+  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
+  ASSERT_OK(zx::job::create(parent_job, 0, &job));
+
+  zx::channel exception_channel;
+  ASSERT_OK(parent_job.create_exception_channel(0, &exception_channel));
+
+  zx::process process;
+  zx::thread thread;
+  ASSERT_NO_FATAL_FAILURE(CreateAndCrashProcess(job, &process, &thread));
+
+  ASSERT_OK(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
+
+  zx_exception_info_t info;
+  zx::exception exception;
+  ASSERT_OK(exception_channel.read(0, &info, exception.reset_and_get_address(), sizeof(info), 1,
+                                   nullptr, nullptr));
+
+  // Handle the exception.
+  handler.Handle(std::move(exception), info);
+  ASSERT_EQ(test_svc.exception_handler().exception_count(), 0u);
+
+  test_svc.exception_handler().SetIsActive(true);
+  RunUntil([&test_svc] { return test_svc.exception_handler().exception_count() == 1; });
+
+  // The exception should not make it out of crashsvc.
+  ASSERT_EQ(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::time(0), nullptr),
+            ZX_ERR_TIMED_OUT);
+  ASSERT_OK(job.kill());
+
+  loop.Shutdown();
+}
+
+TEST(ExceptionHandlerTest, ExceptionHandlerIsActiveTimeOut) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  FakeService test_svc(loop.dispatcher());
+
+  auto RunUntil = [&loop](fit::function<bool()> condition) {
+    while (!condition()) {
+      loop.Run(zx::deadline_after(zx::msec(10)));
+    }
+  };
+
+  auto RunFor = [&loop](zx::duration timeout) {
+    while (timeout > zx::nsec(0)) {
+      loop.Run(zx::deadline_after(zx::msec(10)));
+      timeout -= zx::msec(10);
+    }
+  };
+
+  // Instructs the stub to not respond to calls to IsActive.
+  test_svc.exception_handler().SetIsActive(false);
+
+  ExceptionHandler handler(loop.dispatcher(), test_svc.service_channel().get(),
+                           kExceptionHandlerTimeout);
+
+  RunUntil([&test_svc] { return test_svc.exception_handler().HasClient(); });
+  ASSERT_TRUE(test_svc.exception_handler().HasClient());
+
+  // Generate an exception to give to the handler.
+  zx::job parent_job, job;
+  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job));
+  ASSERT_OK(zx::job::create(parent_job, 0, &job));
+
+  zx::channel exception_channel;
+  ASSERT_OK(parent_job.create_exception_channel(0, &exception_channel));
+
+  zx::channel exception_channel_self;
+  ASSERT_OK(zx::job::default_job()->create_exception_channel(0, &exception_channel_self));
+
+  zx::process process;
+  zx::thread thread;
+  ASSERT_NO_FATAL_FAILURE(CreateAndCrashProcess(job, &process, &thread));
+
+  ASSERT_OK(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
+
+  zx_exception_info_t info;
+  zx::exception exception;
+  ASSERT_OK(exception_channel.read(0, &info, exception.reset_and_get_address(), sizeof(info), 1,
+                                   nullptr, nullptr));
+
+  // Handle the exception.
+  handler.Handle(std::move(exception), info);
+
+  RunFor(kExceptionHandlerTimeout);
+  ASSERT_EQ(test_svc.exception_handler().exception_count(), 0u);
+
+  // The exception should be passed up the chain after the timeout. Once we
+  // get the exception, kill the job which will stop exception handling and
+  // cause the crashsvc thread to exit.
+  ASSERT_OK(exception_channel_self.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
+  ASSERT_OK(job.kill());
 
   loop.Shutdown();
 }

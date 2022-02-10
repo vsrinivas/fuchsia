@@ -9,6 +9,19 @@ using zx;
 /// particular service.
 @discoverable
 protocol Handler {
+    /// Requests the exception handler to send a signal indicating the server is
+    /// active and able to respond to requests.
+    ///
+    /// It's recommended clients call IsActive and wait for a response before
+    /// sending an exception to the server with OnException because a
+    /// zx.handle:EXCEPTION can't be released by the client once it's sent
+    /// across the channel.
+    ///
+    /// Note: a response guarantees the server was active when it sent the
+    /// response, but doesn't preclcude the server being unresponsive after the
+    /// reply was sent.
+    IsActive() -> ();
+
     /// This exception mirrors closely the information provided by exception
     /// channels. The design is to have clients of this API behave as closely as
     /// possible to native exception handlers that are listening to an exception

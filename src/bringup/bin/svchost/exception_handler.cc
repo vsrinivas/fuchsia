@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -11,12 +12,14 @@
 #include <crashsvc/logging.h>
 
 ExceptionHandler::ExceptionHandler(async_dispatcher_t* dispatcher,
-                                   zx_handle_t exception_handler_svc)
+                                   zx_handle_t exception_handler_svc,
+                                   const zx::duration is_active_timeout)
     : dispatcher_(dispatcher),
       exception_handler_svc_(exception_handler_svc),
       // We are in a build without a server for fuchsia.exception.Handler, e.g., bringup.
       drop_exceptions_(exception_handler_svc_ == ZX_HANDLE_INVALID),
-      connection_() {
+      connection_(),
+      is_active_timeout_(is_active_timeout) {
   SetUpClient();
   ConnectToServer();
 }
@@ -80,18 +83,55 @@ void ExceptionHandler::Handle(zx::exception exception, const zx_exception_info_t
 
   ConnectToServer();
 
-  fuchsia_exception::wire::ExceptionInfo exception_info;
-  exception_info.process_koid = info.pid;
-  exception_info.thread_koid = info.tid;
-  exception_info.type = static_cast<fuchsia_exception::wire::ExceptionType>(info.type);
+  auto shared_exception = std::make_shared<zx::exception>(std::move(exception));
 
-  connection_->OnException(
-      std::move(exception), exception_info,
-      [info](fidl::WireUnownedResult<fuchsia_exception::Handler::OnException>& result) {
-        if (!result.ok()) {
-          LogError("Failed to pass exception to handler", info, result.status());
-        }
-      });
+  auto weak_this = weak_factory_.GetWeakPtr();
+
+  // Sends the exception to the server, if it is still valid, after the call to IsActive
+  // has been acknowledged.
+  auto is_active_cb = [weak_this, info, shared_exception](auto& result) {
+    if (!result.ok()) {
+      LogError("Failed to check if handler is active", info, result.status());
+      return;
+    }
+
+    if (!shared_exception->is_valid()) {
+      LogError("Exception was released before hander responded", info);
+      return;
+    }
+
+    if (weak_this->drop_exceptions_) {
+      return;
+    }
+
+    weak_this->ConnectToServer();
+
+    fuchsia_exception::wire::ExceptionInfo exception_info;
+    exception_info.process_koid = info.pid;
+    exception_info.thread_koid = info.tid;
+    exception_info.type = static_cast<fuchsia_exception::wire::ExceptionType>(info.type);
+
+    // The server may be in an unresponsive state, unknown here, despite responding to IsActive.
+    // However, the response to IsActive narrows window during which it's unknown the server
+    // became unresponsive.
+    weak_this->connection_->OnException(
+        std::move(*shared_exception), exception_info, [info](auto& result) {
+          if (!result.ok()) {
+            LogError("Failed to pass exception to handler", info, result.status());
+          }
+        });
+  };
+
+  // Releases the exception if it is still valid.
+  auto release_exception = [shared_exception, info] {
+    if (shared_exception->is_valid()) {
+      LogError("Exception handler may be un, releasing exception to kernel", info);
+      shared_exception->reset();
+    }
+  };
+
+  connection_->IsActive(std::move(is_active_cb));
+  async::PostDelayedTask(dispatcher_, std::move(release_exception), is_active_timeout_);
 }
 
 bool ExceptionHandler::ConnectedToServer() const { return !server_endpoint_.is_valid(); }

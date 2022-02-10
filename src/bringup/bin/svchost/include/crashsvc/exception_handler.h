@@ -11,12 +11,16 @@
 #include <lib/fidl/llcpp/client.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/handle.h>
+#include <lib/zx/time.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
+
 class ExceptionHandler : public fidl::WireAsyncEventHandler<fuchsia_exception::Handler> {
  public:
-  ExceptionHandler(async_dispatcher_t* dispatcher, zx_handle_t exception_handler_svc);
+  ExceptionHandler(async_dispatcher_t* dispatcher, zx_handle_t exception_handler_svc,
+                   zx::duration is_active_timeout);
 
   void Handle(zx::exception exception, const zx_exception_info_t& info);
 
@@ -41,6 +45,10 @@ class ExceptionHandler : public fidl::WireAsyncEventHandler<fuchsia_exception::H
 
   // The other endpoint of |connection_| before it has been sent to the server.
   fidl::ServerEnd<fuchsia_exception::Handler> server_endpoint_;
+
+  zx::duration is_active_timeout_;
+
+  fxl::WeakPtrFactory<ExceptionHandler> weak_factory_{this};
 };
 
 #endif  // SRC_BRINGUP_BIN_SVCHOST_INCLUDE_CRASHSVC_EXCEPTION_HANDLER_H_

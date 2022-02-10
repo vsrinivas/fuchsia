@@ -35,6 +35,8 @@ class ExceptionBroker : public fuchsia::exception::Handler {
   void OnException(zx::exception exception, fuchsia::exception::ExceptionInfo info,
                    OnExceptionCallback) override;
 
+  void IsActive(IsActiveCallback) override;
+
   ProcessLimboManager& limbo_manager() { return limbo_manager_; }
   const ProcessLimboManager& limbo_manager() const { return limbo_manager_; }
 

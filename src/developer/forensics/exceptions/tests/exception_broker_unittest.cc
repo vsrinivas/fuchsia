@@ -38,6 +38,16 @@ size_t NumSubprocesses() {
   return actual - 1;
 }
 
+using ExceptionBrokerTest = UnitTestFixture;
+
+TEST_F(ExceptionBrokerTest, IsActive) {
+  auto broker = ExceptionBroker::Create(dispatcher(), &InspectRoot(), 0, zx::sec(0));
+
+  bool called{false};
+  broker->IsActive([&called] { called = true; });
+  EXPECT_TRUE(called);
+}
+
 using PendingExceptionTest = UnitTestFixture;
 
 TEST_F(PendingExceptionTest, ExceptionExpires) {

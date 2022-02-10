@@ -12,6 +12,9 @@
 void LogError(const char* message, zx_status_t status);
 
 // Logs an error when handling the exception described by |info|.
+void LogError(const char* message, const zx_exception_info& info);
+
+// Logs an error when handling the exception described by |info|.
 void LogError(const char* message, const zx_exception_info& info, zx_status_t status);
 
 #endif  // SRC_BRINGUP_BIN_SVCHOST_INCLUDE_CRASHSVC_LOGGING_H_

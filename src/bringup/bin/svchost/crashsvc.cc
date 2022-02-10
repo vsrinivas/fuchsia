@@ -12,6 +12,7 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
+#include <lib/zx/time.h>
 #include <threads.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
@@ -28,6 +29,13 @@
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace {
+
+// crashsvc gives 8s to the exception handler to respond that it is active, otherwise it releases
+// the exception to prevent potentially sending the exception into oblivion in the channel in case
+// the handler is truly unresponsive.
+//
+// This value was picked as something that seems reasonable. It may need to be adjusted.
+constexpr auto kExceptionHandlerTimeout = zx::sec(8);
 
 struct crash_ctx {
   zx::channel exception_channel;
@@ -95,14 +103,16 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
 
   const std::string process_name = fsl::GetObjectName(process.get());
 
-  // If the process serving fuchsia.exception.Handler crashes, the system will still send future
-  // fuchsia.exception.Handler/OnException requests to that process as it is still alive and
-  // therefore the exception will be stuck in the underlying channel, never terminating the process.
-  // So we release the exception here to terminate the process and unfortunately forgo further
-  // exception handling for that exception.
+  // If the process serving fuchsia.exception.Handler crashes, the system will send future requests
+  // for the protocol to the crashes server because it isn't techically terminated. As a result, the
+  // exception for the server is stuck in the channel and cannot be released to terminate the
+  // process. The exception is released here to terminate the process as early as possible (not via
+  // timeout) and allow the system to recover quickly and gracefully.
   //
   // This needs to be kept in sync with the name of the process serving
   // fuchsia.exception.Handler.
+  //
+  // DO NOT REMOVE: Removing this will lead to delays in exception handlings.
   if (process_name == "exceptions.cm") {
     LogError("cannot handle exception for the process serving fuchsia.exception.Handler",
              ZX_ERR_NOT_SUPPORTED);
@@ -115,6 +125,10 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
   // If an ancestor of the component serving fuchsia.exception.Handler crashes, the system may be
   // unable to meaningfully handle the exception because entries in exception handler's "/svc"
   // directory may be unserviceable and synchronous operations may hang indefinitely.
+  //
+  // DO NOT REMOVE: exceptions.cm has a synchronous dependency on component_manager. Removing this
+  // may cause component_manager crashes to become unrecoverable and the device stuck in a bad
+  // state.
   if (process_name == "bin/component_manager") {
     LogError(
         "cannot handle exception for a process that is a necessary dependency of the process "
@@ -141,7 +155,7 @@ int crash_svc(void* arg) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto ctx = std::unique_ptr<crash_ctx>(reinterpret_cast<crash_ctx*>(arg));
-  ExceptionHandler handler(loop.dispatcher(), ctx->exception_handler_svc);
+  ExceptionHandler handler(loop.dispatcher(), ctx->exception_handler_svc, kExceptionHandlerTimeout);
   async::Wait wait_for_exceptions(ctx->exception_channel.get(),
                                   ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, /*options=*/0u);
 
