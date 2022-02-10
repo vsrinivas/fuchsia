@@ -5,7 +5,8 @@
                 "test": [
                     "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/svc-list.cmx"
                 ]
-            }
+            },
+            "timeout": 120
         }
     },
     "include": [
