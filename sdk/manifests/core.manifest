@@ -1,5 +1,5 @@
-sdk://component_manifest/syslog
 sdk://component_manifest/sys/component
+sdk://component_manifest/syslog
 sdk://component_manifest/vulkan
 sdk://docs/low_level
 sdk://docs/metadata_schemas
@@ -123,6 +123,7 @@ sdk://fidl/fuchsia.ultrasound
 sdk://fidl/fuchsia.update
 sdk://fidl/fuchsia.update.channel
 sdk://fidl/fuchsia.update.channelcontrol
+sdk://fidl/fuchsia.update.config
 sdk://fidl/fuchsia.url
 sdk://fidl/fuchsia.weave
 sdk://fidl/fuchsia.web
