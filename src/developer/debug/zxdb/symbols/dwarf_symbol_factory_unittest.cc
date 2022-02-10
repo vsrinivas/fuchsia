@@ -555,7 +555,13 @@ TEST(DwarfSymbolFactory, NullPtrTTypedef) {
   // The return type should be nullptr_t.
   auto* nullptr_t_type = function->return_type().Get()->As<Type>();
   ASSERT_TRUE(nullptr_t_type);
-  EXPECT_EQ("std::nullptr_t", nullptr_t_type->GetFullName());
+  // TODO (paulkirth): restore strict checks after new libc++/toolchain is available
+  // relax this check until libc++ transition is finished
+  // since both std::nullptr_t and nullptr_t share a suffix, just use that while transitioning
+  std::string null_ptr_str = "nullptr_t";
+  auto& name = nullptr_t_type->GetFullName();
+  ASSERT_TRUE((null_ptr_str.size() <= name.size()) &&
+              std::equal(null_ptr_str.rbegin(), null_ptr_str.rend(), name.rbegin()));
 
   // The standard defined nullptr_t as "typedef decltype(nullptr) nullptr_t"
   auto* typedef_type = nullptr_t_type->As<ModifiedType>();
