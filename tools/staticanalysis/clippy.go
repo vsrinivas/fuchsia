@@ -104,8 +104,8 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*Finding, 
 				Path:      spanPath,
 				StartLine: span.LineStart,
 				EndLine:   span.LineEnd,
-				StartChar: span.ColumnStart,
-				EndChar:   span.ColumnEnd,
+				StartChar: span.ColumnStart - 1,
+				EndChar:   span.ColumnEnd - 1,
 			})
 		}
 	}

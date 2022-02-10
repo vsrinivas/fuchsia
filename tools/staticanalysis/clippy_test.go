@@ -58,8 +58,8 @@ func TestClippyAnalyzer(t *testing.T) {
 								FileName:    "../../src/foo.rs",
 								LineStart:   1,
 								LineEnd:     2,
-								ColumnStart: 3,
-								ColumnEnd:   4,
+								ColumnStart: 4,
+								ColumnEnd:   5,
 							},
 						},
 					},
@@ -72,6 +72,8 @@ func TestClippyAnalyzer(t *testing.T) {
 					Path:      "src/foo.rs",
 					StartLine: 1,
 					EndLine:   2,
+					// StartChar and EndChar should be decremented from the
+					// one-based values produced by Clippy.
 					StartChar: 3,
 					EndChar:   4,
 				},
