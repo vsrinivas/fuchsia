@@ -171,7 +171,6 @@ if (target_cpu == "arm64") {
     ]
     public_deps = [
       ":amlogic_video_test_bind_header",
-      "h264:h264_parser",
       "//sdk/banjo/fuchsia.hardware.amlogiccanvas:fuchsia.hardware.amlogiccanvas_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
@@ -189,6 +188,7 @@ if (target_cpu == "arm64") {
       "//src/media/lib/extend_bits",
       "//src/media/lib/internal_buffer",
       "//src/media/lib/memory_barriers",
+      "//src/media/lib/video_utils/h264:h264_parser",
       "//src/security/tee/tee-client-api",
       "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/async-loop:async-loop-cpp",

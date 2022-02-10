@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_CHROMIUM_UTILS_H_
-#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_CHROMIUM_UTILS_H_
+#ifndef SRC_MEDIA_LIB_VIDEO_UTILS_H264_CHROMIUM_UTILS_H_
+#define SRC_MEDIA_LIB_VIDEO_UTILS_H264_CHROMIUM_UTILS_H_
 
 #include <memory>
 #include <optional>
@@ -94,4 +94,4 @@ enum {
 
 }  // namespace media
 
-#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_CHROMIUM_UTILS_H_
+#endif  // SRC_MEDIA_LIB_VIDEO_UTILS_H264_CHROMIUM_UTILS_H_

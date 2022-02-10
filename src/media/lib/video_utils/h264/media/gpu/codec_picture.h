@@ -1,8 +1,8 @@
 // Copyright 2018 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_CODEC_PICTURE_H_
-#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_CODEC_PICTURE_H_
+#ifndef SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_GPU_CODEC_PICTURE_H_
+#define SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_GPU_CODEC_PICTURE_H_
 
 #include <vector>
 #include "chromium_utils.h"
@@ -40,4 +40,4 @@ class CodecPicture {
 
 }  // namespace media
 
-#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_CODEC_PICTURE_H_
+#endif  // SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_GPU_CODEC_PICTURE_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_VIDEO_H264_LEVEL_LIMITS_H_
-#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_VIDEO_H264_LEVEL_LIMITS_H_
+#ifndef SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_VIDEO_H264_LEVEL_LIMITS_H_
+#define SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_VIDEO_H264_LEVEL_LIMITS_H_
 
 #include <stddef.h>
 
@@ -47,4 +47,4 @@ FindValidH264Level(VideoCodecProfile profile,
                    uint32_t framesize_in_mbs);
 }  // namespace media
 
-#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_VIDEO_H264_LEVEL_LIMITS_H_
+#endif  // SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_VIDEO_H264_LEVEL_LIMITS_H_

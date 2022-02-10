@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MEDIA_VIDEO_H264_POC_H_
-#define MEDIA_VIDEO_H264_POC_H_
+#ifndef SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_VIDEO_H264_POC_H_
+#define SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_VIDEO_H264_POC_H_
 
 #include <stdint.h>
 
@@ -48,4 +48,4 @@ class MEDIA_EXPORT H264POC {
 
 }  // namespace media
 
-#endif  // MEDIA_VIDEO_H264_POC_H_
+#endif  // SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_VIDEO_H264_POC_H_

@@ -5,8 +5,8 @@
 // This file contains an implementation of an H.264 Decoded Picture Buffer
 // used in H264 decoders.
 
-#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_H264_DPB_H_
-#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_H264_DPB_H_
+#ifndef SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_GPU_H264_DPB_H_
+#define SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_GPU_H264_DPB_H_
 
 #include <stddef.h>
 
@@ -175,4 +175,4 @@ class H264DPB {
 
 }  // namespace media
 
-#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_H264_DPB_H_
+#endif  // SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_GPU_H264_DPB_H_

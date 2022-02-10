@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_H264_DECODER_H_
-#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_H264_DECODER_H_
+#ifndef SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_GPU_H264_DECODER_H_
+#define SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_GPU_H264_DECODER_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -403,4 +403,4 @@ class MEDIA_GPU_EXPORT H264Decoder : public AcceleratedVideoDecoder {
 
 }  // namespace media
 
-#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_GPU_H264_DECODER_H_
+#endif  // SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_GPU_H264_DECODER_H_

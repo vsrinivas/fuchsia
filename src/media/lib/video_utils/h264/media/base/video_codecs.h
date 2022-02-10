@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_BASE_VIDEO_CODECS_H_
-#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_BASE_VIDEO_CODECS_H_
+#ifndef SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_BASE_VIDEO_CODECS_H_
+#define SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_BASE_VIDEO_CODECS_H_
 
 namespace media {
 
@@ -66,4 +66,4 @@ enum VideoCodecProfile {
 
 }  // namespace media
 
-#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MEDIA_BASE_VIDEO_CODECS_H_
+#endif  // SRC_MEDIA_LIB_VIDEO_UTILS_H264_MEDIA_BASE_VIDEO_CODECS_H_
