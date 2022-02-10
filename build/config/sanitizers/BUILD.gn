@@ -109,7 +109,6 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//third_party/alacritty/alacritty_terminal/*",
     "//third_party/crashpad/*",
     "//third_party/mesa/src/intel/vulkan/tests/*",
-    "//third_party/openssh-portable/*",
   ]
 
   args = [ "detect_leaks=0" ]
