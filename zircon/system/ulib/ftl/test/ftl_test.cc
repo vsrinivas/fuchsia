@@ -13,6 +13,8 @@
 
 namespace {
 
+constexpr uint32_t kInvalidPage = static_cast<uint32_t>(-1);
+
 constexpr uint32_t kSpareSize = 16;
 constexpr uint32_t kPageSize = 4096;
 constexpr uint32_t kPagesPerBlock = 64;
@@ -214,6 +216,80 @@ TEST(FtlTest, PartialPageWriteRecovery) {
   for (unsigned char& c : buf2) {
     ASSERT_EQ(0xFFu, c);
   }
+}
+
+// Demonstrate how ECC failures part way through a map block can lead to permanent data loss
+// due to preemptive recycling of free map pages during initialization.
+//
+// We set up the FTL such that Map Block 0 = [mpn0, mpn1, mpn0, mpn1 ...] and Map Block 1 = [mpn0].
+// We then set an ECC failure on the first page in map block 0 (mpn1) which causes build_map to stop
+// processing map block 0 (and only has mpn0 at that point). Once map block 1 is processed, there
+// are no current mappings in map block 0 from the FTL's perspective, and thus it is preemptively
+// erased in `init_ftln` after `build_map` returns.
+TEST(FtlTest, MapPageEccFailure) {
+  FtlShell ftl_shell;
+  auto driver_owned = std::make_unique<NdmRamDriver>(kDefaultOptions, kBoringTestOptions);
+  ASSERT_EQ(nullptr, driver_owned->Init());
+  NdmRamDriver* driver_unowned = driver_owned.get();
+  ASSERT_TRUE(ftl_shell.InitWithDriver(std::move(driver_owned)));
+  ftl::Volume* volume = ftl_shell.volume();
+  FTLN ftl = reinterpret_cast<FTLN>(
+      reinterpret_cast<ftl::VolumeImpl*>(volume)->GetInternalVolumeForTest());
+
+  uint8_t buf[kPageSize];
+  memcpy(buf, "abc123", 6);
+
+  constexpr uint32_t kMappingsPerMpn = kPageSize / 4;
+
+  // 1. Consume the first map block by writing out kPagesPerBlock pages to pages spanning MPN0/1.
+  // 2. Consume first page of a new map block by writing to MPN0 (ensure the VPN is one
+  // that we wrote in the first map block).
+  uint32_t first_block_mpn0 = kInvalidPage;
+
+  // Write out kPagesPerBlock + 1 pages to alternating map pages so that we consume 2 map blocks.
+  for (uint32_t page = 0; page < (kPagesPerBlock + 1); ++page) {
+    // Alternate writing to page 0/kMappingsPerMpn, which will update MPNs 0/1 respectively.
+    ASSERT_EQ(ZX_OK, volume->Write((page % 2) ? kMappingsPerMpn : 0, 1, buf));
+    ASSERT_EQ(ZX_OK, volume->Flush());
+
+    if (page == 0) {
+      // Ensure mpns[0] is now valid, and store the block it's in.
+      ASSERT_NE(ftl->mpns[0], kInvalidPage);
+      first_block_mpn0 = ftl->mpns[0] / kPagesPerBlock;
+    }
+  }
+
+  uint32_t phys_page0_old = kInvalidPage;
+  ASSERT_EQ(0, FtlnMapGetPpn(ftl, 0, &phys_page0_old));
+  ASSERT_NE(phys_page0_old, kInvalidPage);
+
+  uint32_t phys_page1_old = kInvalidPage;
+  ASSERT_EQ(0, FtlnMapGetPpn(ftl, kMappingsPerMpn, &phys_page1_old));
+  ASSERT_NE(phys_page1_old, kInvalidPage);
+
+  // Now we simulate the 2nd page in the first map block going bad.
+  // This should result in that physical block being erased when we re-mount.
+  driver_unowned->SetFailEcc((first_block_mpn0 * kPagesPerBlock) + 1, true);
+
+  // Remount with the corruption.
+  volume->ReAttach();
+
+  ftl = reinterpret_cast<FTLN>(
+      reinterpret_cast<ftl::VolumeImpl*>(volume)->GetInternalVolumeForTest());
+
+  // We should expect first_block_mpn0 to now be erased.
+  ASSERT_TRUE(IS_FREE(ftl->bdata[first_block_mpn0]));
+
+  // At this point we've effectively lost all mappings in MPN1 but still have MPN0.
+  ASSERT_NE(ftl->mpns[0], kInvalidPage);
+  uint32_t phys_page0_new = kInvalidPage;
+  ASSERT_EQ(0, FtlnMapGetPpn(ftl, 0, &phys_page0_new));
+  ASSERT_EQ(phys_page0_new, phys_page0_old);
+
+  ASSERT_EQ(ftl->mpns[1], kInvalidPage);
+  uint32_t phys_page1_new = kInvalidPage;
+  ASSERT_EQ(0, FtlnMapGetPpn(ftl, kMappingsPerMpn, &phys_page1_new));
+  ASSERT_EQ(phys_page1_new, kInvalidPage);
 }
 
 }  // namespace
