@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ignore_for_file: unnecessary_non_null_assertion, unnecessary_null_comparison
 import 'dart:async' show Timer;
 import 'dart:math' show Random;
 import 'dart:ui' show lerpDouble;

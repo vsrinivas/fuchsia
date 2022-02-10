@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ignore_for_file: invalid_null_aware_operator
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/widgets/dialogs/dialog.dart';
 import 'package:flutter/material.dart';
