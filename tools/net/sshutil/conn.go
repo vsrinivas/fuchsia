@@ -26,9 +26,9 @@ const (
 	// Interval between keepalive pings.
 	defaultKeepaliveInterval = 1 * time.Second
 
-	// Cancel the connection if a we don't receive a response to a keepalive
+	// Cancel the connection if we don't receive a response to a keepalive
 	// ping within this amount of time.
-	defaultKeepaliveTimeout = defaultKeepaliveInterval + 5*time.Second
+	defaultKeepaliveTimeout = 12 * time.Second
 
 	// A conventionally-used request name for checking the status of an SSH connection.
 	// We deliberately do not use the same name as OpenSSH to make debugging this library easier.
