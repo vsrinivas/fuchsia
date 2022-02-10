@@ -754,6 +754,42 @@ ASSERT_NULL(f1.v());
 	});
 }
 
+TEST(Conformance, GoldenHandleBasicRightsStruct_V2_Decode) {
+	const auto handle_defs = std::vector<zx_handle_info_t>{
+
+// #0
+zx_handle_info_t{
+	.handle = conformance_utils::CreateEvent(53251),
+	.type = ZX_OBJ_TYPE_EVENT,
+	.rights = 53251,
+	.unused = 0u,
+},
+};
+	std::vector<zx_koid_t> handle_koids;
+	for (zx_handle_info_t def : handle_defs) {
+		zx_info_handle_basic_t info;
+		ASSERT_OK(zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+		handle_koids.push_back(info.koid);
+	}
+	auto bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{
+handle_defs[0],};
+	conformance_utils::DecodeSuccess<test_conformance::GoldenHandleBasicRightsStruct>(
+		::fidl::internal::WireFormatVersion::kV2, bytes, handles, [&](test_conformance::GoldenHandleBasicRightsStruct& value) {
+		[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v();
+
+	zx_info_handle_basic_t f3_info;
+	ASSERT_OK(zx_object_get_info(f2.get(), ZX_INFO_HANDLE_BASIC, &f3_info, sizeof(f3_info), nullptr, nullptr));
+	ASSERT_EQ(f3_info.koid, handle_koids[0]);
+	ASSERT_TRUE(f3_info.type == 0 || 0 == ZX_OBJ_TYPE_NONE);
+	ASSERT_TRUE(f3_info.rights == 49155 || 49155 == ZX_RIGHT_SAME_RIGHTS);
+  
+	});
+}
+
 TEST(Conformance, GoldenNullableHandleStructNonNull_V2_Decode) {
 	const auto handle_defs = std::vector<zx_handle_info_t>{
 

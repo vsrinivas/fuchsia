@@ -334,7 +334,7 @@ encode_success("GoldenHandleBasicRightsStruct") {
 }
 
 decode_success("GoldenHandleBasicRightsStruct") {
-    bindings_allowlist = [llcpp, hlcpp, go],
+    bindings_allowlist = [llcpp, hlcpp, cpp, go],
     handle_defs = {
         #0 = event(rights: event_default),
     },

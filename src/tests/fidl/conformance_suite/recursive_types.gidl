@@ -21,8 +21,7 @@ success("RecursiveOptionalStruct") {
 
 success("RecursiveVectorStruct") {
     // TODO(fxbug.dev/88725) Enable this test for Rust.
-    // Cpp: not yet supported.
-    bindings_denylist = [rust, cpp],
+    bindings_denylist = [rust],
     value = RecursiveVectorStruct{
         vec: [
             RecursiveVectorStruct{
@@ -49,8 +48,6 @@ success("RecursiveVectorStruct") {
 }
 
 success("RecursiveUnionStruct") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = RecursiveUnionStruct{
         u: RecursiveUnion{
             s: RecursiveUnionStruct{

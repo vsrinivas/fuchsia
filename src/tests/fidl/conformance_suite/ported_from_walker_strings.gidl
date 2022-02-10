@@ -20,8 +20,6 @@ success("PresentNonnullableString") {
 }
 
 success("PresentNullableString") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = UnboundedNullableString{
         s0: "hello!",
     },
@@ -122,8 +120,6 @@ success("PresentNonnullableBoundedString") {
 }
 
 success("PresentNullableBoundedString") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = Bounded32NullableString{
         s0: "hello!",
     },

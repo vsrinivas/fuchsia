@@ -150,8 +150,6 @@ decode_failure("TooManyBytesSpecifiedError") {
 }
 
 success("MultiplePresentHandles") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     handle_defs = {
         #0 = event(),
         #1 = channel(),

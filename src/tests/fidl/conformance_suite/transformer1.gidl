@@ -103,8 +103,6 @@ success("Sandwich1Case1WithHdr") {
 }
 
 success("Sandwich1WithOptUnionPresent") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = Sandwich1WithOptUnion{
         before: 0x04030201,
         opt_union: UnionSize8Align4{

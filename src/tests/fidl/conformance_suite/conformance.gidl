@@ -252,8 +252,6 @@ decode_failure("OptionalXUnionInStructAbsentInvalidNumHandles") {
 }
 
 success("OptionalXUnionInStructPresent") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = TestOptionalXUnionInStruct{
         before: "before",
         xu: SampleXUnion{
@@ -831,8 +829,7 @@ success("StrictXUnion") {
 
 success("RecursiveVectorUnionStruct") {
     // TODO(fxbug.dev/7644): Fix self-references and enable for Dart.
-    // Cpp: not yet supported,.
-    bindings_denylist = [dart, cpp],
+    bindings_denylist = [dart],
     value = RecursiveVectorUnionStruct{
         u: RecursiveVectorUnion{
             vec: [
@@ -878,8 +875,7 @@ success("RecursiveVectorUnionStruct") {
 
 success("MutualRecursionUnionStruct") {
     // TODO(fxbug.dev/7644): Fix self-references and enable for Dart.
-    // Cpp: not yet supported.
-    bindings_denylist = [dart, cpp],
+    bindings_denylist = [dart],
     value = MutualRecursionUnionStruct{
         u: MutualRecursionUnion{
             s: MutualRecursionUnionStruct{
@@ -1027,8 +1023,6 @@ success("FileGetAttrResponse") {
 
 // See comment in optionals.test.fidl for why this test case exists.
 success("Optionals") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = StructWithOptionals{
         s: EmptyStruct{},
         s2: EmptyStruct{},
@@ -1156,8 +1150,6 @@ success("OutOfLinePaddingZeroed4") {
 }
 
 success("Arrays") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = StructWithArrays{
         arr_int: [1, 2],
         arr_string: ["a", "b"],
@@ -1195,8 +1187,6 @@ success("Arrays") {
 }
 
 success("Vectors") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = StructWithVectors{
         vec_empty: [],
         vec_int: [1, 2],
@@ -1257,8 +1247,6 @@ success("Vectors") {
 // Test that bindings can use large arrays. Before const generics, Rust did not
 // support arrays with more than 32 elements.
 success("LargeArrays") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     value = LargeArrays{
         a33: [
             "first", null, null, null, null, null, null, null, null, null, null,
@@ -1307,8 +1295,6 @@ success("LargeArrays") {
 // This tests the default input used in fidlviz:
 // https://fuchsia.googlesource.com/fidl-misc/+/HEAD/fidlviz/
 success("FidlvizDemo") {
-    // Not yet supported.
-    bindings_denylist = [cpp],
     handle_defs = {
         #0 = event(),
     },
