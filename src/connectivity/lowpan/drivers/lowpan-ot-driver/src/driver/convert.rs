@@ -94,14 +94,14 @@ impl FromExt<ot::ActiveScanResult> for BeaconInfo {
     fn from_ext(x: ot::ActiveScanResult) -> Self {
         BeaconInfo {
             identity: Identity {
-                raw_name: if x.is_native() { Some(x.network_name().to_vec()) } else { None },
-                net_type: if x.is_native() {
-                    Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string())
+                raw_name: if x.network_name().len() != 0 {
+                    Some(x.network_name().to_vec())
                 } else {
                     None
                 },
                 channel: Some(x.channel().into()),
                 panid: Some(x.pan_id()),
+                xpanid: Some(x.extended_pan_id().to_vec()),
                 ..Identity::EMPTY
             },
             rssi: x.rssi().into(),
