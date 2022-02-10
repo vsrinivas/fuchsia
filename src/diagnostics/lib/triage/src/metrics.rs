@@ -144,16 +144,16 @@ pub enum Function {
 #[derive(Deserialize, Debug, Clone)]
 pub struct Lambda {
     parameters: Vec<String>,
-    body: Expression,
+    body: ExpressionTree,
 }
 
 impl Lambda {
-    fn valid_parameters(parameters: &Expression) -> Result<Vec<String>, MetricValue> {
+    fn valid_parameters(parameters: &ExpressionTree) -> Result<Vec<String>, MetricValue> {
         match parameters {
-            Expression::Vector(parameters) => parameters
+            ExpressionTree::Vector(parameters) => parameters
                 .iter()
                 .map(|param| match param {
-                    Expression::Variable(name) => {
+                    ExpressionTree::Variable(name) => {
                         if name.includes_namespace() {
                             Err(syntax_error("Namespaces not allowed in function params"))
                         } else {
@@ -167,7 +167,7 @@ impl Lambda {
         }
     }
 
-    fn as_metric_value(definition: &Vec<Expression>) -> MetricValue {
+    fn as_metric_value(definition: &Vec<ExpressionTree>) -> MetricValue {
         if definition.len() != 2 {
             return syntax_error("Function needs two parameters, list of params and expression");
         }
@@ -189,16 +189,16 @@ enum ShortCircuitBehavior {
     False,
 }
 
-/// Expression represents the parsed body of an Eval Metric. It applies
+/// ExpressionTree represents the parsed body of an Eval Metric. It applies
 /// a function to sub-expressions, or holds a Problem, the name of a
 /// Metric, a vector of expressions, or a basic Value.
 #[derive(Deserialize, Debug, Clone, PartialEq)]
-pub enum Expression {
+pub(crate) enum ExpressionTree {
     // Some operators have arity 1 or 2, some have arity N.
     // For symmetry/readability, I use the same operand-spec Vec<Expression> for all.
     // TODO(cphoenix): Check on load that all operators have a legal number of operands.
-    Function(Function, Vec<Expression>),
-    Vector(Vec<Expression>),
+    Function(Function, Vec<ExpressionTree>),
+    Vector(Vec<ExpressionTree>),
     Variable(VariableName),
     Value(MetricValue),
 }
@@ -442,7 +442,7 @@ impl<'a> MetricState<'a> {
     }
 
     #[cfg(test)]
-    pub fn evaluate_expression(&self, e: &Expression) -> MetricValue {
+    pub(crate) fn evaluate_expression(&self, e: &ExpressionTree) -> MetricValue {
         self.evaluate(&"".to_string(), e)
     }
 
@@ -450,7 +450,7 @@ impl<'a> MetricState<'a> {
         &self,
         namespace: &str,
         function: &Function,
-        operands: &Vec<Expression>,
+        operands: &Vec<ExpressionTree>,
     ) -> MetricValue {
         match function {
             Function::Math(operation) => arithmetic::calculate(
@@ -492,7 +492,7 @@ impl<'a> MetricState<'a> {
         }
     }
 
-    fn regex(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
+    fn regex(&self, namespace: &str, operands: &Vec<ExpressionTree>) -> MetricValue {
         if operands.len() != 2 {
             return syntax_error(
                 "StringMatches(metric, regex) needs one string metric and one string regex"
@@ -520,11 +520,11 @@ impl<'a> MetricState<'a> {
         MetricValue::Bool(regex.is_match(&value))
     }
 
-    fn option(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
+    fn option(&self, namespace: &str, operands: &Vec<ExpressionTree>) -> MetricValue {
         first_usable_value(operands.iter().map(|expression| self.evaluate(namespace, expression)))
     }
 
-    fn now(&self, operands: &'a [Expression]) -> MetricValue {
+    fn now(&self, operands: &'a [ExpressionTree]) -> MetricValue {
         if !operands.is_empty() {
             return syntax_error("Now() requires no operands.");
         }
@@ -536,31 +536,32 @@ impl<'a> MetricState<'a> {
 
     fn apply_lambda(&self, namespace: &str, lambda: &Lambda, args: &[&MetricValue]) -> MetricValue {
         fn substitute_all(
-            expressions: &[Expression],
+            expressions: &[ExpressionTree],
             bindings: &HashMap<String, &MetricValue>,
-        ) -> Vec<Expression> {
+        ) -> Vec<ExpressionTree> {
             expressions.iter().map(|e| substitute(e, bindings)).collect::<Vec<_>>()
         }
 
         fn substitute(
-            expression: &Expression,
+            expression: &ExpressionTree,
             bindings: &HashMap<String, &MetricValue>,
-        ) -> Expression {
+        ) -> ExpressionTree {
             match expression {
-                Expression::Function(function, expressions) => {
-                    Expression::Function(function.clone(), substitute_all(expressions, bindings))
+                ExpressionTree::Function(function, expressions) => ExpressionTree::Function(
+                    function.clone(),
+                    substitute_all(expressions, bindings),
+                ),
+                ExpressionTree::Vector(expressions) => {
+                    ExpressionTree::Vector(substitute_all(expressions, bindings))
                 }
-                Expression::Vector(expressions) => {
-                    Expression::Vector(substitute_all(expressions, bindings))
-                }
-                Expression::Variable(name) => {
+                ExpressionTree::Variable(name) => {
                     if let Some(value) = bindings.get(name.original_name()) {
-                        Expression::Value((*value).clone())
+                        ExpressionTree::Value((*value).clone())
                     } else {
-                        Expression::Variable(name.clone())
+                        ExpressionTree::Variable(name.clone())
                     }
                 }
-                Expression::Value(value) => Expression::Value(value.clone()),
+                ExpressionTree::Value(value) => ExpressionTree::Value(value.clone()),
             }
         }
 
@@ -584,7 +585,7 @@ impl<'a> MetricState<'a> {
     fn unpack_lambda(
         &self,
         namespace: &str,
-        operands: &'a [Expression],
+        operands: &'a [ExpressionTree],
         function_name: &str,
     ) -> Result<(Box<Lambda>, Vec<MetricValue>), MetricValue> {
         if operands.len() == 0 {
@@ -608,7 +609,7 @@ impl<'a> MetricState<'a> {
     }
 
     /// This implements the Apply() function.
-    fn apply(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
+    fn apply(&self, namespace: &str, operands: &[ExpressionTree]) -> MetricValue {
         let (lambda, arguments) = match self.unpack_lambda(namespace, operands, "Apply") {
             Ok((lambda, arguments)) => (lambda, arguments),
             Err(problem) => return problem,
@@ -629,7 +630,7 @@ impl<'a> MetricState<'a> {
     }
 
     /// This implements the Map() function.
-    fn map(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
+    fn map(&self, namespace: &str, operands: &[ExpressionTree]) -> MetricValue {
         let (lambda, arguments) = match self.unpack_lambda(namespace, operands, "Map") {
             Ok((lambda, arguments)) => (lambda, arguments),
             Err(problem) => return problem,
@@ -675,7 +676,7 @@ impl<'a> MetricState<'a> {
     }
 
     /// This implements the Fold() function.
-    fn fold(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
+    fn fold(&self, namespace: &str, operands: &[ExpressionTree]) -> MetricValue {
         let (lambda, arguments) = match self.unpack_lambda(namespace, operands, "Fold") {
             Ok((lambda, arguments)) => (lambda, arguments),
             Err(problem) => return problem,
@@ -703,7 +704,7 @@ impl<'a> MetricState<'a> {
     }
 
     /// This implements the Filter() function.
-    fn filter(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
+    fn filter(&self, namespace: &str, operands: &[ExpressionTree]) -> MetricValue {
         let (lambda, arguments) = match self.unpack_lambda(namespace, operands, "Filter") {
             Ok((lambda, arguments)) => (lambda, arguments),
             Err(problem) => return problem,
@@ -730,7 +731,7 @@ impl<'a> MetricState<'a> {
     }
 
     /// This implements the Count() function.
-    fn count(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
+    fn count(&self, namespace: &str, operands: &[ExpressionTree]) -> MetricValue {
         if operands.len() != 1 {
             return syntax_error("Count requires one argument, a vector");
         }
@@ -764,7 +765,7 @@ impl<'a> MetricState<'a> {
     }
 
     /// This implements the time-conversion functions.
-    fn time(&self, namespace: &str, operands: &[Expression], multiplier: i64) -> MetricValue {
+    fn time(&self, namespace: &str, operands: &[ExpressionTree], multiplier: i64) -> MetricValue {
         if operands.len() != 1 {
             return syntax_error("Time conversion needs 1 numeric argument");
         }
@@ -782,18 +783,18 @@ impl<'a> MetricState<'a> {
         }
     }
 
-    fn evaluate(&self, namespace: &str, e: &Expression) -> MetricValue {
+    fn evaluate(&self, namespace: &str, e: &ExpressionTree) -> MetricValue {
         match e {
-            Expression::Function(f, operands) => self.evaluate_function(namespace, f, operands),
-            Expression::Variable(name) => self.evaluate_variable(namespace, name),
-            Expression::Value(value) => value.clone(),
-            Expression::Vector(values) => {
+            ExpressionTree::Function(f, operands) => self.evaluate_function(namespace, f, operands),
+            ExpressionTree::Variable(name) => self.evaluate_variable(namespace, name),
+            ExpressionTree::Value(value) => value.clone(),
+            ExpressionTree::Vector(values) => {
                 MetricValue::Vector(map_vec(values, |value| self.evaluate(namespace, value)))
             }
         }
     }
 
-    fn annotation(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
+    fn annotation(&self, namespace: &str, operands: &Vec<ExpressionTree>) -> MetricValue {
         if operands.len() != 1 {
             return syntax_error("Annotation() needs 1 string argument");
         }
@@ -811,7 +812,7 @@ impl<'a> MetricState<'a> {
         &self,
         log_type: &Function,
         namespace: &str,
-        operands: &Vec<Expression>,
+        operands: &Vec<ExpressionTree>,
     ) -> MetricValue {
         let log_data = match &self.fetcher {
             Fetcher::TrialData(fetcher) => match log_type {
@@ -840,7 +841,7 @@ impl<'a> MetricState<'a> {
         &self,
         namespace: &str,
         function: &dyn (Fn(&MetricValue, &MetricValue) -> bool),
-        operands: &Vec<Expression>,
+        operands: &Vec<ExpressionTree>,
     ) -> MetricValue {
         if operands.len() != 2 {
             return syntax_error(format!("Bad arg list {:?} for binary operator", operands));
@@ -862,7 +863,7 @@ impl<'a> MetricState<'a> {
         &self,
         namespace: &str,
         function: &dyn (Fn(bool, bool) -> bool),
-        operands: &Vec<Expression>,
+        operands: &Vec<ExpressionTree>,
         short_circuit_behavior: ShortCircuitBehavior,
     ) -> MetricValue {
         if operands.len() == 0 {
@@ -894,7 +895,7 @@ impl<'a> MetricState<'a> {
         MetricValue::Bool(result)
     }
 
-    fn not_bool(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
+    fn not_bool(&self, namespace: &str, operands: &Vec<ExpressionTree>) -> MetricValue {
         if operands.len() != 1 {
             return syntax_error(format!(
                 "Wrong number of arguments ({}) for unary bool operator",
@@ -913,7 +914,7 @@ impl<'a> MetricState<'a> {
     // may be returned by fetch()), or a Multiple containing only Unhandled.
     // Returns false if the metric is a non-Problem value.
     // Propagates non-Unhandled Problems.
-    fn is_unhandled_type(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
+    fn is_unhandled_type(&self, namespace: &str, operands: &Vec<ExpressionTree>) -> MetricValue {
         if operands.len() != 1 {
             return syntax_error(format!(
                 "Wrong number of operands for UnhandledType(): {}",
@@ -950,7 +951,7 @@ impl<'a> MetricState<'a> {
     // Returns Bool true if the given metric is Missing, false if the metric has a value. Propagates
     // non-Missing errors. Special case: An empty vector, or a vector containing one Missing,
     // counts as Missing.
-    fn is_missing(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
+    fn is_missing(&self, namespace: &str, operands: &Vec<ExpressionTree>) -> MetricValue {
         if operands.len() != 1 {
             return syntax_error(format!(
                 "Wrong number of operands for Missing(): {}",
@@ -983,7 +984,7 @@ impl<'a> MetricState<'a> {
     }
 
     // Returns Bool true if and only if the value for the given metric is any sort of Problem.
-    fn is_problem(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
+    fn is_problem(&self, namespace: &str, operands: &Vec<ExpressionTree>) -> MetricValue {
         if operands.len() != 1 {
             return syntax_error(format!(
                 "Wrong number of operands for Problem(): {}",

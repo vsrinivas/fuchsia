@@ -6,6 +6,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
 lib_deps = [
+  "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
   "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
   "//src/lib/diagnostics/hierarchy/rust",
   "//src/lib/diagnostics/selectors",

@@ -4,7 +4,7 @@
 
 use {
     crate::metrics::{
-        internal_bug, variable::VariableName, Expression, Function, MathFunction, MetricValue,
+        internal_bug, variable::VariableName, ExpressionTree, Function, MathFunction, MetricValue,
     },
     anyhow::{format_err, Error},
     nom::{
@@ -103,21 +103,21 @@ fn simple_name<'a>(i: &'a str) -> IResult<&'a str, &'a str, VerboseError<&'a str
 
 // Parses two simple names joined by "::" to form a namespaced name. Returns a
 // Metric-type Expression holding the namespaced name.
-fn name_with_namespace<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+fn name_with_namespace<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     map(separated_pair(simple_name, tag("::"), simple_name), move |(s1, s2)| {
-        Expression::Variable(VariableName::new(format!("{}::{}", s1, s2)))
+        ExpressionTree::Variable(VariableName::new(format!("{}::{}", s1, s2)))
     })(i)
 }
 
 // Parses a simple name with no namespace and returns a Metric-type Expression
 // holding the simple name.
-fn name_no_namespace<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
-    map(simple_name, move |s: &str| Expression::Variable(VariableName::new(s.to_string())))(i)
+fn name_no_namespace<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
+    map(simple_name, move |s: &str| ExpressionTree::Variable(VariableName::new(s.to_string())))(i)
 }
 
 // Parses either a simple or namespaced name and returns a Metric-type Expression
 // holding it.
-fn name<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+fn name<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     alt((name_with_namespace, name_no_namespace))(i)
 }
 
@@ -127,13 +127,13 @@ fn name<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
 // it finds a number, number() attempts to parse those same characters as an int.
 // If it succeeds, it treats the number as an Int type.
 // Note that this handles unary + and -.
-fn number<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+fn number<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     match double(i) {
         Ok((remaining, float)) => {
             let number_len = i.len() - remaining.len(); // How many characters were accepted
             match i[..number_len].parse::<i64>() {
-                Ok(int) => Ok((&i[number_len..], Expression::Value(MetricValue::Int(int)))),
-                Err(_) => Ok((&i[number_len..], Expression::Value(MetricValue::Float(float)))),
+                Ok(int) => Ok((&i[number_len..], ExpressionTree::Value(MetricValue::Int(int)))),
+                Err(_) => Ok((&i[number_len..], ExpressionTree::Value(MetricValue::Float(float)))),
             }
         }
         Err(error) => return Err(error),
@@ -145,30 +145,30 @@ macro_rules! any_string {
         match delimited($left, $mid, $right)($i) {
             Ok((remaining, text)) => {
                 let next_pos = $i.len() - remaining.len();
-                Ok((&$i[next_pos..], Expression::Value(MetricValue::String(text.to_string()))))
+                Ok((&$i[next_pos..], ExpressionTree::Value(MetricValue::String(text.to_string()))))
             }
             Err(e) => Err(e),
         }
     };
 }
 
-fn single_quote_string<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+fn single_quote_string<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     any_string!(char('\''), take_until("'"), char('\''), i)
 }
 
 fn escaped_single_quote_string<'a>(
     i: &'a str,
-) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     any_string!(tag("\'"), take_until("\'"), tag("\'"), i)
 }
 
-fn double_quote_string<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+fn double_quote_string<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     any_string!(char('\"'), take_until("\""), char('\"'), i)
 }
 
 fn escaped_double_quote_string<'a>(
     i: &'a str,
-) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     any_string!(tag("\""), take_until("\""), tag("\""), i)
 }
 
@@ -179,7 +179,7 @@ fn escaped_double_quote_string<'a>(
 // - '"hello"'
 // - "\"hello\""
 // - '\'hello\''
-fn string<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+fn string<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     alt((
         single_quote_string,
         escaped_single_quote_string,
@@ -241,28 +241,28 @@ fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseErr
     ))(i)
 }
 
-fn function_expression<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+fn function_expression<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     let open_paren = spaced(char('('));
     let expressions = separated_list(spaced(char(',')), expression_top);
     let close_paren = spaced(char(')'));
     let function_sequence = tuple((function_name_parser, open_paren, expressions, close_paren));
     map(function_sequence, move |(function, _, operands, _)| {
-        Expression::Function(function, operands)
+        ExpressionTree::Function(function, operands)
     })(i)
 }
 
-fn vector_expression<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+fn vector_expression<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     let open_bracket = spaced(char('['));
     let expressions = separated_list(spaced(char(',')), expression_top);
     let close_bracket = spaced(char(']'));
     let vector_sequence = tuple((open_bracket, expressions, close_bracket));
-    map(vector_sequence, move |(_, items, _)| Expression::Vector(items))(i)
+    map(vector_sequence, move |(_, items, _)| ExpressionTree::Vector(items))(i)
 }
 
 // I use "primitive" to mean an expression that is not an infix operator pair:
 // a primitive value, a metric name, a function (simple name followed by
 // parenthesized expression list), or any expression contained by ( ) or [ ].
-fn expression_primitive<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+fn expression_primitive<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     let paren_expr = delimited(char('('), terminated(expression_top, whitespace), char(')'));
     let res = spaced(alt((
         paren_expr,
@@ -372,7 +372,10 @@ where
 
 // This takes the lists of items and operators produced by items_and_separators()
 // and builds an Expression.
-fn build_expression<'a>(mut items: Vec<Expression>, mut operators: Vec<Function>) -> Expression {
+fn build_expression<'a>(
+    mut items: Vec<ExpressionTree>,
+    mut operators: Vec<Function>,
+) -> ExpressionTree {
     // We want to evaluate the leftmost operator first, which means it has to be
     // lowest in the tree. The leftmost was parsed first, so it's lowest in the
     // vec's. Popping is more efficient than deleting item 0 and shifting, so
@@ -380,19 +383,21 @@ fn build_expression<'a>(mut items: Vec<Expression>, mut operators: Vec<Function>
     items.reverse();
     operators.reverse();
     let mut res =
-        items.pop().unwrap_or(Expression::Value(internal_bug("Bug in parser: zero items")));
+        items.pop().unwrap_or(ExpressionTree::Value(internal_bug("Bug in parser: zero items")));
     for _i in 0..operators.len() {
         let args = vec![
             res,
-            items.pop().unwrap_or(Expression::Value(internal_bug("Bug in parser: too few items"))),
+            items
+                .pop()
+                .unwrap_or(ExpressionTree::Value(internal_bug("Bug in parser: too few items"))),
         ];
-        res = Expression::Function(operators.pop().unwrap(), args);
+        res = ExpressionTree::Function(operators.pop().unwrap(), args);
     }
     res
 }
 
 // Scans for primitive expressions separated by * and /.
-fn expression_muldiv<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+fn expression_muldiv<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     let (remainder, (items, operators)) = items_and_separators(
         expression_primitive,
         alt((math!("*", Mul), math!("//", IntDiv), math!("/", FloatDiv))),
@@ -403,7 +408,7 @@ fn expression_muldiv<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseErro
 
 // Scans for muldiv expressions (which may be a single primitive expression)
 // separated by + and -. Remember unary + and - will be recognized by number().
-fn expression_addsub<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+fn expression_addsub<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     let (remainder, (items, operators)) =
         items_and_separators(expression_muldiv, alt((math!("+", Add), math!("-", Sub))), i)?;
     Ok((remainder, build_expression(items, operators)))
@@ -411,7 +416,7 @@ fn expression_addsub<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseErro
 
 // Top-level expression. Should match the entire expression string, and also
 // can be used inside parentheses.
-fn expression_top<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+fn expression_top<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     // Note: alt() is not BNF - it's sequential. It's important to put the longer strings first.
     // If a shorter substring succeeds where it shouldn't, the alt() may not get another chance.
     let comparison = alt((
@@ -424,7 +429,7 @@ fn expression_top<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&
     ));
     alt((
         map(tuple((expression_addsub, comparison, expression_addsub)), move |(left, op, right)| {
-            Expression::Function(op, vec![left, right])
+            ExpressionTree::Function(op, vec![left, right])
         }),
         expression_addsub,
     ))(i)
@@ -432,7 +437,7 @@ fn expression_top<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&
 
 // Parses a given string into either an Error or an Expression ready
 // to be evaluated.
-pub fn parse_expression(i: &str) -> Result<Expression, Error> {
+pub(crate) fn parse_expression(i: &str) -> Result<ExpressionTree, Error> {
     let match_whole = all_consuming(terminated(expression_top, whitespace));
     match match_whole(i) {
         Err(Err::Error(e)) | Err(Err::Failure(e)) => {
@@ -451,7 +456,7 @@ mod test {
         super::*,
         crate::{
             assert_problem,
-            metrics::{Expression, Fetcher, MathFunction, MetricState, TrialDataFetcher},
+            metrics::{ExpressionTree, Fetcher, MathFunction, MetricState, TrialDataFetcher},
         },
         std::collections::HashMap,
     };
@@ -495,31 +500,31 @@ mod test {
 
     #[fuchsia::test]
     fn parse_vectors() {
-        fn v(i: i64) -> Expression {
-            Expression::Value(MetricValue::Int(i))
+        fn v(i: i64) -> ExpressionTree {
+            ExpressionTree::Value(MetricValue::Int(i))
         }
 
         assert_eq!(
             get_parse!(expression_primitive, "[1,2]"),
-            Res::Ok("", Expression::Vector(vec![v(1), v(2)]))
+            Res::Ok("", ExpressionTree::Vector(vec![v(1), v(2)]))
         );
         assert_eq!(
             get_parse!(expression_primitive, " [ 1 , 2 ] "),
-            Res::Ok(" ", Expression::Vector(vec![v(1), v(2)]))
+            Res::Ok(" ", ExpressionTree::Vector(vec![v(1), v(2)]))
         );
         assert_eq!(
             get_parse!(expression_primitive, "[1]"),
-            Res::Ok("", Expression::Vector(vec![v(1)]))
+            Res::Ok("", ExpressionTree::Vector(vec![v(1)]))
         );
         assert_eq!(
             get_parse!(expression_primitive, "[]"),
-            Res::Ok("", Expression::Vector(Vec::new()))
+            Res::Ok("", ExpressionTree::Vector(Vec::new()))
         );
-        let first = Expression::Function(Function::Math(MathFunction::Add), vec![v(1), v(2)]);
-        let second = Expression::Function(Function::Math(MathFunction::Sub), vec![v(2), v(1)]);
+        let first = ExpressionTree::Function(Function::Math(MathFunction::Add), vec![v(1), v(2)]);
+        let second = ExpressionTree::Function(Function::Math(MathFunction::Sub), vec![v(2), v(1)]);
         assert_eq!(
             get_parse!(expression_primitive, "[1+2, 2-1]"),
-            Res::Ok("", Expression::Vector(vec![first, second]))
+            Res::Ok("", ExpressionTree::Vector(vec![first, second]))
         );
         // Verify that we reject un-closed braces.
         assert!(get_parse!(expression_primitive, "[1+2, 2-1").is_err());
@@ -538,65 +543,74 @@ mod test {
         // Empty string should fail
         assert!(get_parse!(number, "").is_err());
         // Trailing characters will be returned as unused remainder
-        assert_eq!(get_parse!(number, "1 "), Res::Ok(" ", Expression::Value(MetricValue::Int(1))));
-        assert_eq!(get_parse!(number, "1a"), Res::Ok("a", Expression::Value(MetricValue::Int(1))));
+        assert_eq!(
+            get_parse!(number, "1 "),
+            Res::Ok(" ", ExpressionTree::Value(MetricValue::Int(1)))
+        );
+        assert_eq!(
+            get_parse!(number, "1a"),
+            Res::Ok("a", ExpressionTree::Value(MetricValue::Int(1)))
+        );
         // If it parses as int, it's an int.
         assert_eq!(
             get_parse!(number, "234"),
-            Res::Ok("", Expression::Value(MetricValue::Int(234)))
+            Res::Ok("", ExpressionTree::Value(MetricValue::Int(234)))
         );
         // Otherwise it's a float.
         assert_eq!(
             get_parse!(number, "234.0"),
-            Res::Ok("", Expression::Value(MetricValue::Float(234.0)))
+            Res::Ok("", ExpressionTree::Value(MetricValue::Float(234.0)))
         );
         assert_eq!(
             get_parse!(number, "234.0e-5"),
-            Res::Ok("", Expression::Value(MetricValue::Float(234.0e-5)))
+            Res::Ok("", ExpressionTree::Value(MetricValue::Float(234.0e-5)))
         );
         // Leading -, +, 0 are all OK for int
-        assert_eq!(get_parse!(number, "0"), Res::Ok("", Expression::Value(MetricValue::Int(0))));
+        assert_eq!(
+            get_parse!(number, "0"),
+            Res::Ok("", ExpressionTree::Value(MetricValue::Int(0)))
+        );
         assert_eq!(
             get_parse!(number, "00234"),
-            Res::Ok("", Expression::Value(MetricValue::Int(234)))
+            Res::Ok("", ExpressionTree::Value(MetricValue::Int(234)))
         );
         assert_eq!(
             get_parse!(number, "+234"),
-            Res::Ok("", Expression::Value(MetricValue::Int(234)))
+            Res::Ok("", ExpressionTree::Value(MetricValue::Int(234)))
         );
         assert_eq!(
             get_parse!(number, "-234"),
-            Res::Ok("", Expression::Value(MetricValue::Int(-234)))
+            Res::Ok("", ExpressionTree::Value(MetricValue::Int(-234)))
         );
         // Leading +, -, 0 are OK for float.
         assert_eq!(
             get_parse!(number, "0.0"),
-            Res::Ok("", Expression::Value(MetricValue::Float(0.0)))
+            Res::Ok("", ExpressionTree::Value(MetricValue::Float(0.0)))
         );
         assert_eq!(
             get_parse!(number, "00234.0"),
-            Res::Ok("", Expression::Value(MetricValue::Float(234.0)))
+            Res::Ok("", ExpressionTree::Value(MetricValue::Float(234.0)))
         );
         assert_eq!(
             get_parse!(number, "+234.0"),
-            Res::Ok("", Expression::Value(MetricValue::Float(234.0)))
+            Res::Ok("", ExpressionTree::Value(MetricValue::Float(234.0)))
         );
         assert_eq!(
             get_parse!(number, "-234.0"),
-            Res::Ok("", Expression::Value(MetricValue::Float(-234.0)))
+            Res::Ok("", ExpressionTree::Value(MetricValue::Float(-234.0)))
         );
         // Leading and trailing periods parse as valid float.
         assert_eq!(
             get_parse!(number, ".1"),
-            Res::Ok("", Expression::Value(MetricValue::Float(0.1)))
+            Res::Ok("", ExpressionTree::Value(MetricValue::Float(0.1)))
         );
         assert_eq!(
             get_parse!(number, "1."),
-            Res::Ok("", Expression::Value(MetricValue::Float(1.0)))
+            Res::Ok("", ExpressionTree::Value(MetricValue::Float(1.0)))
         );
         assert_eq!(
             get_parse!(number, "1.a"),
-            Res::Ok("a", Expression::Value(MetricValue::Float(1.0)))
+            Res::Ok("a", ExpressionTree::Value(MetricValue::Float(1.0)))
         );
         // "e" must be followed by a number
         assert!(get_parse!(number, "1.e").is_err());
@@ -612,51 +626,51 @@ mod test {
 
         assert_eq!(
             get_parse!(string, "'OK'"),
-            Res::Ok("", Expression::Value(MetricValue::String("OK".to_string())))
+            Res::Ok("", ExpressionTree::Value(MetricValue::String("OK".to_string())))
         );
         assert_eq!(
             get_parse!(string, "'OK'a"),
-            Res::Ok("a", Expression::Value(MetricValue::String("OK".to_string())))
+            Res::Ok("a", ExpressionTree::Value(MetricValue::String("OK".to_string())))
         );
         assert_eq!(
             get_parse!(string, r#""OK""#),
-            Res::Ok("", Expression::Value(MetricValue::String("OK".to_string())))
+            Res::Ok("", ExpressionTree::Value(MetricValue::String("OK".to_string())))
         );
         assert_eq!(
             get_parse!(string, "\'OK\'"),
-            Res::Ok("", Expression::Value(MetricValue::String("OK".to_string())))
+            Res::Ok("", ExpressionTree::Value(MetricValue::String("OK".to_string())))
         );
         assert_eq!(
             get_parse!(string, "\"OK\""),
-            Res::Ok("", Expression::Value(MetricValue::String("OK".to_string())))
+            Res::Ok("", ExpressionTree::Value(MetricValue::String("OK".to_string())))
         );
 
         // can handle nested qoutes
         assert_eq!(
             get_parse!(string, r#"'a"b'"#),
-            Res::Ok("", Expression::Value(MetricValue::String(r#"a"b"#.to_string())))
+            Res::Ok("", ExpressionTree::Value(MetricValue::String(r#"a"b"#.to_string())))
         );
         assert_eq!(
             get_parse!(string, r#""a'b""#),
-            Res::Ok("", Expression::Value(MetricValue::String("a'b".to_string())))
+            Res::Ok("", ExpressionTree::Value(MetricValue::String("a'b".to_string())))
         );
 
         // can handle whitespace
         assert_eq!(
             get_parse!(string, "'OK OK'"),
-            Res::Ok("", Expression::Value(MetricValue::String("OK OK".to_string())))
+            Res::Ok("", ExpressionTree::Value(MetricValue::String("OK OK".to_string())))
         );
 
         // can parse strings that are numbers
         assert_eq!(
             get_parse!(string, "'123'"),
-            Res::Ok("", Expression::Value(MetricValue::String("123".to_string())))
+            Res::Ok("", ExpressionTree::Value(MetricValue::String("123".to_string())))
         );
     }
 
     macro_rules! variable_expression {
         ($name:expr) => {
-            Expression::Variable(VariableName::new($name.to_owned()))
+            ExpressionTree::Variable(VariableName::new($name.to_owned()))
         };
     }
 

@@ -7,6 +7,7 @@ use {
     crate::config::{DataFetcher, DiagnosticData, Source},
     anyhow::{anyhow, bail, Context, Error, Result},
     diagnostics_hierarchy::DiagnosticsHierarchy,
+    fidl_fuchsia_diagnostics::Selector,
     lazy_static::lazy_static,
     regex::Regex,
     selectors::{self, VerboseError},
@@ -171,11 +172,12 @@ impl FromStr for SelectorType {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SelectorString {
     pub(crate) full_selector: String,
     pub selector_type: SelectorType,
     body: String,
+    parsed_selector: Selector,
 }
 
 impl SelectorString {
@@ -210,7 +212,8 @@ impl TryFrom<String> for SelectorString {
         let selector_type =
             SelectorType::from_str(string_parts.next().ok_or(anyhow!("Empty selector"))?)?;
         let body = string_parts.next().ok_or(anyhow!("Selector needs a :"))?.to_owned();
-        Ok(SelectorString { full_selector, selector_type, body })
+        let parsed_selector = selectors::parse_selector::<VerboseError>(&body)?;
+        Ok(SelectorString { full_selector, selector_type, body, parsed_selector })
     }
 }
 
@@ -386,8 +389,8 @@ impl InspectFetcher {
         &EMPTY_INSPECT_FETCHER
     }
 
-    fn try_fetch(&self, selector_string: &str) -> Result<Vec<MetricValue>, Error> {
-        let arc_selector = Arc::new(selectors::parse_selector::<VerboseError>(selector_string)?);
+    fn try_fetch(&self, selector_string: &SelectorString) -> Result<Vec<MetricValue>, Error> {
+        let arc_selector = Arc::new(selector_string.parsed_selector.clone());
         let mut values = Vec::new();
         let mut found_component = false;
         for component in self.components.iter() {
@@ -398,7 +401,7 @@ impl InspectFetcher {
                 continue;
             }
             found_component = true;
-            let selector = selectors::parse_selector::<VerboseError>(selector_string)?;
+            let selector = selector_string.parsed_selector.clone();
             for value in diagnostics_hierarchy::select_from_hierarchy(
                 component.processed_data.clone(),
                 selector,
@@ -411,7 +414,7 @@ impl InspectFetcher {
         if !found_component {
             return Ok(vec![missing(format!(
                 "No component found matching selector {}",
-                selector_string.to_string()
+                selector_string.body.to_string()
             ))]);
         }
         if values.is_empty() {
@@ -421,7 +424,7 @@ impl InspectFetcher {
     }
 
     pub fn fetch(&self, selector: &SelectorString) -> Vec<MetricValue> {
-        match self.try_fetch(selector.body()) {
+        match self.try_fetch(selector) {
             Ok(v) => v,
             Err(e) => vec![syntax_error(format!("Fetch {:?} -> {}", selector, e))],
         }
@@ -763,9 +766,7 @@ mod test {
                 "INSPECT:*/fo/*:root.dataInt",
                 "Missing: No component found matching selector */fo/*:root.dataInt"
             );
-            assert_wrong!(
-                "INSPECT:*/foo/*:root:data:Int",
-                "SyntaxError: Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Failed to parse the input. Error: 0: at line 0, in Eof:\n*/foo/*:root:data:Int\n                 ^\n\n");
+
             assert_eq!(inspect.fetch_str("INSPECT:*/foo/*:root/kid:dataInt"), vec![]);
             assert_eq!(inspect.fetch_str("INSPECT:*/bar/*:base/array:dataInt"), vec![]);
             assert_eq!(
@@ -785,19 +786,16 @@ mod test {
         // Make sure it doesn't crash, can be called multiple times and they both work right.
         let fetcher1 = InspectFetcher::ref_empty();
         let fetcher2 = InspectFetcher::ref_empty();
-        match fetcher1.try_fetch("not a selector") {
-            Err(_) => {}
-            _ => bail!("Should not have accepted a bad selector"),
-        }
-        match fetcher2.try_fetch("not a selector") {
-            Err(_) => {}
-            _ => bail!("Should not have accepted a bad selector"),
-        }
-        match fetcher1.try_fetch("a:b:c").unwrap()[0] {
+
+        match fetcher1.try_fetch(&SelectorString::try_from("INSPECT:a:b:c".to_string())?).unwrap()
+            [0]
+        {
             MetricValue::Problem(Problem::Missing(_)) => {}
             _ => bail!("Should have Missing'd a valid selector"),
         }
-        match fetcher2.try_fetch("a:b:c").unwrap()[0] {
+        match fetcher2.try_fetch(&SelectorString::try_from("INSPECT:a:b:c".to_string())?).unwrap()
+            [0]
+        {
             MetricValue::Problem(Problem::Missing(_)) => {}
             _ => bail!("Should have Missing'd a valid selector"),
         }
@@ -815,6 +813,40 @@ mod test {
         let fetcher2 = TextFetcher::ref_empty();
         assert!(!fetcher1.contains("a"));
         assert!(!fetcher2.contains("a"));
+    }
+
+    #[fuchsia::test]
+    fn test_selector_string_parse() -> Result<(), Error> {
+        // Test correct shape of SelectorString and verify no errors on parse for valid selector.
+        let full_selector = "INSPECT:bad_component.cmx:root:bar".to_string();
+        let selector_type = SelectorType::Inspect;
+        let body = "bad_component.cmx:root:bar".to_string();
+        let parsed_selector = selectors::parse_selector::<VerboseError>(&body)?;
+
+        assert_eq!(
+            SelectorString::try_from("INSPECT:bad_component.cmx:root:bar".to_string())?,
+            SelectorString { full_selector, selector_type, body, parsed_selector }
+        );
+
+        // Test that a selector that does not follow the correct syntax results in parse error.
+        assert_eq!(
+            format!(
+                "{:?}",
+                SelectorString::try_from("INSPECT:not a selector".to_string()).err().unwrap()
+            ),
+            "Failed to parse the input. Error: 0: at line 0, in Tag:\nnot a selector\n   ^\n\n"
+        );
+
+        // Test that an invalid selector results in a parse error.
+        assert_eq!(
+            format!(
+                "{:?}",
+            SelectorString::try_from("INSPECT:*/foo/*:root:data:Int".to_string()).err().unwrap()
+            ),
+            "Failed to parse the input. Error: 0: at line 0, in Eof:\n*/foo/*:root:data:Int\n                 ^\n\n"
+        );
+
+        Ok(())
     }
 
     // KeyValueFetcher is tested in metrics::test::annotations_work()
