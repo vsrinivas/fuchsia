@@ -315,3 +315,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0150_update_opt_out.md
 - title: "RFC-0151: Compiler tuning flags for CPU targeting"
   path: /docs/contribute/governance/rfcs/0151_compiler_cpu_targeting.md
+- title: "RFC-0152: Improved OOM handling behavior"
+  path: /docs/contribute/governance/rfcs/0152_improved_oom_handling.md

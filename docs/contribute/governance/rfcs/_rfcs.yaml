@@ -1970,3 +1970,16 @@
   reviewers: ['phosek@google.com', 'aaronwood@google.com', 'mvanotti@google.com', 'mcgrathr@google.com', 'digit@google.com', 'travisg@google.com', 'cpu@google.com']
   submitted: '2021-01-04'
   reviewed: '2022-02-02'
+
+- name: 'RFC-0152'
+  title: 'Improved OOM handling behavior'
+  short_description: 'Improves out of memory handling by allowing vastly more userspace code to exit and creating a signal path for userspace to inform the kernel when userspace cleanup is complete.'
+  authors: ['jmatt@google.com']
+  file: '0152_improved_oom_handling.md'
+  area: ['Drivers', 'Kernel', 'Power']
+  issue: ['66786']
+  gerrit_change_id: ['622788']
+  status: 'Accepted'
+  reviewers: ['dgilhooley@google.com', 'frousseau@google.com', 'maniscalco@google.com', 'palmer@google.com', 'pankhurst@google.com', 'ppi@google.com', 'pshickel@google.com', 'rashaeqbal@google.com', 'shayba@google.com', 'surajmalhotra@google.com']
+  submitted: '2021-12-20'
+  reviewed: '2022-02-09'
