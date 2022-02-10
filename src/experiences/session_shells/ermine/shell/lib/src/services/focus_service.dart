@@ -22,6 +22,7 @@ class FocusService extends FocusChainListener {
   late final ValueChanged<ViewHandle> onFocusMoved;
 
   final _focusChainListenerBinding = FocusChainListenerBinding();
+  late final StreamSubscription<bool> _focusSubscription;
 
   // Holds the currently focused child view. Null, if shell has focus.
   ViewState? focusedChildView;
@@ -31,10 +32,21 @@ class FocusService extends FocusChainListener {
     Incoming.fromSvcPath().connectToService(registryProxy);
     registryProxy.register(_focusChainListenerBinding.wrap(this));
     registryProxy.ctrl.close();
+    _focusSubscription =
+        FocusState.instance.stream().listen(_onHostFocusChanged);
   }
 
   void dispose() {
+    _focusSubscription.cancel();
     _focusChainListenerBinding.close(0);
+  }
+
+  void _onHostFocusChanged(bool focused) {
+    if (focused) {
+      onFocusMoved(hostView);
+    } else if (focusedChildView != null) {
+      onFocusMoved(focusedChildView!.view);
+    }
   }
 
   void setFocusOnHostView() {

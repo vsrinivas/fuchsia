@@ -53,7 +53,10 @@ void main() {
       var views = await ermine.launchedViews(filterByUrl: componentUrl);
       if (views.length == instances) {
         if (testForFocus) {
-          expect(views.any((view) => view.focused), isTrue);
+          // Wait for a view with focus.
+          if (!views.any((view) => view.focused)) {
+            return null;
+          }
         }
         return views;
       }

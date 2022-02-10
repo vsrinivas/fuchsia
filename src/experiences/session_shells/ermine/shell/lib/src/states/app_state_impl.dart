@@ -704,7 +704,7 @@ class AppStateImpl with Disposable implements AppState {
         final viewData = data['view-$i'];
         viewData['title'] = view.title;
         viewData['url'] = view.url;
-        viewData['focused'] = view == topView;
+        viewData['focused'] = view.view == _focusedView.value;
 
         final viewport = view.viewport;
         if (viewport != null) {
