@@ -30,8 +30,6 @@
 
 // Command-line command to delete the persistent configuration.
 constexpr std::string_view kDeletePersistentConfigCommand = "delete_persistent_config";
-// Command-line flag to enable arrested mode that disables starting a session on launch.
-constexpr std::string_view kArrestedFlag = "arrested";
 // Command-line flag that specifies the name of a v2 child that basemgr will
 // start and monitor for crashes.
 constexpr std::string_view kEagerChildFlag = "eager-child";
@@ -110,12 +108,6 @@ std::string GetUsage() {
 
 # Flags
 
-  --arrested
-
-    Prevents basemgr from starting the Modular session on launch.
-    basemgr will continue to serve the fuchsia.modular.session.Launcher protocol that can be
-    used to launch a Modular session.
-
   --eager-child
 
     Child component which basemgr will launch and monitor for crashes. basemgr
@@ -180,11 +172,7 @@ int main(int argc, const char** argv) {
 
   LifecycleHandler lifecycle_handler{basemgr_impl.get(), &loop};
 
-  if (!command_line.HasOption(kArrestedFlag)) {
-    basemgr_impl->Start();
-  } else {
-    FX_LOGS(INFO) << "Starting in arrested mode. Use basemgr_launcher to launch a session.";
-  }
+  basemgr_impl->Start();
 
   // NOTE: component_controller.events.OnDirectoryReady() is triggered when a
   // component's out directory has mounted. basemgr_launcher uses this signal
