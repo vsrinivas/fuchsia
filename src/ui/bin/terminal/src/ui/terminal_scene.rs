@@ -3,13 +3,95 @@
 // found in the LICENSE file.
 
 use {
-    crate::ui::terminal_views::{GridView, ScrollBar},
+    crate::ui::{terminal_scroll_bar::ScrollBar, TerminalMessages},
     carnelian::{
         input::{self},
-        AppSender, Coord, Point, Rect, Size, ViewAssistantContext, ViewKey,
+        make_message, AppSender, Coord, MessageTarget, Point, Rect, Size, ViewAssistantContext,
+        ViewKey,
     },
-    fuchsia_trace as ftrace,
+    fuchsia_async as fasync, fuchsia_trace as ftrace,
 };
+
+// Hide scroll thumb after 1 second of scrolling or mouse leaving
+// the scroll bar frame.
+const HIDE_SCROLL_THUMB_DELAY: std::time::Duration = std::time::Duration::from_secs(1);
+
+// Width of scroll bar frame. This is the width of the thumb when
+// entering wide mode and is also the width of the area that can
+// be used for scrolling using the mouse.
+const SCROLL_BAR_FRAME_WIDTH: f32 = 16.0;
+
+struct HideScrollThumbTimer {
+    app_sender: Option<AppSender>,
+    view_id: ViewKey,
+    task: Option<fasync::Task<()>>,
+    delay: std::time::Duration,
+}
+
+impl HideScrollThumbTimer {
+    fn new(app_sender: AppSender, view_id: ViewKey, delay: std::time::Duration) -> Self {
+        Self { app_sender: Some(app_sender), view_id, task: None, delay }
+    }
+
+    // Schedule task that will queue a scroll thumb message to hide the thumb.
+    fn schedule(&mut self) {
+        if let Some(app_sender) = &self.app_sender {
+            let timer = fasync::Timer::new(fuchsia_async::Time::after(self.delay.into()));
+            let app_sender = app_sender.clone();
+            let view_id = self.view_id;
+            let task = fasync::Task::local(async move {
+                timer.await;
+                app_sender.queue_message(
+                    MessageTarget::View(view_id),
+                    make_message(TerminalMessages::SetScrollThumbMessage(None)),
+                );
+                app_sender.request_render(view_id);
+            });
+            self.task = Some(task);
+        }
+    }
+
+    // Cancel existing task. Returns true if task was scheduled.
+    fn cancel(&mut self) -> bool {
+        let task = self.task.take();
+        if let Some(task) = task {
+            fasync::Task::local(async move {
+                task.cancel().await;
+            })
+            .detach();
+            true
+        } else {
+            false
+        }
+    }
+
+    // Returns true if task is currently scheduled.
+    fn is_scheduled(&self) -> bool {
+        self.task.is_some()
+    }
+}
+
+impl Default for HideScrollThumbTimer {
+    fn default() -> Self {
+        HideScrollThumbTimer {
+            app_sender: None,
+            view_id: 0,
+            task: None,
+            delay: std::time::Duration::default(),
+        }
+    }
+}
+
+struct GridView {
+    frame: Rect,
+    cell_size: Size,
+}
+
+impl Default for GridView {
+    fn default() -> Self {
+        GridView { frame: Rect::zero(), cell_size: Size::zero() }
+    }
+}
 
 pub struct TerminalScene {
     grid_view: GridView,
@@ -18,9 +100,8 @@ pub struct TerminalScene {
     scroll_context: ScrollContext,
     active_pointer_id: Option<input::pointer::PointerId>,
     start_pointer_location: Point,
+    hide_scroll_thumb_timer: HideScrollThumbTimer,
 }
-
-const SCROLL_BAR_WIDTH: f32 = 16.0;
 
 pub enum PointerEventResponse {
     /// Indicates that the pointer event resulted in the user wanting to scroll the grid
@@ -36,19 +117,16 @@ impl TerminalScene {
         TerminalScene {
             size: Size::zero(),
             grid_view: GridView::default(),
-            scroll_bar: ScrollBar::new(app_sender, view_key),
+            scroll_bar: ScrollBar::new(app_sender.clone(), view_key),
             scroll_context: ScrollContext::default(),
             active_pointer_id: None,
             start_pointer_location: Point::zero(),
+            hide_scroll_thumb_timer: HideScrollThumbTimer::new(
+                app_sender,
+                view_key,
+                HIDE_SCROLL_THUMB_DELAY,
+            ),
         }
-    }
-
-    pub fn scroll_thumb(&self) -> Option<Rect> {
-        self.scroll_bar.thumb_frame()
-    }
-
-    pub fn calculate_term_size_from_size(size: &Size) -> Size {
-        Size::new(size.width - SCROLL_BAR_WIDTH, size.height)
     }
 
     pub fn update_size(&mut self, new_size: Size, cell_size: Size) {
@@ -57,12 +135,11 @@ impl TerminalScene {
         self.grid_view.cell_size = cell_size;
         self.size = new_size;
 
-        self.grid_view.frame =
-            Rect::from_size(TerminalScene::calculate_term_size_from_size(&new_size));
+        self.grid_view.frame = Rect::from_size(new_size);
 
         let mut scroll_bar_frame = Rect::from_size(new_size);
-        scroll_bar_frame.size.width = SCROLL_BAR_WIDTH;
-        scroll_bar_frame.origin.x = new_size.width - SCROLL_BAR_WIDTH;
+        scroll_bar_frame.size.width = SCROLL_BAR_FRAME_WIDTH;
+        scroll_bar_frame.origin.x = new_size.width - SCROLL_BAR_FRAME_WIDTH;
         self.scroll_bar.frame = scroll_bar_frame;
 
         self.update_scroll_metrics();
@@ -75,32 +152,60 @@ impl TerminalScene {
         }
     }
 
-    pub fn handle_pointer_event(
+    pub fn handle_mouse_event(
         &mut self,
-        event: &input::pointer::Event,
+        event: &input::mouse::Event,
         _ctx: &mut ViewAssistantContext,
     ) -> Option<PointerEventResponse> {
-        if self.scroll_bar.is_tracking() {
-            return self.handle_primary_pointer_event_for_scroll_bar(&event);
+        let location = event.location.to_f32();
+
+        // Let the scroll bar handle the event if it is currently
+        // tracking the mouse pointer or if the location is in the
+        // scroll bar frame.
+        let result = if self.scroll_bar.is_tracking() || self.scroll_bar.frame.contains(location) {
+            self.hide_scroll_thumb_timer.cancel();
+            self.handle_primary_pointer_event_for_scroll_bar(&event)
         } else {
+            None
+        };
+
+        // Schedule hiding of the scroll thumb if not already scheduled,
+        // and we are not tracking the mouse, and the location of the
+        // mouse is outside the scroll bar frame.
+        if !self.scroll_bar.is_tracking() && !self.scroll_bar.frame.contains(location) {
+            if !self.hide_scroll_thumb_timer.is_scheduled() {
+                self.hide_scroll_thumb_timer.schedule();
+            }
+        }
+
+        // Update dimming state when mouse location changes.
+        self.scroll_bar.dim_thumb = !self.scroll_bar.thumb_contains(location);
+
+        // Invalidate the scroll thumb after processing mouse events in
+        // case the event caused the thumb to change.
+        self.scroll_bar.invalidate_thumb();
+
+        result
+    }
+
+    pub fn handle_touch_event(
+        &mut self,
+        touch_event: &input::touch::Event,
+        _ctx: &mut ViewAssistantContext,
+    ) -> Option<PointerEventResponse> {
+        for contact in &touch_event.contacts {
+            let event = input::pointer::Event::new_from_contact(contact);
             match event.phase {
                 input::pointer::Phase::Down(point) => {
-                    let point = point.to_f32();
-                    if self.scroll_bar.frame.contains(point) {
-                        return self.handle_primary_pointer_event_for_scroll_bar(&event);
-                    } else {
-                        self.active_pointer_id = Some(event.pointer_id.clone());
-                        self.start_pointer_location = point.to_f32();
-                    }
+                    self.active_pointer_id = Some(event.pointer_id.clone());
+                    self.start_pointer_location = point.to_f32();
                 }
                 input::pointer::Phase::Moved(location) => {
                     if Some(event.pointer_id.clone()) == self.active_pointer_id {
                         let location_offset = location.to_f32() - self.start_pointer_location;
-
                         fn div_and_trunc(value: f32, divisor: f32) -> isize {
                             (value / divisor).trunc() as isize
                         }
-
                         // Movement along Y-axis scrolls.
                         let cell_offset =
                             div_and_trunc(location_offset.y, self.grid_view.cell_size.height);
@@ -120,8 +225,27 @@ impl TerminalScene {
                 }
             }
         }
-
         None
+    }
+
+    pub fn show_scroll_thumb(&mut self) {
+        // Cancel hiding of the scroll thumb.
+        let was_scheduled = self.hide_scroll_thumb_timer.cancel();
+        // Reschedule hiding of thumb if it was hidden or it was scheduled to be hidden.
+        if self.scroll_bar.hidden_thumb || was_scheduled {
+            self.hide_scroll_thumb_timer.schedule();
+        }
+        if self.scroll_bar.hidden_thumb {
+            self.scroll_bar.hidden_thumb = false;
+            self.scroll_bar.invalidate_thumb();
+        }
+    }
+
+    pub fn hide_scroll_thumb(&mut self) {
+        self.scroll_bar.hidden_thumb = true;
+        // Disable wide thumb after hiding the scroll bar.
+        self.scroll_bar.wide_thumb = false;
+        self.scroll_bar.invalidate_thumb();
     }
 
     fn update_scroll_metrics(&mut self) {
@@ -133,25 +257,31 @@ impl TerminalScene {
 
         self.scroll_bar.content_height = content_height;
         self.scroll_bar.content_offset = content_offset;
-        self.scroll_bar.invalidate_thumb_frame();
+        self.scroll_bar.invalidate_thumb();
     }
 
     fn handle_primary_pointer_event_for_scroll_bar(
         &mut self,
-        event: &input::pointer::Event,
+        event: &input::mouse::Event,
     ) -> Option<PointerEventResponse> {
-        // The following logic assumes that we are only tracking one pointer at a time.
         let prev_offset = self.scroll_bar.content_offset;
-        match event.phase {
-            input::pointer::Phase::Down(location) => {
-                self.scroll_bar.begin_tracking_pointer_event(location.to_f32());
+        match &event.phase {
+            input::mouse::Phase::Down(button) if button.is_primary() => {
+                if !self.scroll_bar.is_tracking() {
+                    self.scroll_bar.begin_tracking_pointer_event(event.location.to_f32());
+                }
             }
-            input::pointer::Phase::Moved(location) => {
-                self.scroll_bar.handle_pointer_move(location.to_f32())
+            input::mouse::Phase::Moved => {
+                if self.scroll_bar.is_tracking() {
+                    self.scroll_bar.handle_pointer_move(event.location.to_f32());
+                }
             }
-            input::pointer::Phase::Up
-            | input::pointer::Phase::Remove
-            | input::pointer::Phase::Cancel => self.scroll_bar.cancel_pointer_event(),
+            input::mouse::Phase::Up(button) if button.is_primary() => {
+                if self.scroll_bar.is_tracking() {
+                    self.scroll_bar.cancel_pointer_event();
+                }
+            }
+            _ => {}
         };
 
         // do not rely on the ScrollContext being udpated at this point. Rely on the
@@ -161,6 +291,13 @@ impl TerminalScene {
             self.scroll_bar.content_offset,
             self.grid_view.cell_size.height,
         );
+
+        // Make sure we show a wide scroll thumb after processing a pointer event for
+        // the scroll bar.
+        if offset_change != 0 || self.scroll_bar.hidden_thumb || !self.scroll_bar.wide_thumb {
+            self.scroll_bar.hidden_thumb = false;
+            self.scroll_bar.wide_thumb = true;
+        }
 
         match offset_change {
             0 => Some(PointerEventResponse::ViewDirty),
@@ -188,6 +325,7 @@ impl Default for TerminalScene {
             scroll_context: ScrollContext::default(),
             active_pointer_id: None,
             start_pointer_location: Point::zero(),
+            hide_scroll_thumb_timer: HideScrollThumbTimer::default(),
         }
     }
 }
@@ -277,21 +415,12 @@ mod tests {
     }
 
     #[test]
-    fn calculate_term_size_has_affordance_for_scroll_bar() {
-        let size = Size::new(100.0, 100.0);
-        let calculated = TerminalScene::calculate_term_size_from_size(&size);
-
-        assert_eq!(calculated.width, 84.0);
-        assert_eq!(calculated.height, 100.0);
-    }
-
-    #[test]
     fn update_size_sets_frames() {
         let mut scene = TerminalScene::default();
         let size = Size::new(100.0, 100.0);
         scene.update_size(size, Size::zero());
 
-        assert_eq!(scene.grid_view.frame, Rect::new(Point::zero(), Size::new(84.0, 100.0)));
+        assert_eq!(scene.grid_view.frame, Rect::new(Point::zero(), Size::new(100.0, 100.0)));
         assert_eq!(
             scene.scroll_bar.frame,
             Rect::new(Point::new(84.0, 0.0), Size::new(16.0, 100.0))

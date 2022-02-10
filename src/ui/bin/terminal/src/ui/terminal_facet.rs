@@ -6,10 +6,10 @@ use {
     anyhow::Error,
     carnelian::{
         color::Color,
-        drawing::path_for_rectangle,
+        drawing::path_for_rounded_rectangle,
         render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Style},
         scene::{facets::Facet, LayerGroup, SceneOrder},
-        Rect, Size, ViewAssistantContext,
+        Coord, Rect, Size, ViewAssistantContext,
     },
     fuchsia_trace as ftrace,
     std::{any::Any, cell::RefCell, convert::TryFrom, rc::Rc},
@@ -30,12 +30,16 @@ pub type TerminalConfig = Config<UIConfig>;
 
 pub enum TerminalMessages {
     #[allow(dead_code)]
-    SetScrollThumbMessage(Option<Rect>),
+    SetScrollThumbMessage(Option<(Rect, f32)>),
 }
 
-fn raster_for_rectangle(bounds: &Rect, render_context: &mut RenderContext) -> Raster {
+fn raster_for_rounded_rectangle(
+    bounds: &Rect,
+    corner_radius: Coord,
+    render_context: &mut RenderContext,
+) -> Raster {
     let mut raster_builder = render_context.raster_builder().expect("raster_builder");
-    raster_builder.add(&path_for_rectangle(bounds, render_context), None);
+    raster_builder.add(&path_for_rounded_rectangle(bounds, corner_radius, render_context), None);
     raster_builder.build()
 }
 
@@ -44,25 +48,20 @@ pub struct TerminalFacet<T> {
     font_set: FontSet,
     size: Size,
     term: Rc<RefCell<Term<T>>>,
-    scroll_thumb: Option<Rect>,
+    scroll_thumb: Option<(Rect, f32)>,
     thumb_order: Option<SceneOrder>,
     renderer: Renderer,
 }
 
 impl<T: 'static> TerminalFacet<T> {
-    pub fn new(
-        font_set: FontSet,
-        cell_size: &Size,
-        term: Rc<RefCell<Term<T>>>,
-        scroll_thumb: Option<Rect>,
-    ) -> Self {
+    pub fn new(font_set: FontSet, cell_size: &Size, term: Rc<RefCell<Term<T>>>) -> Self {
         let renderer = Renderer::new(&font_set, cell_size);
 
         TerminalFacet {
             font_set,
             size: Size::zero(),
             term,
-            scroll_thumb,
+            scroll_thumb: None,
             thumb_order: None,
             renderer,
         }
@@ -99,13 +98,16 @@ impl<T: 'static> Facet for TerminalFacet<T> {
         self.renderer.render(layer_group, render_context, &self.font_set, layers);
 
         // Add new scrollbar thumb.
-        if let Some(thumb) = self.scroll_thumb {
+        if let Some((thumb, alpha)) = self.scroll_thumb {
+            // Linear to sRGB.
+            let srgb = (alpha.powf(1.0 / 2.2) * 255.0) as u8;
+            let color = Color { r: srgb, g: srgb, b: srgb, a: (alpha * 255.0) as u8 };
             let layer = Layer {
-                raster: raster_for_rectangle(&thumb, render_context),
+                raster: raster_for_rounded_rectangle(&thumb, 2.0, render_context),
                 clip: None,
                 style: Style {
                     fill_rule: FillRule::NonZero,
-                    fill: Fill::Solid(Color::white()),
+                    fill: Fill::Solid(color),
                     blend_mode: BlendMode::Over,
                 },
             };

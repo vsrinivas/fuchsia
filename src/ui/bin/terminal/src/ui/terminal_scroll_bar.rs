@@ -7,19 +7,16 @@ use {
     carnelian::{make_message, AppSender, Coord, MessageTarget, Point, Rect, Size, ViewKey},
 };
 
-pub struct GridView {
-    pub frame: Rect,
-    pub cell_size: Size,
-}
-
-impl Default for GridView {
-    fn default() -> Self {
-        GridView { frame: Rect::zero(), cell_size: Size::zero() }
-    }
-}
-
 const MAXIMUM_THUMB_RATIO: f32 = 0.8;
 const MINIMUM_THUMB_RATIO: f32 = 0.05;
+
+// Default width of scroll bar thumb.
+const THUMB_WIDTH: f32 = 8.0;
+
+// Alpha values for thumb.
+const THUMB_NORMAL_ALPHA: f32 = 0.6;
+const THUMB_TRACKING_ALPHA: f32 = 0.8;
+const THUMB_DIM_ALPHA: f32 = 0.4;
 
 pub struct ScrollBar {
     pub frame: Rect,
@@ -30,8 +27,17 @@ pub struct ScrollBar {
     /// The vertical distance that the content is offset from the bottom
     pub content_offset: Coord,
 
-    /// The frame to draw the scroll bar thumb
-    thumb_frame: Option<Rect>,
+    /// Whether scroll bar thumb should be hidden or not.
+    pub hidden_thumb: bool,
+
+    /// Whether to draw a wide thumb or not.
+    pub wide_thumb: bool,
+
+    /// Whether to dim thumb or not.
+    pub dim_thumb: bool,
+
+    /// The rectangle and alpha used to draw the scroll bar thumb
+    thumb: Option<(Rect, f32)>,
 
     /// Indicates whether we are tracking a scroll or not. This will
     /// eventually need to track the device_id when we handle multiple
@@ -51,7 +57,10 @@ impl Default for ScrollBar {
             frame: Rect::zero(),
             content_height: 0.0,
             content_offset: 0.0,
-            thumb_frame: None,
+            hidden_thumb: false,
+            wide_thumb: true,
+            dim_thumb: true,
+            thumb: None,
             pointer_tracking_start: None,
         }
     }
@@ -65,25 +74,24 @@ impl ScrollBar {
             frame: Rect::zero(),
             content_height: 0.0,
             content_offset: 0.0,
-            thumb_frame: None,
+            hidden_thumb: true,
+            wide_thumb: false,
+            dim_thumb: true,
+            thumb: None,
             pointer_tracking_start: None,
         }
-    }
-
-    pub fn thumb_frame(&self) -> Option<Rect> {
-        self.thumb_frame
     }
 
     /// This method must be called after the client has updated
     /// the frame, content_height or content_offset. We leave this
     /// up to the caller to allow for the optimization of batching
     /// these updates without needing to recalculate the frame.
-    pub fn invalidate_thumb_frame(&mut self) {
-        self.update_thumb_frame();
+    pub fn invalidate_thumb(&mut self) {
+        self.update_thumb();
     }
 
     pub fn begin_tracking_pointer_event(&mut self, point: Point) {
-        if let Some(frame) = &self.thumb_frame {
+        if let Some((frame, _)) = &self.thumb {
             if !frame.contains(point) {
                 // jump the middle of the thumb to the middle of the point
                 let thumb_height = frame.size.height;
@@ -102,13 +110,13 @@ impl ScrollBar {
     }
 
     pub fn handle_pointer_move(&mut self, point: Point) {
-        if let (Some((start_point, start_offset)), Some(thumb_frame)) =
-            (self.pointer_tracking_start, self.thumb_frame)
+        if let (Some((start_point, start_offset)), Some((frame, _))) =
+            (self.pointer_tracking_start, self.thumb)
         {
             let dy = start_point.y - point.y;
             let conversion_factor = self.pixel_space_to_content_space_conversion_factor();
             let proposed_offset = start_offset + (conversion_factor * dy);
-            self.propose_offset(proposed_offset, conversion_factor, thumb_frame.size.height);
+            self.propose_offset(proposed_offset, conversion_factor, frame.size.height);
         }
     }
 
@@ -127,7 +135,7 @@ impl ScrollBar {
         let max_offset =
             f32::ceil((self.frame.size.height - f32::floor(thumb_height)) * conversion_factor);
         self.content_offset = Coord::min(Coord::max(proposed_offset, 0.0), max_offset);
-        self.invalidate_thumb_frame();
+        self.invalidate_thumb();
     }
 
     #[inline]
@@ -135,21 +143,26 @@ impl ScrollBar {
         self.pointer_tracking_start.is_some()
     }
 
-    fn update_thumb_frame(&mut self) {
-        let thumb_frame = if let Some(thumb_info) = self.calculate_thumb_render_info() {
+    #[inline]
+    pub fn thumb_contains(&self, point: Point) -> bool {
+        self.thumb.map(|(frame, _)| frame.contains(point)).unwrap_or(false)
+    }
+
+    fn update_thumb(&mut self) {
+        let thumb = if let Some(thumb_info) = self.calculate_thumb_render_info() {
             let thumb_frame = thumb_info.calculate_frame_in_rect(&self.frame);
 
-            Some(thumb_frame)
+            Some((thumb_frame, thumb_info.alpha))
         } else {
             None
         };
 
-        if self.thumb_frame != thumb_frame {
-            self.thumb_frame = thumb_frame;
+        if self.thumb != thumb {
+            self.thumb = thumb;
             if let Some(app_sender) = &self.app_sender {
                 app_sender.queue_message(
                     MessageTarget::View(self.view_key),
-                    make_message(TerminalMessages::SetScrollThumbMessage(thumb_frame)),
+                    make_message(TerminalMessages::SetScrollThumbMessage(thumb)),
                 );
                 app_sender.request_render(self.view_key);
             }
@@ -157,17 +170,27 @@ impl ScrollBar {
     }
 
     fn calculate_thumb_render_info(&self) -> Option<ThumbRenderInfo> {
-        if self.content_height <= self.frame.size.height {
+        if self.hidden_thumb || self.content_height <= self.frame.size.height {
             return None;
         }
 
+        let width = if self.wide_thumb { self.frame.size.width } else { THUMB_WIDTH };
         let height =
             Self::calculate_thumb_height_ratio(self.frame.size.height, self.content_height)
                 * self.frame.size.height;
 
         let vertical_offset =
             Coord::floor(self.content_space_to_pixel_space_factor(&height) * self.content_offset);
-        Some(ThumbRenderInfo { height, vertical_offset })
+
+        let alpha = if self.is_tracking() {
+            THUMB_TRACKING_ALPHA
+        } else if self.dim_thumb {
+            THUMB_DIM_ALPHA
+        } else {
+            THUMB_NORMAL_ALPHA
+        };
+
+        Some(ThumbRenderInfo { width, height, vertical_offset, alpha })
     }
 
     fn calculate_thumb_height_ratio(frame_height: Coord, content_height: Coord) -> Coord {
@@ -190,18 +213,24 @@ impl ScrollBar {
 
 #[derive(PartialEq, Debug)]
 struct ThumbRenderInfo {
-    /// The height of the ScrollBarThumb
+    // The width of the ScrollBarThumb
+    width: Coord,
+
+    // The height of the ScrollBarThumb
     height: Coord,
 
-    /// The y position of the bottom of the ScrollBarThumb
+    // The y position of the bottom of the ScrollBarThumb
     vertical_offset: Coord,
+
+    // The alpha value of the ScrollBarThumb
+    alpha: f32,
 }
 
 impl ThumbRenderInfo {
     fn calculate_frame_in_rect(&self, outer_rect: &Rect) -> Rect {
-        let size = Size::new(outer_rect.size.width, self.height);
+        let size = Size::new(self.width, self.height);
         let origin = Point::new(
-            outer_rect.origin.x,
+            outer_rect.origin.x + outer_rect.size.width - self.width,
             outer_rect.origin.y + outer_rect.size.height - self.vertical_offset - self.height,
         );
         Rect::new(origin, size)
@@ -241,7 +270,7 @@ mod tests {
         let mut scroll_bar = ScrollBar::default();
         scroll_bar.frame = rect_with_height(100.0);
         scroll_bar.content_height = 400.0;
-        scroll_bar.invalidate_thumb_frame();
+        scroll_bar.invalidate_thumb();
 
         scroll_bar.pointer_tracking_start =
             Some((Point::new(10.0, 90.0), scroll_bar.content_offset));
@@ -257,7 +286,7 @@ mod tests {
         let mut scroll_bar = ScrollBar::default();
         scroll_bar.frame = Rect::new(Point::new(10.0, 10.0), Size::new(10.0, 100.0));
         scroll_bar.content_height = 400.0;
-        scroll_bar.invalidate_thumb_frame();
+        scroll_bar.invalidate_thumb();
 
         scroll_bar.pointer_tracking_start =
             Some((Point::new(10.0, 90.0), scroll_bar.content_offset));
@@ -273,7 +302,7 @@ mod tests {
         let mut scroll_bar = ScrollBar::default();
         scroll_bar.frame = rect_with_height(100.0);
         scroll_bar.content_height = 400.0;
-        scroll_bar.invalidate_thumb_frame();
+        scroll_bar.invalidate_thumb();
 
         scroll_bar.pointer_tracking_start =
             Some((Point::new(10.0, 90.0), scroll_bar.content_offset));
@@ -287,7 +316,7 @@ mod tests {
         let mut scroll_bar = ScrollBar::default();
         scroll_bar.frame = rect_with_height(100.0);
         scroll_bar.content_height = 400.0;
-        scroll_bar.invalidate_thumb_frame();
+        scroll_bar.invalidate_thumb();
 
         scroll_bar.pointer_tracking_start =
             Some((Point::new(10.0, 90.0), scroll_bar.content_offset));
@@ -301,7 +330,8 @@ mod tests {
         let mut scroll_bar = ScrollBar::default();
         scroll_bar.frame = rect_with_height(100.0);
         scroll_bar.content_height = 400.0;
-        scroll_bar.invalidate_thumb_frame();
+
+        scroll_bar.invalidate_thumb();
 
         scroll_bar.begin_tracking_pointer_event(Point::new(5.0, 10.0));
         assert_eq!(scroll_bar.content_offset, 300.0);
@@ -312,7 +342,7 @@ mod tests {
         let mut scroll_bar = ScrollBar::default();
         scroll_bar.frame = rect_with_height(100.0);
         scroll_bar.content_height = 500.0;
-        scroll_bar.invalidate_thumb_frame();
+        scroll_bar.invalidate_thumb();
 
         scroll_bar.begin_tracking_pointer_event(Point::new(5.0, 50.0));
         assert_eq!(scroll_bar.content_offset, 200.0);
@@ -323,7 +353,7 @@ mod tests {
         let mut scroll_bar = ScrollBar::default();
         scroll_bar.frame = Rect::new(Point::new(10.0, 10.0), Size::new(10.0, 100.0));
         scroll_bar.content_height = 500.0;
-        scroll_bar.invalidate_thumb_frame();
+        scroll_bar.invalidate_thumb();
 
         scroll_bar.begin_tracking_pointer_event(Point::new(5.0, 60.0));
         assert_eq!(scroll_bar.content_offset, 200.0);
@@ -335,7 +365,7 @@ mod tests {
         scroll_bar.frame = rect_with_height(100.0);
         scroll_bar.content_height = 400.0;
         scroll_bar.content_offset = 300.0;
-        scroll_bar.invalidate_thumb_frame();
+        scroll_bar.invalidate_thumb();
 
         scroll_bar.begin_tracking_pointer_event(Point::new(5.0, 99.0));
         assert_eq!(scroll_bar.content_offset, 0.0);
@@ -346,7 +376,7 @@ mod tests {
         let mut scroll_bar = ScrollBar::default();
         scroll_bar.frame = rect_with_height(100.0);
         scroll_bar.content_height = 400.0;
-        scroll_bar.invalidate_thumb_frame();
+        scroll_bar.invalidate_thumb();
 
         scroll_bar.begin_tracking_pointer_event(Point::new(10.0, 10.0));
         scroll_bar.cancel_pointer_event();
@@ -354,11 +384,11 @@ mod tests {
     }
 
     #[test]
-    fn thumb_frame_updated_when_told_thumb_frame_is_invalidated() {
+    fn thumb_updated_when_told_thumb_is_invalidated() {
         let mut scroll_bar = ScrollBar::default();
         scroll_bar.content_height = 10_000.0;
-        scroll_bar.invalidate_thumb_frame();
-        assert!(scroll_bar.thumb_frame.is_some());
+        scroll_bar.invalidate_thumb();
+        assert!(scroll_bar.thumb.is_some());
     }
 
     #[test]
@@ -455,31 +485,38 @@ mod tests {
 
     #[test]
     fn scroll_context_thumb_render_info_equality() {
-        let first = ThumbRenderInfo { height: 100.0, vertical_offset: 100.0 };
-        let second = ThumbRenderInfo { height: 100.0, vertical_offset: 100.0 };
+        let first =
+            ThumbRenderInfo { width: 1.0, height: 100.0, vertical_offset: 100.0, alpha: 1.0 };
+        let second =
+            ThumbRenderInfo { width: 1.0, height: 100.0, vertical_offset: 100.0, alpha: 1.0 };
         assert_eq!(first, second);
     }
 
     #[test]
     fn scroll_context_thumb_render_info_not_equal_diff_offset() {
-        let first = ThumbRenderInfo { height: 100.0, vertical_offset: 100.0 };
-        let second = ThumbRenderInfo { height: 100.0, vertical_offset: 0.0 };
+        let first =
+            ThumbRenderInfo { width: 1.0, height: 100.0, vertical_offset: 100.0, alpha: 1.0 };
+        let second =
+            ThumbRenderInfo { width: 1.0, height: 100.0, vertical_offset: 0.0, alpha: 1.0 };
         assert_ne!(first, second);
     }
 
     #[test]
     fn scroll_context_thumb_render_info_equality_not_equal_diff_height() {
-        let first = ThumbRenderInfo { height: 100.0, vertical_offset: 100.0 };
-        let second = ThumbRenderInfo { height: 10.0, vertical_offset: 100.0 };
+        let first =
+            ThumbRenderInfo { width: 1.0, height: 100.0, vertical_offset: 100.0, alpha: 1.0 };
+        let second =
+            ThumbRenderInfo { width: 1.0, height: 10.0, vertical_offset: 100.0, alpha: 1.0 };
         assert_ne!(first, second);
     }
 
     #[test]
     fn thumb_render_info_calculate_frame_in_rect() {
-        let thumb_info = ThumbRenderInfo { height: 10.0, vertical_offset: 10.0 };
+        let thumb_info =
+            ThumbRenderInfo { width: 1.0, height: 10.0, vertical_offset: 10.0, alpha: 1.0 };
         let outer = Rect::new(Point::new(10.0, 10.0), Size::new(10.0, 1000.0));
         let rect = thumb_info.calculate_frame_in_rect(&outer);
 
-        assert_eq!(rect, Rect::new(Point::new(10.0, 990.0), Size::new(10.0, 10.0)));
+        assert_eq!(rect, Rect::new(Point::new(19.0, 990.0), Size::new(1.0, 10.0)));
     }
 }

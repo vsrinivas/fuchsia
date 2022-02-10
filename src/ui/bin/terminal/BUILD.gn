@@ -62,7 +62,7 @@ rustc_library("lib") {
     "src/ui/mod.rs",
     "src/ui/terminal_facet.rs",
     "src/ui/terminal_scene.rs",
-    "src/ui/terminal_views.rs",
+    "src/ui/terminal_scroll_bar.rs",
   ]
 }
 

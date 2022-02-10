@@ -295,8 +295,7 @@ impl TerminalViewAssistant {
     fn resize_if_needed(&mut self, new_size: &Size, _metrics: &Size) -> Result<(), Error> {
         // The shell works on logical size units but the views operate based on the size
         if TerminalViewAssistant::needs_resize(&self.last_known_size, new_size) {
-            let floored_size = new_size.floor();
-            let term_size = TerminalScene::calculate_term_size_from_size(&floored_size);
+            let term_size = new_size.floor();
 
             // TODO(fxbug.dev/91053): Use physical size relative to largest display that
             // terminal is visible on determine DPI.
@@ -357,7 +356,7 @@ impl TerminalViewAssistant {
 
             self.last_known_size = *new_size;
             self.last_known_size_info = term_size_info;
-            self.terminal_scene.update_size(floored_size, cell_size);
+            self.terminal_scene.update_size(term_size, cell_size);
             self.scene_details = None;
         }
         Ok(())
@@ -513,6 +512,8 @@ impl TerminalViewAssistant {
         match response {
             PointerEventResponse::ScrollLines(lines) => {
                 handler.scroll_term(Scroll::Lines(lines));
+                // Show scroll thumb after scrolling.
+                self.terminal_scene.show_scroll_thumb();
             }
             PointerEventResponse::ViewDirty => handler.update_view(),
         }
@@ -534,32 +535,21 @@ impl TerminalViewAssistant {
                         const HID_USAGE_KEY_DOWN: u32 = 0x51;
                         const HID_USAGE_KEY_UP: u32 = 0x52;
 
-                        match event.hid_usage {
-                            HID_USAGE_KEY_UP if modifiers.alt => {
-                                self.term.borrow_mut().scroll_display(Scroll::Lines(1));
-                                return Ok(true);
-                            }
-                            HID_USAGE_KEY_DOWN if modifiers.alt => {
-                                self.term.borrow_mut().scroll_display(Scroll::Lines(-1));
-                                return Ok(true);
-                            }
-                            HID_USAGE_KEY_PAGEUP if modifiers.shift => {
-                                self.term.borrow_mut().scroll_display(Scroll::PageUp);
-                                return Ok(true);
-                            }
-                            HID_USAGE_KEY_PAGEDOWN if modifiers.shift => {
-                                self.term.borrow_mut().scroll_display(Scroll::PageDown);
-                                return Ok(true);
-                            }
-                            HID_USAGE_KEY_HOME if modifiers.shift => {
-                                self.term.borrow_mut().scroll_display(Scroll::Top);
-                                return Ok(true);
-                            }
-                            HID_USAGE_KEY_END if modifiers.shift => {
-                                self.term.borrow_mut().scroll_display(Scroll::Bottom);
-                                return Ok(true);
-                            }
-                            _ => {}
+                        let maybe_scroll = match event.hid_usage {
+                            HID_USAGE_KEY_UP if modifiers.alt => Some(Scroll::Lines(1)),
+                            HID_USAGE_KEY_DOWN if modifiers.alt => Some(Scroll::Lines(-1)),
+                            HID_USAGE_KEY_PAGEUP if modifiers.shift => Some(Scroll::PageUp),
+                            HID_USAGE_KEY_PAGEDOWN if modifiers.shift => Some(Scroll::PageDown),
+                            HID_USAGE_KEY_HOME if modifiers.shift => Some(Scroll::Top),
+                            HID_USAGE_KEY_END if modifiers.shift => Some(Scroll::Bottom),
+                            _ => None,
+                        };
+
+                        if let Some(scroll) = maybe_scroll {
+                            self.term.borrow_mut().scroll_display(scroll);
+                            // Show scroll thumb after scrolling.
+                            self.terminal_scene.show_scroll_thumb();
+                            return Ok(true);
                         }
                     }
                     Some(code_point) if modifiers.alt == true => {
@@ -621,7 +611,6 @@ impl ViewAssistant for TerminalViewAssistant {
                 self.font_set.clone(),
                 &cell_size,
                 self.term.clone(),
-                self.terminal_scene.scroll_thumb(),
             )));
 
             SceneDetails { scene: builder.build(), terminal }
@@ -667,13 +656,26 @@ impl ViewAssistant for TerminalViewAssistant {
         Ok(())
     }
 
-    fn handle_pointer_event(
+    fn handle_mouse_event(
         &mut self,
         ctx: &mut ViewAssistantContext,
         _event: &input::Event,
-        pointer_event: &input::pointer::Event,
+        mouse_event: &input::mouse::Event,
     ) -> Result<(), Error> {
-        if let Some(response) = self.terminal_scene.handle_pointer_event(&pointer_event, ctx) {
+        if let Some(response) = self.terminal_scene.handle_mouse_event(mouse_event, ctx) {
+            let mut handler = PointerEventResponseHandlerImpl { ctx, term: self.term.clone() };
+            self.handle_pointer_event_response(response, &mut handler);
+        }
+        Ok(())
+    }
+
+    fn handle_touch_event(
+        &mut self,
+        ctx: &mut ViewAssistantContext,
+        _event: &input::Event,
+        touch_event: &input::touch::Event,
+    ) -> Result<(), Error> {
+        if let Some(response) = self.terminal_scene.handle_touch_event(touch_event, ctx) {
             let mut handler = PointerEventResponseHandlerImpl { ctx, term: self.term.clone() };
             self.handle_pointer_event_response(response, &mut handler);
         }
@@ -684,6 +686,10 @@ impl ViewAssistant for TerminalViewAssistant {
         if let Some(message) = message.downcast_ref::<TerminalMessages>() {
             match message {
                 TerminalMessages::SetScrollThumbMessage(thumb) => {
+                    if !thumb.is_some() {
+                        self.terminal_scene.hide_scroll_thumb();
+                    }
+
                     // Forward message to the terminal facet.
                     if let Some(scene_details) = &mut self.scene_details {
                         scene_details.scene.send_message(
@@ -791,7 +797,7 @@ mod tests {
 
         // we want to make sure that the values are floored and that they
         // match what the scene will render the terminal as.
-        assert_eq!(size_info.width, 80.0);
+        assert_eq!(size_info.width, 100.0);
         assert_eq!(size_info.height, 100.0);
     }
 
@@ -848,7 +854,7 @@ mod tests {
             .expect("call to resize failed");
 
         let event = receiver.next().await.expect("failed to receive pty event");
-        assert_eq!(event.window_size.width, 78);
+        assert_eq!(event.window_size.width, 80);
         assert_eq!(event.window_size.height, 80);
 
         Ok(())

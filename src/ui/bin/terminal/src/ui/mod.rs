@@ -4,7 +4,7 @@
 
 mod terminal_facet;
 mod terminal_scene;
-mod terminal_views;
+mod terminal_scroll_bar;
 
 pub use terminal_facet::{TerminalConfig, TerminalFacet, TerminalMessages};
 pub use terminal_scene::{PointerEventResponse, ScrollContext, TerminalScene};
