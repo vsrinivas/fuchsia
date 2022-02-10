@@ -44,7 +44,6 @@ action("dart_sdk_docs") {
   inputs = [
     "//sdk/dart",
     "//analysis_options.yaml",
-    "//prebuilt/third_party/dart/${host_platform}/bin/pub",
     "//prebuilt/third_party/dart/${host_platform}/bin/dart",
   ]
 

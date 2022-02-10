@@ -52,9 +52,9 @@ def main():
     else:
         print('Unsupported platform: %s' % sys.platform)
         return 1
-    pub_path = os.path.join(
+    dart_path = os.path.join(
         paths.FUCHSIA_ROOT, 'prebuilt', 'third_party', 'dart', platform, 'bin',
-        'pub')
+        'dart')
     importer_path = os.path.join(
         paths.FUCHSIA_ROOT, 'scripts', 'dart', 'package_importer.py')
     output_path = os.path.join(
@@ -73,7 +73,7 @@ def main():
     args = [python_tool, importer_path]
     if script_args.debug:
         args.append('--debug')
-    args.extend(['--pub', pub_path])
+    args.extend(['--dart', dart_path])
     args.extend(['--output', output_path])
     args.append('--pubspecs')
     for root in ROOT_PUBSPECS:

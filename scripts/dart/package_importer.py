@@ -216,7 +216,7 @@ def valid_package_path(package_name, source_dir):
 def main():
     parser = argparse.ArgumentParser('Import dart packages from pub')
     parser.add_argument(
-        '--pub', required=True, help='Path to the pub executable')
+        '--dart', required=True, help='Path to the dart executable')
     parser.add_argument(
         '--pubspecs',
         nargs='+',
@@ -327,7 +327,7 @@ def main():
         os.mkdir(pub_cache_dir)
         env = os.environ
         env['PUB_CACHE'] = pub_cache_dir
-        pub_get = [args.pub, 'get']
+        pub_get = [args.dart, 'pub', 'get']
         if args.debug:
             pub_get.append('-v')
         subprocess.check_call(pub_get, cwd=importer_dir, env=env)

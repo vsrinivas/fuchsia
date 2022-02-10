@@ -166,7 +166,7 @@ def generate_docs(
     # TODO (https://fxbug.dev/84343) to have all deps locally.
     with tempfile.TemporaryDirectory() as tmpdirname:
         process = subprocess.run(
-            [os.path.join(dart_prebuilt_dir, 'pub'), 'get'],
+            [os.path.join(dart_prebuilt_dir, 'dart'), 'pub', 'get'],
             cwd=package_dir,
             # Pub requires HOME env variable which is wiped from BUILD.
             env=dict(os.environ, PUB_CACHE=tmpdirname, HOME=tmpdirname),
@@ -184,12 +184,12 @@ def generate_docs(
         # Run dart doc.
         # TODO(fxb/93159): Re-enable `dart doc` after it is known
         # how to incorporate the following dropped flags. Once done,
-        # we can get rid of this `pub global activate dartdoc`
+        # we can get rid of this `dart pub global activate dartdoc`
         # workaround.
         activate_dartdoc_process = subprocess.run(
             [
-                os.path.join(dart_prebuilt_dir, 'pub'), 'global', 'activate',
-                'dartdoc'
+                os.path.join(dart_prebuilt_dir, 'dart'), 'pub', 'global',
+                'activate', 'dartdoc'
             ],
             cwd=package_dir,
             env=dict(os.environ, PUB_CACHE=tmpdirname, HOME=tmpdirname),
@@ -202,7 +202,8 @@ def generate_docs(
         excluded_packages = ['Dart', 'logging']
         process = subprocess.run(
             [
-                os.path.join(dart_prebuilt_dir, 'pub'),
+                os.path.join(dart_prebuilt_dir, 'dart'),
+                'pub',
                 'global',
                 'run',
                 'dartdoc',

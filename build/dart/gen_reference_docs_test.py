@@ -170,7 +170,7 @@ import 'package:foo/foo.dart';
                     mock_run.assert_has_calls(
                         [
                             mock.call(
-                                [os.path.join(prebuilts, 'pub'), 'get'],
+                                [os.path.join(prebuilts, 'dart'), 'pub', 'get'],
                                 cwd=package_dir,
                                 env={
                                     "PUB_CACHE": "fakedir",
@@ -180,8 +180,8 @@ import 'package:foo/foo.dart';
                                 universal_newlines=True),
                             mock.call(
                                 [
-                                    os.path.join(prebuilts, 'pub'), 'global',
-                                    'activate', 'dartdoc'
+                                    os.path.join(prebuilts, 'dart'), 'pub',
+                                    'global', 'activate', 'dartdoc'
                                 ],
                                 cwd=package_dir,
                                 env={
@@ -192,13 +192,13 @@ import 'package:foo/foo.dart';
                                 universal_newlines=True),
                             # TODO(fxb/93159): Re-enable `dart doc` after it is known
                             # how to incorporate the following dropped flags. Once done,
-                            # we can get rid of this `pub global activate dartdoc`
+                            # we can get rid of this `dart pub global activate dartdoc`
                             # workaround.
                             mock.call(
                                 [
-                                    os.path.join(prebuilts,
-                                                 'pub'), 'global', 'run',
-                                    'dartdoc', '--auto-include-dependencies',
+                                    os.path.join(prebuilts, 'dart'), 'pub',
+                                    'global', 'run', 'dartdoc',
+                                    '--auto-include-dependencies',
                                     '--exclude-packages', 'Dart,logging',
                                     '--output',
                                     os.path.join(out_dir,
