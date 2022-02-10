@@ -45,7 +45,7 @@ def make_unique_name(name, type):
 
 class ManifestImage:
   """ Represents an entry in the 'images.json' manifest that will be installed to disk. """
-  def __init__(self, name: str, guids: List[str], type: str):
+  def __init__(self, name: str, guids: List[str], type: str, dest_name: str = None):
     """
     Args:
       name: 'name' of the partition in the image manifest.
@@ -55,6 +55,10 @@ class ManifestImage:
     self.name = name
     self.guids = guids
     self.type = type
+    if dest_name:
+        self.dest_name = dest_name
+    else:
+        self.dest_name = name
 
   def unique_name(self):
     return make_unique_name(self.name, self.type)
@@ -64,8 +68,6 @@ class ManifestImage:
 # and the partition types they will have (passed to cgpt)
 IMAGES = [
     # Standard x64 partitions
-    # This is the zedboot image, which is actually booted.
-    ManifestImage('zedboot-efi', ['efi'], 'blk'),
     # This is the EFI system partition that will be installed to the target.
     ManifestImage('fuchsia.esp', [WORKSTATION_INSTALLER_GPT_GUID], 'blk'),
     ManifestImage('zircon-a', [WORKSTATION_INSTALLER_GPT_GUID], 'zbi'),
@@ -74,13 +76,24 @@ IMAGES = [
     # ChromeOS partitions
     # The zircon-r.signed partition is used as both zedboot on the installation
     # disk and also the installed zircon-r partition.
-    ManifestImage('zircon-r.signed', ['kernel', WORKSTATION_INSTALLER_GPT_GUID], 'zbi.signed'),
+    ManifestImage('zircon-r.signed', [WORKSTATION_INSTALLER_GPT_GUID], 'zbi.signed'),
     ManifestImage('zircon-a.signed', [WORKSTATION_INSTALLER_GPT_GUID], 'zbi.signed'),
 
     # Common partitions - installed everywhere.
     ManifestImage('storage-sparse', [WORKSTATION_INSTALLER_GPT_GUID], 'blk'),
 ]
 
+OLD_INSTALLER_IMAGES = [
+    # This is the zedboot image on x64, which is actually booted.
+    ManifestImage('zedboot-efi', ['efi'], 'blk'),
+    # This is the zedboot image on chromebook-x64, which is actually booted.
+    ManifestImage('zircon-r.signed', ['kernel'], 'zbi.signed'),
+]
+
+NEW_INSTALLER_IMAGES = [
+    # The recovery image for chromebook-x64.
+    ManifestImage('recovery-installer.signed', ['kernel'], 'zbi.signed', 'zircon-r')
+]
 
 def ParseSize(size):
   """Parse a size.
@@ -306,7 +319,7 @@ class Image:
     logging.info('Done.')
     self.file.close()
 
-def GetPartitions(build_dir, images_file):
+def GetPartitions(build_dir, images_file, new_installer):
   """Get all partitions to be written to the output image.
 
   The list of partitions is currently determined by the IMAGES dict
@@ -333,14 +346,19 @@ def GetPartitions(build_dir, images_file):
 
   ret = []
   is_bootable = False
-  for image in IMAGES:
+  target_images = IMAGES
+  if new_installer:
+    target_images += NEW_INSTALLER_IMAGES
+  else:
+    target_images += OLD_INSTALLER_IMAGES
+  for image in target_images:
     if image.unique_name() not in images:
       logging.debug("Skipping image that wasn't built: {}".format(image.unique_name()))
       continue
 
     for part_type in image.guids:
       full_path = os.path.join(build_dir, images[image.unique_name()]['path'])
-      ret.append(Partition(full_path, part_type, image.name))
+      ret.append(Partition(full_path, part_type, image.dest_name))
       # Assume that any non-installer partition is a bootable partition.
       if part_type != WORKSTATION_INSTALLER_GPT_GUID:
         is_bootable = True
@@ -427,7 +445,7 @@ def Main(args):
   build_dir = args.build_dir
   if build_dir == '':
     build_dir = paths.FUCHSIA_BUILD_DIR
-  parts = GetPartitions(build_dir, args.images)
+  parts = GetPartitions(build_dir, args.images, args.new_installer)
   if not parts:
     return 1
 
@@ -485,6 +503,11 @@ if __name__ == '__main__':
       type=str,
       default='',
       help='Path to the Fuchsia build directory. The script will try and guess if no path is provided.'
+  )
+  parser.add_argument(
+      '--new-installer',
+      action='store_true',
+      help='Use the new installer image.',
   )
   parser.add_argument('FILE', help='Path to USB device or installer image')
   argv = parser.parse_args()
