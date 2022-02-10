@@ -333,7 +333,7 @@ def GetPartitions(build_dir, images_file, new_installer):
     a list of |Partition| objects to be written to the disk.
   """
   images = {}
-  if images_file is None:
+  if images_file == '':
     images_file = os.path.join(build_dir, 'images.json')
   try:
     with open(images_file) as f:
@@ -412,8 +412,7 @@ def Main(args):
     if not args.force and os.path.exists(path):
       logging.critical(
           'File {} already exists, not creating an image. Use --force if you want to proceed.'
-          .format(path),
-          file=sys.stderr)
+          .format(path))
       return 1
   else:
     if not os.path.exists(path):
