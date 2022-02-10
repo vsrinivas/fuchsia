@@ -665,11 +665,33 @@ TEST_F(MacInterfaceTest, AssociateToOpenNetwork) {
   ASSERT_EQ(IWL_STA_AUTHORIZED, mvm_sta->sta_state);
   ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
   ASSERT_EQ(kListenInterval, mvmvif_->bss_conf.listen_interval);
+  ASSERT_EQ(mvm_sta->sta_state, iwl_sta_state::IWL_STA_AUTHORIZED);
 
   ASSERT_EQ(ZX_OK, ClearAssoc());
   ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
   ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
+}
+
+// Check if calling iwl_mvm_mac_sta_state() sets the state correctly.
+TEST_F(MacInterfaceTest, CheckStaState) {
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  struct iwl_mvm_sta* mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
+  ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
+  struct iwl_mvm* mvm = mvmvif_->mvm;
+  ASSERT_GT(list_length(&mvm->time_event_list), 0);
+
+  ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
+  ASSERT_EQ(IWL_STA_AUTHORIZED, mvm_sta->sta_state);
+  ASSERT_EQ(true, mvmvif_->bss_conf.assoc);
+  ASSERT_EQ(kListenInterval, mvmvif_->bss_conf.listen_interval);
+  ASSERT_EQ(mvm_sta->sta_state, iwl_sta_state::IWL_STA_AUTHORIZED);
+
+  ASSERT_EQ(ZX_OK,
+            iwl_mvm_mac_sta_state(mvmvif_.get(), mvm_sta, IWL_STA_AUTHORIZED, IWL_STA_ASSOC));
+  ASSERT_EQ(mvm_sta->sta_state, iwl_sta_state::IWL_STA_ASSOC);
+  ASSERT_EQ(ZX_OK, ClearAssoc());
 }
 
 // Back to back calls of ClearAssoc().

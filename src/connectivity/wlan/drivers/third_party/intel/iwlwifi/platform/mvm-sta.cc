@@ -168,16 +168,16 @@ const struct ieee80211_key_conf* MvmSta::GetKey(wlan_key_type_t key_type) const 
   return ieee80211_key_confs_[key_type].get();
 }
 
-enum iwl_sta_state MvmSta::GetState() const { return sta_state_; }
+enum iwl_sta_state MvmSta::GetState() const { return iwl_mvm_sta_.get()->sta_state; }
 
 zx_status_t MvmSta::ChangeState(enum iwl_sta_state state) {
   zx_status_t status = ZX_OK;
-  while (state > sta_state_) {
+  while (state > GetState()) {
     if ((status = ChangeStateUp()) != ZX_OK) {
       return status;
     }
   }
-  while (state < sta_state_) {
+  while (state < GetState()) {
     if ((status = ChangeStateDown()) != ZX_OK) {
       return status;
     }
@@ -194,7 +194,7 @@ const struct iwl_mvm_sta* MvmSta::iwl_mvm_sta() const { return iwl_mvm_sta_.get(
 zx_status_t MvmSta::ChangeStateUp() {
   zx_status_t status = ZX_OK;
   iwl_sta_state new_state = iwl_sta_state::IWL_STA_NOTEXIST;
-  switch (sta_state_) {
+  switch (GetState()) {
     case iwl_sta_state::IWL_STA_NOTEXIST: {
       new_state = iwl_sta_state::IWL_STA_NONE;
       break;
@@ -212,26 +212,25 @@ zx_status_t MvmSta::ChangeStateUp() {
       break;
     }
     default: {
-      IWL_ERR(iwl_mvm_vif_, "ChangeStateUp() in invalid state %d\n", sta_state_);
+      IWL_ERR(iwl_mvm_vif_, "ChangeStateUp() in invalid state %d\n", GetState());
       return ZX_ERR_BAD_STATE;
     }
   }
 
-  if ((status = iwl_mvm_mac_sta_state(iwl_mvm_vif_, iwl_mvm_sta_.get(), sta_state_, new_state)) !=
+  if ((status = iwl_mvm_mac_sta_state(iwl_mvm_vif_, iwl_mvm_sta_.get(), GetState(), new_state)) !=
       ZX_OK) {
-    IWL_ERR(iwl_mvm_vif_, "iwl_mvm_mac_sta_state() failed for %d -> %d: %s\n", sta_state_,
+    IWL_ERR(iwl_mvm_vif_, "iwl_mvm_mac_sta_state() failed for %d -> %d: %s\n", GetState(),
             new_state, zx_status_get_string(status));
     return status;
   }
 
-  sta_state_ = new_state;
   return ZX_OK;
 }
 
 zx_status_t MvmSta::ChangeStateDown() {
   zx_status_t status = ZX_OK;
   iwl_sta_state new_state = iwl_sta_state::IWL_STA_NOTEXIST;
-  switch (sta_state_) {
+  switch (GetState()) {
     case iwl_sta_state::IWL_STA_AUTHORIZED: {
       new_state = iwl_sta_state::IWL_STA_ASSOC;
       break;
@@ -257,19 +256,18 @@ zx_status_t MvmSta::ChangeStateDown() {
       break;
     }
     default: {
-      IWL_ERR(iwl_mvm_vif_, "ChangeStateDown() in invalid state %d\n", sta_state_);
+      IWL_ERR(iwl_mvm_vif_, "ChangeStateDown() in invalid state %d\n", GetState());
       return ZX_ERR_BAD_STATE;
     }
   }
 
-  if ((status = iwl_mvm_mac_sta_state(iwl_mvm_vif_, iwl_mvm_sta_.get(), sta_state_, new_state)) !=
+  if ((status = iwl_mvm_mac_sta_state(iwl_mvm_vif_, iwl_mvm_sta_.get(), GetState(), new_state)) !=
       ZX_OK) {
-    IWL_ERR(iwl_mvm_vif_, "iwl_mvm_mac_sta_state() failed for %d -> %d: %s\n", sta_state_,
+    IWL_ERR(iwl_mvm_vif_, "iwl_mvm_mac_sta_state() failed for %d -> %d: %s\n", GetState(),
             new_state, zx_status_get_string(status));
     return status;
   }
 
-  sta_state_ = new_state;
   return ZX_OK;
 }
 

@@ -64,7 +64,6 @@ class MvmSta {
   struct iwl_mvm_vif* iwl_mvm_vif_ = nullptr;
   std::unique_ptr<struct iwl_mvm_sta> iwl_mvm_sta_;
   std::array<unique_free_ptr<struct ieee80211_key_conf>, 5> ieee80211_key_confs_;
-  enum iwl_sta_state sta_state_ = iwl_sta_state::IWL_STA_NOTEXIST;
 };
 
 }  // namespace wlan::iwlwifi
