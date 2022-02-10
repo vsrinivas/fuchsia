@@ -72,7 +72,7 @@ Did not find credentialed account (\`gcloud auth list\`): $USER@google.com.
 
 To authenticate, run:
 
-  gcloud auth login --update-adc --no-launch-browser
+  gcloud auth login --update-adc --no-browser
 
 EOF
 }
