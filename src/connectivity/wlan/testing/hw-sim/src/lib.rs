@@ -680,11 +680,6 @@ pub async fn save_network_and_wait_until_connected(
         wlancfg_helper::init_client_controller().await;
 
     save_network(&client_controller, ssid, security_type, password).await;
-    assert_connecting(
-        &mut client_state_update_stream,
-        fidl_policy::NetworkIdentifier { ssid: ssid.to_vec(), type_: security_type },
-    )
-    .await;
 
     // Wait until the policy layer indicates that the client has successfully connected.
     wait_until_client_state(&mut client_state_update_stream, |update| {

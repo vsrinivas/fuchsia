@@ -58,8 +58,7 @@ async fn save_network_and_await_failed_connection(
         ssid: AP_SSID.to_vec(),
         type_: fidl_policy::SecurityType::None,
     };
-    assert_connecting(client_state_update_stream, network_identifier.clone()).await;
-    assert_failed(
+    await_failed(
         client_state_update_stream,
         network_identifier.clone(),
         fidl_policy::DisconnectStatus::ConnectionFailed,

@@ -11,18 +11,13 @@ const AUTHENTICATOR_PASSWORD: &str = "goodpassword";
 
 async fn connect_future(
     client_controller: &fidl_policy::ClientControllerProxy,
-    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
+    mut client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
     security_type: fidl_policy::SecurityType,
     password: Option<&str>,
 ) {
     save_network(client_controller, &AP_SSID, security_type, password).await;
-    assert_connecting(
-        client_state_update_stream,
-        fidl_policy::NetworkIdentifier { ssid: AP_SSID.to_vec(), type_: security_type },
-    )
-    .await;
-    assert_failed(
-        client_state_update_stream,
+    await_failed(
+        &mut client_state_update_stream,
         fidl_policy::NetworkIdentifier { ssid: AP_SSID.to_vec(), type_: security_type },
         fidl_policy::DisconnectStatus::ConnectionFailed,
     )

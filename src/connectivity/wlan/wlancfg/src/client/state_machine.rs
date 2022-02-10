@@ -103,12 +103,15 @@ pub enum ManualRequest {
 
 fn send_listener_state_update(
     sender: &ClientListenerMessageSender,
-    network_update: ClientNetworkState,
+    network_update: Option<ClientNetworkState>,
 ) {
-    let updates = ClientStateUpdate {
-        state: fidl_policy::WlanClientState::ConnectionsEnabled,
-        networks: [network_update].to_vec(),
-    };
+    let mut networks = vec![];
+    if let Some(network) = network_update {
+        networks.push(network)
+    }
+
+    let updates =
+        ClientStateUpdate { state: fidl_policy::WlanClientState::ConnectionsEnabled, networks };
     match sender.clone().unbounded_send(NotifyListeners(updates)) {
         Ok(_) => (),
         Err(e) => error!("failed to send state update: {:?}", e),
@@ -262,17 +265,15 @@ async fn disconnecting_state(
         })?;
 
     // Notify listeners of disconnection
-    match options.previous_network {
-        Some((network_identifier, status)) => send_listener_state_update(
-            &common_options.update_sender,
-            ClientNetworkState {
-                id: network_identifier,
-                state: types::ConnectionState::Disconnected,
-                status: Some(status),
-            },
-        ),
-        None => (),
-    }
+    let networks = match options.previous_network {
+        Some((network_identifier, status)) => Some(ClientNetworkState {
+            id: network_identifier,
+            state: types::ConnectionState::Disconnected,
+            status: Some(status),
+        }),
+        None => None,
+    };
+    send_listener_state_update(&common_options.update_sender, networks);
 
     // Notify the caller that disconnect was sent to the SME once the final disconnected update has
     // been sent.  This ensures that there will not be a race when the IfaceManager sends out a
@@ -349,11 +350,11 @@ async fn handle_connecting_error_and_retry(
         info!("Exceeded maximum connection attempts, will not retry");
         send_listener_state_update(
             &common_options.update_sender,
-            ClientNetworkState {
+            Some(ClientNetworkState {
                 id: options.connect_request.target.network,
                 state: types::ConnectionState::Failed,
                 status: Some(types::DisconnectStatus::ConnectionFailed),
-            },
+            }),
         );
         return Err(ExitReason(Ok(())));
     } else {
@@ -408,11 +409,11 @@ async fn connecting_state<'a>(
     if options.attempt_counter == 0 {
         send_listener_state_update(
             &common_options.update_sender,
-            ClientNetworkState {
+            Some(ClientNetworkState {
                 id: options.connect_request.target.network.clone(),
                 state: types::ConnectionState::Connecting,
                 status: None,
-            },
+            }),
         );
     };
 
@@ -550,11 +551,11 @@ async fn connecting_state<'a>(
                             info!("Successfully connected to network");
                             send_listener_state_update(
                                 &common_options.update_sender,
-                                ClientNetworkState {
+                                Some(ClientNetworkState {
                                     id: options.connect_request.target.network.clone(),
                                     state: types::ConnectionState::Connected,
                                     status: None
-                                },
+                                }),
                             );
                             let connected_options = ConnectedOptions {
                                 currently_fulfilled_request: options.connect_request,
@@ -570,11 +571,11 @@ async fn connecting_state<'a>(
                             info!("Failed to connect: {:?}. Will not retry because of credential error.", code);
                             send_listener_state_update(
                                 &common_options.update_sender,
-                                ClientNetworkState {
+                                Some(ClientNetworkState {
                                     id: options.connect_request.target.network,
                                     state: types::ConnectionState::Failed,
                                     status: Some(types::DisconnectStatus::CredentialsFailed),
-                                },
+                                }),
                             );
                             return Err(ExitReason(Err(format_err!("bad credentials"))));
                         },
@@ -591,11 +592,11 @@ async fn connecting_state<'a>(
                     info!("Cancelling pending connect due to disconnect request");
                     send_listener_state_update(
                         &common_options.update_sender,
-                        ClientNetworkState {
+                        Some(ClientNetworkState {
                             id: options.connect_request.target.network,
                             state: types::ConnectionState::Disconnected,
                             status: Some(types::DisconnectStatus::ConnectionStopped)
-                        },
+                        }),
                     );
                     let options = DisconnectingOptions {
                         disconnect_responder: Some(responder),
@@ -615,11 +616,11 @@ async fn connecting_state<'a>(
                         info!("Cancelling pending connect due to new connection request");
                         send_listener_state_update(
                             &common_options.update_sender,
-                            ClientNetworkState {
+                            Some(ClientNetworkState {
                                 id: options.connect_request.target.network,
                                 state: types::ConnectionState::Disconnected,
                                 status: Some(types::DisconnectStatus::ConnectionStopped)
-                            },
+                            }),
                         );
                         let next_connecting_options = ConnectingOptions {
                             connect_responder: Some(new_responder),
@@ -1585,6 +1586,17 @@ mod tests {
         // Progress the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
+        // The state machine should have sent a listener update
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(ClientStateUpdate {
+                state: fidl_policy::WlanClientState::ConnectionsEnabled,
+                networks
+            }))) => {
+                assert!(networks.is_empty());
+            }
+        );
+
         // Check for a connected update
         let client_state_update = ClientStateUpdate {
             state: fidl_policy::WlanClientState::ConnectionsEnabled,
@@ -2359,6 +2371,18 @@ mod tests {
         // Progress the state machine
         // TODO(fxbug.dev/53505): remove this once the disconnect request is fire-and-forget
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // The state machine should have sent a listener update
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(ClientStateUpdate {
+                state: fidl_policy::WlanClientState::ConnectionsEnabled,
+                networks
+            }))) => {
+                assert!(networks.is_empty());
+            }
+        );
+
         // Third SME request: connect to the second network
         let connect_txn_handle = assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
@@ -3866,7 +3890,7 @@ mod tests {
     #[fuchsia::test]
     fn disconnecting_state_completes_and_exits() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let mut test_values = test_setup();
 
         let (sender, mut receiver) = oneshot::channel();
         let disconnecting_options = DisconnectingOptions {
@@ -3894,6 +3918,17 @@ mod tests {
 
         // Ensure the state machine exits once the disconnect is processed.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+
+        // The state machine should have sent a listener update
+        assert_variant!(
+            test_values.update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(ClientStateUpdate {
+                state: fidl_policy::WlanClientState::ConnectionsEnabled,
+                networks
+            }))) => {
+                assert!(networks.is_empty());
+            }
+        );
 
         // Expect the responder to be acknowledged
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));

@@ -13,7 +13,7 @@ use {
     fuchsia_zircon::prelude::*,
     futures::StreamExt,
     ieee80211::Ssid,
-    log::{debug, info},
+    log::info,
 };
 
 // Holds basic WLAN network configuration information and allows cloning and conversion to a policy
@@ -154,10 +154,14 @@ pub async fn init_client_controller(
     provider.get_controller(controller_server_end, listener_client_end).unwrap();
     let mut client_state_update_stream = listener_server_end.into_stream().unwrap();
 
-    // Clear the initial state notification that is sent by the policy layer.  This initial state
+    // Clear the initial state notifications that are sent by the policy layer.  This initial state
     // is variable depending on whether or not the policy layer has discovered a PHY or created an
-    // interface yet.
-    let _ = get_update_from_client_state_update_stream(&mut client_state_update_stream).await;
+    // interface yet.  The policy layer enables client connections by default.  Wait until the
+    // first update that indicates that client connections are enabled before proceeding.
+    wait_until_client_state(&mut client_state_update_stream, |update| {
+        update.state == Some(fidl_policy::WlanClientState::ConnectionsEnabled)
+    })
+    .await;
 
     (controller_client_end, client_state_update_stream)
 }
@@ -197,22 +201,6 @@ pub fn has_ssid_and_state(
     return false;
 }
 
-/// Get the next client update. Will panic if no updates are available.
-async fn get_update_from_client_state_update_stream(
-    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
-) -> fidl_policy::ClientStateSummary {
-    let update_request = client_state_update_stream
-        .next()
-        .await
-        .expect("ClientStateUpdatesRequestStream failed")
-        .expect("ClientStateUpdatesRequestStream received invalid update");
-    let update = update_request.into_on_client_state_update();
-    let (update, responder) = update.expect("Client provider produced invalid update.");
-    // Ack the update.
-    responder.send().expect("failed to ack update");
-    update.into()
-}
-
 pub async fn save_network(
     client_controller: &fidl_policy::ClientControllerProxy,
     ssid: &Ssid,
@@ -249,63 +237,27 @@ pub async fn remove_network(
         .expect("client controller failed to remove network");
 }
 
-pub async fn assert_next_client_state_update(
-    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
-    networks: Vec<fidl_policy::NetworkState>,
-) {
-    let update = get_update_from_client_state_update_stream(client_state_update_stream).await;
-    debug!("Next update from client listener: {:?}", update);
-    assert_eq!(update.state, Some(fidl_policy::WlanClientState::ConnectionsEnabled));
-    assert_eq!(update.networks, Some(networks));
-}
-
-pub async fn assert_connecting(
-    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
-    network_identifier: fidl_policy::NetworkIdentifier,
-) {
-    // The next update in the queue should be "Connecting".
-    assert_next_client_state_update(
-        client_state_update_stream,
-        vec![fidl_policy::NetworkState {
-            id: Some(network_identifier),
-            state: Some(fidl_policy::ConnectionState::Connecting),
-            status: None,
-            ..fidl_policy::NetworkState::EMPTY
-        }],
-    )
-    .await;
-}
-
-pub async fn assert_connected(
-    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
-    network_identifier: fidl_policy::NetworkIdentifier,
-) {
-    // The next update in the queue should be "Connecting".
-    assert_next_client_state_update(
-        client_state_update_stream,
-        vec![fidl_policy::NetworkState {
-            id: Some(network_identifier),
-            state: Some(fidl_policy::ConnectionState::Connected),
-            status: None,
-            ..fidl_policy::NetworkState::EMPTY
-        }],
-    )
-    .await;
-}
-
-pub async fn assert_failed(
-    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
+pub async fn await_failed(
+    mut client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
     network_identifier: fidl_policy::NetworkIdentifier,
     disconnect_status: fidl_policy::DisconnectStatus,
 ) {
-    assert_next_client_state_update(
-        client_state_update_stream,
-        vec![fidl_policy::NetworkState {
-            id: Some(network_identifier),
-            state: Some(fidl_policy::ConnectionState::Failed),
-            status: Some(disconnect_status),
-            ..fidl_policy::NetworkState::EMPTY
-        }],
-    )
+    let ssid = network_identifier.ssid.clone();
+    wait_until_client_state(&mut client_state_update_stream, |update| {
+        if has_ssid_and_state(update.clone(), &ssid, fidl_policy::ConnectionState::Failed) {
+            assert_eq!(
+                update.networks,
+                Some(vec![fidl_policy::NetworkState {
+                    id: Some(network_identifier.clone()),
+                    state: Some(fidl_policy::ConnectionState::Failed),
+                    status: Some(disconnect_status),
+                    ..fidl_policy::NetworkState::EMPTY
+                }])
+            );
+            true
+        } else {
+            false
+        }
+    })
     .await;
 }

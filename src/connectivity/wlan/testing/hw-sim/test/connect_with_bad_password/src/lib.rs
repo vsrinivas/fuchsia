@@ -19,8 +19,7 @@ async fn connect_future(
     save_network(client_controller, &AP_SSID, security_type, Some(password)).await;
     let network_identifier =
         fidl_policy::NetworkIdentifier { ssid: AP_SSID.to_vec(), type_: security_type };
-    assert_connecting(client_state_update_stream, network_identifier.clone()).await;
-    assert_failed(
+    await_failed(
         client_state_update_stream,
         network_identifier.clone(),
         fidl_policy::DisconnectStatus::CredentialsFailed,
