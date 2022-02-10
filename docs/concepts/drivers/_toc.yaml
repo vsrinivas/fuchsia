@@ -6,18 +6,8 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Getting started"
-  path: /docs/concepts/drivers/getting_started.md
 - title: "Fuchsia Driver Framework"
   path: /docs/concepts/drivers/fdf.md
 - title: "Device and driver model"
   section:
   - include: /docs/concepts/drivers/device_driver_model/_toc.yaml
-- title: "Driver development"
-  section:
-  - include: /docs/concepts/drivers/driver_development/_toc.yaml
-- title: "Drivers rubric"
-  path: /docs/concepts/drivers/rubric.md
-- title: "Driver architectures"
-  section:
-  - include: /docs/concepts/drivers/driver_architectures/_toc.yaml

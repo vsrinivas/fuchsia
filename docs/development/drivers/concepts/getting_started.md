@@ -32,8 +32,8 @@ read them in order of interest or applicability.
 
 <!-- xrefs -->
 [fdf]: /docs/concepts/drivers/fdf.md
-[driver-rubric]: /docs/concepts/drivers/rubric.md
+[driver-rubric]: /docs/development/drivers/developer_guide/rubric.md
 [fuchsia-drivers-overview]: /docs/concepts/drivers/device_driver_model/introduction.md
-[device-driver-model]: /docs/concepts/drivers/device_driver_model
-[driver-development]: /docs/concepts/drivers/driver_development
-[driver-architectures]: /docs/concepts/drivers/driver_architectures
+[device-driver-model]: /docs/development/drivers/concepts/device_driver_model/README.md
+[driver-development]: /docs/development/drivers/concepts/driver_development/README.md
+[driver-architectures]: /docs/development/drivers/concepts/driver_architectures/README.md

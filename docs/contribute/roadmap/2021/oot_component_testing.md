@@ -355,7 +355,7 @@ covered in a [separate roadmap document][oot-system-testing].
 [rust]: https://www.rust-lang.org/
 [sanitizers]: /docs/contribute/testing/sanitizers.md
 [sdk-tools]: https://fuchsia.dev/reference/tools/sdk/README.md
-[sl4f]: /docs/concepts/drivers/driver_development/sl4f.md
+[sl4f]: /docs/development/drivers/concepts/driver_development/sl4f.md
 [sl4f-client]: /sdk/testing/sl4f/client/
 [sl4f-guide]: /docs/development/testing/create_a_new_end_to_end_test.md
 [stress-tests]: /docs/development/testing/stress_tests.md

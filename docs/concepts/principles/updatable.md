@@ -57,7 +57,7 @@ This section covers features on
 
 ### Update the system without modifying the driver
 
-**[Drivers](/docs/concepts/drivers/getting_started.md)
+**[Drivers](/docs/development/drivers/concepts/getting_started.md)
 and system services are designed as user space components that
 can be updated independently of the core OS**
 

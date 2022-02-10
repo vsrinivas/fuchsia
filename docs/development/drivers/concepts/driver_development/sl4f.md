@@ -11,7 +11,7 @@ for Android. SL4F serves as a bridge between ACTS and a Fuchsia device.
 
 End-to-end tests run on a host machine, unlike other Fuchsia packages that are
 served to a Fuchsia device and run on the device. To trigger actions on a
-Fuchsia device (for example, “swipe right on the screen”) from a remote test
+Fuchsia device (for example, "swipe right on the screen") from a remote test
 host, end-to-end tests send JSON-RPC requests to SL4F running on the device.
 SL4F then translates these requests into Fuchsia-equivalent
 [FIDL](/docs/development/languages/fidl) commands for various driver services on
@@ -25,24 +25,24 @@ the device.
 </figure>
 
 However, not all requests from a test host to a Fuchsia device need to go
-through SL4F. For instance, a test can directly access a Fuchsia device’s
+through SL4F. For instance, a test can directly access a Fuchsia device's
 Flutter driver or Chrome driver over separate, dedicated HTTP connections (see
-[Figure 1](#figure-1)), given the condition that the test host can access these drivers’
+[Figure 1](#figure-1)), given the condition that the test host can access these drivers'
 ports on the device. If not, the test setup may require port forwarding.
 
 ## Interaction between an end-to-end test and SL4F {#interaction-between-end-to-end-test-and-sl4f}
 
-The following sequence walks through how an end-to-end test triggers the “swipe
-right on the screen” action on a Fuchsia device:
+The following sequence walks through how an end-to-end test triggers the "swipe
+right on the screen" action on a Fuchsia device:
 
 1.  An end-to-end test runs on a host machine.
 1.  The test starts SL4F on the Fuchsia device over SSH.
 1.  SL4F listens for HTTP requests on port 80 on the device.
-1.  The test sends a JSON-RPC request to SL4F, asking the “swipe right on the
-    screen” action on the device.
-1.  SL4F’s [Input facade](/src/testing/sl4f/src/input/facade.rs#) parses the
+1.  The test sends a JSON-RPC request to SL4F, asking the "swipe right on the
+    screen" action on the device.
+1.  SL4F's [Input facade](/src/testing/sl4f/src/input/facade.rs#) parses the
     request into a FIDL command.
-1.  The device performs the “swipe right on the screen” action.
+1.  The device performs the "swipe right on the screen" action.
 
 Once started, SL4F continues to run on the device and accept requests until the
 test terminates SL4F.
@@ -69,5 +69,5 @@ SL4F currently supports several facades, for example:
 *   Diagnostics facade - Read data published by Inspect from components.
 *   Wlan facade - Manipulate the status of a wireless LAN device.
 *   Netstack facade - Manipulate network interfaces.
-*   File facade - Write and read files on a device’s storage.
+*   File facade - Write and read files on a device's storage.
 *   WebDriver facade - Enable and disable devtools in a Chrome webrunner.

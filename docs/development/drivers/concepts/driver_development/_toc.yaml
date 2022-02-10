@@ -7,17 +7,14 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /docs/concepts/drivers/driver_development
-- title: "Using the C++ DDK template library"
-  path: /docs/concepts/drivers/driver_development/using-ddktl.md
-- title: "PCI Base Address Registers (BAR)"
-  path: /docs/concepts/drivers/driver_development/bar.md
-- title: "Interrupts"
-  path: /docs/concepts/drivers/driver_development/interrupts.md
-- title: "DMA"
-  path: /docs/concepts/drivers/driver_development/dma.md
-
-
+  path: /docs/development/drivers/concepts/driver_development
 - title: "Scripting Layer for Fuchsia (SL4F)"
-  path: /docs/concepts/drivers/driver_development/sl4f.md
-
+  path: /docs/development/drivers/concepts/driver_development/sl4f.md
+- title: "Using the C++ DDK template library"
+  path: /docs/development/drivers/concepts/driver_development/using-ddktl.md
+- title: "PCI Base Address Registers (BAR)"
+  path: /docs/development/drivers/concepts/driver_development/bar.md
+- title: "Interrupts"
+  path: /docs/development/drivers/concepts/driver_development/interrupts.md
+- title: "DMA"
+  path: /docs/development/drivers/concepts/driver_development/dma.md

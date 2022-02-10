@@ -40,7 +40,7 @@ group("tests") {
 The continuous integration infrastructure (AKA "infra") and `fx test` start the
 target and then invoke the test on the host.
 
-[SL4F](/docs/concepts/drivers/driver_development/sl4f.md) is one way for the host to interact with
+[SL4F](/docs/development/drivers/concepts/driver_development/sl4f.md) is one way for the host to interact with
 the target. The SL4F host libraries take responsibility for establishing a
 connection with the target.
 

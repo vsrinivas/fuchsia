@@ -304,7 +304,7 @@ the system driver using the Zircon DDK.
 [paving]: /docs/development/build/fx.md#what-is-paving
 [boarddriver]: /docs/concepts/drivers/device_driver_model/platform-bus.md
 [icdabi]: /docs/concepts/packages/system.md#vulkan-icd
-[banjo]: /docs/concepts/drivers/device_driver_model/banjo.md
+[banjo]: /docs/development/drivers/concepts/device_driver_model/banjo.md
 [sysmem]: /docs/development/graphics/sysmem/concepts/sysmem.md
 [vkreadback]: /src/graphics/tests/vkreadback
 [hardwareunit]: /src/graphics/drivers/msd-arm-mali/tests/integration/run_unit_tests.cc
@@ -321,7 +321,7 @@ the system driver using the Zircon DDK.
 [intelgn]: /src/graphics/lib/magma/gnbuild/magma-intel-gen/BUILD.gn
 [fuchsia.hardware.clock.Clock]: /sdk/banjo/fuchsia.hardware.clock/clock.fidl
 [fuchsia.hardware.power.Power]: /sdk/banjo/fuchsia.hardware.power/power.fidl
-[dgsd]: /docs/concepts/drivers/getting_started.md
+[dgsd]: /docs/development/drivers/concepts/getting_started.md
 [libc]: /docs/concepts/kernel/libc.md
 [fdio]: /docs/concepts/filesystems/life_of_an_open.md#fdio
 [versionscript]: /src/graphics/lib/magma/scripts/libvulkan.version

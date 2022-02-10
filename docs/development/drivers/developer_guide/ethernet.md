@@ -197,7 +197,7 @@ is used to represent the bus mastering / DMA capability of a device.
 It can be used for granting memory access to a device.
 The [BTI](/docs/reference/kernel_objects/bus_transaction_initiator.md)
 handle is stored in `edev->btih` and is used later to initialize transfer buffers.
-The [DMA](/docs/concepts/drivers/driver_development/dma.md) section talks more about this.
+The [DMA](/docs/development/drivers/concepts/driver_development/dma.md) section talks more about this.
 
 ### Discover and map interrupts
 
@@ -340,7 +340,7 @@ Finally, the background Interrupt Handling Thread (**IHT**), **irq_thread()** is
     return ZX_OK;
 ```
 
-As discussed in the [Interrupts](/docs/concepts/drivers/driver_development/interrupts.md) section,
+As discussed in the [Interrupts](/docs/development/drivers/concepts/driver_development/interrupts.md) section,
 the IHT handles asynchronous hardware events.
 We'll look at the thread itself below.
 

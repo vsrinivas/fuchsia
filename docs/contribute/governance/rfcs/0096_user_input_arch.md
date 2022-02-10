@@ -746,7 +746,7 @@ future but was deemed too heavyweight for the current use-cases.
 [inclusive]: /docs/concepts/principles/inclusive.md
 [root-presenter]: /docs/development/graphics/scenic/concepts/input.md#rootpresenter_transforms_and_routes_inputs
 [input-pipeline]: /docs/concepts/session/input.md#input-pipeline
-[drivers]: /docs/concepts/drivers/driver_architectures/input_drivers/input.md
+[drivers]: /docs/development/drivers/concepts/driver_architectures/input_drivers/input.md
 [input-report]: https://fuchsia.dev/reference/fidl/fuchsia.input.report
 [glossary.InputEvent]: /docs/glossary/README.md#inputevent
 [glossary.InputHandler]: /docs/glossary/README.md#inputhandler

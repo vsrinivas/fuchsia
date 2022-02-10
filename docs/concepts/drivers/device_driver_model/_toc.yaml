@@ -22,14 +22,6 @@ toc:
   path: /docs/concepts/drivers/device_driver_model/device-power.md
 - title: "Device protocol"
   path: /docs/concepts/drivers/device_driver_model/protocol.md
-- title: "FIDL"
-  path: /docs/concepts/drivers/device_driver_model/fidl.md
-- title: "Banjo"
-  path: /docs/concepts/drivers/device_driver_model/banjo.md
 - title: "Platform bus"
   path: /docs/concepts/drivers/device_driver_model/platform-bus.md
-- title: "Composite devices"
-  path: /docs/concepts/drivers/device_driver_model/composite.md
-- title: "Device firmware"
-  path: /docs/concepts/drivers/device_driver_model/firmware.md
 

@@ -276,7 +276,7 @@ basic bootloader driver. In most cases, your roadmap will be:
 
 <!--xrefs-->
 [dcimpl]: /sdk/banjo/fuchsia.hardware.display.controller/display-controller.fidl
-[ddk-tl]: /docs/concepts/drivers/driver_development/using-ddktl.md
+[ddk-tl]: /docs/development/drivers/concepts/driver_development/using-ddktl.md
 [display-core]: /src/graphics/display/drivers/display/
 [driver-binding]: /docs/concepts/drivers/device_driver_model/driver-binding.md
 [intel-bind]: /src/graphics/display/drivers/intel-i915/intel-i915.bind

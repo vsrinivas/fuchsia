@@ -41,7 +41,7 @@ DAI interface (from here on the DAI driver) advertises supported formats and
 allows the creation of a Ring Buffer for audio sample transferring.
 
 Note that the DAI drivers are expected to perform their own shutdown, just like
-any other driver (see [FDF](/docs/concepts/drivers/getting_started.md)).
+any other driver (see [FDF](/docs/development/drivers/concepts/getting_started.md)).
 
 ## Protocol definition
 

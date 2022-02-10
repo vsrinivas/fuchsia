@@ -6,7 +6,7 @@ following concepts:
 
 *   [FIDL](/docs/development/languages/fidl/README.md)
 *   [Driver Binding](/docs/concepts/drivers/device_driver_model/driver-binding.md)
-*   [DDKTL](/docs/concepts/drivers/driver_development/using-ddktl.md)
+*   [DDKTL](/docs/development/drivers/concepts/driver_development/using-ddktl.md)
 *   [LLCPP FIDL Bindings](/docs/development/languages/fidl/tutorials/llcpp/README.md)
 
 ## FIDL Protocol Definition

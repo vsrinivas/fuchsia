@@ -488,7 +488,7 @@ additional justification or otherwise be discouraged by the platform team.
 [practical-test-pyramid]: https://martinfowler.com/articles/practical-test-pyramid.html
 [scp]: https://fuchsia.dev/reference/tools/fx/cmd/scp
 [sl4a]: https://android.googlesource.com/platform/external/sl4a/
-[sl4f]: /docs/concepts/drivers/driver_development/sl4f.md
+[sl4f]: /docs/development/drivers/concepts/driver_development/sl4f.md
 [snapshot]: https://fuchsia.dev/reference/tools/fx/cmd/snapshot
 [ssh]: /docs/development/idk/documentation/ssh.md
 [v1-test-system-services]: /docs/concepts/testing/v1_test_component.md#additional_system_services

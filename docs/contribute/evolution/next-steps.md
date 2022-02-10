@@ -248,7 +248,7 @@ even if CTS coverage never reaches 100% of the platform surface.
 [sdk-tools]: https://fuchsia.dev/reference/tools/sdk/README.md
 [selectors]: /docs/reference/diagnostics/selectors.md
 [sl4a]: https://android.googlesource.com/platform/external/sl4a/
-[sl4f]: /docs/concepts/drivers/driver_development/sl4f.md
+[sl4f]: /docs/development/drivers/concepts/driver_development/sl4f.md
 [stable-driver-runtime]: /docs/contribute/roadmap/2021/stable_driver_runtime.md
 [structured-config]: /docs/contribute/roadmap/2021/structured_configuration.md
 [test-double]: /docs/contribute/testing/principles.md#test_doubles_stubs_mocks_fakes
