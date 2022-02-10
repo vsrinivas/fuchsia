@@ -52,8 +52,6 @@ async fn main() -> Result<(), Error> {
     let (input_device_registry_server, input_device_registry_request_stream_receiver) =
         input_device_registry_server::make_server_and_receiver();
 
-    let mut input_receiver = Some(input_device_registry_request_stream_receiver);
-
     // This call should normally never fail. The ICU data loader must be kept alive to ensure
     // Unicode data is kept in memory.
     let icu_data_loader = icu_data::Loader::new().unwrap();
@@ -93,6 +91,19 @@ async fn main() -> Result<(), Error> {
     let inspect_node =
         Rc::new(inspect::component::inspector().root().create_child("input_pipeline"));
 
+    // Start input pipeline.
+    if let Ok(input_pipeline) = input_pipeline::handle_input(
+        use_flatland,
+        scene_manager.clone(),
+        input_device_registry_request_stream_receiver,
+        icu_data_loader,
+        &inspect_node.clone(),
+    )
+    .await
+    {
+        fasync::Task::local(input_pipeline.handle_input_events()).detach();
+    }
+
     while let Some(service_request) = fs.next().await {
         match service_request {
             ExposedServices::AccessibilityViewRegistry(request_stream) => {
@@ -103,18 +114,11 @@ async fn main() -> Result<(), Error> {
                 .detach()
             }
             ExposedServices::SceneManager(request_stream) => {
-                if let Some(input_receiver) = input_receiver {
-                    fasync::Task::local(handle_scene_manager_request_stream(
-                        use_flatland,
-                        request_stream,
-                        Arc::clone(&scene_manager),
-                        input_receiver,
-                        icu_data_loader.clone(),
-                        inspect_node.clone(),
-                    ))
-                    .detach();
-                }
-                input_receiver = None;
+                fasync::Task::local(handle_scene_manager_request_stream(
+                    request_stream,
+                    Arc::clone(&scene_manager),
+                ))
+                .detach();
             }
             ExposedServices::InputDeviceRegistry(request_stream) => {
                 match &input_device_registry_server.handle_request(request_stream).await {
@@ -150,27 +154,9 @@ async fn main() -> Result<(), Error> {
 }
 
 pub async fn handle_scene_manager_request_stream(
-    use_flatland: bool,
     mut request_stream: SceneManagerRequestStream,
     scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
-    input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
-        InputDeviceRegistryRequestStream,
-    >,
-    icu_data_loader: icu_data::Loader,
-    inspect_root: Rc<inspect::Node>,
 ) {
-    if let Ok(input_pipeline) = input_pipeline::handle_input(
-        use_flatland,
-        scene_manager.clone(),
-        input_device_registry_request_stream_receiver,
-        icu_data_loader,
-        &inspect_root,
-    )
-    .await
-    {
-        fasync::Task::local(input_pipeline.handle_input_events()).detach();
-    }
-
     while let Ok(Some(request)) = request_stream.try_next().await {
         match request {
             SceneManagerRequest::SetRootView { view_provider, responder } => {
