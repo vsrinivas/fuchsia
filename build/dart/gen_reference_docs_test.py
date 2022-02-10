@@ -178,17 +178,31 @@ import 'package:foo/foo.dart';
                                 },
                                 capture_output=True,
                                 universal_newlines=True),
-                            # TODO(fxb/93159): Re-enable dart doc generation in //tools/docsgen/BUILD
-                            # after it is known how to incorporate the following dropped flags.
                             mock.call(
                                 [
-                                    os.path.join(prebuilts, 'dart'),
-                                    'doc',
-                                    # '--auto-include-dependencies',
-                                    # '--exclude-packages', 'Dart,logging',
+                                    os.path.join(prebuilts, 'pub'), 'global',
+                                    'activate', 'dartdoc'
+                                ],
+                                cwd=package_dir,
+                                env={
+                                    "PUB_CACHE": "fakedir",
+                                    "HOME": "fakedir"
+                                },
+                                capture_output=True,
+                                universal_newlines=True),
+                            # TODO(fxb/93159): Re-enable `dart doc` after it is known
+                            # how to incorporate the following dropped flags. Once done,
+                            # we can get rid of this `pub global activate dartdoc`
+                            # workaround.
+                            mock.call(
+                                [
+                                    os.path.join(prebuilts,
+                                                 'pub'), 'global', 'run',
+                                    'dartdoc', '--auto-include-dependencies',
+                                    '--exclude-packages', 'Dart,logging',
                                     '--output',
-                                    os.path.join(out_dir, 'dartdoc')
-                                    #  ,'--format', 'md'
+                                    os.path.join(out_dir,
+                                                 'dartdoc'), '--format', 'md'
                                 ],
                                 cwd=package_dir,
                                 env={"PUB_CACHE": "fakedir"},

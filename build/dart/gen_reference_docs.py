@@ -182,20 +182,37 @@ def generate_docs(
             walk_rmtree(pkg_to_docs_path)
 
         # Run dart doc.
-        # TODO(fxb/93159): Re-enable dart doc generation in //tools/docsgen/BUILD
-        # after it is known how to incorporate the following dropped flags.
+        # TODO(fxb/93159): Re-enable `dart doc` after it is known
+        # how to incorporate the following dropped flags. Once done,
+        # we can get rid of this `pub global activate dartdoc`
+        # workaround.
+        activate_dartdoc_process = subprocess.run(
+            [
+                os.path.join(dart_prebuilt_dir, 'pub'), 'global', 'activate',
+                'dartdoc'
+            ],
+            cwd=package_dir,
+            env=dict(os.environ, PUB_CACHE=tmpdirname, HOME=tmpdirname),
+            capture_output=True,
+            universal_newlines=True)
+        if activate_dartdoc_process.returncode:
+            print(activate_dartdoc_process.stderr)
+            return 1
+
         excluded_packages = ['Dart', 'logging']
         process = subprocess.run(
             [
-                os.path.join(dart_prebuilt_dir, 'dart'),
-                'doc',
-                # '--auto-include-dependencies',
-                # '--exclude-packages',
-                # ','.join(excluded_packages),
+                os.path.join(dart_prebuilt_dir, 'pub'),
+                'global',
+                'run',
+                'dartdoc',
+                '--auto-include-dependencies',
+                '--exclude-packages',
+                ','.join(excluded_packages),
                 '--output',
                 docs_dir,
-                # '--format',
-                # 'md',
+                '--format',
+                'md',
             ],
             cwd=package_dir,
             env=dict(os.environ, PUB_CACHE=tmpdirname),

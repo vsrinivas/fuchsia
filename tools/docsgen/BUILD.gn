@@ -295,9 +295,7 @@ build_api_module("generated_docs") {
   testonly = true
   data_keys = [ "generated_docset" ]
   deps = [
-    # TODO(fxb/93159): Re-enable dart doc generation after it is known how to
-    # incorporate the dropped flags.
-    # ":dart_sdk_docs($host_toolchain)",
+    ":dart_sdk_docs($host_toolchain)",
     ":invoke_clidoc($host_toolchain)",
     ":invoke_cmldoc($host_toolchain)",
     ":invoke_fidldoc($host_toolchain)",
