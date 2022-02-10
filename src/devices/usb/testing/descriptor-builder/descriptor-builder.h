@@ -58,10 +58,11 @@ class EndpointBuilder {
 
 class InterfaceBuilder {
  public:
-  explicit InterfaceBuilder(uint8_t config_num) {
+  explicit InterfaceBuilder(uint8_t config_num, uint8_t alt_setting = 0) {
     base_desc_.b_num_endpoints = 0;
     base_desc_.b_length = sizeof(base_desc_);
     base_desc_.b_descriptor_type = USB_DT_INTERFACE;
+    base_desc_.b_alternate_setting = alt_setting;
   }
 
   void AddEndpoint(const EndpointBuilder& builder) {
@@ -93,6 +94,8 @@ class ConfigurationBuilder {
     base_desc_.b_num_interfaces = 0;
     base_desc_.i_configuration = config_num;
     base_desc_.b_length = sizeof(base_desc_);
+    // Total length is calculated in Generate()
+    base_desc_.w_total_length = 0;
     base_desc_.b_descriptor_type = USB_DT_CONFIG;
   }
 
@@ -102,7 +105,14 @@ class ConfigurationBuilder {
   }
   void AddInterface(void* interface_desc, size_t interface_desc_length) {
     VectorAppend(descriptors_, interface_desc, interface_desc_length);
-    base_desc_.b_num_interfaces++;
+    usb_interface_descriptor_t* intf =
+        reinterpret_cast<usb_interface_descriptor_t*>(interface_desc);
+    if (intf->b_alternate_setting == 0) {
+      base_desc_.b_num_interfaces++;
+    }
+
+    size_t total = sizeof(base_desc_) + descriptors_.size();
+    base_desc_.w_total_length = htole16(static_cast<uint16_t>(total));
   }
 
   std::vector<uint8_t> Generate() const {

@@ -5,7 +5,9 @@
 using fuchsia.usb;
 using fuchsia.usb.wireless;
 
-fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.INTERFACE;
+// Bind to DEVICE instead of INTERFACE so that the 2 Bluetooth interfaces
+// can be used within the same driver.
+fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_USB_CLASS == fuchsia.usb.BIND_USB_CLASS.WIRELESS;
 fuchsia.BIND_USB_PROTOCOL == fuchsia.usb.wireless.BIND_USB_PROTOCOL.BLUETOOTH;
 fuchsia.BIND_USB_SUBCLASS == fuchsia.usb.wireless.BIND_USB_SUBCLASS.MISC;

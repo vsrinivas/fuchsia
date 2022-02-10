@@ -8,7 +8,7 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DEVICE",
             "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.WIRELESS",
             "fuchsia.BIND_USB_PROTOCOL": "fuchsia.usb.wireless.BIND_USB_PROTOCOL.MISC_RNDIS",
             "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.wireless.BIND_USB_SUBCLASS.MISC"
@@ -19,6 +19,16 @@
     {
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
+            "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.WIRELESS",
+            "fuchsia.BIND_USB_PROTOCOL": "fuchsia.usb.wireless.BIND_USB_PROTOCOL.BLUETOOTH",
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.wireless.BIND_USB_SUBCLASS.MISC"
+        },
+        "expected": "abort",
+        "name": "Bind_Protocol_Interface"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.DEVICE",
             "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.WIRELESS",
             "fuchsia.BIND_USB_PROTOCOL": "fuchsia.usb.wireless.BIND_USB_PROTOCOL.BLUETOOTH",
             "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.wireless.BIND_USB_SUBCLASS.MISC"

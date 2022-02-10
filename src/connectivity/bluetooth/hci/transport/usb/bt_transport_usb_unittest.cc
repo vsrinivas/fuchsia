@@ -27,6 +27,7 @@ constexpr uint16_t kVendorId = 1;
 constexpr uint16_t kProductId = 2;
 constexpr size_t kInterruptPacketSize = 255u;
 constexpr uint16_t kScoMaxPacketSize = 255 + 3;  // payload + 3 bytes header
+constexpr uint8_t kEventAndAclInterfaceNum = 0u;
 constexpr uint8_t kIsocInterfaceNum = 1u;
 constexpr zx_duration_t kOutboundPacketWaitTimeout(zx::sec(30).get());
 constexpr zx_duration_t kOutboundPacketWaitExpectedToFailTimeout(zx::sec(5).get());
@@ -40,10 +41,14 @@ using UnownedRequestQueue = usb::BorrowedRequestQueue<void>;
 // static function calls to the methods of this class.
 class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
  public:
-  FakeUsbDevice() = default;
+  explicit FakeUsbDevice(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
   void set_device_descriptor(usb::DeviceDescriptorBuilder& dev_builder) {
     device_descriptor_data_ = dev_builder.Generate();
+  }
+
+  void set_config_descriptor(usb::ConfigurationBuilder& config_builder) {
+    config_descriptor_data_ = config_builder.Generate();
   }
 
   void ConfigureDefaultDescriptors(bool with_sco = true) {
@@ -71,24 +76,27 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
     interface_0_builder.AddEndpoint(interrupt_endpoint_builder);
     interrupt_addr_ = usb::EpIndexToAddress(usb::kInEndpointStart + 1);
 
-    usb::InterfaceBuilder interface_1_builder(/*config_num=*/0);
-    usb::EndpointBuilder isoc_out_endpoint_builder(/*config_num=*/0, USB_ENDPOINT_ISOCHRONOUS,
-                                                   /*endpoint_index=*/1, /*in=*/false);
-    isoc_out_endpoint_builder.set_max_packet_size(kScoMaxPacketSize);
-    interface_1_builder.AddEndpoint(isoc_out_endpoint_builder);
-    isoc_out_addr_ = usb::EpIndexToAddress(usb::kOutEndpointStart + 1);
-
-    usb::EndpointBuilder isoc_in_endpoint_builder(/*config_num=*/0, USB_ENDPOINT_ISOCHRONOUS,
-                                                  /*endpoint_index=*/2, /*in=*/true);
-    isoc_in_endpoint_builder.set_max_packet_size(kScoMaxPacketSize);
-    interface_1_builder.AddEndpoint(isoc_in_endpoint_builder);
-    isoc_in_addr_ = usb::EpIndexToAddress(usb::kInEndpointStart + 2);
-
     usb::ConfigurationBuilder config_builder(/*config_num=*/0);
     config_builder.AddInterface(interface_0_builder);
+
     if (with_sco) {
-      config_builder.AddInterface(interface_1_builder);
+      for (uint8_t alt_setting = 0; alt_setting < 6; alt_setting++) {
+        usb::InterfaceBuilder interface_1_builder(/*config_num=*/0, alt_setting);
+        usb::EndpointBuilder isoc_out_endpoint_builder(/*config_num=*/0, USB_ENDPOINT_ISOCHRONOUS,
+                                                       /*endpoint_index=*/1, /*in=*/false);
+        isoc_out_endpoint_builder.set_max_packet_size(kScoMaxPacketSize);
+        interface_1_builder.AddEndpoint(isoc_out_endpoint_builder);
+        isoc_out_addr_ = usb::EpIndexToAddress(usb::kOutEndpointStart + 1);
+
+        usb::EndpointBuilder isoc_in_endpoint_builder(/*config_num=*/0, USB_ENDPOINT_ISOCHRONOUS,
+                                                      /*endpoint_index=*/2, /*in=*/true);
+        isoc_in_endpoint_builder.set_max_packet_size(kScoMaxPacketSize);
+        interface_1_builder.AddEndpoint(isoc_in_endpoint_builder);
+        isoc_in_addr_ = usb::EpIndexToAddress(usb::kInEndpointStart + 2);
+        config_builder.AddInterface(interface_1_builder);
+      }
     }
+    set_config_descriptor(config_builder);
 
     usb::DeviceDescriptorBuilder dev_builder;
     dev_builder.set_vendor_id(kVendorId);
@@ -175,6 +183,41 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
     return out;
   }
 
+  bool interrupt_enabled() {
+    sync_mutex_lock(&mutex_);
+    bool out = interrupt_enabled_;
+    sync_mutex_unlock(&mutex_);
+    return out;
+  }
+
+  bool bulk_in_enabled() {
+    sync_mutex_lock(&mutex_);
+    bool out = bulk_in_enabled_;
+    sync_mutex_unlock(&mutex_);
+    return out;
+  }
+
+  bool bulk_out_enabled() {
+    sync_mutex_lock(&mutex_);
+    bool out = bulk_out_enabled_;
+    sync_mutex_unlock(&mutex_);
+    return out;
+  }
+
+  bool isoc_in_enabled() {
+    sync_mutex_lock(&mutex_);
+    bool out = isoc_in_enabled_;
+    sync_mutex_unlock(&mutex_);
+    return out;
+  }
+
+  bool isoc_out_enabled() {
+    sync_mutex_lock(&mutex_);
+    bool out = isoc_out_enabled_;
+    sync_mutex_unlock(&mutex_);
+    return out;
+  }
+
   // ddk::UsbProtocol methods:
 
   // Called by bt-transport-usb to send command packets.
@@ -204,13 +247,16 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
 
     if (unplugged_) {
       sync_mutex_unlock(&mutex_);
-      usb_request_complete(usb_request, ZX_ERR_IO_NOT_PRESENT, /*actual=*/0, complete_cb);
+      async::PostTask(dispatcher_, [usb_request, complete_cb] {
+        usb_request_complete(usb_request, ZX_ERR_IO_NOT_PRESENT, /*actual=*/0, complete_cb);
+      });
       return;
     }
 
     UnownedRequest request(usb_request, *complete_cb, sizeof(usb_request_t));
 
     if (request.request()->header.ep_address == bulk_in_addr_) {
+      ZX_ASSERT(bulk_in_enabled_);
       bulk_in_requests_.push(std::move(request));
       sync_mutex_unlock(&mutex_);
       return;
@@ -218,40 +264,46 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
 
     // If the request is for an ACL packet write, copy the data and complete the request.
     if (request.request()->header.ep_address == bulk_out_addr_) {
+      ZX_ASSERT(bulk_out_enabled_);
       std::vector<uint8_t> packet(request.request()->header.length);
       ssize_t actual_bytes_copied = request.CopyFrom(packet.data(), packet.size(), /*offset=*/0);
       EXPECT_EQ(actual_bytes_copied, static_cast<ssize_t>(packet.size()));
       acl_packets_.push_back(std::move(packet));
       sync_condition_signal(&acl_packets_condition_);
       sync_mutex_unlock(&mutex_);
-      request.Complete(ZX_OK, /*actual=*/actual_bytes_copied);
+      async::PostTask(dispatcher_, [request = std::move(request), actual_bytes_copied]() mutable {
+        request.Complete(ZX_OK, /*actual=*/actual_bytes_copied);
+      });
       return;
     }
 
     if (isoc_in_addr_ && request.request()->header.ep_address == *isoc_in_addr_) {
+      ZX_ASSERT(isoc_in_enabled_);
+      ZX_ASSERT_MSG(isoc_interface_alt_ != 0,
+                    "requests must not be sent to isoc interface with alt setting 0");
       isoc_in_requests_.push(std::move(request));
       sync_mutex_unlock(&mutex_);
       return;
     }
 
     if (isoc_out_addr_ && request.request()->header.ep_address == *isoc_out_addr_) {
-      // Alternate setting 0 has no bandwidth (packets can't be written).
-      if (isoc_interface_alt_ == 0) {
-        sync_mutex_unlock(&mutex_);
-        usb_request_complete(usb_request, ZX_ERR_IO_REFUSED, /*actual=*/0, complete_cb);
-        return;
-      }
+      ZX_ASSERT(isoc_out_enabled_);
+      ZX_ASSERT_MSG(isoc_interface_alt_ != 0,
+                    "requests must not be sent to isoc interface with alt setting 0");
       std::vector<uint8_t> packet(request.request()->header.length);
       ssize_t actual_bytes_copied = request.CopyFrom(packet.data(), packet.size(), /*offset=*/0);
       EXPECT_EQ(actual_bytes_copied, static_cast<ssize_t>(packet.size()));
       sco_packets_.push_back(std::move(packet));
       sync_condition_signal(&sco_packets_condition_);
       sync_mutex_unlock(&mutex_);
-      request.Complete(ZX_OK, /*actual=*/actual_bytes_copied);
+      async::PostTask(dispatcher_, [request = std::move(request), actual_bytes_copied]() mutable {
+        request.Complete(ZX_OK, /*actual=*/actual_bytes_copied);
+      });
       return;
     }
 
     if (request.request()->header.ep_address == interrupt_addr_) {
+      ZX_ASSERT(interrupt_enabled_);
       interrupt_requests_.push(std::move(request));
       sync_mutex_unlock(&mutex_);
       return;
@@ -259,18 +311,31 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
 
     sync_mutex_unlock(&mutex_);
     zxlogf(ERROR, "FakeUsbDevice: received request for unknown endpoint");
-    request.Complete(ZX_ERR_IO_NOT_PRESENT, /*actual=*/0);
+    async::PostTask(dispatcher_, [request = std::move(request)]() mutable {
+      request.Complete(ZX_ERR_IO_NOT_PRESENT, /*actual=*/0);
+    });
   }
 
   usb_speed_t UsbGetSpeed() { return USB_SPEED_FULL; }
 
   zx_status_t UsbSetInterface(uint8_t interface_number, uint8_t alt_setting) {
-    if (interface_number == kIsocInterfaceNum) {
-      sync_mutex_lock(&mutex_);
-      isoc_interface_alt_ = alt_setting;
+    sync_mutex_lock(&mutex_);
+    if (interface_number == kEventAndAclInterfaceNum) {
+      ZX_ASSERT(alt_setting == 0);
+      event_and_acl_interface_set_count_++;
       sync_mutex_unlock(&mutex_);
       return ZX_OK;
     }
+    if (interface_number == kIsocInterfaceNum) {
+      // Endpoints must be disabled before changing the interface.
+      ZX_ASSERT(!isoc_in_enabled_);
+      ZX_ASSERT(!isoc_out_enabled_);
+      isoc_interface_alt_ = alt_setting;
+      isoc_interface_set_count_++;
+      sync_mutex_unlock(&mutex_);
+      return ZX_OK;
+    }
+    sync_mutex_unlock(&mutex_);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -280,6 +345,39 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
 
   zx_status_t UsbEnableEndpoint(const usb_endpoint_descriptor_t* ep_desc,
                                 const usb_ss_ep_comp_descriptor_t* ss_com_desc, bool enable) {
+    sync_mutex_lock(&mutex_);
+
+    if (interrupt_addr_ && interrupt_addr_.value() == ep_desc->b_endpoint_address) {
+      interrupt_enabled_ = enable;
+      sync_mutex_unlock(&mutex_);
+      return ZX_OK;
+    }
+
+    if (bulk_in_addr_ && bulk_in_addr_.value() == ep_desc->b_endpoint_address) {
+      bulk_in_enabled_ = enable;
+      sync_mutex_unlock(&mutex_);
+      return ZX_OK;
+    }
+
+    if (bulk_out_addr_ && bulk_out_addr_.value() == ep_desc->b_endpoint_address) {
+      bulk_out_enabled_ = enable;
+      sync_mutex_unlock(&mutex_);
+      return ZX_OK;
+    }
+
+    if (isoc_in_addr_ && isoc_in_addr_.value() == ep_desc->b_endpoint_address) {
+      isoc_in_enabled_ = enable;
+      sync_mutex_unlock(&mutex_);
+      return ZX_OK;
+    }
+
+    if (isoc_out_addr_ && isoc_out_addr_.value() == ep_desc->b_endpoint_address) {
+      isoc_out_enabled_ = enable;
+      sync_mutex_unlock(&mutex_);
+      return ZX_OK;
+    }
+
+    sync_mutex_unlock(&mutex_);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -296,12 +394,18 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
   }
 
   zx_status_t UsbGetConfigurationDescriptorLength(uint8_t configuration, size_t* out_length) {
-    return ZX_ERR_NOT_SUPPORTED;
+    *out_length = config_descriptor_data_.size();
+    return ZX_OK;
   }
 
   zx_status_t UsbGetConfigurationDescriptor(uint8_t configuration, uint8_t* out_desc_buffer,
                                             size_t desc_size, size_t* out_desc_actual) {
-    return ZX_ERR_NOT_SUPPORTED;
+    if (desc_size != config_descriptor_data_.size()) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(out_desc_buffer, config_descriptor_data_.data(), config_descriptor_data_.size());
+    *out_desc_actual = config_descriptor_data_.size();
+    return ZX_OK;
   }
 
   size_t UsbGetDescriptorsLength() { return device_descriptor_data_.size(); }
@@ -320,6 +424,7 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
 
   zx_status_t UsbCancelAll(uint8_t ep_address) {
     sync_mutex_lock(&mutex_);
+
     if (bulk_in_addr_ && ep_address == *bulk_in_addr_) {
       auto requests = std::move(bulk_in_requests_);
       sync_mutex_unlock(&mutex_);
@@ -338,19 +443,24 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
       requests.CompleteAll(ZX_ERR_CANCELED, 0);
       return ZX_OK;
     }
-    if (isoc_in_addr_ && ep_address == *isoc_in_addr_) {
-      auto requests = std::move(isoc_in_requests_);
+
+    if (isoc_in_addr_ && isoc_in_addr_.value() == ep_address) {
+      isoc_in_canceled_count_++;
+      UnownedRequestQueue isoc_in_reqs = std::move(isoc_in_requests_);
       sync_mutex_unlock(&mutex_);
-      requests.CompleteAll(ZX_ERR_CANCELED, 0);
+      isoc_in_reqs.CompleteAll(ZX_ERR_CANCELED, 0);
       return ZX_OK;
     }
-    if (isoc_out_addr_) {
-      // Isoc out requests are completed instantly, so there's nothing to cancel.
+
+    if (isoc_out_addr_ && isoc_out_addr_.value() == ep_address) {
+      isoc_out_canceled_count_++;
+      // There's nothing to cancel because isoc out requests are completed immediately.
       sync_mutex_unlock(&mutex_);
       return ZX_OK;
     }
+
     sync_mutex_unlock(&mutex_);
-    return ZX_ERR_INVALID_ARGS;
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   uint64_t UsbGetCurrentFrame() { return 0; }
@@ -453,8 +563,17 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
     return out;
   }
 
+  int isoc_interface_set_count() {
+    sync_mutex_lock(&mutex_);
+    int out = isoc_interface_set_count_;
+    sync_mutex_unlock(&mutex_);
+    return out;
+  }
+
  private:
   fit::thread_checker thread_checker_;
+
+  async_dispatcher_t* dispatcher_;
 
   // This mutex guards members that are accessed in USB methods that may be invoked by the read
   // thread in bt-transport-usb.
@@ -488,35 +607,59 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
   UnownedRequestQueue isoc_in_requests_ __TA_GUARDED(mutex_);
 
   std::vector<uint8_t> device_descriptor_data_;
+  std::vector<uint8_t> config_descriptor_data_;
   std::optional<uint8_t> bulk_in_addr_;
+  bool bulk_in_enabled_ __TA_GUARDED(mutex_) = false;
   std::optional<uint8_t> bulk_out_addr_;
+  bool bulk_out_enabled_ __TA_GUARDED(mutex_) = false;
   std::optional<uint8_t> isoc_out_addr_;
+  bool isoc_out_enabled_ __TA_GUARDED(mutex_) = false;
+  int isoc_out_canceled_count_ __TA_GUARDED(mutex_) = 0;
   std::optional<uint8_t> isoc_in_addr_;
+  bool isoc_in_enabled_ __TA_GUARDED(mutex_) = false;
+  int isoc_in_canceled_count_ __TA_GUARDED(mutex_) = 0;
   std::optional<uint8_t> interrupt_addr_;
+  bool interrupt_enabled_ __TA_GUARDED(mutex_) = false;
   uint8_t isoc_interface_alt_ __TA_GUARDED(mutex_) = 0;
+  int isoc_interface_set_count_ __TA_GUARDED(mutex_) = 0;
+  int event_and_acl_interface_set_count_ __TA_GUARDED(mutex_) = 0;
 };
 
 class BtTransportUsbTest : public ::gtest::TestLoopFixture {
  public:
   void SetUp() override {
+    fake_usb_device_.emplace(dispatcher());
     root_device_ = MockDevice::FakeRootParent();
-    root_device_->AddProtocol(ZX_PROTOCOL_USB, fake_usb_device_.proto().ops,
-                              fake_usb_device_.proto().ctx);
+    root_device_->AddProtocol(ZX_PROTOCOL_USB, fake_usb_device_->proto().ops,
+                              fake_usb_device_->proto().ctx);
 
-    fake_usb_device_.ConfigureDefaultDescriptors();
+    fake_usb_device_->ConfigureDefaultDescriptors();
 
     // bt-transport-usb doesn't use ctx.
     ASSERT_EQ(bt_transport_usb::Device::Create(/*ctx=*/nullptr, root_device_.get()), ZX_OK);
     ASSERT_EQ(1u, root_device()->child_count());
     ASSERT_TRUE(dut());
+    EXPECT_TRUE(fake_usb_device_->interrupt_enabled());
+    EXPECT_TRUE(fake_usb_device_->bulk_in_enabled());
+    EXPECT_TRUE(fake_usb_device_->bulk_out_enabled());
+    EXPECT_FALSE(fake_usb_device_->isoc_in_enabled());
+    EXPECT_FALSE(fake_usb_device_->isoc_out_enabled());
   }
 
   void TearDown() override {
+    RunLoopUntilIdle();
+
     dut()->UnbindOp();
     EXPECT_EQ(dut()->WaitUntilUnbindReplyCalled(), ZX_OK);
+    EXPECT_FALSE(fake_usb_device_->interrupt_enabled());
+    EXPECT_FALSE(fake_usb_device_->bulk_in_enabled());
+    EXPECT_FALSE(fake_usb_device_->bulk_out_enabled());
+    EXPECT_FALSE(fake_usb_device_->isoc_in_enabled());
+    EXPECT_FALSE(fake_usb_device_->isoc_out_enabled());
+
     dut()->ReleaseOp();
 
-    fake_usb_device_.Unplug();
+    fake_usb_device_->Unplug();
   }
 
   // The root device that bt-transport-usb binds to.
@@ -525,11 +668,11 @@ class BtTransportUsbTest : public ::gtest::TestLoopFixture {
   // Returns the MockDevice corresponding to the bt-transport-usb driver.
   MockDevice* dut() const { return root_device_->GetLatestChild(); }
 
-  FakeUsbDevice* fake_usb() { return &fake_usb_device_; }
+  FakeUsbDevice* fake_usb() { return &fake_usb_device_.value(); }
 
  private:
   std::shared_ptr<MockDevice> root_device_;
-  FakeUsbDevice fake_usb_device_;
+  std::optional<FakeUsbDevice> fake_usb_device_;
 };
 
 class BtTransportUsbHciProtocolTest : public BtTransportUsbTest {
@@ -710,6 +853,8 @@ class BtTransportUsbHciProtocolTest : public BtTransportUsbTest {
   std::vector<std::vector<uint8_t>> sco_chan_received_packets_;
 };
 
+class BtTransportUsbBindFailureTest : public ::gtest::TestLoopFixture {};
+
 // This tests the test fixture setup and teardown.
 TEST_F(BtTransportUsbTest, Lifecycle) {}
 
@@ -731,8 +876,8 @@ TEST_F(BtTransportUsbTest, Properties) {
   EXPECT_EQ(props[2].value, kProductId);
 }
 
-TEST(BtTransportUsbBindFailureTest, NoConfigurationDescriptor) {
-  FakeUsbDevice fake_usb_device;
+TEST_F(BtTransportUsbBindFailureTest, NoConfigurationDescriptor) {
+  FakeUsbDevice fake_usb_device(dispatcher());
   std::shared_ptr<MockDevice> root_device = MockDevice::FakeRootParent();
   root_device->AddProtocol(ZX_PROTOCOL_USB, fake_usb_device.proto().ops,
                            fake_usb_device.proto().ctx);
@@ -740,8 +885,8 @@ TEST(BtTransportUsbBindFailureTest, NoConfigurationDescriptor) {
             ZX_ERR_NOT_SUPPORTED);
 }
 
-TEST(BtTransportUsbBindFailureTest, ConfigurationDescriptorWithoutInterfaces) {
-  FakeUsbDevice fake_usb_device;
+TEST_F(BtTransportUsbBindFailureTest, ConfigurationDescriptorWithoutInterfaces) {
+  FakeUsbDevice fake_usb_device(dispatcher());
   std::shared_ptr<MockDevice> root_device = MockDevice::FakeRootParent();
   root_device->AddProtocol(ZX_PROTOCOL_USB, fake_usb_device.proto().ops,
                            fake_usb_device.proto().ctx);
@@ -755,8 +900,8 @@ TEST(BtTransportUsbBindFailureTest, ConfigurationDescriptorWithoutInterfaces) {
             ZX_ERR_NOT_SUPPORTED);
 }
 
-TEST(BtTransportUsbBindFailureTest, ConfigurationDescriptorWithIncorrectNumberOfEndpoints) {
-  FakeUsbDevice fake_usb_device;
+TEST_F(BtTransportUsbBindFailureTest, ConfigurationDescriptorWithIncorrectNumberOfEndpoints) {
+  FakeUsbDevice fake_usb_device(dispatcher());
   std::shared_ptr<MockDevice> root_device = MockDevice::FakeRootParent();
   root_device->AddProtocol(ZX_PROTOCOL_USB, fake_usb_device.proto().ops,
                            fake_usb_device.proto().ctx);
@@ -775,8 +920,9 @@ TEST(BtTransportUsbBindFailureTest, ConfigurationDescriptorWithIncorrectNumberOf
             ZX_ERR_NOT_SUPPORTED);
 }
 
-TEST(BtTransportUsbBindFailureTest, ConfigurationDescriptorWithIncorrectEndpointTypesInInterface0) {
-  FakeUsbDevice fake_usb_device;
+TEST_F(BtTransportUsbBindFailureTest,
+       ConfigurationDescriptorWithIncorrectEndpointTypesInInterface0) {
+  FakeUsbDevice fake_usb_device(dispatcher());
   std::shared_ptr<MockDevice> root_device = MockDevice::FakeRootParent();
   root_device->AddProtocol(ZX_PROTOCOL_USB, fake_usb_device.proto().ops,
                            fake_usb_device.proto().ctx);
@@ -921,7 +1067,7 @@ TEST_F(BtTransportUsbHciProtocolTest, ReceiveManyAclPackets) {
 }
 
 TEST_F(BtTransportUsbHciProtocolTest, SendManyAclPackets) {
-  const uint8_t kNumPackets = 25;
+  const uint8_t kNumPackets = 8;
   for (uint8_t i = 0; i < kNumPackets; i++) {
     const std::vector<uint8_t> kAclPacket = {i};
     zx_status_t write_status =
@@ -932,6 +1078,8 @@ TEST_F(BtTransportUsbHciProtocolTest, SendManyAclPackets) {
   }
 
   std::vector<std::vector<uint8_t>> packets = fake_usb()->wait_for_n_acl_packets(kNumPackets);
+  // Ensure completion callbacks are called.
+  RunLoopUntilIdle();
   ASSERT_EQ(packets.size(), kNumPackets);
   for (uint8_t i = 0; i < kNumPackets; i++) {
     EXPECT_EQ(packets[i], std::vector<uint8_t>{i});
@@ -946,9 +1094,10 @@ TEST_F(BtTransportUsbHciProtocolTest, SendManyAclPackets) {
   }
 }
 
-TEST(BtTransportUsbScoNotSupportedTest, OpenScoChannel) {
+class BtTransportUsbScoNotSupportedTest : public ::gtest::TestLoopFixture {};
+TEST_F(BtTransportUsbScoNotSupportedTest, OpenScoChannel) {
   // Create USB device without a SCO interface.
-  FakeUsbDevice fake_usb_device;
+  FakeUsbDevice fake_usb_device(dispatcher());
   fake_usb_device.ConfigureDefaultDescriptors(/*with_sco=*/false);
 
   std::shared_ptr<MockDevice> root_device = MockDevice::FakeRootParent();
@@ -980,27 +1129,33 @@ TEST(BtTransportUsbScoNotSupportedTest, OpenScoChannel) {
 }
 
 TEST_F(BtTransportUsbHciProtocolTest, ConfigureScoAltSettings) {
+  EXPECT_EQ(fake_usb()->isoc_interface_set_count(), 1);
   EXPECT_EQ(ZX_OK,
             ConfigureSco(SCO_CODING_FORMAT_MSBC, SCO_ENCODING_BITS_16, SCO_SAMPLE_RATE_KHZ_16));
   EXPECT_EQ(fake_usb()->isoc_interface_alt(), 1);
+  EXPECT_EQ(fake_usb()->isoc_interface_set_count(), 2);
   EXPECT_EQ(ZX_OK,
             ConfigureSco(SCO_CODING_FORMAT_CVSD, SCO_ENCODING_BITS_8, SCO_SAMPLE_RATE_KHZ_8));
   EXPECT_EQ(fake_usb()->isoc_interface_alt(), 1);
+  EXPECT_EQ(fake_usb()->isoc_interface_set_count(), 2);
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
             ConfigureSco(SCO_CODING_FORMAT_CVSD, SCO_ENCODING_BITS_8, SCO_SAMPLE_RATE_KHZ_16));
+  EXPECT_EQ(fake_usb()->isoc_interface_set_count(), 2);
   EXPECT_EQ(ZX_OK,
             ConfigureSco(SCO_CODING_FORMAT_CVSD, SCO_ENCODING_BITS_16, SCO_SAMPLE_RATE_KHZ_8));
   EXPECT_EQ(fake_usb()->isoc_interface_alt(), 2);
+  EXPECT_EQ(fake_usb()->isoc_interface_set_count(), 3);
   EXPECT_EQ(ZX_OK,
             ConfigureSco(SCO_CODING_FORMAT_CVSD, SCO_ENCODING_BITS_16, SCO_SAMPLE_RATE_KHZ_16));
   EXPECT_EQ(fake_usb()->isoc_interface_alt(), 4);
+  EXPECT_EQ(fake_usb()->isoc_interface_set_count(), 4);
 }
 
 TEST_F(BtTransportUsbHciProtocolTest, SendManyScoPackets) {
   ConfigureSco(SCO_CODING_FORMAT_CVSD, SCO_ENCODING_BITS_8, SCO_SAMPLE_RATE_KHZ_8);
   EXPECT_EQ(fake_usb()->isoc_interface_alt(), 1);
 
-  const uint8_t kNumPackets = 25;
+  const uint8_t kNumPackets = 8;
   for (uint8_t i = 0; i < kNumPackets; i++) {
     const std::vector<uint8_t> kScoPacket = {i};
     zx_status_t write_status =
@@ -1011,6 +1166,8 @@ TEST_F(BtTransportUsbHciProtocolTest, SendManyScoPackets) {
   }
 
   std::vector<std::vector<uint8_t>> packets = fake_usb()->wait_for_n_sco_packets(kNumPackets);
+  // Complete requests.
+  RunLoopUntilIdle();
   ASSERT_EQ(packets.size(), kNumPackets);
   for (uint8_t i = 0; i < kNumPackets; i++) {
     EXPECT_EQ(packets[i], std::vector<uint8_t>{i});
@@ -1028,10 +1185,10 @@ TEST_F(BtTransportUsbHciProtocolTest, SendManyScoPackets) {
   EXPECT_EQ(fake_usb()->isoc_interface_alt(), 0);
 }
 
-TEST_F(BtTransportUsbHciProtocolTest, DropManyScoPacketsDueToNoAltSettingSelected) {
+TEST_F(BtTransportUsbHciProtocolTest, QueueManyScoPacketsDueToNoAltSettingSelected) {
   EXPECT_EQ(fake_usb()->isoc_interface_alt(), 0);
 
-  const uint8_t kNumPackets = 1;
+  const uint8_t kNumPackets = 8;
   for (uint8_t i = 0; i < kNumPackets; i++) {
     const std::vector<uint8_t> kScoPacket = {i};
     zx_status_t write_status =
@@ -1045,7 +1202,14 @@ TEST_F(BtTransportUsbHciProtocolTest, DropManyScoPacketsDueToNoAltSettingSelecte
   // the driver is migrated to libasync.
   std::vector<std::vector<uint8_t>> packets =
       fake_usb()->wait_for_n_sco_packets(1, kOutboundPacketWaitExpectedToFailTimeout);
+  // Complete any requests.
+  RunLoopUntilIdle();
   ASSERT_EQ(packets.size(), 0u);
+
+  // Set an alt setting. Buffered packets should be sent.
+  ConfigureSco(SCO_CODING_FORMAT_CVSD, SCO_ENCODING_BITS_8, SCO_SAMPLE_RATE_KHZ_8);
+  packets = fake_usb()->wait_for_n_sco_packets(kNumPackets, kOutboundPacketWaitTimeout);
+  ASSERT_EQ(packets.size(), kNumPackets);
 }
 
 TEST_F(BtTransportUsbHciProtocolTest, ReceiveManyScoPackets) {

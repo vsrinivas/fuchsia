@@ -10,6 +10,7 @@
 #include <threads.h>
 
 #include <mutex>
+#include <queue>
 #include <thread>
 
 #include <ddktl/device.h>
@@ -64,6 +65,18 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
     kUnbind,
   };
 
+  struct IsocEndpointDescriptors {
+    usb_endpoint_descriptor_t in;
+    usb_endpoint_descriptor_t out;
+  };
+
+  struct IsocAltSettingRequest {
+    uint8_t alt_setting;
+    bt_hci_configure_sco_callback callback;
+    // The pointer to pass to callback.
+    void* cookie;
+  };
+
   // The number of currently supported HCI channel endpoints. We currently have
   // one channel for command/event flow and one for ACL data flow. The snoop channel is managed
   // separately.
@@ -78,11 +91,7 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
 
   using usb_callback_t = void (*)(void*, usb_request_t*);
 
-  // Reads the configuration descriptor |config_desc_iter|, sets |isoc_out_addr| to the isoc out
-  // endpoint address, and sets |isoc_in_addr| to the isoc in endpoint address. |config_desc_iter|
-  // must be iterated to the end of interface 0. Returns true on success.
-  static bool ReadIsocEndpointsFromConfig(usb_desc_iter_t* config_desc_iter, uint8_t* isoc_in_addr,
-                                          uint8_t* isoc_out_addr);
+  void ReadIsocInterfaces(usb_desc_iter_t* config_desc_iter);
 
   zx_status_t InstrumentedRequestAlloc(usb_request_t** out, uint64_t data_size, uint8_t ep_address,
                                        size_t req_size);
@@ -148,6 +157,8 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   void HandleUsbResponseError(usb_request_t* req, const char* req_description)
       __TA_REQUIRES(mutex_);
 
+  void ProcessNextIsocAltSettingRequest();
+
   usb_protocol_t usb_ __TA_GUARDED(mutex_);
 
   zx::channel cmd_channel_ __TA_GUARDED(mutex_);
@@ -155,13 +166,22 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   zx::channel sco_channel_ __TA_GUARDED(mutex_);
   zx::channel snoop_channel_ __TA_GUARDED(mutex_);
 
-  // Set during bind, never modified afterwards
-  bool sco_supported_ = false;
+  // Set during binding and never modified after.
+  std::optional<usb_endpoint_descriptor_t> bulk_out_endp_desc_;
+  std::optional<usb_endpoint_descriptor_t> bulk_in_endp_desc_;
+  std::optional<usb_endpoint_descriptor_t> intr_endp_desc_;
 
   // The alternate setting of the ISOC (SCO) interface.
-  uint8_t isoc_alt_setting_ __TA_GUARDED(isoc_alt_setting_mutex_) = 0;
-  // Locked while the isoc alt setting is being changed or must not be changed.
-  std::mutex isoc_alt_setting_mutex_;
+  uint8_t isoc_alt_setting_ __TA_GUARDED(mutex_) = 0;
+
+  std::queue<IsocAltSettingRequest> isoc_alt_setting_requests_ __TA_GUARDED(mutex_);
+
+  // If true, ISOC out requests may be queued.
+  // Must only be modified while isoc_alt_setting_mutex_ is held.
+  bool isoc_alt_setting_being_changed_ __TA_GUARDED(mutex_) = false;
+
+  // Set during bind, never modified afterwards.
+  std::vector<IsocEndpointDescriptors> isoc_endp_descriptors_;
 
   // Port to queue PEER_CLOSED signals on
   zx_handle_t snoop_watch_ = ZX_HANDLE_INVALID;
@@ -190,6 +210,8 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   size_t parent_req_size_ = 0u;
   std::atomic_size_t allocated_requests_count_ = 0u;
   std::atomic_size_t pending_request_count_ = 0u;
+  std::atomic_size_t pending_sco_write_request_count_ = 0u;
+  cnd_t pending_sco_write_request_count_0_cnd_;
   sync_completion_t requests_freed_completion_;
 
   // Whether or not we are being unbound.
@@ -198,14 +220,13 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   // Set to true when RemoveDeviceLocked() has been called.
   bool remove_requested_ __TA_GUARDED(mutex_) = false;
 
+  // Locked while sending a request, when handling a request callback, or when unbinding.
+  // Useful when any operation needs to terminate if the driver is being unbound.
+  // Also used to receive condition signals from request callbacks (e.g. indicating 0 pending
+  // requests remain).
+  // This is separate from mutex_ so that request operations don't need to acquire mutex_ (which
+  // may degrade performance).
   mtx_t pending_request_lock_ __TA_ACQUIRED_AFTER(mutex_);
-
-  // Set during Bind() and never modified.
-  std::optional<uint8_t> bulk_in_addr_;
-  std::optional<uint8_t> bulk_out_addr_;
-  std::optional<uint8_t> intr_addr_;
-  std::optional<uint8_t> isoc_in_addr_;
-  std::optional<uint8_t> isoc_out_addr_;
 
   // Thread to clean up requests on when the driver is unbound. This avoids blocking the main
   // thread.

@@ -51,6 +51,7 @@ source_set("common") {
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/listnode",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/sync",
   ]
 }
