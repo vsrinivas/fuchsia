@@ -100,7 +100,6 @@ func buildImpl(
 	}
 	proto.Merge(artifacts, targetArtifacts)
 
-	artifacts.BuiltTargets = targets
 	// Initialize the map, otherwise it will be nil and attempts to set keys
 	// will fail.
 	artifacts.LogFiles = make(map[string]string)

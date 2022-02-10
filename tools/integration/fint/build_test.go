@@ -76,7 +76,9 @@ func TestBuild(t *testing.T) {
 		runnerFunc func(cmd []string, stdout io.Writer) error
 		// List of regex strings, where each string corresponds to a subprocess
 		// that must have been run by the runner.
-		mustRun           []string
+		mustRun []string
+		// Targets that should be built.
+		expectedTargets   []string
 		expectedArtifacts *fintpb.BuildArtifacts
 		expectErr         bool
 	}{
@@ -227,19 +229,14 @@ func TestBuild(t *testing.T) {
 			staticSpec: &fintpb.Static{
 				NinjaTargets: []string{"bar", "foo"},
 			},
-			expectedArtifacts: &fintpb.BuildArtifacts{
-				BuiltTargets: []string{"bar", "foo"},
-			},
-			mustRun: []string{`ninja .* bar foo`},
+			expectedTargets: []string{"bar", "foo"},
 		},
 		{
 			name: "duplicate targets",
 			staticSpec: &fintpb.Static{
 				NinjaTargets: []string{"foo", "foo"},
 			},
-			expectedArtifacts: &fintpb.BuildArtifacts{
-				BuiltTargets: []string{"foo"},
-			},
+			expectedTargets: []string{"foo"},
 		},
 		{
 			name: "images for testing included",
@@ -252,11 +249,11 @@ func TestBuild(t *testing.T) {
 					{Name: "should-be-ignored", Path: "different_path"},
 				},
 			},
+			expectedTargets: append(extraTargetsForImages, "build/images:updates", "qemu_image_path"),
 			expectedArtifacts: &fintpb.BuildArtifacts{
 				BuiltImages: []*structpb.Struct{
 					mustStructPB(t, build.Image{Name: qemuImageNames[0], Path: "qemu_image_path"}),
 				},
-				BuiltTargets: append(extraTargetsForImages, "build/images:updates", "qemu_image_path"),
 			},
 		},
 		{
@@ -273,12 +270,12 @@ func TestBuild(t *testing.T) {
 					{Name: "other", Path: "other.tgz", Type: "tgz"},
 				},
 			},
+			expectedTargets: append(extraTargetsForImages, "p.tar.gz", "b.tgz"),
 			expectedArtifacts: &fintpb.BuildArtifacts{
 				BuiltArchives: []*structpb.Struct{
 					mustStructPB(t, build.Archive{Name: "packages", Path: "p.tar.gz", Type: "tgz"}),
 					mustStructPB(t, build.Archive{Name: "archive", Path: "b.tgz", Type: "tgz"}),
 				},
-				BuiltTargets: append(extraTargetsForImages, "p.tar.gz", "b.tgz"),
 			},
 		},
 		{
@@ -295,11 +292,11 @@ func TestBuild(t *testing.T) {
 					{Name: "foo", Path: "foo.sh", Type: "script"},
 				},
 			},
+			expectedTargets: append(extraTargetsForImages, "foo.sh"),
 			expectedArtifacts: &fintpb.BuildArtifacts{
 				BuiltImages: []*structpb.Struct{
 					mustStructPB(t, build.Image{Name: "foo", Path: "foo.sh", Type: "script"}),
 				},
-				BuiltTargets: append(extraTargetsForImages, "foo.sh"),
 			},
 		},
 		{
@@ -307,9 +304,7 @@ func TestBuild(t *testing.T) {
 			staticSpec: &fintpb.Static{
 				IncludeDefaultNinjaTarget: true,
 			},
-			expectedArtifacts: &fintpb.BuildArtifacts{
-				BuiltTargets: []string{":default"},
-			},
+			expectedTargets: []string{":default"},
 		},
 		{
 			name: "host tests included",
@@ -323,9 +318,7 @@ func TestBuild(t *testing.T) {
 					{Test: build.Test{OS: "mac", Path: "mac_path"}},
 				},
 			},
-			expectedArtifacts: &fintpb.BuildArtifacts{
-				BuiltTargets: []string{"linux_path", "mac_path"},
-			},
+			expectedTargets: []string{"linux_path", "mac_path"},
 		},
 		{
 			name: "generated sources included",
@@ -335,9 +328,7 @@ func TestBuild(t *testing.T) {
 			modules: fakeBuildModules{
 				generatedSources: []string{"foo.h", "bar.h"},
 			},
-			expectedArtifacts: &fintpb.BuildArtifacts{
-				BuiltTargets: []string{"foo.h", "bar.h"},
-			},
+			expectedTargets: []string{"foo.h", "bar.h"},
 		},
 		{
 			name: "prebuilt binary manifests included",
@@ -350,9 +341,7 @@ func TestBuild(t *testing.T) {
 					{Manifest: "manifest2.json"},
 				},
 			},
-			expectedArtifacts: &fintpb.BuildArtifacts{
-				BuiltTargets: []string{"manifest1.json", "manifest2.json"},
-			},
+			expectedTargets: []string{"manifest1.json", "manifest2.json"},
 		},
 		{
 			name: "tools included",
@@ -366,9 +355,7 @@ func TestBuild(t *testing.T) {
 					"tool3": {"linux", "mac"},
 				}),
 			},
-			expectedArtifacts: &fintpb.BuildArtifacts{
-				BuiltTargets: []string{"linux_x64/tool1", "linux_x64/tool2"},
-			},
+			expectedTargets: []string{"linux_x64/tool1", "linux_x64/tool2"},
 		},
 		{
 			name: "all lint targets",
@@ -393,9 +380,7 @@ func TestBuild(t *testing.T) {
 					},
 				},
 			},
-			expectedArtifacts: &fintpb.BuildArtifacts{
-				BuiltTargets: []string{"gen/src/foo.clippy", "gen/src/bar.clippy"},
-			},
+			expectedTargets: []string{"gen/src/foo.clippy", "gen/src/bar.clippy"},
 		},
 		{
 			name: "affected lint targets",
@@ -426,9 +411,7 @@ func TestBuild(t *testing.T) {
 					},
 				},
 			},
-			expectedArtifacts: &fintpb.BuildArtifacts{
-				BuiltTargets: []string{"gen/src/foo.clippy"},
-			},
+			expectedTargets: []string{"gen/src/foo.clippy"},
 		},
 		{
 			name: "nonexistent tool",
@@ -492,6 +475,7 @@ func TestBuild(t *testing.T) {
 					},
 				},
 			},
+			expectedTargets: []string{"foo.zbi", "bar.zbi", "foo-qemu-kernel", "zircona", "zirconr"},
 			expectedArtifacts: &fintpb.BuildArtifacts{
 				BuiltZedbootImages: []*structpb.Struct{
 					mustStructPB(t, build.Image{
@@ -505,7 +489,6 @@ func TestBuild(t *testing.T) {
 						Path:            "zirconr",
 					}),
 				},
-				BuiltTargets: []string{"foo.zbi", "bar.zbi", "foo-qemu-kernel", "zircona", "zirconr"},
 				ZbiTestQemuKernelImages: map[string]*structpb.Struct{
 					"foo": mustStructPB(t, build.Image{
 						Name:  qemuKernelImageName,
@@ -549,6 +532,14 @@ func TestBuild(t *testing.T) {
 				t.Fatal("Expected an error but got nil")
 			}
 
+			ninjaTargets := findNinjaTargets(runner.commandsRun)
+
+			sortSlicesOpt := cmpopts.SortSlices(func(a, b string) bool { return a < b })
+
+			if diff := cmp.Diff(tc.expectedTargets, ninjaTargets, sortSlicesOpt, cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf("Wrong ninja targets build (-want +got):\n%s", diff)
+			}
+
 			if tc.expectedArtifacts == nil {
 				tc.expectedArtifacts = &fintpb.BuildArtifacts{}
 			}
@@ -560,7 +551,7 @@ func TestBuild(t *testing.T) {
 			opts := cmp.Options{
 				protocmp.Transform(),
 				// Ordering of the repeated artifact fields doesn't matter.
-				cmpopts.SortSlices(func(a, b string) bool { return a < b }),
+				sortSlicesOpt,
 			}
 			if diff := cmp.Diff(tc.expectedArtifacts, artifacts, opts...); diff != "" {
 				t.Errorf("Got wrong artifacts (-want +got):\n%s", diff)
@@ -584,6 +575,37 @@ func TestBuild(t *testing.T) {
 			}
 		})
 	}
+}
+
+// findNinjaTargets is a hacky utility to return a list of built ninja targets,
+// given a list of command line invocations that is assumed to contain a ninja
+// invocation.
+//
+// It returns an empty slice if it fails to find a ninja invocation in the list
+// of commands.
+func findNinjaTargets(cmds [][]string) []string {
+	for _, cmd := range cmds {
+		// Ignore non-ninja commands and ninja tool invocations.
+		if filepath.Base(cmd[0]) != "ninja" || contains(cmd, "-t") {
+			continue
+		}
+		// Skip over each `-flag value` pair until we reach the list of targets.
+		for i := 1; i < len(cmd); i += 2 {
+			if !strings.HasPrefix(cmd[i], "-") {
+				// We've reached the start of the list of targets, assumed to
+				// come after all flags.
+				return cmd[i:]
+			}
+		}
+		// Found a ninja command that specified zero targets, implying the
+		// default target.
+		return nil
+	}
+	// Failed to find a full-build ninja command (likely because something
+	// failed before ninja was run). We don't bother to distinguish between this
+	// case and the zero-targets case because tests separately check if a
+	// failure occurred.
+	return nil
 }
 
 func makeTools(supportedOSes map[string][]string) build.Tools {

@@ -30,39 +30,36 @@ message BuildArtifacts {
   // Ninja compilation failure).
   string failure_summary = 1;
 
-  // All targets that were passed to Ninja.
-  repeated string built_targets = 2;
-
   // Images produced by the build. We use a struct to avoid needing to maintain
   // a copy of the images.json schema here.
-  repeated google.protobuf.Struct built_images = 3;
+  repeated google.protobuf.Struct built_images = 2;
 
   // Archives produced by the build. We use a struct to avoid needing to
   // maintain a copy of the images.json schema here.
-  repeated google.protobuf.Struct built_archives = 4;
+  repeated google.protobuf.Struct built_archives = 3;
 
   // Zedboot paving images built for ZBI tests. Only populated if ZBI tests were
   // built.
-  repeated google.protobuf.Struct built_zedboot_images = 5;
+  repeated google.protobuf.Struct built_zedboot_images = 4;
 
   // Mapping from ZBI test name to QEMU kernel image for the test. Only
   // populated if ZBI tests were built.
-  map<string, google.protobuf.Struct> zbi_test_qemu_kernel_images = 6;
+  map<string, google.protobuf.Struct> zbi_test_qemu_kernel_images = 5;
 
   // Absolute path to the Ninja log file.
-  string ninja_log_path = 7;
+  string ninja_log_path = 6;
 
   // Absolute path to a Ninja graph file.
-  string ninja_graph_path = 8;
+  string ninja_graph_path = 7;
 
   // Absolute path to a Ninja compdb file.
-  string ninja_compdb_path = 9;
+  string ninja_compdb_path = 8;
 
   // The duration taken by the ninja build step.
-  int32 ninja_duration_seconds = 10;
+  int32 ninja_duration_seconds = 9;
 
   // Various ninja build data
-  NinjaActionMetrics ninja_action_metrics = 14;
+  NinjaActionMetrics ninja_action_metrics = 10;
 
   // Mapping from user-friendly title to absolute path for important log files
   // that should be presented by the infrastructure for humans to read. We
