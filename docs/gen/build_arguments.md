@@ -2271,6 +2271,15 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 From //zircon/kernel/params.gni:73
 
+### kernel_version_string
+Version string embedded in the kernel for `zx_system_get_version_string`.
+If set to the default "", a string is generated based on the
+status of the fuchsia git repository.
+
+**Current value (from the default):** `""`
+
+From //zircon/kernel/lib/version/BUILD.gn:15
+
 ### known_variants
 List of variants that will form the basis for variant toolchains.
 To make use of a variant, set [`select_variant`](#select_variant).
