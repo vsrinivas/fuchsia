@@ -30,7 +30,7 @@ constexpr uint16_t kScoMaxPacketSize = 255 + 3;  // payload + 3 bytes header
 constexpr uint8_t kEventAndAclInterfaceNum = 0u;
 constexpr uint8_t kIsocInterfaceNum = 1u;
 constexpr zx_duration_t kOutboundPacketWaitTimeout(zx::sec(30).get());
-constexpr zx_duration_t kOutboundPacketWaitExpectedToFailTimeout(zx::sec(5).get());
+constexpr zx_duration_t kOutboundPacketWaitExpectedToFailTimeout(zx::sec(1).get());
 
 using Request = usb::Request<void>;
 using UnownedRequest = usb::BorrowedRequest<void>;
@@ -684,35 +684,26 @@ class BtTransportUsbHciProtocolTest : public BtTransportUsbTest {
     ASSERT_NE(dev, nullptr);
     ASSERT_EQ(dev->DdkGetProtocol(ZX_PROTOCOL_BT_HCI, &hci_proto_), ZX_OK);
 
-    zx::channel cmd_chan_driver_end;
-    ASSERT_EQ(zx::channel::create(/*flags=*/0, &cmd_chan_, &cmd_chan_driver_end), ZX_OK);
-    bt_hci_open_command_channel(&hci_proto_, cmd_chan_driver_end.release());
+    ASSERT_EQ(zx::channel::create(/*flags=*/0, &cmd_chan_, &cmd_chan_driver_end_), ZX_OK);
 
     // Configure wait for readable signal on command channel.
     cmd_chan_readable_wait_.set_object(cmd_chan_.get());
     zx_status_t wait_begin_status = cmd_chan_readable_wait_.Begin(dispatcher());
     ASSERT_EQ(wait_begin_status, ZX_OK) << zx_status_get_string(wait_begin_status);
 
-    zx::channel acl_chan_driver_end;
-    ASSERT_EQ(zx::channel::create(/*flags=*/0, &acl_chan_, &acl_chan_driver_end), ZX_OK);
-    bt_hci_open_acl_data_channel(&hci_proto_, acl_chan_driver_end.release());
+    ASSERT_EQ(zx::channel::create(/*flags=*/0, &acl_chan_, &acl_chan_driver_end_), ZX_OK);
 
     // Configure wait for readable signal on ACL channel.
     acl_chan_readable_wait_.set_object(acl_chan_.get());
     wait_begin_status = acl_chan_readable_wait_.Begin(dispatcher());
     ASSERT_EQ(wait_begin_status, ZX_OK) << zx_status_get_string(wait_begin_status);
 
-    zx::channel sco_chan_driver_end;
-    ASSERT_EQ(zx::channel::create(/*flags=*/0, &sco_chan_, &sco_chan_driver_end), ZX_OK);
-    zx_status_t sco_status = bt_hci_open_sco_channel(&hci_proto_, sco_chan_driver_end.release());
-    ASSERT_EQ(sco_status, ZX_OK);
+    ASSERT_EQ(zx::channel::create(/*flags=*/0, &sco_chan_, &sco_chan_driver_end_), ZX_OK);
 
-    // Configure wait for readable signal on ACL channel.
+    // Configure wait for readable signal on SCO channel.
     sco_chan_readable_wait_.set_object(sco_chan_.get());
     wait_begin_status = sco_chan_readable_wait_.Begin(dispatcher());
     ASSERT_EQ(wait_begin_status, ZX_OK) << zx_status_get_string(wait_begin_status);
-
-    configure_snoop_channel();
   }
 
   void TearDown() override {
@@ -722,6 +713,17 @@ class BtTransportUsbHciProtocolTest : public BtTransportUsbTest {
     snoop_chan_.reset();
 
     BtTransportUsbTest::TearDown();
+  }
+
+  // Starts the driver.  Must be called before we expect any result from the driver.
+  // Used to queue multiple packets on a channel before the driver read thread starts.
+  void ConnectDriver() {
+    // connect the snoop channel first, as some channels may have packets waiting.
+    configure_snoop_channel();
+    bt_hci_open_command_channel(&hci_proto_, cmd_chan_driver_end_.release());
+    bt_hci_open_acl_data_channel(&hci_proto_, acl_chan_driver_end_.release());
+    zx_status_t sco_status = bt_hci_open_sco_channel(&hci_proto_, sco_chan_driver_end_.release());
+    ASSERT_EQ(sco_status, ZX_OK);
   }
 
   zx_status_t configure_snoop_channel() {
@@ -837,6 +839,12 @@ class BtTransportUsbHciProtocolTest : public BtTransportUsbTest {
   zx::channel acl_chan_;
   zx::channel sco_chan_;
   zx::channel snoop_chan_;
+  // The driver ends of the above channels.  Passed to the driver on ConnectDriver(), and afterwards
+  // are ZX_HANDLE_INVALID.  snoop_chan_ is not included as it's connected with
+  // configure_snoop_channel and we never write to the client end.
+  zx::channel cmd_chan_driver_end_;
+  zx::channel acl_chan_driver_end_;
+  zx::channel sco_chan_driver_end_;
 
   async::WaitMethod<BtTransportUsbHciProtocolTest, &BtTransportUsbHciProtocolTest::OnChannelReady>
       cmd_chan_readable_wait_{this, zx_handle_t(), ZX_CHANNEL_READABLE};
@@ -952,6 +960,7 @@ TEST_F(BtTransportUsbBindFailureTest,
 }
 
 TEST_F(BtTransportUsbHciProtocolTest, ReceiveManySmallHciEvents) {
+  ConnectDriver();
   std::vector<uint8_t> kSnoopEventBuffer = {
       BT_HCI_SNOOP_TYPE_EVT | BT_HCI_SNOOP_FLAG_RECV,  // snoop packet flag
       0x01,                                            // arbitrary event code
@@ -978,6 +987,7 @@ TEST_F(BtTransportUsbHciProtocolTest, ReceiveManySmallHciEvents) {
 }
 
 TEST_F(BtTransportUsbHciProtocolTest, ReceiveManyHciEventsSplitIntoTwoResponses) {
+  ConnectDriver();
   const std::vector<uint8_t> kSnoopEventBuffer = {
       BT_HCI_SNOOP_TYPE_EVT | BT_HCI_SNOOP_FLAG_RECV,  // Snoop packet flag
       0x01,                                            // event code
@@ -1021,7 +1031,9 @@ TEST_F(BtTransportUsbHciProtocolTest, SendHciCommands) {
 
   const std::vector<uint8_t> kSnoopCmd1 = {
       BT_HCI_SNOOP_TYPE_CMD,  // Snoop packet flag
-      0x01,                   // arbitrary payload
+      0x01,                   // arbitrary payload (longer than before)
+      0xC0,
+      0xDE,
   };
   const std::vector<uint8_t> kCmd1(kSnoopCmd1.begin() + 1, kSnoopCmd1.end());
   write_status = cmd_chan()->write(/*flags=*/0, kCmd1.data(), static_cast<uint32_t>(kCmd1.size()),
@@ -1029,6 +1041,9 @@ TEST_F(BtTransportUsbHciProtocolTest, SendHciCommands) {
                                    /*num_handles=*/0);
   EXPECT_EQ(write_status, ZX_OK);
 
+  // Delayed connect to the driver, so the HCI CMD read loop must process both of the above commands
+  // at once.
+  ConnectDriver();
   std::vector<std::vector<uint8_t>> packets = fake_usb()->wait_for_n_command_packets(2);
   ASSERT_EQ(packets.size(), 2u);
   EXPECT_EQ(packets[0], kCmd0);
@@ -1041,6 +1056,7 @@ TEST_F(BtTransportUsbHciProtocolTest, SendHciCommands) {
 }
 
 TEST_F(BtTransportUsbHciProtocolTest, ReceiveManyAclPackets) {
+  ConnectDriver();
   const std::vector<uint8_t> kSnoopAclBuffer = {
       BT_HCI_SNOOP_TYPE_ACL | BT_HCI_SNOOP_FLAG_RECV,  // Snoop packet flag
       0x04, 0x05                                       // arbitrary payload
@@ -1069,28 +1085,46 @@ TEST_F(BtTransportUsbHciProtocolTest, ReceiveManyAclPackets) {
 TEST_F(BtTransportUsbHciProtocolTest, SendManyAclPackets) {
   const uint8_t kNumPackets = 8;
   for (uint8_t i = 0; i < kNumPackets; i++) {
-    const std::vector<uint8_t> kAclPacket = {i};
+    std::vector<uint8_t> packet;
+    // Vary the length of the packets (start small)
+    if (i % 2) {
+      packet = std::vector<uint8_t>(1, i);
+    } else {
+      packet = std::vector<uint8_t>(10, i);
+    }
     zx_status_t write_status =
-        acl_chan()->write(/*flags=*/0, kAclPacket.data(), static_cast<uint32_t>(kAclPacket.size()),
+        acl_chan()->write(/*flags=*/0, packet.data(), static_cast<uint32_t>(packet.size()),
                           /*handles=*/nullptr,
                           /*num_handles=*/0);
     ASSERT_EQ(write_status, ZX_OK);
   }
 
+  // Delayed connect to the driver, so that the driver must process many packets at once.
+  ConnectDriver();
   std::vector<std::vector<uint8_t>> packets = fake_usb()->wait_for_n_acl_packets(kNumPackets);
   // Ensure completion callbacks are called.
   RunLoopUntilIdle();
   ASSERT_EQ(packets.size(), kNumPackets);
   for (uint8_t i = 0; i < kNumPackets; i++) {
-    EXPECT_EQ(packets[i], std::vector<uint8_t>{i});
+    if (i % 2) {
+      EXPECT_EQ(packets[i], std::vector<uint8_t>(1, i));
+    } else {
+      EXPECT_EQ(packets[i], std::vector<uint8_t>(10, i));
+    }
   }
 
   RunLoopUntilIdle();
   ASSERT_EQ(snoop_packets().size(), kNumPackets);
   for (uint8_t i = 0; i < kNumPackets; i++) {
-    const std::vector<uint8_t> kExpectedSnoopPacket = {BT_HCI_SNOOP_TYPE_ACL,  // Snoop packet flag
-                                                       i};
-    EXPECT_EQ(snoop_packets()[i], kExpectedSnoopPacket);
+    std::vector<uint8_t> expectedSnoopPacket = {BT_HCI_SNOOP_TYPE_ACL};
+    if (i % 2) {
+      const std::vector<uint8_t> data(1, i);
+      expectedSnoopPacket.insert(expectedSnoopPacket.end(), data.begin(), data.end());
+    } else {
+      const std::vector<uint8_t> data(10, i);
+      expectedSnoopPacket.insert(expectedSnoopPacket.end(), data.begin(), data.end());
+    }
+    EXPECT_EQ(snoop_packets()[i], expectedSnoopPacket);
   }
 }
 
@@ -1129,6 +1163,7 @@ TEST_F(BtTransportUsbScoNotSupportedTest, OpenScoChannel) {
 }
 
 TEST_F(BtTransportUsbHciProtocolTest, ConfigureScoAltSettings) {
+  ConnectDriver();
   EXPECT_EQ(fake_usb()->isoc_interface_set_count(), 1);
   EXPECT_EQ(ZX_OK,
             ConfigureSco(SCO_CODING_FORMAT_MSBC, SCO_ENCODING_BITS_16, SCO_SAMPLE_RATE_KHZ_16));
@@ -1152,6 +1187,7 @@ TEST_F(BtTransportUsbHciProtocolTest, ConfigureScoAltSettings) {
 }
 
 TEST_F(BtTransportUsbHciProtocolTest, SendManyScoPackets) {
+  ConnectDriver();
   ConfigureSco(SCO_CODING_FORMAT_CVSD, SCO_ENCODING_BITS_8, SCO_SAMPLE_RATE_KHZ_8);
   EXPECT_EQ(fake_usb()->isoc_interface_alt(), 1);
 
@@ -1186,6 +1222,7 @@ TEST_F(BtTransportUsbHciProtocolTest, SendManyScoPackets) {
 }
 
 TEST_F(BtTransportUsbHciProtocolTest, QueueManyScoPacketsDueToNoAltSettingSelected) {
+  ConnectDriver();
   EXPECT_EQ(fake_usb()->isoc_interface_alt(), 0);
 
   const uint8_t kNumPackets = 8;
@@ -1213,6 +1250,7 @@ TEST_F(BtTransportUsbHciProtocolTest, QueueManyScoPacketsDueToNoAltSettingSelect
 }
 
 TEST_F(BtTransportUsbHciProtocolTest, ReceiveManyScoPackets) {
+  ConnectDriver();
   ConfigureSco(SCO_CODING_FORMAT_CVSD, SCO_ENCODING_BITS_8, SCO_SAMPLE_RATE_KHZ_8);
 
   const std::vector<uint8_t> kSnoopScoBuffer = {
@@ -1250,6 +1288,7 @@ TEST_F(BtTransportUsbHciProtocolTest, ReceiveManyScoPackets) {
 }
 
 TEST_F(BtTransportUsbHciProtocolTest, IgnoresStalledScoRequest) {
+  ConnectDriver();
   ConfigureSco(SCO_CODING_FORMAT_CVSD, SCO_ENCODING_BITS_8, SCO_SAMPLE_RATE_KHZ_8);
   fake_usb()->StallOneIsocInRequest();
   EXPECT_FALSE(dut()->RemoveCalled());

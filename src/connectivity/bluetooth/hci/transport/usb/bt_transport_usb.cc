@@ -36,8 +36,8 @@
 // The maximum HCI ACL frame size used for data transactions
 #define ACL_MAX_FRAME_SIZE 1028  // (1024 + 4 bytes for the ACL header)
 
-#define CMD_BUF_SIZE 255 + 3    // 3 byte header + payload
-#define EVENT_BUF_SIZE 255 + 2  // 2 byte header + payload
+#define CMD_BUF_SIZE 258    // 3 byte header + 255 byte payload
+#define EVENT_BUF_SIZE 257  // 2 byte header + 255 byte payload
 
 // TODO(fxbug.dev/90072): move these to hw/usb.h (or hw/bluetooth.h if that exists)
 #define USB_SUBCLASS_BLUETOOTH 1
@@ -932,12 +932,17 @@ void Device::HciHandleCmdReadEvents(const zx_port_packet_t& packet) {
 
   // Read messages until the channel is empty or an error occurs.
   while (true) {
+    length = sizeof(buf);
     zx_status_t read_status =
         zx_channel_read(cmd_channel_.get(), 0, buf, nullptr, length, 0, &length, nullptr);
     if (read_status == ZX_ERR_SHOULD_WAIT) {
       // The channel is empty.
       break;
     };
+    if (read_status == ZX_ERR_BUFFER_TOO_SMALL) {
+      zxlogf(WARNING, "hci_read_thread: command channel too large message (%d), dropping", length);
+      continue;
+    }
     if (read_status != ZX_OK) {
       zxlogf(ERROR, "hci_read_thread: failed to read from command channel %s",
              zx_status_get_string(read_status));
