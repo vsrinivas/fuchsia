@@ -70,10 +70,16 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
       fuchsia::sysmem::vulkanUsageSampled | fuchsia::sysmem::vulkanUsageTransferSrc;
   status = buffer_collection->SetConstraints(true /* has_constraints */, constraints);
 
-  // From this point on, if we fail, we DCHECK, because we should have already caught errors
-  // pertaining to both invalid tokens and wrong/malicious tokens/channels above, meaning that if a
-  // failure occurs now, then that is some underlying issue unrelated to user input.
-  FX_DCHECK(status == ZX_OK) << "Could not set constraints on buffer collection.";
+  // If a client requests to create Image2 / Image3 but then terminates before
+  // Scenic completes the import. The sysmem will close all the other handles
+  // to the BufferCollection, and all the buffer collection operations will
+  // fail, including the Vulkan buffer collection calls. Thus we should still
+  // return a fitx::failed here (and in checks below) instead of crashing
+  // Scenic.
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not set constraints on buffer collection: " << status;
+    return fitx::failed();
+  }
 
   vk::ImageCreateInfo create_info =
       escher::image_utils::GetDefaultImageConstraints(vk::Format::eUndefined);
@@ -90,7 +96,11 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
         vk_device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader));
     auto vk_result = vk_device.setBufferCollectionImageConstraintsFUCHSIA(
         vk_collection, image_constraints_info.image_constraints, vk_loader);
-    FX_DCHECK(vk_result == vk::Result::eSuccess);
+    if (vk_result != vk::Result::eSuccess) {
+      FX_LOGS(ERROR) << "Could not call vkSetBufferCollectionImageConstraintsFUCHSIA: "
+                     << vk::to_string(vk_result);
+      return fitx::failed();
+    }
   }
 
   return fitx::ok(BufferCollectionInfo(std::move(buffer_collection), std::move(vk_collection)));
