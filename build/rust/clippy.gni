@@ -65,8 +65,11 @@ template("clippy") {
       level = "W"
     }
 
+    _jq = "//prebuilt/third_party/jq/${host_platform}/bin/jq"
+
     args = [
       rebase_path(_output, root_build_dir),
+      rebase_path(_jq, root_build_dir),
       "$rebased_rustc_prefix/clippy-driver",
       rebase_path(source_root, root_build_dir),
       "-${level}clippy::all",

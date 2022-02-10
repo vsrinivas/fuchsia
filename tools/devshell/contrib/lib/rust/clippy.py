@@ -47,15 +47,20 @@ def main():
     if not output_files:
         print("Error: Couldn't find any clippy outputs for those inputs")
         return 1
-    if not args.no_build:
-        try:
-            build_targets(output_files, build_dir, args.fuchsia_dir, args.verbose)
-        except subprocess.CalledProcessError:
-            return 1
+    if args.no_build:
+        returncode = 0
+    else:
+        returncode = build_targets(output_files, build_dir, args.fuchsia_dir, args.verbose, args.raw).returncode
 
     lints = {}
     for clippy_output in output_files:
-        with open(build_dir / clippy_output) as f:
+        clippy_output = build_dir / clippy_output
+        # If we failed to build all targets we can keep going and print any
+        # lints that were collected.
+        # TODO: Check mtimes so we don't print stale lints.
+        if returncode != 0 and not clippy_output.exists():
+            continue
+        with open(clippy_output) as f:
             for line in f:
                 lint = json.loads(line)
                 # filter out "n warnings emitted" messages
@@ -67,19 +72,31 @@ def main():
                 lints[lint["rendered"]] = lint
 
     for lint in lints.values():
-        print(json.dumps(lint) if args.raw else lint["rendered"])
+        print(json.dumps(fix_paths(lint)) if args.raw else lint["rendered"])
     if not args.raw:
         print(len(lints), "warning(s) emitted\n")
 
+    return returncode
 
-def build_targets(output_files, build_dir, fuchsia_dir, verbose):
+
+# Rewrite paths in a diagnostic to be relative to the current directory.
+def fix_paths(lint):
+    fix = lambda path: os.path.relpath(os.path.join(FUCHSIA_BUILD_DIR, path))
+    for span in lint["spans"]:
+        span["file_name"] = fix(span["file_name"])
+    lint["children"] = [fix_paths(child) for child in lint["children"]]
+    return lint
+
+
+def build_targets(output_files, build_dir, fuchsia_dir, verbose, raw):
     prebuilt = PREBUILT_THIRD_PARTY_DIR
     if fuchsia_dir:
         prebuilt = Path(fuchsia_dir) / "prebuilt" / "third_party"
     ninja = [prebuilt / "ninja" / HOST_PLATFORM / "ninja", "-C", build_dir]
     if verbose:
         ninja += ["-v"]
-    subprocess.run(ninja + output_files, stdout=sys.stderr, check=True)
+    output = sys.stderr if raw else None
+    return subprocess.run(ninja + output_files, stdout=output)
 
 
 def get_targets(source_map, input_files, build_dir, get_all=False):

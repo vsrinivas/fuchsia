@@ -7,18 +7,22 @@
 # the first arg is the rebased path to `target_name.clippy` in the generated
 # output directory, which is used to form all other output paths.
 output="$1"
+shift
+# the next arg is the path to jq.
+jq="$1"
+shift
 # after that the positional args are the clippy-driver command and args set
 # in the clippy GN template
 
 deps=( $(<"$output.deps") )
 transdeps=( $(sort -u "$output.transdeps") )
 
-RUSTC_LOG=error "${@:2}" -Cpanic=abort -Zpanic_abort_tests -Zno_codegen \
+RUSTC_LOG=error "$@" -Cpanic=abort -Zpanic_abort_tests -Zno_codegen \
     ${deps[@]} ${transdeps[@]} --emit metadata="$output.rmeta" \
     --error-format=json --json=diagnostic-rendered-ansi 2>"$output"
 result=$?
 
 if [ $result -ne 0 ]; then
-    jq -sr '.[] | select(.level == "error") | .rendered' "$output"
+    "$jq" -sr '.[] | select(.level == "error") | .rendered' "$output" &1>2
     exit $result
 fi
