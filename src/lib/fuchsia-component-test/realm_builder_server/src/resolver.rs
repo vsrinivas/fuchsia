@@ -81,6 +81,31 @@ impl Registry {
         .detach();
     }
 
+    async fn get_config_data(
+        decl: &fcdecl::Component,
+        package_dir: &Option<fio::DirectoryProxy>,
+    ) -> Result<Option<fmem::Data>, Error> {
+        if let Some(fcdecl::ConfigSchema { value_source, .. }) = &decl.config {
+            if let Some(fcdecl::ConfigValueSource::PackagePath(path)) = value_source {
+                if let Some(p) = package_dir {
+                    Ok(Some(mem_util::open_file_data(p, path).await?))
+                } else {
+                    return Err(anyhow!(
+                        "Expected package directory for opening config values at {:?}, but none was provided",
+                        path
+                    ));
+                }
+            } else {
+                return Err(anyhow!(
+                    "Expected ConfigValueSource::PackagePath, got {:?}",
+                    value_source
+                ));
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
     async fn handle_resolver_request_stream(
         self: &Arc<Self>,
         mut stream: fsys::ComponentResolverRequestStream,
@@ -115,29 +140,7 @@ impl Registry {
                             None
                         };
 
-                        let config_values = if let Some(fcdecl::ConfigSchema {
-                            value_source, ..
-                        }) = &decl.config
-                        {
-                            if let Some(fcdecl::ConfigValueSource::PackagePath(path)) = value_source
-                            {
-                                if let Some(p) = package_dir {
-                                    Some(mem_util::open_file_data(&p, path).await?)
-                                } else {
-                                    return Err(anyhow!(
-                                        "Expected package directory for opening config values at {:?}, but none was provided",
-                                        path
-                                    ));
-                                }
-                            } else {
-                                return Err(anyhow!(
-                                    "Expected ConfigValueSource::PackagePath, got {:?}",
-                                    value_source
-                                ));
-                            }
-                        } else {
-                            None
-                        };
+                        let config_values = Self::get_config_data(&decl, &package_dir).await?;
 
                         responder.send(&mut Ok(fsys::Component {
                             resolved_url: Some(component_url),
@@ -195,6 +198,9 @@ impl Registry {
         package_dir
             .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_end.into_channel()))
             .map_err(|_| fsys::ResolverError::Io)?;
+        let config_values = Self::get_config_data(&component_decl, &Some(package_dir))
+            .await
+            .map_err(|_| fsys::ResolverError::ConfigValuesNotFound)?;
         Ok(fsys::Component {
             resolved_url: Some(component_url.clone()),
             decl: Some(encode(component_decl).map_err(|_| fsys::ResolverError::Internal)?),
@@ -203,6 +209,7 @@ impl Registry {
                 package_dir: Some(client_end),
                 ..fsys::Package::EMPTY
             }),
+            config_values,
             ..fsys::Component::EMPTY
         })
     }

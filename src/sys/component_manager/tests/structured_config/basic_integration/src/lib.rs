@@ -7,7 +7,6 @@ use diagnostics_reader::{ArchiveReader, Inspect};
 use fidl::encoding::decode_persistent;
 use fidl_test_structuredconfig_receiver::{ConfigReceiverPuppetMarker, ReceiverConfig};
 use fuchsia_inspect::assert_data_tree;
-use std::fs::{read_dir, read_to_string};
 use std::path::Path;
 
 fn expected_my_flag() -> bool {
@@ -50,47 +49,6 @@ async fn resolve_structured_config_in_child() {
         expected_config(),
         "child must receive expected configuration"
     );
-
-    // Now that the receiver has been resolved, check that the hub also has the matching
-    // configuration fields.
-    let config_path = Path::new("/hub/children/receiver/resolved/config");
-    let files = read_dir(config_path).unwrap();
-    let mut files: Vec<String> =
-        files.map(|d| d.unwrap().file_name().into_string().unwrap()).collect();
-    files.sort();
-
-    let expected_fields = vec![
-        ("my_flag", if expected_my_flag() { "true" } else { "false" }),
-        ("my_int16", "-32766"),
-        ("my_int32", "-2000000000"),
-        ("my_int64", "-4000000000"),
-        ("my_int8", "-127"),
-        ("my_string", "\"hello, world!\""),
-        ("my_uint16", "65535"),
-        ("my_uint32", "4000000000"),
-        ("my_uint64", "8000000000"),
-        ("my_uint8", "255"),
-        ("my_vector_of_flag", "[true, false]"),
-        ("my_vector_of_int16", "[-2, -3, 4]"),
-        ("my_vector_of_int32", "[-3, -4, 5]"),
-        ("my_vector_of_int64", "[-4, -5, 6]"),
-        ("my_vector_of_int8", "[-1, -2, 3]"),
-        ("my_vector_of_string", "[\"hello, world!\", \"hello, again!\"]"),
-        ("my_vector_of_uint16", "[2, 3, 4]"),
-        ("my_vector_of_uint32", "[3, 4, 5]"),
-        ("my_vector_of_uint64", "[4, 5, 6]"),
-        ("my_vector_of_uint8", "[1, 2, 3]"),
-    ];
-
-    let expected_files: Vec<&str> = expected_fields.iter().map(|field| field.0).collect();
-
-    assert_eq!(files, expected_files);
-
-    for (key, expected_value) in expected_fields {
-        let file = config_path.join(key);
-        let value = read_to_string(file).unwrap();
-        assert_eq!(value, expected_value);
-    }
 
     let inspector = ArchiveReader::new()
         .add_selector("receiver:root")

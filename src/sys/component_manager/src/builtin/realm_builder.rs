@@ -72,17 +72,16 @@ impl Resolver for RealmBuilderResolver {
         component_url: &str,
         _target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError> {
-        let fsys::Component { resolved_url, decl, package, .. } =
+        let fsys::Component { resolved_url, decl, package, config_values, .. } =
             self.resolve_async(component_url).await?;
         let resolved_url = resolved_url.unwrap();
         let decl = resolver::read_and_validate_manifest(&decl.unwrap()).await?;
-        Ok(ResolvedComponent {
-            resolved_url,
-            decl,
-            package,
-            // TODO(https://fxbug.dev/88958) may need to support structured config
-            config_values: None,
-        })
+        let config_values = if let Some(data) = config_values {
+            Some(resolver::read_and_validate_config_values(&data)?)
+        } else {
+            None
+        };
+        Ok(ResolvedComponent { resolved_url, decl, package, config_values })
     }
 }
 
