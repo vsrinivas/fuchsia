@@ -44,7 +44,7 @@ rustc_binary("immediate_exit") {
 
 rustc_binary("run-indefinitely") {
   name = "run_indefinitely"
-  edition = 2018
+  edition = "2018"
   source_root = "run_indefinitely.rs"
   sources = [ "run_indefinitely.rs" ]
   deps = [

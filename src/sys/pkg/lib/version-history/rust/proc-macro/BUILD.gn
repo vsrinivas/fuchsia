@@ -5,7 +5,7 @@
 import("//build/rust/rustc_macro.gni")
 
 rustc_macro("version-history-macro") {
-  edition = "2021"
+  edition = "2018"
   with_unit_tests = true
 
   deps = [ "shared:version-history-shared" ]

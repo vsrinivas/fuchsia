@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("ffx_flutter_tunnel_ctrlc") {
   name = "ffx_flutter_tunnel_ctrlc"
   version = "0.1.0"
-  edition = "2021"
+  edition = "2018"
 
   deps = [
     "//third_party/rust_crates:atomic-waker",

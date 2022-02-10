@@ -6,7 +6,7 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 
 ffx_plugin("ffx_flutter") {
   version = "0.1.0"
-  edition = "2021"
+  edition = "2018"
   with_unit_tests = false
   plugin_deps = [ "tunnel:ffx_flutter_tunnel" ]
   args_sources = [ "src/args.rs" ]

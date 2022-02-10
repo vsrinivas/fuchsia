@@ -13,7 +13,7 @@ config("env") {
 }
 
 rustc_library("version-history-shared") {
-  edition = "2021"
+  edition = "2018"
   with_unit_tests = true
   disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
 

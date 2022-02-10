@@ -12,7 +12,7 @@ import("//src/sys/pkg/bin/grand-swd-binary/gsb.gni")
 rustc_library("lib") {
   name = "system-update-configurator"
   with_unit_tests = true
-  edition = "2021"
+  edition = "2018"
 
   deps = [
     "//sdk/fidl/fuchsia.update.config:fuchsia.update.config-rustc",

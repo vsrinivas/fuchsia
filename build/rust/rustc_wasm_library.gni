@@ -165,9 +165,14 @@ template("rustc_wasm_library") {
     sources = _sources
 
     # in-tree default in 2018 edition
-    if (defined(invoker.edition) && invoker.edition == "2015") {
-      configs -= [ "//build/config/rust:edition_2018" ]
-      configs += [ "//build/config/rust:edition_2015" ]
+    if (defined(invoker.edition)) {
+      assert(invoker.edition == "2015" || invoker.edition == "2018",
+             "Only editions 2015 and 2018 are supported")
+
+      if (invoker.edition == "2015") {
+        configs -= [ "//build/config/rust:edition_2018" ]
+        configs += [ "//build/config/rust:edition_2015" ]
+      }
     }
 
     forward_variables_from(invoker,

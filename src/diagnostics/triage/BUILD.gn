@@ -96,7 +96,7 @@ lib_deps = [
 ]
 
 rustc_library("triage_app_lib") {
-  edition = 2018
+  edition = "2018"
 
   deps = lib_deps
 
@@ -109,7 +109,7 @@ rustc_library("triage_app_lib") {
 }
 
 rustc_test("triage_lib_test") {
-  edition = 2018
+  edition = "2018"
 
   deps = lib_deps + [
            "//src/lib/fuchsia",

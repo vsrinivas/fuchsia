@@ -46,7 +46,7 @@ library_sources = [
 ]
 
 rustc_library("triage") {
-  edition = 2018
+  edition = "2018"
   version = "0.0.1"
 
   deps = lib_deps
