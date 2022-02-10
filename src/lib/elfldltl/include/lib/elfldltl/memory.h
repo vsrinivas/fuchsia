@@ -181,11 +181,12 @@ class FixedArrayFromFile {
 // corresponds to the beginning of the image this object points to.
 class DirectMemory {
  public:
+  DirectMemory() = default;
+
   // This type could easily be copyable.  But the template APIs should always
   // use Memory types only be reference.  So make this type uncopyable and
   // unmovable just so using it enforces API constraints other implementations
   // might actually need to rely on.
-  DirectMemory() = delete;
   DirectMemory(const DirectMemory&) = delete;
   DirectMemory(DirectMemory&&) = delete;
 
@@ -194,6 +195,9 @@ class DirectMemory {
   // known.  Then set_base must be called before using the Memory API.
   explicit DirectMemory(cpp20::span<std::byte> image, uintptr_t base = ~uintptr_t{})
       : image_(image), base_(base) {}
+
+  cpp20::span<std::byte> image() const { return image_; }
+  void set_image(cpp20::span<std::byte> image) { image_ = image; }
 
   uintptr_t base() const { return base_; }
   void set_base(uintptr_t base) { base_ = base; }
@@ -295,7 +299,7 @@ class DirectMemory {
   }
 
   cpp20::span<std::byte> image_;
-  uintptr_t base_;
+  uintptr_t base_ = 0;
 };
 
 }  // namespace elfldltl

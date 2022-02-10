@@ -77,7 +77,7 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
   ktl::span<ktl::byte> elf_bytes = {const_cast<ktl::byte*>(it->data.data()), it->data.size()};
 
   // We are just reading from the file and so don't worry about the base address.
-  elfldltl::DirectMemory file{elf_bytes, 0};
+  elfldltl::DirectMemory file{elf_bytes};
 
   auto ehdr_result = file.ReadFromFile<Ehdr>(0);
   if (!ehdr_result) {
@@ -120,6 +120,7 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
   elfldltl::DecodePhdrs(diag, phdrs, elfldltl::PhdrDynamicObserver<Elf>(dyn_phdr),
                         elfldltl::PhdrLoadObserver<Elf, elfldltl::PhdrLoadPolicy::kContiguous>(
                             ZX_PAGE_SIZE, vaddr_start, vaddr_size));
+  file.set_base(vaddr_start);
 
   if (!dyn_phdr) {
     printf("FAILED: no dynamic sections found\n");

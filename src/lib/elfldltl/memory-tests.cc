@@ -55,6 +55,16 @@ TEST(ElfldltlDirectMemoryTests, MemoryApi) {
   file.set_base(kBaseAddress);
   EXPECT_EQ(file.base(), kBaseAddress);
 
+  // Test default-construction.
+  elfldltl::DirectMemory empty;
+  EXPECT_TRUE(empty.image().empty());
+  EXPECT_EQ(empty.base(), 0);
+  empty.set_image(image_bytes);
+  empty.set_base(kBaseAddress);
+  EXPECT_EQ(empty.image().data(), image_bytes.data());
+  EXPECT_EQ(empty.image().size(), image_bytes.size());
+  EXPECT_EQ(empty.base(), kBaseAddress);
+
   auto array = file.ReadArray<char>(kBaseAddress + 16, 4);
   ASSERT_TRUE(array.has_value());
   EXPECT_EQ(4, array->size());
