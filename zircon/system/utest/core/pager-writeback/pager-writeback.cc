@@ -1741,4 +1741,72 @@ TEST(PagerWriteback, DirtyNoTrapRandomOffsets) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
 }
 
+// Tests that adding the WRITE permission with zx_vmar_protect does not override read-only mappings
+// required in order to track dirty transitions.
+TEST(PagerWriteback, DirtyAfterMapProtect) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  uint32_t create_options[] = {0, ZX_VMO_TRAP_DIRTY};
+
+  for (auto create_option : create_options) {
+    // Create a temporary VMAR to work with.
+    zx::vmar vmar;
+    zx_vaddr_t base_addr;
+    ASSERT_OK(zx::vmar::root_self()->allocate(ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0,
+                                              zx_system_get_page_size(), &vmar, &base_addr));
+
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+    // Buffer to verify VMO contents later.
+    std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+    vmo->GenerateBufferContents(expected.data(), 1, 0);
+
+    zx_vaddr_t ptr;
+    // Map the vmo read-only first so that the protect step below is not a no-op.
+    ASSERT_OK(vmar.map(ZX_VM_PERM_READ, 0, vmo->vmo(), 0, zx_system_get_page_size(), &ptr));
+
+    auto unmap = fit::defer([&]() {
+      // Cleanup the mapping we created.
+      vmar.unmap(ptr, zx_system_get_page_size());
+    });
+
+    // Read the VMO through the mapping so that the hardware mapping is created.
+    uint8_t data = *reinterpret_cast<uint8_t*>(ptr);
+    ASSERT_EQ(data, expected[0]);
+
+    // Add the write permission now. This will allow us to write to the VMO below.
+    ASSERT_OK(vmar.protect(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, ptr, zx_system_get_page_size()));
+
+    // Write to the vmo. This should trigger a write fault. If the protect above added the write
+    // permission on the hardware mapping, this write will go through without generating a write
+    // fault for dirty tracking.
+    auto buf = reinterpret_cast<uint8_t*>(ptr);
+    data = 0xaa;
+    TestThread t([buf, data, &expected]() -> bool {
+      *buf = data;
+      expected[0] = data;
+      return true;
+    });
+
+    ASSERT_TRUE(t.Start());
+
+    if (create_option == ZX_VMO_TRAP_DIRTY) {
+      ASSERT_TRUE(t.WaitForBlocked());
+      ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+      // Dirty the page.
+      ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+    }
+    ASSERT_TRUE(t.Wait());
+
+    // Verify that the page is dirty.
+    zx_vmo_dirty_range_t range = {.offset = 0, .length = 1};
+    ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+    ASSERT_EQ(data, *buf);
+    ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  }
+}
+
 }  // namespace pager_tests

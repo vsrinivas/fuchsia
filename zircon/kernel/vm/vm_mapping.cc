@@ -160,7 +160,8 @@ zx_status_t VmMapping::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flag
 zx_status_t VmMapping::ProtectOrUnmap(const fbl::RefPtr<VmAspace>& aspace, vaddr_t base,
                                       size_t size, uint new_arch_mmu_flags) {
   // This can never be used to set a WRITE permission since it does not ask the underlying VMO to
-  // perform the copy-on-write step.
+  // perform the copy-on-write step. The underlying VMO might also support dirty tracking, which
+  // requires write permission faults in order to track pages as dirty when written.
   ASSERT(!(new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
   // If not removing all permissions do the protect, otherwise skip straight to unmapping the entire
   // region.
@@ -208,7 +209,9 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
     uint flags = new_arch_mmu_flags;
     // Check if the new flags have the write permission. This is problematic as we cannot just
     // change any existing hardware mappings to have the write permission, as any individual mapping
-    // may be the result of a read fault and still need to have a copy-on-write step performed.
+    // may be the result of a read fault and still need to have a copy-on-write step performed. This
+    // could also map a dirty tracked VMO which requires write permission faults to track pages as
+    // dirty when written.
     if (new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) {
       // Whatever happens, we're not going to be protecting the arch aspace to have write mappings,
       // so this has to be a user aspace so that we can lazily take write faults in the future.
@@ -222,8 +225,6 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
       }
     }
 
-    // TODO(fxbug.dev/63989) Ensure dirty tracked regions do not get write permissions added to
-    // their hardware mappings.
     zx_status_t status = ProtectOrUnmap(aspace_, base, size, flags);
     // If the protect failed then we do not have sufficient information left to rollback in order to
     // return an error, nor can we claim success, so require the protect to have succeeded to
