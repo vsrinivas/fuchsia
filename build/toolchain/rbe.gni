@@ -36,10 +36,20 @@ declare_args() {
   #   (There are other rewrapper options that are not exposed.)
   rbe_exec_strategy = "remote"
 
+  ################################################################
+  ### Special test modes: enable at most one of the following: ###
+  ################################################################
+
   # Check of determinism of rustc targets by running locally twice
   # and comparing outputs, failing if any differences are found.
   # Even though this check doesn't involve RBE, it uses the same
   # wrapper script, which knows what output files to expect and compare.
+  #
+  # Build outputs that depend on time are discouraged because they
+  # impact caching.
+  # If your result depends on the current time, this check will
+  # definitely fail.  If it depends on only the date, there is still
+  # a nonzero chance of failure, if the rerun falls on the next day.
   #
   # Requires GN args:
   #   `enable_rbe = true`
@@ -50,4 +60,12 @@ declare_args() {
   #     because RBE is not used
   #
   check_rustc_determinism = false
+
+  # Check consistency between local and remote rust compiles.
+  # This check is slow and expensive and mostly intended for CI.
+  #
+  # Requires GN args:
+  #   `enable_rbe = true`
+  #
+  check_rustc_consistency = false
 }

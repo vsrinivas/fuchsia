@@ -112,7 +112,15 @@ template("clang_toolchain") {
     _rustc_wrapper = ""
     _rust_concurrent_jobs = ""
     if (enable_rbe) {
-      if (check_rustc_determinism) {
+      assert(
+          !check_rustc_consistency || !check_rustc_determinism,
+          "Only one of {check_rustc_consistency,check_rustc_determinism} may be true.")
+      if (check_rustc_consistency) {
+        # Compare local vs. remote build.
+        # Allow caching.
+        # Use local concurrency.
+        _rewrapper_flags = " --compare --fsatrace --exec_strategy-remote"
+      } else if (check_rustc_determinism) {
         # Determinism check is run locally, and doesn't use RBE,
         # even though it uses the same wrapper script.
         _rewrapper_flags = " --local --check-determinism"
