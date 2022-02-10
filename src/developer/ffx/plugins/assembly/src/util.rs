@@ -100,6 +100,7 @@ mod tests {
         let value = json!(
             {
                 "version": "1",
+                "repository": "testrepository.com",
                 "package": {
                     "name": "test",
                     "version": "0.0.0",

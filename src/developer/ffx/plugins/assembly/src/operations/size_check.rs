@@ -373,6 +373,7 @@ mod tests {
             "obj/src/sys/pkg/bin/pkg-cache/pkg-cache/package_manifest.json",
             json!({
                 "version": "1",
+                "repository": "testrepository.com",
                 "package": {
                     "name": "pkg-cache",
                     "version": "0"
@@ -394,6 +395,7 @@ mod tests {
             "obj/src/sys/pkg/bin/pkgfs/pkgfs/package_manifest.json",
             json!({
                 "version": "1",
+                "repository": "testrepository.com",
                 "package": {
                     "name": "pkg-cache",
                     "version": "0"
@@ -464,6 +466,7 @@ mod tests {
             "obj/src/sys/pkg/bin/pkg-cache/pkg-cache/package_manifest.json",
             json!({
                 "version": "1",
+                "repository": "testrepository.com",
                 "package": {
                     "name": "pkg-cache",
                     "version": "0"
@@ -540,6 +543,7 @@ mod tests {
             "obj/src/sys/pkg/bin/pkg-cache/pkg-cache/package_manifest.json",
             json!({
                 "version": "1",
+                "repository": "testrepository.com",
                 "package": {
                     "name": "pkg-cache",
                     "version": "0"
@@ -556,6 +560,7 @@ mod tests {
             "obj/src/sys/pkg/bin/pkgfs/pkgfs/package_manifest.json",
             json!({
                 "version": "1",
+                "repository": "testrepository.com",
                 "package": {
                     "name": "pkg-cache",
                     "version": "0"
@@ -572,6 +577,7 @@ mod tests {
             "obj/src/connectivity/bluetooth/core/bt-gap/bt-gap/package_manifest.json",
             json!({
                 "version": "1",
+                "repository": "testrepository.com",
                 "package": {
                     "name": "pkg-cache",
                     "version": "0"
@@ -630,6 +636,7 @@ mod tests {
             "obj/src/sys/pkg/bin/pkg-cache/pkg-cache/package_manifest.json",
             json!({
                 "version": "1",
+                "repository": "testrepository.com",
                 "package": {
                     "name": "pkg-cache",
                     "version": "0"

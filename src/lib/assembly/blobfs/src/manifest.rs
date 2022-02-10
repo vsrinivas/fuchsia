@@ -227,6 +227,7 @@ mod tests {
         serde_json::from_value::<PackageManifest>(json!(
             {
                 "version": "1",
+                "repository": "testrepository.com",
                 "package": {
                     "name": name,
                     "version": version,

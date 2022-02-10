@@ -276,6 +276,7 @@ mod tests {
             &manifest_file,
             &json!({
                     "version": "1",
+                    "repository": "testrepository.com",
                     "package": {
                         "name": name.as_ref(),
                         "version": "1",

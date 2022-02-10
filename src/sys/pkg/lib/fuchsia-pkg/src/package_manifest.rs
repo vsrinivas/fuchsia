@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Package, PackageManifestError, PackageName, PackagePath, PackageVariant};
 
+const DEFAULT_PACKAGE_REPOSITORY: &str = "fuchsia.com";
+
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct PackageManifest(VersionedPackageManifest);
@@ -51,7 +53,11 @@ impl PackageManifest {
             name: package.meta_package().name().to_owned(),
             version: package.meta_package().variant().to_owned(),
         };
-        let manifest_v1 = PackageManifestV1 { package: package_metadata, blobs };
+        let manifest_v1 = PackageManifestV1 {
+            package: package_metadata,
+            blobs,
+            repository: DEFAULT_PACKAGE_REPOSITORY.to_string(),
+        };
         Ok(PackageManifest(VersionedPackageManifest::Version1(manifest_v1)))
     }
 }
@@ -67,6 +73,7 @@ enum VersionedPackageManifest {
 struct PackageManifestV1 {
     package: PackageMetadata,
     blobs: Vec<BlobInfo>,
+    repository: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -96,6 +103,7 @@ mod tests {
         let manifest = serde_json::from_value::<PackageManifest>(json!(
             {
                 "version": "1",
+                "repository": "testrepository.org",
                 "package": {
                     "name": "example",
                     "version": "0"

@@ -112,7 +112,7 @@ mod test {
             published_name: String::from("package"),
         };
         cmd_package_build(cmd).unwrap();
-        assert_eq!("{\"version\":\"1\",\"package\":{\"name\":\"package\",\"version\":\"0\"},\"blobs\":[{\"source_path\":\"./out/meta.far\",\"path\":\"meta/\",\"merkle\":\"421f08d453e25059d5908923901582e683dbce82fe697e40656bd74e143a96a5\",\"size\":8192}]}".to_owned(), read_to_string(package_manifest_path).unwrap());
+        assert_eq!("{\"version\":\"1\",\"package\":{\"name\":\"package\",\"version\":\"0\"},\"blobs\":[{\"source_path\":\"./out/meta.far\",\"path\":\"meta/\",\"merkle\":\"421f08d453e25059d5908923901582e683dbce82fe697e40656bd74e143a96a5\",\"size\":8192}],\"repository\":\"fuchsia.com\"}".to_owned(), read_to_string(package_manifest_path).unwrap());
         Ok(())
     }
 
@@ -150,7 +150,7 @@ mod test {
         };
         let emtpy_file_path_string = emtpy_file_path.display().to_string();
         cmd_package_build(cmd).unwrap();
-        assert_eq!("{\"version\":\"1\",\"package\":{\"name\":\"package\",\"version\":\"0\"},\"blobs\":[{\"source_path\":\"\",\"path\":\"file\",\"merkle\":\"15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\",\"size\":0},{\"source_path\":\"./out/meta.far\",\"path\":\"meta/\",\"merkle\":\"d14b2158d0a08f826c5359a7c8af79432cdd70490f0366c6ffa832421444078f\",\"size\":12288}]}".to_owned(), read_to_string(package_manifest_path).unwrap().as_str().replace(&emtpy_file_path_string, ""));
+        assert_eq!("{\"version\":\"1\",\"package\":{\"name\":\"package\",\"version\":\"0\"},\"blobs\":[{\"source_path\":\"\",\"path\":\"file\",\"merkle\":\"15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\",\"size\":0},{\"source_path\":\"./out/meta.far\",\"path\":\"meta/\",\"merkle\":\"d14b2158d0a08f826c5359a7c8af79432cdd70490f0366c6ffa832421444078f\",\"size\":12288}],\"repository\":\"fuchsia.com\"}".to_owned(), read_to_string(package_manifest_path).unwrap().as_str().replace(&emtpy_file_path_string, ""));
         Ok(())
     }
 }
