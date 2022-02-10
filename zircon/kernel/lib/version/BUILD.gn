@@ -8,32 +8,48 @@ import("//build/tracer/tracer.gni")
 import("//build/zircon/migrated_targets.gni")
 import("version_string.gni")
 
+declare_args() {
+  # Version string embedded in the kernel for `zx_system_get_version_string`.
+  # If set to the default "", a string is generated based on the
+  # status of the fuchsia git repository.
+  kernel_version_string = ""
+}
+
 # The version string depends solely on the source and doesn't vary across
 # machines or toolchains, so generate it only once.
 gen_dir = get_label_info(".($default_toolchain)", "target_gen_dir")
 if (current_toolchain == default_toolchain) {
   assert(gen_dir == target_gen_dir)
 
-  action("version-string.bin") {
-    visibility = [
-      ":*",
-      "//zircon/kernel:*",
-    ]
-    script = "git-version-string.sh"
-    inputs = [
-      # Regenerate version if HEAD moves
-      "//.git/HEAD",
+  _bin_visibility = [
+    ":*",
+    "//zircon/kernel:*",
+  ]
+  if (kernel_version_string != "") {
+    generated_file("version-string.bin") {
+      visibility = _bin_visibility
+      outputs = [ kernel_version_string_file ]
+      contents = kernel_version_string  # Not a list so no newline added.
+    }
+  } else {
+    action("version-string.bin") {
+      visibility = _bin_visibility
+      script = "git-version-string.sh"
+      inputs = [
+        # Regenerate version if HEAD moves
+        "//.git/HEAD",
 
-      # Add "-dirty" suffix as needed
-      "//.git/index",
-    ]
-    outputs = [ kernel_version_string_file ]
+        # Add "-dirty" suffix as needed
+        "//.git/index",
+      ]
+      outputs = [ kernel_version_string_file ]
 
-    args = rebase_path([
-                         kernel_version_string_file,
-                         "//.git",
-                       ],
-                       root_build_dir)
+      args = rebase_path([
+                           kernel_version_string_file,
+                           "//.git",
+                         ],
+                         root_build_dir)
+    }
   }
 
   action("version-string.h") {
