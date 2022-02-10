@@ -38,6 +38,30 @@ spinel_device_lost(struct spinel_device * const device)
 }
 
 //
+// FIXME(allanmac): This workaround exacts some performance. Remove it as soon
+// as it's feasible.
+//
+static void
+spinel_deps_workaround_mesa_21_anv(struct spinel_device * const device)
+{
+  VkPhysicalDeviceVulkan12Properties pdp12 = {
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES,
+  };
+
+  VkPhysicalDeviceProperties2 pdp2 = {
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+    .pNext = &pdp12,
+  };
+
+  vkGetPhysicalDeviceProperties2(device->vk.pd, &pdp2);
+
+  if ((pdp2.properties.vendorID == 0x8086) && strcmp(pdp12.driverName, "Mesa 21."))
+    {
+      device->vk.workaround.mesa_21_anv = true;
+    }
+}
+
+//
 //
 //
 static struct spinel_device *
@@ -66,6 +90,12 @@ spinel_device_create(struct spinel_vk_context_create_info const * create_info)
   device->vk.d  = create_info->vk.d;
   device->vk.pc = create_info->vk.pc;
   device->vk.ac = create_info->vk.ac;
+
+  //////////////////////////////////////////////////////////////////////////////
+  //
+  // Initialize all workarounds
+  //
+  spinel_deps_workaround_mesa_21_anv(device);
 
   //
   // Create the queue pools

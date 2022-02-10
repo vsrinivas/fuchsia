@@ -30,10 +30,19 @@ struct spinel_device_vk
   VkDevice                      d;
   VkPipelineCache               pc;
   VkAllocationCallbacks const * ac;
+
   struct
   {
     struct spinel_queue_pool compute;
   } q;
+
+  //
+  // Workarounds
+  //
+  struct
+  {
+    bool mesa_21_anv;
+  } workaround;
 };
 
 //

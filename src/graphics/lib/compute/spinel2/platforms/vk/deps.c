@@ -745,6 +745,34 @@ spinel_deps_delayed_acquire(struct spinel_deps *                            deps
   spinel_deps_action_invoke(deps->delayed.submissions + delayed);
 
   //
+  // There is a bug with Mesa 21.x when ANV_QUEUE_THREAD_DISABLE is defined.
+  //
+  // See: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=92433
+  //
+  // FIXME(allanmac): This workaround exacts some performance. Remove it as soon
+  // as it's feasible.
+  //
+  if (vk->workaround.mesa_21_anv)
+    {
+      VkSemaphoreWaitInfo const swi = {
+        .sType          = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+        .pNext          = NULL,
+        .flags          = 0,  // flag doesn't matter when there is 1 semaphore
+        .semaphoreCount = 1,
+        .pSemaphores    = deps->delayed.semaphores + delayed,
+        .pValues        = deps->delayed.values + delayed,
+      };
+
+      //
+      // Wait for semaphore to complete...
+      //
+      if (vkWaitSemaphores(vk->d, &swi, UINT64_MAX) != VK_SUCCESS)
+        {
+          exit(EXIT_FAILURE);
+        }
+    }
+
+  //
   // Save the new submission action
   //
   deps->delayed.submissions[delayed] = info->submission;
