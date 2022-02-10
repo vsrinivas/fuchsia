@@ -479,6 +479,160 @@ const EXAMPLE_IPV4_ADDR: fnet::IpAddress = fidl_ip!("93.184.216.34");
 const EXAMPLE_IPV6_ADDR: fnet::IpAddress = fidl_ip!("2606:2800:220:1:248:1893:25c8:1946");
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn successfully_retrieves_ipv6_record_despite_ipv4_timeout() {
+    use trust_dns_proto::{
+        op::{Message, ResponseCode},
+        rr::RecordType,
+    };
+
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
+            "realm",
+            &[KnownServiceProvider::DnsResolver, KnownServiceProvider::FakeClock],
+        )
+        .expect("failed to create realm");
+
+    let fake_clock: fidl_fuchsia_testing::FakeClockControlProxy = realm
+        .connect_to_protocol::<fidl_fuchsia_testing::FakeClockControlMarker>()
+        .expect("failed to connect to FakeClockControl");
+    fake_clock.pause().await.expect("failed to pause fake clock");
+
+    let dns_server: std::net::SocketAddr = std_socket_addr!("127.0.0.1:1234");
+    let (socket, fuchsia_async::net::TcpListener { .. }) =
+        setup_dns_server(&realm, dns_server).await;
+
+    let name_lookup =
+        realm.connect_to_protocol::<net_name::LookupMarker>().expect("failed to connect to Lookup");
+
+    let lookup_fut = async {
+        let ips = name_lookup
+            .lookup_ip(
+                EXAMPLE_HOSTNAME,
+                net_name::LookupIpOptions {
+                    ipv4_lookup: Some(true),
+                    ipv6_lookup: Some(true),
+                    sort_addresses: Some(true),
+                    ..net_name::LookupIpOptions::EMPTY
+                },
+            )
+            .await
+            .expect("FIDL error")
+            .expect("lookup_ip error");
+        let want = net_name::LookupResult {
+            addresses: Some(vec![EXAMPLE_IPV6_ADDR]),
+            ..net_name::LookupResult::EMPTY
+        };
+        assert_eq!(ips, want);
+    }
+    .fuse();
+
+    let response_fut = async {
+        use trust_dns_proto::op::{MessageType, OpCode};
+
+        match async_utils::fold::fold_while(
+            {
+                let socket = &socket;
+                let buf = [0; MAX_DNS_UDP_MESSAGE_LEN];
+                futures::stream::unfold((socket, buf), |(socket, mut buf)| async move {
+                    let (read, src_addr) =
+                        socket.recv_from(&mut buf).await.expect("receive DNS query");
+                    let query = Message::from_vec(&buf[..read]).expect("deserialize DNS query");
+                    Some(((query, src_addr), (socket, buf)))
+                })
+            },
+            (false, false),
+            |(seen_v4, seen_v6), (query, src_addr)| {
+                let socket = &socket;
+                async move {
+                    let id = query.id();
+                    let queries = query.queries().to_vec();
+                    let query = match query.queries() {
+                        [single_query] => single_query,
+                        slice => panic!(
+                            "Unexpectedly received message with {}: {:?}",
+                            if slice.len() == 0 { "no queries" } else { "more than one query" },
+                            query
+                        ),
+                    };
+                    let requested_record_type = query.query_type();
+                    let state @ (seen_v4, seen_v6) = match &requested_record_type {
+                        RecordType::A => (true, seen_v6),
+                        RecordType::AAAA => (seen_v4, true),
+                        _ => (seen_v4, seen_v6),
+                    };
+                    let fold_step = if seen_v4 && seen_v6 {
+                        async_utils::fold::FoldWhile::Done(())
+                    } else {
+                        async_utils::fold::FoldWhile::Continue(state)
+                    };
+                    let answer_addr = match requested_record_type {
+                        RecordType::A => return fold_step,
+                        RecordType::AAAA => EXAMPLE_IPV6_ADDR,
+                        _ => {
+                            panic!(
+                                "DNS resolver should only request A or AAAA records, got {}",
+                                query
+                            )
+                        }
+                    };
+                    let answer = answer_for_hostname(EXAMPLE_HOSTNAME, answer_addr);
+                    let mut response = Message::new();
+                    let _: &mut Message = response
+                        .set_response_code(ResponseCode::NoError)
+                        .add_answer(answer)
+                        .set_message_type(MessageType::Response)
+                        .set_op_code(OpCode::Update)
+                        .set_id(id)
+                        .add_queries(queries);
+                    let response = response.to_vec().expect("serialize DNS response");
+                    let written =
+                        socket.send_to(&response, src_addr).await.expect("send DNS response");
+                    assert_eq!(written, response.len());
+                    fold_step
+                }
+            },
+        )
+        .await
+        {
+            async_utils::fold::FoldResult::ShortCircuited(()) => {}
+            async_utils::fold::FoldResult::StreamEnded((seen_v4, seen_v6)) => panic!(
+                "Stream unexpectedly ended before seeing requests for both v4 and v6 records. \
+                    seen_v4: {}, seen_v6: {}",
+                seen_v4, seen_v6
+            ),
+        }
+    }
+    .fuse();
+
+    futures::pin_mut!(lookup_fut, response_fut);
+
+    let () = futures::select! {
+        () = lookup_fut => panic!("lookup_fut not expected to have completed"),
+        () = response_fut => (),
+    };
+
+    futures::stream::once(futures::future::ready(()))
+        .chain(fuchsia_async::Interval::new(
+            // Wait an arbitrary short duration to avoid busy-looping.
+            zx::Duration::from_millis(10),
+        ))
+        .take_until(lookup_fut)
+        .for_each(|()| async {
+            let () = fake_clock
+                .advance(&mut fidl_fuchsia_testing::Increment::Determined(
+                    // Advance the fake clock by a larger amount than the real time we are waiting
+                    // in order to speed up the test run-time.
+                    zx::Duration::from_seconds(1).into_nanos(),
+                ))
+                .await
+                .expect("fake clock FIDL error")
+                .expect("failed to increment fake clock");
+        })
+        .await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn fallback_on_error_response_code() {
     use itertools::Itertools as _;
     use trust_dns_proto::{
