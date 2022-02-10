@@ -117,12 +117,8 @@ uint32_t VmObject::num_mappings() const {
 bool VmObject::IsMappedByUser() const {
   canary_.Assert();
   Guard<Mutex> guard{&lock_};
-  for (const auto& m : mapping_list_) {
-    if (m.aspace()->is_user()) {
-      return true;
-    }
-  }
-  return false;
+  return ktl::any_of(mapping_list_.cbegin(), mapping_list_.cend(),
+                     [](const VmMapping& m) -> bool { return m.aspace()->is_user(); });
 }
 
 uint32_t VmObject::share_count() const {
@@ -220,9 +216,9 @@ void VmObject::SetChildObserver(VmObjectChildObserver* child_observer) {
   child_observer_ = child_observer;
 }
 
-bool VmObject::AddChildLocked(VmObject* o) {
+bool VmObject::AddChildLocked(VmObject* child) {
   canary_.Assert();
-  children_list_.push_front(o);
+  children_list_.push_front(child);
   children_list_len_++;
 
   return OnChildAddedLocked();

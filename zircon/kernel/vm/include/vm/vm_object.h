@@ -597,7 +597,7 @@ class VmObject : public VmHierarchyBase,
 
   // Adds a child to this vmo and returns true if the dispatcher which matches
   // user_id should be notified about the first child being added.
-  bool AddChildLocked(VmObject* r) TA_REQ(lock_);
+  bool AddChildLocked(VmObject* child) TA_REQ(lock_);
 
   // Notifies the child observer that there is one child.
   void NotifyOneChild() TA_EXCL(lock_);
@@ -605,7 +605,7 @@ class VmObject : public VmHierarchyBase,
   // Removes the child |child| from this vmo.
   //
   // Subclasses which override this function should be sure that ::DropChildLocked
-  // and ::OnUserChildRemoved are called where appropraite.
+  // and ::OnUserChildRemoved are called where appropriate.
   //
   // |guard| must be this vmo's lock.
   virtual void RemoveChild(VmObject* child, Guard<Mutex>&& guard) TA_REQ(lock_);
@@ -661,7 +661,7 @@ class VmObject : public VmHierarchyBase,
   virtual uint32_t ScanForZeroPages(bool reclaim) { return 0; }
 
  protected:
-  explicit VmObject(fbl::RefPtr<VmHierarchyState> root_lock);
+  explicit VmObject(fbl::RefPtr<VmHierarchyState> hierarchy_state_ptr);
 
   // private destructor, only called from refptr
   virtual ~VmObject();
