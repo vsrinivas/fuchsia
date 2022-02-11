@@ -24,7 +24,6 @@ group("tests") {
     "pkg_test/tests",
     "scrutiny:tests",
     "tee_manager:tests",
-    "verifiers:tests",
     "zxcrypt:tests",
   ]
 }

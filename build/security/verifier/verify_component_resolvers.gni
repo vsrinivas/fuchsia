@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
 import("//build/dev.gni")
+import("//src/developer/ffx/build/ffx_action.gni")
 
 # Validates that privileged component resolvers only resolve allowed static components,
 # determined by the provided allowlist.
@@ -17,7 +17,7 @@ import("//build/dev.gni")
 #       which components are allowed to be resolved by them.
 #
 template("verify_component_resolvers") {
-  compiled_action("${target_name}") {
+  ffx_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -26,10 +26,7 @@ template("verify_component_resolvers") {
                              "data_deps",
                              "visibility",
                            ])
-
     depfile = "$target_out_dir/$target_name.d"
-    tool = "//src/security/verifiers/verify_component_resolvers:bin"
-    tool_output_name = "scrutiny_verify_component_resolvers"
     stamp_file = "$target_gen_dir/$target_name.verified"
     published_packages = "//build/images:publish"
 
@@ -37,12 +34,15 @@ template("verify_component_resolvers") {
     outputs = [ stamp_file ]
 
     args = [
+      "scrutiny",
+      "verify",
+      "component-resolvers",
+      "--allowlist",
+      rebase_path(invoker.allowlist, root_build_dir),
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
       "--depfile",
       rebase_path(depfile, root_build_dir),
-      "--allowlist",
-      rebase_path(invoker.allowlist, root_build_dir),
     ]
 
     if (!defined(invoker.deps)) {

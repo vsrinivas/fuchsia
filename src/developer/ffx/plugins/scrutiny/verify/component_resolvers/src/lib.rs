@@ -1,13 +1,15 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Result},
+    anyhow::{anyhow, bail, Context, Error, Result},
+    ffx_core::ffx_plugin,
+    ffx_scrutiny_component_resolvers_args::ScrutinyComponentResolversCommand,
     scrutiny_config::Config,
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     serde::{Deserialize, Serialize},
-    std::{collections::HashSet, env, path::PathBuf},
+    std::{collections::HashSet, env, fs, io::Write, path::PathBuf},
 };
 
 type NodePath = String;
@@ -157,6 +159,96 @@ pub fn verify_component_resolvers(
     } else {
         Ok(Err(AllowList(violations)))
     }
+}
+
+pub struct VerifyComponentResolvers {
+    stamp_path: Option<String>,
+    depfile_path: Option<String>,
+    allowlist_path: String,
+}
+
+impl VerifyComponentResolvers {
+    /// Creates a new VerifyComponentResolvers instance with:
+    /// * a `stamp_path` that is written to if the verification succeeds,
+    /// * a `depfile_path` that lists all the files this executable touches, and
+    /// * a `allowlist_path` which lists the scheme/moniker/protocol tuples to check and the
+    /// allowed matching components.
+    fn new<S: Into<String>>(
+        stamp_path: Option<S>,
+        depfile_path: Option<S>,
+        allowlist_path: S,
+    ) -> Self {
+        Self {
+            stamp_path: stamp_path.map(|stamp_path| stamp_path.into()),
+            depfile_path: depfile_path.map(|depfile_path| depfile_path.into()),
+            allowlist_path: allowlist_path.into(),
+        }
+    }
+
+    /// Launches Scrutiny and performs the component resolver analysis. The
+    /// results are then filtered based on the provided allowlist and any
+    /// errors that are not allowlisted cause the verification to fail listing
+    /// all non-allowlisted errors.
+    fn verify(&self) -> Result<()> {
+        let scrutiny = ScrutinyQueryComponentResolvers::from_env()?;
+
+        let allowlist: AllowList = serde_json5::from_str(
+            &fs::read_to_string(&self.allowlist_path).context("Failed to read allowlist")?,
+        )
+        .context("Failed to deserialize allowlist")?;
+
+        let deps = match verify_component_resolvers(scrutiny, allowlist)? {
+            Ok(deps) => deps,
+            Err(violations) => {
+                bail!(
+                    "
+Static Component Resolver Capability Analysis Error:
+The component resolver verifier found some components configured to be resolved using
+a privileged component resolver.
+
+If it is intended for these components to be resolved using the given resolver, add an entry
+to the allowlist located at: {}
+
+Verification Errors:
+{}",
+                    self.allowlist_path,
+                    serde_json::to_string_pretty(&violations).unwrap()
+                );
+            }
+        };
+
+        // Write out the depfile and stampfile.
+        if let Some(depfile_path) = self.depfile_path.as_ref() {
+            let stamp_path = self
+                .stamp_path
+                .as_ref()
+                .ok_or(anyhow!("Cannot specify depfile without specifying stamp"))?;
+            let mut depfile =
+                fs::File::create(depfile_path).context("failed to create dep file")?;
+
+            write!(depfile, "{}: {}", stamp_path, deps.get().join(" "))
+                .context("failed to write to dep file")?;
+        }
+
+        if let Some(stamp_path) = self.stamp_path.as_ref() {
+            fs::write(stamp_path, "Verified\n").context("failed to write stamp file")?;
+        }
+
+        Ok(())
+    }
+}
+
+#[ffx_plugin()]
+pub async fn scrutiny_component_resolvers(
+    cmd: ScrutinyComponentResolversCommand,
+) -> Result<(), Error> {
+    if cmd.depfile.is_some() && cmd.stamp.is_none() {
+        bail!("Cannot specify --depfile without --stamp");
+    }
+
+    let verify_component_resolvers =
+        VerifyComponentResolvers::new(cmd.stamp, cmd.depfile, cmd.allowlist);
+    verify_component_resolvers.verify()
 }
 
 #[cfg(test)]

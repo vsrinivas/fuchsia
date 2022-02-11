@@ -10,6 +10,7 @@ ffx_plugin("ffx_scrutiny_verify") {
   with_unit_tests = true
   plugin_deps = [
     "bootfs:ffx_scrutiny_bootfs",
+    "component_resolvers:ffx_scrutiny_component_resolvers",
     "routes:ffx_scrutiny_routes",
   ]
   deps = [
