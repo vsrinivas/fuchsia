@@ -328,7 +328,12 @@ impl vfs::directory::entry_container::Directory for RootDir {
 
     async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
         Ok(NodeAttributes {
-            mode: MODE_TYPE_DIRECTORY,
+            mode: MODE_TYPE_DIRECTORY
+                | vfs::common::rights_to_posix_mode_bits(
+                    true,  // read
+                    false, // write
+                    true,  // execute
+                ),
             id: 1,
             content_size: 0,
             storage_size: 0,
@@ -494,7 +499,7 @@ mod tests {
         assert_eq!(
             Directory::get_attrs(&root_dir).await.unwrap(),
             NodeAttributes {
-                mode: MODE_TYPE_DIRECTORY,
+                mode: MODE_TYPE_DIRECTORY | 0o500,
                 id: 1,
                 content_size: 0,
                 storage_size: 0,
