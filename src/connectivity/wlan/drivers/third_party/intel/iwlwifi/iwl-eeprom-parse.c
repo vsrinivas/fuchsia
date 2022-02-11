@@ -662,7 +662,7 @@ static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
 #endif  // NEEDS_PORTING
 
 int iwl_init_sband_channels(struct iwl_nvm_data* data, struct ieee80211_supported_band* sband,
-                            int n_channels, wlan_info_band_t band) {
+                            int n_channels, wlan_band_t band) {
   struct ieee80211_channel* chan = &data->channels[0];
   int n = 0, idx = 0;
 
@@ -686,8 +686,8 @@ int iwl_init_sband_channels(struct iwl_nvm_data* data, struct ieee80211_supporte
 #define MAX_BIT_RATE_20_MHZ 72  /* Mbps */
 
 void iwl_init_ht_hw_capab(const struct iwl_cfg* cfg, struct iwl_nvm_data* data,
-                          struct ieee80211_sta_ht_cap* ht_info, wlan_info_band_t band,
-                          uint8_t tx_chains, uint8_t rx_chains) {
+                          struct ieee80211_sta_ht_cap* ht_info, wlan_band_t band, uint8_t tx_chains,
+                          uint8_t rx_chains) {
   int max_bit_rate = 0;
 
   tx_chains = hweight8(tx_chains);

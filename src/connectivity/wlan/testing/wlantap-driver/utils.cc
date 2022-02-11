@@ -128,7 +128,7 @@ uint32_t ConvertCaps(const ::std::vector<wlan_device::Capability>& caps) {
 void ConvertBandInfoToCapability(const wlan_device::BandInfo& in,
                                  wlan_softmac_band_capability_t* out) {
   memset(out, 0, sizeof(*out));
-  out->band = static_cast<uint8_t>(wlan::common::BandFromFidl(in.band_id));
+  out->band = wlan::common::FromFidl(in.band);
 
   if (in.ht_caps != nullptr) {
     out->ht_supported = true;

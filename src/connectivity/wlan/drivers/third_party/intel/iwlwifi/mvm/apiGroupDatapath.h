@@ -44,7 +44,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_APIGROUPDATAPATH_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_APIGROUPDATAPATH_H_
 
-#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 
 /* ***************************************************************************
  * 0x0F - GRP_DATAPATH_TLC_MNG_CONFIG_CMD
@@ -173,7 +173,7 @@ typedef struct _TLC_MNG_CONFIG_PARAMS_CMD_API_S_VER_2 {
   // unused for HE.
   uint8_t reserved1[1];
 
-  wlan_info_band_t band;
+  wlan_band_t band;
 } TLC_MNG_CONFIG_PARAMS_CMD_API_S_VER_2;
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_APIGROUPDATAPATH_H_

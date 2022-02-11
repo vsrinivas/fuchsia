@@ -13,7 +13,7 @@ using zx;
 
 type WlanSoftmacBandCapability = struct {
     /// The supported band.
-    band fuchsia.hardware.wlan.phyinfo.WlanInfoBand;
+    band fuchsia.wlan.common.WlanBand;
 
     /// HT PHY capabilities, if supported.
     ht_supported bool;

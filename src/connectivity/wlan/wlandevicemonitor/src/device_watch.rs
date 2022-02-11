@@ -222,7 +222,7 @@ mod tests {
 
     fn create_2_4_ghz_band_info() -> fidl_wlan_dev::BandInfo {
         fidl_wlan_dev::BandInfo {
-            band_id: fidl_wlan_common::Band::WlanBand2Ghz,
+            band: fidl_wlan_common::WlanBand::TwoGhz,
             ht_caps: Some(Box::new(fidl_internal::HtCapabilities {
                 bytes: fake_ht_capabilities().as_bytes().try_into().unwrap(),
             })),

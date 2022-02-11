@@ -147,7 +147,7 @@ static const struct ath10k_channel ath10k_5ghz_channels[] = {
 // Band information that is consistent across all supported ath10k chipsets
 static const struct ath10k_band ath10k_supported_bands[] = {
     {
-        .band_id = WLAN_INFO_BAND_TWO_GHZ,
+        .band_id = WLAN_BAND_TWO_GHZ,
         .ht_supported = true,
         .vht_supported = false,
         // TODO(28891):
@@ -161,7 +161,7 @@ static const struct ath10k_band ath10k_supported_bands[] = {
     },
 
     {
-        .band_id = WLAN_INFO_BAND_FIVE_GHZ,
+        .band_id = WLAN_BAND_FIVE_GHZ,
         .ht_supported = true,
         .vht_supported = true,
         // TODO(28891):
@@ -181,8 +181,8 @@ static const struct ath10k_band ath10k_supported_bands[] = {
 
 // Gets the band ID from |channel| number.
 //
-// Returns: WLAN_INFO_BAND_COUNT if |channel| is not found in the band info.
-static wlan_info_band_t chan_to_band(uint8_t channel) {
+// Returns: WLAN_INFO_MAX_BANDS if |channel| is not found in the band info.
+static wlan_band_t chan_to_band(uint8_t channel) {
   for (size_t band_idx = 0; band_idx < countof(ath10k_supported_bands); band_idx++) {
     const struct ath10k_band* band = &ath10k_supported_bands[band_idx];
 
@@ -194,7 +194,7 @@ static wlan_info_band_t chan_to_band(uint8_t channel) {
   }
 
   ZX_DEBUG_ASSERT(false);  // This should not happen since MLME should honor what ath10k reports.
-  return WLAN_INFO_BAND_COUNT;  // Not found
+  return WLAN_INFO_MAX_BANDS;  // Not found
 }
 
 static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role);
@@ -1423,13 +1423,13 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
                                                       uint32_t* ptr_center_freq,
                                                       enum wmi_phy_mode* ptr_phymode) {
   uint8_t primary_chan = chandef->primary;
-  wlan_info_band_t band = chan_to_band(primary_chan);
+  wlan_band_t band = chan_to_band(primary_chan);
   channel_bandwidth_t cbw = chandef->cbw;
   uint16_t new_center_freq = 0;
   enum wmi_phy_mode phymode = MODE_UNKNOWN;
 
   switch (band) {
-    case WLAN_INFO_BAND_TWO_GHZ:
+    case WLAN_BAND_TWO_GHZ:
       switch (cbw) {
         case CHANNEL_BANDWIDTH_CBW20:
           new_center_freq = center_freq->cbw20;
@@ -1449,7 +1449,7 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
       }
       break;
 
-    case WLAN_INFO_BAND_FIVE_GHZ:
+    case WLAN_BAND_FIVE_GHZ:
       switch (cbw) {
         case CHANNEL_BANDWIDTH_CBW20:
           new_center_freq = center_freq->cbw20;
@@ -2589,8 +2589,8 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar, const wlan_assoc_ctx_t* a
 
   arg->peer_flags |= ar->wmi.peer_flags->vht;
 
-  wlan_info_band_t band = chan_to_band(assoc->channel.primary);
-  if (band == WLAN_INFO_BAND_TWO_GHZ) {
+  wlan_band_t band = chan_to_band(assoc->channel.primary);
+  if (band == WLAN_BAND_TWO_GHZ) {
     arg->peer_flags |= ar->wmi.peer_flags->vht_2g;
   }
 
@@ -2697,11 +2697,11 @@ static enum wmi_phy_mode ath10k_mac_get_phymode_vht(channel_bandwidth_t cbw) {
 
 static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(const wlan_assoc_ctx_t* assoc) {
   enum wmi_phy_mode phymode = MODE_UNKNOWN;
-  wlan_info_band_t band = chan_to_band(assoc->channel.primary);
+  wlan_band_t band = chan_to_band(assoc->channel.primary);
   channel_bandwidth_t cbw = assoc->channel.cbw;
 
   switch (band) {
-    case WLAN_INFO_BAND_TWO_GHZ:
+    case WLAN_BAND_TWO_GHZ:
       if (assoc->has_vht_cap) {
         if (cbw == CHANNEL_BANDWIDTH_CBW40 || cbw == CHANNEL_BANDWIDTH_CBW40BELOW) {
           phymode = MODE_11AC_VHT40;
@@ -2719,7 +2719,7 @@ static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(const wlan_assoc_ctx_t* ass
       }
       break;
 
-    case WLAN_INFO_BAND_FIVE_GHZ:
+    case WLAN_BAND_FIVE_GHZ:
       /*
        * Check VHT first.
        */

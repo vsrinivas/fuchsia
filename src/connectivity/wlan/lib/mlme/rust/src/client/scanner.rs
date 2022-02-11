@@ -135,7 +135,7 @@ enum OngoingScan {
 }
 
 struct ChannelList {
-    band: banjo_wlan_phyinfo::WlanInfoBand,
+    band: banjo_common::WlanBand,
     channels: Vec<u8>,
 }
 
@@ -543,7 +543,7 @@ impl<'a> BoundScanner<'a> {
 
 fn band_cap_for_band(
     wlan_softmac_info: &banjo_wlan_softmac::WlanSoftmacInfo,
-    band: banjo_wlan_phyinfo::WlanInfoBand,
+    band: banjo_common::WlanBand,
 ) -> Option<&banjo_wlan_softmac::WlanSoftmacBandCapability> {
     wlan_softmac_info.band_cap_list[..wlan_softmac_info.band_cap_count as usize]
         .iter()
@@ -554,7 +554,7 @@ fn band_cap_for_band(
 // TODO(fxbug.dev/91036): Zero should not mark a null rate.
 fn supported_rates_for_band(
     wlan_softmac_info: &banjo_wlan_softmac::WlanSoftmacInfo,
-    band: banjo_wlan_phyinfo::WlanInfoBand,
+    band: banjo_common::WlanBand,
 ) -> Result<Vec<u8>, Error> {
     let band_cap = band_cap_for_band(&wlan_softmac_info, band)
         .ok_or(format_err!("no band found for band {:?}", band))?;
@@ -562,11 +562,11 @@ fn supported_rates_for_band(
 }
 
 // TODO(fxbug.dev/91038): This is not correct. Channel numbers do not imply band.
-fn band_from_channel_number(channel_number: u8) -> banjo_wlan_phyinfo::WlanInfoBand {
+fn band_from_channel_number(channel_number: u8) -> banjo_common::WlanBand {
     if channel_number > 14 {
-        banjo_wlan_phyinfo::WlanInfoBand::FIVE_GHZ
+        banjo_common::WlanBand::FIVE_GHZ
     } else {
-        banjo_wlan_phyinfo::WlanInfoBand::TWO_GHZ
+        banjo_common::WlanBand::TWO_GHZ
     }
 }
 
@@ -585,8 +585,8 @@ fn active_scan_args_series(
     // and so partitioning channels must be done internally.
     let channel_lists: [ChannelList; 2] = channel_list.into_iter().fold(
         [
-            ChannelList { band: banjo_wlan_phyinfo::WlanInfoBand::FIVE_GHZ, channels: vec![] },
-            ChannelList { band: banjo_wlan_phyinfo::WlanInfoBand::TWO_GHZ, channels: vec![] },
+            ChannelList { band: banjo_common::WlanBand::FIVE_GHZ, channels: vec![] },
+            ChannelList { band: banjo_common::WlanBand::TWO_GHZ, channels: vec![] },
         ],
         |mut channel_lists, c| {
             for cl in &mut channel_lists {

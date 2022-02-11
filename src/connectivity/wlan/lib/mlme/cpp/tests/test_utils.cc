@@ -59,8 +59,8 @@ wlan_assoc_ctx_t FakeDdkAssocCtx() {
   };
 }
 
-wlan_softmac_band_capability_t FakeBandCapability(wlan_info_band_t band) {
-  ZX_DEBUG_ASSERT(band == WLAN_INFO_BAND_TWO_GHZ || band == WLAN_INFO_BAND_FIVE_GHZ);
+wlan_softmac_band_capability_t FakeBandCapability(wlan_band_t band) {
+  ZX_DEBUG_ASSERT(band == WLAN_BAND_TWO_GHZ || band == WLAN_BAND_FIVE_GHZ);
 
   // Construct a base
   wlan_softmac_band_capability_t bc = {
@@ -103,7 +103,7 @@ wlan_softmac_band_capability_t FakeBandCapability(wlan_info_band_t band) {
           },
   };
 
-  if (band == WLAN_INFO_BAND_FIVE_GHZ) {
+  if (band == WLAN_BAND_FIVE_GHZ) {
     bc.supported_channels.base_freq = 5000;
     uint8_t fake[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS] = {36, 40, 44, 48, 149, 153, 157, 161};
     memcpy(bc.supported_channels.channels, fake,

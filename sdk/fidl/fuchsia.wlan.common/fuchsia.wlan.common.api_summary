@@ -1,7 +1,3 @@
-enum/member fuchsia.wlan.common/Band.WLAN_BAND_2GHZ 0
-enum/member fuchsia.wlan.common/Band.WLAN_BAND_5GHZ 1
-enum/member fuchsia.wlan.common/Band.WLAN_BAND_COUNT 2
-strict enum fuchsia.wlan.common/Band uint8
 enum/member fuchsia.wlan.common/ChannelBandwidth.CBW160 4
 enum/member fuchsia.wlan.common/ChannelBandwidth.CBW20 0
 enum/member fuchsia.wlan.common/ChannelBandwidth.CBW40 1
@@ -65,6 +61,9 @@ struct/member fuchsia.wlan.common/SpectrumManagementSupport.dfs fuchsia.wlan.com
 struct fuchsia.wlan.common/SpectrumManagementSupport
 const fuchsia.wlan.common/WLAN_TX_STATUS_MAX_ENTRY uint32 8
 const fuchsia.wlan.common/WLAN_TX_VECTOR_IDX_INVALID uint16 0
+enum/member fuchsia.wlan.common/WlanBand.FIVE_GHZ 1
+enum/member fuchsia.wlan.common/WlanBand.TWO_GHZ 0
+flexible enum fuchsia.wlan.common/WlanBand uint8
 struct/member fuchsia.wlan.common/WlanChannel.cbw fuchsia.wlan.common/ChannelBandwidth
 struct/member fuchsia.wlan.common/WlanChannel.primary uint8
 struct/member fuchsia.wlan.common/WlanChannel.secondary80 uint8

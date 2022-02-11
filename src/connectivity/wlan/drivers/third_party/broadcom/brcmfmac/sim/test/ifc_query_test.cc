@@ -46,7 +46,7 @@ TEST_F(SimTest, ClientIfcQuery) {
     wlan_fullmac_band_capability* band_cap = &ifc_query_result.band_cap_list[band];
 
     // Band id should be in valid range
-    EXPECT_LE(band_cap->band_id, WLAN_INFO_BAND_COUNT);
+    EXPECT_LE(band_cap->band, WLAN_INFO_MAX_BANDS);
 
     // Number of channels shouldn't exceed the maximum allowable
     ASSERT_LE(band_cap->num_channels, (size_t)WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);

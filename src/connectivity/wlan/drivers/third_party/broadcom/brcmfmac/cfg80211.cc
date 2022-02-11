@@ -3860,13 +3860,13 @@ static void brcmf_get_bwcap(struct brcmf_if* ifp, uint32_t bw_cap[]) {
   uint32_t val = WLC_BAND_2G;
   zx_status_t status = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val, nullptr);
   if (status == ZX_OK) {
-    bw_cap[WLAN_INFO_BAND_TWO_GHZ] = val;
+    bw_cap[WLAN_BAND_TWO_GHZ] = val;
 
     // 5 GHz
     val = WLC_BAND_5G;
     status = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val, nullptr);
     if (status == ZX_OK) {
-      bw_cap[WLAN_INFO_BAND_FIVE_GHZ] = val;
+      bw_cap[WLAN_BAND_FIVE_GHZ] = val;
       return;
     }
     BRCMF_WARN(
@@ -3886,14 +3886,14 @@ static void brcmf_get_bwcap(struct brcmf_if* ifp, uint32_t bw_cap[]) {
 
   switch (mimo_bwcap) {
     case WLC_N_BW_40ALL:
-      bw_cap[WLAN_INFO_BAND_TWO_GHZ] |= WLC_BW_40MHZ_BIT;
+      bw_cap[WLAN_BAND_TWO_GHZ] |= WLC_BW_40MHZ_BIT;
       __FALLTHROUGH;
     case WLC_N_BW_20IN2G_40IN5G:
-      bw_cap[WLAN_INFO_BAND_FIVE_GHZ] |= WLC_BW_40MHZ_BIT;
+      bw_cap[WLAN_BAND_FIVE_GHZ] |= WLC_BW_40MHZ_BIT;
       __FALLTHROUGH;
     case WLC_N_BW_20ALL:
-      bw_cap[WLAN_INFO_BAND_TWO_GHZ] |= WLC_BW_20MHZ_BIT;
-      bw_cap[WLAN_INFO_BAND_FIVE_GHZ] |= WLC_BW_20MHZ_BIT;
+      bw_cap[WLAN_BAND_TWO_GHZ] |= WLC_BW_20MHZ_BIT;
+      bw_cap[WLAN_BAND_FIVE_GHZ] |= WLC_BW_20MHZ_BIT;
       break;
     default:
       BRCMF_ERR("invalid mimo_bw_cap value");
@@ -3909,40 +3909,40 @@ static uint16_t brcmf_get_mcs_map(uint32_t nchain, uint16_t supp) {
   return mcs_map;
 }
 
-static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capability_t* band,
+static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capability* band_cap,
                                 uint32_t bw_cap[2], uint32_t ldpc_cap, uint32_t nchain,
                                 uint32_t max_ampdu_len_exp) {
   zx_status_t status;
 
-  band->ht_supported = true;
+  band_cap->ht_supported = true;
 
   // LDPC Support
   if (ldpc_cap) {
-    band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_LDPC;
+    band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_LDPC;
   }
 
   // Bandwidth-related flags
-  if (bw_cap[band->band_id] & WLC_BW_40MHZ_BIT) {
-    band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_CHAN_WIDTH;
-    band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_SGI_40;
+  if (bw_cap[band_cap->band] & WLC_BW_40MHZ_BIT) {
+    band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_CHAN_WIDTH;
+    band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_SGI_40;
   }
-  band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_SGI_20;
-  band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_DSSS_CCK_40;
+  band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_SGI_20;
+  band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_DSSS_CCK_40;
 
   // SM Power Save
   // At present SMPS appears to never be enabled in firmware (see fxbug.dev/29648)
-  band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_SMPS_DISABLED;
+  band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_SMPS_DISABLED;
 
   // Rx STBC
   uint32_t rx_stbc = 0;
   (void)brcmf_fil_iovar_int_get(ifp, "stbc_rx", &rx_stbc, nullptr);
-  band->ht_caps.ht_capability_info |= ((rx_stbc & 0x3) << IEEE80211_HT_CAPS_RX_STBC_SHIFT);
+  band_cap->ht_caps.ht_capability_info |= ((rx_stbc & 0x3) << IEEE80211_HT_CAPS_RX_STBC_SHIFT);
 
   // Tx STBC
   // According to Broadcom, Tx STBC capability should be induced from the value of the
   // "stbc_rx" iovar and not "stbc_tx".
   if (rx_stbc != 0) {
-    band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_TX_STBC;
+    band_cap->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_TX_STBC;
   }
 
   // AMPDU Parameters
@@ -3952,57 +3952,57 @@ static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capabili
     BRCMF_ERR("Failed to retrieve value for AMPDU Rx density from firmware, using 16 us");
     ampdu_rx_density = 7;
   }
-  band->ht_caps.ampdu_params |= ((ampdu_rx_density & 0x7) << IEEE80211_AMPDU_DENSITY_SHIFT);
+  band_cap->ht_caps.ampdu_params |= ((ampdu_rx_density & 0x7) << IEEE80211_AMPDU_DENSITY_SHIFT);
   if (max_ampdu_len_exp > 3) {
     // Cap A-MPDU length at 64K
     max_ampdu_len_exp = 3;
   }
-  band->ht_caps.ampdu_params |= (max_ampdu_len_exp << IEEE80211_AMPDU_RX_LEN_SHIFT);
+  band_cap->ht_caps.ampdu_params |= (max_ampdu_len_exp << IEEE80211_AMPDU_RX_LEN_SHIFT);
 
   // Supported MCS Set
-  size_t mcs_set_size = sizeof(band->ht_caps.supported_mcs_set.bytes);
+  size_t mcs_set_size = sizeof(band_cap->ht_caps.supported_mcs_set.bytes);
   if (nchain > mcs_set_size) {
     BRCMF_ERR("Supported MCS set too small for nchain (%u), truncating", nchain);
     nchain = mcs_set_size;
   }
-  memset(&band->ht_caps.supported_mcs_set.bytes[0], 0xff, nchain);
+  memset(&band_cap->ht_caps.supported_mcs_set.bytes[0], 0xff, nchain);
 }
 
-static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capability_t* band,
+static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capability* band_cap,
                                  uint32_t bw_cap[2], uint32_t nchain, uint32_t ldpc_cap,
                                  uint32_t max_ampdu_len_exp) {
   uint16_t mcs_map;
 
-  band->vht_supported = true;
+  band_cap->vht_supported = true;
 
   // Set Max MPDU length to 11454
   // TODO (fxbug.dev/29107): Value hardcoded from firmware behavior of the BCM4356 and BCM4359
   // chips.
-  band->vht_caps.vht_capability_info |= (2 << IEEE80211_VHT_CAPS_MAX_MPDU_LEN_SHIFT);
+  band_cap->vht_caps.vht_capability_info |= (2 << IEEE80211_VHT_CAPS_MAX_MPDU_LEN_SHIFT);
 
   /* 80MHz is mandatory */
-  band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SGI_80;
-  if (bw_cap[band->band_id] & WLC_BW_160MHZ_BIT) {
-    band->vht_caps.vht_capability_info |= (1 << IEEE80211_VHT_CAPS_SUPP_CHAN_WIDTH_SHIFT);
-    band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SGI_160;
+  band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SGI_80;
+  if (bw_cap[band_cap->band] & WLC_BW_160MHZ_BIT) {
+    band_cap->vht_caps.vht_capability_info |= (1 << IEEE80211_VHT_CAPS_SUPP_CHAN_WIDTH_SHIFT);
+    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SGI_160;
   }
 
   if (ldpc_cap) {
-    band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_RX_LDPC;
+    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_RX_LDPC;
   }
 
   // Tx STBC
   // TODO (fxbug.dev/29107): Value is hardcoded for now
   if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_IS_4359)) {
-    band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_TX_STBC;
+    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_TX_STBC;
   }
 
   /* all support 256-QAM */
   mcs_map = brcmf_get_mcs_map(nchain, IEEE80211_VHT_MCS_0_9);
   /* Rx MCS map (B0:15) */
-  band->vht_caps.supported_vht_mcs_and_nss_set = (uint64_t)mcs_map;
+  band_cap->vht_caps.supported_vht_mcs_and_nss_set = (uint64_t)mcs_map;
   /* Tx MCS map (B0:15) */
-  band->vht_caps.supported_vht_mcs_and_nss_set |= ((uint64_t)mcs_map << 32);
+  band_cap->vht_caps.supported_vht_mcs_and_nss_set |= ((uint64_t)mcs_map << 32);
 
   /* Beamforming support information */
   uint32_t txbf_bfe_cap = 0;
@@ -4022,16 +4022,16 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capabil
   }
 
   if (txbf_bfe_cap & BRCMF_TXBF_SU_BFE_CAP) {
-    band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SU_BEAMFORMEE;
+    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SU_BEAMFORMEE;
   }
   if (txbf_bfe_cap & BRCMF_TXBF_MU_BFE_CAP) {
-    band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_MU_BEAMFORMEE;
+    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_MU_BEAMFORMEE;
   }
   if (txbf_bfr_cap & BRCMF_TXBF_SU_BFR_CAP) {
-    band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SU_BEAMFORMER;
+    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SU_BEAMFORMER;
   }
   if (txbf_bfr_cap & BRCMF_TXBF_MU_BFR_CAP) {
-    band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_MU_BEAMFORMER;
+    band_cap->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_MU_BEAMFORMER;
   }
 
   uint32_t txstreams = 0;
@@ -4043,15 +4043,15 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capabil
   }
 
   if ((txbf_bfe_cap || txbf_bfr_cap) && (txstreams > 1)) {
-    band->vht_caps.vht_capability_info |= (2 << IEEE80211_VHT_CAPS_BEAMFORMEE_STS_SHIFT);
-    band->vht_caps.vht_capability_info |=
+    band_cap->vht_caps.vht_capability_info |= (2 << IEEE80211_VHT_CAPS_BEAMFORMEE_STS_SHIFT);
+    band_cap->vht_caps.vht_capability_info |=
         (((txstreams - 1) << IEEE80211_VHT_CAPS_SOUND_DIM_SHIFT) & IEEE80211_VHT_CAPS_SOUND_DIM);
     // Link adapt = Both
-    band->vht_caps.vht_capability_info |= (3 << IEEE80211_VHT_CAPS_VHT_LINK_ADAPT_SHIFT);
+    band_cap->vht_caps.vht_capability_info |= (3 << IEEE80211_VHT_CAPS_VHT_LINK_ADAPT_SHIFT);
   }
 
   // Maximum A-MPDU Length Exponent
-  band->vht_caps.vht_capability_info |=
+  band_cap->vht_caps.vht_capability_info |=
       ((max_ampdu_len_exp & 0x7) << IEEE80211_VHT_CAPS_MAX_AMPDU_LEN_SHIFT);
 }
 
@@ -4076,55 +4076,56 @@ static void brcmf_dump_80211_vht_caps(ieee80211_vht_capabilities_t* caps) {
                        caps->supported_vht_mcs_and_nss_set);
 }
 
-static void brcmf_dump_if_band_cap(wlan_fullmac_band_capability_t* band) {
-  char band_id_str[32];
-  switch (band->band_id) {
-    case WLAN_INFO_BAND_TWO_GHZ:
-      sprintf(band_id_str, "2GHz");
+static void brcmf_dump_if_band_cap(wlan_fullmac_band_capability_t* band_cap) {
+  char band_str[32];
+  switch (band_cap->band) {
+    case WLAN_BAND_TWO_GHZ:
+      sprintf(band_str, "2GHz");
       break;
-    case WLAN_INFO_BAND_FIVE_GHZ:
-      sprintf(band_id_str, "5GHz");
+    case WLAN_BAND_FIVE_GHZ:
+      sprintf(band_str, "5GHz");
       break;
     default:
-      sprintf(band_id_str, "unknown (%d)", band->band_id);
+      sprintf(band_str, "unknown (%d)", band_cap->band);
       break;
   }
-  BRCMF_DBG_UNFILTERED("   band_id: %s", band_id_str);
+  BRCMF_DBG_UNFILTERED("   band: %s", band_str);
 
-  if (band->basic_rate_count > fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES) {
+  if (band_cap->basic_rate_count > fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES) {
     BRCMF_DBG_UNFILTERED("Number of rates reported (%u) exceeds limit (%du), truncating",
-                         band->basic_rate_count, fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES);
-    band->basic_rate_count = fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES;
+                         band_cap->basic_rate_count,
+                         fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES);
+    band_cap->basic_rate_count = fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES;
   }
   char rates_str[fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES * 6 + 1];
   char* str = rates_str;
-  for (unsigned i = 0; i < band->basic_rate_count; i++) {
-    str += sprintf(str, "%s%d", i > 0 ? " " : "", band->basic_rate_list[i]);
+  for (unsigned i = 0; i < band_cap->basic_rate_count; i++) {
+    str += sprintf(str, "%s%d", i > 0 ? " " : "", band_cap->basic_rate_list[i]);
   }
   BRCMF_DBG_UNFILTERED("     basic_rates: %s", rates_str);
 
-  BRCMF_DBG_UNFILTERED("     base_frequency: %d", band->base_frequency);
+  BRCMF_DBG_UNFILTERED("     base_frequency: %d", band_cap->base_frequency);
 
-  if (band->num_channels > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
+  if (band_cap->num_channels > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
     BRCMF_DBG_UNFILTERED("Number of channels reported (%zu) exceeds limit (%du), truncating",
-                         band->num_channels, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
-    band->num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
+                         band_cap->num_channels, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
+    band_cap->num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
   }
   char channels_str[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * 4 + 1];
   str = channels_str;
-  for (unsigned i = 0; i < band->num_channels; i++) {
-    str += sprintf(str, "%s%d", i > 0 ? " " : "", band->channels[i]);
+  for (unsigned i = 0; i < band_cap->num_channels; i++) {
+    str += sprintf(str, "%s%d", i > 0 ? " " : "", band_cap->channels[i]);
   }
   BRCMF_DBG_UNFILTERED("     channels: %s", channels_str);
 
-  BRCMF_DBG_UNFILTERED("     ht_supported: %s", band->ht_supported ? "true" : "false");
-  if (band->ht_supported) {
-    brcmf_dump_80211_ht_caps(&band->ht_caps);
+  BRCMF_DBG_UNFILTERED("     ht_supported: %s", band_cap->ht_supported ? "true" : "false");
+  if (band_cap->ht_supported) {
+    brcmf_dump_80211_ht_caps(&band_cap->ht_caps);
   }
 
-  BRCMF_DBG_UNFILTERED("     vht_supported: %s", band->vht_supported ? "true" : "false");
-  if (band->vht_supported) {
-    brcmf_dump_80211_vht_caps(&band->vht_caps);
+  BRCMF_DBG_UNFILTERED("     vht_supported: %s", band_cap->vht_supported ? "true" : "false");
+  if (band_cap->vht_supported) {
+    brcmf_dump_80211_vht_caps(&band_cap->vht_caps);
   }
 }
 
@@ -4191,8 +4192,8 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
     return;
   }
 
-  wlan_fullmac_band_capability_t* band_2ghz = nullptr;
-  wlan_fullmac_band_capability_t* band_5ghz = nullptr;
+  wlan_fullmac_band_capability_t* band_cap_2ghz = nullptr;
+  wlan_fullmac_band_capability_t* band_cap_5ghz = nullptr;
 
   /* first entry in bandlist is number of bands */
   info->band_cap_count = bandlist[0];
@@ -4201,23 +4202,23 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
       BRCMF_ERR("insufficient space in query response for all bands, truncating");
       continue;
     }
-    wlan_fullmac_band_capability_t* band = &info->band_cap_list[i - 1];
+    wlan_fullmac_band_capability* band_cap = &info->band_cap_list[i - 1];
     if (bandlist[i] == WLC_BAND_2G) {
-      band->band_id = WLAN_INFO_BAND_TWO_GHZ;
-      band->basic_rate_count =
+      band_cap->band = WLAN_BAND_TWO_GHZ;
+      band_cap->basic_rate_count =
           std::min<size_t>(fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES, wl_g_rates_size);
-      memcpy(band->basic_rate_list, wl_g_rates,
-             band->basic_rate_count * sizeof(*band->basic_rate_list));
-      band->base_frequency = 2407;
-      band_2ghz = band;
+      memcpy(band_cap->basic_rate_list, wl_g_rates,
+             band_cap->basic_rate_count * sizeof(*band_cap->basic_rate_list));
+      band_cap->base_frequency = 2407;
+      band_cap_2ghz = band_cap;
     } else if (bandlist[i] == WLC_BAND_5G) {
-      band->band_id = WLAN_INFO_BAND_FIVE_GHZ;
-      band->basic_rate_count =
+      band_cap->band = WLAN_BAND_FIVE_GHZ;
+      band_cap->basic_rate_count =
           std::min<size_t>(fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES, wl_a_rates_size);
-      memcpy(band->basic_rate_list, wl_a_rates,
-             band->basic_rate_count * sizeof(*band->basic_rate_list));
-      band->base_frequency = 5000;
-      band_5ghz = band;
+      memcpy(band_cap->basic_rate_list, wl_a_rates,
+             band_cap->basic_rate_count * sizeof(*band_cap->basic_rate_list));
+      band_cap->base_frequency = 5000;
+      band_cap_5ghz = band_cap;
     }
   }
 
@@ -4241,16 +4242,16 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
     cfg->d11inf.decchspec(&ch);
 
     // Find the appropriate band
-    wlan_fullmac_band_capability_t* band = nullptr;
+    wlan_fullmac_band_capability_t* band_cap = nullptr;
     if (ch.band == BRCMU_CHAN_BAND_2G) {
-      band = band_2ghz;
+      band_cap = band_cap_2ghz;
     } else if (ch.band == BRCMU_CHAN_BAND_5G) {
-      band = band_5ghz;
+      band_cap = band_cap_5ghz;
     } else {
       BRCMF_ERR("unrecognized band for channel %d", ch.control_ch_num);
       continue;
     }
-    if (band == nullptr) {
+    if (band_cap == nullptr) {
       continue;
     }
 
@@ -4258,20 +4259,20 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
     // brcm specifies each channel + bw + sb configuration individually. Until we
     // offer that level of resolution, just filter out duplicates.
     uint32_t j;
-    for (j = 0; j < band->num_channels; j++) {
-      if (band->channels[j] == ch.control_ch_num) {
+    for (j = 0; j < band_cap->num_channels; j++) {
+      if (band_cap->channels[j] == ch.control_ch_num) {
         break;
       }
     }
-    if (j != band->num_channels) {
+    if (j != band_cap->num_channels) {
       continue;
     }
 
-    if (band->num_channels + 1 >= sizeof(band->channels)) {
+    if (band_cap->num_channels + 1 >= sizeof(band_cap->channels)) {
       BRCMF_ERR("insufficient space for channel %d, skipping", ch.control_ch_num);
       continue;
     }
-    band->channels[band->num_channels++] = ch.control_ch_num;
+    band_cap->channels[band_cap->num_channels++] = ch.control_ch_num;
   }
 
   // Parse HT/VHT information
@@ -4290,7 +4291,7 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
     brcmf_get_bwcap(ifp, bw_cap);
   }
   BRCMF_DBG(QUERY, "nmode=%d, vhtmode=%d, bw_cap=(%d, %d)", nmode, vhtmode,
-            bw_cap[WLAN_INFO_BAND_TWO_GHZ], bw_cap[WLAN_INFO_BAND_FIVE_GHZ]);
+            bw_cap[WLAN_BAND_TWO_GHZ], bw_cap[WLAN_BAND_FIVE_GHZ]);
 
   // LDPC support, applies to both HT and VHT
   ldpc_cap = 0;
@@ -4329,15 +4330,15 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
   BRCMF_DBG(QUERY, "nchain=%d", nchain);
 
   if (nmode) {
-    if (band_2ghz) {
-      brcmf_update_ht_cap(ifp, band_2ghz, bw_cap, ldpc_cap, nchain, max_ampdu_len_exp);
+    if (band_cap_2ghz) {
+      brcmf_update_ht_cap(ifp, band_cap_2ghz, bw_cap, ldpc_cap, nchain, max_ampdu_len_exp);
     }
-    if (band_5ghz) {
-      brcmf_update_ht_cap(ifp, band_5ghz, bw_cap, ldpc_cap, nchain, max_ampdu_len_exp);
+    if (band_cap_5ghz) {
+      brcmf_update_ht_cap(ifp, band_cap_5ghz, bw_cap, ldpc_cap, nchain, max_ampdu_len_exp);
     }
   }
-  if (vhtmode && band_5ghz) {
-    brcmf_update_vht_cap(ifp, band_5ghz, bw_cap, nchain, ldpc_cap, max_ampdu_len_exp);
+  if (vhtmode && band_cap_5ghz) {
+    brcmf_update_vht_cap(ifp, band_cap_5ghz, bw_cap, nchain, ldpc_cap, max_ampdu_len_exp);
   }
 
   if (BRCMF_IS_ON(QUERY)) {

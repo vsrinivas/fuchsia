@@ -141,11 +141,11 @@ impl StaCapabilities {
 }
 
 // TODO(fxbug.dev/91038): Using channel number to determine band is incorrect.
-fn get_band_id(primary_channel: u8) -> fidl_common::Band {
+fn get_band(primary_channel: u8) -> fidl_common::WlanBand {
     if primary_channel <= 14 {
-        fidl_common::Band::WlanBand2Ghz
+        fidl_common::WlanBand::TwoGhz
     } else {
-        fidl_common::Band::WlanBand5Ghz
+        fidl_common::WlanBand::FiveGhz
     }
 }
 
@@ -153,8 +153,8 @@ pub fn get_device_band_cap(
     device_info: &fidl_mlme::DeviceInfo,
     channel: u8,
 ) -> Option<&fidl_mlme::BandCapabilities> {
-    let target = get_band_id(channel);
-    device_info.bands.iter().find(|b| b.band_id == target)
+    let target = get_band(channel);
+    device_info.bands.iter().find(|b| b.band == target)
 }
 
 #[cfg(test)]
@@ -284,29 +284,23 @@ mod tests {
     }
 
     #[test]
-    fn band_id() {
-        assert_eq!(fidl_common::Band::WlanBand2Ghz, get_band_id(1));
-        assert_eq!(fidl_common::Band::WlanBand2Ghz, get_band_id(14));
-        assert_eq!(fidl_common::Band::WlanBand5Ghz, get_band_id(36));
-        assert_eq!(fidl_common::Band::WlanBand5Ghz, get_band_id(165));
-    }
-
-    #[test]
-    fn test_get_band_id() {
-        assert_eq!(fidl_common::Band::WlanBand2Ghz, get_band_id(14));
-        assert_eq!(fidl_common::Band::WlanBand5Ghz, get_band_id(36));
+    fn test_get_band() {
+        assert_eq!(fidl_common::WlanBand::TwoGhz, get_band(1));
+        assert_eq!(fidl_common::WlanBand::TwoGhz, get_band(14));
+        assert_eq!(fidl_common::WlanBand::FiveGhz, get_band(36));
+        assert_eq!(fidl_common::WlanBand::FiveGhz, get_band(165));
     }
 
     #[test]
     fn test_get_device_band_info() {
         assert_eq!(
-            fidl_common::Band::WlanBand5Ghz,
+            fidl_common::WlanBand::FiveGhz,
             get_device_band_cap(
                 &fake_device_info_ht(wlan_common::ie::ChanWidthSet::TWENTY_FORTY),
                 36
             )
             .unwrap()
-            .band_id
+            .band
         );
     }
 }

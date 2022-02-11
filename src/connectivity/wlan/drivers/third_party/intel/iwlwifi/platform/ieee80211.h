@@ -162,7 +162,7 @@ struct ieee80211_p2p_noa_desc {
 
 // Channel info. Attributes of a channel.
 struct ieee80211_channel {
-  wlan_info_band_t band;
+  wlan_band_t band;
   uint32_t center_freq;  // unit: MHz.
   uint16_t ch_num;       // channel number (starts from 1).
   uint32_t flags;
@@ -185,7 +185,7 @@ struct ieee80211_sta_ht_cap {
 };
 
 struct ieee80211_supported_band {
-  wlan_info_band_t band;
+  wlan_band_t band;
   struct ieee80211_channel* channels;
   int n_channels;
   uint8_t* bitrates;

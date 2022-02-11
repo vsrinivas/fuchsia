@@ -34,7 +34,7 @@ const MAX_NUM_RATES uint8 = 12;
 // BandInfo groups capabilities defined per band.
 // This grouping is the industry's de factor standard.
 type BandInfo = struct {
-    band_id fuchsia.wlan.common.Band;
+    band fuchsia.wlan.common.WlanBand;
     ht_caps box<fuchsia.wlan.internal.HtCapabilities>;
     vht_caps box<fuchsia.wlan.internal.VhtCapabilities>;
     rates vector<uint8>:MAX_NUM_RATES;

@@ -219,12 +219,12 @@ static const uint32_t mac80211_idx_to_data_rate_[] = {
 // Returns:
 //   data_rate: in 0.5 Mbps unit. For data_rate of 'struct wlan_rx_info'.
 //
-zx_status_t mac80211_idx_to_data_rate(wlan_info_band_t band, int mac_idx, uint32_t* data_rate) {
+zx_status_t mac80211_idx_to_data_rate(wlan_band_t band, int mac_idx, uint32_t* data_rate) {
   int band_offset;
 
-  if (band == WLAN_INFO_BAND_TWO_GHZ) {
+  if (band == WLAN_BAND_TWO_GHZ) {
     band_offset = 0;
-  } else if (band == WLAN_INFO_BAND_FIVE_GHZ) {
+  } else if (band == WLAN_BAND_FIVE_GHZ) {
     band_offset = IWL_FIRST_OFDM_RATE;
   } else {
     return ZX_ERR_NOT_SUPPORTED;
@@ -264,13 +264,13 @@ static const uint8_t fw_rate_idx_to_plcp[IWL_RATE_COUNT] = {
 //     0~11 in 2.4 GHz band
 //     0~7  in   5 GHz band
 //
-zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_info_band_t band,
+zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_band_t band,
                                                 int* ptr_chan_idx) {
   int rate = rate_n_flags & RATE_LEGACY_RATE_MSK;
   int band_offset = 0;
 
   // Sanity-check
-  if (band >= WLAN_INFO_BAND_COUNT) {
+  if (band >= WLAN_INFO_MAX_BANDS) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (!ptr_chan_idx) {
@@ -283,7 +283,7 @@ zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_info
 #endif  // NEEDS_PORTING
 
   /* Legacy rate format, search for match in table */
-  if (band == WLAN_INFO_BAND_FIVE_GHZ) {
+  if (band == WLAN_BAND_FIVE_GHZ) {
     band_offset = IWL_FIRST_OFDM_RATE;
   }
   for (int chan_idx = band_offset; chan_idx < IWL_RATE_COUNT_LEGACY; chan_idx++) {
@@ -878,7 +878,7 @@ int iwl_mvm_update_low_latency(struct iwl_mvm* mvm, struct ieee80211_vif* vif, b
 
 struct iwl_mvm_low_latency_iter {
   bool result;
-  bool result_per_band[WLAN_INFO_BAND_COUNT];
+  bool result_per_band[WLAN_INFO_MAX_BANDS];
 };
 
 // How iwl_mvm_ll_iter() work with ieee80211_iterate_active_interfaces_atomic:
@@ -892,7 +892,7 @@ struct iwl_mvm_low_latency_iter {
 // last iteration for each band.
 static void iwl_mvm_ll_iter(void* _data, struct iwl_mvm_vif* mvmvif) {
   struct iwl_mvm_low_latency_iter* result = _data;
-  wlan_info_band_t band;
+  wlan_band_t band;
 
   if (iwl_mvm_vif_low_latency(mvmvif)) {
     result->result = true;
@@ -914,7 +914,7 @@ bool iwl_mvm_low_latency(struct iwl_mvm* mvm) {
   return data.result;
 }
 
-bool iwl_mvm_low_latency_band(struct iwl_mvm* mvm, wlan_info_band_t band) {
+bool iwl_mvm_low_latency_band(struct iwl_mvm* mvm, wlan_band_t band) {
   struct iwl_mvm_low_latency_iter data = {};
 
   ieee80211_iterate_active_interfaces_atomic(mvm, iwl_mvm_ll_iter, &data);

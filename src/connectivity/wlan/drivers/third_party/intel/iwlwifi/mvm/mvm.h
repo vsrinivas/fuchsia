@@ -137,7 +137,7 @@ struct iwl_mvm_phy_ctxt {
   uint32_t ref;
 
   wlan_channel_t chandef;
-  wlan_info_band_t band;
+  wlan_band_t band;
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
   /* Frequency Manager tx power limit*/
@@ -670,7 +670,7 @@ struct iwl_mvm_tcm {
     uint32_t elapsed; /* milliseconds for this TCM period */
     uint32_t airtime[NUM_MAC_INDEX_DRIVER];
     enum iwl_mvm_traffic_load load[NUM_MAC_INDEX_DRIVER];
-    enum iwl_mvm_traffic_load band_load[WLAN_INFO_BAND_COUNT];
+    enum iwl_mvm_traffic_load band_load[WLAN_INFO_MAX_BANDS];
     enum iwl_mvm_traffic_load global_load;
     bool low_latency[NUM_MAC_INDEX_DRIVER];
     bool change[NUM_MAC_INDEX_DRIVER];
@@ -1556,10 +1556,9 @@ zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm);
 // Convert Mbps to 0.5 Mbps units.
 #define TO_HALF_MBPS(mbps) (mbps * 2)
 
-zx_status_t mac80211_idx_to_data_rate(wlan_info_band_t band, int mac80211_idx, uint32_t* data_rate);
-zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_info_band_t band,
-                                                int* idx);
-void iwl_mvm_hwrate_to_tx_rate(uint32_t rate_n_flags, wlan_info_band_t band,
+zx_status_t mac80211_idx_to_data_rate(wlan_band_t band, int mac80211_idx, uint32_t* data_rate);
+zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_band_t band, int* idx);
+void iwl_mvm_hwrate_to_tx_rate(uint32_t rate_n_flags, wlan_band_t band,
                                struct ieee80211_tx_rate* r);
 uint8_t iwl_mvm_mac80211_idx_to_hwrate(int rate_idx);
 void iwl_mvm_dump_nic_error_log(struct iwl_mvm* mvm);
@@ -1889,7 +1888,7 @@ uint16_t iwl_mvm_coex_agg_time_limit(struct iwl_mvm* mvm, struct ieee80211_sta* 
 bool iwl_mvm_bt_coex_is_mimo_allowed(struct iwl_mvm* mvm, struct ieee80211_sta* sta);
 bool iwl_mvm_bt_coex_is_ant_avail(struct iwl_mvm* mvm, uint8_t ant);
 bool iwl_mvm_bt_coex_is_shared_ant_avail(struct iwl_mvm* mvm);
-bool iwl_mvm_bt_coex_is_tpc_allowed(struct iwl_mvm* mvm, wlan_info_band_t band);
+bool iwl_mvm_bt_coex_is_tpc_allowed(struct iwl_mvm* mvm, wlan_band_t band);
 uint8_t iwl_mvm_bt_coex_get_single_ant_msk(struct iwl_mvm* mvm, uint8_t enabled_ants);
 uint8_t iwl_mvm_bt_coex_tx_prio(struct iwl_mvm* mvm, struct ieee80211_hdr* hdr,
                                 struct ieee80211_tx_info* info, uint8_t ac);
@@ -1917,7 +1916,7 @@ int iwl_mvm_update_low_latency(struct iwl_mvm* mvm, struct ieee80211_vif* vif, b
                                enum iwl_mvm_low_latency_cause cause);
 /* get SystemLowLatencyMode - only needed for beacon threshold? */
 bool iwl_mvm_low_latency(struct iwl_mvm* mvm);
-bool iwl_mvm_low_latency_band(struct iwl_mvm* mvm, wlan_info_band_t band);
+bool iwl_mvm_low_latency_band(struct iwl_mvm* mvm, wlan_band_t band);
 void iwl_mvm_send_low_latency_cmd(struct iwl_mvm* mvm, bool low_latency, uint16_t mac_id);
 
 /* get VMACLowLatencyMode */
@@ -2143,7 +2142,7 @@ zx_status_t iwl_mvm_init(void);
 // For phy-ctxt.c
 //
 extern const wlan_channel_t default_channel;
-wlan_info_band_t iwl_mvm_get_channel_band(uint8_t chan_num);
+wlan_band_t iwl_mvm_get_channel_band(uint8_t chan_num);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //

@@ -1,9 +1,5 @@
 const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS uint32 64
 const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_MAX_BANDS uint32 2
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoBand.COUNT 2
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoBand.FIVE_GHZ 1
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoBand.TWO_GHZ 0
-strict enum fuchsia.hardware.wlan.phyinfo/WlanInfoBand uint32
 struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoChannelList.base_freq uint16
 struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoChannelList.channels array<uint8,64>
 struct fuchsia.hardware.wlan.phyinfo/WlanInfoChannelList

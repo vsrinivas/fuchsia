@@ -101,7 +101,7 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
   info->band_cap_count = 2;
   // clang-format off
     info->band_cap_list[0] = {
-        .band = WLAN_INFO_BAND_TWO_GHZ,
+        .band = WLAN_BAND_TWO_GHZ,
         .ht_supported = false,
         .ht_caps = {},
         .vht_supported = false,
@@ -115,7 +115,7 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
            },
     };
     info->band_cap_list[1] = {
-        .band = WLAN_INFO_BAND_FIVE_GHZ,
+        .band = WLAN_BAND_FIVE_GHZ,
         .ht_supported = false,
         .ht_caps = {},
         .vht_supported = false,

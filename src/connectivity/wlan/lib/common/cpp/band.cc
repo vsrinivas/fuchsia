@@ -5,6 +5,7 @@
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
@@ -14,52 +15,38 @@ namespace common {
 
 namespace wlan_common = ::fuchsia::wlan::common;
 
-wlan_info_band_t GetBand(const wlan_channel_t& channel) {
-  return Is2Ghz(channel) ? WLAN_INFO_BAND_TWO_GHZ : WLAN_INFO_BAND_FIVE_GHZ;
+wlan_band_t GetWlanBand(const wlan_channel_t& channel) {
+  return Is2Ghz(channel) ? WLAN_BAND_TWO_GHZ : WLAN_BAND_FIVE_GHZ;
 }
 
-std::string BandStr(uint8_t band) {
-  if (band > WLAN_INFO_BAND_COUNT) {
-    band = WLAN_INFO_BAND_COUNT;
-  }
+std::string WlanBandStr(wlan_band_t band) {
   switch (band) {
-    case WLAN_INFO_BAND_TWO_GHZ:
+    case WLAN_BAND_TWO_GHZ:
       return "2 GHz";
-    case WLAN_INFO_BAND_FIVE_GHZ:
+    case WLAN_BAND_FIVE_GHZ:
       return "5 GHz";
-    default:
-      return "BAND_INV";
   }
+  return "INVALID";
 }
 
-std::string BandStr(wlan_info_band_t band) { return BandStr(static_cast<uint8_t>(band)); }
+std::string WlanBandStr(const wlan_channel_t& channel) { return WlanBandStr(GetWlanBand(channel)); }
 
-std::string BandStr(const wlan_channel_t& channel) { return BandStr(GetBand(channel)); }
-
-wlan_common::Band BandToFidl(uint8_t band) {
-  return BandToFidl(static_cast<wlan_info_band_t>(band));
+zx_status_t ToFidl(wlan_common::WlanBand* out_fidl_band, wlan_band_t banjo_band) {
+  switch (banjo_band) {
+    case WLAN_BAND_TWO_GHZ:
+      *out_fidl_band = wlan_common::WlanBand::TWO_GHZ;
+      break;
+    case WLAN_BAND_FIVE_GHZ:
+      *out_fidl_band = wlan_common::WlanBand::FIVE_GHZ;
+      break;
+    default:
+      return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_OK;
 }
 
-wlan_common::Band BandToFidl(wlan_info_band_t band) {
-  switch (band) {
-    case WLAN_INFO_BAND_TWO_GHZ:
-      return wlan_common::Band::WLAN_BAND_2GHZ;
-    case WLAN_INFO_BAND_FIVE_GHZ:
-      return wlan_common::Band::WLAN_BAND_5GHZ;
-    default:
-      return wlan_common::Band::WLAN_BAND_COUNT;
-  }
-}
-
-wlan_info_band_t BandFromFidl(wlan_common::Band band) {
-  switch (band) {
-    case wlan_common::Band::WLAN_BAND_2GHZ:
-      return WLAN_INFO_BAND_TWO_GHZ;
-    case wlan_common::Band::WLAN_BAND_5GHZ:
-      return WLAN_INFO_BAND_FIVE_GHZ;
-    default:
-      return WLAN_INFO_BAND_COUNT;
-  }
+wlan_band_t FromFidl(wlan_common::WlanBand fidl_band) {
+  return static_cast<wlan_band_t>(fidl_band);
 }
 
 }  // namespace common

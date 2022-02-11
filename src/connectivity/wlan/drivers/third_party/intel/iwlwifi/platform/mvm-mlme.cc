@@ -83,32 +83,33 @@ extern "C" {
 //   bands[]: contains the list of enabled bands.
 //
 size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
-                         wlan_info_band_t bands[WLAN_INFO_BAND_COUNT]) {
+                         wlan_band_t bands[WLAN_INFO_MAX_BANDS]) {
   size_t bands_count = 0;
 
   if (nvm_data->sku_cap_band_24ghz_enable) {
-    bands[bands_count++] = WLAN_INFO_BAND_TWO_GHZ;
+    bands[bands_count++] = WLAN_BAND_TWO_GHZ;
   }
   if (nvm_data->sku_cap_band_52ghz_enable) {
-    bands[bands_count++] = WLAN_INFO_BAND_FIVE_GHZ;
+    bands[bands_count++] = WLAN_BAND_FIVE_GHZ;
   }
-  ZX_ASSERT(bands_count <= WLAN_INFO_BAND_COUNT);
+  ZX_ASSERT(bands_count <= WLAN_INFO_MAX_BANDS);
 
   return bands_count;
 }
 
 //
-// Given a NVM data, copy the band and channel info into the 'wlan_info_band_info_t' structure.
+// Given a NVM data, copy the band and channel info into the 'wlan_softmac_band_capability_t'
+// structure.
 //
 // - 'bands_count' is the number of bands in 'bands[]'.
 // - 'band_infos[]' must have at least bands_count for this function to write.
 //
-void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t* bands,
+void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_band_t* bands,
                         size_t band_caps_count, wlan_softmac_band_capability_t* band_cap_list) {
   ZX_ASSERT(band_caps_count <= std::size(nvm_data->bands));
 
   for (size_t band_idx = 0; band_idx < band_caps_count; ++band_idx) {
-    wlan_info_band_t band_id = bands[band_idx];
+    wlan_band_t band_id = bands[band_idx];
     const struct ieee80211_supported_band* sband = &nvm_data->bands[band_id];  // source
     wlan_softmac_band_capability_t* band_cap = &band_cap_list[band_idx];       // destination
 
@@ -131,10 +132,10 @@ void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_info_ban
     // Fill the channel list of this band.
     wlan_info_channel_list_t* ch_list = &band_cap->supported_channels;
     switch (band_cap->band) {
-      case WLAN_INFO_BAND_TWO_GHZ:
+      case WLAN_BAND_TWO_GHZ:
         ch_list->base_freq = 2407;
         break;
-      case WLAN_INFO_BAND_FIVE_GHZ:
+      case WLAN_BAND_FIVE_GHZ:
         ch_list->base_freq = 5000;
         break;
       default:
@@ -182,7 +183,7 @@ zx_status_t mac_query(void* ctx, wlan_softmac_info_t* info) {
                WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
 
   // Determine how many bands this adapter supports.
-  wlan_info_band_t bands[WLAN_INFO_BAND_COUNT];
+  wlan_band_t bands[WLAN_INFO_MAX_BANDS];
   info->band_cap_count = compose_band_list(nvm_data, bands);
 
   fill_band_cap_list(nvm_data, bands, info->band_cap_count, info->band_cap_list);

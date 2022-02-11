@@ -25,7 +25,7 @@ type EapolIndication = struct {
 // BandInfo groups capabilities defined per band.
 // This grouping is the industry's de factor standard.
 type BandCapabilities = struct {
-    band_id fuchsia.wlan.common.Band;
+    band fuchsia.wlan.common.WlanBand;
     basic_rates vector<uint8>:internal.MAX_SUPPORTED_BASIC_RATES;
     base_frequency uint16;
     channels bytes;

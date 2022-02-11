@@ -35,11 +35,10 @@ TEST_F(UtilsTest, LegacyToDot11) {
   int idx;  // 802.11 index
 
   // The band is out of range
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0, WLAN_INFO_BAND_COUNT, &idx),
-            ZX_ERR_OUT_OF_RANGE);
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0, WLAN_INFO_MAX_BANDS, &idx), ZX_ERR_OUT_OF_RANGE);
 
   // Invalid pointer
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0, WLAN_INFO_BAND_FIVE_GHZ, nullptr),
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0, WLAN_BAND_FIVE_GHZ, nullptr),
             ZX_ERR_INVALID_ARGS);
 
 #if 0   // NEEDS_PORTING
@@ -48,27 +47,22 @@ TEST_F(UtilsTest, LegacyToDot11) {
 #endif  // NEEDS_PORTING
 
   // 2.4 GHz: data rate: 1 Mbps ~ 54 Mbps
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(10 /* 1 Mbpsz */, WLAN_INFO_BAND_TWO_GHZ, &idx),
-            ZX_OK);
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(10 /* 1 Mbpsz */, WLAN_BAND_TWO_GHZ, &idx), ZX_OK);
   EXPECT_EQ(idx, 0);
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(3 /* 54 Mbpsz */, WLAN_INFO_BAND_TWO_GHZ, &idx),
-            ZX_OK);
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(3 /* 54 Mbpsz */, WLAN_BAND_TWO_GHZ, &idx), ZX_OK);
   EXPECT_EQ(idx, 11);
 
   // 5 GHz: data rate: 6 Mbps ~ 54 Mbps
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(13 /* 6 Mbps */, WLAN_INFO_BAND_FIVE_GHZ, &idx),
-            ZX_OK);
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(13 /* 6 Mbps */, WLAN_BAND_FIVE_GHZ, &idx), ZX_OK);
   EXPECT_EQ(idx, 0);
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(3 /* 54 Mbps */, WLAN_INFO_BAND_FIVE_GHZ, &idx),
-            ZX_OK);
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(3 /* 54 Mbps */, WLAN_BAND_FIVE_GHZ, &idx), ZX_OK);
   EXPECT_EQ(idx, 7);
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(10 /* 1 Mbps */, WLAN_INFO_BAND_FIVE_GHZ, &idx),
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(10 /* 1 Mbps */, WLAN_BAND_FIVE_GHZ, &idx),
             ZX_ERR_NOT_FOUND);
 
   // Not in the table
-  EXPECT_EQ(
-      iwl_mvm_legacy_rate_to_mac80211_idx(0 /* random number */, WLAN_INFO_BAND_FIVE_GHZ, &idx),
-      ZX_ERR_NOT_FOUND);
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0 /* random number */, WLAN_BAND_FIVE_GHZ, &idx),
+            ZX_ERR_NOT_FOUND);
 }
 
 TEST_F(UtilsTest, Dot11ToHWRate) {
@@ -80,21 +74,21 @@ TEST_F(UtilsTest, Dot11ToDataRate) {
   uint32_t data_rate;
 
   // 2.4 GHz, idx: 0 ~ 11
-  EXPECT_EQ(ZX_OK, mac80211_idx_to_data_rate(WLAN_INFO_BAND_TWO_GHZ, 0 /* 1 Mbps */, &data_rate));
+  EXPECT_EQ(ZX_OK, mac80211_idx_to_data_rate(WLAN_BAND_TWO_GHZ, 0 /* 1 Mbps */, &data_rate));
   EXPECT_EQ(data_rate, TO_HALF_MBPS(1));
-  EXPECT_EQ(ZX_OK, mac80211_idx_to_data_rate(WLAN_INFO_BAND_TWO_GHZ, 11 /* 54 Mbps */, &data_rate));
+  EXPECT_EQ(ZX_OK, mac80211_idx_to_data_rate(WLAN_BAND_TWO_GHZ, 11 /* 54 Mbps */, &data_rate));
   EXPECT_EQ(data_rate, TO_HALF_MBPS(54));
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, mac80211_idx_to_data_rate(WLAN_INFO_BAND_TWO_GHZ, 12, &data_rate));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, mac80211_idx_to_data_rate(WLAN_BAND_TWO_GHZ, 12, &data_rate));
 
   // 5 GHz, idx: 0 ~ 7
-  EXPECT_EQ(ZX_OK, mac80211_idx_to_data_rate(WLAN_INFO_BAND_FIVE_GHZ, 0 /* 6 Mbps */, &data_rate));
+  EXPECT_EQ(ZX_OK, mac80211_idx_to_data_rate(WLAN_BAND_FIVE_GHZ, 0 /* 6 Mbps */, &data_rate));
   EXPECT_EQ(data_rate, TO_HALF_MBPS(6));
-  EXPECT_EQ(ZX_OK, mac80211_idx_to_data_rate(WLAN_INFO_BAND_FIVE_GHZ, 7 /* 54 Mbps */, &data_rate));
+  EXPECT_EQ(ZX_OK, mac80211_idx_to_data_rate(WLAN_BAND_FIVE_GHZ, 7 /* 54 Mbps */, &data_rate));
   EXPECT_EQ(data_rate, TO_HALF_MBPS(54));
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, mac80211_idx_to_data_rate(WLAN_INFO_BAND_FIVE_GHZ, 8, &data_rate));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, mac80211_idx_to_data_rate(WLAN_BAND_FIVE_GHZ, 8, &data_rate));
 
   // For future 60 GHz
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, mac80211_idx_to_data_rate(WLAN_INFO_BAND_COUNT, 0, &data_rate));
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, mac80211_idx_to_data_rate(WLAN_INFO_MAX_BANDS, 0, &data_rate));
 }
 
 struct iter_data {

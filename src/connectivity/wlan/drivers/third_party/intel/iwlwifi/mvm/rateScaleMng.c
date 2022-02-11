@@ -1354,7 +1354,7 @@ static bool _rsMngIsStbcAllowed(const RS_MNG_STA_INFO_S* staInfo, const RS_MNG_R
 }
 
 static bool _rsMngCoexIsLongAggAllowed(const RS_MNG_STA_INFO_S* staInfo) {
-  if (staInfo->config.band != WLAN_INFO_BAND_TWO_GHZ) {
+  if (staInfo->config.band != WLAN_BAND_TWO_GHZ) {
     return true;
   }
 
@@ -1392,7 +1392,7 @@ static bool _allowColAnt(const RS_MNG_STA_INFO_S* staInfo, U32 bw,
     return true;
   }
 
-  if (staInfo->config.band != WLAN_INFO_BAND_TWO_GHZ) {
+  if (staInfo->config.band != WLAN_BAND_TWO_GHZ) {
     return true;
   }
 

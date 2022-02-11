@@ -65,19 +65,6 @@ type WlanInfoHardwareCapability = strict enum : uint32 {
     SIMULTANEOUS_CLIENT_AP = 0x10000;
 };
 
-/// This is a simplified expression of channel starting frequencies. Expand this
-/// list as Fuchsia evolves.
-type WlanInfoBand = strict enum {
-    /// Channel starting frequency: 2.407 GHz.
-    TWO_GHZ = 0;
-
-    /// Channel starting frequency: 5.000 GHz.
-    FIVE_GHZ = 1;
-
-    /// The number of defined bands.
-    COUNT = 2;
-};
-
 /// The maximum number of supported channels in a WlanInfoChannelList.
 const WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS uint32 = 64;
 

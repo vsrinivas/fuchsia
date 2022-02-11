@@ -923,7 +923,7 @@ mod test_utils {
         let band_cap_count = 2;
         let mut band_cap_list = [default_band_capability(); WLAN_INFO_MAX_BANDS as usize];
         band_cap_list[0] = banjo_wlan_softmac::WlanSoftmacBandCapability {
-            band: WlanInfoBand::TWO_GHZ,
+            band: banjo_common::WlanBand::TWO_GHZ,
             basic_rate_list: arr!(
                 [0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C],
                 banjo_wlan_internal::MAX_SUPPORTED_BASIC_RATES as usize
@@ -945,7 +945,7 @@ mod test_utils {
             },
         };
         band_cap_list[1] = banjo_wlan_softmac::WlanSoftmacBandCapability {
-            band: WlanInfoBand::FIVE_GHZ,
+            band: banjo_common::WlanBand::FIVE_GHZ,
             basic_rate_list: arr!(
                 [0x7E, 0x7F],
                 banjo_wlan_internal::MAX_SUPPORTED_BASIC_RATES as usize
@@ -1022,7 +1022,7 @@ mod test_utils {
     /// care about the exact information, but the type demands it.
     pub const fn default_band_capability() -> banjo_wlan_softmac::WlanSoftmacBandCapability {
         banjo_wlan_softmac::WlanSoftmacBandCapability {
-            band: WlanInfoBand(0),
+            band: banjo_common::WlanBand::TWO_GHZ,
             ht_supported: false,
             ht_caps: Ieee80211HtCapabilities {
                 ht_capability_info: 0,

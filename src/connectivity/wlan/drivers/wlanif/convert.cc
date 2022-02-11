@@ -504,7 +504,10 @@ wlan_common::WlanMacRole ConvertMacRole(wlan_mac_role_t role) {
 
 void ConvertBandCapability(wlan_mlme::BandCapabilities* fidl_band,
                            const wlan_fullmac_band_capability_t& band) {
-  fidl_band->band_id = ::wlan::common::BandToFidl(band.band_id);
+  zx_status_t status = ::wlan::common::ToFidl(&fidl_band->band, band.band);
+  if (status != ZX_OK) {
+    ZX_ASSERT(0);
+  }
 
   // basic_rates
   fidl_band->basic_rates.assign(band.basic_rate_list, band.basic_rate_list + band.basic_rate_count);

@@ -110,10 +110,9 @@ type WlanChannel = struct {
     secondary80 uint8;
 };
 
-type Band = strict enum : uint8 {
-    WLAN_BAND_2GHZ = 0;
-    WLAN_BAND_5GHZ = 1;
-    WLAN_BAND_COUNT = 2;
+type WlanBand = flexible enum : uint8 {
+    TWO_GHZ = 0;
+    FIVE_GHZ = 1;
 };
 
 // LINT.ThenChange(//zircon/system/banjo/fuchsia.hardware.wlan.associnfo/info.banjo)

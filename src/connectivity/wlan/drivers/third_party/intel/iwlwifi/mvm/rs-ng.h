@@ -93,8 +93,7 @@ void iwl_mvm_reset_frame_stats(struct iwl_mvm* mvm);
 #endif
 
 void iwl_mvm_tlc_update_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
-void rs_fw_rate_init(struct iwl_mvm* mvm, struct iwl_mvm_sta* sta, wlan_info_band_t band,
-                     bool update);
+void rs_fw_rate_init(struct iwl_mvm* mvm, struct iwl_mvm_sta* sta, wlan_band_t band, bool update);
 void iwl_mvm_rs_add_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta);
 int rs_fw_tx_protection(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool enable);
 

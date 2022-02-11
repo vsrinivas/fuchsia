@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.wlan.ieee80211/cpp/wire_types.h>
 #include <fuchsia/hardware/wlan/associnfo/cpp/banjo.h>
 #include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/fidl.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/zx/channel.h>
@@ -38,7 +39,7 @@ namespace {
 
 constexpr size_t kListenInterval = 100;
 constexpr uint8_t kInvalidBandIdFillByte = 0xa5;
-constexpr wlan_info_band_t kInvalidBandId = 0xa5a5a5a5;
+constexpr wlan_band_t kInvalidBandId = 0xa5;
 constexpr zx_handle_t kDummyMlmeChannel = 73939133;  // An arbitrary value not ZX_HANDLE_INVALID
 
 using recv_cb_t = mock_function::MockFunction<void, void*, const wlan_rx_packet_t*>;
@@ -84,7 +85,7 @@ class WlanSoftmacDeviceTest : public SingleApTest {
 
 TEST_F(WlanSoftmacDeviceTest, ComposeBandList) {
   struct iwl_nvm_data nvm_data;
-  wlan_info_band_t bands[WLAN_INFO_BAND_COUNT];
+  wlan_band_t bands[WLAN_INFO_MAX_BANDS];
 
   // nothing enabled
   memset(&nvm_data, 0, sizeof(nvm_data));
@@ -98,7 +99,7 @@ TEST_F(WlanSoftmacDeviceTest, ComposeBandList) {
   memset(bands, kInvalidBandIdFillByte, sizeof(bands));
   nvm_data.sku_cap_band_24ghz_enable = true;
   EXPECT_EQ(1, compose_band_list(&nvm_data, bands));
-  EXPECT_EQ(WLAN_INFO_BAND_TWO_GHZ, bands[0]);
+  EXPECT_EQ(WLAN_BAND_TWO_GHZ, bands[0]);
   EXPECT_EQ(kInvalidBandId, bands[1]);
 
   // 5GHz only
@@ -106,7 +107,7 @@ TEST_F(WlanSoftmacDeviceTest, ComposeBandList) {
   memset(bands, kInvalidBandIdFillByte, sizeof(bands));
   nvm_data.sku_cap_band_52ghz_enable = true;
   EXPECT_EQ(1, compose_band_list(&nvm_data, bands));
-  EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, bands[0]);
+  EXPECT_EQ(WLAN_BAND_FIVE_GHZ, bands[0]);
   EXPECT_EQ(kInvalidBandId, bands[1]);
 
   // both bands enabled
@@ -115,24 +116,24 @@ TEST_F(WlanSoftmacDeviceTest, ComposeBandList) {
   nvm_data.sku_cap_band_24ghz_enable = true;
   nvm_data.sku_cap_band_52ghz_enable = true;
   EXPECT_EQ(2, compose_band_list(&nvm_data, bands));
-  EXPECT_EQ(WLAN_INFO_BAND_TWO_GHZ, bands[0]);
-  EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, bands[1]);
+  EXPECT_EQ(WLAN_BAND_TWO_GHZ, bands[0]);
+  EXPECT_EQ(WLAN_BAND_FIVE_GHZ, bands[1]);
 }
 
 TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
   // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
 
-  wlan_info_band_t bands[WLAN_INFO_BAND_COUNT] = {
-      WLAN_INFO_BAND_TWO_GHZ,
-      WLAN_INFO_BAND_FIVE_GHZ,
+  wlan_band_t bands[WLAN_INFO_MAX_BANDS] = {
+      WLAN_BAND_TWO_GHZ,
+      WLAN_BAND_FIVE_GHZ,
   };
-  wlan_softmac_band_capability_t band_cap_list[WLAN_INFO_BAND_COUNT] = {};
+  wlan_softmac_band_capability_t band_cap_list[WLAN_INFO_MAX_BANDS] = {};
 
   fill_band_cap_list(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, std::size(bands),
                      band_cap_list);
   // 2.4Ghz
   wlan_softmac_band_capability_t* band_cap = &band_cap_list[0];
-  EXPECT_EQ(WLAN_INFO_BAND_TWO_GHZ, band_cap->band);
+  EXPECT_EQ(WLAN_BAND_TWO_GHZ, band_cap->band);
   EXPECT_EQ(true, band_cap->ht_supported);
   EXPECT_EQ(12, band_cap->basic_rate_count);
   EXPECT_EQ(expected_rate(0), band_cap->basic_rate_list[0]);    // 1Mbps
@@ -142,7 +143,7 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
   EXPECT_EQ(13, band_cap->supported_channels.channels[12]);
   // 5GHz
   band_cap = &band_cap_list[1];
-  EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, band_cap->band);
+  EXPECT_EQ(WLAN_BAND_FIVE_GHZ, band_cap->band);
   EXPECT_EQ(true, band_cap->ht_supported);
   EXPECT_EQ(8, band_cap->basic_rate_count);
   EXPECT_EQ(expected_rate(4), band_cap->basic_rate_list[0]);   // 6Mbps
@@ -155,16 +156,16 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
 TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityListOnly5GHz) {
   // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
 
-  wlan_info_band_t bands[WLAN_INFO_BAND_COUNT] = {
-      WLAN_INFO_BAND_FIVE_GHZ,
+  wlan_band_t bands[WLAN_INFO_MAX_BANDS] = {
+      WLAN_BAND_FIVE_GHZ,
       0,
   };
-  wlan_softmac_band_capability_t band_cap_list[WLAN_INFO_BAND_COUNT] = {};
+  wlan_softmac_band_capability_t band_cap_list[WLAN_INFO_MAX_BANDS] = {};
 
   fill_band_cap_list(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, 1, band_cap_list);
   // 5GHz
   wlan_softmac_band_capability_t* band_cap = &band_cap_list[0];
-  EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, band_cap->band);
+  EXPECT_EQ(WLAN_BAND_FIVE_GHZ, band_cap->band);
   EXPECT_EQ(true, band_cap->ht_supported);
   EXPECT_EQ(8, band_cap->basic_rate_count);
   EXPECT_EQ(expected_rate(4), band_cap->basic_rate_list[0]);   // 6Mbps

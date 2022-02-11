@@ -11,7 +11,6 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
     ieee80211::Bssid,
-    log::warn,
     wlan_common::{
         ie::{
             parse_ht_capabilities, parse_ht_operation, parse_vht_capabilities, parse_vht_operation,
@@ -117,27 +116,22 @@ pub fn device_info_from_wlan_softmac_info(
     let role = fidl_common::WlanMacRole::from_primitive(info.mac_role.0)
         .ok_or(format_err!("Unknown WlanWlanMacRole: {}", info.mac_role.0))?;
     let cap = wlan_common::mac::CapabilityInfo::from(info.caps).0;
-    let bands = info.band_cap_list[0..info.band_cap_count as usize]
-        .to_vec()
-        .into_iter()
-        .map(|band_cap| convert_ddk_band_cap(band_cap, cap))
-        .collect();
+    let mut bands = vec![];
+    for band_cap in &info.band_cap_list[0..info.band_cap_count as usize] {
+        bands.push(convert_ddk_band_cap(band_cap, cap)?);
+    }
     let driver_features = convert_driver_features(&info.driver_features);
     Ok(fidl_mlme::DeviceInfo { sta_addr, role, bands, driver_features, qos_capable: false })
 }
 
 fn convert_ddk_band_cap(
-    band_cap: banjo_wlan_softmac::WlanSoftmacBandCapability,
+    band_cap: &banjo_wlan_softmac::WlanSoftmacBandCapability,
     capability_info: u16,
-) -> fidl_mlme::BandCapabilities {
-    let band_id = match band_cap.band {
-        banjo_wlan_phyinfo::WlanInfoBand::TWO_GHZ => fidl_common::Band::WlanBand2Ghz,
-        banjo_wlan_phyinfo::WlanInfoBand::FIVE_GHZ => fidl_common::Band::WlanBand5Ghz,
-        banjo_wlan_phyinfo::WlanInfoBand::COUNT => fidl_common::Band::WlanBandCount,
-        unknown => {
-            warn!("Unexpected WLAN band: {:?}. Defaulting to WlanBandCount", unknown);
-            fidl_common::Band::WlanBandCount
-        }
+) -> Result<fidl_mlme::BandCapabilities, Error> {
+    let band = match band_cap.band {
+        banjo_common::WlanBand::TWO_GHZ => fidl_common::WlanBand::TwoGhz,
+        banjo_common::WlanBand::FIVE_GHZ => fidl_common::WlanBand::FiveGhz,
+        _ => return Err(format_err!("Unexpected banjo_comon::WlanBand value {}", band_cap.band.0)),
     };
     let basic_rates = band_cap.basic_rate_list[..band_cap.basic_rate_count as usize].to_vec();
     let base_frequency = band_cap.supported_channels.base_freq;
@@ -165,15 +159,15 @@ fn convert_ddk_band_cap(
     } else {
         None
     };
-    fidl_mlme::BandCapabilities {
-        band_id,
+    Ok(fidl_mlme::BandCapabilities {
+        band,
         basic_rates,
         base_frequency,
         channels,
         capability_info,
         ht_cap,
         vht_cap,
-    }
+    })
 }
 
 fn convert_driver_features(
@@ -354,8 +348,9 @@ mod tests {
     #[test]
     fn test_convert_band_cap() {
         let wlan_softmac_info = fake_wlan_softmac_info();
-        let band0 = convert_ddk_band_cap(wlan_softmac_info.band_cap_list[0], 10);
-        assert_eq!(band0.band_id, fidl_common::Band::WlanBand2Ghz);
+        let band0 = convert_ddk_band_cap(&wlan_softmac_info.band_cap_list[0], 10)
+            .expect("failed to convert band capability");
+        assert_eq!(band0.band, fidl_common::WlanBand::TwoGhz);
         assert_eq!(band0.basic_rates, vec![0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C]);
         assert_eq!(band0.base_frequency, 2407);
         assert_eq!(band0.channels, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);

@@ -645,7 +645,7 @@ std::string Describe(const wlan_info_channel_list& wl) {
 std::string Describe(const wlan_softmac_band_capability& bc) {
   char buf[1024];
   size_t offset = 0;
-  BUFFER("band:%s", common::BandStr(bc.band).c_str());
+  BUFFER("band:%s", common::WlanBandStr(bc.band).c_str());
   BUFFER("ht_caps:[%s]", Describe(bc.ht_caps).c_str());
   BUFFER("vht_supported:%u", bc.vht_supported);
   BUFFER("vht_caps:[to implement]");

@@ -48,13 +48,13 @@ TEST_F(NvmTest, TestParsingDefaultNvm) {
 
   // Band and channel info
   // - 2G band
-  EXPECT_EQ(data->bands[WLAN_INFO_BAND_TWO_GHZ].band, WLAN_INFO_BAND_TWO_GHZ);
-  EXPECT_EQ(data->bands[WLAN_INFO_BAND_TWO_GHZ].n_channels, 14);
-  EXPECT_EQ(data->bands[WLAN_INFO_BAND_TWO_GHZ].channels[0].ch_num, 1);
+  EXPECT_EQ(data->bands[WLAN_BAND_TWO_GHZ].band, WLAN_BAND_TWO_GHZ);
+  EXPECT_EQ(data->bands[WLAN_BAND_TWO_GHZ].n_channels, 14);
+  EXPECT_EQ(data->bands[WLAN_BAND_TWO_GHZ].channels[0].ch_num, 1);
   // - 5G band
-  EXPECT_EQ(data->bands[WLAN_INFO_BAND_FIVE_GHZ].band, WLAN_INFO_BAND_FIVE_GHZ);
-  EXPECT_EQ(data->bands[WLAN_INFO_BAND_FIVE_GHZ].n_channels, 25);
-  EXPECT_EQ(data->bands[WLAN_INFO_BAND_FIVE_GHZ].channels[0].ch_num, 36);
+  EXPECT_EQ(data->bands[WLAN_BAND_FIVE_GHZ].band, WLAN_BAND_FIVE_GHZ);
+  EXPECT_EQ(data->bands[WLAN_BAND_FIVE_GHZ].n_channels, 25);
+  EXPECT_EQ(data->bands[WLAN_BAND_FIVE_GHZ].channels[0].ch_num, 36);
 }
 
 TEST_F(NvmTest, CfgRatesTo80211) {

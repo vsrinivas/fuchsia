@@ -368,7 +368,7 @@ exit_fail:
   return ret;
 }
 
-static void iwl_mvm_ack_rates(struct iwl_mvm_vif* mvmvif, wlan_info_band_t band, uint8_t* cck_rates,
+static void iwl_mvm_ack_rates(struct iwl_mvm_vif* mvmvif, wlan_band_t band, uint8_t* cck_rates,
                               uint8_t* ofdm_rates) {
   // Since the 'iwl_cfg80211_rates' table is fixed, seems we can always return fixed values.
   *cck_rates = 0xf;    // 1 Mbps, 2 Mbps, 5.5 Mbps, 11 Mbps
@@ -501,7 +501,7 @@ static void iwl_mvm_mac_ctxt_set_ht_flags(struct iwl_mvm_vif* mvmvif, struct iwl
 #endif  // NEEDS_PORTING
 }
 
-static void iwl_mvm_mac_ctxt_cmd_common(struct iwl_mvm_vif* mvmvif, wlan_info_band_t band,
+static void iwl_mvm_mac_ctxt_cmd_common(struct iwl_mvm_vif* mvmvif, wlan_band_t band,
                                         bool ht_enabled, struct iwl_mac_ctx_cmd* cmd,
                                         const uint8_t* bssid_override, uint32_t action) {
   struct iwl_mvm* mvm = mvmvif->mvm;
@@ -601,7 +601,7 @@ static zx_status_t iwl_mvm_mac_ctxt_cmd_sta(struct iwl_mvm_vif* mvmvif, uint32_t
   WARN_ON(mvmvif->mac_role != WLAN_MAC_ROLE_CLIENT);
 
   /* Fill the common data for all mac context types */
-  iwl_mvm_mac_ctxt_cmd_common(mvmvif, WLAN_INFO_BAND_TWO_GHZ,  // Use default value.
+  iwl_mvm_mac_ctxt_cmd_common(mvmvif, WLAN_BAND_TWO_GHZ,  // Use default value.
                               mvmvif->ht_enabled, &cmd, bssid_override, action);
 
 #if 1  // NEEDS_PORTING

@@ -27,8 +27,8 @@ struct iwl_mvm_sta;
 
 // for testing
 size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
-                         wlan_info_band_t bands[WLAN_INFO_BAND_COUNT]);
-void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t* bands,
+                         wlan_band_t bands[WLAN_INFO_MAX_BANDS]);
+void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_band_t* bands,
                         size_t band_cap_count, wlan_softmac_band_capability_t* band_cap_list);
 
 // Phy protocol helpers

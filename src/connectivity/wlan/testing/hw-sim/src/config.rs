@@ -44,7 +44,7 @@ pub(crate) fn create_wlantap_config(
 
 fn create_2_4_ghz_band_info() -> fidl_device::BandInfo {
     fidl_device::BandInfo {
-        band_id: fidl_common::Band::WlanBand2Ghz,
+        band: fidl_common::WlanBand::TwoGhz,
         ht_caps: Some(Box::new(fidl_internal::HtCapabilities {
             bytes: fake_ht_capabilities().as_bytes().try_into().unwrap(),
         })),
