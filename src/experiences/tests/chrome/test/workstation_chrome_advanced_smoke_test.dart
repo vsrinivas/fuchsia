@@ -49,8 +49,7 @@ void main() {
     await ermine.driver.waitUntilNoTransientCallbacks();
     print('Launched Chrome');
 
-    final snapshot = await ermine.waitForView(chromeUrl);
-    expect(snapshot.focused, true);
+    final snapshot = await ermine.waitForView(chromeUrl, testForFocus: true);
     expect(snapshot.url, chromeUrl);
     print('A Chrome view is presented');
 

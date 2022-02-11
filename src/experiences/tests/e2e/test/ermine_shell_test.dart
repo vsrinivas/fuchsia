@@ -63,14 +63,13 @@ void main() {
     // Launch terminal.
     const terminalUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
     await ermine.launch(terminalUrl);
-    await ermine.waitForView(terminalUrl);
+    await ermine.waitForView(terminalUrl, testForFocus: true);
 
     // Launch spinning_square_view, it should have focus.
     const spinningSquareViewUrl =
         'fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx';
     await ermine.launch(spinningSquareViewUrl);
-    var view = await ermine.waitForView(spinningSquareViewUrl);
-    expect(view.focused, isTrue);
+    await ermine.waitForView(spinningSquareViewUrl, testForFocus: true);
 
     // Tap on terminal to switch focus to it. Terminal view should be left half
     // of the screen. [input.tap] assumes screen resolution as 1000 x 1000.
@@ -78,7 +77,6 @@ void main() {
     await ermine.driver.waitUntilNoTransientCallbacks();
 
     // Terminal should now have focus.
-    view = await ermine.waitForView(terminalUrl);
-    expect(view.focused, isTrue);
+    await ermine.waitForView(terminalUrl, testForFocus: true);
   }, skip: true);
 }

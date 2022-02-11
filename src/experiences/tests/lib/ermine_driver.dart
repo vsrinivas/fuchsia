@@ -338,17 +338,24 @@ class ErmineDriver {
 
   Future<Rectangle> getViewRect(String viewUrl,
       [Duration timeout = waitForTimeout]) async {
-    final view = await waitForView(viewUrl, timeout);
+    final view = await waitForView(viewUrl, timeout: timeout);
     return view.viewport;
   }
 
   /// Finds the first launched component given its [viewUrl] and returns it's
-  /// Inspect data. Waits for [timeout] duration for view to launch.
+  /// Inspect data. Waits for [timeout] duration for view to launch. If
+  /// [testForFocus] is true, waits for focused signal.
   Future<ViewSnapshot> waitForView(String viewUrl,
-      [Duration timeout = waitForTimeout]) async {
+      {bool testForFocus = false, Duration timeout = waitForTimeout}) async {
     return waitFor(() async {
       final views = await launchedViews(filterByUrl: viewUrl);
-      return views.isNotEmpty ? views.first : null;
+      if (views.isEmpty) {
+        return null;
+      }
+      if (testForFocus) {
+        return views.first.focused ? views.first : null;
+      }
+      return views.first;
     }, timeout: timeout);
   }
 
