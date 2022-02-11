@@ -2,17 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// An abstract class for information for dialogs.
-abstract class DialogInfo {}
-
-/// A class for holding information for alert dialogs widgets that will be
-/// carried by [AppState.dialogs].
-class AlertDialogInfo implements DialogInfo {
+/// An base class for information for aler dialogs.
+class DialogInfo {
   /// The title of the alert dialog box.
-  final String title;
-
-  /// Optional. The content body of the dialog box.
-  final String? body;
+  final String? title;
 
   /// Optional. The default action to invoke if the user presses submit button.
   /// This action MUST be present in the list of [actions].
@@ -28,12 +21,62 @@ class AlertDialogInfo implements DialogInfo {
   /// Optional. Callback when a specific action is invoked.
   final void Function(String action)? onAction;
 
-  const AlertDialogInfo({
-    required this.title,
+  const DialogInfo({
     required this.actions,
     this.defaultAction,
     this.onAction,
     this.onClose,
-    this.body,
+    this.title,
   });
+}
+
+/// A class for holding information for alert dialogs widgets that will be
+/// carried by [AppState.dialogs].
+class AlertDialogInfo extends DialogInfo {
+  /// Optional. The content body of the dialog box.
+  final String? body;
+
+  const AlertDialogInfo({
+    required String title,
+    required List<String> actions,
+    String? defaultAction,
+    void Function(String action)? onAction,
+    void Function()? onClose,
+    this.body,
+  }) : super(
+          title: title,
+          actions: actions,
+          defaultAction: defaultAction,
+          onAction: onAction,
+          onClose: onClose,
+        );
+}
+
+/// A class for holding information for password capture dialogs widgets that
+/// will be carried by [AppState.dialogs].
+class PasswordDialogInfo extends DialogInfo {
+  /// The password prompt to show above the password text field.
+  final String prompt;
+
+  /// The callback to receive the entered password.
+  final void Function(String? password) onSubmit;
+
+  /// Optional. Callback to validate the password. Returns an error text on
+  /// validation fail or [null] for success.
+  final String? Function(String? password)? validator;
+
+  PasswordDialogInfo({
+    required this.prompt,
+    required this.onSubmit,
+    required List<String> actions,
+    String? defaultAction,
+    void Function(String action)? onAction,
+    void Function()? onClose,
+    this.validator,
+  }) : super(
+          actions: actions,
+          defaultAction: defaultAction,
+          onAction: onAction,
+          onClose: onClose,
+        );
 }
