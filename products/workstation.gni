@@ -180,3 +180,6 @@ product_bootfs_labels += [
   "//src/storage/fxfs",
   "//src/storage/fxfs-crypt",
 ]
+
+# Use Flatland as the default graphics protocol in Scenic.
+use_flatland_by_default = true
