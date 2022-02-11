@@ -469,6 +469,12 @@ DEFINE_ADMIN_TEST_CLASS(PositionNotifyNone, {
                         DevNameForEntry(DEVICE).c_str(), __FILE__, __LINE__,                 \
                         [=]() -> AdminTest* { return new CLASS_NAME(DEVICE); })
 
+#define REGISTER_DISABLED_ADMIN_TEST(CLASS_NAME, DEVICE)                                       \
+  testing::RegisterTest(                                                                       \
+      "AdminTest", (std::string("DISABLED_") + TestNameForEntry(#CLASS_NAME, DEVICE)).c_str(), \
+      nullptr, DevNameForEntry(DEVICE).c_str(), __FILE__, __LINE__,                            \
+      [=]() -> AdminTest* { return new CLASS_NAME(DEVICE); })
+
 void RegisterAdminTestsForDevice(const DeviceEntry& device_entry,
                                  bool expect_audio_core_connected) {
   // If audio_core is connected to the audio driver, admin tests will fail.
@@ -488,10 +494,11 @@ void RegisterAdminTestsForDevice(const DeviceEntry& device_entry,
     REGISTER_ADMIN_TEST(StopBeforeGetVmoShouldDisconnect, device_entry);
     REGISTER_ADMIN_TEST(StopWhileStoppedIsPermitted, device_entry);
 
-    REGISTER_ADMIN_TEST(PositionNotifyFast, device_entry);
-    REGISTER_ADMIN_TEST(PositionNotifySlow, device_entry);
-    REGISTER_ADMIN_TEST(NoPositionNotifyAfterStop, device_entry);
-    REGISTER_ADMIN_TEST(PositionNotifyNone, device_entry);
+    // TODO(fxbug.dev/65608): Re-enable position tests where realtime response is guaranteed.
+    REGISTER_DISABLED_ADMIN_TEST(PositionNotifyFast, device_entry);
+    REGISTER_DISABLED_ADMIN_TEST(PositionNotifySlow, device_entry);
+    REGISTER_DISABLED_ADMIN_TEST(NoPositionNotifyAfterStop, device_entry);
+    REGISTER_DISABLED_ADMIN_TEST(PositionNotifyNone, device_entry);
   }
 }
 

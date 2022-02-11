@@ -99,6 +99,7 @@ int main(int argc, char** argv) {
 
   // --admin  Validate commands that require the privileged channel, such as SetFormat.
   // Without this, we omit AdminTest cases if a device/driver is exposed in the device tree.
+  // TODO(fxbug.dev/93428): Also enable Admin test cases if audio_core cannot connect to drivers.
   bool expect_audio_core_connected = !command_line.HasOption("admin");
 
   media::audio::drivers::test::DetectDevices();
