@@ -1,9 +1,7 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.requestflexibleenvelope
-
 
 
 ## **PROTOCOLS**
@@ -11,62 +9,61 @@
 ## Protocol {#Protocol}
 *Defined in [test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl;l=13)*
 
-
-
 ### RequestFlexibleResponseStrict {#Protocol.RequestFlexibleResponseStrict}
 
 
-
 #### Request {#Protocol.RequestFlexibleResponseStrict_Request}
+
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>s</code></td>
             <td>
                 <code><a class='link' href='#FlexibleFoo'>FlexibleFoo</a></code>
             </td>
-        </tr></table>
+        </tr>
+</table>
 
 
 #### Response {#Protocol.RequestFlexibleResponseStrict_Response}
+
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>f</code></td>
             <td>
                 <code><a class='link' href='#StrictFoo'>StrictFoo</a></code>
             </td>
-        </tr></table>
+        </tr>
+</table>
 
 ### RequestStrictResponseFlexible {#Protocol.RequestStrictResponseFlexible}
 
 
-
 #### Request {#Protocol.RequestStrictResponseFlexible_Request}
+
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>s</code></td>
             <td>
                 <code><a class='link' href='#StrictFoo'>StrictFoo</a></code>
             </td>
-        </tr></table>
+        </tr>
+</table>
 
 
 #### Response {#Protocol.RequestStrictResponseFlexible_Response}
+
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>f</code></td>
             <td>
                 <code><a class='link' href='#FlexibleFoo'>FlexibleFoo</a></code>
             </td>
-        </tr></table>
-
-
-
-
-
+        </tr>
+</table>
 
 
 
@@ -75,55 +72,47 @@
 
 ### FlexibleFoo [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#FlexibleFoo data-text="FlexibleFoo"}
 *Defined in [test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl;l=3)*
-
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FlexibleFoo.s">
-            <td><h3 id="FlexibleFoo.s" class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="FlexibleFoo.s">
+<td><h3 id="FlexibleFoo.s" class="add-link hide-from-toc">1</h3></td>
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="FlexibleFoo.i">
-            <td><h3 id="FlexibleFoo.i" class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="FlexibleFoo.i">
+<td><h3 id="FlexibleFoo.i" class="add-link hide-from-toc">2</h3></td>
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
             </td>
-            <td>
-</td>
-        </tr></table>
+            <td></td>
+        </tr>
+</table>
 
 ### StrictFoo [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#StrictFoo data-text="StrictFoo"}
 *Defined in [test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl;l=8)*
-
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictFoo.s">
-            <td><h3 id="StrictFoo.s" class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="StrictFoo.s">
+<td><h3 id="StrictFoo.s" class="add-link hide-from-toc">1</h3></td>
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
-            <td>
-</td>
-        </tr><tr id="StrictFoo.i">
-            <td><h3 id="StrictFoo.i" class="add-link hide-from-toc">2</h3></td>
+            <td></td>
+        </tr>
+        <tr id="StrictFoo.i">
+<td><h3 id="StrictFoo.i" class="add-link hide-from-toc">2</h3></td>
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
-
-
-
+            <td></td>
+        </tr>
+</table>
 
 
 

@@ -36,7 +36,7 @@ fn parse_json_visitor<'a, 'reg>(
     relative_path: &[PathSeg],
     block_contexts: &'a VecDeque<BlockContext<'reg>>,
     always_for_absolute_path: bool,
-) -> Result<ResolvedPath<'a>, RenderError> {
+) -> ResolvedPath<'a> {
     let mut path_context_depth: i64 = 0;
     let mut with_block_param = None;
     let mut from_root = false;
@@ -45,7 +45,7 @@ fn parse_json_visitor<'a, 'reg>(
     for path_seg in relative_path {
         match path_seg {
             PathSeg::Named(the_path) => {
-                if let Some((holder, base_path)) = get_in_block_params(&block_contexts, the_path) {
+                if let Some((holder, base_path)) = get_in_block_params(block_contexts, the_path) {
                     with_block_param = Some((holder, base_path));
                 }
                 break;
@@ -65,7 +65,7 @@ fn parse_json_visitor<'a, 'reg>(
     match with_block_param {
         Some((BlockParamHolder::Value(ref value), _)) => {
             merge_json_path(&mut path_stack, &relative_path[1..]);
-            Ok(ResolvedPath::BlockParamValue(path_stack, value))
+            ResolvedPath::BlockParamValue(path_stack, value)
         }
         Some((BlockParamHolder::Path(ref paths), base_path)) => {
             extend(&mut path_stack, base_path);
@@ -74,7 +74,7 @@ fn parse_json_visitor<'a, 'reg>(
             }
             merge_json_path(&mut path_stack, &relative_path[1..]);
 
-            Ok(ResolvedPath::AbsolutePath(path_stack))
+            ResolvedPath::AbsolutePath(path_stack)
         }
         None => {
             if path_context_depth > 0 {
@@ -84,31 +84,31 @@ fn parse_json_visitor<'a, 'reg>(
 
                 if let Some(base_value) = blk.and_then(|blk| blk.base_value()) {
                     merge_json_path(&mut path_stack, relative_path);
-                    Ok(ResolvedPath::LocalValue(path_stack, base_value))
+                    ResolvedPath::LocalValue(path_stack, base_value)
                 } else {
                     if let Some(base_path) = blk.map(|blk| blk.base_path()) {
                         extend(&mut path_stack, base_path);
                     }
                     merge_json_path(&mut path_stack, relative_path);
-                    Ok(ResolvedPath::AbsolutePath(path_stack))
+                    ResolvedPath::AbsolutePath(path_stack)
                 }
             } else if from_root {
                 merge_json_path(&mut path_stack, relative_path);
-                Ok(ResolvedPath::AbsolutePath(path_stack))
+                ResolvedPath::AbsolutePath(path_stack)
             } else if always_for_absolute_path {
                 if let Some(base_value) = block_contexts.front().and_then(|blk| blk.base_value()) {
                     merge_json_path(&mut path_stack, relative_path);
-                    Ok(ResolvedPath::LocalValue(path_stack, base_value))
+                    ResolvedPath::LocalValue(path_stack, base_value)
                 } else {
                     if let Some(base_path) = block_contexts.front().map(|blk| blk.base_path()) {
                         extend(&mut path_stack, base_path);
                     }
                     merge_json_path(&mut path_stack, relative_path);
-                    Ok(ResolvedPath::AbsolutePath(path_stack))
+                    ResolvedPath::AbsolutePath(path_stack)
                 }
             } else {
                 merge_json_path(&mut path_stack, relative_path);
-                Ok(ResolvedPath::RelativePath(path_stack))
+                ResolvedPath::RelativePath(path_stack)
             }
         }
     }
@@ -138,14 +138,14 @@ fn get_in_block_params<'a, 'reg>(
     None
 }
 
-pub(crate) fn merge_json(base: &Json, addition: &HashMap<&&str, &Json>) -> Json {
+pub(crate) fn merge_json(base: &Json, addition: &HashMap<&str, &Json>) -> Json {
     let mut base_map = match base {
         Json::Object(ref m) => m.clone(),
         _ => Map::new(),
     };
 
     for (k, v) in addition.iter() {
-        base_map.insert((*(*k)).to_string(), (*v).clone());
+        base_map.insert(k.to_string(), (*v).clone());
     }
 
     Json::Object(base_map)
@@ -171,7 +171,7 @@ impl Context {
         block_contexts: &VecDeque<BlockContext<'reg>>,
     ) -> Result<ScopedJson<'reg, 'rc>, RenderError> {
         // always use absolute at the moment until we get base_value lifetime issue fixed
-        let resolved_visitor = parse_json_visitor(&relative_path, block_contexts, true)?;
+        let resolved_visitor = parse_json_visitor(relative_path, block_contexts, true);
 
         // debug logging
         debug!("Accessing context value: {:?}", resolved_visitor);
@@ -220,6 +220,12 @@ impl Context {
     /// Return the mutable reference to Json data wrapped in context
     pub fn data_mut(&mut self) -> &mut Json {
         &mut self.data
+    }
+}
+
+impl From<Json> for Context {
+    fn from(data: Json) -> Context {
+        Context { data }
     }
 }
 
@@ -334,7 +340,7 @@ mod test {
         let s = "hello".to_owned();
         let mut hash = HashMap::new();
         let v = value::to_json("h1");
-        hash.insert(&"tag", &v);
+        hash.insert("tag", &v);
 
         let ctx_a1 = Context::wraps(&context::merge_json(&map, &hash)).unwrap();
         assert_eq!(

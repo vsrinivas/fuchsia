@@ -1,9 +1,7 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.transitivedependenciescompose
-
 
 
 ## **PROTOCOLS**
@@ -11,33 +9,25 @@
 ## Top {#Top}
 *Defined in [test.transitivedependenciescompose/top.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl;l=8)*
 
-
-
 ### GetFoo {#Top.GetFoo}
 
 
-
 #### Request {#Top.GetFoo_Request}
+
 &lt;EMPTY&gt;
 
 
 #### Response {#Top.GetFoo_Response}
+
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>foo</code></td>
             <td>
                 <code><a class='link' href='../test.bottom/'>test.bottom</a>/<a class='link' href='../test.bottom/#Foo'>Foo</a></code>
             </td>
-        </tr></table>
-
-
-
-
-
-
-
-
+        </tr>
+</table>
 
 
 

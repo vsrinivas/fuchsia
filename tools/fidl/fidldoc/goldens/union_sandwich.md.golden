@@ -1,10 +1,7 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.unionsandwich
-
-
 
 
 
@@ -13,33 +10,30 @@
 ### SandwichUnionSize12Alignment4  {#SandwichUnionSize12Alignment4 data-text="SandwichUnionSize12Alignment4"}
 *Defined in [test.unionsandwich/union_sandwich.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union_sandwich.test.fidl;l=24)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SandwichUnionSize12Alignment4.before">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="SandwichUnionSize12Alignment4.before">
             <td><code>before</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="SandwichUnionSize12Alignment4.union">
+        </tr>
+        <tr id="SandwichUnionSize12Alignment4.union">
             <td><code>union</code></td>
             <td>
                 <code><a class='link' href='#UnionSize12Alignment4'>UnionSize12Alignment4</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="SandwichUnionSize12Alignment4.after">
+        </tr>
+        <tr id="SandwichUnionSize12Alignment4.after">
             <td><code>after</code></td>
             <td>
                 <code>int32</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
@@ -47,33 +41,30 @@
 ### SandwichUnionSize24Alignment8  {#SandwichUnionSize24Alignment8 data-text="SandwichUnionSize24Alignment8"}
 *Defined in [test.unionsandwich/union_sandwich.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union_sandwich.test.fidl;l=39)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SandwichUnionSize24Alignment8.before">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="SandwichUnionSize24Alignment8.before">
             <td><code>before</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="SandwichUnionSize24Alignment8.union">
+        </tr>
+        <tr id="SandwichUnionSize24Alignment8.union">
             <td><code>union</code></td>
             <td>
                 <code><a class='link' href='#UnionSize24Alignment8'>UnionSize24Alignment8</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="SandwichUnionSize24Alignment8.after">
+        </tr>
+        <tr id="SandwichUnionSize24Alignment8.after">
             <td><code>after</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
@@ -81,33 +72,30 @@
 ### SandwichUnionSize36Alignment4  {#SandwichUnionSize36Alignment4 data-text="SandwichUnionSize36Alignment4"}
 *Defined in [test.unionsandwich/union_sandwich.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union_sandwich.test.fidl;l=49)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SandwichUnionSize36Alignment4.before">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="SandwichUnionSize36Alignment4.before">
             <td><code>before</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="SandwichUnionSize36Alignment4.union">
+        </tr>
+        <tr id="SandwichUnionSize36Alignment4.union">
             <td><code>union</code></td>
             <td>
                 <code><a class='link' href='#UnionSize36Alignment4'>UnionSize36Alignment4</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="SandwichUnionSize36Alignment4.after">
+        </tr>
+        <tr id="SandwichUnionSize36Alignment4.after">
             <td><code>after</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
@@ -115,33 +103,30 @@
 ### SandwichUnionSize8Alignment4  {#SandwichUnionSize8Alignment4 data-text="SandwichUnionSize8Alignment4"}
 *Defined in [test.unionsandwich/union_sandwich.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union_sandwich.test.fidl;l=14)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SandwichUnionSize8Alignment4.before">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="SandwichUnionSize8Alignment4.before">
             <td><code>before</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="SandwichUnionSize8Alignment4.union">
+        </tr>
+        <tr id="SandwichUnionSize8Alignment4.union">
             <td><code>union</code></td>
             <td>
                 <code><a class='link' href='#UnionSize8Alignment4'>UnionSize8Alignment4</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="SandwichUnionSize8Alignment4.after">
+        </tr>
+        <tr id="SandwichUnionSize8Alignment4.after">
             <td><code>after</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
@@ -149,32 +134,25 @@
 ### StructSize16Alignment8  {#StructSize16Alignment8 data-text="StructSize16Alignment8"}
 *Defined in [test.unionsandwich/union_sandwich.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union_sandwich.test.fidl;l=30)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructSize16Alignment8.f1">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="StructSize16Alignment8.f1">
             <td><code>f1</code></td>
             <td>
                 <code>uint64</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
-        </tr><tr id="StructSize16Alignment8.f2">
+        </tr>
+        <tr id="StructSize16Alignment8.f2">
             <td><code>f2</code></td>
             <td>
                 <code>uint64</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
-
-
-
-
 
 
 
@@ -182,71 +160,59 @@
 
 ### UnionSize12Alignment4 [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#UnionSize12Alignment4 data-text="UnionSize12Alignment4"}
 *Defined in [test.unionsandwich/union_sandwich.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union_sandwich.test.fidl;l=20)*
-
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize12Alignment4.variant">
-            <td><h3 id="UnionSize12Alignment4.variant" class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="UnionSize12Alignment4.variant">
+<td><h3 id="UnionSize12Alignment4.variant" class="add-link hide-from-toc">1</h3></td>
             <td><code>variant</code></td>
             <td>
                 <code>uint8[6]</code>
             </td>
-            <td>
-</td>
-        </tr></table>
+            <td></td>
+        </tr>
+</table>
 
 ### UnionSize24Alignment8 [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#UnionSize24Alignment8 data-text="UnionSize24Alignment8"}
 *Defined in [test.unionsandwich/union_sandwich.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union_sandwich.test.fidl;l=35)*
-
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize24Alignment8.variant">
-            <td><h3 id="UnionSize24Alignment8.variant" class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="UnionSize24Alignment8.variant">
+<td><h3 id="UnionSize24Alignment8.variant" class="add-link hide-from-toc">1</h3></td>
             <td><code>variant</code></td>
             <td>
                 <code><a class='link' href='#StructSize16Alignment8'>StructSize16Alignment8</a></code>
             </td>
-            <td>
-</td>
-        </tr></table>
+            <td></td>
+        </tr>
+</table>
 
 ### UnionSize36Alignment4 [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#UnionSize36Alignment4 data-text="UnionSize36Alignment4"}
 *Defined in [test.unionsandwich/union_sandwich.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union_sandwich.test.fidl;l=45)*
-
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize36Alignment4.variant">
-            <td><h3 id="UnionSize36Alignment4.variant" class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="UnionSize36Alignment4.variant">
+<td><h3 id="UnionSize36Alignment4.variant" class="add-link hide-from-toc">1</h3></td>
             <td><code>variant</code></td>
             <td>
                 <code>uint8[32]</code>
             </td>
-            <td>
-</td>
-        </tr></table>
+            <td></td>
+        </tr>
+</table>
 
 ### UnionSize8Alignment4 [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#UnionSize8Alignment4 data-text="UnionSize8Alignment4"}
 *Defined in [test.unionsandwich/union_sandwich.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union_sandwich.test.fidl;l=10)*
-
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize8Alignment4.variant">
-            <td><h3 id="UnionSize8Alignment4.variant" class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="UnionSize8Alignment4.variant">
+<td><h3 id="UnionSize8Alignment4.variant" class="add-link hide-from-toc">1</h3></td>
             <td><code>variant</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
-
-
-
+            <td></td>
+        </tr>
+</table>
 
 
 

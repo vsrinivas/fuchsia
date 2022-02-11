@@ -310,7 +310,7 @@ group("gpt") {
 
 if (!(current_os == "fuchsia")) {
   group("handlebars") {
-    deps = [ ":handlebars-v3_5_4" ]
+    deps = [ ":handlebars-v4_2_1" ]
   }
 }
 
@@ -4734,10 +4734,10 @@ rust_library("half-v1_6_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("handlebars-v3_5_4") {
+rust_library("handlebars-v4_2_1") {
   crate_name = "handlebars"
   crate_root = "//third_party/rust_crates/vendor/handlebars/src/lib.rs"
-  output_name = "handlebars-57fc345ed0913234"
+  output_name = "handlebars-a76c34e7f359eb7e"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -4757,8 +4757,8 @@ rust_library("handlebars-v3_5_4") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=57fc345ed0913234",
-    "-Cextra-filename=-57fc345ed0913234",
+    "-Cmetadata=a76c34e7f359eb7e",
+    "-Cextra-filename=-a76c34e7f359eb7e",
     "--cfg=feature=\"default\"",
   ]
 

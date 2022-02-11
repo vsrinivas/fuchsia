@@ -1,6 +1,6 @@
-{{#if table_declarations}}
 ## **TABLES**
 {{#each table_declarations}}
+
 ### {{rpn name}} {{#if resource}}[resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute}{{/if}} {#{{rpn name}} data-text="{{rpn name}}"}
 {{#if type}}Type: <code>{{type}}</code>{{/if}}
 
@@ -10,7 +10,7 @@
 
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    {{#each members ~}}
+    {{#each members}}
         <tr id="{{rpn ../name}}.{{~ name ~}}">
             {{!-- This uses h3 since fuchsia.dev does not apply heading style if an h2/h3 is in a table --}}
             <td><h3 id="{{rpn ../name}}.{{~ name ~}}" class="add-link hide-from-toc">{{~ ordinal ~}}</h3></td>
@@ -30,7 +30,6 @@
                 {{~> doc ~}}
             </td>
         </tr>
-    {{~ /each ~}}
+    {{/each}}
 </table>
-{{/each ~}}
-{{/if}}
+{{/each}}

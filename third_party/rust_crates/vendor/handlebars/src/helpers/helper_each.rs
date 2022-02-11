@@ -18,7 +18,7 @@ fn update_block_context<'reg>(
     is_first: bool,
     value: &Json,
 ) {
-    if let Some(ref p) = base_path {
+    if let Some(p) = base_path {
         if is_first {
             *block.base_path_mut() = copy_on_push_vec(p, relative_path);
         } else if let Some(ptr) = block.base_path_mut().last_mut() {
@@ -80,8 +80,10 @@ impl HelperDef for EachHelper {
 
         match template {
             Some(t) => match *value.value() {
-                Json::Array(ref list) if !list.is_empty() => {
-                    let block_context = create_block(&value)?;
+                Json::Array(ref list)
+                    if !list.is_empty() || (list.is_empty() && h.inverse().is_none()) =>
+                {
+                    let block_context = create_block(value);
                     rc.push_block(block_context);
 
                     let len = list.len();
@@ -94,12 +96,12 @@ impl HelperDef for EachHelper {
                             let is_last = i == len - 1;
 
                             let index = to_json(i);
-                            block.set_local_var("@first".to_string(), to_json(is_first));
-                            block.set_local_var("@last".to_string(), to_json(is_last));
-                            block.set_local_var("@index".to_string(), index.clone());
+                            block.set_local_var("first", to_json(is_first));
+                            block.set_local_var("last", to_json(is_last));
+                            block.set_local_var("index", index.clone());
 
-                            update_block_context(block, array_path, i.to_string(), is_first, &v);
-                            set_block_param(block, h, array_path, &index, &v)?;
+                            update_block_context(block, array_path, i.to_string(), is_first, v);
+                            set_block_param(block, h, array_path, &index, v)?;
                         }
 
                         t.render(r, ctx, rc, out)?;
@@ -108,29 +110,31 @@ impl HelperDef for EachHelper {
                     rc.pop_block();
                     Ok(())
                 }
-                Json::Object(ref obj) if !obj.is_empty() => {
-                    let block_context = create_block(&value)?;
+                Json::Object(ref obj)
+                    if !obj.is_empty() || (obj.is_empty() && h.inverse().is_none()) =>
+                {
+                    let block_context = create_block(value);
                     rc.push_block(block_context);
 
-                    let mut is_first = true;
+                    let len = obj.len();
+
                     let obj_path = value.context_path();
 
-                    for (k, v) in obj.iter() {
+                    for (i, (k, v)) in obj.iter().enumerate() {
                         if let Some(ref mut block) = rc.block_mut() {
+                            let is_first = i == 0usize;
+                            let is_last = i == len - 1;
+
                             let key = to_json(k);
+                            block.set_local_var("first", to_json(is_first));
+                            block.set_local_var("last", to_json(is_last));
+                            block.set_local_var("key", key.clone());
 
-                            block.set_local_var("@first".to_string(), to_json(is_first));
-                            block.set_local_var("@key".to_string(), key.clone());
-
-                            update_block_context(block, obj_path, k.to_string(), is_first, &v);
-                            set_block_param(block, h, obj_path, &key, &v)?;
+                            update_block_context(block, obj_path, k.to_string(), is_first, v);
+                            set_block_param(block, h, obj_path, &key, v)?;
                         }
 
                         t.render(r, ctx, rc, out)?;
-
-                        if is_first {
-                            is_first = false;
-                        }
                     }
 
                     rc.pop_block();
@@ -138,9 +142,12 @@ impl HelperDef for EachHelper {
                 }
                 _ => {
                     if let Some(else_template) = h.inverse() {
-                        else_template.render(r, ctx, rc, out)?;
+                        else_template.render(r, ctx, rc, out)
+                    } else if r.strict_mode() {
+                        Err(RenderError::strict_error(value.relative_path()))
+                    } else {
+                        Ok(())
                     }
-                    Ok(())
                 }
             },
             None => Ok(()),
@@ -159,6 +166,19 @@ mod test {
     use std::str::FromStr;
 
     #[test]
+    fn test_empty_each() {
+        let mut hbs = Registry::new();
+        hbs.set_strict_mode(true);
+
+        let data = json!({
+            "a": [ ],
+        });
+
+        let template = "{{#each a}}each{{/each}}";
+        assert_eq!(hbs.render_template(template, &data).unwrap(), "");
+    }
+
+    #[test]
     fn test_each() {
         let mut handlebars = Registry::new();
         assert!(handlebars
@@ -168,7 +188,10 @@ mod test {
             )
             .is_ok());
         assert!(handlebars
-            .register_template_string("t1", "{{#each this}}{{@first}}|{{@key}}:{{this}}|{{/each}}")
+            .register_template_string(
+                "t1",
+                "{{#each this}}{{@first}}|{{@last}}|{{@key}}:{{this}}|{{/each}}"
+            )
             .is_ok());
 
         let r0 = handlebars.render("t0", &vec![1u16, 2u16, 3u16]);
@@ -179,9 +202,13 @@ mod test {
 
         let mut m: BTreeMap<String, u16> = BTreeMap::new();
         m.insert("ftp".to_string(), 21);
+        m.insert("gopher".to_string(), 70);
         m.insert("http".to_string(), 80);
         let r1 = handlebars.render("t1", &m);
-        assert_eq!(r1.ok().unwrap(), "true|ftp:21|false|http:80|".to_string());
+        assert_eq!(
+            r1.ok().unwrap(),
+            "true|false|ftp:21|false|false|gopher:70|false|true|http:80|".to_string()
+        );
     }
 
     #[test]
@@ -523,5 +550,51 @@ mod test {
 
         let rendered = reg.render("walk", &input).unwrap();
         assert_eq!(expected_output, rendered);
+    }
+
+    #[test]
+    fn test_strict_each() {
+        let mut reg = Registry::new();
+
+        assert!(reg
+            .render_template("{{#each data}}{{/each}}", &json!({}))
+            .is_ok());
+        assert!(reg
+            .render_template("{{#each data}}{{/each}}", &json!({"data": 24}))
+            .is_ok());
+
+        reg.set_strict_mode(true);
+
+        assert!(reg
+            .render_template("{{#each data}}{{/each}}", &json!({}))
+            .is_err());
+        assert!(reg
+            .render_template("{{#each data}}{{/each}}", &json!({"data": 24}))
+            .is_err());
+        assert!(reg
+            .render_template("{{#each data}}{{else}}food{{/each}}", &json!({}))
+            .is_ok());
+        assert!(reg
+            .render_template("{{#each data}}{{else}}food{{/each}}", &json!({"data": 24}))
+            .is_ok());
+    }
+
+    #[test]
+    fn newline_stripping_for_each() {
+        let reg = Registry::new();
+
+        let tpl = r#"<ul>
+  {{#each a}}
+    {{!-- comment --}}
+    <li>{{this}}</li>
+  {{/each}}
+</ul>"#;
+        assert_eq!(
+            r#"<ul>
+    <li>0</li>
+    <li>1</li>
+</ul>"#,
+            reg.render_template(tpl, &json!({"a": [0, 1]})).unwrap()
+        );
     }
 }

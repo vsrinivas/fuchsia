@@ -1,6 +1,6 @@
-{{#if union_declarations}}
 ## **UNIONS**
 {{#each union_declarations}}
+
 ### {{rpn name}} {{#if strict}}[strict]{{else}}[flexible]{{/if}}(/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {{#if resource}}[resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute}{{/if}} {#{{rpn name}} data-text="{{rpn name}}"}
 {{> filename }}
 
@@ -9,7 +9,7 @@
 {{#if members}}
 <table>
     <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
-    {{~ #each members ~}}
+    {{#each members}}
         <tr id="{{rpn ../name}}.{{~ name ~}}">
             {{!-- This uses h3 since fuchsia.dev does not apply heading style if an h2/h3 is in a table --}}
             <td><h3 id="{{rpn ../name}}.{{~ name ~}}" class="add-link hide-from-toc">{{~ ordinal ~}}</h3></td>
@@ -21,8 +21,7 @@
             </td>
             <td>{{~> doc ~}}</td>
         </tr>
-    {{~ /each ~}}
+    {{/each}}
 </table>
-{{~ /if}}
-{{/each ~}}
-{{~ /if ~}}
+{{/if}}
+{{/each}}

@@ -1,6 +1,6 @@
-{{#if bits_declarations}}
 ## **BITS**
 {{#each bits_declarations}}
+
 ### {{rpn name}} {{#if strict}}[strict]{{else}}[flexible]{{/if}}(/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#{{rpn name}}}
 Type: <code>{{type.subtype}}</code>
 
@@ -10,14 +10,13 @@ Type: <code>{{type.subtype}}</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-    {{~ #each members ~}}
+    {{#each members}}
         <tr id="{{rpn ../name}}.{{~ name ~}}">
             {{!-- This uses h3 since fuchsia.dev does not apply heading style if an h2/h3 is in a table --}}
             <td><h3 id="{{rpn ../name}}.{{~ name ~}}" class="add-link hide-from-toc">{{~ name ~}}</h3></td>
             <td>{{~ value.literal.value ~}}</td>
             <td>{{~> doc ~}}</td>
         </tr>
-    {{~ /each ~}}
+    {{/each}}
 </table>
-{{/each ~}}
-{{/if ~}}
+{{/each}}

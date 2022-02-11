@@ -1,9 +1,7 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.placementofattributes
-
 
 
 ## **PROTOCOLS**
@@ -11,24 +9,20 @@
 ## ExampleProtocol {#ExampleProtocol}
 *Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=22)*
 
-
-
 ### Method {#ExampleProtocol.Method}
 
 
-
 #### Request {#ExampleProtocol.Method_Request}
+
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    <tr>
+        <tr>
             <td><code>arg</code></td>
             <td>
                 <code><a class='link' href='../test.exampleusing/'>test.exampleusing</a>/<a class='link' href='../test.exampleusing/#Empty'>Empty</a></code>
             </td>
-        </tr></table>
-
-
-
+        </tr>
+</table>
 
 
 ## **STRUCTS**
@@ -36,22 +30,17 @@
 ### ExampleStruct  {#ExampleStruct data-text="ExampleStruct"}
 *Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=30)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ExampleStruct.member">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="ExampleStruct.member">
             <td><code>member</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td>No default</td>
         </tr>
 </table>
-
-
 
 ## **ENUMS**
 
@@ -60,18 +49,14 @@ Type: <code>uint32</code>
 
 *Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=16)*
 
-
-
-
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="ExampleEnum.MEMBER">
-            <td><h3 id="ExampleEnum.MEMBER" class="add-link hide-from-toc">MEMBER</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="ExampleEnum.MEMBER">
+<td><h3 id="ExampleEnum.MEMBER" class="add-link hide-from-toc">MEMBER</h3></td>
             <td><code>1</code></td>
-            <td>
-</td>
-        </tr></table>
-
-
+            <td></td>
+        </tr>
+</table>
 
 ## **TABLES**
 
@@ -80,58 +65,47 @@ Type: <code>uint32</code>
 
 *Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=36)*
 
-
-
-
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    <tr id="ExampleTable.member">
-            <td><h3 id="ExampleTable.member" class="add-link hide-from-toc">1</h3></td>
+        <tr id="ExampleTable.member">
+<td><h3 id="ExampleTable.member" class="add-link hide-from-toc">1</h3></td>
             <td><code>member</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
-
+            <td></td>
+        </tr>
+</table>
 
 ## **UNIONS**
 
 ### ExampleUnion [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#ExampleUnion data-text="ExampleUnion"}
 *Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=45)*
-
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExampleUnion.variant">
-            <td><h3 id="ExampleUnion.variant" class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="ExampleUnion.variant">
+<td><h3 id="ExampleUnion.variant" class="add-link hide-from-toc">1</h3></td>
             <td><code>variant</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
-        </tr></table>
+            <td></td>
+        </tr>
+</table>
 
 ### ExampleXUnion [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#ExampleXUnion data-text="ExampleXUnion"}
 *Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=51)*
-
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="ExampleXUnion.variant">
-            <td><h3 id="ExampleXUnion.variant" class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="ExampleXUnion.variant">
+<td><h3 id="ExampleXUnion.variant" class="add-link hide-from-toc">1</h3></td>
             <td><code>variant</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td>
-</td>
-        </tr></table>
-
-
+            <td></td>
+        </tr>
+</table>
 
 ## **BITS**
 
@@ -140,44 +114,36 @@ Type: <code>uint32</code>
 
 *Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=7)*
 
-
-
-
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="ExampleBits.MEMBER">
-            <td><h3 id="ExampleBits.MEMBER" class="add-link hide-from-toc">MEMBER</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="ExampleBits.MEMBER">
+<td><h3 id="ExampleBits.MEMBER" class="add-link hide-from-toc">MEMBER</h3></td>
             <td>1</td>
-            <td>
-</td>
-        </tr></table>
-
-
+            <td></td>
+        </tr>
+</table>
 
 ## **CONSTANTS**
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr><tr id="EXAMPLE_CONST">
+    <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr>
+        <tr id="EXAMPLE_CONST">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=13">EXAMPLE_CONST</a></td>
-            <td>
+                <td>
                     <code>0</code>
                 </td>
                 <td><code>uint32</code></td>
-            <td>
-</td>
+            <td></td>
         </tr>
-    
 </table>
-
-
-
 ## **TYPE ALIASES**
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="TypeAlias">
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="TypeAlias">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=42">TypeAlias</a></td>
             <td>
                 <code>uint32</code></td>
-            <td>
-</td>
-        </tr></table>
-
+            <td></td>
+        </tr>
+</table>

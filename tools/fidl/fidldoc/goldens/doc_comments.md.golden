@@ -1,31 +1,26 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.doccomments
 
 <p>library comment #1</p>
 <p>library comment #2</p>
 
-
 ## **PROTOCOLS**
 
 ## Interface {#Interface}
 *Defined in [test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=112)*
-
 <p>interface comment #1</p>
 <p>interface comment #3</p>
-
 
 ### Method {#Interface.Method}
 
 <p>method comment #1</p>
 <p>method comment #3</p>
 
-
 #### Request {#Interface.Method_Request}
-&lt;EMPTY&gt;
 
+&lt;EMPTY&gt;
 
 
 ### OnEvent {#Interface.OnEvent}
@@ -34,38 +29,30 @@
 <p>event comment #3</p>
 
 
-
-
 #### Response {#Interface.OnEvent_Response}
+
 &lt;EMPTY&gt;
-
-
 
 ## **STRUCTS**
 
 ### Struct  {#Struct data-text="Struct"}
 *Defined in [test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=72)*
-
 <p>struct comment #1</p>
 <p>struct comment #3</p>
 
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Struct.Field">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="Struct.Field">
             <td><code>Field</code></td>
             <td>
                 <code>int32</code>
             </td>
             <td><p>struct member comment #1</p>
 <p>struct member comment #3</p>
-
 </td>
             <td>No default</td>
         </tr>
 </table>
-
-
 
 ## **ENUMS**
 
@@ -73,57 +60,51 @@
 Type: <code>uint32</code>
 
 *Defined in [test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=57)*
-
 <p>flexible enum comment #1.</p>
 <p>flexible enum comment #2.</p>
 
-
-
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyFlexibleEnum.FOO">
-            <td><h3 id="MyFlexibleEnum.FOO" class="add-link hide-from-toc">FOO</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="MyFlexibleEnum.FOO">
+<td><h3 id="MyFlexibleEnum.FOO" class="add-link hide-from-toc">FOO</h3></td>
             <td><code>1</code></td>
             <td><p>FOO member comment #1</p>
 <p>FOO member comment #3</p>
-
 </td>
-        </tr><tr id="MyFlexibleEnum.BAR">
-            <td><h3 id="MyFlexibleEnum.BAR" class="add-link hide-from-toc">BAR</h3></td>
+        </tr>
+        <tr id="MyFlexibleEnum.BAR">
+<td><h3 id="MyFlexibleEnum.BAR" class="add-link hide-from-toc">BAR</h3></td>
             <td><code>2</code></td>
             <td><p>BAR member comment #1</p>
 <p>BAR member comment #3</p>
-
 </td>
-        </tr></table>
+        </tr>
+</table>
 
 ### MyStrictEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyStrictEnum}
 Type: <code>uint32</code>
 
 *Defined in [test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=42)*
-
 <p>strict enum comment #1.</p>
 <p>strict enum comment #2.</p>
 
-
-
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyStrictEnum.FOO">
-            <td><h3 id="MyStrictEnum.FOO" class="add-link hide-from-toc">FOO</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="MyStrictEnum.FOO">
+<td><h3 id="MyStrictEnum.FOO" class="add-link hide-from-toc">FOO</h3></td>
             <td><code>1</code></td>
             <td><p>FOO member comment #1</p>
 <p>FOO member comment #3</p>
-
 </td>
-        </tr><tr id="MyStrictEnum.BAR">
-            <td><h3 id="MyStrictEnum.BAR" class="add-link hide-from-toc">BAR</h3></td>
+        </tr>
+        <tr id="MyStrictEnum.BAR">
+<td><h3 id="MyStrictEnum.BAR" class="add-link hide-from-toc">BAR</h3></td>
             <td><code>2</code></td>
             <td><p>BAR member comment #1</p>
 <p>BAR member comment #3</p>
-
 </td>
-        </tr></table>
-
-
+        </tr>
+</table>
 
 ## **TABLES**
 
@@ -131,71 +112,60 @@ Type: <code>uint32</code>
 
 
 *Defined in [test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=102)*
-
 <p>table comment #1</p>
 <p>table comment #3</p>
 
-
-
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
-    <tr id="Table.Field">
-            <td><h3 id="Table.Field" class="add-link hide-from-toc">1</h3></td>
+        <tr id="Table.Field">
+<td><h3 id="Table.Field" class="add-link hide-from-toc">1</h3></td>
             <td><code>Field</code></td>
             <td>
                 <code>int32</code>
             </td>
             <td><p>table field comment #1</p>
 <p>table field comment #3</p>
-
 </td>
-        </tr></table>
-
-
+        </tr>
+</table>
 
 ## **UNIONS**
 
 ### FlexibleUnion [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#FlexibleUnion data-text="FlexibleUnion"}
 *Defined in [test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=92)*
-
 <p>flexible union comment #1</p>
 <p>flexible union comment #3</p>
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FlexibleUnion.Field">
-            <td><h3 id="FlexibleUnion.Field" class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="FlexibleUnion.Field">
+<td><h3 id="FlexibleUnion.Field" class="add-link hide-from-toc">1</h3></td>
             <td><code>Field</code></td>
             <td>
                 <code>int32</code>
             </td>
             <td><p>union member comment #1</p>
 <p>union member comment #3</p>
-
 </td>
-        </tr></table>
+        </tr>
+</table>
 
 ### StrictUnion [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#StrictUnion data-text="StrictUnion"}
 *Defined in [test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=82)*
-
 <p>strict union comment #1</p>
 <p>strict union comment #3</p>
-
-
 <table>
-    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictUnion.Field">
-            <td><h3 id="StrictUnion.Field" class="add-link hide-from-toc">1</h3></td>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="StrictUnion.Field">
+<td><h3 id="StrictUnion.Field" class="add-link hide-from-toc">1</h3></td>
             <td><code>Field</code></td>
             <td>
                 <code>int32</code>
             </td>
             <td><p>union member comment #1</p>
 <p>union member comment #3</p>
-
 </td>
-        </tr></table>
-
-
+        </tr>
+</table>
 
 ## **BITS**
 
@@ -203,74 +173,64 @@ Type: <code>uint32</code>
 Type: <code>uint32</code>
 
 *Defined in [test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=23)*
-
 <p>flexible bits comment #1</p>
 <p>flexible bits comment #2</p>
 
-
-
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyFlexibleBits.MY_FIRST_BIT">
-            <td><h3 id="MyFlexibleBits.MY_FIRST_BIT" class="add-link hide-from-toc">MY_FIRST_BIT</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="MyFlexibleBits.MY_FIRST_BIT">
+<td><h3 id="MyFlexibleBits.MY_FIRST_BIT" class="add-link hide-from-toc">MY_FIRST_BIT</h3></td>
             <td>1</td>
             <td><p>MY_FIRST_BIT member comment #1</p>
 <p>MY_FIRST_BIT member comment #3</p>
-
 </td>
-        </tr><tr id="MyFlexibleBits.MY_OTHER_BIT">
-            <td><h3 id="MyFlexibleBits.MY_OTHER_BIT" class="add-link hide-from-toc">MY_OTHER_BIT</h3></td>
+        </tr>
+        <tr id="MyFlexibleBits.MY_OTHER_BIT">
+<td><h3 id="MyFlexibleBits.MY_OTHER_BIT" class="add-link hide-from-toc">MY_OTHER_BIT</h3></td>
             <td>2</td>
             <td><p>MY_OTHER_BIT member comment #1</p>
 <p>MY_OTHER_BIT member comment #3</p>
-
 </td>
-        </tr></table>
+        </tr>
+</table>
 
 ### MyStrictBits [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyStrictBits}
 Type: <code>uint32</code>
 
 *Defined in [test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=9)*
-
 <p>strict bits comment #1</p>
 <p>strict bits comment #2</p>
 
-
-
 <table>
-    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="MyStrictBits.MY_FIRST_BIT">
-            <td><h3 id="MyStrictBits.MY_FIRST_BIT" class="add-link hide-from-toc">MY_FIRST_BIT</h3></td>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+        <tr id="MyStrictBits.MY_FIRST_BIT">
+<td><h3 id="MyStrictBits.MY_FIRST_BIT" class="add-link hide-from-toc">MY_FIRST_BIT</h3></td>
             <td>1</td>
             <td><p>MY_FIRST_BIT member comment #1</p>
 <p>MY_FIRST_BIT member comment #3</p>
-
 </td>
-        </tr><tr id="MyStrictBits.MY_OTHER_BIT">
-            <td><h3 id="MyStrictBits.MY_OTHER_BIT" class="add-link hide-from-toc">MY_OTHER_BIT</h3></td>
+        </tr>
+        <tr id="MyStrictBits.MY_OTHER_BIT">
+<td><h3 id="MyStrictBits.MY_OTHER_BIT" class="add-link hide-from-toc">MY_OTHER_BIT</h3></td>
             <td>2</td>
             <td><p>MY_OTHER_BIT member comment #1</p>
 <p>MY_OTHER_BIT member comment #3</p>
-
 </td>
-        </tr></table>
-
-
+        </tr>
+</table>
 
 ## **CONSTANTS**
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr><tr id="C">
+    <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr>
+        <tr id="C">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=37">C</a></td>
-            <td>
+                <td>
                     <code>4</code>
                 </td>
                 <td><code>int32</code></td>
             <td><p>const comment #1</p>
 <p>const comment #3</p>
-
 </td>
         </tr>
-    
 </table>
-
-
-

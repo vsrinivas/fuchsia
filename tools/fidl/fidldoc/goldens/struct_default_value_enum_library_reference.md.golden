@@ -1,10 +1,7 @@
 <link rel="stylesheet" href="../style.css" />
 
 [TOC]
-
 # test.structdefaultvalueenumlibraryreference
-
-
 
 
 
@@ -13,27 +10,17 @@
 ### Foo  {#Foo data-text="Foo"}
 *Defined in [test.structdefaultvalueenumlibraryreference/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl;l=5)*
 
-
-
-
 <table>
-    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Foo.field">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
+        <tr id="Foo.field">
             <td><code>field</code></td>
             <td>
                 <code><a class='link' href='../test.dependent/'>test.dependent</a>/<a class='link' href='../test.dependent/#MyEnum'>MyEnum</a></code>
             </td>
-            <td>
-</td>
+            <td></td>
             <td><a class='link' href='../test.dependent/'>test.dependent</a>/<a class='link' href='../test.dependent/#MyEnum.A'>MyEnum.A</a></td>
         </tr>
 </table>
-
-
-
-
-
-
-
 
 
 
