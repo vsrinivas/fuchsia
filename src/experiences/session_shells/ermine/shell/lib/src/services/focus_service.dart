@@ -27,6 +27,13 @@ class FocusService extends FocusChainListener {
   // Holds the currently focused child view. Null, if shell has focus.
   ViewState? focusedChildView;
 
+  // Temporary variable to guard against FocusChain overwriting the values
+  // set by _onHostFocusChanged(). Note that Flatland doesn't work with
+  // FocusChain.
+  // TODO(fxbug.dev/93446): Remove this along with FocusChain subscription after
+  // enabling Flatland by default.
+  bool flatlandHasMovedFocusToChild = false;
+
   FocusService(ViewRef viewRef) : hostView = ViewHandle(viewRef) {
     final registryProxy = FocusChainListenerRegistryProxy();
     Incoming.fromSvcPath().connectToService(registryProxy);
@@ -44,8 +51,10 @@ class FocusService extends FocusChainListener {
   void _onHostFocusChanged(bool focused) {
     if (focused) {
       onFocusMoved(hostView);
+      flatlandHasMovedFocusToChild = false;
     } else if (focusedChildView != null) {
       onFocusMoved(focusedChildView!.view);
+      flatlandHasMovedFocusToChild = true;
     }
   }
 
@@ -96,6 +105,8 @@ class FocusService extends FocusChainListener {
     final index = chain.lastIndexOf(hostView);
     final childView = chain[index + 1];
 
-    onFocusMoved(childView);
+    if (!flatlandHasMovedFocusToChild) {
+      onFocusMoved(childView);
+    }
   }
 }
