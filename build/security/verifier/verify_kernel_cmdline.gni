@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
 import("//build/dev.gni")
+import("//src/developer/ffx/build/ffx_action.gni")
 
 # Check the kernel cmdline extracted from ZBI against a golden file.
 #
@@ -23,7 +23,7 @@ import("//build/dev.gni")
 #     Usual GN meaning.
 
 template("verify_kernel_cmdline") {
-  compiled_action("${target_name}") {
+  ffx_action(target_name) {
     assert(defined(invoker.zbi), "verify_kernel_cmdline() must specify zbi")
     assert(defined(invoker.zbi_target),
            "verify_kernel_cmdline() must specify zbi_target")
@@ -38,8 +38,6 @@ template("verify_kernel_cmdline") {
                              "visibility",
                            ])
 
-    tool = "//src/security/verifiers/verify_kernel_cmdline:bin"
-    tool_output_name = "scrutiny_verify_kernel_cmdline"
     stamp_file = "$target_gen_dir/$target_name.verified"
 
     inputs = [ invoker.zbi ]
@@ -47,12 +45,20 @@ template("verify_kernel_cmdline") {
     outputs = [ stamp_file ]
 
     args = [
-             "--zbi",
-             rebase_path(invoker.zbi, root_build_dir),
-             "--stamp",
-             rebase_path(stamp_file, root_build_dir),
-             "--goldens",
-           ] + rebase_path(invoker.goldens, root_build_dir)
+      "scrutiny",
+      "verify",
+      "kernel-cmdline",
+      "--zbi",
+      rebase_path(invoker.zbi, root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
+    ]
+    foreach(golden, invoker.goldens) {
+      args += [
+        "--golden",
+        rebase_path(golden, root_build_dir),
+      ]
+    }
 
     if (!defined(invoker.deps)) {
       deps = []

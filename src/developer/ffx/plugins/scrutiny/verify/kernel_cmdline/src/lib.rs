@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Result},
-    clap::{App, Arg},
+    anyhow::{anyhow, bail, Context, Error, Result},
+    ffx_core::ffx_plugin,
+    ffx_scrutiny_kernel_cmdline_args::ScrutinyKernelCmdlineCommand,
     scrutiny_config::{Config, LoggingConfig, PluginConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_utils::golden::{CompareResult, GoldenFile},
@@ -71,65 +72,19 @@ impl VerifyKernelCmdline {
     }
 }
 
-fn main() -> Result<()> {
-    simplelog::SimpleLogger::init(simplelog::LevelFilter::Error, simplelog::Config::default())?;
-    let args = App::new("scrutiny_verify_kernel_cmdline")
-        .version("1.0")
-        .author("Fuchsia Authors")
-        .about("Check the kernel cmdline extracted from ZBI against a golden file.")
-        .arg(
-            Arg::with_name("stamp")
-                .long("stamp")
-                .required(true)
-                .help("The stamp file output location.")
-                .value_name("stamp")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("goldens")
-                .long("goldens")
-                .required(true)
-                .help(
-                    "Path to one of the possible golden files to check against,
-                       there should only be one golden file in normal case, and only
-                       two golden files, one old file and one new file during a soft
-                       transition. After the transition, the old golden file should
-                       be removed and only leave the new golden file.",
-                )
-                .value_name("goldens")
-                .takes_value(true)
-                .min_values(1)
-                .max_values(2),
-        )
-        .arg(
-            Arg::with_name("zbi")
-                .long("zbi")
-                .required(true)
-                .help("Path to the ZBI to verify.")
-                .value_name("zbi")
-                .takes_value(true),
-        )
-        .get_matches();
-    let golden_files: Vec<String> = args
-        .values_of("goldens")
-        .expect("failed to find goldens")
-        .map(ToString::to_string)
-        .collect();
-    let zbi_path = args.value_of("zbi").expect("failed to find the zbi path");
+#[ffx_plugin()]
+pub async fn scrutiny_kernel_cmdline(cmd: ScrutinyKernelCmdlineCommand) -> Result<(), Error> {
+    if cmd.golden.len() == 0 {
+        bail!("Must specify at least one --golden");
+    }
 
-    let mut last_error: Result<()> = Ok(());
-    for golden_file in golden_files.iter() {
-        let verifier = VerifyKernelCmdline::new(golden_file.clone(), zbi_path.clone());
-        match verifier.verify() {
-            Ok(()) => {
-                fs::write(args.value_of("stamp").unwrap(), "Verified")
-                    .expect("Failed to write stamp file");
-                return Ok(());
-            }
-            error => {
-                last_error = error;
-            }
+    for golden_file in cmd.golden.into_iter() {
+        let verifier = VerifyKernelCmdline::new(golden_file, cmd.zbi.clone());
+        verifier.verify()?;
+        if let Some(stamp) = cmd.stamp.as_ref() {
+            fs::write(stamp, "Verified").context("Failed to write stamp file")?;
         }
     }
-    last_error
+
+    Ok(())
 }
