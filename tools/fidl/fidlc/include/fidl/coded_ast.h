@@ -130,7 +130,6 @@ struct Type {
     kTable,
     kXUnion,
     kStructPointer,
-    kMessage,
     kProtocol,
     kArray,
     kString,
@@ -290,32 +289,19 @@ struct XUnionType : public Type {
   types::Resourceness resourceness;
 };
 
-struct MessageType : public Type {
-  MessageType(std::string name, std::vector<StructElement> elements, uint32_t size_v1,
-              uint32_t size_v2, bool contains_envelope, std::string qname)
-      : Type(Kind::kMessage, std::move(name), size_v1, size_v2, true, false),
-        elements(std::move(elements)),
-        contains_envelope(contains_envelope),
-        qname(std::move(qname)) {}
-
-  std::vector<StructElement> elements;
-  bool contains_envelope;
-  std::string qname;
-};
-
 struct ProtocolType : public Type {
-  explicit ProtocolType(std::vector<std::unique_ptr<MessageType>> messages_during_compile)
+  explicit ProtocolType(std::vector<std::unique_ptr<StructType>> messages_during_compile)
       // N.B. ProtocolTypes are never used in the eventual coding table generation.
       : Type(Kind::kProtocol, "", 0, 0, false, false),
         messages_during_compile(std::move(messages_during_compile)) {}
 
   // Note: the messages are moved from the protocol type into the
   // CodedTypesGenerator coded_types_ vector during assembly.
-  std::vector<std::unique_ptr<MessageType>> messages_during_compile;
+  std::vector<std::unique_ptr<StructType>> messages_during_compile;
 
   // Back pointers to fully compiled message types, owned by the
   // CodedTypesGenerator coded_types_ vector.
-  std::vector<const MessageType*> messages_after_compile;
+  std::vector<const StructType*> messages_after_compile;
 };
 
 struct ArrayType : public Type {

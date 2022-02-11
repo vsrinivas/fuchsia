@@ -5,13 +5,13 @@
 
 __LOCAL extern const struct FidlCodedStruct test_driveroneway_PayloadTable;
 __LOCAL extern const struct FidlCodedStruct test_driveroneway_OneWaySendRequestTable;
-
-
 __LOCAL extern const struct FidlCodedStruct test_driveroneway_OneWaySendRequestMessageTable;
-const struct FidlCodedStruct test_driveroneway_OneWaySendRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.driveroneway/OneWaySendRequestMessage"};
+
 
 
 const struct FidlCodedStruct test_driveroneway_PayloadTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.driveroneway/Payload"};
 
 const struct FidlCodedStruct test_driveroneway_OneWaySendRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.driveroneway/OneWaySendRequest"};
+
+const struct FidlCodedStruct test_driveroneway_OneWaySendRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.driveroneway/OneWaySendRequestMessage"};
 

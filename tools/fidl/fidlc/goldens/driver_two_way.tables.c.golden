@@ -5,16 +5,16 @@
 
 __LOCAL extern const struct FidlCodedStruct test_drivertwoway_TwoWayAddTopResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_drivertwoway_TwoWayAddRequestTable;
-
-
 __LOCAL extern const struct FidlCodedStruct test_drivertwoway_TwoWayAddRequestMessageTable;
-const struct FidlCodedStruct test_drivertwoway_TwoWayAddRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.drivertwoway/TwoWayAddRequestMessage"};
-
 __LOCAL extern const struct FidlCodedStruct test_drivertwoway_TwoWayAddResponseMessageTable;
-const struct FidlCodedStruct test_drivertwoway_TwoWayAddResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=2u, .size_v2=2u, .name="test.drivertwoway/TwoWayAddResponseMessage"};
+
 
 
 const struct FidlCodedStruct test_drivertwoway_TwoWayAddTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=2u, .size_v2=2u, .name="test.drivertwoway/TwoWayAddTopResponse"};
 
 const struct FidlCodedStruct test_drivertwoway_TwoWayAddRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.drivertwoway/TwoWayAddRequest"};
+
+const struct FidlCodedStruct test_drivertwoway_TwoWayAddRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.drivertwoway/TwoWayAddRequestMessage"};
+
+const struct FidlCodedStruct test_drivertwoway_TwoWayAddResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=2u, .size_v2=2u, .name="test.drivertwoway/TwoWayAddResponseMessage"};
 

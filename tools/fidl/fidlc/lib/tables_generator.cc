@@ -83,8 +83,6 @@ std::string TableTypeName([[maybe_unused]] const Type& type) {
     return "FidlCodedTable";
   if constexpr (std::is_same_v<T, fidl::coded::XUnionType>)
     return "FidlCodedXUnion";
-  if constexpr (std::is_same_v<T, fidl::coded::MessageType>)
-    return "FidlCodedStruct";
 }
 
 constexpr auto kIndent = "    ";
@@ -316,39 +314,6 @@ void TablesGenerator::Generate(const coded::StructPointerType& pointer) {
   Emit(&tables_file_, "};\n");
 }
 
-void TablesGenerator::Generate(const coded::MessageType& message_type) {
-  Emit(&tables_file_, "__LOCAL extern const struct FidlCodedStruct ");
-  Emit(&tables_file_, NameTable(message_type.coded_name));
-  Emit(&tables_file_, ";\n");
-
-  std::string fields_array_name = NameFields(message_type.coded_name);
-  if (!message_type.elements.empty()) {
-    Emit(&tables_file_, "static const struct FidlStructElement ");
-    Emit(&tables_file_, fields_array_name);
-    Emit(&tables_file_, "[] = ");
-    GenerateArray(message_type.elements);
-    Emit(&tables_file_, ";\n");
-  }
-
-  Emit(&tables_file_, "const struct FidlCodedStruct ");
-  Emit(&tables_file_, NameTable(message_type.coded_name));
-  Emit(&tables_file_, " = {.tag=kFidlTypeStruct, .contains_envelope=");
-  Emit(&tables_file_, message_type.contains_envelope
-                          ? "kFidlContainsEnvelope_ContainsEnvelope"
-                          : "kFidlContainsEnvelope_DoesNotContainEnvelope");
-  Emit(&tables_file_, ", .elements=");
-  Emit(&tables_file_, message_type.elements.empty() ? "NULL" : fields_array_name);
-  Emit(&tables_file_, ", .element_count=");
-  Emit(&tables_file_, static_cast<uint32_t>(message_type.elements.size()));
-  Emit(&tables_file_, ", .size_v1=");
-  Emit(&tables_file_, message_type.size_v1);
-  Emit(&tables_file_, ", .size_v2=");
-  Emit(&tables_file_, message_type.size_v2);
-  Emit(&tables_file_, ", .name=\"");
-  Emit(&tables_file_, message_type.qname);
-  Emit(&tables_file_, "\"};\n\n");
-}
-
 void TablesGenerator::Generate(const coded::HandleType& handle_type) {
   Emit(&tables_file_, "static const struct FidlCodedHandle ");
   Emit(&tables_file_, NameTable(handle_type.coded_name));
@@ -574,6 +539,15 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
           GenerateForward(*xunion_type.maybe_reference_type);
         break;
       }
+      case coded::Type::Kind::kProtocol: {
+        const auto* protocol_coded_type = static_cast<const coded::ProtocolType*>(coded_type);
+        for (const auto* message : protocol_coded_type->messages_after_compile) {
+          // TODO(fxbug.dev/88343): Switch on table/union when those payloads are supported.
+          assert(message->kind == coded::Type::Kind::kStruct);
+          GenerateForward(*static_cast<const coded::StructType*>(message));
+        }
+        break;
+      }
       default:
         break;
     }
@@ -628,9 +602,6 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
         // Nothing to generate for protocols. We've already moved the
         // messages from the protocol into coded_types_ directly.
         break;
-      case coded::Type::Kind::kMessage:
-        Generate(*static_cast<const coded::MessageType*>(coded_type.get()));
-        break;
       case coded::Type::Kind::kHandle:
         Generate(*static_cast<const coded::HandleType*>(coded_type.get()));
         break;
@@ -660,7 +631,7 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
 
   // Generate coding table definitions for named declarations.
   for (const auto& decl : coded_types_generator->target_library_decl_order()) {
-    auto coded_type = coded_types_generator->CodedTypeFor(decl->name);
+    const coded::Type* coded_type = coded_types_generator->CodedTypeFor(decl->name);
     if (!coded_type)
       continue;
     switch (coded_type->kind) {
@@ -683,6 +654,15 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
         if (xunion_type.maybe_reference_type)
           Generate(*xunion_type.maybe_reference_type);
 
+        break;
+      }
+      case coded::Type::Kind::kProtocol: {
+        const auto* protocol_coded_type = static_cast<const coded::ProtocolType*>(coded_type);
+        for (const auto* message : protocol_coded_type->messages_after_compile) {
+          // TODO(fxbug.dev/88343): Switch on table/union when those payloads are supported.
+          assert(message->kind == coded::Type::Kind::kStruct);
+          Generate(*static_cast<const coded::StructType*>(message));
+        }
         break;
       }
       default:

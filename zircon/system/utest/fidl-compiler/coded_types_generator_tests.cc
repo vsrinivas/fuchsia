@@ -233,8 +233,8 @@ protocol UseOfProtocol {
   EXPECT_TRUE(type1->is_coding_needed);
   EXPECT_EQ(4, type1->size_v1);
   EXPECT_EQ(4, type1->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
-  auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
+  ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type1->kind);
+  auto type1_message = static_cast<const fidl::coded::StructType*>(type1);
   EXPECT_FALSE(type1_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolCallRequestMessage", type1_message->qname.c_str());
   EXPECT_EQ(1, type1_message->elements.size());
@@ -271,7 +271,7 @@ protocol ErrorSyntaxProtocol {
                type2->coded_name.c_str());
   EXPECT_EQ(24, type2->size_v1);
   EXPECT_EQ(16, type2->size_v2);
-  auto type2_message = static_cast<const fidl::coded::MessageType*>(type2);
+  auto type2_message = static_cast<const fidl::coded::StructType*>(type2);
   EXPECT_TRUE(type2_message->contains_envelope);
 }
 
@@ -315,8 +315,8 @@ protocol UseOfProtocolEnds {
   EXPECT_TRUE(type1->is_coding_needed);
   EXPECT_EQ(4, type1->size_v1);
   EXPECT_EQ(4, type1->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
-  auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
+  ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type1->kind);
+  auto type1_message = static_cast<const fidl::coded::StructType*>(type1);
   EXPECT_FALSE(type1_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolEndsClientEndsRequestMessage", type1_message->qname.c_str());
   EXPECT_EQ(1, type1_message->elements.size());
@@ -340,8 +340,8 @@ protocol UseOfProtocolEnds {
   EXPECT_TRUE(type3->is_coding_needed);
   EXPECT_EQ(4, type3->size_v1);
   EXPECT_EQ(4, type3->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type3->kind);
-  auto type3_message = static_cast<const fidl::coded::MessageType*>(type3);
+  ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type3->kind);
+  auto type3_message = static_cast<const fidl::coded::StructType*>(type3);
   EXPECT_FALSE(type3_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolEndsClientEndsResponseMessage", type3_message->qname.c_str());
   EXPECT_EQ(1, type3_message->elements.size());
@@ -365,8 +365,8 @@ protocol UseOfProtocolEnds {
   EXPECT_TRUE(type5->is_coding_needed);
   EXPECT_EQ(4, type5->size_v1);
   EXPECT_EQ(4, type5->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type5->kind);
-  auto type5_message = static_cast<const fidl::coded::MessageType*>(type5);
+  ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type5->kind);
+  auto type5_message = static_cast<const fidl::coded::StructType*>(type5);
   EXPECT_FALSE(type5_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolEndsServerEndsRequestMessage", type5_message->qname.c_str());
   EXPECT_EQ(1, type5_message->elements.size());
@@ -390,8 +390,8 @@ protocol UseOfProtocolEnds {
   EXPECT_TRUE(type7->is_coding_needed);
   EXPECT_EQ(4, type7->size_v1);
   EXPECT_EQ(4, type7->size_v2);
-  ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type7->kind);
-  auto type7_message = static_cast<const fidl::coded::MessageType*>(type7);
+  ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type7->kind);
+  auto type7_message = static_cast<const fidl::coded::StructType*>(type7);
   EXPECT_FALSE(type7_message->contains_envelope);
   EXPECT_STREQ("example/UseOfProtocolEndsServerEndsResponseMessage", type7_message->qname.c_str());
   EXPECT_EQ(1, type7_message->elements.size());

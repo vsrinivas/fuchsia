@@ -55,7 +55,6 @@ class TablesGenerator {
   void Generate(const coded::TableType& table_type);
   void Generate(const coded::XUnionType& xunion_type);
   void Generate(const coded::StructPointerType& pointer);
-  void Generate(const coded::MessageType& message_type);
   void Generate(const coded::HandleType& handle_type);
   void Generate(const coded::ProtocolHandleType& protocol_type);
   void Generate(const coded::RequestHandleType& request_type);

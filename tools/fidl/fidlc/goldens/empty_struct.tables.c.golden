@@ -8,19 +8,11 @@ __LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendRe
 __LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolReceiveRequestTable;
-
-
 __LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendRequestMessageTable;
-const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolSendRequestMessage"};
-
 __LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolReceiveEventMessageTable;
-const struct FidlCodedStruct test_emptystruct_EmptyProtocolReceiveEventMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolReceiveEventMessage"};
-
 __LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
-const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolSendAndReceiveRequestMessage"};
-
 __LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
-const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolSendAndReceiveResponseMessage"};
+
 
 
 const struct FidlCodedStruct test_emptystruct_EmptyTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.emptystruct/Empty"};
@@ -32,4 +24,12 @@ const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveTopResp
 const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolSendAndReceiveRequest"};
 
 const struct FidlCodedStruct test_emptystruct_EmptyProtocolReceiveRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolReceiveRequest"};
+
+const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolSendRequestMessage"};
+
+const struct FidlCodedStruct test_emptystruct_EmptyProtocolReceiveEventMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolReceiveEventMessage"};
+
+const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolSendAndReceiveRequestMessage"};
+
+const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolSendAndReceiveResponseMessage"};
 

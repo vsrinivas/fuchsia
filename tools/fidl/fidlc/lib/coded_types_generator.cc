@@ -292,7 +292,6 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         case coded::Type::Kind::kPrimitive:
         case coded::Type::Kind::kProtocolHandle:
         case coded::Type::Kind::kStructPointer:
-        case coded::Type::Kind::kMessage:
         case coded::Type::Kind::kRequestHandle:
         case coded::Type::Kind::kHandle:
         case coded::Type::Kind::kArray:
@@ -324,7 +323,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         const auto& method = *method_with_info.method;
         auto CompileMessage = [&](const std::unique_ptr<flat::TypeConstructor>& payload) -> void {
           if (payload && payload->name.as_anonymous() != nullptr) {
-            std::unique_ptr<coded::MessageType>& coded_message =
+            std::unique_ptr<coded::StructType>& coded_message =
                 coded_protocol->messages_during_compile[i++];
             std::vector<coded::StructElement>& request_elements = coded_message->elements;
             uint32_t field_num = 0;
@@ -360,7 +359,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
             // We also keep back pointers to reference to these messages via the
             // coded_protocol.
             coded_protocol->messages_after_compile.push_back(
-                static_cast<const coded::MessageType*>(coded_types_.back().get()));
+                static_cast<const coded::StructType*>(coded_types_.back().get()));
           }
         };
         if (method.has_request) {
@@ -504,7 +503,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       auto protocol_decl = static_cast<const flat::Protocol*>(decl);
       std::string protocol_name = NameCodedName(protocol_decl->name);
       std::string protocol_qname = NameFlatName(protocol_decl->name);
-      std::vector<std::unique_ptr<coded::MessageType>> protocol_messages;
+      std::vector<std::unique_ptr<coded::StructType>> protocol_messages;
       for (const auto& method_with_info : protocol_decl->all_methods) {
         assert(method_with_info.method != nullptr);
         const auto& method = *method_with_info.method;
@@ -526,7 +525,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
             typeshape_v1 = as_struct->typeshape(WireFormat::kV1NoEe);
             typeshape_v2 = as_struct->typeshape(WireFormat::kV2);
 
-            protocol_messages.push_back(std::make_unique<coded::MessageType>(
+            protocol_messages.push_back(std::make_unique<coded::StructType>(
                 std::move(message_name), std::vector<coded::StructElement>(),
                 typeshape_v1.inline_size, typeshape_v2.inline_size, typeshape_v1.has_envelope,
                 std::move(message_qname)));
