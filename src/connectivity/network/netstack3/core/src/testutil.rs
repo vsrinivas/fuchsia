@@ -269,8 +269,8 @@ pub(crate) fn trigger_timers_until<F: Fn(&TimerId) -> bool>(
 }
 
 /// Get the counter value for a `key`.
-pub(crate) fn get_counter_val(ctx: &mut Ctx<DummyEventDispatcher>, key: &str) -> usize {
-    *ctx.state.test_counters.get(key)
+pub(crate) fn get_counter_val(ctx: &Ctx<DummyEventDispatcher>, key: &str) -> usize {
+    *ctx.state.test_counters.borrow().get(key)
 }
 
 /// An extension trait for `Ip` providing test-related functionality.
@@ -1332,28 +1332,28 @@ mod tests {
         );
 
         // No timers fired before.
-        assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 0);
-        assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 0);
+        assert_eq!(get_counter_val(net.context(1), "timer::nop"), 0);
+        assert_eq!(get_counter_val(net.context(2), "timer::nop"), 0);
         assert_eq!(net.step().timers_fired(), 1);
         // Only timer in context 1 should have fired.
-        assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 1);
-        assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 0);
+        assert_eq!(get_counter_val(net.context(1), "timer::nop"), 1);
+        assert_eq!(get_counter_val(net.context(2), "timer::nop"), 0);
         assert_eq!(net.step().timers_fired(), 1);
         // Only timer in context 2 should have fired.
-        assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 1);
-        assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 1);
+        assert_eq!(get_counter_val(net.context(1), "timer::nop"), 1);
+        assert_eq!(get_counter_val(net.context(2), "timer::nop"), 1);
         assert_eq!(net.step().timers_fired(), 1);
         // Only timer in context 2 should have fired.
-        assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 1);
-        assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 2);
+        assert_eq!(get_counter_val(net.context(1), "timer::nop"), 1);
+        assert_eq!(get_counter_val(net.context(2), "timer::nop"), 2);
         assert_eq!(net.step().timers_fired(), 1);
         // Only timer in context 1 should have fired.
-        assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 2);
-        assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 2);
+        assert_eq!(get_counter_val(net.context(1), "timer::nop"), 2);
+        assert_eq!(get_counter_val(net.context(2), "timer::nop"), 2);
         assert_eq!(net.step().timers_fired(), 2);
         // Both timers have fired at the same time.
-        assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 3);
-        assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 3);
+        assert_eq!(get_counter_val(net.context(1), "timer::nop"), 3);
+        assert_eq!(get_counter_val(net.context(2), "timer::nop"), 3);
 
         assert!(net.step().is_idle());
         // Check that current time on contexts tick together.
@@ -1386,8 +1386,8 @@ mod tests {
         );
 
         net.run_until_idle_or(|net| {
-            *net.context(1).state.test_counters.get("timer::nop") == 1
-                && *net.context(2).state.test_counters.get("timer::nop") == 1
+            get_counter_val(net.context(1), "timer::nop") == 1
+                && get_counter_val(net.context(2), "timer::nop") == 1
         })
         .unwrap();
         // Assert that we stopped before all times were fired, meaning we can
@@ -1491,16 +1491,14 @@ mod tests {
             F: Fn(&&'static str, DeviceId) -> Vec<(&'static str, DeviceId, Option<Duration>)>,
         {
             let alice = net.context("alice");
-            assert_eq!(*alice.state.test_counters.get("timer::nop"), alice_nop);
-            assert_eq!(
-                *alice.state.test_counters.get("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_reply"),
+            assert_eq!(get_counter_val(alice, "timer::nop"), alice_nop);
+            assert_eq!(get_counter_val(alice, "<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_reply"),
                 alice_echo_response
             );
 
             let bob = net.context("bob");
-            assert_eq!(*bob.state.test_counters.get("timer::nop"), bob_nop);
-            assert_eq!(
-                *bob.state.test_counters.get("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_request"),
+            assert_eq!(get_counter_val(bob, "timer::nop"), bob_nop);
+            assert_eq!(get_counter_val(bob, "<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_request"),
                 bob_echo_request
             );
         }

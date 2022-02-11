@@ -455,7 +455,7 @@ pub(crate) trait FrameHandler<Ctx, Id, Meta, B> {
 /// optimized out entirely by the compiler.
 pub trait CounterContext {
     /// Increment the counter with the given key.
-    fn increment_counter(&mut self, key: &'static str);
+    fn increment_counter(&self, key: &'static str);
 }
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
@@ -465,7 +465,7 @@ impl<D: EventDispatcher> CounterContext for Ctx<D> {
     // code so the compiler thinks `key` is unused. Remove this when this is
     // no longer a problem.
     #[allow(unused)]
-    fn increment_counter(&mut self, key: &'static str) {
+    fn increment_counter(&self, key: &'static str) {
         increment_counter!(self, key);
     }
 }
@@ -804,23 +804,24 @@ pub(crate) mod testutil {
     /// A dummy [`CounterContext`].
     #[derive(Default)]
     pub struct DummyCounterCtx {
-        counters: HashMap<&'static str, usize>,
+        counters: core::cell::RefCell<HashMap<&'static str, usize>>,
     }
 
     impl CounterContext for DummyCounterCtx {
-        fn increment_counter(&mut self, key: &'static str) {
-            let val = self.counters.entry(key).or_insert(0);
+        fn increment_counter(&self, key: &'static str) {
+            let mut counters = self.counters.borrow_mut();
+            let val = counters.entry(key).or_insert(0);
             *val += 1;
         }
     }
 
-    impl<T: AsMut<DummyCounterCtx>> CounterContext for T {
+    impl<T: AsRef<DummyCounterCtx>> CounterContext for T {
         // TODO(rheacock): This is tricky because it's used in test only macro
         // code so the compiler thinks `key` is unused. Remove this when this is
         // no longer a problem.
         #[allow(unused)]
-        fn increment_counter(&mut self, key: &'static str) {
-            self.as_mut().increment_counter(key);
+        fn increment_counter(&self, key: &'static str) {
+            self.as_ref().increment_counter(key);
         }
     }
 
@@ -899,7 +900,7 @@ pub(crate) mod testutil {
 
         /// Get the value of the named counter.
         pub(crate) fn get_counter(&self, ctr: &str) -> usize {
-            self.counters.counters.get(ctr).cloned().unwrap_or(0)
+            self.counters.counters.borrow().get(ctr).cloned().unwrap_or(0)
         }
     }
 
@@ -934,9 +935,9 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<S, Id, Meta> AsMut<DummyCounterCtx> for DummyCtx<S, Id, Meta> {
-        fn as_mut(&mut self) -> &mut DummyCounterCtx {
-            &mut self.counters
+    impl<S, Id, Meta> AsRef<DummyCounterCtx> for DummyCtx<S, Id, Meta> {
+        fn as_ref(&self) -> &DummyCounterCtx {
+            &self.counters
         }
     }
 

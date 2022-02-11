@@ -2126,7 +2126,8 @@ mod tests {
     use crate::ip::socket::testutil::DummyIpSocketCtx;
     use crate::ip::{receive_ipv4_packet, receive_ipv6_packet, DummyDeviceId};
     use crate::testutil::{
-        DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
+        get_counter_val, DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4,
+        DUMMY_CONFIG_V6,
     };
     use crate::transport::udp::UdpStateBuilder;
     use crate::{assert_empty, StackStateBuilder};
@@ -2253,7 +2254,7 @@ mod tests {
         }
 
         for counter in assert_counters {
-            assert!(*ctx.state.test_counters.get(counter) > 0, "counter at zero: {}", counter);
+            assert!(get_counter_val(&ctx, counter) > 0, "counter at zero: {}", counter);
         }
 
         if let Some((expect_message, expect_code)) = expect_message_code {
@@ -2827,17 +2828,17 @@ mod tests {
         net.run_until_idle().unwrap();
 
         assert_eq!(
-            *net.context(ctx_name_receiving_req)
-                .state
-                .test_counters
-                .get(&format!("{}::echo_request", recv_icmp_packet_name)),
+            get_counter_val(
+                net.context(ctx_name_receiving_req),
+                &format!("{}::echo_request", recv_icmp_packet_name)
+            ),
             1
         );
         assert_eq!(
-            *net.context(LOCAL_CTX_NAME)
-                .state
-                .test_counters
-                .get(&format!("{}::echo_reply", recv_icmp_packet_name)),
+            get_counter_val(
+                net.context(LOCAL_CTX_NAME),
+                &format!("{}::echo_reply", recv_icmp_packet_name)
+            ),
             1
         );
         let replies = net.context(LOCAL_CTX_NAME).dispatcher.take_icmp_replies(conn);

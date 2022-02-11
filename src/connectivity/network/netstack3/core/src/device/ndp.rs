@@ -2846,7 +2846,7 @@ mod tests {
         }
         // Check that we hit the timeout after MAX_MULTICAST_SOLICIT.
         assert_eq!(
-            *ctx.state.test_counters.get("ndp::neighbor_solicitation_timer"),
+            get_counter_val(&ctx, "ndp::neighbor_solicitation_timer"),
             1,
             "timeout counter at zero"
         );
@@ -2926,7 +2926,7 @@ mod tests {
         );
 
         assert_eq!(
-            *net.context("remote").state.test_counters.get("ndp::rx_neighbor_solicitation"),
+            get_counter_val(net.context("remote"), "ndp::rx_neighbor_solicitation"),
             1,
             "remote received solicitation"
         );
@@ -2936,7 +2936,7 @@ mod tests {
         let _: StepResult = net.step();
 
         assert_eq!(
-            *net.context("local").state.test_counters.get("ndp::rx_neighbor_advertisement"),
+            get_counter_val(net.context("local"), "ndp::rx_neighbor_advertisement"),
             1,
             "local received advertisement"
         );
@@ -2976,7 +2976,7 @@ mod tests {
         assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
         let _: StepResult = net.step();
         assert_eq!(
-            *net.context("remote").state.test_counters.get("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::echo_request"),
+            get_counter_val(net.context("remote"), "<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::echo_request"),
             1
         );
 

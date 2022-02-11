@@ -183,7 +183,7 @@ impl StackStateBuilder {
             ipv6: self.ipv6.build(),
             device: self.device.build(),
             #[cfg(test)]
-            test_counters: testutil::TestCounters::default(),
+            test_counters: Default::default(),
         }
     }
 }
@@ -195,7 +195,7 @@ pub struct StackState<D: EventDispatcher> {
     ipv6: Ipv6State<D::Instant, DeviceId>,
     device: DeviceLayerState<D::Instant>,
     #[cfg(test)]
-    test_counters: testutil::TestCounters,
+    test_counters: core::cell::RefCell<testutil::TestCounters>,
 }
 
 impl<D: EventDispatcher> StackState<D> {
