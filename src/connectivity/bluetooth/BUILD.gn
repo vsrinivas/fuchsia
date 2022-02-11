@@ -91,5 +91,5 @@ kernel_cmdline("driver-debug-logging") {
 }
 
 kernel_cmdline("disable-bt-host") {
-  args = [ "driver.bt_host.disable" ]
+  args = [ "driver.bt_host.disable=true" ]
 }
