@@ -5,43 +5,46 @@
 
 import unittest
 
-from eager_package_config import generate_omaha_client_config
+from eager_package_config import generate_omaha_client_config, generate_pkg_resolver_config
 
 
 class TestEagerPackageConfig(unittest.TestCase):
     maxDiff = None
 
-    def test_generate_omaha_client_config(self):
-        configs = [
-            {
-                "url":
-                    "fuchsia-pkg://example.com/package",
-                "default_channel":
-                    "stable",
-                "flavor":
-                    "debug",
-                "realms":
-                    [
-                        {
-                            "app_id": "1a2b3c4d",
-                            "channels": ["stable", "beta", "alpha"],
-                        },
-                        {
-                            "app_id": "2b3c4d5e",
-                            "channels": ["test"],
-                        },
-                    ],
-            }, {
-                "url": "fuchsia-pkg://example.com/package2",
-                "realms": [{
-                    "app_id": "3c4d5e6f",
-                    "channels": ["stable"],
-                }],
-            }
-        ]
+    configs = [
+        {
+            "url":
+                "fuchsia-pkg://example.com/package",
+            "default_channel":
+                "stable",
+            "flavor":
+                "debug",
+            "executable":
+                True,
+            "realms":
+                [
+                    {
+                        "app_id": "1a2b3c4d",
+                        "channels": ["stable", "beta", "alpha"],
+                    },
+                    {
+                        "app_id": "2b3c4d5e",
+                        "channels": ["test"],
+                    },
+                ],
+        },
+        {
+            "url": "fuchsia-pkg://example.com/package2",
+            "realms": [{
+                "app_id": "3c4d5e6f",
+                "channels": ["stable"],
+            }],
+        },
+    ]
 
+    def test_generate_omaha_client_config(self):
         self.assertEqual(
-            generate_omaha_client_config(configs), {
+            generate_omaha_client_config(self.configs), {
                 "packages":
                     [
                         {
@@ -110,3 +113,18 @@ class TestEagerPackageConfig(unittest.TestCase):
         ]
         with self.assertRaises(AssertionError):
             generate_omaha_client_config(configs)
+
+    def test_generate_pkg_resolver_config(self):
+        self.assertEqual(
+            generate_pkg_resolver_config(self.configs), {
+                "packages":
+                    [
+                        {
+                            "url": "fuchsia-pkg://example.com/package",
+                            "executable": True,
+                        },
+                        {
+                            "url": "fuchsia-pkg://example.com/package2",
+                        },
+                    ]
+            })

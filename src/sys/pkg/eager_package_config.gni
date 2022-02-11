@@ -19,6 +19,9 @@ import("//build/config.gni")
 #     flavor (optional)
 #       [string] flavor of the package.
 #
+#     executable (optional)
+#       [bool] executability of the package.
+#
 #     default_channel (optional)
 #       [string] if set, this channel will be the default channel. The
 #       channel must appear in channels in at least one realm.
@@ -40,16 +43,23 @@ template("eager_package_config") {
 
   omaha_client_config_path =
       "$target_gen_dir/$target_name/omaha_client/eager_package_config.json"
+  pkg_resolver_config_path =
+      "$target_gen_dir/$target_name/pkg_resolver/eager_package_config.json"
 
   eager_package_config_script_label =
       "${target_name}_eager_package_config_script"
   action(eager_package_config_script_label) {
     script = "//src/sys/pkg/scripts/eager_package_config.py"
     inputs = invoker.sources
-    outputs = [ omaha_client_config_path ]
+    outputs = [
+      omaha_client_config_path,
+      pkg_resolver_config_path,
+    ]
     args = [
              "--out-omaha-client-config",
              rebase_path(omaha_client_config_path, root_build_dir),
+             "--out-pkg-resolver-config",
+             rebase_path(pkg_resolver_config_path, root_build_dir),
            ] + input_paths
   }
 
@@ -58,6 +68,14 @@ template("eager_package_config") {
     for_pkg = "omaha-client"
     outputs = [ "eager_package_config.json" ]
     sources = [ omaha_client_config_path ]
+    deps = [ ":$eager_package_config_script_label" ]
+  }
+
+  pkg_resolver_config_label = "${target_name}_pkg_resolver_config"
+  config_data(pkg_resolver_config_label) {
+    for_pkg = "pkg-resolver"
+    outputs = [ "eager_package_config.json" ]
+    sources = [ pkg_resolver_config_path ]
     deps = [ ":$eager_package_config_script_label" ]
   }
 
@@ -70,6 +88,9 @@ template("eager_package_config") {
     if (!defined(data_deps)) {
       data_deps = []
     }
-    data_deps += [ ":$omaha_client_config_label" ]
+    data_deps += [
+      ":$omaha_client_config_label",
+      ":$pkg_resolver_config_label",
+    ]
   }
 }

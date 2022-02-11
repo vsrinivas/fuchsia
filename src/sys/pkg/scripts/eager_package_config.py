@@ -43,12 +43,32 @@ def generate_omaha_client_config(configs):
     return {'packages': packages}
 
 
+def generate_pkg_resolver_config(configs):
+    packages = []
+
+    for config in configs:
+        package = {}
+
+        package['url'] = config['url']
+        if 'executable' in config:
+            package['executable'] = config['executable']
+
+        packages.append(package)
+
+    return {'packages': packages}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--out-omaha-client-config",
         type=argparse.FileType('w'),
-        help="path to the generated eager package config file for omaha client",
+        help="path to the generated eager package config file for omaha-client",
+    )
+    parser.add_argument(
+        "--out-pkg-resolver-config",
+        type=argparse.FileType('w'),
+        help="path to the generated eager package config file for pkg-resolver",
     )
     parser.add_argument(
         "eager_package_config_files",
@@ -61,6 +81,9 @@ def main():
 
     omaha_client_config = generate_omaha_client_config(configs)
     json.dump(omaha_client_config, args.out_omaha_client_config, sort_keys=True)
+
+    pkg_resolver_config = generate_pkg_resolver_config(configs)
+    json.dump(pkg_resolver_config, args.out_pkg_resolver_config, sort_keys=True)
 
 
 if __name__ == "__main__":
