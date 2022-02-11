@@ -23,7 +23,7 @@
     use: [
         {
             directory: "boot",
-            rights: [ "r*" ], // TODO(fxbug.dev/37534): Add the execute bit when supported.
+            rights: [ "rx*" ],
             path: "/boot",
         },
         { protocol: "fuchsia.process.Launcher" },

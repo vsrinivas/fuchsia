@@ -14,9 +14,9 @@
 
 use {
     fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio,
-    fuchsia_component::server::ServiceFs,
     fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     futures::prelude::*,
+    vfs::directory::entry::DirectoryEntry as _,
 };
 
 #[fuchsia::test]
@@ -34,19 +34,24 @@ async fn boot_resolver_can_be_routed_from_component_manager() {
         .add_local_child(
             "mock-boot",
             |mock_handles| {
-                async move {
-                    let pkg = io_util::directory::open_in_namespace(
-                        "/pkg",
-                        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
-                    )
-                    .unwrap();
-                    let mut fs = ServiceFs::new();
-                    fs.add_remote("boot", pkg);
-                    fs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
-                    fs.collect::<()>().await;
-                    Ok::<(), anyhow::Error>(())
+                let scope = vfs::execution_scope::ExecutionScope::new();
+                let () = vfs::pseudo_directory! {
+                    "boot" => vfs::remote::remote_dir(
+                        io_util::directory::open_in_namespace(
+                            "/pkg",
+                            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
+                        )
+                        .unwrap()
+                    ),
                 }
-                .boxed()
+                .open(
+                    scope.clone(),
+                    io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
+                    0,
+                    vfs::path::Path::dot(),
+                    mock_handles.outgoing_dir.into_channel().into(),
+                );
+                async move { Ok(scope.wait().await) }.boxed()
             },
             ChildOptions::new(),
         )
@@ -54,11 +59,10 @@ async fn boot_resolver_can_be_routed_from_component_manager() {
         .unwrap();
 
     // Supply a fake boot directory which is really just an alias to this package's pkg directory.
-    // TODO(fxbug.dev/37534): Add the execute bit when supported.
     builder
         .add_route(
             Route::new()
-                .capability(Capability::directory("boot").path("/boot").rights(fio::R_STAR_DIR))
+                .capability(Capability::directory("boot").path("/boot").rights(fio::RX_STAR_DIR))
                 .from(&mock_boot)
                 .to(&component_manager),
         )
