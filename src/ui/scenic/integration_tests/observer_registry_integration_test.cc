@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
-#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/observation/test/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -24,8 +25,9 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <sdk/lib/ui/scenic/cpp/view_creation_tokens.h>
 
-#include "sdk/lib/ui/scenic/cpp/view_creation_tokens.h"
+#include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
 // This test exercises the fuchsia.ui.observation.test.Registry protocol implemented by Scenic.
@@ -64,6 +66,8 @@ class ViewBuilder {
 namespace integration_tests {
 using fuc_ChildViewWatcher = fuchsia::ui::composition::ChildViewWatcher;
 using fuc_ContentId = fuchsia::ui::composition::ContentId;
+using fuc_Flatland = fuchsia::ui::composition::Flatland;
+using fuc_FlatlandDisplay = fuchsia::ui::composition::FlatlandDisplay;
 using fuc_FlatlandDisplayPtr = fuchsia::ui::composition::FlatlandDisplayPtr;
 using fuc_FlatlandPtr = fuchsia::ui::composition::FlatlandPtr;
 using fuc_ParentViewportWatcher = fuchsia::ui::composition::ParentViewportWatcher;
@@ -73,12 +77,11 @@ using fuc_ViewportProperties = fuchsia::ui::composition::ViewportProperties;
 using fuf_FocusChain = fuchsia::ui::focus::FocusChain;
 using fuf_FocusChainListener = fuchsia::ui::focus::FocusChainListener;
 using fuf_FocusChainListenerRegistry = fuchsia::ui::focus::FocusChainListenerRegistry;
-using ful_LifecycleController = fuchsia::ui::lifecycle::LifecycleController;
-using ful_LifecycleControllerSyncPtr = fuchsia::ui::lifecycle::LifecycleControllerSyncPtr;
 using fuog_ProviderPtr = fuchsia::ui::observation::geometry::ProviderPtr;
 using fuog_ProviderWatchResponse = fuchsia::ui::observation::geometry::ProviderWatchResponse;
 using fuog_ViewDescriptor = fuchsia::ui::observation::geometry::ViewDescriptor;
 using fuog_ViewTreeSnapshot = fuchsia::ui::observation::geometry::ViewTreeSnapshot;
+using fuot_Registry = fuchsia::ui::observation::test::Registry;
 using fuot_RegistryPtr = fuchsia::ui::observation::test::RegistryPtr;
 using fus_Scenic = fuchsia::ui::scenic::Scenic;
 using fus_ScenicPtr = fuchsia::ui::scenic::ScenicPtr;
@@ -89,33 +92,7 @@ using fuv_FocuserPtr = fuchsia::ui::views::FocuserPtr;
 using fuv_ViewRef = fuchsia::ui::views::ViewRef;
 using fuv_ViewRefFocusedPtr = fuchsia::ui::views::ViewRefFocusedPtr;
 using fuv_ViewportCreationToken = fuchsia::ui::views::ViewportCreationToken;
-
-const std::map<std::string, std::string> LocalServices() {
-  return {{"fuchsia.ui.observation.geometry.Provider",
-           "fuchsia-pkg://fuchsia.com/observer_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.observation.test.Registry",
-           "fuchsia-pkg://fuchsia.com/observer_integration_tests#meta/scenic.cmx"},
-          // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-          {"fuchsia.ui.lifecycle.LifecycleController",
-           "fuchsia-pkg://fuchsia.com/observer_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.composition.Flatland",
-           "fuchsia-pkg://fuchsia.com/observer_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.composition.FlatlandDisplay",
-           "fuchsia-pkg://fuchsia.com/observer_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.hardware.display.Provider",
-           "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
-          {"fuchsia.ui.composition.Allocator",
-           "fuchsia-pkg://fuchsia.com/observer_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.scenic.Scenic",
-           "fuchsia-pkg://fuchsia.com/observer_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.focus.FocusChainListenerRegistry",
-           "fuchsia-pkg://fuchsia.com/observer_integration_tests#meta/scenic.cmx"}};
-}
-
-// Allow these global services.
-const std::vector<std::string> GlobalServices() {
-  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
-}
+using RealmRoot = sys::testing::experimental::RealmRoot;
 
 scenic::Session CreateSession(fus_Scenic* scenic, fus_SessionEndpoints endpoints) {
   FX_DCHECK(scenic);
@@ -199,46 +176,44 @@ void AssertViewTreeSnapshot(const fuog_ViewTreeSnapshot& snapshot,
 
 // Test fixture that sets up an environment with Registry protocol we can connect to. This test
 // fixture is used for tests where the view nodes are created by Flatland instances.
-class FlatlandObserverRegistryIntegrationTest : public gtest::TestWithEnvironmentFixture,
+class FlatlandObserverRegistryIntegrationTest : public gtest::RealLoopFixture,
                                                 public fuf_FocusChainListener {
  protected:
   FlatlandObserverRegistryIntegrationTest() : focus_chain_listener_(this) {}
 
   void SetUp() override {
-    TestWithEnvironmentFixture::SetUp();
-
-    environment_ = CreateNewEnclosingEnvironment("observer_registry_integration_test_environment",
-                                                 CreateServices());
-    WaitForEnclosingEnvToStart(environment_.get());
-
-    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
-    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
-    // controller.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    environment_->ConnectToService<ful_LifecycleController>(
-        scenic_lifecycle_controller_.NewRequest());
+    // Build the realm topology and route the protocols required by this test fixture from the
+    // scenic subrealm.
+    realm_ = ScenicRealmBuilder(
+                 "fuchsia-pkg://fuchsia.com/observer_integration_tests#meta/scenic_subrealm.cm")
+                 .AddScenicSubRealmProtocol(fuchsia::ui::observation::test::Registry::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::focus::FocusChainListenerRegistry::Name_)
+                 .Build();
 
     // Set up focus chain listener and wait for the initial null focus chain.
     fidl::InterfaceHandle<fuf_FocusChainListener> listener_handle;
     focus_chain_listener_.Bind(listener_handle.NewRequest());
-    environment_->ConnectToService<fuf_FocusChainListenerRegistry>()->Register(
-        std::move(listener_handle));
+    auto focus_chain_listener_registry = realm_->Connect<fuf_FocusChainListenerRegistry>();
+    focus_chain_listener_registry->Register(std::move(listener_handle));
     EXPECT_EQ(CountReceivedFocusChains(), 0u);
     RunLoopUntil([this] { return CountReceivedFocusChains() == 1u; });
 
-    environment_->ConnectToService(observer_registry_ptr_.NewRequest());
+    observer_registry_ptr_ = realm_->Connect<fuot_Registry>();
+
     observer_registry_ptr_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Observer Registry Protocol: " << zx_status_get_string(status);
     });
 
-    environment_->ConnectToService(flatland_display_.NewRequest());
+    flatland_display_ = realm_->Connect<fuc_FlatlandDisplay>();
     flatland_display_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
 
     // Set up root view.
-    environment_->ConnectToService(root_session_.NewRequest());
+    root_session_ = realm_->Connect<fuc_Flatland>();
     root_session_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
@@ -265,37 +240,6 @@ class FlatlandObserverRegistryIntegrationTest : public gtest::TestWithEnvironmen
     RunLoopUntil([this] {
       return CountReceivedFocusChains() == 2u && display_width_ != 0 && display_height_ != 0;
     });
-  }
-
-  void TearDown() override {
-    // Avoid spurious errors since we are about to kill scenic.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    flatland_display_.set_error_handler(nullptr);
-    root_session_.set_error_handler(nullptr);
-    observer_registry_ptr_.set_error_handler(nullptr);
-    root_focuser_.set_error_handler(nullptr);
-    focus_chain_listener_.set_error_handler(nullptr);
-
-    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
-    FX_CHECK(terminate_status == ZX_OK)
-        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
-  }
-
-  // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|.
-  std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
-    auto services = TestWithEnvironmentFixture::CreateServices();
-    for (const auto& [name, url] : LocalServices()) {
-      const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
-    }
-
-    for (const auto& service : GlobalServices()) {
-      const zx_status_t is_ok = services->AllowParentService(service);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
-    }
-    return services;
   }
 
   // Invokes Flatland.Present() and waits for a response from Scenic that the frame has been
@@ -344,42 +288,38 @@ class FlatlandObserverRegistryIntegrationTest : public gtest::TestWithEnvironmen
   fuc_FlatlandPtr root_session_;
   fuv_ViewRef root_view_ref_;
   fuv_FocuserPtr root_focuser_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+  std::unique_ptr<RealmRoot> realm_;
 
  private:
   fuc_FlatlandDisplayPtr flatland_display_;
-  ful_LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   fidl::Binding<fuf_FocusChainListener> focus_chain_listener_;
   std::vector<fuf_FocusChain> observed_focus_chains_;
 };
 
 // Test fixture that sets up an environment with Registry protocol we can connect to. This test
 // fixture is used for tests where the view nodes are created by GFX instances.
-class GfxObserverRegistryIntegrationTest : public gtest::TestWithEnvironmentFixture {
+class GfxObserverRegistryIntegrationTest : public gtest::RealLoopFixture {
  protected:
   fus_Scenic* scenic() { return scenic_.get(); }
 
   void SetUp() override {
-    TestWithEnvironmentFixture::SetUp();
+    // Build the realm topology and route the protocols required by this test fixture from the
+    // scenic subrealm.
+    realm_ = ScenicRealmBuilder(
+                 "fuchsia-pkg://fuchsia.com/observer_integration_tests#meta/scenic_subrealm.cm")
+                 .AddScenicSubRealmProtocol(fuchsia::ui::observation::test::Registry::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::scenic::Scenic::Name_)
+                 .Build();
 
-    environment_ = CreateNewEnclosingEnvironment("observer_registry_integration_test_environment",
-                                                 CreateServices());
-    WaitForEnclosingEnvToStart(environment_.get());
-
-    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
-    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
-    // controller.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    environment_->ConnectToService<ful_LifecycleController>(
-        scenic_lifecycle_controller_.NewRequest());
-
-    environment_->ConnectToService(scenic_.NewRequest());
+    scenic_ = realm_->Connect<fus_Scenic>();
     scenic_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
 
-    environment_->ConnectToService(observer_registry_ptr_.NewRequest());
+    observer_registry_ptr_ = realm_->Connect<fuot_Registry>();
     observer_registry_ptr_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Observer Registry Protocol: " << zx_status_get_string(status);
     });
@@ -390,34 +330,6 @@ class GfxObserverRegistryIntegrationTest : public gtest::TestWithEnvironmentFixt
       FAIL() << "Root session terminated: " << zx_status_get_string(status);
     });
     BlockingPresent(root_session_->session);
-  }
-
-  void TearDown() override {
-    // Avoid spurious errors since we are about to kill scenic.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    observer_registry_ptr_.set_error_handler(nullptr);
-    scenic_.set_error_handler(nullptr);
-
-    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
-    FX_CHECK(terminate_status == ZX_OK)
-        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
-  }
-
-  // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|.
-  std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
-    auto services = TestWithEnvironmentFixture::CreateServices();
-    for (const auto& [name, url] : LocalServices()) {
-      const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
-    }
-
-    for (const auto& service : GlobalServices()) {
-      const zx_status_t is_ok = services->AllowParentService(service);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
-    }
-    return services;
   }
 
   // Invokes GFX.Present2() and waits for a response from Scenic that the frame has been
@@ -431,11 +343,10 @@ class GfxObserverRegistryIntegrationTest : public gtest::TestWithEnvironmentFixt
   }
 
   fuot_RegistryPtr observer_registry_ptr_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   std::unique_ptr<GfxRootSession> root_session_;
+  std::unique_ptr<RealmRoot> realm_;
 
  private:
-  ful_LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   fus_ScenicPtr scenic_;
 };
 
@@ -469,7 +380,7 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesTopologyUpdatesFor
   fuv_ViewRef parent_view_ref;
   {
     auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
-    environment_->ConnectToService(parent_session.NewRequest());
+    parent_session = realm_->Connect<fuc_Flatland>();
     fidl::InterfacePtr<fuc_ParentViewportWatcher> parent_viewport_watcher;
     fuc_ViewBoundProtocols protocols;
     auto identity = scenic::NewViewIdentityOnCreation();
@@ -488,7 +399,7 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesTopologyUpdatesFor
   fuv_ViewRef child_view_ref;
   {
     auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
-    environment_->ConnectToService(child_session.NewRequest());
+    child_session = realm_->Connect<fuc_Flatland>();
     fidl::InterfacePtr<fuc_ParentViewportWatcher> parent_viewport_watcher;
     fuc_ViewBoundProtocols protocols;
     auto identity = scenic::NewViewIdentityOnCreation();
@@ -569,7 +480,7 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesLayoutUpdatesForFl
   fuc_FlatlandPtr session;
 
   auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
-  environment_->ConnectToService(session.NewRequest());
+  session = realm_->Connect<fuc_Flatland>();
   fidl::InterfacePtr<fuc_ParentViewportWatcher> parent_viewport_watcher;
   fuc_ViewBoundProtocols protocols;
   auto identity = scenic::NewViewIdentityOnCreation();
@@ -645,7 +556,7 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectin
   fuv_ViewRefFocusedPtr child_focused_ptr;
   {
     auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
-    environment_->ConnectToService(child_session.NewRequest());
+    child_session = realm_->Connect<fuc_Flatland>();
     fidl::InterfacePtr<fuc_ParentViewportWatcher> parent_viewport_watcher;
     fuc_ViewBoundProtocols protocols;
     protocols.set_view_ref_focused(child_focused_ptr.NewRequest());

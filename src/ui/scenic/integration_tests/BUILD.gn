@@ -22,7 +22,6 @@ source_set("common_deps") {
     "utils.h",
   ]
   public_deps = [
-    # TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
     "//sdk/fidl/fuchsia.ui.lifecycle",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
@@ -35,6 +34,22 @@ source_set("common_deps") {
   deps = [ "//src/lib/fostr/fidl/fuchsia.ui.input:fuchsia.ui.input" ]
 }
 
+source_set("scenic_realm_builder") {
+  testonly = true
+  sources = [
+    "scenic_realm_builder.cc",
+    "scenic_realm_builder.h",
+  ]
+  public_deps = [
+    "//sdk//fidl/fuchsia.logger",
+    "//sdk//fidl/fuchsia.scheduler",
+    "//sdk//fidl/fuchsia.tracing.provider",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+  ]
+}
+
 executable("gfx_focus_integration_test_bin") {
   testonly = true
   sources = [ "gfx_focus_integration_test.cc" ]
@@ -42,6 +57,16 @@ executable("gfx_focus_integration_test_bin") {
     ":common_deps",
     "//sdk/fidl/fuchsia.ui.focus",
     "//src/ui/scenic/lib/utils",
+  ]
+}
+
+fuchsia_component("scenic_subrealm") {
+  testonly = true
+  manifest = "meta/scenic_subrealm.cml"
+  deps = [
+    "//examples/fidl/rust/server:echo-server",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/scenic:component_v2",
   ]
 }
 
@@ -186,6 +211,7 @@ executable("observer_registry_integration_test_bin") {
   sources = [ "observer_registry_integration_test.cc" ]
   deps = [
     ":common_deps",
+    ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk//fidl/fuchsia.ui.focus",
     "//sdk//fidl/fuchsia.ui.observation.geometry",
@@ -196,7 +222,7 @@ executable("observer_registry_integration_test_bin") {
 
 fuchsia_test_component("observer_registry_integration_test") {
   component_name = "observer_registry_integration_test"
-  manifest = "meta/observer_registry_integration_test.cmx"
+  manifest = "meta/observer_registry_integration_test.cml"
   deps = [ ":observer_registry_integration_test_bin" ]
 }
 
@@ -274,5 +300,5 @@ fuchsia_test_package("observer_integration_tests") {
   test_specs = {
     environments = [ aemu_env ] + magma_libvulkan_hardware_envs
   }
-  deps = [ "//src/ui/scenic:component" ]
+  deps = [ ":scenic_subrealm" ]
 }
