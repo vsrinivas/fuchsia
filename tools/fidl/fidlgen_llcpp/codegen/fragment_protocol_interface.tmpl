@@ -34,7 +34,7 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
   {{ .Docs }}
   virtual void {{ .Name }}(
     {{- if eq .Transport.Name "Driver" }}
-    {{ .WireRequestViewArg }} request, fdf::Arena arena, {{ .WireCompleterArg }}& _completer)
+    {{ .WireRequestViewArg }} request, fdf::Arena& arena, {{ .WireCompleterArg }}& _completer)
     {{- else }}
     {{ .WireRequestViewArg }} request, {{ .WireCompleterArg }}& _completer)
     {{- end }}

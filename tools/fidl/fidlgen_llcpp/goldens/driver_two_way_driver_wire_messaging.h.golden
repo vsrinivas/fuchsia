@@ -163,7 +163,7 @@ class ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final
  public:
   explicit WireUnownedResult(
       ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end,
-      ::fdf::Arena& arena,
+      const ::fdf::Arena& arena,
       ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* request);
   explicit WireUnownedResult(
       ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* response)
@@ -318,9 +318,9 @@ class ::fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
-  ::fidl::Result Reply(uint16_t sum, fdf::Arena _arena);
+  ::fidl::Result Reply(uint16_t sum, const fdf::Arena& _arena);
   ::fidl::Result Reply(::fidl::BufferSpan _buffer, uint16_t sum,
-                       fdf::Arena _arena);
+                       const fdf::Arena& _arena);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -350,7 +350,7 @@ class ::fdf::WireServer<::test_drivertwoway::TwoWay>
   using AddRequestView =
       ::fidl::internal::WireRequestView<::test_drivertwoway::TwoWay::Add>;
 
-  virtual void Add(AddRequestView request, fdf::Arena arena,
+  virtual void Add(AddRequestView request, fdf::Arena& arena,
                    AddCompleter::Sync& _completer) = 0;
 
  private:

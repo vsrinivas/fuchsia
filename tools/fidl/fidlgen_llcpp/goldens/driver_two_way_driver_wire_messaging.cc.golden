@@ -15,7 +15,7 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
 }  // namespace test_drivertwoway
 ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>::WireUnownedResult(
     ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end,
-    ::fdf::Arena& arena,
+    const ::fdf::Arena& arena,
     ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* request) {
   constexpr uint32_t buffer_size = ::fidl::MaxSizeInChannel<
       ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>,
@@ -31,7 +31,7 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
   ::fidl::CallOptions call_options = {
       .outgoing_transport_context =
           ::fidl::internal::OutgoingTransportContext::Create<
-              fidl::internal::DriverTransport>(arena.release()),
+              fidl::internal::DriverTransport>(arena.get()),
       .out_incoming_transport_context = &incoming_context,
   };
   uint8_t* call_result_bytes;
@@ -123,7 +123,7 @@ void fidl::internal::
   fidl::WriteOptions _options = {};
   _options.outgoing_transport_context =
       ::fidl::internal::OutgoingTransportContext::Create<
-          ::fidl::internal::DriverTransport>(_arena().release());
+          ::fidl::internal::DriverTransport>(_arena().get());
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context,
                              std::move(_options));
 }
@@ -164,13 +164,11 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
           auto* primary = decoded.PrimaryObject();
           ::fidl::internal::WireCompleter<
               ::test_drivertwoway::TwoWay::Add>::Sync completer(txn);
+          fdf::Arena arena(
+              transport_context.release<::fidl::internal::DriverTransport>());
           reinterpret_cast<::fdf::WireServer<::test_drivertwoway::TwoWay>*>(
               interface)
-              ->Add(
-                  primary,
-                  fdf::Arena(transport_context
-                                 .release<::fidl::internal::DriverTransport>()),
-                  completer);
+              ->Add(primary, arena, completer);
           return ZX_OK;
         },
     },
@@ -206,8 +204,9 @@ void fdf::WireServer<::test_drivertwoway::TwoWay>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterBase<
-    ::test_drivertwoway::TwoWay::Add>::Reply(uint16_t sum, fdf::Arena _arena) {
+::fidl::Result
+fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>::Reply(
+    uint16_t sum, const fdf::Arena& _arena) {
   constexpr uint32_t kBufferSize = internal::ClampedMessageSize<
       ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>,
       MessageDirection::kSending>();
@@ -221,12 +220,12 @@ void fdf::WireServer<::test_drivertwoway::TwoWay>::dispatch_message(
   return ::fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>::
       SendReply(&_response_message.GetOutgoingMessage(),
                 ::fidl::internal::OutgoingTransportContext::Create<
-                    ::fidl::internal::DriverTransport>(_arena.release()));
+                    ::fidl::internal::DriverTransport>(_arena.get()));
 }
 
 ::fidl::Result
 fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>::Reply(
-    ::fidl::BufferSpan _buffer, uint16_t sum, fdf::Arena _arena) {
+    ::fidl::BufferSpan _buffer, uint16_t sum, const fdf::Arena& _arena) {
   ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> _response{sum};
   ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>
@@ -234,7 +233,7 @@ fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>::Reply(
   return CompleterBase::SendReply(
       &_response_message.GetOutgoingMessage(),
       ::fidl::internal::OutgoingTransportContext::Create<
-          ::fidl::internal::DriverTransport>(_arena.release()));
+          ::fidl::internal::DriverTransport>(_arena.get()));
 }
 #endif  // __Fuchsia__
 

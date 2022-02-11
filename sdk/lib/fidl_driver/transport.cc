@@ -140,8 +140,10 @@ const TransportVTable DriverTransport::VTable = {
     .call = driver_call,
     .create_waiter = driver_create_waiter,
     .close = driver_close,
+
+    // The arena in the incoming context is owned, while the arena in the outgoing context is
+    // borrowed (and does not require a custom close function).
     .close_incoming_transport_context = driver_close_context,
-    .close_outgoing_transport_context = driver_close_context,
 };
 
 zx_status_t DriverWaiter::Begin() {

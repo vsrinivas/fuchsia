@@ -19,7 +19,7 @@ namespace {
 std::array<uint8_t, 4> kRequestPayload = {1, 2, 3, 4};
 
 struct TestServer : public fdf::WireServer<test_transport::OneWayTest> {
-  void OneWay(OneWayRequestView request, fdf::Arena arena,
+  void OneWay(OneWayRequestView request, fdf::Arena& arena,
               OneWayCompleter::Sync& completer) override {
     ASSERT_EQ(kRequestPayload.size(), request->payload.count());
     ASSERT_BYTES_EQ(kRequestPayload.data(), request->payload.data(), kRequestPayload.size());
@@ -58,8 +58,7 @@ TEST(DriverTransport, DISABLED_OneWayVector) {
   server->fdf_request_arena = arena->get();
   // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
   // The arena is consumed after a single call.
-  client.buffer(std::move(*arena))
-      ->OneWay(fidl::VectorView<uint8_t>::FromExternal(kRequestPayload));
+  client.buffer(*arena)->OneWay(fidl::VectorView<uint8_t>::FromExternal(kRequestPayload));
 
   ASSERT_OK(sync_completion_wait(&server->done, ZX_TIME_INFINITE));
 }

@@ -178,12 +178,10 @@ class WireClient {
   //
   // In this situation, those calls will all use the initially provided arena
   // to allocate their message buffers.
-  //
-  // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
-  auto buffer(fdf::Arena&& arena) const {
+  auto buffer(const fdf::Arena& arena) const {
     ZX_ASSERT(is_valid());
-    return fidl::internal::Arrow<fidl::internal::WireWeakAsyncBufferClientImpl<Protocol>>{
-        &get(), std::move(arena)};
+    return fidl::internal::Arrow<fidl::internal::WireWeakAsyncBufferClientImpl<Protocol>>(&get(),
+                                                                                          arena);
   }
 
  private:
@@ -373,10 +371,10 @@ class WireSharedClient final {
   // See documentation on |WireClient::buffer| for detailed behavior.
   //
   // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
-  auto buffer(fdf::Arena&& arena) const {
+  auto buffer(const fdf::Arena& arena) const {
     ZX_ASSERT(is_valid());
-    return fidl::internal::Arrow<fidl::internal::WireWeakAsyncBufferClientImpl<Protocol>>{
-        &get(), std::move(arena)};
+    return fidl::internal::Arrow<fidl::internal::WireWeakAsyncBufferClientImpl<Protocol>>(&get(),
+                                                                                          arena);
   }
 
  private:

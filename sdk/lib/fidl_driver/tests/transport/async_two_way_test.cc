@@ -20,7 +20,7 @@ constexpr uint32_t kRequestPayload = 1234;
 constexpr uint32_t kResponsePayload = 5678;
 
 struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
-  void TwoWay(TwoWayRequestView request, fdf::Arena in_request_arena,
+  void TwoWay(TwoWayRequestView request, fdf::Arena& in_request_arena,
               TwoWayCompleter::Sync& completer) override {
     ASSERT_EQ(kRequestPayload, request->payload);
     ASSERT_EQ(fdf_request_arena, in_request_arena.get());
@@ -62,15 +62,14 @@ TEST(DriverTransport, DISABLED_TwoWayAsync) {
   sync_completion_t done;
   // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
   // The arena is consumed after a single call.
-  client.buffer(std::move(*arena))
-      ->TwoWay(
-          kRequestPayload,
-          [&done, &server](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
-            ASSERT_OK(result.status());
-            ASSERT_EQ(kResponsePayload, result->payload);
-            ASSERT_EQ(server->fdf_response_arena, result.arena().get());
-            sync_completion_signal(&done);
-          });
+  client.buffer(*arena)->TwoWay(
+      kRequestPayload,
+      [&done, &server](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
+        ASSERT_OK(result.status());
+        ASSERT_EQ(kResponsePayload, result->payload);
+        ASSERT_EQ(server->fdf_response_arena, result.arena().get());
+        sync_completion_signal(&done);
+      });
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }

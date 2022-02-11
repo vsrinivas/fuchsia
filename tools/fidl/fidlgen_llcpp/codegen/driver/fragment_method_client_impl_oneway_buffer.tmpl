@@ -27,7 +27,7 @@
   fidl::WriteOptions _options = {};
   _options.outgoing_transport_context =
     ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
-        _arena().release());
+        _arena().get());
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(), std::move(_options));
 }
 {{- end }}

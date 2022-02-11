@@ -84,7 +84,7 @@ void {{ .Protocol.WireWeakAsyncBufferClientImpl.NoLeading }}::{{ .Name }}(
   fidl::WriteOptions _options = {};
   _options.outgoing_transport_context =
       ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
-          _arena().release());
+          _arena().get());
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context, std::move(_options));
 }
 

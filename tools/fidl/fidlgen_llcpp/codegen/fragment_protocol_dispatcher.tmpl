@@ -45,13 +45,14 @@ constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::e
         auto* primary = reinterpret_cast<{{ .WireRequest }}*>(msg.bytes());
         {{- end }}
         {{ .WireCompleter }}::Sync completer(txn);
+        {{- if eq .Transport.Name "Driver" }}
+        fdf::Arena arena(transport_context.release<::fidl::internal::DriverTransport>());
         reinterpret_cast<{{ $.WireServer }}*>(interface)->{{ .Name }}(
-            {{- if eq .Transport.Name "Driver" }}
-            primary, fdf::Arena(transport_context.release<::fidl::internal::DriverTransport>()),
-            completer);
-            {{- else }}
+            primary, arena, completer);
+        {{- else }}
+        reinterpret_cast<{{ $.WireServer }}*>(interface)->{{ .Name }}(
             primary, completer);
-            {{- end }}
+          {{- end }}
         return ZX_OK;
       },
     },

@@ -16,8 +16,9 @@ namespace internal {
 // |Derived| implementations must not add any state, only behavior.
 template <typename Derived>
 struct SyncEndpointBufferVeneer {
-  explicit SyncEndpointBufferVeneer(fidl::internal::AnyUnownedTransport transport, fdf::Arena arena)
-      : transport_(transport), arena_(std::move(arena)) {}
+  explicit SyncEndpointBufferVeneer(fidl::internal::AnyUnownedTransport transport,
+                                    const fdf::Arena& arena)
+      : transport_(transport), arena_(arena) {}
 
   // Returns a pointer to the concrete messaging implementation.
   Derived* operator->() {
@@ -36,11 +37,11 @@ struct SyncEndpointBufferVeneer {
 
   // Used by implementations to access the arena, hence prefixed with an
   // underscore to avoid the unlikely event of a name collision.
-  fdf::Arena& _arena() { return arena_; }
+  const fdf::Arena& _arena() { return arena_; }
 
  private:
   fidl::internal::AnyUnownedTransport transport_;
-  fdf::Arena arena_;
+  const fdf::Arena& arena_;
 };
 
 // A veneer interface object for client/server messaging implementations that
@@ -64,8 +65,8 @@ class SyncEndpointVeneer final {
   // Returns a veneer object which exposes the caller-allocating API, using
   // the provided |arena| to allocate buffers necessary for each call.
   // The requests and responses (if applicable) will live on the arena.
-  auto buffer(fdf::Arena arena) {
-    return SyncEndpointBufferVeneer<CallerAllocatingImpl>{transport_, std::move(arena)};
+  auto buffer(const fdf::Arena& arena) {
+    return SyncEndpointBufferVeneer<CallerAllocatingImpl>(transport_, arena);
   }
 
  private:
@@ -171,11 +172,11 @@ class WireSyncClient {
   // allocate buffers necessary for each call. Requests will live on the arena.
   // Responses on the other hand live on the arena passed along with the
   // response, which may or may not be the same arena as the request.
-  auto buffer(fdf::Arena arena) const {
+  auto buffer(const fdf::Arena& arena) const {
     ZX_ASSERT(is_valid());
     return fdf::internal::SyncEndpointBufferVeneer<
-        fidl::internal::WireSyncBufferClientImpl<FidlProtocol>>{
-        fidl::internal::MakeAnyUnownedTransport(client_end_.handle()), std::move(arena)};
+        fidl::internal::WireSyncBufferClientImpl<FidlProtocol>>(
+        fidl::internal::MakeAnyUnownedTransport(client_end_.handle()), arena);
   }
 
  private:

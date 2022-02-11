@@ -17,8 +17,8 @@ namespace internal {
 // are provided by an allocator.
 class BufferClientImplBase {
  public:
-  explicit BufferClientImplBase(fidl::internal::ClientBase* client_base, fdf::Arena&& arena)
-      : client_base_(client_base), arena_(std::move(arena)) {}
+  explicit BufferClientImplBase(fidl::internal::ClientBase* client_base, const fdf::Arena& arena)
+      : client_base_(client_base), arena_(arena) {}
 
  protected:
   // Used by implementations to access the transport, hence prefixed with an
@@ -27,11 +27,11 @@ class BufferClientImplBase {
 
   // Used by implementations to access the arena, hence prefixed with an
   // underscore to avoid the unlikely event of a name collision.
-  fdf::Arena& _arena() { return arena_; }
+  const fdf::Arena& _arena() { return arena_; }
 
  private:
   fidl::internal::ClientBase* client_base_;
-  fdf::Arena arena_;
+  const fdf::Arena& arena_;
 };
 
 }  // namespace internal

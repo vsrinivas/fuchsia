@@ -115,7 +115,7 @@ class ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send> final
  public:
   explicit WireUnownedResult(
       ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end,
-      ::fdf::Arena& arena,
+      const ::fdf::Arena& arena,
       ::fidl::WireRequest<::test_driveroneway::OneWay::Send>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
@@ -214,7 +214,7 @@ class ::fdf::WireServer<::test_driveroneway::OneWay>
   using SendRequestView =
       ::fidl::internal::WireRequestView<::test_driveroneway::OneWay::Send>;
 
-  virtual void Send(SendRequestView request, fdf::Arena arena,
+  virtual void Send(SendRequestView request, fdf::Arena& arena,
                     SendCompleter::Sync& _completer) = 0;
 
  private:

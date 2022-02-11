@@ -31,7 +31,7 @@ template <typename Impl>
 struct Arrow {
  public:
   template <typename... Args>
-  explicit Arrow(Args... args) : impl_(std::forward<Args>(args)...) {}
+  explicit Arrow(Args&&... args) : impl_(std::forward<Args>(args)...) {}
 
   // Copying/moving around this object is dangerous as it may lead to dangling
   // references. Disable these operations for now.

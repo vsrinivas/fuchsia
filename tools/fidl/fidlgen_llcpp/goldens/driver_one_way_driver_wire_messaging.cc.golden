@@ -14,7 +14,7 @@ extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
 }  // namespace test_driveroneway
 ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send>::WireUnownedResult(
     ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end,
-    ::fdf::Arena& arena,
+    const ::fdf::Arena& arena,
     ::fidl::WireRequest<::test_driveroneway::OneWay::Send>* request) {
   constexpr uint32_t buffer_size = ::fidl::MaxSizeInChannel<
       ::fidl::WireRequest<::test_driveroneway::OneWay::Send>,
@@ -29,7 +29,7 @@ extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
   ::fidl::WriteOptions write_options = {
       .outgoing_transport_context =
           ::fidl::internal::OutgoingTransportContext::Create<
-              fidl::internal::DriverTransport>(arena.release()),
+              fidl::internal::DriverTransport>(arena.get()),
   };
   outgoing.Write(client_end.handle(), std::move(write_options));
   ::fidl::Result::operator=(outgoing);
@@ -55,7 +55,7 @@ namespace test_driveroneway {
   fidl::WriteOptions _options = {};
   _options.outgoing_transport_context =
       ::fidl::internal::OutgoingTransportContext::Create<
-          ::fidl::internal::DriverTransport>(_arena().release());
+          ::fidl::internal::DriverTransport>(_arena().get());
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(),
                                     std::move(_options));
 }
@@ -96,13 +96,11 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
           auto* primary = decoded.PrimaryObject();
           ::fidl::internal::WireCompleter<
               ::test_driveroneway::OneWay::Send>::Sync completer(txn);
+          fdf::Arena arena(
+              transport_context.release<::fidl::internal::DriverTransport>());
           reinterpret_cast<::fdf::WireServer<::test_driveroneway::OneWay>*>(
               interface)
-              ->Send(
-                  primary,
-                  fdf::Arena(transport_context
-                                 .release<::fidl::internal::DriverTransport>()),
-                  completer);
+              ->Send(primary, arena, completer);
           return ZX_OK;
         },
     },

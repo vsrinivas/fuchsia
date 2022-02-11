@@ -17,7 +17,7 @@
 namespace {
 
 class TestServer : public fdf::WireServer<test_transport::SendDriverClientEndTest> {
-  void SendDriverClientEnd(SendDriverClientEndRequestView request, fdf::Arena arena,
+  void SendDriverClientEnd(SendDriverClientEndRequestView request, fdf::Arena& arena,
                            SendDriverClientEndCompleter::Sync& completer) override {
     completer.Reply(std::move(request->h), std::move(arena));
   }
@@ -56,16 +56,16 @@ TEST(DriverTransport, DISABLED_SendDriverClientEnd) {
   sync_completion_t done;
   // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
   // The arena is consumed after a single call.
-  client.buffer(std::move(*arena))
-      ->SendDriverClientEnd(
-          std::move(client_end_to_send),
-          [&done, handle](fdf::WireUnownedResult<
-                          ::test_transport::SendDriverClientEndTest::SendDriverClientEnd>& result) {
-            ASSERT_OK(result.status());
-            ASSERT_TRUE(result->h.is_valid());
-            ASSERT_EQ(handle, result->h.handle()->get());
-            sync_completion_signal(&done);
-          });
+  client.buffer(*arena)->SendDriverClientEnd(
+      std::move(client_end_to_send),
+      [&done, handle](
+          fdf::WireUnownedResult<::test_transport::SendDriverClientEndTest::SendDriverClientEnd>&
+              result) {
+        ASSERT_OK(result.status());
+        ASSERT_TRUE(result->h.is_valid());
+        ASSERT_EQ(handle, result->h.handle()->get());
+        sync_completion_signal(&done);
+      });
 
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }

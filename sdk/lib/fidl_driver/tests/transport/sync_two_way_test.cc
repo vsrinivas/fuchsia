@@ -27,7 +27,7 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
   explicit TestServer(sync::Completion* destroyed) : destroyed_(destroyed) {}
   ~TestServer() override { destroyed_->Signal(); }
 
-  void TwoWay(TwoWayRequestView request, fdf::Arena in_request_arena,
+  void TwoWay(TwoWayRequestView request, fdf::Arena& in_request_arena,
               TwoWayCompleter::Sync& completer) override {
     ZX_ASSERT(request->payload == kRequestPayload);
     ASSERT_EQ(fdf_request_arena, in_request_arena.get());
@@ -73,7 +73,7 @@ TEST(DriverTransport, DISABLED_TwoWaySync) {
     server->fdf_request_arena = arena->get();
     fdf::WireSyncClient<test_transport::TwoWayTest> client(std::move(client_end));
     fdf::WireUnownedResult<test_transport::TwoWayTest::TwoWay> result =
-        client.buffer(std::move(*arena))->TwoWay(kRequestPayload);
+        client.buffer(*arena)->TwoWay(kRequestPayload);
     ASSERT_TRUE(result.ok());
     ASSERT_EQ(kResponsePayload, result->payload);
     ASSERT_EQ(server->fdf_response_arena, result.arena().get());

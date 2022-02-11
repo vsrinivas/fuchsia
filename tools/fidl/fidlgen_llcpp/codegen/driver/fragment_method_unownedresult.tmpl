@@ -11,7 +11,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
  public:
   {{- if .Transport.HasSyncClient }}
   {{- $args := (printf "::%s::UnownedClientEnd<%s> client_end" .Transport.Namespace .Protocol) }}
-  {{- $args = (List $args "::fdf::Arena& arena") }}
+  {{- $args = (List $args "const ::fdf::Arena& arena") }}
   {{- $args = (List $args (printf "%s* request" .WireRequest)) }}
   explicit {{ .WireUnownedResult.Self }}({{ RenderParams $args }});
   {{- end }}
@@ -87,7 +87,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 {{- $args := (printf "::%s::UnownedClientEnd<%s> client_end" .Transport.Namespace .Protocol) }}
-{{- $args = (List $args "::fdf::Arena& arena") }}
+{{- $args = (List $args "const ::fdf::Arena& arena") }}
 {{- $args = (List $args (printf "%s* request" .WireRequest)) }}
 {{ .WireUnownedResult }}::{{ .WireUnownedResult.Self }}({{ RenderParams $args }}) {
   {{/* TODO(fxbug.dev/86367): Factor out common buffer allocation logic once we have other instances
@@ -105,7 +105,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
   ::fidl::CallOptions call_options = {
     .outgoing_transport_context =
      ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
-       arena.release()),
+       arena.get()),
     .out_incoming_transport_context = &incoming_context,
   };
   uint8_t* call_result_bytes;
@@ -118,7 +118,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
   ::fidl::WriteOptions write_options = {
     .outgoing_transport_context =
      ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
-       arena.release()),
+       arena.get()),
   };
   outgoing.Write(client_end.handle(), std::move(write_options));
 {{- end }}
