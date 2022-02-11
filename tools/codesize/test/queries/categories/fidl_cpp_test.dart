@@ -83,7 +83,7 @@ void main() {
       pos('fuchsia::io::Directory_RequestEncoder::Open(fidl::Encoder*, foo)');
       pos('fuchsia::io::Directory_RequestDecoder::GetType(unsigned long, bool*)');
       pos('fuchsia::io::(anonymous namespace)::Directory_Link_ResponseHandler::OnMessage(fidl::Message)');
-      pos(r'int fidl::internal::SingleUseMessageHandler::InvokeImpl<fuchsia::io::(anonymous namespace)::Directory_NodeGetFlags_ResponseHandler(fit::function_impl<16ul, false, void (int, unsigned int)>)::$_28>(fidl::internal::SingleUseMessageHandler*, fidl::Message&&)');
+      pos(r'int fidl::internal::SingleUseMessageHandler::InvokeImpl<fuchsia::io::(anonymous namespace)::Directory_GetFlags_ResponseHandler(fit::function_impl<16ul, false, void (int, unsigned int)>)::$_28>(fidl::internal::SingleUseMessageHandler*, fidl::Message&&)');
     });
 
     Function neg(String name) =>

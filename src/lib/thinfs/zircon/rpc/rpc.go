@@ -425,19 +425,11 @@ func (d *directoryWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemI
 	return int32(zx.ErrOk), &info, nil
 }
 
-// NodeGetFlags is a transitional method, and if it's unimplemented the current behavior
-// of the FIDL bindings is to crash the server, which is undesirable.
-// Given that it's a transitional method, we can choose not to implement it fully.
-// TODO(fxbug.dev/55663): remove this method when the default behavior of the FIDL bindings is changed
-func (d *directoryWrapper) NodeGetFlags(fidl.Context) (int32, uint32, error) {
+func (d *directoryWrapper) GetFlags(fidl.Context) (int32, uint32, error) {
 	return int32(zx.ErrNotSupported), uint32(0), nil
 }
 
-// NodeSetFlags is a transitional method, and if it's unimplemented the current behavior
-// of the FIDL bindings is to crash the server, which is undesirable.
-// Given that it's a transitional method, we can choose not to implement it fully.
-// TODO(fxbug.dev/55663): remove this method when the default behavior of the FIDL bindings is changed
-func (d *directoryWrapper) NodeSetFlags(fidl.Context, uint32) (int32, error) {
+func (d *directoryWrapper) SetFlags(fidl.Context, uint32) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -633,26 +625,24 @@ func (f *fileWrapper) GetFlags(ctx fidl.Context) (int32, uint32, error) {
 	return f.getFlagsInternal(ctx)
 }
 
-func (f *fileWrapper) NodeGetFlags(ctx fidl.Context) (int32, uint32, error) {
-	return f.getFlagsInternal(ctx)
+func (f *fileWrapper) GetFlagsDeprecatedUseNode(ctx fidl.Context) (int32, uint32, error) {
+	return f.GetFlags(ctx)
 }
 
 func (f *fileWrapper) AdvisoryLock(ctx fidl.Context, req io.AdvisoryLockRequest) (io.AdvisoryLockingAdvisoryLockResult, error) {
 	return io.AdvisoryLockingAdvisoryLockResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-// NodeSetFlags is a transitional method, and if it's unimplemented the current behavior
-// of the FIDL bindings is to crash the server, which is undesirable.
-// Given that it's a transitional method, we can choose not to implement it fully.
-// TODO(fxbug.dev/55663): remove this method when the default behavior of the FIDL bindings is changed
-func (f *fileWrapper) NodeSetFlags(ctx fidl.Context, flags uint32) (int32, error) {
-	return int32(zx.ErrNotSupported), nil
+func (f *fileWrapper) SetFlags(ctx fidl.Context, flags uint32) (int32, error) {
+	{
+		flags := uint32(openFlagsFromFIDL(flags, 0))
+		uflags := (uint32(f.file.GetOpenFlags()) & ^statusFlags) | (flags & statusFlags)
+		return int32(errorToZx(f.file.SetOpenFlags(fs.OpenFlags(uflags)))), nil
+	}
 }
 
-func (f *fileWrapper) SetFlags(_ fidl.Context, inFlags uint32) (int32, error) {
-	flags := uint32(openFlagsFromFIDL(inFlags, 0))
-	uflags := (uint32(f.file.GetOpenFlags()) & ^statusFlags) | (flags & statusFlags)
-	return int32(errorToZx(f.file.SetOpenFlags(fs.OpenFlags(uflags)))), nil
+func (f *fileWrapper) SetFlagsDeprecatedUseNode(ctx fidl.Context, flags uint32) (int32, error) {
+	return f.SetFlags(ctx, flags)
 }
 
 func (d *fileWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, error) {

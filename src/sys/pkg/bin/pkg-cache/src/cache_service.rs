@@ -2720,8 +2720,8 @@ mod serve_write_blob_tests {
         Sync,
         GetAttr,
         SetAttr,
-        NodeGetFlags,
-        NodeSetFlags,
+        GetFlagsDeprecatedUseNode,
+        SetFlagsDeprecatedUseNode,
         Write,
         WriteAt,
         Read,
@@ -2747,8 +2747,8 @@ mod serve_write_blob_tests {
                 StubRequestor::Sync => "sync",
                 StubRequestor::GetAttr => "get_attr",
                 StubRequestor::SetAttr => "set_attr",
-                StubRequestor::NodeGetFlags => "node_get_flags",
-                StubRequestor::NodeSetFlags => "node_set_flags",
+                StubRequestor::GetFlagsDeprecatedUseNode => "get_flags_deprecated_use_node",
+                StubRequestor::SetFlagsDeprecatedUseNode => "set_flags_deprecated_use_node",
                 StubRequestor::Write => "write",
                 StubRequestor::WriteAt => "write_at",
                 StubRequestor::Read => "read",
@@ -2777,8 +2777,12 @@ mod serve_write_blob_tests {
                     .set_attr(0, &mut fidl_fuchsia_io::NodeAttributes::new_empty())
                     .map(|_| ())
                     .boxed(),
-                StubRequestor::NodeGetFlags => proxy.node_get_flags().map(|_| ()).boxed(),
-                StubRequestor::NodeSetFlags => proxy.node_set_flags(0).map(|_| ()).boxed(),
+                StubRequestor::GetFlagsDeprecatedUseNode => {
+                    proxy.get_flags_deprecated_use_node().map(|_| ()).boxed()
+                }
+                StubRequestor::SetFlagsDeprecatedUseNode => {
+                    proxy.set_flags_deprecated_use_node(0).map(|_| ()).boxed()
+                }
                 StubRequestor::Write => proxy.write(&[0; 0]).map(|_| ()).boxed(),
                 StubRequestor::WriteAt => proxy.write_at(&[0; 0], 0).map(|_| ()).boxed(),
                 StubRequestor::Read => proxy.read(0).map(|_| ()).boxed(),

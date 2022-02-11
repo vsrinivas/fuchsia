@@ -523,11 +523,11 @@ impl BlockServer {
                 responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?;
             }
             // TODO(fxbug.dev/89873)
-            VolumeAndNodeRequest::NodeGetFlags { responder } => {
+            VolumeAndNodeRequest::GetFlags { responder } => {
                 responder.send(zx::sys::ZX_OK, OPEN_FLAG_NODE_REFERENCE)?;
             }
             // TODO(fxbug.dev/89873)
-            VolumeAndNodeRequest::NodeSetFlags { flags: _, responder } => {
+            VolumeAndNodeRequest::SetFlags { flags: _, responder } => {
                 responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED)?;
             }
             VolumeAndNodeRequest::QueryFilesystem { responder } => {

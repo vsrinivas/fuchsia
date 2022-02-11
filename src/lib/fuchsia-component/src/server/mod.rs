@@ -1315,8 +1315,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             }
             DirectoryRequest::Link { responder, .. } => unsupported!(responder)?,
             DirectoryRequest::Watch { responder, .. } => unsupported!(responder)?,
-            DirectoryRequest::NodeGetFlags { responder } => unsupported!(responder, 0)?,
-            DirectoryRequest::NodeSetFlags { flags: _, responder } => unsupported!(responder)?,
+            DirectoryRequest::GetFlags { responder } => unsupported!(responder, 0)?,
+            DirectoryRequest::SetFlags { flags: _, responder } => unsupported!(responder)?,
             DirectoryRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?
             }
@@ -1476,12 +1476,14 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             }
             FileRequest::Truncate { responder, .. } => unsupported!(responder)?,
             FileRequest::Resize { responder, .. } => unsupported2!(responder)?,
-            FileRequest::GetFlags { responder, .. } => unsupported!(responder, 0)?,
-            FileRequest::SetFlags { responder, .. } => unsupported!(responder)?,
+            FileRequest::GetFlags { responder } => unsupported!(responder, 0)?,
+            FileRequest::SetFlags { flags: _, responder } => unsupported!(responder)?,
             FileRequest::GetBuffer { responder, .. } => unsupported!(responder, None)?,
             FileRequest::GetBackingMemory { responder, .. } => unsupported2!(responder)?,
-            FileRequest::NodeGetFlags { responder } => unsupported!(responder, 0)?,
-            FileRequest::NodeSetFlags { flags: _, responder } => unsupported!(responder)?,
+            FileRequest::GetFlagsDeprecatedUseNode { responder } => unsupported!(responder, 0)?,
+            FileRequest::SetFlagsDeprecatedUseNode { flags: _, responder } => {
+                unsupported!(responder)?
+            }
             FileRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?
             }
@@ -1527,8 +1529,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
             }
             NodeRequest::SetAttr { responder, .. } => unsupported!(responder)?,
-            NodeRequest::NodeGetFlags { responder } => unsupported!(responder, 0)?,
-            NodeRequest::NodeSetFlags { flags: _, responder } => unsupported!(responder)?,
+            NodeRequest::GetFlags { responder } => unsupported!(responder, 0)?,
+            NodeRequest::SetFlags { flags: _, responder } => unsupported!(responder)?,
             // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
             _ => panic!("Unhandled request!"),
         }

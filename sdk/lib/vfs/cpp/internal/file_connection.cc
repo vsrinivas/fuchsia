@@ -209,10 +209,12 @@ void FileConnection::Resize(uint64_t length, ResizeCallback callback) {
   });
 }
 
-void FileConnection::GetFlags(GetFlagsCallback callback) { callback(ZX_OK, flags()); }
+void FileConnection::GetFlagsDeprecatedUseNode(GetFlagsDeprecatedUseNodeCallback callback) {
+  callback(ZX_OK, flags() & (Flags::kStatusFlags | Flags::kFsRights));
+}
 
-void FileConnection::SetFlags(uint32_t flags, SetFlagsCallback callback) {
-  // TODO: Implement set flags.
+void FileConnection::SetFlagsDeprecatedUseNode(uint32_t flags,
+                                               SetFlagsDeprecatedUseNodeCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 
@@ -229,11 +231,11 @@ void FileConnection::SendOnOpenEvent(zx_status_t status) {
   binding_.events().OnOpen(status, NodeInfoIfStatusOk(vn_, status));
 }
 
-void FileConnection::NodeGetFlags(NodeGetFlagsCallback callback) {
-  callback(ZX_OK, this->flags() & (Flags::kStatusFlags | Flags::kFsRights));
+void FileConnection::GetFlags(GetFlagsCallback callback) {
+  callback(ZX_OK, flags() & (Flags::kStatusFlags | Flags::kFsRights));
 }
 
-void FileConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCallback callback) {
+void FileConnection::SetFlags(uint32_t flags, SetFlagsCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 

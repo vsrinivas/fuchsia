@@ -257,9 +257,8 @@ protocol Node1 {
     /// This method does not require any rights.
     /// This method has the same functionality as GetFlags for File and is
     /// meant as an in-progress replacement.
-    @transitional
     @selector("fuchsia.io1/Node.NodeGetFlags")
-    NodeGetFlags() -> (struct {
+    GetFlags() -> (struct {
         s zx.status;
         flags uint32;
     });
@@ -271,9 +270,8 @@ protocol Node1 {
     /// This method does not require any rights.
     /// This method has the same functionality as SetFlags for File and is
     /// meant as an in-progress replacement.
-    @transitional
     @selector("fuchsia.io1/Node.NodeSetFlags")
-    NodeSetFlags(struct {
+    SetFlags(struct {
         flags uint32;
     }) -> (struct {
         s zx.status;

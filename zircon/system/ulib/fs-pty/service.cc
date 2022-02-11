@@ -103,7 +103,9 @@ void NullPtyDeviceImpl::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sy
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
+void NullPtyDeviceImpl::GetFlagsDeprecatedUseNode(
+    GetFlagsDeprecatedUseNodeRequestView request,
+    GetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -131,7 +133,9 @@ void NullPtyDeviceImpl::Truncate(TruncateRequestView request, TruncateCompleter:
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
+void NullPtyDeviceImpl::SetFlagsDeprecatedUseNode(
+    SetFlagsDeprecatedUseNodeRequestView request,
+    SetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -149,6 +153,14 @@ void NullPtyDeviceImpl::Sync2(Sync2RequestView request, Sync2Completer::Sync& co
 }
 
 void NullPtyDeviceImpl::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void NullPtyDeviceImpl::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void NullPtyDeviceImpl::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

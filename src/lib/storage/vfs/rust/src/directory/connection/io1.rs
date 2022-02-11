@@ -216,11 +216,11 @@ where
                 };
                 responder.send(status, &mut attrs)?;
             }
-            DirectoryRequest::NodeGetFlags { responder } => {
+            DirectoryRequest::GetFlags { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetFlags");
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
-            DirectoryRequest::NodeSetFlags { flags: _, responder } => {
+            DirectoryRequest::SetFlags { flags: _, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::SetFlags");
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }

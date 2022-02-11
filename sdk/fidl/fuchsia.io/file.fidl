@@ -125,7 +125,8 @@ protocol File1 {
     ///
     /// This method does not require any rights.
     @selector("fuchsia.io1/File.GetFlags")
-    GetFlags() -> (struct {
+    @deprecated("replaced by Node.GetFlags")
+    GetFlagsDeprecatedUseNode() -> (struct {
         s zx.status;
         flags uint32;
     });
@@ -136,7 +137,8 @@ protocol File1 {
     ///
     /// This method does not require any rights.
     @selector("fuchsia.io1/File.SetFlags")
-    SetFlags(struct {
+    @deprecated("replaced by Node.SetFlags")
+    SetFlagsDeprecatedUseNode(struct {
         flags uint32;
     }) -> (struct {
         s zx.status;

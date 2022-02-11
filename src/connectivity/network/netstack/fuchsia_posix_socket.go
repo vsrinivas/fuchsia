@@ -378,14 +378,14 @@ func (ep *endpoint) SetAttr(fidl.Context, uint32, fidlio.NodeAttributes) (int32,
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
-func (ep *endpoint) NodeGetFlags(fidl.Context) (int32, uint32, error) {
-	_ = syslog.DebugTf("NodeGetFlags", "%p", ep)
+func (ep *endpoint) GetFlags(fidl.Context) (int32, uint32, error) {
+	_ = syslog.DebugTf("GetFlags", "%p", ep)
 
 	return 0, 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
-func (ep *endpoint) NodeSetFlags(_ fidl.Context, flags uint32) (int32, error) {
-	_ = syslog.DebugTf("NodeGetFlags", "%p", ep)
+func (ep *endpoint) SetFlags(_ fidl.Context, flags uint32) (int32, error) {
+	_ = syslog.DebugTf("GetFlags", "%p", ep)
 
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }

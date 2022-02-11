@@ -1339,33 +1339,25 @@ async fn get_token_per_package_source(source: PackageSource) {
 }
 
 #[fuchsia::test]
-async fn node_get_flags() {
+async fn get_flags() {
     for source in dirs_to_test().await {
-        node_get_flags_per_package_source(source).await
+        get_flags_per_package_source(source).await
     }
 }
 
-async fn node_get_flags_per_package_source(source: PackageSource) {
+async fn get_flags_per_package_source(source: PackageSource) {
     // Test get_flags APIs for root directory and subdirectory.
-    assert_node_get_flags_directory_calls(
-        &source,
-        ".",
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
-    )
-    .await;
-    assert_node_get_flags_directory_calls(
-        &source,
-        "dir",
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
-    )
-    .await;
+    assert_get_flags_directory_calls(&source, ".", OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)
+        .await;
+    assert_get_flags_directory_calls(&source, "dir", OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)
+        .await;
 
     // Test get_flags APIs for meta directory and subdirectory.
-    assert_node_get_flags_directory_calls(&source, "meta", OPEN_RIGHT_READABLE).await;
-    assert_node_get_flags_directory_calls(&source, "meta/dir", OPEN_RIGHT_READABLE).await;
+    assert_get_flags_directory_calls(&source, "meta", OPEN_RIGHT_READABLE).await;
+    assert_get_flags_directory_calls(&source, "meta/dir", OPEN_RIGHT_READABLE).await;
 }
 
-async fn assert_node_get_flags_directory_calls(
+async fn assert_get_flags_directory_calls(
     source: &PackageSource,
     path: &str,
     expected_rights: u32,
@@ -1382,11 +1374,11 @@ async fn assert_node_get_flags_directory_calls(
     .await
     .expect("open directory");
 
-    let (status, flags) = dir.node_get_flags().await.unwrap();
+    let (status, flags) = dir.get_flags().await.unwrap();
     let status = zx::Status::ok(status);
 
     if source.is_pkgdir() {
-        // "NodeGetFlags() is supported on directories"
+        // "GetFlags() is supported on directories"
         let result = status.map(|()| OpenFlags(flags));
         assert_eq!(result, Ok(OpenFlags(expected_rights)))
     } else {
@@ -1473,8 +1465,5 @@ async fn assert_unsupported_directory_calls(
     );
 
     // Verify nodeSetFlags() is not supported.
-    assert_eq!(
-        zx::Status::from_raw(parent.node_set_flags(0).await.unwrap()),
-        zx::Status::NOT_SUPPORTED
-    );
+    assert_eq!(zx::Status::from_raw(parent.set_flags(0).await.unwrap()), zx::Status::NOT_SUPPORTED);
 }

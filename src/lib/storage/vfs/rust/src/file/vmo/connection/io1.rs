@@ -544,10 +544,10 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::NodeGetFlags { responder } => {
+            FileRequest::GetFlagsDeprecatedUseNode { responder } => {
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
-            FileRequest::NodeSetFlags { flags: _, responder } => {
+            FileRequest::SetFlagsDeprecatedUseNode { flags: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             FileRequest::AdvisoryLock { request: _, responder } => {

@@ -180,10 +180,10 @@ impl Connection {
                 // it is not supported by the PseudoFile.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::NodeGetFlags { responder } => {
+            FileRequest::GetFlags { responder } => {
                 responder.send(ZX_OK, OPEN_FLAG_NODE_REFERENCE)?;
             }
-            FileRequest::NodeSetFlags { flags: _, responder } => {
+            FileRequest::SetFlags { flags: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             FileRequest::AdvisoryLock { request: _, responder } => {
@@ -225,10 +225,10 @@ impl Connection {
             FileRequest::Resize { length: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
-            FileRequest::GetFlags { responder } => {
+            FileRequest::GetFlagsDeprecatedUseNode { responder } => {
                 responder.send(ZX_OK, OPEN_FLAG_NODE_REFERENCE)?;
             }
-            FileRequest::SetFlags { flags: _, responder } => {
+            FileRequest::SetFlagsDeprecatedUseNode { flags: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             FileRequest::GetBuffer { flags: _, responder } => {

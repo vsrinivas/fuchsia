@@ -125,7 +125,9 @@ void PtyClientDevice::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
+void PtyClientDevice::GetFlagsDeprecatedUseNode(
+    GetFlagsDeprecatedUseNodeRequestView request,
+    GetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -161,7 +163,9 @@ void PtyClientDevice::Resize(ResizeRequestView request, ResizeCompleter::Sync& c
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
+void PtyClientDevice::SetFlagsDeprecatedUseNode(
+    SetFlagsDeprecatedUseNodeRequestView request,
+    SetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -183,6 +187,14 @@ void PtyClientDevice::Sync2(Sync2RequestView request, Sync2Completer::Sync& comp
 }
 
 void PtyClientDevice::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void PtyClientDevice::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
+void PtyClientDevice::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

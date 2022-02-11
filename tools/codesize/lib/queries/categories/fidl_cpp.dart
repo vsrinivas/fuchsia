@@ -264,7 +264,7 @@ class HlcppDomainObjectCategory extends CodeCategory
     _nsAndClassPattern,
 
     // int fidl::internal::SingleUseMessageHandler::InvokeImpl<
-    //     fuchsia::io::(anonymous namespace)::Directory_NodeGetFlags_ResponseHandler(fit::function_impl<16ul, false, void (int, unsigned int)>)::$_28
+    //     fuchsia::io::(anonymous namespace)::Directory_GetFlags_ResponseHandler(fit::function_impl<16ul, false, void (int, unsigned int)>)::$_28
     // >(fidl::internal::SingleUseMessageHandler*, fidl::Message&&)
     RegExp(r'^int fidl::internal::SingleUseMessageHandler::InvokeImpl<'
         r'(([a-z0-9]+::)+)\(anonymous namespace\)::'

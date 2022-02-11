@@ -63,11 +63,11 @@ void NodeConnection::SendOnOpenEvent(zx_status_t status) {
   binding_.events().OnOpen(status, NodeInfoIfStatusOk(vn_, status));
 }
 
-void NodeConnection::NodeGetFlags(NodeGetFlagsCallback callback) {
+void NodeConnection::GetFlags(GetFlagsCallback callback) {
   callback(ZX_OK, this->flags() & (Flags::kStatusFlags | Flags::kFsRights));
 }
 
-void NodeConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCallback callback) {
+void NodeConnection::SetFlags(uint32_t flags, SetFlagsCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 

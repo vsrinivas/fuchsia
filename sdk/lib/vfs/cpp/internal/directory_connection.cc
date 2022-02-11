@@ -118,11 +118,11 @@ void DirectoryConnection::SendOnOpenEvent(zx_status_t status) {
   binding_.events().OnOpen(status, NodeInfoIfStatusOk(vn_, status));
 }
 
-void DirectoryConnection::NodeGetFlags(NodeGetFlagsCallback callback) {
+void DirectoryConnection::GetFlags(GetFlagsCallback callback) {
   callback(ZX_OK, this->flags() & (Flags::kStatusFlags | Flags::kFsRights));
 }
 
-void DirectoryConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCallback callback) {
+void DirectoryConnection::SetFlags(uint32_t flags, SetFlagsCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 

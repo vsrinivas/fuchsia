@@ -114,9 +114,8 @@ void NodeConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync&
   }
 }
 
-void NodeConnection::NodeGetFlags(NodeGetFlagsRequestView request,
-                                  NodeGetFlagsCompleter::Sync& completer) {
-  auto result = Connection::NodeNodeGetFlags();
+void NodeConnection::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
+  auto result = Connection::NodeGetFlags();
   if (result.is_error()) {
     completer.Reply(result.error(), 0);
   } else {
@@ -124,9 +123,8 @@ void NodeConnection::NodeGetFlags(NodeGetFlagsRequestView request,
   }
 }
 
-void NodeConnection::NodeSetFlags(NodeSetFlagsRequestView request,
-                                  NodeSetFlagsCompleter::Sync& completer) {
-  auto result = Connection::NodeNodeSetFlags(request->flags);
+void NodeConnection::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
+  auto result = Connection::NodeSetFlags(request->flags);
   if (result.is_error()) {
     completer.Reply(result.error());
   } else {

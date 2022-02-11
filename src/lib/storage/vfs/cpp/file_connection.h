@@ -44,8 +44,8 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   void Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) final;
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
-  void NodeGetFlags(NodeGetFlagsRequestView request, NodeGetFlagsCompleter::Sync& completer) final;
-  void NodeSetFlags(NodeSetFlagsRequestView request, NodeSetFlagsCompleter::Sync& completer) final;
+  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
+  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
 
   //
   // |fuchsia.io/File| operations.
@@ -53,8 +53,10 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
 
   void Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) final;
   void Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) final;
-  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
-  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
+  void GetFlagsDeprecatedUseNode(GetFlagsDeprecatedUseNodeRequestView request,
+                                 GetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;
+  void SetFlagsDeprecatedUseNode(SetFlagsDeprecatedUseNodeRequestView request,
+                                 SetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;
   void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) final;
   void GetBackingMemory(GetBackingMemoryRequestView request,
                         GetBackingMemoryCompleter::Sync& completer) final;

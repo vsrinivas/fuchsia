@@ -1135,13 +1135,10 @@ where
                                     .send_msg(addr.map(|addr| *addr), data)
                             );
                         }
-                        fposix_socket::DatagramSocketRequest::NodeGetFlags { responder } => {
+                        fposix_socket::DatagramSocketRequest::GetFlags { responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), 0);
                         }
-                        fposix_socket::DatagramSocketRequest::NodeSetFlags {
-                            flags: _,
-                            responder,
-                        } => {
+                        fposix_socket::DatagramSocketRequest::SetFlags { flags: _, responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }
                         fposix_socket::DatagramSocketRequest::GetInfo { responder } => {

@@ -89,7 +89,7 @@ async fn open_node_status<T: ProtocolMarker>(
 
 /// Returns the specified node flags from the given NodeProxy.
 async fn get_node_flags(node_proxy: &io::NodeProxy) -> u32 {
-    let (_, node_flags) = node_proxy.node_get_flags().await.expect("Failed to get node flags!");
+    let (_, node_flags) = node_proxy.get_flags().await.expect("Failed to get node flags!");
     return node_flags;
 }
 
@@ -484,7 +484,7 @@ async fn open_remote_directory_right_escalation_test() {
 
     // Since the root node only has RW permissions, and even though the remote has RWX,
     // we should only get RW permissions back.
-    let (_, node_flags) = node_proxy.node_get_flags().await.unwrap();
+    let (_, node_flags) = node_proxy.get_flags().await.unwrap();
     assert_eq!(node_flags, io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE);
 }
 
@@ -1659,7 +1659,7 @@ async fn clone_file_with_same_or_fewer_rights() {
 
             // Check flags of cloned connection are correct.
             let proxy = convert_node_proxy::<io::FileMarker>(proxy);
-            let (status, flags) = proxy.node_get_flags().await.expect("node_get_flags failed");
+            let (status, flags) = proxy.get_flags().await.expect("get_flags failed");
             assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
             assert_eq!(flags, clone_flags);
         }
@@ -1684,7 +1684,7 @@ async fn clone_file_with_same_rights_flag() {
 
         // Check flags of cloned connection are correct.
         let proxy = convert_node_proxy::<io::FileMarker>(proxy);
-        let (status, flags) = proxy.node_get_flags().await.expect("node_get_flags failed");
+        let (status, flags) = proxy.get_flags().await.expect("get_flags failed");
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(flags, file_flags);
     }
@@ -1729,7 +1729,7 @@ async fn clone_directory_with_same_or_fewer_rights() {
             assert_eq!(status, zx::Status::OK);
 
             // Check flags of cloned connection are correct.
-            let (status, flags) = proxy.node_get_flags().await.expect("node_get_flags failed");
+            let (status, flags) = proxy.get_flags().await.expect("get_flags failed");
             assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
             assert_eq!(flags, clone_flags);
         }
@@ -1754,7 +1754,7 @@ async fn clone_directory_with_same_rights_flag() {
 
         // Check flags of cloned connection are correct.
         let proxy = convert_node_proxy::<io::DirectoryMarker>(proxy);
-        let (status, flags) = proxy.node_get_flags().await.expect("node_get_flags failed");
+        let (status, flags) = proxy.get_flags().await.expect("get_flags failed");
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(flags, dir_flags);
     }

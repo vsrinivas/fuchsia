@@ -130,6 +130,12 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override;
+  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
+  }
+  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
   void QueryFilesystem(QueryFilesystemRequestView request,
                        QueryFilesystemCompleter::Sync& completer) override;
 

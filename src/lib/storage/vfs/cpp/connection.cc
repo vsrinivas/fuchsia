@@ -379,11 +379,11 @@ Connection::Result<> Connection::NodeSetAttr(uint32_t flags,
   return FromStatus(status);
 }
 
-Connection::Result<uint32_t> Connection::NodeNodeGetFlags() {
+Connection::Result<uint32_t> Connection::NodeGetFlags() {
   return fpromise::ok(options().ToIoV1Flags() & (kStatusFlags | ZX_FS_RIGHTS));
 }
 
-Connection::Result<> Connection::NodeNodeSetFlags(uint32_t flags) {
+Connection::Result<> Connection::NodeSetFlags(uint32_t flags) {
   auto options = VnodeConnectionOptions::FromIoV1Flags(flags);
   set_append(options.flags.append);
   return fpromise::ok();

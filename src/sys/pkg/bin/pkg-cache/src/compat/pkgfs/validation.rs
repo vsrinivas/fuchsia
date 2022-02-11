@@ -201,7 +201,7 @@ mod tests {
             server_end.into_channel().into(),
         );
 
-        let (status, flags) = proxy.node_get_flags().await.unwrap();
+        let (status, flags) = proxy.get_flags().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
         assert_eq!(flags, OPEN_RIGHT_READABLE);
     }

@@ -41,8 +41,10 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
 
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
   void Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) final;
-  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
-  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
+  void GetFlagsDeprecatedUseNode(GetFlagsDeprecatedUseNodeRequestView request,
+                                 GetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;
+  void SetFlagsDeprecatedUseNode(SetFlagsDeprecatedUseNodeRequestView request,
+                                 SetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;
   void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) final;
 
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
@@ -53,6 +55,8 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
   void Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) final;
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
+  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
+  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
   void QueryFilesystem(QueryFilesystemRequestView request,
                        QueryFilesystemCompleter::Sync& completer) final;
 };

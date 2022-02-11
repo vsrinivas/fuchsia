@@ -372,23 +372,39 @@ async fn verify_describe_meta_file_success(node: NodeProxy) -> Result<(), Error>
 }
 
 #[fuchsia::test]
-async fn node_set_flags() {
+async fn set_flags() {
     for source in dirs_to_test().await {
-        node_set_flags_per_package_source(source).await
+        set_flags_per_package_source(source).await
     }
 }
 
-async fn node_set_flags_per_package_source(source: PackageSource) {
+async fn set_flags_per_package_source(source: PackageSource) {
     let package_root = &source.dir;
-    do_node_set_flags(package_root, ".", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
-    do_node_set_flags(package_root, "meta", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
-    do_node_set_flags(package_root, "meta/dir", MODE_TYPE_DIRECTORY, 0)
-        .await
-        .assert_not_supported();
-    do_node_set_flags(package_root, "dir", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
-    do_node_set_flags(package_root, "file", MODE_TYPE_FILE, 0).await.assert_ok();
+    do_set_flags(package_root, ".", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
+    do_set_flags(package_root, "meta", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
+    do_set_flags(package_root, "meta/dir", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
+    do_set_flags(package_root, "dir", MODE_TYPE_DIRECTORY, 0).await.assert_not_supported();
+    do_set_flags(package_root, "file", MODE_TYPE_FILE, 0).await.assert_ok();
     {
-        let outcome = do_node_set_flags(package_root, "meta", MODE_TYPE_FILE, 0).await;
+        let outcome = do_set_flags(package_root, "meta", MODE_TYPE_FILE, 0).await;
+        if source.is_pkgdir() {
+            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
+            outcome.assert_ok();
+        } else {
+            outcome.assert_not_supported();
+        }
+    };
+    {
+        let outcome = do_set_flags(package_root, "meta", MODE_TYPE_FILE, OPEN_FLAG_APPEND).await;
+        if source.is_pkgdir() {
+            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
+            outcome.assert_ok();
+        } else {
+            outcome.assert_not_supported();
+        }
+    };
+    {
+        let outcome = do_set_flags(package_root, "meta/file", MODE_TYPE_FILE, 0).await;
         if source.is_pkgdir() {
             // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
             outcome.assert_ok();
@@ -398,26 +414,7 @@ async fn node_set_flags_per_package_source(source: PackageSource) {
     };
     {
         let outcome =
-            do_node_set_flags(package_root, "meta", MODE_TYPE_FILE, OPEN_FLAG_APPEND).await;
-        if source.is_pkgdir() {
-            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
-            outcome.assert_ok();
-        } else {
-            outcome.assert_not_supported();
-        }
-    };
-    {
-        let outcome = do_node_set_flags(package_root, "meta/file", MODE_TYPE_FILE, 0).await;
-        if source.is_pkgdir() {
-            // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
-            outcome.assert_ok();
-        } else {
-            outcome.assert_not_supported();
-        }
-    };
-    {
-        let outcome =
-            do_node_set_flags(package_root, "meta/file", MODE_TYPE_FILE, OPEN_FLAG_APPEND).await;
+            do_set_flags(package_root, "meta/file", MODE_TYPE_FILE, OPEN_FLAG_APPEND).await;
         if source.is_pkgdir() {
             // TODO(fxbug.dev/86883): should pkgdir support OPEN_FLAG_APPEND (as a no-op)?
             outcome.assert_ok();
@@ -427,26 +424,26 @@ async fn node_set_flags_per_package_source(source: PackageSource) {
     };
 }
 
-struct NodeSetFlagsOutcome<'a> {
+struct SetFlagsOutcome<'a> {
     argument: crate::OpenFlags,
     path: &'a str,
     mode: Mode,
     result: Result<Result<(), zx::Status>, fidl::Error>,
 }
-async fn do_node_set_flags<'a>(
+async fn do_set_flags<'a>(
     package_root: &DirectoryProxy,
     path: &'a str,
     mode: u32,
     argument: u32,
-) -> NodeSetFlagsOutcome<'a> {
+) -> SetFlagsOutcome<'a> {
     let node =
         io_util::directory::open_node(package_root, path, OPEN_RIGHT_READABLE, mode).await.unwrap();
 
-    let result = node.node_set_flags(argument).await.map(zx::Status::ok);
-    NodeSetFlagsOutcome { path, mode: Mode(mode), result, argument: crate::OpenFlags(argument) }
+    let result = node.set_flags(argument).await.map(zx::Status::ok);
+    SetFlagsOutcome { path, mode: Mode(mode), result, argument: crate::OpenFlags(argument) }
 }
 
-impl NodeSetFlagsOutcome<'_> {
+impl SetFlagsOutcome<'_> {
     fn error_context(&self) -> String {
         format!("path: {:?} as {:?}", self.path, self.mode)
     }
@@ -456,19 +453,19 @@ impl NodeSetFlagsOutcome<'_> {
         match &self.result {
             Ok(Err(zx::Status::NOT_SUPPORTED)) => {}
             Ok(Err(e)) => panic!(
-                "node_set_flags({:?}): wrong error status: {} on {}",
+                "set_flags({:?}): wrong error status: {} on {}",
                 self.argument,
                 e,
                 self.error_context()
             ),
             Err(e) => panic!(
-                "failed to call node_set_flags({:?}): {:?} on {}",
+                "failed to call set_flags({:?}): {:?} on {}",
                 self.argument,
                 e,
                 self.error_context()
             ),
             Ok(Ok(())) => panic!(
-                "node_set_flags({:?}) suceeded unexpectedly on {}",
+                "set_flags({:?}) suceeded unexpectedly on {}",
                 self.argument,
                 self.error_context()
             ),
@@ -479,12 +476,9 @@ impl NodeSetFlagsOutcome<'_> {
     fn assert_ok(&self) {
         match &self.result {
             Ok(Ok(())) => {}
-            e => panic!(
-                "node_set_flags({:?}) failed: {:?} on {}",
-                self.argument,
-                e,
-                self.error_context()
-            ),
+            e => {
+                panic!("set_flags({:?}) failed: {:?} on {}", self.argument, e, self.error_context())
+            }
         }
     }
 }

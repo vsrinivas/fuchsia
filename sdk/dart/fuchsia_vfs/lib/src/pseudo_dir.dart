@@ -565,6 +565,16 @@ class _DirConnection extends Directory {
   }
 
   @override
+  Future<Directory$GetFlags$Response> getFlags() async {
+    return Directory$GetFlags$Response(ZX.ERR_NOT_SUPPORTED, 0);
+  }
+
+  @override
+  Future<int> setFlags(int flags) async {
+    return ZX.ERR_NOT_SUPPORTED;
+  }
+
+  @override
   Future<Directory$QueryFilesystem$Response> queryFilesystem() async {
     return Directory$QueryFilesystem$Response(ZX.ERR_NOT_SUPPORTED, null);
   }

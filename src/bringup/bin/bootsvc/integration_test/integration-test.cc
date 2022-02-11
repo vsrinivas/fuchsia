@@ -56,7 +56,7 @@ void print_test_success_string() {
   zx_debuglog_write(log.get(), 0, ZBI_TEST_SUCCESS_STRING, sizeof(ZBI_TEST_SUCCESS_STRING));
 }
 
-// Consumes the given fd and returns the result of a call to fuchsia.io.Node.NodeGetFlags.
+// Consumes the given fd and returns the result of a call to fuchsia.io.Node.GetFlags.
 uint32_t fd_get_flags(fbl::unique_fd fd) {
   zx::channel file_channel;
   if (fdio_fd_transfer(fd.release(), file_channel.reset_and_get_address()) != ZX_OK) {
@@ -64,11 +64,11 @@ uint32_t fd_get_flags(fbl::unique_fd fd) {
   }
 
   fidl::WireSyncClient<fio::Node> client(std::move(file_channel));
-  auto result = client->NodeGetFlags();
+  auto result = client->GetFlags();
   if (result.status() != ZX_OK) {
     return 0;
   }
-  fidl::WireResponse<fio::Node::NodeGetFlags>* response = result.Unwrap();
+  fidl::WireResponse<fio::Node::GetFlags>* response = result.Unwrap();
   if (response->s != ZX_OK) {
     return 0;
   }
@@ -105,7 +105,7 @@ TEST(BootsvcIntegrationTest, Namespace) {
   free(ns);
 
   // /boot should be RX and /svc should be RW. The call to fdio_open_fd should fail if that is not
-  // the case, but we also use fuchsia.io.Node.NodeGetFlags to validate the returned set of rights.
+  // the case, but we also use fuchsia.io.Node.GetFlags to validate the returned set of rights.
   fbl::unique_fd fd;
   EXPECT_EQ(ZX_OK,
             fdio_open_fd("/boot", fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,

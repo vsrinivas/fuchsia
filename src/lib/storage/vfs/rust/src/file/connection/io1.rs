@@ -384,8 +384,8 @@ impl<T: 'static + File> FileConnection<T> {
                 fuchsia_trace::duration!("storage", "File::GetFlags");
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
-            FileRequest::NodeGetFlags { responder } => {
-                fuchsia_trace::duration!("storage", "File::NodeGetFlags");
+            FileRequest::GetFlagsDeprecatedUseNode { responder } => {
+                fuchsia_trace::duration!("storage", "File::GetFlagsDeprecatedUseNode");
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
             FileRequest::SetFlags { flags, responder } => {
@@ -393,8 +393,8 @@ impl<T: 'static + File> FileConnection<T> {
                 self.flags = (self.flags & !OPEN_FLAG_APPEND) | (flags & OPEN_FLAG_APPEND);
                 responder.send(ZX_OK)?;
             }
-            FileRequest::NodeSetFlags { flags, responder } => {
-                fuchsia_trace::duration!("storage", "File::NodeSetFlags");
+            FileRequest::SetFlagsDeprecatedUseNode { flags, responder } => {
+                fuchsia_trace::duration!("storage", "File::SetFlagsDeprecatedUseNode");
                 self.flags = (self.flags & !OPEN_FLAG_APPEND) | (flags & OPEN_FLAG_APPEND);
                 responder.send(ZX_OK)?;
             }

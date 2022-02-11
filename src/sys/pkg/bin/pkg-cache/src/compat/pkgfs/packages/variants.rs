@@ -439,7 +439,7 @@ mod tests {
 
         let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_WRITABLE);
 
-        let (status, flags) = proxy.node_get_flags().await.unwrap();
+        let (status, flags) = proxy.get_flags().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
         assert_eq!(flags, OPEN_RIGHT_READABLE);
     }
@@ -460,7 +460,7 @@ mod tests {
 
         let proxy = pkgfs_packages_variants.proxy(OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_DEPRECATED);
 
-        let (status, flags) = proxy.node_get_flags().await.unwrap();
+        let (status, flags) = proxy.get_flags().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
         assert_eq!(flags, OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE);
     }

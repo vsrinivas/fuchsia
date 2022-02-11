@@ -486,7 +486,7 @@ async fn get_flags_per_package_source(source: PackageSource) {
     assert_get_flags_meta_file(&root_dir, "meta/file").await;
 }
 
-/// Opens a file and verifies the result of GetFlags() and NodeGetFlags().
+/// Opens a file and verifies the result of GetFlags() and GetFlags().
 async fn assert_get_flags(
     root_dir: &DirectoryProxy,
     path: &str,
@@ -503,11 +503,6 @@ async fn assert_get_flags(
 
     // Verify GetFlags() produces the expected result.
     let (status, flags) = file.get_flags().await.unwrap();
-    let () = zx::Status::ok(status).unwrap();
-    assert_eq!(flags, expected_flags);
-
-    // NodeGetFlags() and GetFlags() should have the same result.
-    let (status, flags) = file.node_get_flags().await.unwrap();
     let () = zx::Status::ok(status).unwrap();
     assert_eq!(flags, expected_flags);
 }

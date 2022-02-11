@@ -114,9 +114,10 @@ void FileConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync&
   }
 }
 
-void FileConnection::NodeGetFlags(NodeGetFlagsRequestView request,
-                                  NodeGetFlagsCompleter::Sync& completer) {
-  auto result = Connection::NodeNodeGetFlags();
+void FileConnection::GetFlagsDeprecatedUseNode(
+    GetFlagsDeprecatedUseNodeRequestView request,
+    GetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
+  auto result = Connection::NodeGetFlags();
   if (result.is_error()) {
     completer.Reply(result.error(), 0);
   } else {
@@ -124,9 +125,10 @@ void FileConnection::NodeGetFlags(NodeGetFlagsRequestView request,
   }
 }
 
-void FileConnection::NodeSetFlags(NodeSetFlagsRequestView request,
-                                  NodeSetFlagsCompleter::Sync& completer) {
-  auto result = Connection::NodeNodeSetFlags(request->flags);
+void FileConnection::SetFlagsDeprecatedUseNode(
+    SetFlagsDeprecatedUseNodeRequestView request,
+    SetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
+  auto result = Connection::NodeSetFlags(request->flags);
   if (result.is_error()) {
     completer.Reply(result.error());
   } else {

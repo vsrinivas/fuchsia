@@ -61,6 +61,14 @@ class TestServerBase : public fidl::WireServer<fuchsia_io::Node> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
+  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
   void QueryFilesystem(QueryFilesystemRequestView request,
                        QueryFilesystemCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);

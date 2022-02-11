@@ -142,19 +142,19 @@ TEST_F(ConnectionTest, NodeGetSetFlagsOnFile) {
   ASSERT_OK(fdio_open_at(root->client.channel().get(), "file", fio::wire::kOpenRightReadable,
                          fc->server.TakeChannel().release()));
 
-  // Use NodeGetFlags to get current flags and rights
-  auto file_get_result = fidl::WireCall(fc->client)->NodeGetFlags();
+  // Use GetFlags to get current flags and rights
+  auto file_get_result = fidl::WireCall(fc->client)->GetFlags();
   EXPECT_OK(file_get_result.status());
   EXPECT_EQ(fio::wire::kOpenRightReadable, file_get_result.Unwrap()->flags);
   {
-    // Make modifications to flags with NodeSetFlags: Note this only works for kOpenFlagAppend
+    // Make modifications to flags with SetFlags: Note this only works for kOpenFlagAppend
     // based on posix standard
-    auto file_set_result = fidl::WireCall(fc->client)->NodeSetFlags(fio::wire::kOpenFlagAppend);
+    auto file_set_result = fidl::WireCall(fc->client)->SetFlags(fio::wire::kOpenFlagAppend);
     EXPECT_OK(file_set_result.Unwrap()->s);
   }
   {
     // Check that the new flag is saved
-    auto file_get_result = fidl::WireCall(fc->client)->NodeGetFlags();
+    auto file_get_result = fidl::WireCall(fc->client)->GetFlags();
     EXPECT_OK(file_get_result.Unwrap()->s);
     EXPECT_EQ(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagAppend,
               file_get_result.Unwrap()->flags);
@@ -175,15 +175,15 @@ TEST_F(ConnectionTest, NodeGetSetFlagsOnDirectory) {
                          dc->server.TakeChannel().release()));
 
   // Read/write/read directory flags; same as for file
-  auto dir_get_result = fidl::WireCall(dc->client)->NodeGetFlags();
+  auto dir_get_result = fidl::WireCall(dc->client)->GetFlags();
   EXPECT_OK(dir_get_result.Unwrap()->s);
   EXPECT_EQ(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
             dir_get_result.Unwrap()->flags);
 
-  auto dir_set_result = fidl::WireCall(dc->client)->NodeSetFlags(fio::wire::kOpenFlagAppend);
+  auto dir_set_result = fidl::WireCall(dc->client)->SetFlags(fio::wire::kOpenFlagAppend);
   EXPECT_OK(dir_set_result.Unwrap()->s);
 
-  auto dir_get_result_2 = fidl::WireCall(dc->client)->NodeGetFlags();
+  auto dir_get_result_2 = fidl::WireCall(dc->client)->GetFlags();
   EXPECT_OK(dir_get_result_2.Unwrap()->s);
   EXPECT_EQ(
       fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable | fio::wire::kOpenFlagAppend,
@@ -212,7 +212,7 @@ TEST_F(ConnectionTest, PosixFlagDirectoryRightExpansion) {
                            dc->server.TakeChannel().release()));
 
     // Ensure flags match those which we expect.
-    auto dir_get_result = fidl::WireCall(dc->client)->NodeGetFlags();
+    auto dir_get_result = fidl::WireCall(dc->client)->GetFlags();
     EXPECT_OK(dir_get_result.Unwrap()->s);
     auto dir_flags = dir_get_result.Unwrap()->flags;
     EXPECT_NE(fio::wire::kOpenRightReadable & dir_flags, 0);
@@ -247,13 +247,13 @@ TEST_F(ConnectionTest, FileGetSetFlagsOnFile) {
                          fc->server.TakeChannel().release()));
 
   {
-    // Use NodeGetFlags to get current flags and rights
+    // Use GetFlags to get current flags and rights
     auto file_get_result = fidl::WireCall(fc->client)->GetFlags();
     EXPECT_OK(file_get_result.status());
     EXPECT_EQ(fio::wire::kOpenRightReadable, file_get_result.Unwrap()->flags);
   }
   {
-    // Make modifications to flags with NodeSetFlags: Note this only works for kOpenFlagAppend
+    // Make modifications to flags with SetFlags: Note this only works for kOpenFlagAppend
     // based on posix standard
     auto file_set_result = fidl::WireCall(fc->client)->SetFlags(fio::wire::kOpenFlagAppend);
     EXPECT_OK(file_set_result.Unwrap()->s);
@@ -267,13 +267,13 @@ TEST_F(ConnectionTest, FileGetSetFlagsOnFile) {
   }
 }
 
-TEST_F(ConnectionTest, FileGetSetFlagsDirectory) {
+TEST_F(ConnectionTest, FileSeekDirectory) {
   // Create connection to vfs
   zx::status root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
-  // Read/write flags on a Directory connection using File protocol Get/SetFlags should fail.
+  // Interacting with a Directory connection using File protocol methods should fail.
   {
     zx::status dc = fidl::CreateEndpoints<fio::Directory>();
     ASSERT_OK(dc.status_value());
@@ -283,22 +283,9 @@ TEST_F(ConnectionTest, FileGetSetFlagsDirectory) {
 
     // Borrowing directory channel as file channel.
     auto dir_get_result =
-        fidl::WireCall(fidl::UnownedClientEnd<fio::File>(dc->client.borrow().handle()))->GetFlags();
-    EXPECT_NOT_OK(dir_get_result.status());
-  }
-
-  {
-    zx::status dc = fidl::CreateEndpoints<fio::Directory>();
-    ASSERT_OK(dc.status_value());
-    ASSERT_OK(fdio_open_at(root->client.channel().get(), "dir",
-                           fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
-                           dc->server.TakeChannel().release()));
-
-    // Borrowing directory channel as file channel.
-    auto dir_set_result =
         fidl::WireCall(fidl::UnownedClientEnd<fio::File>(dc->client.borrow().handle()))
-            ->SetFlags(fio::wire::kOpenFlagAppend);
-    EXPECT_NOT_OK(dir_set_result.status());
+            ->Seek(0, fio::wire::SeekOrigin::kStart);
+    EXPECT_NOT_OK(dir_get_result.status());
   }
 }
 

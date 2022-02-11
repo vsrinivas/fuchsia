@@ -217,8 +217,8 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   void NodeSync(fit::callback<void(zx_status_t)> callback);
   Result<VnodeAttributes> NodeGetAttr();
   Result<> NodeSetAttr(uint32_t flags, const fuchsia_io::wire::NodeAttributes& attributes);
-  Result<uint32_t> NodeNodeGetFlags();
-  Result<> NodeNodeSetFlags(uint32_t flags);
+  Result<uint32_t> NodeGetFlags();
+  Result<> NodeSetFlags(uint32_t flags);
 
  private:
   // The contract of the Vnode API is that there should be a balancing |Close| call for every |Open|

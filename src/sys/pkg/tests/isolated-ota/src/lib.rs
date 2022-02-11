@@ -553,10 +553,10 @@ async fn serve_failing_blobfs(
             DirectoryRequest::SetAttr { responder, .. } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing setattr")?
             }
-            DirectoryRequest::NodeGetFlags { responder } => {
+            DirectoryRequest::GetFlags { responder } => {
                 responder.send(zx::Status::IO.into_raw(), 0).context("failing getflags")?
             }
-            DirectoryRequest::NodeSetFlags { responder, .. } => {
+            DirectoryRequest::SetFlags { responder, .. } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing setflags")?
             }
             DirectoryRequest::Open { object, flags, path, .. } => {

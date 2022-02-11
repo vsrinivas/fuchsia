@@ -175,9 +175,9 @@ void DirectoryConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::
   }
 }
 
-void DirectoryConnection::NodeGetFlags(NodeGetFlagsRequestView request,
-                                       NodeGetFlagsCompleter::Sync& completer) {
-  auto result = Connection::NodeNodeGetFlags();
+void DirectoryConnection::GetFlags(GetFlagsRequestView request,
+                                   GetFlagsCompleter::Sync& completer) {
+  auto result = Connection::NodeGetFlags();
   if (result.is_error()) {
     completer.Reply(result.error(), 0);
   } else {
@@ -185,9 +185,9 @@ void DirectoryConnection::NodeGetFlags(NodeGetFlagsRequestView request,
   }
 }
 
-void DirectoryConnection::NodeSetFlags(NodeSetFlagsRequestView request,
-                                       NodeSetFlagsCompleter::Sync& completer) {
-  auto result = Connection::NodeNodeSetFlags(request->flags);
+void DirectoryConnection::SetFlags(SetFlagsRequestView request,
+                                   SetFlagsCompleter::Sync& completer) {
+  auto result = Connection::NodeSetFlags(request->flags);
   if (result.is_error()) {
     completer.Reply(result.error());
   } else {

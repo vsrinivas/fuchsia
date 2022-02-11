@@ -125,11 +125,11 @@ func (*Service) SetAttr(_ fidl.Context, flags uint32, attributes fidlio.NodeAttr
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (*Service) NodeGetFlags(fidl.Context) (int32, uint32, error) {
+func (*Service) GetFlags(fidl.Context) (int32, uint32, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (*Service) NodeSetFlags(_ fidl.Context, flags uint32) (int32, error) {
+func (*Service) SetFlags(_ fidl.Context, flags uint32) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -361,11 +361,11 @@ func (*directoryState) Watch(_ fidl.Context, mask uint32, options uint32, watche
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (*directoryState) NodeGetFlags(fidl.Context) (int32, uint32, error) {
+func (*directoryState) GetFlags(fidl.Context) (int32, uint32, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (*directoryState) NodeSetFlags(fidl.Context, uint32) (int32, error) {
+func (*directoryState) SetFlags(fidl.Context, uint32) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -616,11 +616,11 @@ func (*fileState) SetFlags(_ fidl.Context, flags uint32) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (*fileState) NodeGetFlags(fidl.Context) (int32, uint32, error) {
+func (*fileState) GetFlagsDeprecatedUseNode(fidl.Context) (int32, uint32, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (*fileState) NodeSetFlags(_ fidl.Context, flags uint32) (int32, error) {
+func (*fileState) SetFlagsDeprecatedUseNode(_ fidl.Context, flags uint32) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
