@@ -440,16 +440,16 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
       path = nullptr;
     }
 
-    auto describe =
-        [&ipc, describe = flags & ZX_FS_FLAG_DESCRIBE](zx::status<fio::wire::NodeInfo> node_info) {
-          if (describe) {
-            fidl::WireEvent<fio::Node::OnOpen> response{
-                node_info.status_value(),
-                node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfo()};
-            fidl::OwnedEncodedMessage<fidl::WireEvent<fio::Node::OnOpen>> message(&response);
-            message.Write(ipc.channel());
-          }
-        };
+    auto describe = [&ipc, describe = flags & ZX_FS_FLAG_DESCRIBE](
+                        zx::status<fio::wire::NodeInfo> node_info) {
+      if (describe) {
+        fidl::WireEvent<fio::Node::OnOpen> response{
+            node_info.status_value(),
+            node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfo()};
+        fidl::unstable::OwnedEncodedMessage<fidl::WireEvent<fio::Node::OnOpen>> message(&response);
+        message.Write(ipc.channel());
+      }
+    };
 
     Devnode* dn = dirdn;
     if (zx_status_t status = devfs_walk(&dn, path); status != ZX_OK) {

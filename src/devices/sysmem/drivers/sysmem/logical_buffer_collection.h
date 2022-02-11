@@ -562,7 +562,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   bool has_allocation_result_ = false;
   std::optional<TableHolder<fuchsia_sysmem2::wire::BufferCollectionInfo>>
       buffer_collection_info_before_population_;
-  std::optional<fidl::OwnedEncodedMessage<fuchsia_sysmem2::wire::BufferCollectionInfo>>
+  std::optional<fidl::unstable::OwnedEncodedMessage<fuchsia_sysmem2::wire::BufferCollectionInfo>>
       linearized_buffer_collection_info_before_population_;
   zx_status_t allocation_result_status_ = ZX_OK;
   std::optional<TableHolder<fuchsia_sysmem2::wire::BufferCollectionInfo>> allocation_result_info_;

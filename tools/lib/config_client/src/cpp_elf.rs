@@ -138,7 +138,7 @@ std::vector<std::string> from_vector_string_view(fidl::VectorView<fidl::StringVi
     uint8_t* fidl_struct = static_cast<uint8_t*>(data);
 
     // Decode the FIDL struct
-    fidl::DecodedMessage<::{fidl_cpp_namespace}::wire::Config> decoded(
+    fidl::unstable::DecodedMessage<::{fidl_cpp_namespace}::wire::Config> decoded(
         fidl::internal::WireFormatVersion::kV2, fidl_struct, static_cast<uint32_t>(fidl_struct_size));
     ZX_ASSERT_MSG(decoded.ok(), "Could not decode Config FIDL structure");
     ::{fidl_cpp_namespace}::wire::Config* fidl_config = decoded.PrimaryObject();

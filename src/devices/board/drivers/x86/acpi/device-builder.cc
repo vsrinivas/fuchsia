@@ -26,7 +26,7 @@ static const zx_bind_inst_t kSysmemFragment[] = {
 template <typename T>
 zx::status<std::vector<uint8_t>> DoFidlEncode(T data) {
   // TODO(fxbug.dev/45252): Use FIDL at rest.
-  fidl::OwnedEncodedMessage<T> encoded(fidl::internal::WireFormatVersion::kV1, &data);
+  fidl::unstable::OwnedEncodedMessage<T> encoded(fidl::internal::WireFormatVersion::kV1, &data);
   if (!encoded.ok()) {
     return zx::error(encoded.status());
   }

@@ -52,7 +52,8 @@ class AsyncTearDownVnode : public VnodeF2fs {
 void SendDirSync(fidl::UnownedClientEnd<fuchsia_io::Directory> client) {
   FIDL_ALIGNDECL
   fidl::WireRequest<fuchsia_io::Directory::Sync> request;
-  fidl::OwnedEncodedMessage<fidl::WireRequest<fuchsia_io::Directory::Sync>> encoded(&request);
+  fidl::unstable::OwnedEncodedMessage<fidl::WireRequest<fuchsia_io::Directory::Sync>> encoded(
+      &request);
   ASSERT_EQ(encoded.status(), ZX_OK);
   encoded.GetOutgoingMessage().set_txid(5);
   encoded.Write(zx::unowned_channel(client.handle()));

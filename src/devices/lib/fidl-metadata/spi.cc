@@ -25,7 +25,7 @@ zx::status<std::vector<uint8_t>> SpiChannelsToFidl(const cpp20::span<const Chann
   metadata.set_channels(allocator, spi_channels);
 
   // TODO(fxbug.dev/45252): Use FIDL at rest.
-  fidl::OwnedEncodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> encoded(
+  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> encoded(
       fidl::internal::WireFormatVersion::kV1, &metadata);
   if (!encoded.ok()) {
     return zx::error(encoded.status());

@@ -122,14 +122,14 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   }
   status.progress = DecoderEncoderProgress::InitializedForDecoding;
 
-  std::optional<fidl::DecodedMessage<T>> decoded_initialize_later;
+  std::optional<fidl::unstable::DecodedMessage<T>> decoded_initialize_later;
   if constexpr (kTransactionalMessage) {
     decoded_initialize_later.emplace(std::move(incoming));
   } else {
     // TODO(fxbug.dev/45252): Use FIDL at rest.
     decoded_initialize_later.emplace(fidl::internal::WireFormatVersion::kV1, std::move(incoming));
   }
-  fidl::DecodedMessage<T>& decoded = decoded_initialize_later.value();
+  fidl::unstable::DecodedMessage<T>& decoded = decoded_initialize_later.value();
 
   if (decoded.status() != ZX_OK) {
     status.status = decoded.status();
@@ -142,8 +142,8 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   // By specifying |AllowUnownedInputRef|, we fuzz the code paths used in production message
   // passing, which uses multiple iovecs referencing input objects instead of copying.
   // TODO(fxbug.dev/45252): Use FIDL at rest.
-  fidl::OwnedEncodedMessage<T> encoded(::fidl::internal::AllowUnownedInputRef{},
-                                       fidl::internal::WireFormatVersion::kV1, value);
+  fidl::unstable::OwnedEncodedMessage<T> encoded(::fidl::internal::AllowUnownedInputRef{},
+                                                 fidl::internal::WireFormatVersion::kV1, value);
 
   if (encoded.status() != ZX_OK) {
     status.status = encoded.status();
@@ -165,14 +165,14 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   }
   status.progress = DecoderEncoderProgress::FirstEncodeVerified;
 
-  std::optional<fidl::DecodedMessage<T>> decoded2_initialize_later;
+  std::optional<fidl::unstable::DecodedMessage<T>> decoded2_initialize_later;
   if constexpr (kTransactionalMessage) {
     decoded2_initialize_later.emplace(std::move(conversion.incoming_message()));
   } else {
     decoded2_initialize_later.emplace(fidl::internal::WireFormatVersion::kV1,
                                       std::move(conversion.incoming_message()));
   }
-  fidl::DecodedMessage<T>& decoded2 = decoded2_initialize_later.value();
+  fidl::unstable::DecodedMessage<T>& decoded2 = decoded2_initialize_later.value();
 
   if (decoded2.status() != ZX_OK) {
     status.status = decoded2.status();
@@ -185,7 +185,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   // in-process messaging.
   T* value2 = decoded2.PrimaryObject();
   // TODO(fxbug.dev/45252): Use FIDL at rest.
-  fidl::OwnedEncodedMessage<T> encoded2(fidl::internal::WireFormatVersion::kV1, value2);
+  fidl::unstable::OwnedEncodedMessage<T> encoded2(fidl::internal::WireFormatVersion::kV1, value2);
 
   if (encoded2.status() != ZX_OK) {
     status.status = encoded2.status();

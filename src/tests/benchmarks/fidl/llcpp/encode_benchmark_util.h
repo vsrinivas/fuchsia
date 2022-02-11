@@ -36,9 +36,9 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
     {
       FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-      ::fidl::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{},
-                                                    fidl::internal::WireFormatVersion::kV2,
-                                                    &aligned_value);
+      ::fidl::unstable::OwnedEncodedMessage<FidlType> encoded(
+          fidl::internal::AllowUnownedInputRef{}, fidl::internal::WireFormatVersion::kV2,
+          &aligned_value);
       if (!encoded.ok()) {
         std::cerr << "Unexpected error: " << encoded.error() << std::endl;
       }

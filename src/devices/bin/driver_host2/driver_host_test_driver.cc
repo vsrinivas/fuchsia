@@ -68,8 +68,8 @@ class TestDriver {
 zx_status_t test_driver_start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher,
                               void** driver) {
   // TODO(fxbug.dev/45252): Use FIDL at rest.
-  fidl::DecodedMessage<fdf::wire::DriverStartArgs> decoded(fidl::internal::WireFormatVersion::kV1,
-                                                           msg);
+  fidl::unstable::DecodedMessage<fdf::wire::DriverStartArgs> decoded(
+      fidl::internal::WireFormatVersion::kV1, msg);
   if (!decoded.ok()) {
     return decoded.status();
   }

@@ -122,7 +122,8 @@ class OwnedMessage {
  public:
   static std::unique_ptr<OwnedMessage<T>> From(T& message) {
     // TODO(fxbug.dev/45252): Use FIDL at rest.
-    fidl::OwnedEncodedMessage<T> encoded(fidl::internal::WireFormatVersion::kV1, &message);
+    fidl::unstable::OwnedEncodedMessage<T> encoded(fidl::internal::WireFormatVersion::kV1,
+                                                   &message);
     ZX_ASSERT_MSG(encoded.ok(), "Failed to encode: %s", encoded.FormatDescription().data());
     return std::make_unique<OwnedMessage>(encoded);
   }
@@ -131,17 +132,17 @@ class OwnedMessage {
 
  private:
   friend std::unique_ptr<OwnedMessage<T>> std::make_unique<OwnedMessage<T>>(
-      fidl::OwnedEncodedMessage<T>&);
+      fidl::unstable::OwnedEncodedMessage<T>&);
 
   // TODO(fxbug.dev/45252): Use FIDL at rest.
-  explicit OwnedMessage(fidl::OwnedEncodedMessage<T>& encoded)
+  explicit OwnedMessage(fidl::unstable::OwnedEncodedMessage<T>& encoded)
       : converted_(encoded.GetOutgoingMessage()),
         decoded_(fidl::internal::WireFormatVersion::kV1, std::move(converted_.incoming_message())) {
     ZX_ASSERT_MSG(decoded_.ok(), "Failed to decode: %s", decoded_.FormatDescription().c_str());
   }
 
   fidl::OutgoingToIncomingMessage converted_;
-  fidl::DecodedMessage<T> decoded_;
+  fidl::unstable::DecodedMessage<T> decoded_;
 };
 
 class DriverBinder {

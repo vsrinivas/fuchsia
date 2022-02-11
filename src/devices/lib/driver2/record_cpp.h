@@ -27,7 +27,7 @@ namespace driver::internal {
 template <typename T>
 zx_status_t Start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher, void** driver) {
   // Decode the incoming `msg`.
-  fidl::DecodedMessage<fuchsia_driver_framework::wire::DriverStartArgs> decoded(msg);
+  fidl::unstable::DecodedMessage<fuchsia_driver_framework::wire::DriverStartArgs> decoded(msg);
   if (!decoded.ok()) {
     return decoded.status();
   }

@@ -246,8 +246,8 @@ zx_status_t Vim3::PowerInit() {
 
   auto metadata = vreg::BuildMetadata(allocator, std::move(pwm_vreg_entries));
   // TODO(fxbug.dev/45252): Use FIDL at rest.
-  fidl::OwnedEncodedMessage<vreg::Metadata> encoded_metadata(fidl::internal::WireFormatVersion::kV1,
-                                                             &metadata);
+  fidl::unstable::OwnedEncodedMessage<vreg::Metadata> encoded_metadata(
+      fidl::internal::WireFormatVersion::kV1, &metadata);
   if (!encoded_metadata.ok()) {
     zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__,
            encoded_metadata.FormatDescription().c_str());

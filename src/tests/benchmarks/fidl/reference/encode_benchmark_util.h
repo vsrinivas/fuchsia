@@ -45,8 +45,8 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
   // Encode the input with fidl::Encode and compare againt encode().
   fidl::Arena<65536> allocator;
   FidlType aligned_value = builder(allocator);
-  ::fidl::OwnedEncodedMessage<FidlType> encoded(fidl::internal::WireFormatVersion::kV2,
-                                                &aligned_value);
+  ::fidl::unstable::OwnedEncodedMessage<FidlType> encoded(fidl::internal::WireFormatVersion::kV2,
+                                                          &aligned_value);
   ZX_ASSERT(encoded.ok());
 
   fidl::Arena<65536> allocator2;

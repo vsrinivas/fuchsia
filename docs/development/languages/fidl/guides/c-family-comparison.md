@@ -99,7 +99,7 @@ Category                           | [DEPRECATED] C                    | Low-lev
 
 Generated types own all handles stored inline. Out-of-line handles e.g. those
 behind a pointer indirection are not closed when the containing object of the
-pointer goes away. In those cases, the bindings provide a `fidl::DecodedMessage`
+pointer goes away. In those cases, the bindings provide a `fidl::unstable::DecodedMessage`
 object to manage all handles associated with a call.
 
 ##### Footnote2
