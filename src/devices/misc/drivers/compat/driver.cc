@@ -13,7 +13,6 @@
 #include <lib/service/llcpp/service.h>
 #include <zircon/dlfcn.h>
 
-#include "src/devices/lib/compat/symbols.h"
 #include "src/devices/lib/driver2/promise.h"
 #include "src/devices/lib/driver2/record_cpp.h"
 #include "src/devices/lib/driver2/start_args.h"
@@ -57,15 +56,15 @@ namespace compat {
 
 Driver::Driver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
                driver::Namespace ns, driver::Logger logger, std::string_view url,
-               std::string_view name, void* context, const zx_protocol_device_t* ops,
-               std::optional<Device*> linked_device)
+               std::string_view name, void* context, const compat_device_proto_ops_t& proto_ops,
+               const zx_protocol_device_t* ops)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       outgoing_(dispatcher),
       ns_(std::move(ns)),
       logger_(std::move(logger)),
       url_(url),
-      device_(name, context, ops, std::nullopt, linked_device, inner_logger_, dispatcher) {
+      device_(name, context, proto_ops, ops, std::nullopt, inner_logger_, dispatcher) {
   device_.Bind(std::move(node));
 }
 
@@ -88,14 +87,13 @@ zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& st
   }
   auto name = GetSymbol<const char*>(symbols, kName, "compat-device");
   auto context = GetSymbol<void*>(symbols, kContext);
-  const zx_protocol_device_t* ops = nullptr;
-  std::optional<Device*> parent_opt;
-  if (auto parent = driver::SymbolValue<Device*>(symbols, kParent); parent.is_ok()) {
-    parent_opt = *parent;
-  }
-  // Only look for an opts field if we don't have a linked parent.
-  if (!parent_opt) {
-    ops = GetSymbol<const zx_protocol_device_t*>(symbols, kOps);
+  const zx_protocol_device_t* ops = GetSymbol<const zx_protocol_device_t*>(symbols, kOps);
+  compat_device_proto_ops_t proto_ops;
+  {
+    auto parent_ops = GetSymbol<const compat_device_proto_ops_t*>(symbols, kProtoOps);
+    if (parent_ops) {
+      proto_ops = *parent_ops;
+    }
   }
 
   // Open the compat driver's binary within the package.
@@ -107,7 +105,7 @@ zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& st
 
   auto driver =
       std::make_unique<Driver>(dispatcher, std::move(node), std::move(ns), std::move(logger),
-                               start_args.url().get(), name, context, ops, parent_opt);
+                               start_args.url().get(), name, context, proto_ops, ops);
   auto result = driver->Run(std::move(start_args.outgoing_dir()), "/pkg/" + *compat);
   if (result.is_error()) {
     return result.take_error();

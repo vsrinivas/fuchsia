@@ -43,16 +43,16 @@ bool HasOp(const zx_protocol_device_t* ops, T member) {
 
 namespace compat {
 
-Device::Device(std::string_view name, void* context, const zx_protocol_device_t* ops,
-               std::optional<Device*> parent, std::optional<Device*> linked_device,
+Device::Device(std::string_view name, void* context, const compat_device_proto_ops_t& proto_ops,
+               const zx_protocol_device_t* ops, std::optional<Device*> parent,
                driver::Logger& logger, async_dispatcher_t* dispatcher)
     : name_(name),
       context_(context),
       ops_(ops),
       logger_(logger),
       dispatcher_(dispatcher),
+      proto_ops_(proto_ops),
       parent_(parent),
-      linked_device_(linked_device ? **linked_device : *this),
       executor_(dispatcher) {}
 
 Device::~Device() {
@@ -60,20 +60,25 @@ Device::~Device() {
     (*vnode_teardown_callback_)();
   }
 
-  // Technically we shouldn't unbind here, since unbind should go parent to child.
-  // However, this is much simpler than going parent to child, and this
-  // *technically* upholds the same invariant, because at this point we know
-  // the device does not have any children.
-  // Also, if a device has unbind, it would be an error to call Release before
-  // Unbind.
-  // This may be a potential difference in behavior from DFv1, so this needs
-  // to be investigated further. For now, it will let us run integration tests.
-  // TODO(fxbug.dev/92196)
-  if (HasOp(ops_, &zx_protocol_device_t::unbind)) {
-    ops_->unbind(context_);
-  }
-  if (HasOp(ops_, &zx_protocol_device_t::release)) {
-    ops_->release(context_);
+  // We only shut down the devices that have a parent, since that means that *this* compat driver
+  // owns the device. If the device does not have a parent, then ops_ belongs to another driver, and
+  // it's that driver's responsibility to be shut down.
+  if (parent_) {
+    // Technically we shouldn't unbind here, since unbind should go parent to child.
+    // However, this is much simpler than going parent to child, and this
+    // *technically* upholds the same invariant, because at this point we know
+    // the device does not have any children.
+    // Also, if a device has unbind, it would be an error to call Release before
+    // Unbind.
+    // This may be a potential difference in behavior from DFv1, so this needs
+    // to be investigated further. For now, it will let us run integration tests.
+    // TODO(fxbug.dev/92196)
+    if (HasOp(ops_, &zx_protocol_device_t::unbind)) {
+      ops_->unbind(context_);
+    }
+    if (HasOp(ops_, &zx_protocol_device_t::release)) {
+      ops_->release(context_);
+    }
   }
 }
 
@@ -95,20 +100,20 @@ const char* Device::Name() const { return name_.data(); }
 bool Device::HasChildren() const { return !children_.empty(); }
 
 zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
-  auto device = std::make_shared<Device>(zx_args->name, zx_args->ctx, zx_args->ops, this,
-                                         std::nullopt, logger_, dispatcher_);
+  const compat_device_proto_ops_t device_proto_ops{
+      .ops = zx_args->proto_ops,
+      .id = zx_args->proto_id,
+  };
+  auto device = std::make_shared<Device>(zx_args->name, zx_args->ctx, device_proto_ops,
+                                         zx_args->ops, this, logger_, dispatcher_);
 
-  device->topological_path_ = linked_device_.topological_path_;
+  device->topological_path_ = topological_path_;
   if (!device->topological_path_.empty()) {
     device->topological_path_ += "/";
   }
   device->topological_path_ += device->name_;
 
   auto device_ptr = device.get();
-  if (zx_args->proto_id) {
-    device_ptr->proto_id_ = zx_args->proto_id;
-    device_ptr->proto_ops_ = zx_args->proto_ops;
-  }
 
   // Add the metadata from add_args:
   for (size_t i = 0; i < zx_args->metadata_count; i++) {
@@ -146,8 +151,8 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
       .set_name(arena, kOps)
       .set_address(arena, reinterpret_cast<uint64_t>(zx_args->ops));
   symbols.emplace_back(arena)
-      .set_name(arena, kParent)
-      .set_address(arena, reinterpret_cast<uint64_t>(device_ptr));
+      .set_name(arena, kProtoOps)
+      .set_address(arena, reinterpret_cast<uint64_t>(&device_ptr->proto_ops_));
   std::vector<fdf::wire::NodeProperty> props;
   props.reserve(zx_args->prop_count);
   bool has_protocol = false;
@@ -276,11 +281,11 @@ void Device::Remove() {
 void Device::RemoveChild(std::shared_ptr<Device>& child) { children_.remove(child); }
 
 zx_status_t Device::GetProtocol(uint32_t proto_id, void* out) const {
-  if (HasOp(linked_device_.ops_, &zx_protocol_device_t::get_protocol)) {
-    return linked_device_.ops_->get_protocol(context_, proto_id, out);
+  if (HasOp(ops_, &zx_protocol_device_t::get_protocol)) {
+    return ops_->get_protocol(context_, proto_id, out);
   }
 
-  if ((linked_device_.proto_id_ != proto_id) || (linked_device_.proto_ops_ == nullptr)) {
+  if ((proto_ops_.id != proto_id) || (proto_ops_.ops == nullptr)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -289,8 +294,8 @@ zx_status_t Device::GetProtocol(uint32_t proto_id, void* out) const {
     void* ctx;
   };
   auto proto = static_cast<GenericProtocol*>(out);
-  proto->ops = linked_device_.proto_ops_;
-  proto->ctx = linked_device_.context_;
+  proto->ops = proto_ops_.ops;
+  proto->ctx = context_;
   return ZX_OK;
 }
 

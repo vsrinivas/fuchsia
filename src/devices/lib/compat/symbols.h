@@ -13,8 +13,13 @@ constexpr char kName[] = "compat-name";
 constexpr char kContext[] = "compat-context";
 // Ops of the DFv1 device.
 constexpr char kOps[] = "compat-ops";
-// Address of the parent of the DFv1 device.
-constexpr char kParent[] = "compat-parent";
+
+struct compat_device_proto_ops_t {
+  void* ops;
+  uint32_t id;
+};
+
+constexpr char kProtoOps[] = "compat-proto-ops";
 
 }  // namespace compat
 

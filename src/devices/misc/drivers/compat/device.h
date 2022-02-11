@@ -20,6 +20,7 @@
 
 #include <fbl/intrusive_double_list.h>
 
+#include "src/devices/lib/compat/symbols.h"
 #include "src/devices/lib/driver2/logger.h"
 #include "src/devices/misc/drivers/compat/service.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
@@ -30,9 +31,9 @@ namespace compat {
 class Device : public std::enable_shared_from_this<Device>,
                public fidl::WireServer<fuchsia_driver_compat::Device> {
  public:
-  Device(std::string_view name, void* context, const zx_protocol_device_t* ops,
-         std::optional<Device*> parent, std::optional<Device*> linked_device,
-         driver::Logger& logger, async_dispatcher_t* dispatcher);
+  Device(std::string_view name, void* context, const compat_device_proto_ops_t& proto_ops,
+         const zx_protocol_device_t* ops, std::optional<Device*> parent, driver::Logger& logger,
+         async_dispatcher_t* dispatcher);
 
   ~Device();
 
@@ -64,7 +65,7 @@ class Device : public std::enable_shared_from_this<Device>,
 
   zx_status_t StartCompatService(ServiceDir dir);
 
-  std::string_view topological_path() const { return linked_device_.topological_path_; }
+  std::string_view topological_path() const { return topological_path_; }
   void set_topological_path(std::string path) { topological_path_ = std::move(path); }
 
   fpromise::scope& scope() { return scope_; }
@@ -90,8 +91,7 @@ class Device : public std::enable_shared_from_this<Device>,
   async_dispatcher_t* const dispatcher_;
 
   // The default protocol of the device.
-  uint32_t proto_id_ = 0;
-  void* proto_ops_ = nullptr;
+  compat_device_proto_ops_t proto_ops_ = {};
 
   std::optional<fit::callback<void()>> vnode_teardown_callback_;
 
@@ -106,10 +106,6 @@ class Device : public std::enable_shared_from_this<Device>,
   // by the Driver class in the DFv1 shim. When parent_ is std::nullopt, the
   // Device will be freed when the Driver is freed.
   std::optional<Device*> parent_;
-
-  // Used to link two instances of the same device together.
-  // If the device is not linked with anything, this will point to `this`.
-  Device& linked_device_;
 
   fidl::WireSharedClient<fuchsia_driver_framework::Node> node_;
   fidl::WireSharedClient<fuchsia_driver_framework::NodeController> controller_;

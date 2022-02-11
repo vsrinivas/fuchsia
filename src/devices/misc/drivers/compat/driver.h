@@ -10,6 +10,7 @@
 #include <lib/fpromise/scope.h>
 #include <lib/service/llcpp/outgoing_directory.h>
 
+#include "src/devices/lib/compat/symbols.h"
 #include "src/devices/lib/driver2/devfs_exporter.h"
 #include "src/devices/lib/driver2/logger.h"
 #include "src/devices/lib/driver2/namespace.h"
@@ -24,7 +25,7 @@ class Driver {
   Driver(async_dispatcher_t* dispatcher,
          fidl::WireSharedClient<fuchsia_driver_framework::Node> node, driver::Namespace ns,
          driver::Logger logger, std::string_view url, std::string_view name, void* context,
-         const zx_protocol_device_t* ops, std::optional<Device*> linked_device);
+         const compat_device_proto_ops_t& proto_ops, const zx_protocol_device_t* ops);
   ~Driver();
 
   zx_driver_t* ZxDriver();
