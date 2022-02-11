@@ -16,7 +16,7 @@ namespace test_inheritancewithrecursivedecl {
       ::test_inheritancewithrecursivedecl::kParent_First_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_inheritancewithrecursivedecl::
-          test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable,
+          test_inheritancewithrecursivedecl_ParentFirstRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
   return ::fidl::internal::ToFitxResult(result);
@@ -109,7 +109,7 @@ namespace test_inheritancewithrecursivedecl {
       ::test_inheritancewithrecursivedecl::kChild_First_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_inheritancewithrecursivedecl::
-          test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable,
+          test_inheritancewithrecursivedecl_ParentFirstRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
   return ::fidl::internal::ToFitxResult(result);
@@ -123,7 +123,7 @@ namespace test_inheritancewithrecursivedecl {
       ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_inheritancewithrecursivedecl::
-          test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable,
+          test_inheritancewithrecursivedecl_ChildSecondRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
   return ::fidl::internal::ToFitxResult(result);

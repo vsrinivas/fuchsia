@@ -20,10 +20,9 @@ namespace test_nullable {
 class SimpleProtocol;
 
 __LOCAL extern "C" const fidl_type_t
-    test_nullable_SimpleProtocolAddRequestMessageTable;
-
+    test_nullable_SimpleProtocolAddRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_nullable_SimpleProtocolAddResponseMessageTable;
+    test_nullable_SimpleProtocolAddTopResponseTable;
 }  // namespace test_nullable
 template <>
 struct ::fidl::internal::WireOrdinal<::test_nullable::SimpleProtocol::Add>
@@ -101,7 +100,7 @@ struct IsFidlMessage<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>>
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>> {
   static constexpr const fidl_type_t* kType =
-      &::test_nullable::test_nullable_SimpleProtocolAddRequestMessageTable;
+      &::test_nullable::test_nullable_SimpleProtocolAddRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -136,7 +135,7 @@ struct IsFidlMessage<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>>
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>> {
   static constexpr const fidl_type_t* kType =
-      &::test_nullable::test_nullable_SimpleProtocolAddResponseMessageTable;
+      &::test_nullable::test_nullable_SimpleProtocolAddTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));

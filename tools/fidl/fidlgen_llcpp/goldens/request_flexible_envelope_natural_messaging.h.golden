@@ -15,16 +15,13 @@
 namespace fidl {}  // namespace fidl
 namespace test_requestflexibleenvelope {
 __LOCAL extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
-
+    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
-
+    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
-
+    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
+    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_requestflexibleenvelope

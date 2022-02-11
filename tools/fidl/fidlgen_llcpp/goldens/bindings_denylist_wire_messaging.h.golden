@@ -1224,34 +1224,25 @@ namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
 
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
 }  // namespace test_bindingsdenylist
 template <>
 struct ::fidl::internal::WireOrdinal<
@@ -1516,7 +1507,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> {
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(1 + sizeof(fidl_message_header_t));
@@ -1554,7 +1545,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> {
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -1592,7 +1583,7 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> {
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(1 + sizeof(fidl_message_header_t));
@@ -1630,7 +1621,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> {
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -1668,7 +1659,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> {
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(1 + sizeof(fidl_message_header_t));
@@ -1706,7 +1697,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> {
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -1744,7 +1735,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> {
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(1 + sizeof(fidl_message_header_t));
@@ -1782,7 +1773,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> {
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -1820,7 +1811,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> {
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(1 + sizeof(fidl_message_header_t));
@@ -1858,7 +1849,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> {
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));

@@ -17,7 +17,7 @@ namespace test {
 namespace inheritancewithrecursivedecl {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
+    test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 }  // namespace _internal
 Parent::~Parent() = default;
@@ -28,7 +28,7 @@ const fidl_type_t* ::test::inheritancewithrecursivedecl::Parent_RequestDecoder::
   switch (ordinal) {
     case ::test::inheritancewithrecursivedecl::internal::kParent_First_Ordinal:
       return &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
+          test_inheritancewithrecursivedecl_ParentFirstRequestTable;
       ;
     default:
       return nullptr;
@@ -71,7 +71,7 @@ void Parent_Proxy::First(
       ::test::inheritancewithrecursivedecl::internal::kParent_First_Ordinal);
   const fidl_type_t* req_type =
       &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
+          test_inheritancewithrecursivedecl_ParentFirstRequestTable;
   controller_->Send(
       req_type,
       ::test::inheritancewithrecursivedecl::Parent_RequestEncoder::First(
@@ -147,7 +147,7 @@ zx_status_t Parent_SyncProxy::First(
       ::test::inheritancewithrecursivedecl::internal::kParent_First_Ordinal);
   const fidl_type_t* req_type =
       &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
+          test_inheritancewithrecursivedecl_ParentFirstRequestTable;
   return proxy_.Send(
       req_type,
       ::test::inheritancewithrecursivedecl::Parent_RequestEncoder::First(
@@ -163,10 +163,7 @@ namespace test {
 namespace inheritancewithrecursivedecl {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
+    test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
 }  // namespace _internal
 Child::~Child() = default;
@@ -177,11 +174,11 @@ const fidl_type_t* ::test::inheritancewithrecursivedecl::Child_RequestDecoder::
   switch (ordinal) {
     case ::test::inheritancewithrecursivedecl::internal::kChild_First_Ordinal:
       return &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
+          test_inheritancewithrecursivedecl_ParentFirstRequestTable;
       ;
     case ::test::inheritancewithrecursivedecl::internal::kChild_Second_Ordinal:
       return &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
+          test_inheritancewithrecursivedecl_ChildSecondRequestTable;
       ;
     default:
       return nullptr;
@@ -224,7 +221,7 @@ void Child_Proxy::First(
       ::test::inheritancewithrecursivedecl::internal::kChild_First_Ordinal);
   const fidl_type_t* req_type =
       &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
+          test_inheritancewithrecursivedecl_ParentFirstRequestTable;
   controller_->Send(
       req_type,
       ::test::inheritancewithrecursivedecl::Child_RequestEncoder::First(
@@ -238,7 +235,7 @@ void Child_Proxy::Second(
       ::test::inheritancewithrecursivedecl::internal::kChild_Second_Ordinal);
   const fidl_type_t* req_type =
       &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
+          test_inheritancewithrecursivedecl_ChildSecondRequestTable;
   controller_->Send(
       req_type,
       ::test::inheritancewithrecursivedecl::Child_RequestEncoder::Second(
@@ -321,7 +318,7 @@ zx_status_t Child_SyncProxy::First(
       ::test::inheritancewithrecursivedecl::internal::kChild_First_Ordinal);
   const fidl_type_t* req_type =
       &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
+          test_inheritancewithrecursivedecl_ParentFirstRequestTable;
   return proxy_.Send(
       req_type,
       ::test::inheritancewithrecursivedecl::Child_RequestEncoder::First(
@@ -335,7 +332,7 @@ zx_status_t Child_SyncProxy::Second(
       ::test::inheritancewithrecursivedecl::internal::kChild_Second_Ordinal);
   const fidl_type_t* req_type =
       &::test::inheritancewithrecursivedecl::_internal::
-          test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
+          test_inheritancewithrecursivedecl_ChildSecondRequestTable;
   return proxy_.Send(
       req_type,
       ::test::inheritancewithrecursivedecl::Child_RequestEncoder::Second(

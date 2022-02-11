@@ -7,9 +7,9 @@
 namespace test_inheritance {
 [[maybe_unused]] constexpr uint64_t ksuper_foo_Ordinal = 7540745593380780216lu;
 
-extern "C" const fidl_type_t test_inheritance_superfooRequestMessageTable;
+extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
-extern "C" const fidl_type_t test_inheritance_superfooResponseMessageTable;
+extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_inheritance
 ::fidl::WireResult<::test_inheritance::Super::Foo>::WireResult(
@@ -335,9 +335,9 @@ void ::fidl::WireResponse<::test_inheritance::Super::Foo>::_InitHeader() {
 namespace test_inheritance {
 [[maybe_unused]] constexpr uint64_t ksub_foo_Ordinal = 7540745593380780216lu;
 
-extern "C" const fidl_type_t test_inheritance_subfooRequestMessageTable;
+extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
-extern "C" const fidl_type_t test_inheritance_subfooResponseMessageTable;
+extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_inheritance
 ::fidl::WireResult<::test_inheritance::Sub::Foo>::WireResult(

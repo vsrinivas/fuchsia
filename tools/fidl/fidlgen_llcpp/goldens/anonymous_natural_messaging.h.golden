@@ -15,10 +15,9 @@
 namespace fidl {}  // namespace fidl
 namespace test_anonymous {
 __LOCAL extern "C" const fidl_type_t
-    test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
-
+    test_anonymous_SomeProtocolSomeMethodRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
+    test_anonymous_SomeProtocolSomeMethodTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_anonymous

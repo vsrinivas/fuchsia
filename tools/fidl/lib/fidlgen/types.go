@@ -697,6 +697,12 @@ func (d *Decl) GetName() EncodedCompoundIdentifier {
 // to be the case.
 type NamingContext []string
 
+// IsAnonymous states whether the described NamingContext indicates anonymous declaration (ie, not
+// explicitly named in the source FIDL).
+func (nc NamingContext) IsAnonymous() bool {
+	return len(nc) > 1
+}
+
 // scopedNamingContext stores a NamingContext that also includes the library from which that naming
 // context was sourced.  This is useful for comparing identical NamingContexts from different
 // libraries for uniqueness.
@@ -737,12 +743,12 @@ type Layout struct {
 	NamingContext NamingContext `json:"naming_context"`
 }
 
+// IsAnonymous states whether this Layout has an anonymous naming context. We treat inner layouts
+// (i.e. layouts defined within another layout) as anonymous. All such layouts have a naming context
+// with length greater than one, since they include at least the top level name followed by one or
+// more inner names.
 func (l *Layout) IsAnonymous() bool {
-	// We treat inner layouts (i.e. layouts defined within another layout) as
-	// anonymous. All such layouts have a naming context with length greater
-	// than 1, since they include at least the top level name followed by 1 or
-	// more inner names
-	return len(l.NamingContext) > 1
+	return l.NamingContext.IsAnonymous()
 }
 
 // Assert that declarations conform to the Declaration interface

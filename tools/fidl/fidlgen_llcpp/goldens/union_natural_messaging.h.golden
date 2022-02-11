@@ -15,10 +15,10 @@
 namespace fidl {}  // namespace fidl
 namespace test_union {
 __LOCAL extern "C" const fidl_type_t
-    test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
+    test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
+    test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_union

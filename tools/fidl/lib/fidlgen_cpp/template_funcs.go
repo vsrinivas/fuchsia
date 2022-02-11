@@ -94,11 +94,33 @@ func endifFuchsia() string {
 	return s
 }
 
+// A per-file set of coding table definitions that have been imported via `__LOCAL extern "C"`
+// declarations, used to prevent duplicate imports.
+var externedCodingTables = map[string]struct{}{}
+
 func endOfFile() string {
+	externedCodingTables = map[string]struct{}{}
 	if len(namespaceStack) != 0 {
 		panic("The namespace stack isn't empty, there's a EndifFuchsia missing somewhere")
 	}
 	return ensureNamespace("::")
+}
+
+// ensureCodingTableDecl determines whether or not a particular name has already been imported into
+// a `*.h` or `*.cc` file via a `__LOCAL extern "C"`-style declaration, thereby preventing duplicate
+// instances of this declaration.
+func ensureCodingTableDecl(codingTable *name) string {
+	if codingTable == nil {
+		return ""
+	}
+
+	n := codingTable.Name()
+	if _, found := externedCodingTables[n]; found {
+		return ""
+	}
+
+	externedCodingTables[n] = struct{}{}
+	return ensureNamespace(codingTable) + "__LOCAL extern \"C\" const fidl_type_t " + codingTable.Name() + ";"
 }
 
 var currentTransport *Transport
@@ -252,10 +274,11 @@ var commonTemplateFuncs = template.FuncMap{
 	"FamilyKinds": func() interface{} { return FamilyKinds },
 	"TypeKinds":   func() interface{} { return TypeKinds },
 
-	"IfdefFuchsia":    ifdefFuchsia,
-	"EndifFuchsia":    endifFuchsia,
-	"EnsureNamespace": ensureNamespace,
-	"EndOfFile":       endOfFile,
+	"IfdefFuchsia":          ifdefFuchsia,
+	"EndifFuchsia":          endifFuchsia,
+	"EnsureNamespace":       ensureNamespace,
+	"EnsureCodingTableDecl": ensureCodingTableDecl,
+	"EndOfFile":             endOfFile,
 
 	"SetTransport":   setTransport,
 	"UnsetTransport": unsetTransport,

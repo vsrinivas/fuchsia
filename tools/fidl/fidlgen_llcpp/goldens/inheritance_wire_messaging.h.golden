@@ -21,11 +21,8 @@ class Super;
 
 class Sub;
 
-__LOCAL extern "C" const fidl_type_t
-    test_inheritance_superfooRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_inheritance_superfooResponseMessageTable;
+__LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
+__LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 }  // namespace test_inheritance
 template <>
 struct ::fidl::internal::WireOrdinal<::test_inheritance::Super::Foo> final {
@@ -98,7 +95,7 @@ struct IsFidlMessage<::fidl::WireRequest<::test_inheritance::Super::Foo>>
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>> {
   static constexpr const fidl_type_t* kType =
-      &::test_inheritance::test_inheritance_superfooRequestMessageTable;
+      &::test_inheritance::test_inheritance_SuperFooRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -128,7 +125,7 @@ struct IsFidlMessage<::fidl::WireResponse<::test_inheritance::Super::Foo>>
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_inheritance::Super::Foo>> {
   static constexpr const fidl_type_t* kType =
-      &::test_inheritance::test_inheritance_superfooResponseMessageTable;
+      &::test_inheritance::test_inheritance_SuperFooTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -423,10 +420,6 @@ class ::fidl::WireServer<::test_inheritance::Super>
 namespace test_inheritance {
 #endif  // __Fuchsia__
 
-__LOCAL extern "C" const fidl_type_t test_inheritance_subfooRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_inheritance_subfooResponseMessageTable;
 }  // namespace test_inheritance
 template <>
 struct ::fidl::internal::WireOrdinal<::test_inheritance::Sub::Foo> final {
@@ -499,7 +492,7 @@ struct IsFidlMessage<::fidl::WireRequest<::test_inheritance::Sub::Foo>>
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>> {
   static constexpr const fidl_type_t* kType =
-      &::test_inheritance::test_inheritance_subfooRequestMessageTable;
+      &::test_inheritance::test_inheritance_SuperFooRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -529,7 +522,7 @@ struct IsFidlMessage<::fidl::WireResponse<::test_inheritance::Sub::Foo>>
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_inheritance::Sub::Foo>> {
   static constexpr const fidl_type_t* kType =
-      &::test_inheritance::test_inheritance_subfooResponseMessageTable;
+      &::test_inheritance::test_inheritance_SuperFooTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(8 + sizeof(fidl_message_header_t));

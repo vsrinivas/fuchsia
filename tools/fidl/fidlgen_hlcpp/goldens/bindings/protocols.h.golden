@@ -351,10 +351,9 @@ using WithErrorSyntax_HandleInResult_ResultPtr =
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
-
+    test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
+    test_protocols_HandleRightsProtocolResponseMethodRequestTable;
 
 }  // namespace _internal
 class HandleRightsProtocol_RequestEncoder {
@@ -389,7 +388,7 @@ class HandleRightsProtocol_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocols::_internal::
-            test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable,
+            test_protocols_HandleRightsProtocolNoResponseMethodRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -425,19 +424,19 @@ class HandleRightsProtocol_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocols::_internal::
-            test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable,
+            test_protocols_HandleRightsProtocolResponseMethodRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
+
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
-
+    test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolAnEventEventMessageTable;
+    test_protocols_HandleRightsProtocolAnEventRequestTable;
 
 }  // namespace _internal
 class HandleRightsProtocol_ResponseEncoder {
@@ -472,7 +471,7 @@ class HandleRightsProtocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocols::_internal::
-            test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable,
+            test_protocols_HandleRightsProtocolResponseMethodTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -507,7 +506,7 @@ class HandleRightsProtocol_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_HandleRightsProtocolAnEventEventMessageTable,
+                   test_protocols_HandleRightsProtocolAnEventRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -900,13 +899,11 @@ using WithErrorSyntax_ErrorAsEnum_ResponsePtr =
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable;
-
+    test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
-
+    test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable;
+    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 
 }  // namespace _internal
 class WithAndWithoutRequestResponse_RequestEncoder {
@@ -945,7 +942,7 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable,
+            test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -973,7 +970,7 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable,
+            test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1001,22 +998,23 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable,
+            test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
+
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
+    test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable;
+    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
+    test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 
 }  // namespace _internal
 class WithAndWithoutRequestResponse_ResponseEncoder {
@@ -1047,7 +1045,7 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable,
+            test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1079,7 +1077,7 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable,
+            test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1111,7 +1109,7 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable,
+            test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1124,10 +1122,9 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_TransitionalRequestRequestMessageTable;
-
+    test_protocols_TransitionalRequestRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_TransitionalOneWayRequestMessageTable;
+    test_protocols_TransitionalOneWayRequestTable;
 
 }  // namespace _internal
 class Transitional_RequestEncoder {
@@ -1153,7 +1150,7 @@ class Transitional_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_TransitionalRequestRequestMessageTable,
+                   test_protocols_TransitionalRequestRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1180,7 +1177,7 @@ class Transitional_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_TransitionalOneWayRequestMessageTable,
+                   test_protocols_TransitionalOneWayRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1189,10 +1186,10 @@ class Transitional_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_TransitionalRequestResponseMessageTable;
+    test_protocols_TransitionalRequestTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_TransitionalEventEventMessageTable;
+    test_protocols_TransitionalEventRequestTable;
 
 }  // namespace _internal
 class Transitional_ResponseEncoder {
@@ -1218,7 +1215,7 @@ class Transitional_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_TransitionalRequestResponseMessageTable,
+                   test_protocols_TransitionalRequestTopResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1245,7 +1242,7 @@ class Transitional_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_TransitionalEventEventMessageTable,
+                   test_protocols_TransitionalEventRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1345,7 +1342,7 @@ using TheUnionPtr = ::std::unique_ptr<TheUnion>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
+    test_protocols_MethodWithUnionUnionMethodRequestTable;
 
 }  // namespace _internal
 class MethodWithUnion_RequestEncoder {
@@ -1371,7 +1368,7 @@ class MethodWithUnion_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_MethodWithUnionUnionMethodRequestMessageTable,
+                   test_protocols_MethodWithUnionUnionMethodRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1423,13 +1420,11 @@ using ProtocolEndsPtr = ::std::unique_ptr<ProtocolEnds>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsClientEndsRequestMessageTable;
-
+    test_protocols_WithProtocolEndsClientEndsRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsServerEndsRequestMessageTable;
-
+    test_protocols_WithProtocolEndsServerEndsRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable;
+    test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
 
 }  // namespace _internal
 class WithProtocolEnds_RequestEncoder {
@@ -1464,7 +1459,7 @@ class WithProtocolEnds_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_WithProtocolEndsClientEndsRequestMessageTable,
+                   test_protocols_WithProtocolEndsClientEndsRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1500,7 +1495,7 @@ class WithProtocolEnds_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_WithProtocolEndsServerEndsRequestMessageTable,
+                   test_protocols_WithProtocolEndsServerEndsRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1528,7 +1523,7 @@ class WithProtocolEnds_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocols::_internal::
-            test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable,
+            test_protocols_WithProtocolEndsStructContainingEndsRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1537,13 +1532,11 @@ class WithProtocolEnds_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsClientEndsResponseMessageTable;
-
+    test_protocols_WithProtocolEndsClientEndsTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsServerEndsResponseMessageTable;
-
+    test_protocols_WithProtocolEndsServerEndsTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
+    test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
 
 }  // namespace _internal
 class WithProtocolEnds_ResponseEncoder {
@@ -1576,12 +1569,11 @@ class WithProtocolEnds_ResponseEncoder {
                      });
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_WithProtocolEndsClientEndsResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_WithProtocolEndsClientEndsTopResponseTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1613,12 +1605,11 @@ class WithProtocolEnds_ResponseEncoder {
                      });
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_WithProtocolEndsServerEndsResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_WithProtocolEndsServerEndsTopResponseTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1644,7 +1635,7 @@ class WithProtocolEnds_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocols::_internal::
-            test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable,
+            test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1657,7 +1648,7 @@ class WithProtocolEnds_ResponseEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ManyParametersFifteenRequestMessageTable;
+    test_protocols_ManyParametersFifteenRequestTable;
 
 }  // namespace _internal
 class ManyParameters_RequestEncoder {
@@ -1743,7 +1734,7 @@ class ManyParameters_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_ManyParametersFifteenRequestMessageTable,
+                   test_protocols_ManyParametersFifteenRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1908,16 +1899,13 @@ class WithErrorSyntax_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
-
+    test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
-
+    test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
-
+    test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
+    test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
 
 }  // namespace _internal
 class WithErrorSyntax_ResponseEncoder {
@@ -1945,7 +1933,7 @@ class WithErrorSyntax_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocols::_internal::
-            test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable,
+            test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1974,7 +1962,7 @@ class WithErrorSyntax_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocols::_internal::
-            test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable,
+            test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -2000,12 +1988,11 @@ class WithErrorSyntax_ResponseEncoder {
       ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -2029,12 +2016,11 @@ class WithErrorSyntax_ResponseEncoder {
       ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_WithErrorSyntaxHandleInResultTopResponseTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -2059,16 +2045,14 @@ class DiscoverableProtocol_ResponseEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMethodARequestMessageTable;
+    test_protocols_ChannelProtocolMethodARequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMethodBRequestMessageTable;
-
+    test_protocols_ChannelProtocolMethodBRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
-
+    test_protocols_ChannelProtocolTakeHandleRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMutateSocketRequestMessageTable;
+    test_protocols_ChannelProtocolMutateSocketRequestTable;
 
 }  // namespace _internal
 class ChannelProtocol_RequestEncoder {
@@ -2098,7 +2082,7 @@ class ChannelProtocol_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_ChannelProtocolMethodARequestMessageTable,
+                   test_protocols_ChannelProtocolMethodARequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -2129,7 +2113,7 @@ class ChannelProtocol_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_ChannelProtocolMethodBRequestMessageTable,
+                   test_protocols_ChannelProtocolMethodBRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -2164,7 +2148,7 @@ class ChannelProtocol_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_ChannelProtocolTakeHandleRequestMessageTable,
+                   test_protocols_ChannelProtocolTakeHandleRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -2197,25 +2181,24 @@ class ChannelProtocol_RequestEncoder {
                      });
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_ChannelProtocolMutateSocketRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_ChannelProtocolMutateSocketRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
+
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolEventAEventMessageTable;
+    test_protocols_ChannelProtocolEventARequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_ChannelProtocolMethodBTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMethodBResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
+    test_protocols_ChannelProtocolMutateSocketTopResponseTable;
 
 }  // namespace _internal
 class ChannelProtocol_ResponseEncoder {
@@ -2245,7 +2228,7 @@ class ChannelProtocol_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_ChannelProtocolEventAEventMessageTable,
+                   test_protocols_ChannelProtocolEventARequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -2272,7 +2255,7 @@ class ChannelProtocol_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
-                   test_protocols_ChannelProtocolMethodBResponseMessageTable,
+                   test_protocols_ChannelProtocolMethodBTopResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -2309,12 +2292,11 @@ class ChannelProtocol_ResponseEncoder {
                      });
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocols::_internal::
-            test_protocols_ChannelProtocolMutateSocketResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_ChannelProtocolMutateSocketTopResponseTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }

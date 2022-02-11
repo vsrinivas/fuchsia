@@ -70,7 +70,7 @@ void fidl::internal::NaturalCompleterBase<
       ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal};
   messenger_.SendReply(
       &::test_foreigntypeinresponseusedthroughcompose::
-          test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable,
+          test_middle_MiddleGetFooTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
 }

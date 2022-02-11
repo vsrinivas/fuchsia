@@ -617,34 +617,25 @@ struct ::fidl::internal::NaturalServerDispatcher<
 
 namespace test_bindingsdenylist {
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist

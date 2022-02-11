@@ -68,7 +68,7 @@ void fidl::internal::NaturalCompleterBase<
       ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
   messenger_.SendReply(
       &::test_transitivedependenciescompose::
-          test_transitivedependenciescompose_TopGetFooResponseMessageTable,
+          test_bottom_BottomGetFooTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
 }

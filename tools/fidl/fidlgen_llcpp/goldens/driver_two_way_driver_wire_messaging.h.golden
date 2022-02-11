@@ -19,11 +19,9 @@
 namespace test_drivertwoway {
 class TwoWay;
 
+__LOCAL extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_drivertwoway_TwoWayAddRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_drivertwoway_TwoWayAddResponseMessageTable;
+    test_drivertwoway_TwoWayAddTopResponseTable;
 }  // namespace test_drivertwoway
 template <>
 struct ::fidl::internal::WireOrdinal<::test_drivertwoway::TwoWay::Add> final {
@@ -101,7 +99,7 @@ struct IsFidlMessage<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>>
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>> {
   static constexpr const fidl_type_t* kType =
-      &::test_drivertwoway::test_drivertwoway_TwoWayAddRequestMessageTable;
+      &::test_drivertwoway::test_drivertwoway_TwoWayAddRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -134,7 +132,7 @@ struct IsFidlMessage<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> {
   static constexpr const fidl_type_t* kType =
-      &::test_drivertwoway::test_drivertwoway_TwoWayAddResponseMessageTable;
+      &::test_drivertwoway::test_drivertwoway_TwoWayAddTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(2 + sizeof(fidl_message_header_t));

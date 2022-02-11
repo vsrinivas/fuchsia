@@ -16,8 +16,7 @@
 namespace test {
 namespace foreigntypeinresponseusedthroughcompose {
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+__LOCAL extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
 
 }  // namespace _internal
 Top::~Top() = default;
@@ -41,7 +40,7 @@ const fidl_type_t* Top_ResponseDecoder::GetType(uint64_t ordinal) {
     case ::test::foreigntypeinresponseusedthroughcompose::internal::
         kTop_GetFoo_Ordinal:
       return &::test::foreigntypeinresponseusedthroughcompose::_internal::
-          test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+          test_middle_MiddleGetFooTopResponseTable;
       ;
     default:
       return nullptr;
@@ -84,7 +83,7 @@ Top_GetFoo_ResponseHandler(Top::GetFooCallback&& callback) {
         return ZX_OK;
       },
       &::test::foreigntypeinresponseusedthroughcompose::_internal::
-          test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable);
+          test_middle_MiddleGetFooTopResponseTable);
 }
 
 }  // namespace
@@ -120,7 +119,7 @@ class Top_GetFoo_Responder final {
             kTop_GetFoo_Ordinal);
     const fidl_type_t* resp_type =
         &::test::foreigntypeinresponseusedthroughcompose::_internal::
-            test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+            test_middle_MiddleGetFooTopResponseTable;
     response_.Send(resp_type, ::test::foreigntypeinresponseusedthroughcompose::
                                   Top_ResponseEncoder::GetFoo(&_encoder, &foo));
   }
@@ -188,7 +187,7 @@ zx_status_t Top_SyncProxy::GetFoo(::test::bottom::Foo* out_foo) {
   const fidl_type_t* req_type = nullptr;
   const fidl_type_t* resp_type =
       &::test::foreigntypeinresponseusedthroughcompose::_internal::
-          test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+          test_middle_MiddleGetFooTopResponseTable;
   zx_status_t status_ =
       proxy_.Call(req_type, resp_type,
                   ::test::foreigntypeinresponseusedthroughcompose::

@@ -15,7 +15,7 @@
 namespace fidl {}  // namespace fidl
 namespace test_inheritancewithrecursivedecl {
 __LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
+    test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
@@ -179,10 +179,7 @@ struct ::fidl::internal::NaturalServerDispatcher<
 
 namespace test_inheritancewithrecursivedecl {
 __LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
+    test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl

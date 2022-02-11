@@ -25,10 +25,9 @@ using ChildHandle = ::fidl::InterfaceHandle<Child>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildRequestMessageTable;
-
+    test_protocolrequest_ParentTakeChildRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+    test_protocolrequest_ParentTakeChildRequestRequestTable;
 
 }  // namespace _internal
 class Parent_RequestEncoder {
@@ -71,7 +70,7 @@ class Parent_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolrequest::_internal::
-                   test_protocolrequest_ParentTakeChildRequestMessageTable,
+                   test_protocolrequest_ParentTakeChildRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -105,22 +104,20 @@ class Parent_RequestEncoder {
                      });
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolrequest::_internal::
-            test_protocolrequest_ParentTakeChildRequestRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolrequest::_internal::
+                   test_protocolrequest_ParentTakeChildRequestRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildResponseMessageTable;
-
+    test_protocolrequest_ParentGetChildTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+    test_protocolrequest_ParentGetChildRequestTopResponseTable;
 
 }  // namespace _internal
 class Parent_ResponseEncoder {
@@ -155,7 +152,7 @@ class Parent_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolrequest::_internal::
-                   test_protocolrequest_ParentGetChildResponseMessageTable,
+                   test_protocolrequest_ParentGetChildTopResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -189,12 +186,11 @@ class Parent_ResponseEncoder {
                      });
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolrequest::_internal::
-            test_protocolrequest_ParentGetChildRequestResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolrequest::_internal::
+                   test_protocolrequest_ParentGetChildRequestTopResponseTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }

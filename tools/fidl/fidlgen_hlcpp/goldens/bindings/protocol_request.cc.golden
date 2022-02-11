@@ -17,16 +17,15 @@ namespace test {
 namespace protocolrequest {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildResponseMessageTable;
+    test_protocolrequest_ParentGetChildTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+    test_protocolrequest_ParentGetChildRequestTopResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocolrequest_ParentTakeChildRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+    test_protocolrequest_ParentTakeChildRequestRequestTable;
 
 }  // namespace _internal
 Parent::~Parent() = default;
@@ -45,11 +44,11 @@ const fidl_type_t* ::test::protocolrequest::Parent_RequestDecoder::GetType(
       ;
     case ::test::protocolrequest::internal::kParent_TakeChild_Ordinal:
       return &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentTakeChildRequestMessageTable;
+          test_protocolrequest_ParentTakeChildRequestTable;
       ;
     case ::test::protocolrequest::internal::kParent_TakeChildRequest_Ordinal:
       return &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+          test_protocolrequest_ParentTakeChildRequestRequestTable;
       ;
     default:
       return nullptr;
@@ -60,11 +59,11 @@ const fidl_type_t* Parent_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::test::protocolrequest::internal::kParent_GetChild_Ordinal:
       return &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildResponseMessageTable;
+          test_protocolrequest_ParentGetChildTopResponseTable;
       ;
     case ::test::protocolrequest::internal::kParent_GetChildRequest_Ordinal:
       return &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+          test_protocolrequest_ParentGetChildRequestTopResponseTable;
       ;
     default:
       return nullptr;
@@ -109,7 +108,7 @@ Parent_GetChild_ResponseHandler(Parent::GetChildCallback&& callback) {
         return ZX_OK;
       },
       &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildResponseMessageTable);
+          test_protocolrequest_ParentGetChildTopResponseTable);
 }
 
 }  // namespace
@@ -139,7 +138,7 @@ Parent_GetChildRequest_ResponseHandler(
         return ZX_OK;
       },
       &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildRequestResponseMessageTable);
+          test_protocolrequest_ParentGetChildRequestTopResponseTable);
 }
 
 }  // namespace
@@ -159,7 +158,7 @@ void Parent_Proxy::TakeChild(
       ::test::protocolrequest::internal::kParent_TakeChild_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentTakeChildRequestMessageTable;
+          test_protocolrequest_ParentTakeChildRequestTable;
   controller_->Send(
       req_type,
       ::test::protocolrequest::Parent_RequestEncoder::TakeChild(&_encoder, &c),
@@ -171,7 +170,7 @@ void Parent_Proxy::TakeChildRequest(
       ::test::protocolrequest::internal::kParent_TakeChildRequest_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+          test_protocolrequest_ParentTakeChildRequestRequestTable;
   controller_->Send(
       req_type,
       ::test::protocolrequest::Parent_RequestEncoder::TakeChildRequest(
@@ -199,7 +198,7 @@ class Parent_GetChild_Responder final {
         ::test::protocolrequest::internal::kParent_GetChild_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocolrequest::_internal::
-            test_protocolrequest_ParentGetChildResponseMessageTable;
+            test_protocolrequest_ParentGetChildTopResponseTable;
     response_.Send(resp_type,
                    ::test::protocolrequest::Parent_ResponseEncoder::GetChild(
                        &_encoder, &c));
@@ -219,7 +218,7 @@ class Parent_GetChildRequest_Responder final {
         ::test::protocolrequest::internal::kParent_GetChildRequest_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocolrequest::_internal::
-            test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+            test_protocolrequest_ParentGetChildRequestTopResponseTable;
     response_.Send(
         resp_type,
         ::test::protocolrequest::Parent_ResponseEncoder::GetChildRequest(
@@ -308,7 +307,7 @@ zx_status_t Parent_SyncProxy::GetChild(
   const fidl_type_t* req_type = nullptr;
   const fidl_type_t* resp_type =
       &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildResponseMessageTable;
+          test_protocolrequest_ParentGetChildTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocolrequest::Parent_RequestEncoder::GetChild(&_encoder),
@@ -330,7 +329,7 @@ zx_status_t Parent_SyncProxy::GetChildRequest(
   const fidl_type_t* req_type = nullptr;
   const fidl_type_t* resp_type =
       &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+          test_protocolrequest_ParentGetChildRequestTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocolrequest::Parent_RequestEncoder::GetChildRequest(
@@ -350,7 +349,7 @@ zx_status_t Parent_SyncProxy::TakeChild(
       ::test::protocolrequest::internal::kParent_TakeChild_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentTakeChildRequestMessageTable;
+          test_protocolrequest_ParentTakeChildRequestTable;
   return proxy_.Send(
       req_type,
       ::test::protocolrequest::Parent_RequestEncoder::TakeChild(&_encoder, &c));
@@ -362,7 +361,7 @@ zx_status_t Parent_SyncProxy::TakeChildRequest(
       ::test::protocolrequest::internal::kParent_TakeChildRequest_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocolrequest::_internal::
-          test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+          test_protocolrequest_ParentTakeChildRequestRequestTable;
   return proxy_.Send(
       req_type,
       ::test::protocolrequest::Parent_RequestEncoder::TakeChildRequest(

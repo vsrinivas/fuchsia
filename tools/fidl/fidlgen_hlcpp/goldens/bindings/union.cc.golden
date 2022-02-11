@@ -6159,10 +6159,10 @@ void XUnionContainingEmptyStruct::EnsureStorageInitialized(
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
+    test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
+    test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
 
 }  // namespace _internal
 TestProtocol::~TestProtocol() = default;
@@ -6191,12 +6191,12 @@ const fidl_type_t* TestProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
     case ::test::union_::internal::
         kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
       return &::test::union_::_internal::
-          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
+          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
       ;
     case ::test::union_::internal::
         kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
       return &::test::union_::_internal::
-          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
+          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
       ;
     default:
       return nullptr;
@@ -6246,7 +6246,7 @@ TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler(
         return ZX_OK;
       },
       &::test::union_::_internal::
-          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable);
+          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable);
 }
 
 }  // namespace
@@ -6282,7 +6282,7 @@ TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler(
         return ZX_OK;
       },
       &::test::union_::_internal::
-          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable);
+          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable);
 }
 
 }  // namespace
@@ -6323,7 +6323,7 @@ class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Responder
             kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
     const fidl_type_t* resp_type =
         &::test::union_::_internal::
-            test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
+            test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
     response_.Send(resp_type, ::test::union_::TestProtocol_ResponseEncoder::
                                   StrictXUnionHenceResponseMayBeStackAllocated(
                                       &_encoder, &xu));
@@ -6346,7 +6346,7 @@ class TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Responder
             kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
     const fidl_type_t* resp_type =
         &::test::union_::_internal::
-            test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
+            test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
     response_.Send(
         resp_type,
         ::test::union_::TestProtocol_ResponseEncoder::
@@ -6428,7 +6428,7 @@ TestProtocol_SyncProxy::StrictXUnionHenceResponseMayBeStackAllocated(
   const fidl_type_t* req_type = nullptr;
   const fidl_type_t* resp_type =
       &::test::union_::_internal::
-          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
+          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
   zx_status_t status_ =
       proxy_.Call(req_type, resp_type,
                   ::test::union_::TestProtocol_RequestEncoder::
@@ -6452,7 +6452,7 @@ TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
   const fidl_type_t* req_type = nullptr;
   const fidl_type_t* resp_type =
       &::test::union_::_internal::
-          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
+          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
   zx_status_t status_ =
       proxy_.Call(req_type, resp_type,
                   ::test::union_::TestProtocol_RequestEncoder::

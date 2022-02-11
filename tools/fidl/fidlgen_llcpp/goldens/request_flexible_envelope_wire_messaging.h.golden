@@ -20,16 +20,13 @@ namespace test_requestflexibleenvelope {
 class Protocol;
 
 __LOCAL extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
-
+    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
-
+    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
-
+    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
+    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 }  // namespace test_requestflexibleenvelope
 template <>
 struct ::fidl::internal::WireOrdinal<
@@ -166,7 +163,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> {
   static constexpr const fidl_type_t* kType =
       &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
+          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -205,7 +202,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> {
   static constexpr const fidl_type_t* kType =
       &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
+          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -244,7 +241,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> {
   static constexpr const fidl_type_t* kType =
       &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
+          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -283,7 +280,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> {
   static constexpr const fidl_type_t* kType =
       &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
+          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));

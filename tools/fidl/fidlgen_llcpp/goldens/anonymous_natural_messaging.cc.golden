@@ -16,8 +16,7 @@ void fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::
   ::fidl::MessageEncoder _encoder{
       ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   return messenger().TwoWay(
-      &::test_anonymous::
-          test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
+      &::test_anonymous::test_anonymous_SomeProtocolSomeMethodRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       ::fidl::internal::MakeResponseContext<
@@ -34,8 +33,7 @@ void fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::
   ::fidl::MessageEncoder _encoder{
       ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   return messenger().TwoWay(
-      &::test_anonymous::
-          test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
+      &::test_anonymous::test_anonymous_SomeProtocolSomeMethodRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       ::fidl::internal::MakeResponseContext<
@@ -69,8 +67,7 @@ void fidl::internal::
   ::fidl::MessageEncoder _encoder{
       ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   messenger_.SendReply(
-      &::test_anonymous::
-          test_anonymous_SomeProtocolSomeMethodResponseMessageTable,
+      &::test_anonymous::test_anonymous_SomeProtocolSomeMethodTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
 }

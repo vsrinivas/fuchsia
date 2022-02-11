@@ -16,88 +16,44 @@
 namespace fidl {}  // namespace fidl
 namespace test_protocolpayloads {
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayComposedRequestMessageTable;
+    test_protocolpayloads_imported_ImportStructPayloadTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayComposedRequestMessageTable;
+    test_protocolpayloads_imported_ComposedProtocolTwoWayComposedWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayComposedResponseMessageTable;
+    test_protocolpayloads_imported_ComposedProtocolOnComposedWithErrorRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocolpayloads_LocalStructPayloadTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayComposedWithErrorRequestMessageTable;
+    test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayComposedWithErrorResponseMessageTable;
+    test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnComposedEventMessageTable;
+    test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnComposedWithErrorEventMessageTable;
+    test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayLocalRequestMessageTable;
+    test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayLocalRequestMessageTable;
+    test_protocolpayloads_MainProtocolOnAnonRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayLocalResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayLocalWithErrorRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayLocalWithErrorResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnLocalEventMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnLocalWithErrorEventMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayImportRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayImportRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayImportResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayImportWithErrorRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayImportWithErrorResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnImportEventMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnImportWithErrorEventMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayAnonRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayAnonRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayAnonResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnAnonEventMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnAnonWithErrorEventMessageTable;
+    test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads

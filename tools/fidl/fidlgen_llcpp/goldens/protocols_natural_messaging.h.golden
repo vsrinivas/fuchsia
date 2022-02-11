@@ -15,16 +15,15 @@
 namespace fidl {}  // namespace fidl
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
+    test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
+    test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolAnEventEventMessageTable;
+    test_protocols_HandleRightsProtocolAnEventRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocols
@@ -385,22 +384,20 @@ struct ::fidl::internal::NaturalServerDispatcher<
 
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
+    test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable;
+    test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
+    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
+    test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocols
@@ -1250,16 +1247,14 @@ struct ::fidl::internal::NaturalServerDispatcher<
 
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_TransitionalRequestRequestMessageTable;
+    test_protocols_TransitionalRequestRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_TransitionalRequestTopResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_TransitionalOneWayRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_TransitionalRequestResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_TransitionalOneWayRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_TransitionalEventEventMessageTable;
+    test_protocols_TransitionalEventRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocols
@@ -1579,7 +1574,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::Transitional>
 
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
+    test_protocols_MethodWithUnionUnionMethodRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocols
@@ -1736,22 +1731,17 @@ struct ::fidl::internal::NaturalServerDispatcher<
 
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsClientEndsRequestMessageTable;
-
+    test_protocols_WithProtocolEndsClientEndsRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsClientEndsResponseMessageTable;
-
+    test_protocols_WithProtocolEndsClientEndsTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsServerEndsRequestMessageTable;
-
+    test_protocols_WithProtocolEndsServerEndsRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsServerEndsResponseMessageTable;
-
+    test_protocols_WithProtocolEndsServerEndsTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable;
-
+    test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
+    test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocols
@@ -2276,7 +2266,7 @@ struct ::fidl::internal::NaturalServerDispatcher<
 
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ManyParametersFifteenRequestMessageTable;
+    test_protocols_ManyParametersFifteenRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocols
@@ -2430,16 +2420,16 @@ struct ::fidl::internal::NaturalServerDispatcher<
 
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
+    test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
+    test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
+    test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
+    test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocols
@@ -3140,25 +3130,21 @@ struct ::fidl::internal::NaturalServerDispatcher<
 
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMethodARequestMessageTable;
+    test_protocols_ChannelProtocolMethodARequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolEventAEventMessageTable;
+    test_protocols_ChannelProtocolEventARequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_ChannelProtocolMethodBRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_ChannelProtocolMethodBTopResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_ChannelProtocolTakeHandleRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMethodBRequestMessageTable;
-
+    test_protocols_ChannelProtocolMutateSocketRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMethodBResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMutateSocketRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
+    test_protocols_ChannelProtocolMutateSocketTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocols

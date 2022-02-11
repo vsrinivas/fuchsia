@@ -130,7 +130,7 @@ void fidl::internal::NaturalCompleterBase<
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
   messenger_.SendReply(
       &::test_union::
-          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable,
+          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
 }
@@ -147,7 +147,7 @@ void fidl::internal::NaturalCompleterBase<
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
   messenger_.SendReply(
       &::test_union::
-          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable,
+          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
 }

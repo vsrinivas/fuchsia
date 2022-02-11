@@ -25,7 +25,7 @@ using ChildHandle = ::fidl::InterfaceHandle<Child>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
+    test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 }  // namespace _internal
 class Parent_RequestEncoder {
@@ -59,12 +59,11 @@ class Parent_RequestEncoder {
                      });
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::inheritancewithrecursivedecl::_internal::
-            test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::inheritancewithrecursivedecl::_internal::
+                   test_inheritancewithrecursivedecl_ParentFirstRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -79,10 +78,7 @@ class Parent_ResponseEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
+    test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
 }  // namespace _internal
 class Child_RequestEncoder {
@@ -116,12 +112,11 @@ class Child_RequestEncoder {
                      });
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::inheritancewithrecursivedecl::_internal::
-            test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::inheritancewithrecursivedecl::_internal::
+                   test_inheritancewithrecursivedecl_ParentFirstRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -154,12 +149,11 @@ class Child_RequestEncoder {
                      });
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::inheritancewithrecursivedecl::_internal::
-            test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::inheritancewithrecursivedecl::_internal::
+                   test_inheritancewithrecursivedecl_ChildSecondRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }

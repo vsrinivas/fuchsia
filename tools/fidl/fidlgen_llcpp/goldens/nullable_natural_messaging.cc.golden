@@ -14,7 +14,7 @@ void fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol>::Add(
     const {
   ::fidl::MessageEncoder _encoder{::test_nullable::kSimpleProtocol_Add_Ordinal};
   return messenger().TwoWay(
-      &::test_nullable::test_nullable_SimpleProtocolAddRequestMessageTable,
+      &::test_nullable::test_nullable_SimpleProtocolAddRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       ::fidl::internal::MakeResponseContext<
@@ -28,7 +28,7 @@ void fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol>::Add(
         _callback) const {
   ::fidl::MessageEncoder _encoder{::test_nullable::kSimpleProtocol_Add_Ordinal};
   return messenger().TwoWay(
-      &::test_nullable::test_nullable_SimpleProtocolAddRequestMessageTable,
+      &::test_nullable::test_nullable_SimpleProtocolAddRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       ::fidl::internal::MakeResponseContext<
@@ -59,7 +59,7 @@ void fidl::internal::
         ::test_nullable::SimpleProtocolAddTopResponse&& payload) {
   ::fidl::MessageEncoder _encoder{::test_nullable::kSimpleProtocol_Add_Ordinal};
   messenger_.SendReply(
-      &::test_nullable::test_nullable_SimpleProtocolAddResponseMessageTable,
+      &::test_nullable::test_nullable_SimpleProtocolAddTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
 }

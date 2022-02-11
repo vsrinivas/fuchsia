@@ -627,7 +627,7 @@ zx_status_t ExampleStruct::Clone(ExampleStruct* _result) const {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
+    test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 }  // namespace _internal
 ExampleProtocol::~ExampleProtocol() = default;
@@ -640,7 +640,7 @@ const fidl_type_t* ::test::placementofattributes::
     case ::test::placementofattributes::internal::
         kExampleProtocol_Method_Ordinal:
       return &::test::placementofattributes::_internal::
-          test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
+          test_placementofattributes_ExampleProtocolMethodRequestTable;
       ;
     default:
       return nullptr;
@@ -683,7 +683,7 @@ void ExampleProtocol_Proxy::Method(::test::exampleusing::Empty arg) {
       ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal);
   const fidl_type_t* req_type =
       &::test::placementofattributes::_internal::
-          test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
+          test_placementofattributes_ExampleProtocolMethodRequestTable;
   controller_->Send(
       req_type,
       ::test::placementofattributes::ExampleProtocol_RequestEncoder::Method(
@@ -758,7 +758,7 @@ zx_status_t ExampleProtocol_SyncProxy::Method(::test::exampleusing::Empty arg) {
       ::test::placementofattributes::internal::kExampleProtocol_Method_Ordinal);
   const fidl_type_t* req_type =
       &::test::placementofattributes::_internal::
-          test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
+          test_placementofattributes_ExampleProtocolMethodRequestTable;
   return proxy_.Send(
       req_type,
       ::test::placementofattributes::ExampleProtocol_RequestEncoder::Method(

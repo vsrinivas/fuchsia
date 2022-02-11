@@ -8,7 +8,7 @@ namespace test_driveroneway {
 [[maybe_unused]] constexpr uint64_t kOneWay_Send_Ordinal =
     7942965975761529343lu;
 
-extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestMessageTable;
+extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway

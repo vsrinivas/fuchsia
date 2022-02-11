@@ -83,8 +83,7 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
   ::fidl::MessageEncoder _encoder{
       ::test_protocolrequest::kParent_TakeChild_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test_protocolrequest::
-          test_protocolrequest_ParentTakeChildRequestMessageTable,
+      &::test_protocolrequest::test_protocolrequest_ParentTakeChildRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
   return ::fidl::internal::ToFitxResult(result);
@@ -97,7 +96,7 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
       ::test_protocolrequest::kParent_TakeChildRequest_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_protocolrequest::
-          test_protocolrequest_ParentTakeChildRequestRequestMessageTable,
+          test_protocolrequest_ParentTakeChildRequestRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
   return ::fidl::internal::ToFitxResult(result);
@@ -127,7 +126,7 @@ void fidl::internal::
       ::test_protocolrequest::kParent_GetChild_Ordinal};
   messenger_.SendReply(
       &::test_protocolrequest::
-          test_protocolrequest_ParentGetChildResponseMessageTable,
+          test_protocolrequest_ParentGetChildTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
 }
@@ -139,7 +138,7 @@ void fidl::internal::NaturalCompleterBase<
       ::test_protocolrequest::kParent_GetChildRequest_Ordinal};
   messenger_.SendReply(
       &::test_protocolrequest::
-          test_protocolrequest_ParentGetChildRequestResponseMessageTable,
+          test_protocolrequest_ParentGetChildRequestTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
 }

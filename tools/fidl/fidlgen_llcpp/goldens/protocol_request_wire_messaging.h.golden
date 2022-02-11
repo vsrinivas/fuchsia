@@ -22,16 +22,16 @@ class Parent;
 class Child;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildResponseMessageTable;
+    test_protocolrequest_ParentGetChildTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+    test_protocolrequest_ParentGetChildRequestTopResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocolrequest_ParentTakeChildRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildRequestMessageTable;
+    test_protocolrequest_ParentTakeChildRequestRequestTable;
 
-__LOCAL extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
 }  // namespace test_protocolrequest
 template <>
 struct ::fidl::internal::WireOrdinal<::test_protocolrequest::Parent::GetChild>
@@ -244,7 +244,7 @@ struct TypeTraits<
     ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::
-          test_protocolrequest_ParentGetChildResponseMessageTable;
+          test_protocolrequest_ParentGetChildTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -319,7 +319,7 @@ struct TypeTraits<
     ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::
-          test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+          test_protocolrequest_ParentGetChildRequestTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -362,8 +362,7 @@ template <>
 struct TypeTraits<
     ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>> {
   static constexpr const fidl_type_t* kType =
-      &::test_protocolrequest::
-          test_protocolrequest_ParentTakeChildRequestMessageTable;
+      &::test_protocolrequest::test_protocolrequest_ParentTakeChildRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -405,7 +404,7 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::
-          test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+          test_protocolrequest_ParentTakeChildRequestRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));

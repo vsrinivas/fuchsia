@@ -1083,7 +1083,7 @@ using SomeProtocol_SomeMethod_ResultPtr =
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
+    test_anonymous_SomeProtocolSomeMethodRequestTable;
 
 }  // namespace _internal
 class SomeProtocol_RequestEncoder {
@@ -1117,7 +1117,7 @@ class SomeProtocol_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::anonymous::_internal::
-                   test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
+                   test_anonymous_SomeProtocolSomeMethodRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1126,7 +1126,7 @@ class SomeProtocol_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
+    test_anonymous_SomeProtocolSomeMethodTopResponseTable;
 
 }  // namespace _internal
 class SomeProtocol_ResponseEncoder {
@@ -1153,7 +1153,7 @@ class SomeProtocol_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::anonymous::_internal::
-                   test_anonymous_SomeProtocolSomeMethodResponseMessageTable,
+                   test_anonymous_SomeProtocolSomeMethodTopResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 

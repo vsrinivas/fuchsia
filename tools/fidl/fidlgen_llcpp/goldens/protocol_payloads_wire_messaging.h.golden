@@ -22,88 +22,44 @@ namespace test_protocolpayloads {
 class MainProtocol;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayComposedRequestMessageTable;
+    test_protocolpayloads_imported_ImportStructPayloadTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayComposedRequestMessageTable;
+    test_protocolpayloads_imported_ComposedProtocolTwoWayComposedWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayComposedResponseMessageTable;
+    test_protocolpayloads_imported_ComposedProtocolOnComposedWithErrorRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocolpayloads_LocalStructPayloadTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayComposedWithErrorRequestMessageTable;
+    test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayComposedWithErrorResponseMessageTable;
+    test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnComposedEventMessageTable;
+    test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnComposedWithErrorEventMessageTable;
+    test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayLocalRequestMessageTable;
+    test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayLocalRequestMessageTable;
+    test_protocolpayloads_MainProtocolOnAnonRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayLocalResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayLocalWithErrorRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayLocalWithErrorResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnLocalEventMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnLocalWithErrorEventMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayImportRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayImportRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayImportResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayImportWithErrorRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayImportWithErrorResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnImportEventMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnImportWithErrorEventMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayAnonRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayAnonRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayAnonResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnAnonEventMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnAnonWithErrorEventMessageTable;
+    test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
 }  // namespace test_protocolpayloads
 template <>
 struct ::fidl::internal::WireOrdinal<
@@ -732,7 +688,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::OneWayComposed>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolOneWayComposedRequestMessageTable;
+          test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -770,7 +726,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayComposedRequestMessageTable;
+          test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -808,7 +764,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayComposedResponseMessageTable;
+          test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -846,7 +802,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayComposedWithErrorRequestMessageTable;
+          test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -885,7 +841,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayComposedWithErrorResponseMessageTable;
+          test_protocolpayloads_imported_ComposedProtocolTwoWayComposedWithErrorTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -925,7 +881,7 @@ struct TypeTraits<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolOnComposedEventMessageTable;
+          test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -963,7 +919,7 @@ struct TypeTraits<::fidl::WireEvent<
     ::test_protocolpayloads::MainProtocol::OnComposedWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolOnComposedWithErrorEventMessageTable;
+          test_protocolpayloads_imported_ComposedProtocolOnComposedWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -1000,8 +956,7 @@ template <>
 struct TypeTraits<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>> {
   static constexpr const fidl_type_t* kType =
-      &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolOneWayLocalRequestMessageTable;
+      &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -1042,8 +997,7 @@ template <>
 struct TypeTraits<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>> {
   static constexpr const fidl_type_t* kType =
-      &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayLocalRequestMessageTable;
+      &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -1084,8 +1038,7 @@ template <>
 struct TypeTraits<
     ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> {
   static constexpr const fidl_type_t* kType =
-      &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayLocalResponseMessageTable;
+      &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -1124,8 +1077,7 @@ template <>
 struct TypeTraits<::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> {
   static constexpr const fidl_type_t* kType =
-      &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayLocalWithErrorRequestMessageTable;
+      &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -1167,7 +1119,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayLocalWithErrorResponseMessageTable;
+          test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -1204,8 +1156,7 @@ template <>
 struct TypeTraits<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>> {
   static constexpr const fidl_type_t* kType =
-      &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolOnLocalEventMessageTable;
+      &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -1244,7 +1195,7 @@ struct TypeTraits<::fidl::WireEvent<
     ::test_protocolpayloads::MainProtocol::OnLocalWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolOnLocalWithErrorEventMessageTable;
+          test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -1282,7 +1233,7 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayImport>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolOneWayImportRequestMessageTable;
+          test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -1319,7 +1270,7 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayImportRequestMessageTable;
+          test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -1356,7 +1307,7 @@ struct TypeTraits<
     ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayImportResponseMessageTable;
+          test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -1393,7 +1344,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayImportWithErrorRequestMessageTable;
+          test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -1431,7 +1382,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayImportWithErrorResponseMessageTable;
+          test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -1469,7 +1420,7 @@ struct TypeTraits<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolOnImportEventMessageTable;
+          test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
@@ -1506,7 +1457,7 @@ struct TypeTraits<::fidl::WireEvent<
     ::test_protocolpayloads::MainProtocol::OnImportWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolOnImportWithErrorEventMessageTable;
+          test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -1544,7 +1495,7 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolOneWayAnonRequestMessageTable;
+          test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -1586,7 +1537,7 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayAnonRequestMessageTable;
+          test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -1628,7 +1579,7 @@ struct TypeTraits<
     ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayAnonResponseMessageTable;
+          test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -1670,7 +1621,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestMessageTable;
+          test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -1712,7 +1663,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolTwoWayAnonWithErrorResponseMessageTable;
+          test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -1750,7 +1701,7 @@ struct TypeTraits<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolOnAnonEventMessageTable;
+          test_protocolpayloads_MainProtocolOnAnonRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(8 + sizeof(fidl_message_header_t));
@@ -1789,7 +1740,7 @@ struct TypeTraits<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
-          test_protocolpayloads_MainProtocolOnAnonWithErrorEventMessageTable;
+          test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));

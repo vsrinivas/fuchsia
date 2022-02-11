@@ -16,7 +16,7 @@ namespace test_placementofattributes {
       ::test_placementofattributes::kExampleProtocol_Method_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_placementofattributes::
-          test_placementofattributes_ExampleProtocolMethodRequestMessageTable,
+          test_placementofattributes_ExampleProtocolMethodRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
   return ::fidl::internal::ToFitxResult(result);

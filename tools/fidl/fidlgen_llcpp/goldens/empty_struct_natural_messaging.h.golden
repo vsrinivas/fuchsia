@@ -15,16 +15,14 @@
 namespace fidl {}  // namespace fidl
 namespace test_emptystruct {
 __LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendRequestMessageTable;
+    test_emptystruct_EmptyProtocolSendRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolReceiveEventMessageTable;
-
+    test_emptystruct_EmptyProtocolReceiveRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
-
+    test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
+    test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_emptystruct

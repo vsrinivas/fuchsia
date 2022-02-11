@@ -19,9 +19,8 @@
 namespace test_error {
 class Example;
 
-__LOCAL extern "C" const fidl_type_t test_error_ExamplefooRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t test_error_ExamplefooResponseMessageTable;
+__LOCAL extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
+__LOCAL extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 }  // namespace test_error
 template <>
 struct ::fidl::internal::WireOrdinal<::test_error::Example::Foo> final {
@@ -99,7 +98,7 @@ struct IsFidlMessage<::fidl::WireRequest<::test_error::Example::Foo>>
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_error::Example::Foo>> {
   static constexpr const fidl_type_t* kType =
-      &::test_error::test_error_ExamplefooRequestMessageTable;
+      &::test_error::test_error_ExampleFooRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -129,7 +128,7 @@ struct IsFidlMessage<::fidl::WireResponse<::test_error::Example::Foo>>
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_error::Example::Foo>> {
   static constexpr const fidl_type_t* kType =
-      &::test_error::test_error_ExamplefooResponseMessageTable;
+      &::test_error::test_error_ExampleFooTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));

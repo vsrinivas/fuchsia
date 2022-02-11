@@ -318,7 +318,7 @@ using SimpleUnionPtr = ::std::unique_ptr<SimpleUnion>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_nullable_SimpleProtocolAddRequestMessageTable;
+    test_nullable_SimpleProtocolAddRequestTable;
 
 }  // namespace _internal
 class SimpleProtocol_RequestEncoder {
@@ -348,7 +348,7 @@ class SimpleProtocol_RequestEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::nullable::_internal::
-                   test_nullable_SimpleProtocolAddRequestMessageTable,
+                   test_nullable_SimpleProtocolAddRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -357,7 +357,7 @@ class SimpleProtocol_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_nullable_SimpleProtocolAddResponseMessageTable;
+    test_nullable_SimpleProtocolAddTopResponseTable;
 
 }  // namespace _internal
 class SimpleProtocol_ResponseEncoder {
@@ -383,7 +383,7 @@ class SimpleProtocol_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::nullable::_internal::
-                   test_nullable_SimpleProtocolAddResponseMessageTable,
+                   test_nullable_SimpleProtocolAddTopResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 

@@ -38,14 +38,8 @@
 {{- $protocol := . }}
 {{ "" }}
   {{- range .Methods }}
-    {{- if .HasRequestPayload }}
-      {{ EnsureNamespace .Request.WireCodingTable }}
-__LOCAL extern "C" const fidl_type_t {{ .Request.WireCodingTable.Name }};
-    {{- end }}
-    {{- if .HasResponsePayload }}
-      {{ EnsureNamespace .Response.WireCodingTable }}
-__LOCAL extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
-    {{- end }}
+    {{ EnsureCodingTableDecl .Request.WireCodingTable }}
+    {{ EnsureCodingTableDecl .Response.WireCodingTable }}
   {{- end }}
 {{ "" }}
 
@@ -323,13 +317,7 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
   {{- /* This decouples the natural messaging header from the messaging header. */}}
   {{- /* For example, we could transition one of them off of coding tables independently. */}}
   {{- range .Methods }}
-    {{- if .HasRequestPayload }}
-      {{ EnsureNamespace .Request.WireCodingTable }}
-    __LOCAL extern "C" const fidl_type_t {{ .Request.WireCodingTable.Name }};
-    {{- end }}
-    {{- if .HasResponsePayload }}
-      {{ EnsureNamespace .Response.WireCodingTable }}
-    __LOCAL extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
-    {{- end }}
+    {{ EnsureCodingTableDecl .Request.WireCodingTable }}
+    {{ EnsureCodingTableDecl .Response.WireCodingTable }}
   {{- end }}
 {{- end }}

@@ -7,9 +7,9 @@
 namespace test_drivertwoway {
 [[maybe_unused]] constexpr uint64_t kTwoWay_Add_Ordinal = 989730524426044687lu;
 
-extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestMessageTable;
+extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 
-extern "C" const fidl_type_t test_drivertwoway_TwoWayAddResponseMessageTable;
+extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_drivertwoway

@@ -381,8 +381,8 @@ func (args argsWrapper) isResource() bool {
 type messageInner struct {
 	TypeShapeV1     TypeShape
 	TypeShapeV2     TypeShape
-	HlCodingTable   name
-	WireCodingTable name
+	HlCodingTable   *name
+	WireCodingTable *name
 }
 
 // message contains lower level wire-format information about a request/response
@@ -534,11 +534,13 @@ type methodInner struct {
 	HasRequestPayload         bool
 	RequestPayload            nameVariants
 	RequestArgs               []Parameter
+	RequestLayout             fidlgen.Layout
 	RequestAnonymousChildren  []ScopedLayout
 	HasResponse               bool
 	HasResponsePayload        bool
 	ResponsePayload           nameVariants
 	ResponseArgs              []Parameter
+	ResponseLayout            fidlgen.Layout
 	ResponseAnonymousChildren []ScopedLayout
 	Transitional              bool
 	Result                    *Result
@@ -610,17 +612,25 @@ func (d messageDirection) queryBoundedness(c methodContext, hasFlexibleEnvelope 
 	panic(fmt.Sprintf("unexpected message direction: %v", d))
 }
 
-func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames, p fidlgen.Protocol) Method {
-	hlCodingTableBase := hl.ProtocolMarker.Namespace().append("_internal").member(inner.baseCodingTableName)
-	wireCodingTableBase := wire.WireProtocolMarker.Namespace().member(inner.baseCodingTableName)
+// messageBodyCodingTableNames creates a name for an anonymous coding table of a certain type
+// (request/response/event).
+func messageBodyCodingTableName(ns *namespace, ct string, suffix string) *name {
+	n := ns.member(ct).appendName(suffix)
+	return &n
+}
 
-	hlRequestCodingTable := hlCodingTableBase.appendName("RequestMessageTable")
-	wireRequestCodingTable := wireCodingTableBase.appendName("RequestMessageTable")
-	hlResponseCodingTable := hlCodingTableBase.appendName("ResponseMessageTable")
-	wireResponseCodingTable := wireCodingTableBase.appendName("ResponseMessageTable")
-	if !inner.HasRequest {
-		hlResponseCodingTable = hlCodingTableBase.appendName("EventMessageTable")
-		wireResponseCodingTable = wireCodingTableBase.appendName("EventMessageTable")
+func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames, p fidlgen.Protocol) Method {
+	// Create generated names for the coding tables.
+	var hlRequestCodingTable, wireRequestCodingTable, hlResponseCodingTable, wireResponseCodingTable *name
+	hlCodingTableNamespace := hl.ProtocolMarker.Namespace().append("_internal")
+	wireCodingTableNamespace := wire.WireProtocolMarker.Namespace()
+	if inner.HasRequestPayload {
+		hlRequestCodingTable = messageBodyCodingTableName(&hlCodingTableNamespace, codingTableName(inner.RequestLayout.Name), "Table")
+		wireRequestCodingTable = messageBodyCodingTableName(&wireCodingTableNamespace, codingTableName(inner.RequestLayout.Name), "Table")
+	}
+	if inner.HasResponsePayload {
+		hlResponseCodingTable = messageBodyCodingTableName(&hlCodingTableNamespace, codingTableName(inner.ResponseLayout.Name), "Table")
+		wireResponseCodingTable = messageBodyCodingTableName(&wireCodingTableNamespace, codingTableName(inner.ResponseLayout.Name), "Table")
 	}
 
 	var callbackType *nameVariants = nil
@@ -788,11 +798,13 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			HasRequestPayload:         v.HasRequestPayload(),
 			RequestPayload:            maybeRequestPayload,
 			RequestArgs:               c.compileParameterArray(requestPayloadStruct),
+			RequestLayout:             requestPayloadStruct.Layout,
 			RequestAnonymousChildren:  requestChildren,
 			HasResponse:               v.HasResponse,
 			HasResponsePayload:        v.HasResponsePayload(),
 			ResponsePayload:           maybeResponsePayload,
 			ResponseArgs:              c.compileParameterArray(responsePayloadStruct),
+			ResponseLayout:            responsePayloadStruct.Layout,
 			ResponseAnonymousChildren: responseChildren,
 			Transitional:              v.IsTransitional(),
 			Result:                    result,

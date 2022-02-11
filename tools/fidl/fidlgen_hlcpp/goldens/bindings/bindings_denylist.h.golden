@@ -1060,19 +1060,15 @@ using DenyEachBinding_OnlyDenyDart_ResultPtr =
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
 
 }  // namespace _internal
 class DenyEachBinding_RequestEncoder {
@@ -1099,7 +1095,7 @@ class DenyEachBinding_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable,
+            test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1124,12 +1120,11 @@ class DenyEachBinding_RequestEncoder {
       ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::bindingsdenylist::_internal::
+                   test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1155,7 +1150,7 @@ class DenyEachBinding_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable,
+            test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1183,7 +1178,7 @@ class DenyEachBinding_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable,
+            test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1211,7 +1206,7 @@ class DenyEachBinding_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable,
+            test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1220,19 +1215,15 @@ class DenyEachBinding_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
 
 }  // namespace _internal
 class DenyEachBinding_ResponseEncoder {
@@ -1260,7 +1251,7 @@ class DenyEachBinding_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable,
+            test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1289,7 +1280,7 @@ class DenyEachBinding_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable,
+            test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1319,7 +1310,7 @@ class DenyEachBinding_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable,
+            test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1348,7 +1339,7 @@ class DenyEachBinding_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable,
+            test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1378,7 +1369,7 @@ class DenyEachBinding_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable,
+            test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 

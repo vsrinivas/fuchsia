@@ -8,23 +8,21 @@ namespace test_emptystruct {
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_Send_Ordinal =
     1378773277029173000lu;
 
-extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendRequestMessageTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_Receive_Ordinal =
     2301564782476583487lu;
 
-extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolReceiveEventMessageTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
 
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_SendAndReceive_Ordinal =
     534401212734647530lu;
 
 extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
+    test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
 extern "C" const fidl_type_t
-    test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
+    test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_emptystruct
 ::fidl::WireResult<::test_emptystruct::EmptyProtocol::Send>::WireResult(

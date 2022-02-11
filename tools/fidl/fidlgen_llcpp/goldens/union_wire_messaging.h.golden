@@ -20,10 +20,10 @@ namespace test_union {
 class TestProtocol;
 
 __LOCAL extern "C" const fidl_type_t
-    test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
+    test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
+    test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
 }  // namespace test_union
 template <>
 struct ::fidl::internal::WireOrdinal<
@@ -180,7 +180,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> {
   static constexpr const fidl_type_t* kType =
       &::test_union::
-          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
+          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -258,7 +258,7 @@ struct TypeTraits<
                              FlexibleXUnionHenceResponseMustBeHeapAllocated>> {
   static constexpr const fidl_type_t* kType =
       &::test_union::
-          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
+          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));

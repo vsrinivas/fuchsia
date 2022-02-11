@@ -14,9 +14,8 @@
 
 namespace fidl {}  // namespace fidl
 namespace test_error {
-__LOCAL extern "C" const fidl_type_t test_error_ExamplefooRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t test_error_ExamplefooResponseMessageTable;
+__LOCAL extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
+__LOCAL extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_error

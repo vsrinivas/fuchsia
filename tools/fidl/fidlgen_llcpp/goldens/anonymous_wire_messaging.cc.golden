@@ -8,11 +8,10 @@ namespace test_anonymous {
 [[maybe_unused]] constexpr uint64_t kSomeProtocol_SomeMethod_Ordinal =
     2515914517457749720lu;
 
-extern "C" const fidl_type_t
-    test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
+extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
 
 extern "C" const fidl_type_t
-    test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
+    test_anonymous_SomeProtocolSomeMethodTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_anonymous
 ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>::WireResult(

@@ -7,8 +7,7 @@
 namespace test_foreigntypeinresponseusedthroughcompose {
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 4619180266423108403lu;
 
-extern "C" const fidl_type_t
-    test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_foreigntypeinresponseusedthroughcompose
 ::fidl::WireResult<

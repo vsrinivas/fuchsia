@@ -16,8 +16,7 @@
 
 namespace fidl {}  // namespace fidl
 namespace test_foreigntypeinresponseusedthroughcompose {
-__LOCAL extern "C" const fidl_type_t
-    test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+__LOCAL extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_foreigntypeinresponseusedthroughcompose

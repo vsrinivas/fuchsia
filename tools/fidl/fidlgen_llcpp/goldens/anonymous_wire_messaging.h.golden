@@ -20,10 +20,9 @@ namespace test_anonymous {
 class SomeProtocol;
 
 __LOCAL extern "C" const fidl_type_t
-    test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
-
+    test_anonymous_SomeProtocolSomeMethodRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
+    test_anonymous_SomeProtocolSomeMethodTopResponseTable;
 }  // namespace test_anonymous
 template <>
 struct ::fidl::internal::WireOrdinal<::test_anonymous::SomeProtocol::SomeMethod>
@@ -116,8 +115,7 @@ template <>
 struct TypeTraits<
     ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>> {
   static constexpr const fidl_type_t* kType =
-      &::test_anonymous::
-          test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
+      &::test_anonymous::test_anonymous_SomeProtocolSomeMethodRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(32 + sizeof(fidl_message_header_t));
@@ -155,8 +153,7 @@ template <>
 struct TypeTraits<
     ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>> {
   static constexpr const fidl_type_t* kType =
-      &::test_anonymous::
-          test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
+      &::test_anonymous::test_anonymous_SomeProtocolSomeMethodTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));

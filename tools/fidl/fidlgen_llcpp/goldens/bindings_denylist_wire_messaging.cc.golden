@@ -852,46 +852,46 @@ namespace test_bindingsdenylist {
     8446571910689294295lu;
 
 extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
 
 extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
 
 [[maybe_unused]] constexpr uint64_t kDenyEachBinding_OnlyDenyGo_Ordinal =
     7311125300308839833lu;
 
 extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
 
 extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
 
 [[maybe_unused]] constexpr uint64_t kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal =
     2184115815603862302lu;
 
 extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
 
 extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
 
 [[maybe_unused]] constexpr uint64_t kDenyEachBinding_OnlyDenyRust_Ordinal =
     3719805222870932662lu;
 
 extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
 
 extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
 
 [[maybe_unused]] constexpr uint64_t kDenyEachBinding_OnlyDenySyzkaller_Ordinal =
     2319043834522757514lu;
 
 extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
 
 extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
 ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::

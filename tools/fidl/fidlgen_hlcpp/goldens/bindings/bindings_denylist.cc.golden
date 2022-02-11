@@ -2436,34 +2436,25 @@ ImportsSameNameContext_SyncProxy::AlwaysAppearsInImportingLibrary() {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable;
-
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable;
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
 
 }  // namespace _internal
 DenyEachBinding::~DenyEachBinding() = default;
@@ -2476,31 +2467,31 @@ const fidl_type_t* ::test::bindingsdenylist::DenyEachBinding_RequestDecoder::
         kDenyEachBinding_OnlyDenyDart_Ordinal:
       *out_needs_response = true;
       return &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
       ;
     case ::test::bindingsdenylist::internal::
         kDenyEachBinding_OnlyDenyGo_Ordinal:
       *out_needs_response = true;
       return &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
       ;
     case ::test::bindingsdenylist::internal::
         kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal:
       *out_needs_response = true;
       return &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
       ;
     case ::test::bindingsdenylist::internal::
         kDenyEachBinding_OnlyDenyRust_Ordinal:
       *out_needs_response = true;
       return &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
       ;
     case ::test::bindingsdenylist::internal::
         kDenyEachBinding_OnlyDenySyzkaller_Ordinal:
       *out_needs_response = true;
       return &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
       ;
     default:
       return nullptr;
@@ -2512,27 +2503,27 @@ const fidl_type_t* DenyEachBinding_ResponseDecoder::GetType(uint64_t ordinal) {
     case ::test::bindingsdenylist::internal::
         kDenyEachBinding_OnlyDenyDart_Ordinal:
       return &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
       ;
     case ::test::bindingsdenylist::internal::
         kDenyEachBinding_OnlyDenyGo_Ordinal:
       return &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
       ;
     case ::test::bindingsdenylist::internal::
         kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal:
       return &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
       ;
     case ::test::bindingsdenylist::internal::
         kDenyEachBinding_OnlyDenyRust_Ordinal:
       return &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
       ;
     case ::test::bindingsdenylist::internal::
         kDenyEachBinding_OnlyDenySyzkaller_Ordinal:
       return &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
       ;
     default:
       return nullptr;
@@ -2582,7 +2573,7 @@ DenyEachBinding_OnlyDenyDart_ResponseHandler(
         return ZX_OK;
       },
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable);
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable);
 }
 
 }  // namespace
@@ -2592,7 +2583,7 @@ void DenyEachBinding_Proxy::OnlyDenyDart(bool a,
                                       kDenyEachBinding_OnlyDenyDart_Ordinal);
   const fidl_type_t* req_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
   controller_->Send(
       req_type,
       ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::OnlyDenyDart(
@@ -2616,7 +2607,7 @@ DenyEachBinding_OnlyDenyGo_ResponseHandler(
         return ZX_OK;
       },
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable);
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable);
 }
 
 }  // namespace
@@ -2625,7 +2616,7 @@ void DenyEachBinding_Proxy::OnlyDenyGo(bool a, OnlyDenyGoCallback callback) {
       ::test::bindingsdenylist::internal::kDenyEachBinding_OnlyDenyGo_Ordinal);
   const fidl_type_t* req_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
   controller_->Send(
       req_type,
       ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::OnlyDenyGo(
@@ -2651,7 +2642,7 @@ DenyEachBinding_OnlyDenyLibfuzzer_ResponseHandler(
         return ZX_OK;
       },
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable);
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable);
 }
 
 }  // namespace
@@ -2662,7 +2653,7 @@ void DenyEachBinding_Proxy::OnlyDenyLibfuzzer(
           kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal);
   const fidl_type_t* req_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
   controller_->Send(
       req_type,
       ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::
@@ -2688,7 +2679,7 @@ DenyEachBinding_OnlyDenyRust_ResponseHandler(
         return ZX_OK;
       },
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable);
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable);
 }
 
 }  // namespace
@@ -2698,7 +2689,7 @@ void DenyEachBinding_Proxy::OnlyDenyRust(bool a,
                                       kDenyEachBinding_OnlyDenyRust_Ordinal);
   const fidl_type_t* req_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
   controller_->Send(
       req_type,
       ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::OnlyDenyRust(
@@ -2724,7 +2715,7 @@ DenyEachBinding_OnlyDenySyzkaller_ResponseHandler(
         return ZX_OK;
       },
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable);
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable);
 }
 
 }  // namespace
@@ -2735,7 +2726,7 @@ void DenyEachBinding_Proxy::OnlyDenySyzkaller(
           kDenyEachBinding_OnlyDenySyzkaller_Ordinal);
   const fidl_type_t* req_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
   controller_->Send(
       req_type,
       ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::
@@ -2765,7 +2756,7 @@ class DenyEachBinding_OnlyDenyDart_Responder final {
                                         kDenyEachBinding_OnlyDenyDart_Ordinal);
     const fidl_type_t* resp_type =
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable;
+            test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
     response_.Send(
         resp_type,
         ::test::bindingsdenylist::DenyEachBinding_ResponseEncoder::OnlyDenyDart(
@@ -2788,7 +2779,7 @@ class DenyEachBinding_OnlyDenyGo_Responder final {
                                         kDenyEachBinding_OnlyDenyGo_Ordinal);
     const fidl_type_t* resp_type =
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable;
+            test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
     response_.Send(
         resp_type,
         ::test::bindingsdenylist::DenyEachBinding_ResponseEncoder::OnlyDenyGo(
@@ -2813,7 +2804,7 @@ class DenyEachBinding_OnlyDenyLibfuzzer_Responder final {
             kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal);
     const fidl_type_t* resp_type =
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable;
+            test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
     response_.Send(resp_type,
                    ::test::bindingsdenylist::DenyEachBinding_ResponseEncoder::
                        OnlyDenyLibfuzzer(&_encoder, &result));
@@ -2835,7 +2826,7 @@ class DenyEachBinding_OnlyDenyRust_Responder final {
                                         kDenyEachBinding_OnlyDenyRust_Ordinal);
     const fidl_type_t* resp_type =
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable;
+            test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
     response_.Send(
         resp_type,
         ::test::bindingsdenylist::DenyEachBinding_ResponseEncoder::OnlyDenyRust(
@@ -2860,7 +2851,7 @@ class DenyEachBinding_OnlyDenySyzkaller_Responder final {
             kDenyEachBinding_OnlyDenySyzkaller_Ordinal);
     const fidl_type_t* resp_type =
         &::test::bindingsdenylist::_internal::
-            test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable;
+            test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
     response_.Send(resp_type,
                    ::test::bindingsdenylist::DenyEachBinding_ResponseEncoder::
                        OnlyDenySyzkaller(&_encoder, &result));
@@ -2965,10 +2956,10 @@ zx_status_t DenyEachBinding_SyncProxy::OnlyDenyDart(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
   const fidl_type_t* resp_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyDartResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::OnlyDenyDart(
@@ -2991,10 +2982,10 @@ zx_status_t DenyEachBinding_SyncProxy::OnlyDenyGo(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
   const fidl_type_t* resp_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyGoResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::OnlyDenyGo(
@@ -3018,10 +3009,10 @@ zx_status_t DenyEachBinding_SyncProxy::OnlyDenyLibfuzzer(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
   const fidl_type_t* resp_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
   zx_status_t status_ =
       proxy_.Call(req_type, resp_type,
                   ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::
@@ -3044,10 +3035,10 @@ zx_status_t DenyEachBinding_SyncProxy::OnlyDenyRust(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
   const fidl_type_t* resp_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyRustResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::OnlyDenyRust(
@@ -3071,10 +3062,10 @@ zx_status_t DenyEachBinding_SyncProxy::OnlyDenySyzkaller(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
   const fidl_type_t* resp_type =
       &::test::bindingsdenylist::_internal::
-          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerResponseMessageTable;
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
   zx_status_t status_ =
       proxy_.Call(req_type, resp_type,
                   ::test::bindingsdenylist::DenyEachBinding_RequestEncoder::

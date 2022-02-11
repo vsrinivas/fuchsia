@@ -16,7 +16,7 @@
 namespace fidl {}  // namespace fidl
 namespace test_placementofattributes {
 __LOCAL extern "C" const fidl_type_t
-    test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
+    test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_placementofattributes

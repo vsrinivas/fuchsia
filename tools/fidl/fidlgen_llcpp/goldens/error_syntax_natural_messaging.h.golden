@@ -16,16 +16,13 @@
 namespace fidl {}  // namespace fidl
 namespace test_errorsyntax {
 __LOCAL extern "C" const fidl_type_t
-    test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
-
+    test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
-
+    test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
-
+    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
+    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_errorsyntax

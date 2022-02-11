@@ -22,16 +22,13 @@ namespace test_errorsyntax {
 class ExampleUseOfErrorSyntax;
 
 __LOCAL extern "C" const fidl_type_t
-    test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
-
+    test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
-
+    test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
-
+    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
+    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
 }  // namespace test_errorsyntax
 template <>
 struct ::fidl::internal::WireOrdinal<
@@ -170,7 +167,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
   static constexpr const fidl_type_t* kType =
       &::test_errorsyntax::
-          test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
+          test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -209,7 +206,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
   static constexpr const fidl_type_t* kType =
       &::test_errorsyntax::
-          test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
+          test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -248,7 +245,7 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
   static constexpr const fidl_type_t* kType =
       &::test_errorsyntax::
-          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
+          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));
@@ -286,7 +283,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
   static constexpr const fidl_type_t* kType =
       &::test_errorsyntax::
-          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
+          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(16 + sizeof(fidl_message_header_t));

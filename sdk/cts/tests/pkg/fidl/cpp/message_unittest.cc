@@ -111,7 +111,7 @@ TEST(MessageBuilder, BasicTests) {
   // Note: |MessageBuilder| takes a coding table which is strictly speaking
   // internal API.
   fidl::MessageBuilder builder(
-      &fidl::test::handles::_internal::fidl_test_handles_FooBarRequestMessageTable);
+      &fidl::test::handles::_internal::fidl_test_handles_FooBarRequestTable);
   builder.header()->txid = 5u;
   builder.header()->ordinal = 42u;
 

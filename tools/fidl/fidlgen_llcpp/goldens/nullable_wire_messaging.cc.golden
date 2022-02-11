@@ -8,10 +8,9 @@ namespace test_nullable {
 [[maybe_unused]] constexpr uint64_t kSimpleProtocol_Add_Ordinal =
     9142761280038437494lu;
 
-extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestMessageTable;
+extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
 
-extern "C" const fidl_type_t
-    test_nullable_SimpleProtocolAddResponseMessageTable;
+extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_nullable
 ::fidl::WireResult<::test_nullable::SimpleProtocol::Add>::WireResult(

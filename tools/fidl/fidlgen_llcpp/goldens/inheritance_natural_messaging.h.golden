@@ -14,11 +14,8 @@
 
 namespace fidl {}  // namespace fidl
 namespace test_inheritance {
-__LOCAL extern "C" const fidl_type_t
-    test_inheritance_superfooRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_inheritance_superfooResponseMessageTable;
+__LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
+__LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritance
@@ -231,14 +228,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_inheritance::Super>
 };
 #endif  // __Fuchsia__
 
-namespace test_inheritance {
-__LOCAL extern "C" const fidl_type_t test_inheritance_subfooRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_inheritance_subfooResponseMessageTable;
-
 #ifdef __Fuchsia__
-}  // namespace test_inheritance
 
 template <>
 class ::fidl::Response<::test_inheritance::Sub::Foo> final
@@ -272,7 +262,6 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::test_inheritance::SuperFooTopResponse;
 };
-namespace test_inheritance {}  // namespace test_inheritance
 template <>
 class ::fidl::internal::ClientCallbackTraits<::test_inheritance::Sub::Foo>
     final {
@@ -298,10 +287,8 @@ class ::fidl::internal::NaturalClientImpl<::test_inheritance::Sub> final
            ::fidl::ClientResponseCallback<::test_inheritance::Sub::Foo>&&
                _callback) const;
 };
-namespace test_inheritance {
 #endif  // __Fuchsia__
 
-}  // namespace test_inheritance
 #ifdef __Fuchsia__
 
 template <>

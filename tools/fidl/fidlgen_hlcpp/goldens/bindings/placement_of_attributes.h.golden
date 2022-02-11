@@ -403,7 +403,7 @@ using ExampleStructPtr = ::std::unique_ptr<ExampleStruct>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_placementofattributes_ExampleProtocolMethodRequestMessageTable;
+    test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 }  // namespace _internal
 class ExampleProtocol_RequestEncoder {
@@ -427,12 +427,11 @@ class ExampleProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::placementofattributes::_internal::
-            test_placementofattributes_ExampleProtocolMethodRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::placementofattributes::_internal::
+                   test_placementofattributes_ExampleProtocolMethodRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }

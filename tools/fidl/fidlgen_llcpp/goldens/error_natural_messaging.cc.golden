@@ -13,7 +13,7 @@ void fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(
     ::fidl::ClientCallback<::test_error::Example::Foo>&& _callback) const {
   ::fidl::MessageEncoder _encoder{::test_error::kExample_foo_Ordinal};
   return messenger().TwoWay(
-      &::test_error::test_error_ExamplefooRequestMessageTable,
+      &::test_error::test_error_ExampleFooRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       ::fidl::internal::MakeResponseContext<
@@ -27,7 +27,7 @@ void fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(
     const {
   ::fidl::MessageEncoder _encoder{::test_error::kExample_foo_Ordinal};
   return messenger().TwoWay(
-      &::test_error::test_error_ExamplefooRequestMessageTable,
+      &::test_error::test_error_ExampleFooRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       ::fidl::internal::MakeResponseContext<
@@ -57,7 +57,7 @@ void fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>::Reply(
     ::test_error::ExampleFooTopResponse&& payload) {
   ::fidl::MessageEncoder _encoder{::test_error::kExample_foo_Ordinal};
   messenger_.SendReply(
-      &::test_error::test_error_ExamplefooResponseMessageTable,
+      &::test_error::test_error_ExampleFooTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
 }

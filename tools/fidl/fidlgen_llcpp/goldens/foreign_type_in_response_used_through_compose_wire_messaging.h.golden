@@ -22,8 +22,7 @@
 namespace test_foreigntypeinresponseusedthroughcompose {
 class Top;
 
-__LOCAL extern "C" const fidl_type_t
-    test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+__LOCAL extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
 }  // namespace test_foreigntypeinresponseusedthroughcompose
 template <>
 struct ::fidl::internal::WireOrdinal<
@@ -148,7 +147,7 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> {
   static constexpr const fidl_type_t* kType =
       &::test_foreigntypeinresponseusedthroughcompose::
-          test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+          test_middle_MiddleGetFooTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));

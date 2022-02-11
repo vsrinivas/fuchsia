@@ -15,10 +15,9 @@
 namespace fidl {}  // namespace fidl
 namespace test_nullable {
 __LOCAL extern "C" const fidl_type_t
-    test_nullable_SimpleProtocolAddRequestMessageTable;
-
+    test_nullable_SimpleProtocolAddRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_nullable_SimpleProtocolAddResponseMessageTable;
+    test_nullable_SimpleProtocolAddTopResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_nullable

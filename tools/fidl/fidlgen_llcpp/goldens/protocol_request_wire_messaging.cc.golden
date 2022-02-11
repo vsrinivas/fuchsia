@@ -9,25 +9,24 @@ namespace test_protocolrequest {
     881818649151440699lu;
 
 extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildResponseMessageTable;
+    test_protocolrequest_ParentGetChildTopResponseTable;
 
 [[maybe_unused]] constexpr uint64_t kParent_GetChildRequest_Ordinal =
     1096855814967598201lu;
 
 extern "C" const fidl_type_t
-    test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+    test_protocolrequest_ParentGetChildRequestTopResponseTable;
 
 [[maybe_unused]] constexpr uint64_t kParent_TakeChild_Ordinal =
     4470101341872267920lu;
 
-extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildRequestMessageTable;
+extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
 
 [[maybe_unused]] constexpr uint64_t kParent_TakeChildRequest_Ordinal =
     2333981071306416007lu;
 
 extern "C" const fidl_type_t
-    test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+    test_protocolrequest_ParentTakeChildRequestRequestTable;
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
 ::fidl::WireResult<::test_protocolrequest::Parent::GetChild>::WireResult(

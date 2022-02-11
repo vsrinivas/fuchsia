@@ -212,14 +212,8 @@ class {{ .SyncProxy.Name }} : public {{ .SyncInterface }} {
 {{- IfdefFuchsia -}}
 
 {{- range .Methods }}
-{{ if .HasRequestPayload }}
-{{ EnsureNamespace .Request.HlCodingTable }}
-__LOCAL extern "C" const fidl_type_t {{ .Request.HlCodingTable.Name }};
-{{- end }}
-{{- if .HasResponsePayload }}
-{{ EnsureNamespace .Response.HlCodingTable }}
-__LOCAL extern "C" const fidl_type_t {{ .Response.HlCodingTable.Name }};
-{{- end }}
+  {{ EnsureCodingTableDecl .Request.HlCodingTable }}
+  {{ EnsureCodingTableDecl .Response.HlCodingTable }}
 {{- end }}
 
 {{ EnsureNamespace . }}

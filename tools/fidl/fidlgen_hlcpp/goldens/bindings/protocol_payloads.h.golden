@@ -927,40 +927,17 @@ using MainProtocol_OnLocalWithError_ResultPtr =
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayComposedRequestMessageTable;
+    test_protocolpayloads_imported_ImportStructPayloadTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayComposedRequestMessageTable;
+    test_protocolpayloads_LocalStructPayloadTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayComposedWithErrorRequestMessageTable;
-
+    test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayLocalRequestMessageTable;
-
+    test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayLocalRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayLocalWithErrorRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayImportRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayImportRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayImportWithErrorRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOneWayAnonRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayAnonRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestMessageTable;
+    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
 
 }  // namespace _internal
 class MainProtocol_RequestEncoder {
@@ -984,12 +961,11 @@ class MainProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolOneWayComposedRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_imported_ImportStructPayloadTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1012,12 +988,11 @@ class MainProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayComposedRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_imported_ImportStructPayloadTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1040,12 +1015,11 @@ class MainProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayComposedWithErrorRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_imported_ImportStructPayloadTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1072,12 +1046,11 @@ class MainProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolOneWayLocalRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_LocalStructPayloadTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1104,12 +1077,11 @@ class MainProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayLocalRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_LocalStructPayloadTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1136,12 +1108,11 @@ class MainProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayLocalWithErrorRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_LocalStructPayloadTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1164,12 +1135,11 @@ class MainProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolOneWayImportRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_imported_ImportStructPayloadTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1192,12 +1162,11 @@ class MainProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayImportRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_imported_ImportStructPayloadTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1220,12 +1189,11 @@ class MainProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayImportWithErrorRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_imported_ImportStructPayloadTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1252,12 +1220,11 @@ class MainProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolOneWayAnonRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_MainProtocolOneWayAnonRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1284,12 +1251,11 @@ class MainProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayAnonRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_MainProtocolTwoWayAnonRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1319,61 +1285,41 @@ class MainProtocol_RequestEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestMessageTable,
+            test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
+
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayComposedResponseMessageTable;
+    test_protocolpayloads_imported_ComposedProtocolTwoWayComposedWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayComposedWithErrorResponseMessageTable;
+    test_protocolpayloads_imported_ComposedProtocolOnComposedWithErrorRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnComposedEventMessageTable;
+    test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnComposedWithErrorEventMessageTable;
+    test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayLocalResponseMessageTable;
+    test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayLocalWithErrorResponseMessageTable;
+    test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnLocalEventMessageTable;
-
+    test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnLocalWithErrorEventMessageTable;
-
+    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayImportResponseMessageTable;
-
+    test_protocolpayloads_MainProtocolOnAnonRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayImportWithErrorResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnImportEventMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnImportWithErrorEventMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayAnonResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnAnonEventMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocolpayloads_MainProtocolOnAnonWithErrorEventMessageTable;
+    test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
 
 }  // namespace _internal
 class MainProtocol_ResponseEncoder {
@@ -1397,12 +1343,11 @@ class MainProtocol_ResponseEncoder {
       ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayComposedResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_imported_ImportStructPayloadTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1430,7 +1375,7 @@ class MainProtocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayComposedWithErrorResponseMessageTable,
+            test_protocolpayloads_imported_ComposedProtocolTwoWayComposedWithErrorTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1455,12 +1400,11 @@ class MainProtocol_ResponseEncoder {
       ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolOnComposedEventMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_imported_ImportStructPayloadTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1488,7 +1432,7 @@ class MainProtocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolOnComposedWithErrorEventMessageTable,
+            test_protocolpayloads_imported_ComposedProtocolOnComposedWithErrorRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1517,12 +1461,11 @@ class MainProtocol_ResponseEncoder {
       ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayLocalResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_LocalStructPayloadTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1550,7 +1493,7 @@ class MainProtocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayLocalWithErrorResponseMessageTable,
+            test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1581,7 +1524,7 @@ class MainProtocol_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
-                   test_protocolpayloads_MainProtocolOnLocalEventMessageTable,
+                   test_protocolpayloads_LocalStructPayloadTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1610,7 +1553,7 @@ class MainProtocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolOnLocalWithErrorEventMessageTable,
+            test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1635,12 +1578,11 @@ class MainProtocol_ResponseEncoder {
       ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayImportResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_imported_ImportStructPayloadTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1668,7 +1610,7 @@ class MainProtocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayImportWithErrorResponseMessageTable,
+            test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1695,7 +1637,7 @@ class MainProtocol_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
-                   test_protocolpayloads_MainProtocolOnImportEventMessageTable,
+                   test_protocolpayloads_imported_ImportStructPayloadTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1724,7 +1666,7 @@ class MainProtocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolOnImportWithErrorEventMessageTable,
+            test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1753,12 +1695,11 @@ class MainProtocol_ResponseEncoder {
       ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayAnonResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocolpayloads::_internal::
+                   test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1786,7 +1727,7 @@ class MainProtocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolTwoWayAnonWithErrorResponseMessageTable,
+            test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1817,7 +1758,7 @@ class MainProtocol_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
-                   test_protocolpayloads_MainProtocolOnAnonEventMessageTable,
+                   test_protocolpayloads_MainProtocolOnAnonRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1846,7 +1787,7 @@ class MainProtocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &::test::protocolpayloads::_internal::
-            test_protocolpayloads_MainProtocolOnAnonWithErrorEventMessageTable,
+            test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 

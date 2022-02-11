@@ -1726,16 +1726,15 @@ void WithErrorSyntax_ErrorAsEnum_Result::EnsureStorageInitialized(
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
+    test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
+    test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_HandleRightsProtocolAnEventEventMessageTable;
+    test_protocols_HandleRightsProtocolAnEventRequestTable;
 
 }  // namespace _internal
 HandleRightsProtocol::~HandleRightsProtocol() = default;
@@ -1747,13 +1746,13 @@ const fidl_type_t* ::test::protocols::HandleRightsProtocol_RequestDecoder::
     case ::test::protocols::internal::
         kHandleRightsProtocol_NoResponseMethod_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
+          test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
       ;
     case ::test::protocols::internal::
         kHandleRightsProtocol_ResponseMethod_Ordinal:
       *out_needs_response = true;
       return &::test::protocols::_internal::
-          test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
+          test_protocols_HandleRightsProtocolResponseMethodRequestTable;
       ;
     default:
       return nullptr;
@@ -1766,11 +1765,11 @@ const fidl_type_t* HandleRightsProtocol_ResponseDecoder::GetType(
     case ::test::protocols::internal::
         kHandleRightsProtocol_ResponseMethod_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
+          test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
       ;
     case ::test::protocols::internal::kHandleRightsProtocol_AnEvent_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_HandleRightsProtocolAnEventEventMessageTable;
+          test_protocols_HandleRightsProtocolAnEventRequestTable;
       ;
     default:
       return nullptr;
@@ -1801,13 +1800,13 @@ zx_status_t HandleRightsProtocol_Proxy::Dispatch_(
       const char* error_msg = nullptr;
       status = message.Decode(
           &::test::protocols::_internal::
-              test_protocols_HandleRightsProtocolAnEventEventMessageTable,
+              test_protocols_HandleRightsProtocolAnEventRequestTable,
           &error_msg);
       if (status != ZX_OK) {
         FIDL_REPORT_DECODING_ERROR(
             message,
             &::test::protocols::_internal::
-                test_protocols_HandleRightsProtocolAnEventEventMessageTable,
+                test_protocols_HandleRightsProtocolAnEventRequestTable,
             error_msg);
         break;
       }
@@ -1830,7 +1829,7 @@ void HandleRightsProtocol_Proxy::NoResponseMethod(::zx::socket h) {
           kHandleRightsProtocol_NoResponseMethod_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
+          test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::HandleRightsProtocol_RequestEncoder::NoResponseMethod(
@@ -1854,7 +1853,7 @@ HandleRightsProtocol_ResponseMethod_ResponseHandler(
         return ZX_OK;
       },
       &::test::protocols::_internal::
-          test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable);
+          test_protocols_HandleRightsProtocolResponseMethodTopResponseTable);
 }
 
 }  // namespace
@@ -1865,7 +1864,7 @@ void HandleRightsProtocol_Proxy::ResponseMethod(
           kHandleRightsProtocol_ResponseMethod_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
+          test_protocols_HandleRightsProtocolResponseMethodRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::HandleRightsProtocol_RequestEncoder::ResponseMethod(
@@ -1896,7 +1895,7 @@ class HandleRightsProtocol_ResponseMethod_Responder final {
             kHandleRightsProtocol_ResponseMethod_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocols::_internal::
-            test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
+            test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
     response_.Send(
         resp_type,
         ::test::protocols::HandleRightsProtocol_ResponseEncoder::ResponseMethod(
@@ -1968,7 +1967,7 @@ void HandleRightsProtocol_Stub::AnEvent(::zx::socket h) {
       ::test::protocols::internal::kHandleRightsProtocol_AnEvent_Ordinal);
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_HandleRightsProtocolAnEventEventMessageTable;
+          test_protocols_HandleRightsProtocolAnEventRequestTable;
   sender_()->Send(
       resp_type,
       ::test::protocols::HandleRightsProtocol_ResponseEncoder::AnEvent(
@@ -1987,7 +1986,7 @@ zx_status_t HandleRightsProtocol_SyncProxy::NoResponseMethod(::zx::socket h) {
           kHandleRightsProtocol_NoResponseMethod_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
+          test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
   return proxy_.Send(
       req_type,
       ::test::protocols::HandleRightsProtocol_RequestEncoder::NoResponseMethod(
@@ -2003,10 +2002,10 @@ zx_status_t HandleRightsProtocol_SyncProxy::ResponseMethod(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
+          test_protocols_HandleRightsProtocolResponseMethodRequestTable;
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
+          test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocols::HandleRightsProtocol_RequestEncoder::ResponseMethod(
@@ -2024,22 +2023,20 @@ zx_status_t HandleRightsProtocol_SyncProxy::ResponseMethod(
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
+    test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable;
+    test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
+    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
+    test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 
 }  // namespace _internal
 WithAndWithoutRequestResponse::~WithAndWithoutRequestResponse() = default;
@@ -2066,19 +2063,19 @@ const fidl_type_t* ::test::protocols::
     case ::test::protocols::internal::
         kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable;
+          test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
       ;
     case ::test::protocols::internal::
         kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
       *out_needs_response = true;
       return &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
+          test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
       ;
     case ::test::protocols::internal::
         kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
       *out_needs_response = true;
       return &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable;
+          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
       ;
     default:
       return nullptr;
@@ -2095,7 +2092,7 @@ const fidl_type_t* WithAndWithoutRequestResponse_ResponseDecoder::GetType(
     case ::test::protocols::internal::
         kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
+          test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
       ;
     case ::test::protocols::internal::
         kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
@@ -2104,7 +2101,7 @@ const fidl_type_t* WithAndWithoutRequestResponse_ResponseDecoder::GetType(
     case ::test::protocols::internal::
         kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable;
+          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
       ;
     case ::test::protocols::internal::
         kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal:
@@ -2113,7 +2110,7 @@ const fidl_type_t* WithAndWithoutRequestResponse_ResponseDecoder::GetType(
     case ::test::protocols::internal::
         kWithAndWithoutRequestResponse_OnWithResponse_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
+          test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
       ;
     default:
       return nullptr;
@@ -2157,13 +2154,13 @@ zx_status_t WithAndWithoutRequestResponse_Proxy::Dispatch_(
       const char* error_msg = nullptr;
       status = message.Decode(
           &::test::protocols::_internal::
-              test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable,
+              test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable,
           &error_msg);
       if (status != ZX_OK) {
         FIDL_REPORT_DECODING_ERROR(
             message,
             &::test::protocols::_internal::
-                test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable,
+                test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable,
             error_msg);
         break;
       }
@@ -2240,7 +2237,7 @@ WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler(
         return ZX_OK;
       },
       &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable);
+          test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable);
 }
 
 }  // namespace
@@ -2264,7 +2261,7 @@ void WithAndWithoutRequestResponse_Proxy::WithRequestNoResponse(
           kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable;
+          test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::WithAndWithoutRequestResponse_RequestEncoder::
@@ -2298,7 +2295,7 @@ void WithAndWithoutRequestResponse_Proxy::WithRequestEmptyResponse(
           kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
+          test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::WithAndWithoutRequestResponse_RequestEncoder::
@@ -2324,7 +2321,7 @@ WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler(
         return ZX_OK;
       },
       &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable);
+          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable);
 }
 
 }  // namespace
@@ -2335,7 +2332,7 @@ void WithAndWithoutRequestResponse_Proxy::WithRequestWithResponse(
           kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable;
+          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::WithAndWithoutRequestResponse_RequestEncoder::
@@ -2389,7 +2386,7 @@ class WithAndWithoutRequestResponse_NoRequestWithResponse_Responder final {
             kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
+            test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
     response_.Send(
         resp_type,
         ::test::protocols::WithAndWithoutRequestResponse_ResponseEncoder::
@@ -2433,7 +2430,7 @@ class WithAndWithoutRequestResponse_WithRequestWithResponse_Responder final {
             kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocols::_internal::
-            test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable;
+            test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
     response_.Send(
         resp_type,
         ::test::protocols::WithAndWithoutRequestResponse_ResponseEncoder::
@@ -2546,7 +2543,7 @@ void WithAndWithoutRequestResponse_Stub::OnWithResponse(::std::string ret) {
           kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
+          test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
   sender_()->Send(
       resp_type,
       ::test::protocols::WithAndWithoutRequestResponse_ResponseEncoder::
@@ -2598,7 +2595,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestWithResponse(
   const fidl_type_t* req_type = nullptr;
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
+          test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocols::WithAndWithoutRequestResponse_RequestEncoder::
@@ -2618,7 +2615,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestNoResponse(
           kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable;
+          test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
   return proxy_.Send(
       req_type,
       ::test::protocols::WithAndWithoutRequestResponse_RequestEncoder::
@@ -2634,7 +2631,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestEmptyResponse(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
+          test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
   const fidl_type_t* resp_type = nullptr;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
@@ -2654,10 +2651,10 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestWithResponse(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable;
+          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable;
+          test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocols::WithAndWithoutRequestResponse_RequestEncoder::
@@ -2675,16 +2672,14 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestWithResponse(
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_TransitionalRequestRequestMessageTable;
+    test_protocols_TransitionalRequestRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_TransitionalRequestTopResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_TransitionalOneWayRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_TransitionalRequestResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_TransitionalOneWayRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_TransitionalEventEventMessageTable;
+    test_protocols_TransitionalEventRequestTable;
 
 }  // namespace _internal
 Transitional::~Transitional() = default;
@@ -2696,11 +2691,11 @@ const fidl_type_t* ::test::protocols::Transitional_RequestDecoder::GetType(
     case ::test::protocols::internal::kTransitional_Request_Ordinal:
       *out_needs_response = true;
       return &::test::protocols::_internal::
-          test_protocols_TransitionalRequestRequestMessageTable;
+          test_protocols_TransitionalRequestRequestTable;
       ;
     case ::test::protocols::internal::kTransitional_OneWay_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_TransitionalOneWayRequestMessageTable;
+          test_protocols_TransitionalOneWayRequestTable;
       ;
     default:
       return nullptr;
@@ -2711,11 +2706,11 @@ const fidl_type_t* Transitional_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::test::protocols::internal::kTransitional_Request_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_TransitionalRequestResponseMessageTable;
+          test_protocols_TransitionalRequestTopResponseTable;
       ;
     case ::test::protocols::internal::kTransitional_Event_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_TransitionalEventEventMessageTable;
+          test_protocols_TransitionalEventRequestTable;
       ;
     default:
       return nullptr;
@@ -2744,15 +2739,14 @@ zx_status_t Transitional_Proxy::Dispatch_(
         break;
       }
       const char* error_msg = nullptr;
-      status =
-          message.Decode(&::test::protocols::_internal::
-                             test_protocols_TransitionalEventEventMessageTable,
-                         &error_msg);
+      status = message.Decode(&::test::protocols::_internal::
+                                  test_protocols_TransitionalEventRequestTable,
+                              &error_msg);
       if (status != ZX_OK) {
         FIDL_REPORT_DECODING_ERROR(
             message,
             &::test::protocols::_internal::
-                test_protocols_TransitionalEventEventMessageTable,
+                test_protocols_TransitionalEventRequestTable,
             error_msg);
         break;
       }
@@ -2784,7 +2778,7 @@ Transitional_Request_ResponseHandler(Transitional::RequestCallback&& callback) {
         return ZX_OK;
       },
       &::test::protocols::_internal::
-          test_protocols_TransitionalRequestResponseMessageTable);
+          test_protocols_TransitionalRequestTopResponseTable);
 }
 
 }  // namespace
@@ -2793,7 +2787,7 @@ void Transitional_Proxy::Request(int64_t x, RequestCallback callback) {
       ::test::protocols::internal::kTransitional_Request_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_TransitionalRequestRequestMessageTable;
+          test_protocols_TransitionalRequestRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::Transitional_RequestEncoder::Request(&_encoder, &x),
@@ -2804,7 +2798,7 @@ void Transitional_Proxy::OneWay(int64_t x) {
       ::test::protocols::internal::kTransitional_OneWay_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_TransitionalOneWayRequestMessageTable;
+          test_protocols_TransitionalOneWayRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::Transitional_RequestEncoder::OneWay(&_encoder, &x),
@@ -2831,7 +2825,7 @@ class Transitional_Request_Responder final {
         ::test::protocols::internal::kTransitional_Request_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocols::_internal::
-            test_protocols_TransitionalRequestResponseMessageTable;
+            test_protocols_TransitionalRequestTopResponseTable;
     response_.Send(resp_type,
                    ::test::protocols::Transitional_ResponseEncoder::Request(
                        &_encoder, &y));
@@ -2899,7 +2893,7 @@ void Transitional_Stub::Event(int64_t x) {
       ::test::protocols::internal::kTransitional_Event_Ordinal);
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_TransitionalEventEventMessageTable;
+          test_protocols_TransitionalEventRequestTable;
   sender_()->Send(
       resp_type,
       ::test::protocols::Transitional_ResponseEncoder::Event(&_encoder, &x));
@@ -2917,10 +2911,10 @@ zx_status_t Transitional_SyncProxy::Request(int64_t x, int64_t* out_y) {
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_TransitionalRequestRequestMessageTable;
+          test_protocols_TransitionalRequestRequestTable;
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_TransitionalRequestResponseMessageTable;
+          test_protocols_TransitionalRequestTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocols::Transitional_RequestEncoder::Request(&_encoder, &x),
@@ -2937,7 +2931,7 @@ zx_status_t Transitional_SyncProxy::OneWay(int64_t x) {
       ::test::protocols::internal::kTransitional_OneWay_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_TransitionalOneWayRequestMessageTable;
+          test_protocols_TransitionalOneWayRequestTable;
   return proxy_.Send(
       req_type,
       ::test::protocols::Transitional_RequestEncoder::OneWay(&_encoder, &x));
@@ -2948,7 +2942,7 @@ zx_status_t Transitional_SyncProxy::OneWay(int64_t x) {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
+    test_protocols_MethodWithUnionUnionMethodRequestTable;
 
 }  // namespace _internal
 MethodWithUnion::~MethodWithUnion() = default;
@@ -2959,7 +2953,7 @@ const fidl_type_t* ::test::protocols::MethodWithUnion_RequestDecoder::GetType(
   switch (ordinal) {
     case ::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
+          test_protocols_MethodWithUnionUnionMethodRequestTable;
       ;
     default:
       return nullptr;
@@ -3002,7 +2996,7 @@ void MethodWithUnion_Proxy::UnionMethod(::test::protocols::TheUnion u) {
       ::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
+          test_protocols_MethodWithUnionUnionMethodRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::MethodWithUnion_RequestEncoder::UnionMethod(&_encoder,
@@ -3076,7 +3070,7 @@ zx_status_t MethodWithUnion_SyncProxy::UnionMethod(
       ::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
+          test_protocols_MethodWithUnionUnionMethodRequestTable;
   return proxy_.Send(
       req_type, ::test::protocols::MethodWithUnion_RequestEncoder::UnionMethod(
                     &_encoder, &u));
@@ -3087,22 +3081,17 @@ zx_status_t MethodWithUnion_SyncProxy::UnionMethod(
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsClientEndsRequestMessageTable;
-
+    test_protocols_WithProtocolEndsClientEndsRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsClientEndsResponseMessageTable;
-
+    test_protocols_WithProtocolEndsClientEndsTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsServerEndsRequestMessageTable;
-
+    test_protocols_WithProtocolEndsServerEndsRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsServerEndsResponseMessageTable;
-
+    test_protocols_WithProtocolEndsServerEndsTopResponseTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable;
-
+    test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
+    test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
 
 }  // namespace _internal
 WithProtocolEnds::~WithProtocolEnds() = default;
@@ -3114,18 +3103,18 @@ const fidl_type_t* ::test::protocols::WithProtocolEnds_RequestDecoder::GetType(
     case ::test::protocols::internal::kWithProtocolEnds_ClientEnds_Ordinal:
       *out_needs_response = true;
       return &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsClientEndsRequestMessageTable;
+          test_protocols_WithProtocolEndsClientEndsRequestTable;
       ;
     case ::test::protocols::internal::kWithProtocolEnds_ServerEnds_Ordinal:
       *out_needs_response = true;
       return &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsServerEndsRequestMessageTable;
+          test_protocols_WithProtocolEndsServerEndsRequestTable;
       ;
     case ::test::protocols::internal::
         kWithProtocolEnds_StructContainingEnds_Ordinal:
       *out_needs_response = true;
       return &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable;
+          test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
       ;
     default:
       return nullptr;
@@ -3136,16 +3125,16 @@ const fidl_type_t* WithProtocolEnds_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::test::protocols::internal::kWithProtocolEnds_ClientEnds_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsClientEndsResponseMessageTable;
+          test_protocols_WithProtocolEndsClientEndsTopResponseTable;
       ;
     case ::test::protocols::internal::kWithProtocolEnds_ServerEnds_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsServerEndsResponseMessageTable;
+          test_protocols_WithProtocolEndsServerEndsTopResponseTable;
       ;
     case ::test::protocols::internal::
         kWithProtocolEnds_StructContainingEnds_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
+          test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
       ;
     default:
       return nullptr;
@@ -3194,7 +3183,7 @@ WithProtocolEnds_ClientEnds_ResponseHandler(
         return ZX_OK;
       },
       &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsClientEndsResponseMessageTable);
+          test_protocols_WithProtocolEndsClientEndsTopResponseTable);
 }
 
 }  // namespace
@@ -3205,7 +3194,7 @@ void WithProtocolEnds_Proxy::ClientEnds(
       ::test::protocols::internal::kWithProtocolEnds_ClientEnds_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsClientEndsRequestMessageTable;
+          test_protocols_WithProtocolEndsClientEndsRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::WithProtocolEnds_RequestEncoder::ClientEnds(&_encoder,
@@ -3230,7 +3219,7 @@ WithProtocolEnds_ServerEnds_ResponseHandler(
         return ZX_OK;
       },
       &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsServerEndsResponseMessageTable);
+          test_protocols_WithProtocolEndsServerEndsTopResponseTable);
 }
 
 }  // namespace
@@ -3241,7 +3230,7 @@ void WithProtocolEnds_Proxy::ServerEnds(
       ::test::protocols::internal::kWithProtocolEnds_ServerEnds_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsServerEndsRequestMessageTable;
+          test_protocols_WithProtocolEndsServerEndsRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::WithProtocolEnds_RequestEncoder::ServerEnds(&_encoder,
@@ -3265,7 +3254,7 @@ WithProtocolEnds_StructContainingEnds_ResponseHandler(
         return ZX_OK;
       },
       &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable);
+          test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable);
 }
 
 }  // namespace
@@ -3276,7 +3265,7 @@ void WithProtocolEnds_Proxy::StructContainingEnds(
           kWithProtocolEnds_StructContainingEnds_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable;
+          test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::WithProtocolEnds_RequestEncoder::StructContainingEnds(
@@ -3307,7 +3296,7 @@ class WithProtocolEnds_ClientEnds_Responder final {
         ::test::protocols::internal::kWithProtocolEnds_ClientEnds_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocols::_internal::
-            test_protocols_WithProtocolEndsClientEndsResponseMessageTable;
+            test_protocols_WithProtocolEndsClientEndsTopResponseTable;
     response_.Send(
         resp_type,
         ::test::protocols::WithProtocolEnds_ResponseEncoder::ClientEnds(
@@ -3330,7 +3319,7 @@ class WithProtocolEnds_ServerEnds_Responder final {
         ::test::protocols::internal::kWithProtocolEnds_ServerEnds_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocols::_internal::
-            test_protocols_WithProtocolEndsServerEndsResponseMessageTable;
+            test_protocols_WithProtocolEndsServerEndsTopResponseTable;
     response_.Send(
         resp_type,
         ::test::protocols::WithProtocolEnds_ResponseEncoder::ServerEnds(
@@ -3353,7 +3342,7 @@ class WithProtocolEnds_StructContainingEnds_Responder final {
             kWithProtocolEnds_StructContainingEnds_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocols::_internal::
-            test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
+            test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
     response_.Send(resp_type,
                    ::test::protocols::WithProtocolEnds_ResponseEncoder::
                        StructContainingEnds(&_encoder, &out));
@@ -3445,10 +3434,10 @@ zx_status_t WithProtocolEnds_SyncProxy::ClientEnds(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsClientEndsRequestMessageTable;
+          test_protocols_WithProtocolEndsClientEndsRequestTable;
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsClientEndsResponseMessageTable;
+          test_protocols_WithProtocolEndsClientEndsTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocols::WithProtocolEnds_RequestEncoder::ClientEnds(&_encoder,
@@ -3472,10 +3461,10 @@ zx_status_t WithProtocolEnds_SyncProxy::ServerEnds(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsServerEndsRequestMessageTable;
+          test_protocols_WithProtocolEndsServerEndsRequestTable;
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsServerEndsResponseMessageTable;
+          test_protocols_WithProtocolEndsServerEndsTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocols::WithProtocolEnds_RequestEncoder::ServerEnds(&_encoder,
@@ -3499,10 +3488,10 @@ zx_status_t WithProtocolEnds_SyncProxy::StructContainingEnds(
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable;
+          test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
+          test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocols::WithProtocolEnds_RequestEncoder::StructContainingEnds(
@@ -3520,7 +3509,7 @@ zx_status_t WithProtocolEnds_SyncProxy::StructContainingEnds(
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ManyParametersFifteenRequestMessageTable;
+    test_protocols_ManyParametersFifteenRequestTable;
 
 }  // namespace _internal
 ManyParameters::~ManyParameters() = default;
@@ -3531,7 +3520,7 @@ const fidl_type_t* ::test::protocols::ManyParameters_RequestDecoder::GetType(
   switch (ordinal) {
     case ::test::protocols::internal::kManyParameters_Fifteen_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_ManyParametersFifteenRequestMessageTable;
+          test_protocols_ManyParametersFifteenRequestTable;
       ;
     default:
       return nullptr;
@@ -3577,7 +3566,7 @@ void ManyParameters_Proxy::Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5,
       ::test::protocols::internal::kManyParameters_Fifteen_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_ManyParametersFifteenRequestMessageTable;
+          test_protocols_ManyParametersFifteenRequestTable;
   controller_->Send(req_type,
                     ::test::protocols::ManyParameters_RequestEncoder::Fifteen(
                         &_encoder, &p1, &p2, &p3, &p4, &p5, &p6, &p7, &p8, &p9,
@@ -3668,7 +3657,7 @@ zx_status_t ManyParameters_SyncProxy::Fifteen(bool p1, bool p2, bool p3,
       ::test::protocols::internal::kManyParameters_Fifteen_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_ManyParametersFifteenRequestMessageTable;
+          test_protocols_ManyParametersFifteenRequestTable;
   return proxy_.Send(req_type,
                      ::test::protocols::ManyParameters_RequestEncoder::Fifteen(
                          &_encoder, &p1, &p2, &p3, &p4, &p5, &p6, &p7, &p8, &p9,
@@ -3680,16 +3669,16 @@ zx_status_t ManyParameters_SyncProxy::Fifteen(bool p1, bool p2, bool p3,
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
+    test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
+    test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
+    test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
+    test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
 
 }  // namespace _internal
 WithErrorSyntax::~WithErrorSyntax() = default;
@@ -3723,19 +3712,19 @@ const fidl_type_t* WithErrorSyntax_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::test::protocols::internal::kWithErrorSyntax_ResponseAsStruct_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
+          test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
       ;
     case ::test::protocols::internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
+          test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
       ;
     case ::test::protocols::internal::kWithErrorSyntax_ErrorAsEnum_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
+          test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
       ;
     case ::test::protocols::internal::kWithErrorSyntax_HandleInResult_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
+          test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
       ;
     default:
       return nullptr;
@@ -3784,7 +3773,7 @@ WithErrorSyntax_ResponseAsStruct_ResponseHandler(
         return ZX_OK;
       },
       &::test::protocols::_internal::
-          test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable);
+          test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable);
 }
 
 }  // namespace
@@ -3817,7 +3806,7 @@ WithErrorSyntax_ErrorAsPrimitive_ResponseHandler(
         return ZX_OK;
       },
       &::test::protocols::_internal::
-          test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable);
+          test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable);
 }
 
 }  // namespace
@@ -3850,7 +3839,7 @@ WithErrorSyntax_ErrorAsEnum_ResponseHandler(
         return ZX_OK;
       },
       &::test::protocols::_internal::
-          test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable);
+          test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable);
 }
 
 }  // namespace
@@ -3881,7 +3870,7 @@ WithErrorSyntax_HandleInResult_ResponseHandler(
         return ZX_OK;
       },
       &::test::protocols::_internal::
-          test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable);
+          test_protocols_WithErrorSyntaxHandleInResultTopResponseTable);
 }
 
 }  // namespace
@@ -3918,7 +3907,7 @@ class WithErrorSyntax_ResponseAsStruct_Responder final {
         ::test::protocols::internal::kWithErrorSyntax_ResponseAsStruct_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocols::_internal::
-            test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
+            test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
     response_.Send(
         resp_type,
         ::test::protocols::WithErrorSyntax_ResponseEncoder::ResponseAsStruct(
@@ -3941,7 +3930,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Responder final {
         ::test::protocols::internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocols::_internal::
-            test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
+            test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
     response_.Send(
         resp_type,
         ::test::protocols::WithErrorSyntax_ResponseEncoder::ErrorAsPrimitive(
@@ -3964,7 +3953,7 @@ class WithErrorSyntax_ErrorAsEnum_Responder final {
         ::test::protocols::internal::kWithErrorSyntax_ErrorAsEnum_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocols::_internal::
-            test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
+            test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
     response_.Send(
         resp_type,
         ::test::protocols::WithErrorSyntax_ResponseEncoder::ErrorAsEnum(
@@ -3987,7 +3976,7 @@ class WithErrorSyntax_HandleInResult_Responder final {
         ::test::protocols::internal::kWithErrorSyntax_HandleInResult_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocols::_internal::
-            test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
+            test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
     response_.Send(
         resp_type,
         ::test::protocols::WithErrorSyntax_ResponseEncoder::HandleInResult(
@@ -4075,7 +4064,7 @@ zx_status_t WithErrorSyntax_SyncProxy::ResponseAsStruct(
   const fidl_type_t* req_type = nullptr;
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
+          test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocols::WithErrorSyntax_RequestEncoder::ResponseAsStruct(
@@ -4098,7 +4087,7 @@ zx_status_t WithErrorSyntax_SyncProxy::ErrorAsPrimitive(
   const fidl_type_t* req_type = nullptr;
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
+          test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocols::WithErrorSyntax_RequestEncoder::ErrorAsPrimitive(
@@ -4121,7 +4110,7 @@ zx_status_t WithErrorSyntax_SyncProxy::ErrorAsEnum(
   const fidl_type_t* req_type = nullptr;
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
+          test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocols::WithErrorSyntax_RequestEncoder::ErrorAsEnum(&_encoder),
@@ -4143,7 +4132,7 @@ zx_status_t WithErrorSyntax_SyncProxy::HandleInResult(
   const fidl_type_t* req_type = nullptr;
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
+          test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocols::WithErrorSyntax_RequestEncoder::HandleInResult(
@@ -4292,25 +4281,21 @@ zx_status_t DiscoverableProtocol_SyncProxy::Method() {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMethodARequestMessageTable;
+    test_protocols_ChannelProtocolMethodARequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolEventAEventMessageTable;
+    test_protocols_ChannelProtocolEventARequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_ChannelProtocolMethodBRequestTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_ChannelProtocolMethodBTopResponseTable;
+__LOCAL extern "C" const fidl_type_t
+    test_protocols_ChannelProtocolTakeHandleRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMethodBRequestMessageTable;
-
+    test_protocols_ChannelProtocolMutateSocketRequestTable;
 __LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMethodBResponseMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMutateSocketRequestMessageTable;
-
-__LOCAL extern "C" const fidl_type_t
-    test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
+    test_protocols_ChannelProtocolMutateSocketTopResponseTable;
 
 }  // namespace _internal
 ChannelProtocol::~ChannelProtocol() = default;
@@ -4321,22 +4306,22 @@ const fidl_type_t* ::test::protocols::ChannelProtocol_RequestDecoder::GetType(
   switch (ordinal) {
     case ::test::protocols::internal::kChannelProtocol_MethodA_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMethodARequestMessageTable;
+          test_protocols_ChannelProtocolMethodARequestTable;
       ;
     case ::test::protocols::internal::kChannelProtocol_MethodB_Ordinal:
       *out_needs_response = true;
       return &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMethodBRequestMessageTable;
+          test_protocols_ChannelProtocolMethodBRequestTable;
       ;
     case ::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal:
       *out_needs_response = true;
       return &::test::protocols::_internal::
-          test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
+          test_protocols_ChannelProtocolTakeHandleRequestTable;
       ;
     case ::test::protocols::internal::kChannelProtocol_MutateSocket_Ordinal:
       *out_needs_response = true;
       return &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMutateSocketRequestMessageTable;
+          test_protocols_ChannelProtocolMutateSocketRequestTable;
       ;
     default:
       return nullptr;
@@ -4347,18 +4332,18 @@ const fidl_type_t* ChannelProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::test::protocols::internal::kChannelProtocol_EventA_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_ChannelProtocolEventAEventMessageTable;
+          test_protocols_ChannelProtocolEventARequestTable;
       ;
     case ::test::protocols::internal::kChannelProtocol_MethodB_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMethodBResponseMessageTable;
+          test_protocols_ChannelProtocolMethodBTopResponseTable;
       ;
     case ::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal:
       return nullptr;
       ;
     case ::test::protocols::internal::kChannelProtocol_MutateSocket_Ordinal:
       return &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
+          test_protocols_ChannelProtocolMutateSocketTopResponseTable;
       ;
     default:
       return nullptr;
@@ -4387,15 +4372,15 @@ zx_status_t ChannelProtocol_Proxy::Dispatch_(
         break;
       }
       const char* error_msg = nullptr;
-      status = message.Decode(
-          &::test::protocols::_internal::
-              test_protocols_ChannelProtocolEventAEventMessageTable,
-          &error_msg);
+      status =
+          message.Decode(&::test::protocols::_internal::
+                             test_protocols_ChannelProtocolEventARequestTable,
+                         &error_msg);
       if (status != ZX_OK) {
         FIDL_REPORT_DECODING_ERROR(
             message,
             &::test::protocols::_internal::
-                test_protocols_ChannelProtocolEventAEventMessageTable,
+                test_protocols_ChannelProtocolEventARequestTable,
             error_msg);
         break;
       }
@@ -4419,7 +4404,7 @@ void ChannelProtocol_Proxy::MethodA(int64_t a, int64_t b) {
       ::test::protocols::internal::kChannelProtocol_MethodA_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMethodARequestMessageTable;
+          test_protocols_ChannelProtocolMethodARequestTable;
   controller_->Send(req_type,
                     ::test::protocols::ChannelProtocol_RequestEncoder::MethodA(
                         &_encoder, &a, &b),
@@ -4441,7 +4426,7 @@ ChannelProtocol_MethodB_ResponseHandler(
         return ZX_OK;
       },
       &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMethodBResponseMessageTable);
+          test_protocols_ChannelProtocolMethodBTopResponseTable);
 }
 
 }  // namespace
@@ -4451,7 +4436,7 @@ void ChannelProtocol_Proxy::MethodB(int64_t a, int64_t b,
       ::test::protocols::internal::kChannelProtocol_MethodB_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMethodBRequestMessageTable;
+          test_protocols_ChannelProtocolMethodBRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::ChannelProtocol_RequestEncoder::MethodB(&_encoder, &a,
@@ -4481,7 +4466,7 @@ void ChannelProtocol_Proxy::TakeHandle(::zx::handle h,
       ::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
+          test_protocols_ChannelProtocolTakeHandleRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::ChannelProtocol_RequestEncoder::TakeHandle(&_encoder,
@@ -4505,7 +4490,7 @@ ChannelProtocol_MutateSocket_ResponseHandler(
         return ZX_OK;
       },
       &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMutateSocketResponseMessageTable);
+          test_protocols_ChannelProtocolMutateSocketTopResponseTable);
 }
 
 }  // namespace
@@ -4515,7 +4500,7 @@ void ChannelProtocol_Proxy::MutateSocket(::zx::socket a,
       ::test::protocols::internal::kChannelProtocol_MutateSocket_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMutateSocketRequestMessageTable;
+          test_protocols_ChannelProtocolMutateSocketRequestTable;
   controller_->Send(
       req_type,
       ::test::protocols::ChannelProtocol_RequestEncoder::MutateSocket(&_encoder,
@@ -4543,7 +4528,7 @@ class ChannelProtocol_MethodB_Responder final {
         ::test::protocols::internal::kChannelProtocol_MethodB_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocols::_internal::
-            test_protocols_ChannelProtocolMethodBResponseMessageTable;
+            test_protocols_ChannelProtocolMethodBTopResponseTable;
     response_.Send(resp_type,
                    ::test::protocols::ChannelProtocol_ResponseEncoder::MethodB(
                        &_encoder, &result));
@@ -4584,7 +4569,7 @@ class ChannelProtocol_MutateSocket_Responder final {
         ::test::protocols::internal::kChannelProtocol_MutateSocket_Ordinal);
     const fidl_type_t* resp_type =
         &::test::protocols::_internal::
-            test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
+            test_protocols_ChannelProtocolMutateSocketTopResponseTable;
     response_.Send(
         resp_type,
         ::test::protocols::ChannelProtocol_ResponseEncoder::MutateSocket(
@@ -4673,7 +4658,7 @@ void ChannelProtocol_Stub::EventA(int64_t a, int64_t b) {
       ::test::protocols::internal::kChannelProtocol_EventA_Ordinal);
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_ChannelProtocolEventAEventMessageTable;
+          test_protocols_ChannelProtocolEventARequestTable;
   sender_()->Send(resp_type,
                   ::test::protocols::ChannelProtocol_ResponseEncoder::EventA(
                       &_encoder, &a, &b));
@@ -4689,7 +4674,7 @@ zx_status_t ChannelProtocol_SyncProxy::MethodA(int64_t a, int64_t b) {
       ::test::protocols::internal::kChannelProtocol_MethodA_Ordinal);
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMethodARequestMessageTable;
+          test_protocols_ChannelProtocolMethodARequestTable;
   return proxy_.Send(req_type,
                      ::test::protocols::ChannelProtocol_RequestEncoder::MethodA(
                          &_encoder, &a, &b));
@@ -4703,10 +4688,10 @@ zx_status_t ChannelProtocol_SyncProxy::MethodB(int64_t a, int64_t b,
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMethodBRequestMessageTable;
+          test_protocols_ChannelProtocolMethodBRequestTable;
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMethodBResponseMessageTable;
+          test_protocols_ChannelProtocolMethodBTopResponseTable;
   zx_status_t status_ =
       proxy_.Call(req_type, resp_type,
                   ::test::protocols::ChannelProtocol_RequestEncoder::MethodB(
@@ -4726,7 +4711,7 @@ zx_status_t ChannelProtocol_SyncProxy::TakeHandle(::zx::handle h) {
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
+          test_protocols_ChannelProtocolTakeHandleRequestTable;
   const fidl_type_t* resp_type = nullptr;
   zx_status_t status_ =
       proxy_.Call(req_type, resp_type,
@@ -4745,10 +4730,10 @@ zx_status_t ChannelProtocol_SyncProxy::MutateSocket(::zx::socket a,
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =
       &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMutateSocketRequestMessageTable;
+          test_protocols_ChannelProtocolMutateSocketRequestTable;
   const fidl_type_t* resp_type =
       &::test::protocols::_internal::
-          test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
+          test_protocols_ChannelProtocolMutateSocketTopResponseTable;
   zx_status_t status_ = proxy_.Call(
       req_type, resp_type,
       ::test::protocols::ChannelProtocol_RequestEncoder::MutateSocket(&_encoder,

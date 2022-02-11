@@ -22,7 +22,7 @@ void fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::
       ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
   return messenger().TwoWay(
       &::test_emptystruct::
-          test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable,
+          test_emptystruct_EmptyProtocolSendAndReceiveRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       ::fidl::internal::MakeResponseContext<
@@ -42,7 +42,7 @@ void fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::
       ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
   return messenger().TwoWay(
       &::test_emptystruct::
-          test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable,
+          test_emptystruct_EmptyProtocolSendAndReceiveRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       ::fidl::internal::MakeResponseContext<
@@ -59,8 +59,7 @@ fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::Send(
   ::fidl::MessageEncoder _encoder{
       ::test_emptystruct::kEmptyProtocol_Send_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      &::test_emptystruct::
-          test_emptystruct_EmptyProtocolSendRequestMessageTable,
+      &::test_emptystruct::test_emptystruct_EmptyProtocolSendRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
   return ::fidl::internal::ToFitxResult(result);
@@ -104,8 +103,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
   ::fidl::MessageEncoder _encoder{
       ::test_emptystruct::kEmptyProtocol_Receive_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
-      &::test_emptystruct::
-          test_emptystruct_EmptyProtocolReceiveEventMessageTable,
+      &::test_emptystruct::test_emptystruct_EmptyProtocolReceiveRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       [this](fidl::OutgoingMessage outgoing) {
@@ -120,8 +118,7 @@ fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>::Receive(
   ::fidl::MessageEncoder _encoder{
       ::test_emptystruct::kEmptyProtocol_Receive_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
-      &::test_emptystruct::
-          test_emptystruct_EmptyProtocolReceiveEventMessageTable,
+      &::test_emptystruct::test_emptystruct_EmptyProtocolReceiveRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)),
       [this](fidl::OutgoingMessage outgoing) {
@@ -141,7 +138,7 @@ void fidl::internal::NaturalCompleterBase<
       ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
   messenger_.SendReply(
       &::test_emptystruct::
-          test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable,
+          test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
 }

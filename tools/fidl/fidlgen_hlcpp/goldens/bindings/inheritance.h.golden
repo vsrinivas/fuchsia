@@ -24,8 +24,7 @@ using subHandle = ::fidl::InterfaceHandle<sub>;
 #ifdef __Fuchsia__
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_inheritance_superfooRequestMessageTable;
+__LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
 }  // namespace _internal
 class super_RequestEncoder {
@@ -49,18 +48,17 @@ class super_RequestEncoder {
       ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(DidHLCPPEncode,
-               &::test::inheritance::_internal::
-                   test_inheritance_superfooRequestMessageTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &::test::inheritance::_internal::test_inheritance_SuperFooRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_inheritance_superfooResponseMessageTable;
+__LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 
 }  // namespace _internal
 class super_ResponseEncoder {
@@ -86,7 +84,7 @@ class super_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::inheritance::_internal::
-                   test_inheritance_superfooResponseMessageTable,
+                   test_inheritance_SuperFooTopResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -97,10 +95,6 @@ class super_ResponseEncoder {
 
 #ifdef __Fuchsia__
 
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_inheritance_subfooRequestMessageTable;
-
-}  // namespace _internal
 class sub_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::MessageEncoder* _encoder,
@@ -122,20 +116,16 @@ class sub_RequestEncoder {
       ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
     }
 
-    fidl_trace(DidHLCPPEncode,
-               &::test::inheritance::_internal::
-                   test_inheritance_subfooRequestMessageTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &::test::inheritance::_internal::test_inheritance_SuperFooRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    test_inheritance_subfooResponseMessageTable;
 
-}  // namespace _internal
 class sub_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::MessageEncoder* _encoder,
@@ -159,7 +149,7 @@ class sub_ResponseEncoder {
 
     fidl_trace(DidHLCPPEncode,
                &::test::inheritance::_internal::
-                   test_inheritance_subfooResponseMessageTable,
+                   test_inheritance_SuperFooTopResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 

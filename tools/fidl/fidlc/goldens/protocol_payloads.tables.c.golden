@@ -38,26 +38,11 @@ __LOCAL extern const struct FidlCodedXUnion test_protocolpayloads_MainProtocol_O
 __LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
 
 
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolOneWayComposedRequestMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolOneWayComposedRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.protocolpayloads/MainProtocolOneWayComposedRequestMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayComposedRequestMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayComposedRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.protocolpayloads/MainProtocolTwoWayComposedRequestMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayComposedResponseMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayComposedResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.protocolpayloads/MainProtocolTwoWayComposedResponseMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayComposedWithErrorRequestMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayComposedWithErrorRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.protocolpayloads/MainProtocolTwoWayComposedWithErrorRequestMessage"};
-
 __LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayComposedWithErrorResponseMessageTable;
 static const struct FidlStructElement Fields72test_protocolpayloads_MainProtocolTwoWayComposedWithErrorResponseMessage[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_protocolpayloads_imported_ComposedProtocol_TwoWayComposedWithError_ResultTable)}}
 };
 const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayComposedWithErrorResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields72test_protocolpayloads_MainProtocolTwoWayComposedWithErrorResponseMessage, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.protocolpayloads/MainProtocolTwoWayComposedWithErrorResponseMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnComposedEventMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnComposedEventMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.protocolpayloads/MainProtocolOnComposedEventMessage"};
 
 __LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnComposedWithErrorEventMessageTable;
 static const struct FidlStructElement Fields65test_protocolpayloads_MainProtocolOnComposedWithErrorEventMessage[] = {
@@ -65,26 +50,11 @@ static const struct FidlStructElement Fields65test_protocolpayloads_MainProtocol
 };
 const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnComposedWithErrorEventMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields65test_protocolpayloads_MainProtocolOnComposedWithErrorEventMessage, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.protocolpayloads/MainProtocolOnComposedWithErrorEventMessage"};
 
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolOneWayLocalRequestMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolOneWayLocalRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="test.protocolpayloads/MainProtocolOneWayLocalRequestMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayLocalRequestMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayLocalRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="test.protocolpayloads/MainProtocolTwoWayLocalRequestMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayLocalResponseMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayLocalResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="test.protocolpayloads/MainProtocolTwoWayLocalResponseMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayLocalWithErrorRequestMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayLocalWithErrorRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="test.protocolpayloads/MainProtocolTwoWayLocalWithErrorRequestMessage"};
-
 __LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayLocalWithErrorResponseMessageTable;
 static const struct FidlStructElement Fields69test_protocolpayloads_MainProtocolTwoWayLocalWithErrorResponseMessage[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_protocolpayloads_MainProtocol_TwoWayLocalWithError_ResultTable)}}
 };
 const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayLocalWithErrorResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields69test_protocolpayloads_MainProtocolTwoWayLocalWithErrorResponseMessage, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.protocolpayloads/MainProtocolTwoWayLocalWithErrorResponseMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnLocalEventMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnLocalEventMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="test.protocolpayloads/MainProtocolOnLocalEventMessage"};
 
 __LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnLocalWithErrorEventMessageTable;
 static const struct FidlStructElement Fields62test_protocolpayloads_MainProtocolOnLocalWithErrorEventMessage[] = {
@@ -92,26 +62,11 @@ static const struct FidlStructElement Fields62test_protocolpayloads_MainProtocol
 };
 const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnLocalWithErrorEventMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields62test_protocolpayloads_MainProtocolOnLocalWithErrorEventMessage, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.protocolpayloads/MainProtocolOnLocalWithErrorEventMessage"};
 
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolOneWayImportRequestMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolOneWayImportRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.protocolpayloads/MainProtocolOneWayImportRequestMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayImportRequestMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayImportRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.protocolpayloads/MainProtocolTwoWayImportRequestMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayImportResponseMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayImportResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.protocolpayloads/MainProtocolTwoWayImportResponseMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayImportWithErrorRequestMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayImportWithErrorRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.protocolpayloads/MainProtocolTwoWayImportWithErrorRequestMessage"};
-
 __LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayImportWithErrorResponseMessageTable;
 static const struct FidlStructElement Fields70test_protocolpayloads_MainProtocolTwoWayImportWithErrorResponseMessage[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_protocolpayloads_MainProtocol_TwoWayImportWithError_ResultTable)}}
 };
 const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayImportWithErrorResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields70test_protocolpayloads_MainProtocolTwoWayImportWithErrorResponseMessage, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.protocolpayloads/MainProtocolTwoWayImportWithErrorResponseMessage"};
-
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnImportEventMessageTable;
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnImportEventMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.protocolpayloads/MainProtocolOnImportEventMessage"};
 
 __LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnImportWithErrorEventMessageTable;
 static const struct FidlStructElement Fields63test_protocolpayloads_MainProtocolOnImportWithErrorEventMessage[] = {

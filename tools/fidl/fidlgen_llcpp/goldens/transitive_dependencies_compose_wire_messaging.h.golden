@@ -22,8 +22,7 @@
 namespace test_transitivedependenciescompose {
 class Top;
 
-__LOCAL extern "C" const fidl_type_t
-    test_transitivedependenciescompose_TopGetFooResponseMessageTable;
+__LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
 }  // namespace test_transitivedependenciescompose
 template <>
 struct ::fidl::internal::WireOrdinal<
@@ -143,7 +142,7 @@ struct TypeTraits<
     ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>> {
   static constexpr const fidl_type_t* kType =
       &::test_transitivedependenciescompose::
-          test_transitivedependenciescompose_TopGetFooResponseMessageTable;
+          test_bottom_BottomGetFooTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
