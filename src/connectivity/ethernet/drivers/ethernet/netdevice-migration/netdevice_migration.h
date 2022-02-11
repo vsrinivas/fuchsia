@@ -24,8 +24,8 @@
 namespace netdevice_migration {
 
 using NetdeviceMigrationVmoStore = vmo_store::VmoStore<vmo_store::SlabStorage<uint32_t>>;
-using Netbuf = eth::Operation<>;
-using NetbufPool = eth::OperationPool<>;
+using Netbuf = eth::Operation<uint32_t>;
+using NetbufPool = eth::OperationPool<uint32_t>;
 
 class NetdeviceMigration;
 using DeviceType = ddk::Device<NetdeviceMigration>;
@@ -44,11 +44,7 @@ class NetdeviceMigration
       MODE_MULTICAST_FILTER | MODE_MULTICAST_PROMISCUOUS | MODE_PROMISCUOUS;
   static constexpr uint32_t kMulticastFilterMax = MAX_MAC_FILTER;
   static zx::status<std::unique_ptr<NetdeviceMigration>> Create(zx_device_t* dev);
-  virtual ~NetdeviceMigration() {
-    size_t diff = cookie_storage_.size() - tx_frame_cookies_.size();
-    ZX_ASSERT_MSG(diff == 0, "ethernet driver has not returned %lu of %lu tx frame cookies", diff,
-                  tx_frame_cookies_.size());
-  }
+  virtual ~NetdeviceMigration() {}
 
   // Initializes the driver and binds it to the parent device `dev`. The DDK calls Bind through
   // the zx_driver_ops_t published for this driver; consequently, a client of this driver will not
@@ -131,11 +127,7 @@ class NetdeviceMigration
         }),
         netbuf_size_(netbuf_size),
         netbuf_pool_(std::move(netbuf_pool)),
-        vmo_store_(opts) {
-    for (FrameCookie& cookie : cookie_storage_) {
-      tx_frame_cookies_.push_back(&cookie);
-    }
-  }
+        vmo_store_(opts) {}
   void SetMacParam(uint32_t param, int32_t value, const uint8_t* data_buffer,
                    size_t data_size) const;
 
@@ -157,12 +149,6 @@ class NetdeviceMigration
 
   std::mutex tx_lock_ __TA_ACQUIRED_AFTER(rx_lock_, vmo_lock_);
   bool tx_started_ __TA_GUARDED(tx_lock_) = false;
-  struct FrameCookie {
-    uint32_t id;
-    NetdeviceMigration* netdev;
-  };
-  std::array<FrameCookie, kFifoDepth> cookie_storage_ __TA_GUARDED(tx_lock_);
-  std::vector<FrameCookie*> tx_frame_cookies_ __TA_GUARDED(tx_lock_);
   NetbufPool netbuf_pool_ __TA_GUARDED(tx_lock_);
 
   std::mutex rx_lock_ __TA_ACQUIRED_BEFORE(tx_lock_, vmo_lock_);

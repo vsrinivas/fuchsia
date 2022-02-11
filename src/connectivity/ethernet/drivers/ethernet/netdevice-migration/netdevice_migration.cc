@@ -236,22 +236,12 @@ void NetdeviceMigration::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_lis
                                                   size_t buffers_count)
     __TA_EXCLUDES(tx_lock_, vmo_lock_) {
   constexpr uint32_t kQueueOpts = 0;
-  struct CompleteArgs {
-    std::optional<Netbuf> netbuf;
-    FrameCookie* cookie;
-  };
-  CompleteArgs args[kFifoDepth];
+  std::optional<Netbuf> args[kFifoDepth];
   auto args_iter = std::begin(args);
   {
     network::SharedAutoLock vmo_lock(&vmo_lock_);
     std::lock_guard tx_lock(tx_lock_);
     cpp20::span buffers(buffers_list, buffers_count);
-    if (buffers.size() > tx_frame_cookies_.size()) {
-      zxlogf(ERROR, "netdevice-migration: received tx buffers %ld > available tx frame cookies %lu",
-             buffers.size(), tx_frame_cookies_.size());
-      DdkAsyncRemove();
-      return;
-    }
     if (!tx_started_) {
       zxlogf(ERROR, "netdevice-migration: tx buffers queued before start call");
       tx_result_t results[buffers.size()];
@@ -306,12 +296,6 @@ void NetdeviceMigration::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_lis
       }
       cpp20::span vmo_view(vmo->data());
       vmo_view = vmo_view.subspan(buffer.data_list->offset, buffer.data_list->length);
-      FrameCookie* cookie = tx_frame_cookies_.back();
-      tx_frame_cookies_.pop_back();
-      *cookie = {
-          .id = buffer.id,
-          .netdev = this,
-      };
       std::optional netbuf = netbuf_pool_.pop();
       if (!netbuf.has_value()) {
         zxlogf(ERROR, "netdevice-migration: netbuf pool exhausted");
@@ -323,15 +307,13 @@ void NetdeviceMigration::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_lis
           .data_size = vmo_view.size(),
           .phys = phys_addr,
       };
-      *args_iter++ = {
-          .netbuf = std::move(netbuf),
-          .cookie = cookie,
-      };
+      *(netbuf->private_storage()) = buffer.id;
+      *args_iter++ = std::move(netbuf);
     }
   }
   for (auto arg = std::begin(args); arg != args_iter; ++arg) {
     ethernet_.QueueTx(
-        kQueueOpts, arg->netbuf->take(),
+        kQueueOpts, arg->value().take(),
         [](void* ctx, zx_status_t status, ethernet_netbuf_t* netbuf) {
           // The error semantics of fuchsia.hardware.ethernet/EthernetImpl.QueueTx are unspecified
           // other than `ZX_OK` indicating success. However, ethernet driver usages of
@@ -349,18 +331,16 @@ void NetdeviceMigration::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_lis
           tx_result_t result = {
               .status = status,
           };
-          auto* cookie = static_cast<FrameCookie*>(ctx);
-          result.id = cookie->id;
-          cookie->netdev->netdevice_.CompleteTx(&result, 1);
+          auto* netdev = static_cast<NetdeviceMigration*>(ctx);
+          Netbuf op(netbuf, netdev->netbuf_size_);
+          result.id = *(op.private_storage());
+          netdev->netdevice_.CompleteTx(&result, 1);
           {
-            std::lock_guard tx_lock(cookie->netdev->tx_lock_);
-            // TODO(https://fxbug.dev/93293): move tx cookie into Netbuf
-            cookie->netdev->tx_frame_cookies_.push_back(cookie);
-            Netbuf op(netbuf, cookie->netdev->netbuf_size_);
-            cookie->netdev->netbuf_pool_.push(std::move(op));
+            std::lock_guard tx_lock(netdev->tx_lock_);
+            netdev->netbuf_pool_.push(std::move(op));
           }
         },
-        arg->cookie);
+        this);
   }
 }
 
