@@ -94,13 +94,15 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*Finding, 
 			if spanPath != path {
 				continue
 			}
-			category := fmt.Sprintf(
-				"Clippy/%s/%s",
-				result.Level,
-				strings.TrimPrefix(result.Code.Code, "clippy::"))
+			lintID := strings.TrimPrefix(result.Code.Code, "clippy::")
+			category := fmt.Sprintf("Clippy/%s/%s", result.Level, lintID)
 			findings = append(findings, &Finding{
-				Category:  category,
-				Message:   result.Message,
+				Category: category,
+				Message: strings.Join([]string{
+					result.Message,
+					fmt.Sprintf("For more information, see %s", clippyLintURL(lintID)),
+					fmt.Sprintf("To reproduce locally, run `fx clippy -f %s`", spanPath),
+				}, "\n\n"),
 				Path:      spanPath,
 				StartLine: span.LineStart,
 				EndLine:   span.LineEnd,
@@ -153,4 +155,9 @@ type clippySpan struct {
 
 	ColumnStart int `json:"column_start"`
 	ColumnEnd   int `json:"column_end"`
+}
+
+// clippyLintURL returns the URL of the docs for a specific Clippy lint.
+func clippyLintURL(lintID string) string {
+	return "https://rust-lang.github.io/rust-clippy/master/index.html#" + lintID
 }

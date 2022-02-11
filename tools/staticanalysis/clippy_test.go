@@ -8,9 +8,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -67,7 +69,11 @@ func TestClippyAnalyzer(t *testing.T) {
 			},
 			expected: []*Finding{
 				{
-					Message:   "this function has too many arguments (8/7)",
+					Message: strings.Join([]string{
+						"this function has too many arguments (8/7)",
+						fmt.Sprintf("For more information, see %s", clippyLintURL("too_many_arguments")),
+						"To reproduce locally, run `fx clippy -f src/foo.rs`",
+					}, "\n\n"),
 					Category:  "Clippy/warning/too_many_arguments",
 					Path:      "src/foo.rs",
 					StartLine: 1,
