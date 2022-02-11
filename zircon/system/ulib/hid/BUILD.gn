@@ -9,6 +9,7 @@ zx_library("hid") {
   sdk_headers = [
     "hid/acer12.h",
     "hid/ambient-light.h",
+    "hid/atlas-touchpad.h",
     "hid/boot.h",
     "hid/buttons.h",
     "hid/visalia-touch.h",
@@ -30,6 +31,7 @@ zx_library("hid") {
   sources = [
     "acer12.c",
     "ambient-light.c",
+    "atlas-touchpad.c",
     "bma253.c",
     "boot.c",
     "buttons.c",
