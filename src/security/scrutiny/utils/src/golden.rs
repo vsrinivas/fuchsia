@@ -25,6 +25,23 @@ pub struct GoldenFile {
     path: String,
     required: HashSet<String>,
     optional: HashSet<String>,
+    required_prefix: HashSet<String>,
+    optional_prefix: HashSet<String>,
+}
+
+/// Returns the element of `prefixes` that `name` matched, or `None`.
+fn matches_prefix(name: &String, prefixes: &HashSet<String>) -> Option<String> {
+    for p in prefixes.iter() {
+        if name.starts_with(p) {
+            // The wildcard prefix cannot match if the remaining suffix
+            // contains the path separator.
+            let remainder = &name[p.len()..];
+            if !remainder.contains('/') {
+                return Some(p.to_string());
+            }
+        }
+    }
+    None
 }
 
 impl GoldenFile {
@@ -37,9 +54,28 @@ impl GoldenFile {
         Self::parse(path, BufReader::new(Cursor::new(contents)))
     }
 
+    /// Parses the lines of `reader` as follows:
+    ///
+    /// * lines beginning with "#" are ignored
+    /// * blank lines are ignored
+    /// * lines beginning with "?" are treated as optional: the system may or
+    ///   may not include the named file
+    /// * lines ending with "*" are prefixes by which file names should be
+    ///   matched, rather than matched exactly
+    ///
+    /// For prefix matching, the suffixes cannot contain the path separator
+    /// character '/'. For example, a golden file with this line:
+    ///
+    ///   ?/bin/goat*
+    ///
+    /// indicates that the system image may or may not contain /bin/goat,
+    /// /bin/goats, or /bin/goat_teleporter, but it says nothing about whether
+    /// /bin/goats/Buttermilk is allowed.
     fn parse<R: Read>(path: String, reader: BufReader<R>) -> Result<Self> {
         let mut required: HashSet<String> = HashSet::new();
         let mut optional: HashSet<String> = HashSet::new();
+        let mut required_prefix: HashSet<String> = HashSet::new();
+        let mut optional_prefix: HashSet<String> = HashSet::new();
 
         for line in reader.lines() {
             let line = line?;
@@ -50,18 +86,28 @@ impl GoldenFile {
                 Some('?') => {
                     let mut stripped = line.chars();
                     stripped.next();
-                    optional.insert(String::from(stripped.as_str()));
+                    let name = String::from(stripped.as_str());
+                    if name.ends_with("*") {
+                        optional_prefix.insert(name.strip_suffix("*").unwrap().to_string());
+                    } else {
+                        optional.insert(name);
+                    };
                 }
                 // Normal entry
                 Some(_) => {
-                    required.insert(line.clone());
+                    let name = line.clone();
+                    if name.ends_with("*") {
+                        required_prefix.insert(name.strip_suffix("*").unwrap().to_string());
+                    } else {
+                        required.insert(name);
+                    }
                 }
                 // Skip empty lines
                 None => {}
             };
         }
 
-        Ok(Self { path, required, optional })
+        Ok(Self { path, required, optional, required_prefix, optional_prefix })
     }
 
     /// Returns the set of differences between the golden file and the content
@@ -70,11 +116,28 @@ impl GoldenFile {
         let mut not_permitted: Vec<String> = Vec::new();
         let mut observed: Vec<String> = Vec::new();
 
+        // Take copies of all the sets and work on those, so that this function
+        // does not mutate `self`.
+        let mut required = self.required.clone();
+        let mut optional = self.optional.clone();
+        let mut required_prefix = self.required_prefix.clone();
+        let mut optional_prefix = self.optional_prefix.clone();
+
         for line in content.iter() {
-            if !self.required.contains(line) && !self.optional.contains(line) {
-                not_permitted.push(line.clone());
-            } else {
+            if required.contains(line) {
                 observed.push(line.clone());
+                required.remove(line);
+            } else if optional.contains(line) {
+                observed.push(line.clone());
+                optional.remove(line);
+            } else if let Some(found) = matches_prefix(line, &required_prefix) {
+                observed.push(line.clone());
+                required_prefix.remove(&found);
+            } else if let Some(found) = matches_prefix(line, &optional_prefix) {
+                observed.push(line.clone());
+                optional_prefix.remove(&found);
+            } else {
+                not_permitted.push(line.clone());
             }
         }
 
@@ -85,9 +148,7 @@ impl GoldenFile {
         for entry in not_permitted.iter() {
             errors.push(format!("{0} is not listed in {1} but was found in the build. If the addition to the build was intended, add a line '{0}' to {1}.", entry, self.path));
         }
-        let diff: Vec<String> =
-            self.required.clone().into_iter().filter(|e| !observed.contains(e)).collect();
-        for entry in diff.iter() {
+        for entry in required.iter().chain(required_prefix.iter()) {
             errors.push(format!("{0} was declared as required in {1} but was not found in the build. If the removal from the build was intended, update {1} to remove the line '{0}'.", entry, self.path));
         }
 
@@ -114,11 +175,17 @@ mod tests {
         writeln!(golden_file, "foo").expect("failed to write");
         writeln!(golden_file, "bar").expect("failed to write");
         writeln!(golden_file, "baz").expect("failed to write");
+        writeln!(golden_file, "goat*").expect("failed to write");
         drop(golden_file);
 
         let golden = GoldenFile::open(golden_path.to_string_lossy().to_string())
             .expect("failed to open golden");
-        let result = golden.compare(vec!["foo".to_string(), "bar".to_string(), "baz".to_string()]);
+        let result = golden.compare(vec![
+            "foo".to_string(),
+            "bar".to_string(),
+            "baz".to_string(),
+            "goats".to_string(),
+        ]);
         assert_eq!(result, CompareResult::Matches);
 
         let extra_entry_result = golden.compare(vec![
@@ -126,6 +193,14 @@ mod tests {
             "bar".to_string(),
             "baz".to_string(),
             "extra".to_string(),
+        ]);
+        assert_ne!(extra_entry_result, CompareResult::Matches);
+
+        let extra_entry_result = golden.compare(vec![
+            "foo".to_string(),
+            "bar".to_string(),
+            "baz".to_string(),
+            "goats/Buttermilk".to_string(),
         ]);
         assert_ne!(extra_entry_result, CompareResult::Matches);
 
