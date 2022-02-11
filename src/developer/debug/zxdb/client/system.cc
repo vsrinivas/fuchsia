@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/system.h"
 
+#include <lib/syslog/cpp/log_settings.h>
+
 #include <filesystem>
 #include <set>
 
@@ -895,7 +897,10 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
       }
     }
   } else if (setting_name == ClientSettings::System::kDebugMode) {
-    debug::SetDebugMode(store.GetBool(setting_name));
+    bool debug_mode = store.GetBool(setting_name);
+    debug::SetDebugMode(debug_mode);
+    syslog::SetLogSettings(
+        syslog::LogSettings{.min_log_level = debug_mode ? syslog::LOG_TRACE : syslog::LOG_INFO});
   } else if (setting_name == ClientSettings::System::kSecondChanceExceptions) {
     debug_ipc::UpdateGlobalSettingsRequest request;
     auto updates = ParseExceptionStrategyUpdates(store.GetList(setting_name));

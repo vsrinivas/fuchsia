@@ -233,10 +233,16 @@ void PopLogEntry(LogCategory category, const FileLineFunction& location, const s
     gCurrentSlot = nullptr;
   }
 
+#if defined(__Fuchsia__)
+  for (auto& log : logs) {
+    FX_LOGS(DEBUG) << log;
+  }
+#else
   for (auto& log : logs) {
     fprintf(stderr, "\r%s\r\n", log.c_str());
   }
   fflush(stderr);
+#endif
 }
 
 void FlushLogEntries() {
@@ -249,10 +255,16 @@ void FlushLogEntries() {
     gLogMutex.unlock();
   }
 
+#if defined(__Fuchsia__)
+  for (auto& log : logs) {
+    FX_LOGS(DEBUG) << "LOG: " << log;
+  }
+#else
   for (auto& log : logs) {
     fprintf(stderr, "\rLOG: %s\r\n", log.c_str());
   }
   fflush(stderr);
+#endif
 }
 
 const char* LogCategoryToString(LogCategory category) {

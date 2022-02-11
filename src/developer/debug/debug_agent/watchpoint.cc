@@ -42,9 +42,9 @@ enum class WarningType {
 void Warn(debug::FileLineFunction origin, WarningType type, zx_koid_t thread_koid,
           uint64_t address) {
   const char* verb = type == WarningType::kInstall ? "install" : "uninstall";
-  printf("[%s:%d][%s] Could not %s HW breakpoint for thread %u at %" PRIX64, origin.file().c_str(),
-         origin.line(), origin.function().c_str(), verb, static_cast<uint32_t>(thread_koid),
-         address);
+  FX_LOGS(WARNING) << fxl::StringPrintf(
+      "[%s:%d][%s] Could not %s HW breakpoint for thread %u at %" PRIX64, origin.file().c_str(),
+      origin.line(), origin.function().c_str(), verb, static_cast<uint32_t>(thread_koid), address);
 
   fflush(stdout);
 }

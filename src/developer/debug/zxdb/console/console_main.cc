@@ -191,7 +191,6 @@ int ConsoleMain(int argc, const char* argv[]) {
 
     debug::SetLogCategories({debug::LogCategory::kAll});
     if (options.debug_mode) {
-      debug::SetDebugMode(true);
       session.system().settings().SetBool(ClientSettings::System::kDebugMode, true);
     }
 
