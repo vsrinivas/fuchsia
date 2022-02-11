@@ -332,7 +332,7 @@ fuchsia_unittest_component(
 
 fuchsia_test_component(
     "use_h264_multi_decoder_concurrent_stream_switching_test_v2") {
-  manifest = "use_media_decoder/meta/use_h264_multi_decoder_concurrent_stream_switching_test.cmx"
+  manifest = "use_media_decoder/meta/use_h264_multi_decoder_concurrent_stream_switching_test.cml"
   deps = [
     ":bear_h264",
     "//src/media/codec:codec_factory",
