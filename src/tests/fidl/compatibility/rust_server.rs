@@ -6,10 +6,12 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fidl_test_compatibility::{
         EchoEchoArraysWithErrorResult, EchoEchoMinimalWithErrorResult,
-        EchoEchoStructWithErrorResult, EchoEchoTableWithErrorResult,
-        EchoEchoVectorsWithErrorResult, EchoEchoXunionsWithErrorResult, EchoEvent, EchoMarker,
-        EchoProxy, EchoRequest, EchoRequestStream, RespondWith,
+        EchoEchoNamedStructWithErrorResult, EchoEchoStructWithErrorResult,
+        EchoEchoTableWithErrorResult, EchoEchoVectorsWithErrorResult,
+        EchoEchoXunionsWithErrorResult, EchoEvent, EchoMarker, EchoProxy, EchoRequest,
+        EchoRequestStream, RespondWith,
     },
+    fidl_fidl_test_imported::WantResponse,
     fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -305,6 +307,76 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                         };
                         responder.send(&mut result).context("Error responding")?;
                     }
+                }
+
+                EchoRequest::EchoNamedStruct { mut value, forward_to_server, responder } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        value = echo
+                            .echo_named_struct(&mut value, "")
+                            .await
+                            .context("Error calling echo_named_struct on proxy")?;
+                        drop(app);
+                    }
+                    responder.send(&mut value).context("Error responding")?;
+                }
+                EchoRequest::EchoNamedStructWithError {
+                    mut value,
+                    result_err,
+                    forward_to_server,
+                    result_variant,
+                    responder,
+                } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        let mut result = echo
+                            .echo_named_struct_with_error(
+                                &mut value,
+                                result_err,
+                                "",
+                                result_variant,
+                            )
+                            .await
+                            .context("Error calling echo_named_struct_with_error on proxy")?;
+                        drop(app);
+                        responder.send(&mut result).context("Error responding")?;
+                    } else {
+                        let mut result = if let WantResponse::Err = result_variant {
+                            EchoEchoNamedStructWithErrorResult::Err(result_err)
+                        } else {
+                            EchoEchoNamedStructWithErrorResult::Ok(value)
+                        };
+                        responder.send(&mut result).context("Error responding")?;
+                    }
+                }
+                EchoRequest::EchoNamedStructNoRetVal {
+                    mut value,
+                    forward_to_server,
+                    control_handle,
+                } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        echo.echo_named_struct_no_ret_val(&mut value, "")
+                            .context("Error sending echo_named_struct_no_ret_val to proxy")?;
+                        let mut event_stream = echo.take_event_stream();
+                        if let EchoEvent::OnEchoNamedEvent { value: response_val } = event_stream
+                            .try_next()
+                            .await
+                            .context("Error getting event response from proxy")?
+                            .ok_or_else(|| format_err!("Proxy sent no events"))?
+                        {
+                            value = response_val;
+                        } else {
+                            panic!("Unexpected event type");
+                        }
+                        drop(app);
+                    }
+                    control_handle
+                        .send_on_echo_named_event(&mut value)
+                        .context("Error responding with event")?;
                 }
             }
             Ok(())

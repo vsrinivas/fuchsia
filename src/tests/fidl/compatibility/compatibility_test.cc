@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/compatibility/cpp/fidl.h>
+#include <fidl/test/imported/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
@@ -1501,6 +1502,127 @@ TEST(Struct, EchoStructNoRetval) {
     loop.Run();
     ASSERT_TRUE(event_received);
     ExpectEq(sent_clone, resp_clone);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (struct_no_ret)"] = true;
+  });
+}
+
+TEST(Struct, EchoNamedStruct) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (struct)"] =
+        false;
+    fidl::test::imported::SimpleStruct sent;
+    sent.f1 = true;
+    sent.f2 = 1;
+
+    fidl::test::imported::SimpleStruct sent_clone;
+    sent.Clone(&sent_clone);
+    fidl::test::imported::SimpleStruct resp_clone;
+    bool called_back = false;
+    proxy->EchoNamedStruct(
+        std::move(sent), server_url,
+        [&loop, &resp_clone, &called_back](fidl::test::imported::SimpleStruct resp) {
+          ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
+          called_back = true;
+          loop.Quit();
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    EXPECT_EQ(sent_clone.f1, resp_clone.f1);
+    EXPECT_EQ(sent_clone.f2, resp_clone.f2);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (struct)"] =
+        true;
+  });
+}
+
+TEST(Struct, EchoNamedStructWithErrorSuccessCase) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (struct result success)"] = false;
+    fidl::test::imported::SimpleStruct sent;
+    sent.f1 = false;
+    sent.f2 = 2;
+    const uint32_t err = 12;
+
+    fidl::test::imported::SimpleStruct sent_clone;
+    sent.Clone(&sent_clone);
+
+    fidl::test::imported::SimpleStruct resp_clone;
+    bool called_back = false;
+    proxy->EchoNamedStructWithError(
+        std::move(sent), err, server_url, fidl::test::imported::WantResponse::SUCCESS,
+        [&loop, &resp_clone,
+         &called_back](fidl::test::compatibility::Echo_EchoNamedStructWithError_Result resp) {
+          ASSERT_TRUE(resp.is_response());
+          ASSERT_EQ(ZX_OK, resp.response().value.Clone(&resp_clone));
+          called_back = true;
+          loop.Quit();
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    EXPECT_EQ(sent_clone.f1, resp_clone.f1);
+    EXPECT_EQ(sent_clone.f2, resp_clone.f2);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (struct result success)"] = true;
+  });
+}
+
+TEST(Struct, EchoNamedStructWithErrorErrorCase) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (struct result error)"] = false;
+    fidl::test::imported::SimpleStruct sent;
+    sent.f1 = true;
+    sent.f2 = 3;
+    const uint32_t err = 13;
+
+    bool called_back = false;
+    proxy->EchoNamedStructWithError(
+        std::move(sent), err, server_url, fidl::test::imported::WantResponse::ERR,
+        [&loop, &err,
+         &called_back](fidl::test::compatibility::Echo_EchoNamedStructWithError_Result resp) {
+          ASSERT_TRUE(resp.is_err());
+          ASSERT_EQ(err, resp.err());
+          called_back = true;
+          loop.Quit();
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (struct result error)"] = true;
+  });
+}
+
+TEST(Struct, EchoNamedStructNoRetval) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (struct_no_ret)"] = false;
+    fidl::test::imported::SimpleStruct sent;
+    sent.f1 = false;
+    sent.f2 = 4;
+
+    fidl::test::imported::SimpleStruct sent_clone;
+    sent.Clone(&sent_clone);
+    fidl::test::imported::SimpleStruct resp_clone;
+    bool event_received = false;
+    proxy.events().OnEchoNamedEvent = [&loop, &resp_clone,
+                                       &event_received](fidl::test::imported::SimpleStruct resp) {
+      resp.Clone(&resp_clone);
+      event_received = true;
+      loop.Quit();
+    };
+    proxy->EchoNamedStructNoRetVal(std::move(sent), server_url);
+    loop.Run();
+    ASSERT_TRUE(event_received);
+    EXPECT_EQ(sent_clone.f1, resp_clone.f1);
+    EXPECT_EQ(sent_clone.f2, resp_clone.f2);
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (struct_no_ret)"] = true;
   });

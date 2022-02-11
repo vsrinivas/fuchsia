@@ -1,0 +1,38 @@
+library fidl.test.imported;
+
+type WantResponse = strict enum {
+    SUCCESS = 1;
+    ERR = 2;
+};
+
+type SimpleStruct = struct {
+    f1 bool;
+    f2 uint16;
+};
+
+// If `forward_to_server` is empty, just returns `value`.
+// If `forward_to_server` is not empty, it is treated as the URL of a server
+// which implements this interface. The server that recieves the non-empty
+// `forward_to_server` arg acts as a proxy for that other server.
+// For the error variants: if should_error is true, the provided err result
+// error is sent, otherwise the response variant is sent.
+type RequestStruct = struct {
+    value SimpleStruct;
+    forward_to_server string;
+};
+
+type ResponseStruct = struct {
+    value SimpleStruct;
+};
+
+type EventTriggeringRequestStruct = struct {
+    value SimpleStruct;
+    forward_to_server string;
+};
+
+type ErrorableRequestStruct = struct {
+    value SimpleStruct;
+    result_err uint32;
+    forward_to_server string;
+    result_variant WantResponse;
+};

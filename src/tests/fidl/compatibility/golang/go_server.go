@@ -18,6 +18,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	"fidl/fidl/test/compatibility"
+	"fidl/fidl/test/imported"
 	"fidl/fuchsia/io"
 	"fidl/fuchsia/sys"
 )
@@ -357,6 +358,79 @@ func (echo *echoImpl) EchoXunionsWithError(_ fidl.Context, value []compatibility
 		return compatibility.EchoEchoXunionsWithErrorResult{}, err
 	}
 	return response, nil
+}
+
+func (echo *echoImpl) EchoNamedStruct(_ fidl.Context, value imported.SimpleStruct, forwardURL string) (imported.SimpleStruct, error) {
+	if forwardURL == "" {
+		return value, nil
+	}
+	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", forwardURL, err)
+		return imported.SimpleStruct{}, err
+	}
+	response, err := echoWithCtxInterface.EchoNamedStruct(context.Background(), value, "")
+	if err != nil {
+		log.Printf("EchoNamedStruct failed: %s", err)
+		return imported.SimpleStruct{}, err
+	}
+	return response, nil
+}
+
+func (echo *echoImpl) EchoNamedStructWithError(_ fidl.Context, value imported.SimpleStruct, resultErr uint32, forwardURL string, resultVariant imported.WantResponse) (compatibility.EchoEchoNamedStructWithErrorResult, error) {
+	if forwardURL == "" {
+		if resultVariant == imported.WantResponseErr {
+			return compatibility.EchoEchoNamedStructWithErrorResultWithErr(resultErr), nil
+		} else {
+			return compatibility.EchoEchoNamedStructWithErrorResultWithResponse(imported.ResponseStruct{
+				Value: value,
+			}), nil
+		}
+	}
+	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", forwardURL, err)
+		return compatibility.EchoEchoNamedStructWithErrorResult{}, err
+	}
+	response, err := echoWithCtxInterface.EchoNamedStructWithError(context.Background(), value, resultErr, "", resultVariant)
+	if err != nil {
+		log.Printf("EchoNamedStruct failed: %s", err)
+		return compatibility.EchoEchoNamedStructWithErrorResult{}, err
+	}
+	return response, nil
+}
+
+func (echo *echoImpl) EchoNamedStructNoRetVal(_ fidl.Context, value imported.SimpleStruct, forwardURL string) error {
+	if forwardURL != "" {
+		echoWithCtxInterface, err := echo.getServer(forwardURL)
+		if err != nil {
+			log.Printf("Connecting to %s failed: %s", forwardURL, err)
+			return err
+		}
+		go func() {
+			for {
+				value, err := echoWithCtxInterface.ExpectOnEchoNamedEvent(context.Background())
+				if err != nil {
+					log.Fatalf("ExpectOnEchoNamedEvent failed: %s while communicating with %s", err, forwardURL)
+					return
+				}
+				mu.Lock()
+				for pxy := range mu.proxies {
+					_ = pxy.OnEchoNamedEvent(value)
+				}
+				mu.Unlock()
+				break
+			}
+		}()
+		echoWithCtxInterface.EchoNamedStructNoRetVal(context.Background(), value, "")
+	} else {
+		mu.Lock()
+		for pxy := range mu.proxies {
+			_ = pxy.OnEchoNamedEvent(value)
+		}
+		mu.Unlock()
+	}
+	return nil
 }
 
 var mu struct {

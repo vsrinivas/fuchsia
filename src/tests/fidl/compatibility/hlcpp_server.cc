@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <string>
 
+#include "fidl/test/imported/cpp/fidl.h"
 #include "src/tests/fidl/compatibility/hlcpp_client_app.h"
 
 namespace fidl {
@@ -438,6 +439,92 @@ class EchoServerApp : public Echo {
     }
   }
 
+  void EchoNamedStruct(imported::SimpleStruct value, std::string forward_to_server,
+                       EchoNamedStructCallback callback) override {
+    if (!forward_to_server.empty()) {
+      EchoClientApp app;
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      app.echo()->EchoNamedStruct(std::move(value), "",
+                                  [this, &called_back, &callback](imported::SimpleStruct resp) {
+                                    called_back = true;
+                                    callback(std::move(resp));
+                                    loop_->Quit();
+                                  });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      callback(std::move(value));
+    }
+  }
+
+  void EchoNamedStructWithError(imported::SimpleStruct value, uint32_t err,
+                                std::string forward_to_server,
+                                imported::WantResponse result_variant,
+                                EchoNamedStructWithErrorCallback callback) override {
+    if (!forward_to_server.empty()) {
+      EchoClientApp app;
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      app.echo()->EchoNamedStructWithError(
+          std::move(value), std::move(err), "", result_variant,
+          [this, &called_back, &callback](Echo_EchoNamedStructWithError_Result result) {
+            called_back = true;
+            callback(std::move(result));
+            loop_->Quit();
+          });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      Echo_EchoNamedStructWithError_Result result;
+      if (result_variant == imported::WantResponse::ERR) {
+        result.set_err(err);
+      } else {
+        result.set_response(imported::ResponseStruct{std::move(value)});
+      }
+      callback(std::move(result));
+    }
+  }
+
+  void EchoNamedStructNoRetVal(imported::SimpleStruct value,
+                               std::string forward_to_server) override {
+    if (!forward_to_server.empty()) {
+      std::unique_ptr<EchoClientApp> app(new EchoClientApp);
+      app->echo().set_error_handler([this, forward_to_server](zx_status_t status) {
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app->Start(forward_to_server);
+      app->echo().events().OnEchoNamedEvent = [this](imported::SimpleStruct resp) {
+        this->HandleOnEchoNamedEvent(std::move(resp));
+      };
+      app->echo()->EchoNamedStructNoRetVal(std::move(value), "");
+      client_apps_.push_back(std::move(app));
+    } else {
+      for (const auto& binding : bindings_.bindings()) {
+        imported::SimpleStruct to_send;
+        value.Clone(&to_send);
+        binding->events().OnEchoNamedEvent(std::move(to_send));
+      }
+    }
+  }
+
  private:
   void HandleEchoEvent(Struct value) {
     for (const auto& binding : bindings_.bindings()) {
@@ -449,6 +536,13 @@ class EchoServerApp : public Echo {
   void HandleEchoMinimalEvent() {
     for (const auto& binding : bindings_.bindings()) {
       binding->events().EchoMinimalEvent();
+    }
+  }
+  void HandleOnEchoNamedEvent(imported::SimpleStruct value) {
+    for (const auto& binding : bindings_.bindings()) {
+      imported::SimpleStruct to_send;
+      value.Clone(&to_send);
+      binding->events().OnEchoNamedEvent(std::move(to_send));
     }
   }
 

@@ -14,7 +14,7 @@ go_library("lib") {
   deps = [
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component",
-    "//src/tests/fidl/compatibility:fidl($go_toolchain)",
+    "//src/tests/fidl/compatibility:fidl_service($go_toolchain)",
   ]
   sources = [ "go_server.go" ]
 }

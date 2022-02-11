@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 library fidl.test.compatibility;
 
+using fidl.test.imported as imp;
+
 // This is not a reference to library zx to avoid complexity in the test data.
 // A local handle is defined here that contains subtypes that this test cares
 // about.
@@ -669,4 +671,9 @@ protocol Echo {
     }) -> (resource struct {
         value vector<AllTypesXunion>;
     }) error default_enum;
+
+    EchoNamedStruct(imp.RequestStruct) -> (imp.ResponseStruct);
+    EchoNamedStructWithError(imp.ErrorableRequestStruct) -> (imp.ResponseStruct) error uint32;
+    EchoNamedStructNoRetVal(imp.EventTriggeringRequestStruct);
+    -> OnEchoNamedEvent(imp.ResponseStruct);
 };

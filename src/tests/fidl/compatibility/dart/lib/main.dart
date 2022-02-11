@@ -9,6 +9,7 @@ import 'dart:async';
 
 import 'package:fidl/fidl.dart' show InterfaceRequest, MethodException;
 import 'package:fidl_fidl_test_compatibility/fidl_async.dart';
+import 'package:fidl_fidl_test_imported/fidl_async.dart' as imported;
 import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:fuchsia_services/services.dart';
 
@@ -16,6 +17,8 @@ class EchoImpl extends Echo {
   final _binding = EchoBinding();
   final _echoEventStreamController = StreamController<Struct>();
   final _echoMinimalEventStreamController = StreamController<void>();
+  final _onEchoNamedEventStreamController =
+      StreamController<imported.SimpleStruct>();
 
   // Saves references to proxies from which we're expecting events.
   Map<String, EchoProxy> proxies = {};
@@ -227,6 +230,58 @@ class EchoImpl extends Echo {
       return value;
     }
   }
+
+  @override
+  Future<imported.SimpleStruct> echoNamedStruct(
+      imported.SimpleStruct value, String forwardToServer) async {
+    if (forwardToServer != null && forwardToServer.isNotEmpty) {
+      return (await proxy(forwardToServer)).echoNamedStruct(value, '');
+    }
+    return value;
+  }
+
+  @override
+  Future<imported.SimpleStruct> echoNamedStructWithError(
+      imported.SimpleStruct value,
+      int err,
+      String forwardToServer,
+      imported.WantResponse resultVariant) async {
+    if (forwardToServer != null && forwardToServer.isNotEmpty) {
+      return (await proxy(forwardToServer))
+          .echoNamedStructWithError(value, err, '', resultVariant);
+    }
+    if (resultVariant == imported.WantResponse.err) {
+      throw MethodException(err);
+    } else {
+      return value;
+    }
+  }
+
+  void _handleOnEchoNamedEvent(imported.SimpleStruct value, String serverUrl) {
+    _onEchoNamedEventStreamController.add(value);
+    // Not technically safe if there's more than one outstanding event on this
+    // proxy, but that shouldn't happen in the existing test.
+    proxies.remove(serverUrl);
+  }
+
+  @override
+  Future<void> echoNamedStructNoRetVal(
+      imported.SimpleStruct value, String forwardToServer) async {
+    if (forwardToServer != null && forwardToServer.isNotEmpty) {
+      final echo = await proxy(forwardToServer);
+      // Keep echo around until we process the expected event.
+      proxies[forwardToServer] = echo;
+      echo.onEchoNamedEvent.listen((imported.SimpleStruct val) {
+        _handleOnEchoNamedEvent(val, forwardToServer);
+      });
+      return echo.echoNamedStructNoRetVal(value, '');
+    }
+    return _onEchoNamedEventStreamController.add(value);
+  }
+
+  @override
+  Stream<imported.SimpleStruct> get onEchoNamedEvent =>
+      _onEchoNamedEventStreamController.stream;
 }
 
 void main(List<String> args) {

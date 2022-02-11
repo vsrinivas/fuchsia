@@ -8,11 +8,17 @@ import("//build/dart/dart_library.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 
-# The protocol used in the test.
-fidl("fidl") {
-  name = "fidl.test.compatibility"
+# Import definitions into the protocol being tested.
+fidl("fidl_import") {
+  name = "fidl.test.imported"
+  sources = [ "compatibility_imported.test.fidl" ]
+}
 
+# The protocol used in the test.
+fidl("fidl_service") {
+  name = "fidl.test.compatibility"
   sources = [ "compatibility_service.test.fidl" ]
+  public_deps = [ ":fidl_import" ]
 }
 
 # Shared between the hlcpp test server and the test harness
@@ -24,7 +30,7 @@ source_set("hlcpp_client_app") {
   ]
 
   deps = [
-    ":fidl",
+    ":fidl_service",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/zx",
   ]
@@ -39,7 +45,7 @@ executable("hlcpp_server") {
   sources = [ "hlcpp_server.cc" ]
 
   deps = [
-    ":fidl",
+    ":fidl_service",
     ":hlcpp_client_app",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -64,7 +70,7 @@ executable("llcpp_server") {
   sources = [ "llcpp_server.cc" ]
 
   deps = [
-    ":fidl_llcpp",
+    ":fidl_service_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
@@ -89,7 +95,8 @@ rustc_binary("rust_server") {
   source_root = "rust_server.rs"
 
   deps = [
-    ":fidl-rustc",
+    ":fidl_import-rustc",
+    ":fidl_service-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -117,7 +124,8 @@ dart_library("dart_server") {
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_services",
     "//sdk/fidl/fuchsia.sys",
-    "//src/tests/fidl/compatibility:fidl",
+    "//src/tests/fidl/compatibility:fidl_import",
+    "//src/tests/fidl/compatibility:fidl_service",
   ]
 }
 
@@ -137,7 +145,7 @@ executable("fidl_compatibility_test_executable") {
   sources = [ "compatibility_test.cc" ]
 
   deps = [
-    ":fidl",
+    ":fidl_service",
     ":hlcpp_client_app",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fidl.test.compatibility/cpp/wire.h>
+#include <fidl/fidl.test.imported/cpp/wire.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -17,6 +18,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+
+#include "fidl/fidl.test.imported/cpp/wire_types.h"
 
 constexpr const char kEchoInterfaceName[] = "fidl.test.compatibility.Echo";
 
@@ -51,6 +54,28 @@ class EchoClientApp {
   fidl::WireResult<Echo::EchoStruct> EchoStruct(wire::Struct value,
                                                 ::fidl::StringView forward_to_server) {
     return client_->EchoStruct(std::move(value), std::move(forward_to_server));
+  }
+
+  fidl::WireResult<Echo::EchoNamedStruct> EchoNamedStruct(
+      fidl_test_imported::wire::SimpleStruct value, ::fidl::StringView forward_to_server) {
+    return client_->EchoNamedStruct(std::move(value), std::move(forward_to_server));
+  }
+
+  fidl::WireResult<Echo::EchoNamedStructWithError> EchoNamedStructWithError(
+      fidl_test_imported::wire::SimpleStruct value, uint32_t err,
+      ::fidl::StringView forward_to_server, fidl_test_imported::wire::WantResponse result_variant) {
+    return client_->EchoNamedStructWithError(std::move(value), err, std::move(forward_to_server),
+                                             result_variant);
+  }
+
+  zx_status_t EchoNamedStructNoRetVal(fidl_test_imported::wire::SimpleStruct value,
+                                      ::fidl::StringView forward_to_server,
+                                      fidl::WireSyncEventHandler<Echo>& event_handler) {
+    auto result = client_->EchoNamedStructNoRetVal(std::move(value), std::move(forward_to_server));
+    if (result.status() != ZX_OK) {
+      return result.status();
+    }
+    return client_.HandleOneEvent(event_handler).status();
   }
 
   fidl::WireResult<Echo::EchoStructWithError> EchoStructWithError(
@@ -406,6 +431,77 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.FormatDescription().c_str());
       completer.Reply(std::move(result->result));
+    }
+  }
+
+  void EchoNamedStruct(EchoNamedStructRequestView request,
+                       EchoNamedStructCompleter::Sync& completer) override {
+    if (request->forward_to_server.empty()) {
+      completer.Reply(std::move(request->value));
+    } else {
+      EchoClientApp app(request->forward_to_server);
+      auto result = app.EchoNamedStruct(std::move(request->value), "");
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
+                    result.FormatDescription().c_str());
+      completer.Reply(std::move(result.Unwrap()->value));
+    }
+  }
+
+  void EchoNamedStructWithError(EchoNamedStructWithErrorRequestView request,
+                                EchoNamedStructWithErrorCompleter::Sync& completer) override {
+    if (request->forward_to_server.empty()) {
+      if (request->result_variant == fidl_test_imported::wire::WantResponse::kErr) {
+        completer.ReplyError(request->result_err);
+      } else {
+        completer.ReplySuccess(std::move(request->value));
+      }
+    } else {
+      EchoClientApp app(request->forward_to_server);
+      auto result = app.EchoNamedStructWithError(std::move(request->value), request->result_err, "",
+                                                 request->result_variant);
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
+                    result.FormatDescription().c_str());
+      completer.Reply(std::move(result->result));
+    }
+  }
+
+  void EchoNamedStructNoRetVal(EchoNamedStructNoRetValRequestView request,
+                               EchoNamedStructNoRetValCompleter::Sync&) override {
+    if (request->forward_to_server.empty()) {
+      fidl::Result result =
+          fidl::WireSendEvent(server_binding_.value())->OnEchoNamedEvent(std::move(request->value));
+      ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
+                    result.FormatDescription().c_str());
+    } else {
+      class EventHandler : public fidl::WireSyncEventHandler<Echo> {
+       public:
+        explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
+
+        fidl::Result result() const { return result_; }
+
+        void OnEchoNamedEvent(fidl::WireEvent<Echo::OnEchoNamedEvent>* event) override {
+          result_ = fidl::WireSendEvent(connection_->server_binding_.value())
+                        ->OnEchoNamedEvent(std::move(event->value));
+        }
+
+        zx_status_t Unknown() override {
+          ZX_PANIC("Received unexpected event");
+          return ZX_ERR_INVALID_ARGS;
+        }
+
+       private:
+        EchoConnection* const connection_;
+        fidl::Result result_ = fidl::Result::Ok();
+      };
+
+      EchoClientApp app(request->forward_to_server);
+      EventHandler event_handler(this);
+      zx_status_t status =
+          app.EchoNamedStructNoRetVal(std::move(request->value), "", event_handler);
+      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
+                    zx_status_get_string(status));
+      ZX_ASSERT_MSG(event_handler.result().ok(), "Replying with event failed indirect: %s",
+                    event_handler.result().FormatDescription().c_str());
     }
   }
 
