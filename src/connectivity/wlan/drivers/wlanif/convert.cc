@@ -502,8 +502,8 @@ wlan_common::WlanMacRole ConvertMacRole(wlan_mac_role_t role) {
   }
 }
 
-void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
-                             const wlan_fullmac_band_capabilities_t& band) {
+void ConvertBandCapability(wlan_mlme::BandCapabilities* fidl_band,
+                           const wlan_fullmac_band_capability_t& band) {
   fidl_band->band_id = ::wlan::common::BandToFidl(band.band_id);
 
   // basic_rates

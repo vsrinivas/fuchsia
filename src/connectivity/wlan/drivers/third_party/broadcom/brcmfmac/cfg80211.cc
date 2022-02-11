@@ -3909,7 +3909,7 @@ static uint16_t brcmf_get_mcs_map(uint32_t nchain, uint16_t supp) {
   return mcs_map;
 }
 
-static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capabilities_t* band,
+static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capability_t* band,
                                 uint32_t bw_cap[2], uint32_t ldpc_cap, uint32_t nchain,
                                 uint32_t max_ampdu_len_exp) {
   zx_status_t status;
@@ -3968,7 +3968,7 @@ static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capabili
   memset(&band->ht_caps.supported_mcs_set.bytes[0], 0xff, nchain);
 }
 
-static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capabilities_t* band,
+static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capability_t* band,
                                  uint32_t bw_cap[2], uint32_t nchain, uint32_t ldpc_cap,
                                  uint32_t max_ampdu_len_exp) {
   uint16_t mcs_map;
@@ -4076,7 +4076,7 @@ static void brcmf_dump_80211_vht_caps(ieee80211_vht_capabilities_t* caps) {
                        caps->supported_vht_mcs_and_nss_set);
 }
 
-static void brcmf_dump_if_band_caps(wlan_fullmac_band_capabilities_t* band) {
+static void brcmf_dump_if_band_cap(wlan_fullmac_band_capability_t* band) {
   char band_id_str[32];
   switch (band->band_id) {
     case WLAN_INFO_BAND_TWO_GHZ:
@@ -4137,8 +4137,8 @@ static void brcmf_dump_if_query_info(wlan_fullmac_query_info_t* info) {
   BRCMF_DBG_UNFILTERED("   feature(s): %s%s",
                        info->features & WLAN_FULLMAC_FEATURE_DMA ? "DMA " : "",
                        info->features & WLAN_FULLMAC_FEATURE_SYNTH ? "SYNTH " : "");
-  for (unsigned i = 0; i < info->num_bands; i++) {
-    brcmf_dump_if_band_caps(&info->bands[i]);
+  for (unsigned i = 0; i < info->band_cap_count; i++) {
+    brcmf_dump_if_band_cap(&info->band_cap_list[i]);
   }
 }
 
@@ -4191,17 +4191,17 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
     return;
   }
 
-  wlan_fullmac_band_capabilities_t* band_2ghz = nullptr;
-  wlan_fullmac_band_capabilities_t* band_5ghz = nullptr;
+  wlan_fullmac_band_capability_t* band_2ghz = nullptr;
+  wlan_fullmac_band_capability_t* band_5ghz = nullptr;
 
   /* first entry in bandlist is number of bands */
-  info->num_bands = bandlist[0];
-  for (unsigned i = 1; i <= info->num_bands && i < std::size(bandlist); i++) {
-    if (i > std::size(info->bands)) {
+  info->band_cap_count = bandlist[0];
+  for (unsigned i = 1; i <= info->band_cap_count && i < std::size(bandlist); i++) {
+    if (i > std::size(info->band_cap_list)) {
       BRCMF_ERR("insufficient space in query response for all bands, truncating");
       continue;
     }
-    wlan_fullmac_band_capabilities_t* band = &info->bands[i - 1];
+    wlan_fullmac_band_capability_t* band = &info->band_cap_list[i - 1];
     if (bandlist[i] == WLC_BAND_2G) {
       band->band_id = WLAN_INFO_BAND_TWO_GHZ;
       band->num_rates = std::min<size_t>(WLAN_INFO_BAND_INFO_MAX_RATES, wl_g_rates_size);
@@ -4237,7 +4237,7 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
     cfg->d11inf.decchspec(&ch);
 
     // Find the appropriate band
-    wlan_fullmac_band_capabilities_t* band = nullptr;
+    wlan_fullmac_band_capability_t* band = nullptr;
     if (ch.band == BRCMU_CHAN_BAND_2G) {
       band = band_2ghz;
     } else if (ch.band == BRCMU_CHAN_BAND_5G) {

@@ -619,9 +619,9 @@ void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
   fidl_resp.role = ConvertMacRole(query_info_.role);
 
   // bands
-  fidl_resp.bands.resize(query_info_.num_bands);
-  for (size_t ndx = 0; ndx < query_info_.num_bands; ndx++) {
-    ConvertBandCapabilities(&fidl_resp.bands[ndx], query_info_.bands[ndx]);
+  fidl_resp.bands.resize(query_info_.band_cap_count);
+  for (size_t ndx = 0; ndx < query_info_.band_cap_count; ndx++) {
+    ConvertBandCapability(&fidl_resp.bands[ndx], query_info_.band_cap_list[ndx]);
   }
 
   // driver features flag

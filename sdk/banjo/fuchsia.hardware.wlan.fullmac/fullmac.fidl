@@ -400,7 +400,7 @@ type WlanFullmacSaeHandshakeInd = struct {
     peer_sta_address ieee80211.MacAddr;
 };
 
-type WlanFullmacBandCapabilities = struct {
+type WlanFullmacBandCapability = struct {
     /// Values from enum Band (WLAN_BAND_*)
     band_id uint8;
     num_rates uint64;
@@ -427,8 +427,9 @@ type WlanFullmacQueryInfo = struct {
     role fuchsia.wlan.common.WlanMacRole;
     /// WLAN_FULLMAC_FEATURE_*
     features uint32;
-    num_bands uint64;
-    bands array<WlanFullmacBandCapabilities, fuchsia.hardware.wlan.phyinfo.WLAN_INFO_MAX_BANDS>;
+    band_cap_list
+            array<WlanFullmacBandCapability, fuchsia.hardware.wlan.phyinfo.WLAN_INFO_MAX_BANDS>;
+    band_cap_count uint8;
     /// WLAN_DRIVER_FEATURE_*
     driver_features uint32;
 };

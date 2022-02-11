@@ -40,16 +40,16 @@ TEST_F(SimTest, ClientIfcQuery) {
   EXPECT_EQ(ifc_query_result.role, WLAN_MAC_ROLE_CLIENT);
 
   // Number of bands shouldn't exceed the maximum allowable
-  ASSERT_LE(ifc_query_result.num_bands, (size_t)WLAN_INFO_MAX_BANDS);
+  ASSERT_LE(ifc_query_result.band_cap_count, (size_t)WLAN_INFO_MAX_BANDS);
 
-  for (size_t band = 0; band < ifc_query_result.num_bands; band++) {
-    wlan_fullmac_band_capabilities* band_info = &ifc_query_result.bands[band];
+  for (size_t band = 0; band < ifc_query_result.band_cap_count; band++) {
+    wlan_fullmac_band_capability* band_cap = &ifc_query_result.band_cap_list[band];
 
     // Band id should be in valid range
-    EXPECT_LE(band_info->band_id, WLAN_INFO_BAND_COUNT);
+    EXPECT_LE(band_cap->band_id, WLAN_INFO_BAND_COUNT);
 
     // Number of channels shouldn't exceed the maximum allowable
-    ASSERT_LE(band_info->num_channels, (size_t)WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
+    ASSERT_LE(band_cap->num_channels, (size_t)WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
   }
 
   // Verify driver features from if query.
