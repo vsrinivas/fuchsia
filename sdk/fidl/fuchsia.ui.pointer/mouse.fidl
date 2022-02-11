@@ -118,6 +118,12 @@ type MouseDeviceInfo = table {
 alias RelativeMotion = array<float32, 2>;
 
 /// A description of each sampled data point in a mouse event stream.
+///
+/// `MousePointerSample` may bundle multiple state changes into one event.
+/// For example, if user scrolls mouse wheel and presses the left buttton
+/// down at the same time, client may receive scroll and button state changes
+/// together in 1 event, or receive button change and scroll change in
+/// separate events.
 type MousePointerSample = table {
     /// An identifier for the mouse device that issues a mouse event stream.
     /// Required.
