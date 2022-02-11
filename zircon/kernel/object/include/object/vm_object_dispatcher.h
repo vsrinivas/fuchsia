@@ -51,13 +51,13 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
 
   // VmObjectDispatcher own methods.
   zx_status_t Read(VmAspace* current_aspace, user_out_ptr<char> user_data, size_t length,
-                   uint64_t offset);
+                   uint64_t offset, size_t* out_actual);
   zx_status_t ReadVector(VmAspace* current_aspace, user_out_iovec_t user_data, size_t length,
-                         uint64_t offset);
+                         uint64_t offset, size_t* out_actual);
   zx_status_t Write(VmAspace* current_aspace, user_in_ptr<const char> user_data, size_t length,
-                    uint64_t offset);
+                    uint64_t offset, size_t* out_actual);
   zx_status_t WriteVector(VmAspace* current_aspace, user_in_iovec_t user_data, size_t length,
-                          uint64_t offset);
+                          uint64_t offset, size_t* out_actual);
   zx_status_t SetSize(uint64_t);
   zx_status_t GetSize(uint64_t* size);
   zx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size, user_inout_ptr<void> buffer,

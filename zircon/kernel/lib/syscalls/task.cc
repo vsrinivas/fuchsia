@@ -356,7 +356,7 @@ void sys_process_exit(int64_t retcode) {
 
 // zx_status_t zx_process_read_memory
 zx_status_t sys_process_read_memory(zx_handle_t handle, zx_vaddr_t vaddr, user_out_ptr<void> buffer,
-                                    size_t buffer_size, user_out_ptr<size_t> _actual) {
+                                    size_t buffer_size, user_out_ptr<size_t> actual) {
   LTRACEF("vaddr 0x%" PRIxPTR ", size %zu\n", vaddr, buffer_size);
 
   if (!buffer)
@@ -397,19 +397,21 @@ zx_status_t sys_process_read_memory(zx_handle_t handle, zx_vaddr_t vaddr, user_o
     // Additionally, it is racy with the mapping going away.
     buffer_size = ktl::min(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
   }
-  zx_status_t st =
-      vmo->ReadUser(up->aspace().get(), buffer.reinterpret<char>(), offset, buffer_size);
+  size_t out_actual = 0;
+  zx_status_t st = vmo->ReadUser(up->aspace().get(), buffer.reinterpret<char>(), offset,
+                                 buffer_size, &out_actual);
   if (st != ZX_OK) {
+    // Do not write |out_actual| to |actual| on error
     return st;
   }
 
-  return _actual.copy_to_user(static_cast<size_t>(buffer_size));
+  return actual.copy_to_user(out_actual);
 }
 
 // zx_status_t zx_process_write_memory
 zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
                                      user_in_ptr<const void> buffer, size_t buffer_size,
-                                     user_out_ptr<size_t> _actual) {
+                                     user_out_ptr<size_t> actual) {
   LTRACEF("vaddr 0x%" PRIxPTR ", size %zu\n", vaddr, buffer_size);
 
   if (!gBootOptions->enable_debugging_syscalls) {
@@ -458,13 +460,15 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
     // Additionally, it is racy with the mapping going away.
     buffer_size = ktl::min(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
   }
-  zx_status_t st =
-      vmo->WriteUser(up->aspace().get(), buffer.reinterpret<const char>(), offset, buffer_size);
+  size_t out_actual = 0;
+  zx_status_t st = vmo->WriteUser(up->aspace().get(), buffer.reinterpret<const char>(), offset,
+                                  buffer_size, &out_actual);
   if (st != ZX_OK) {
+    // Do not write |out_actual| to |actual| on error~
     return st;
   }
 
-  return _actual.copy_to_user(static_cast<size_t>(buffer_size));
+  return actual.copy_to_user(out_actual);
 }
 
 // helper routine for sys_task_kill

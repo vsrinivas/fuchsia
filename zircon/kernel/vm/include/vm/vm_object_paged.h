@@ -144,9 +144,9 @@ class VmObjectPaged final : public VmObject {
   zx_status_t LookupContiguous(uint64_t offset, uint64_t len, paddr_t* out_paddr) override;
 
   zx_status_t ReadUser(VmAspace* current_aspace, user_out_ptr<char> ptr, uint64_t offset,
-                       size_t len) override;
+                       size_t len, size_t* out_actual) override;
   zx_status_t WriteUser(VmAspace* current_aspace, user_in_ptr<const char> ptr, uint64_t offset,
-                        size_t len) override;
+                        size_t len, size_t* out_actual) override;
 
   zx_status_t TakePages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) override;
   zx_status_t SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) override;

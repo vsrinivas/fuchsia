@@ -1173,12 +1173,16 @@ zx_status_t VmObjectPaged::LookupContiguous(uint64_t offset, uint64_t len, paddr
 }
 
 zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<char> ptr,
-                                    uint64_t offset, size_t len) {
+                                    uint64_t offset, size_t len, size_t* out_actual) {
   canary_.Assert();
 
+  if (out_actual != nullptr) {
+    *out_actual = 0;
+  }
+
   // read routine that uses copy_to_user
-  auto read_routine = [ptr, current_aspace](const char* src, size_t offset, size_t len,
-                                            Guard<Mutex>* guard) -> zx_status_t {
+  auto read_routine = [ptr, current_aspace, out_actual](const char* src, size_t offset, size_t len,
+                                                        Guard<Mutex>* guard) -> zx_status_t {
     auto copy_result = ptr.byte_offset(offset).copy_array_to_user_capture_faults(src, len);
 
     // If a fault has actually occurred, then we will have captured fault info that we can use to
@@ -1196,7 +1200,14 @@ zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<char>
     // produced no fault address, squash the error down to just "NOT_FOUND".
     // This is what the SoftFault error would have told us if we did try to
     // handle the fault and could not.
-    return copy_result.status == ZX_OK ? ZX_OK : ZX_ERR_NOT_FOUND;
+    if (copy_result.status != ZX_OK) {
+      return ZX_ERR_NOT_FOUND;
+    }
+
+    if (out_actual != nullptr) {
+      *out_actual += len;
+    }
+    return ZX_OK;
   };
 
   Guard<Mutex> guard{&lock_};
@@ -1205,12 +1216,16 @@ zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<char>
 }
 
 zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const char> ptr,
-                                     uint64_t offset, size_t len) {
+                                     uint64_t offset, size_t len, size_t* out_actual) {
   canary_.Assert();
 
+  if (out_actual != nullptr) {
+    *out_actual = 0;
+  }
+
   // write routine that uses copy_from_user
-  auto write_routine = [ptr, &current_aspace](char* dst, size_t offset, size_t len,
-                                              Guard<Mutex>* guard) -> zx_status_t {
+  auto write_routine = [ptr, &current_aspace, out_actual](char* dst, size_t offset, size_t len,
+                                                          Guard<Mutex>* guard) -> zx_status_t {
     auto copy_result = ptr.byte_offset(offset).copy_array_from_user_capture_faults(dst, len);
 
     // If a fault has actually occurred, then we will have captured fault info that we can use to
@@ -1228,7 +1243,14 @@ zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const
     // produced no fault address, squash the error down to just "NOT_FOUND".
     // This is what the SoftFault error would have told us if we did try to
     // handle the fault and could not.
-    return copy_result.status == ZX_OK ? ZX_OK : ZX_ERR_NOT_FOUND;
+    if (copy_result.status != ZX_OK) {
+      return ZX_ERR_NOT_FOUND;
+    }
+
+    if (out_actual != nullptr) {
+      *out_actual += len;
+    }
+    return ZX_OK;
   };
 
   Guard<Mutex> guard{&lock_};

@@ -168,7 +168,7 @@ uint32_t VmObject::share_count() const {
 }
 
 zx_status_t VmObject::ReadUserVector(VmAspace* current_aspace, user_out_iovec_t vec,
-                                     uint64_t offset, size_t len) {
+                                     uint64_t offset, size_t len, size_t* out_actual) {
   if (len == 0u) {
     return ZX_OK;
   }
@@ -179,18 +179,28 @@ zx_status_t VmObject::ReadUserVector(VmAspace* current_aspace, user_out_iovec_t 
     if (capacity > len) {
       capacity = len;
     }
-    zx_status_t status = ReadUser(current_aspace, ptr, offset, capacity);
+
+    size_t chunk_actual = 0;
+    zx_status_t status = ReadUser(current_aspace, ptr, offset, capacity, &chunk_actual);
+
+    // Always add |chunk_actual| since some bytes may have been transferred, even on error
+    if (out_actual != nullptr) {
+      *out_actual += chunk_actual;
+    }
     if (status != ZX_OK) {
       return status;
     }
-    offset += capacity;
-    len -= capacity;
+
+    DEBUG_ASSERT(chunk_actual == capacity);
+
+    offset += chunk_actual;
+    len -= chunk_actual;
     return len > 0 ? ZX_ERR_NEXT : ZX_ERR_STOP;
   });
 }
 
 zx_status_t VmObject::WriteUserVector(VmAspace* current_aspace, user_in_iovec_t vec,
-                                      uint64_t offset, size_t len) {
+                                      uint64_t offset, size_t len, size_t* out_actual) {
   if (len == 0u) {
     return ZX_OK;
   }
@@ -201,12 +211,22 @@ zx_status_t VmObject::WriteUserVector(VmAspace* current_aspace, user_in_iovec_t 
     if (capacity > len) {
       capacity = len;
     }
-    zx_status_t status = WriteUser(current_aspace, ptr, offset, capacity);
+
+    size_t chunk_actual = 0;
+    zx_status_t status = WriteUser(current_aspace, ptr, offset, capacity, &chunk_actual);
+
+    // Always add |chunk_actual| since some bytes may have been transferred, even on error
+    if (out_actual != nullptr) {
+      *out_actual += chunk_actual;
+    }
     if (status != ZX_OK) {
       return status;
     }
-    offset += capacity;
-    len -= capacity;
+
+    DEBUG_ASSERT(chunk_actual == capacity);
+
+    offset += chunk_actual;
+    len -= chunk_actual;
     return len > 0 ? ZX_ERR_NEXT : ZX_ERR_STOP;
   });
 }

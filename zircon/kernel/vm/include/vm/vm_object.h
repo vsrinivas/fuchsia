@@ -355,18 +355,22 @@ class VmObject : public VmHierarchyBase,
   }
 
   // read/write operators against user space pointers only
+  //
+  // The |out_actual| field will be set to the number of bytes successfully processed, even upon
+  // error. This allows for callers to still pass on this bytes transferred if a particular
+  // error was expected.
   virtual zx_status_t ReadUser(VmAspace* current_aspace, user_out_ptr<char> ptr, uint64_t offset,
-                               size_t len) {
+                               size_t len, size_t* out_actual) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   virtual zx_status_t ReadUserVector(VmAspace* current_aspace, user_out_iovec_t vec,
-                                     uint64_t offset, size_t len);
+                                     uint64_t offset, size_t len, size_t* out_actual);
   virtual zx_status_t WriteUser(VmAspace* current_aspace, user_in_ptr<const char> ptr,
-                                uint64_t offset, size_t len) {
+                                uint64_t offset, size_t len, size_t* out_actual) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   virtual zx_status_t WriteUserVector(VmAspace* current_aspace, user_in_iovec_t vec,
-                                      uint64_t offset, size_t len);
+                                      uint64_t offset, size_t len, size_t* out_actual);
 
   // Removes the pages from this vmo in the range [offset, offset + len) and returns
   // them in pages.  This vmo must be a paged vmo with no parent, and it cannot have any

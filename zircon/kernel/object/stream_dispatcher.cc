@@ -78,8 +78,7 @@ zx_status_t StreamDispatcher::ReadVector(VmAspace* current_aspace, user_out_iove
     seek_ += length;
   }
 
-  *out_actual = length;
-  return vmo_->ReadVector(current_aspace, user_data, length, offset);
+  return vmo_->ReadVector(current_aspace, user_data, length, offset, out_actual);
 }
 
 zx_status_t StreamDispatcher::ReadVectorAt(VmAspace* current_aspace, user_out_iovec_t user_data,
@@ -102,8 +101,7 @@ zx_status_t StreamDispatcher::ReadVectorAt(VmAspace* current_aspace, user_out_io
 
   size_t length = ktl::min(total_capacity, content_size - offset);
 
-  *out_actual = length;
-  return vmo_->ReadVector(current_aspace, user_data, length, offset);
+  return vmo_->ReadVector(current_aspace, user_data, length, offset, out_actual);
 }
 
 zx_status_t StreamDispatcher::WriteVector(VmAspace* current_aspace, user_in_iovec_t user_data,
@@ -142,8 +140,7 @@ zx_status_t StreamDispatcher::WriteVector(VmAspace* current_aspace, user_in_iove
     seek_ += length;
   }
 
-  *out_actual = length;
-  return vmo_->WriteVector(current_aspace, user_data, length, offset);
+  return vmo_->WriteVector(current_aspace, user_data, length, offset, out_actual);
 }
 
 zx_status_t StreamDispatcher::WriteVectorAt(VmAspace* current_aspace, user_in_iovec_t user_data,
@@ -173,8 +170,7 @@ zx_status_t StreamDispatcher::WriteVectorAt(VmAspace* current_aspace, user_in_io
 
   size_t length = ktl::min(total_capacity, content_size - offset);
 
-  *out_actual = length;
-  return vmo_->WriteVector(current_aspace, user_data, length, offset);
+  return vmo_->WriteVector(current_aspace, user_data, length, offset, out_actual);
 }
 
 zx_status_t StreamDispatcher::AppendVector(VmAspace* current_aspace, user_in_iovec_t user_data,
@@ -214,8 +210,7 @@ zx_status_t StreamDispatcher::AppendVector(VmAspace* current_aspace, user_in_iov
     seek_ = offset + length;
   }
 
-  *out_actual = length;
-  return vmo_->WriteVector(current_aspace, user_data, length, offset);
+  return vmo_->WriteVector(current_aspace, user_data, length, offset, out_actual);
 }
 
 zx_status_t StreamDispatcher::Seek(zx_stream_seek_origin_t whence, int64_t offset,
