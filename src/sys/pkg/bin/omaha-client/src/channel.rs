@@ -29,7 +29,7 @@ pub struct ChannelConfigs {
 }
 
 impl ChannelConfigs {
-    fn validate(self) -> Result<Self, io::Error> {
+    pub fn validate(&self) -> Result<(), io::Error> {
         let names: Vec<&str> = self.known_channels.iter().map(|c| c.name.as_str()).collect();
         if !names.iter().all(|n| Cohort::validate_name(n)) {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "invalid channel name"));
@@ -42,7 +42,7 @@ impl ChannelConfigs {
                 ));
             }
         }
-        Ok(self)
+        Ok(())
     }
 
     pub fn get_default_channel(&self) -> Option<ChannelConfig> {
@@ -133,10 +133,9 @@ fn get_configs_from<R>(reader: R) -> Result<ChannelConfigs, io::Error>
 where
     R: io::Read,
 {
-    let config_format = serde_json::from_reader(reader)?;
-    match config_format {
-        ChannelConfigFormats::Version1(configs) => configs.validate(),
-    }
+    let ChannelConfigFormats::Version1(configs) = serde_json::from_reader(reader)?;
+    let () = configs.validate()?;
+    Ok(configs)
 }
 
 #[cfg(test)]

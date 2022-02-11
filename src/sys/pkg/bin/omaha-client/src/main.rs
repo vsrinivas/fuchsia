@@ -18,6 +18,7 @@ mod app_set;
 mod channel;
 mod cobalt;
 mod configuration;
+mod eager_package_config;
 mod feedback_annotation;
 mod fidl;
 mod http_request;
