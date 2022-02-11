@@ -36,7 +36,7 @@ where
 {
     let mut file = File::open(path.as_ref())
         .context(format!("Unable to open file: {}", path.as_ref().display()))?;
-    from_reader(&mut file)
+    from_reader(&mut file).context(format!("Unable to read file: {}", path.as_ref().display()))
 }
 
 /// Helper fn to insert into an empty Option, or return an Error.

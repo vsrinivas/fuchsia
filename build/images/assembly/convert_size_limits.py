@@ -12,14 +12,22 @@ Usage example:
     --output out/default/size_budgets.json
 
 
-The budget configuration is a JSON file used by `ffx assembly size_check` that contains the
-list of package groups.
+The budget configuration is a JSON file used by `ffx assembly size-check` that contains two types
+of budgets:
+resource_budgets: applies to all the files matched by path across all package sets. It is
+  used to allocate space for common resources, widely used. Blobs corresponding to the matched
+  files are no longer charged to any packages. It has the following fields:
+    name: string, human readable name for this budget.
+    budget_bytes: integer, number of bytes the matched files have to fit in.
+    creep_budget_bytes: integer, maximum number of bytes added by a given code change.
+    paths: list of strings, file name to be matched in the package manifest.
 
-A component budget is an object with the following fields:
-  name: string, human readable name of the component.
-  budget_bytes: decimal, number of bytes alloted on the devices for the packages of this component.
-  packages:  [string], list of paths of `package_manifest.json` files for each of the packages
-    conforming to https://source.corp.google.com/fuchsia/src/sys/pkg/lib/fuchsia-pkg/src/package_manifest.rs
+package_set_budgets: size limit that applies to one or more packages. It has the following fields:
+    name, budget_bytes, creep_budget_bytes: ditto.
+    packages: list of string, path to package manifests that belongs to this set.    
+    merge: boolean, when true the packages blobs are deduplicate by hash before accounting.
+      This affects the shared blobs accounting, and is intended to approximate merged packages
+      such as base_package_manifest.json.
 '''
 import argparse
 import json
@@ -28,31 +36,16 @@ import collections
 import os
 
 
-def get_all_manifests(image_assembly_config_json):
-    """Returns the list of all the package manifests mentioned in the specified product configuration.
-
-  Args:
-    image_assembly_config_json: Dictionary, holding manifest per categories.
-  Returns:
-    list of path to the manifest files as string.
-  Raises:
-    KeyError: if one of the manifest group is missing.
-  """
-    try:
-        return image_assembly_config_json.get(
-            "base", []) + image_assembly_config_json.get(
-                "cache", []) + image_assembly_config_json.get("system", [])
-    except KeyError as e:
-        raise KeyError(
-            f"Product config is missing in the product configuration: {e}")
+class InvalidInputError(Exception):
+    pass
 
 
-def convert_budget_format(component, manifests):
+def convert_budget_format(component, all_manifests):
     """Converts a component budget to the new budget format.
 
   Args:
     component: dictionary, former size checker configuration entry.
-    manifests: [string], list of path to packages manifests.
+    all_manifests: [string], list of path to packages manifests.
   Returns:
     dictionary, new configuration with a name, a maximum size and the list of
     packages manifest to fit in the budget.
@@ -62,10 +55,12 @@ def convert_budget_format(component, manifests):
     prefixes = tuple(os.path.join("obj", src, "") for src in component["src"])
     # Finds all package manifest files located bellow the directories
     # listed by the component `src` field.
-    packages = [m for m in manifests if m.startswith(prefixes)]
+    packages = sorted(m for m in all_manifests if m.startswith(prefixes))
     return dict(
         name=component["component"],
         budget_bytes=component["limit"],
+        creep_budget_bytes=component["creep_limit"],
+        merge=False,
         packages=packages)
 
 
@@ -80,10 +75,75 @@ def count_packages(budgets, all_manifests):
     return more_than_once, zero
 
 
+def make_package_set_budgets(size_limits, product_config):
+    # Convert each budget to the new format and packages from base and cache.
+    # Package from system belongs the system budget.
+    all_manifests = product_config.get("base", []) + product_config.get(
+        "cache", [])
+    components = size_limits.get("components", [])
+    packages_budgets = list(
+        convert_budget_format(pkg, all_manifests) for pkg in components)
+
+    # Verify packages are in exactly one budget.
+    more_than_once, zero = count_packages(packages_budgets, all_manifests)
+
+    # Create a budget for the packages not matched by any other budget.
+    if "core_limit" in size_limits:
+        packages_budgets.append(
+            dict(
+                name="Core system+services",
+                budget_bytes=size_limits["core_limit"],
+                creep_budget_bytes=size_limits["core_creep_limit"],
+                merge=False,
+                packages=sorted(zero)))
+
+    if more_than_once:
+        print("ERROR: Package(s) matched by more than one size budget:")
+        for package in more_than_once:
+            print(f" - {package}")
+        raise InvalidInputError()  # Exit with an error code.
+
+    # Assign all system packages from the product configuration to the
+    # system package set.
+    system_budget = next(
+        (
+            budget for budget in packages_budgets
+            if budget["name"] == "/system (drivers and early boot)"), None)
+    if system_budget:
+        # De-duplicate blobs by hash accors the packages of this budget in order to
+        # approximate the package merging that happens with base_package_manifest.
+        system_budget["merge"] = True
+        system_budget["packages"] = sorted(product_config.get("system", []))
+
+    return sorted(packages_budgets, key=lambda budget: budget["name"])
+
+
+def make_resources_budgets(size_limits):
+    budgets = []
+    if "distributed_shlibs" in size_limits:
+        budgets.append(
+            dict(
+                name="Distributed shared libraries",
+                paths=sorted(size_limits["distributed_shlibs"]),
+                budget_bytes=size_limits["distributed_shlibs_limit"],
+                creep_budget_bytes=size_limits[
+                    "distributed_shlibs_creep_limit"],
+            ))
+    if "icu_data" in size_limits:
+        budgets.append(
+            dict(
+                name="ICU Data",
+                paths=sorted(size_limits["icu_data"]),
+                budget_bytes=size_limits["icu_data_limit"],
+                creep_budget_bytes=size_limits["icu_data_creep_limit"],
+            ))
+    return budgets
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=
-        'Converts the old size_checker.go budget file to the new format as part of RFC-0144'
+        'Converts the former size_checker.go budget file to the new format as part of RFC-0144'
     )
     parser.add_argument(
         '--size_limits', type=argparse.FileType('r'), required=True)
@@ -97,31 +157,22 @@ def main():
     size_limits = json.load(args.size_limits)
     image_assembly_config = json.load(args.image_assembly_config)
 
-    # Convert the configuration to the new format.
-    all_manifests = get_all_manifests(image_assembly_config)
-    component_budgets = [
-        convert_budget_format(component, all_manifests)
-        for component in size_limits.get("components", [])
-    ]
-
-    # Verify bipartite mapping between manifests and components.
-    more_than_once, zero = count_packages(component_budgets, all_manifests)
-
-    if zero and args.verbose:
-        print("WARNING: Package(s) not matched by any size budget:")
-        for package in zero:
-            print(f" - {package}")
-        print(f"Review components budgets in {args.size_limits.name}")
-
-    if more_than_once:
-        print("ERROR: Package(s) matched by more than one size budget:")
-        for package in more_than_once:
-            print(f" - {package}")
-        return 1  # Exit with an error code.
-
     # Format the resulting configuration file.
-    json.dump(component_budgets, args.output, indent=2)
-    return 0
+    try:
+        # Ensure the outputfile is closed early.
+        with args.output as output:
+            json.dump(
+                dict(
+                    resource_budgets=make_resources_budgets(size_limits),
+                    package_set_budgets=make_package_set_budgets(
+                        size_limits, image_assembly_config),
+                ),
+                output,
+                indent=2)
+
+        return 0
+    except InvalidInputError:
+        return 1
 
 
 if __name__ == '__main__':

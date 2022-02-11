@@ -17,6 +17,14 @@ class ConvertTest(unittest.TestCase):
             param(
                 name="general_case",
                 size_limits=dict(
+                    core_limit=21,
+                    core_creep_limit=22,
+                    distributed_shlibs=["lib_a", "lib_b"],
+                    distributed_shlibs_limit=31,
+                    distributed_shlibs_creep_limit=32,
+                    icu_data=["icu"],
+                    icu_data_limit=41,
+                    icu_data_creep_limit=42,
                     components=[
                         dict(
                             component="b1_2_comp",
@@ -28,39 +36,88 @@ class ConvertTest(unittest.TestCase):
                             creep_limit=16,
                             limit=22,
                             src=["a/b"]),
-                    ]),
+                        dict(
+                            component="/system (drivers and early boot)",
+                            creep_limit=52,
+                            limit=53,
+                            src=[])
+                    ],
+                ),
                 image_assembly_config=dict(
                     base=[
                         "obj/a/b1/c1/package_manifest.json",
-                        "obj/a/b/c2/package_manifest.json"
+                        "obj/a/b/c2/package_manifest.json",
+                        "obj/is_not_matched_1/package_manifest.json",
                     ],
                     cache=[
                         "obj/a/b/c1/package_manifest.json",
-                        "obj/a/b2/c1/package_manifest.json"
+                        "obj/a/b2/c1/package_manifest.json",
+                        "obj/a/b1/c2/package_manifest.json",
+                        "obj/is_not_matched_2/package_manifest.json",
                     ],
-                    system=["obj/a/b1/c2/package_manifest.json"],
+                    system=["obj/system/package_manifest.json"],
                 ),
-                expected_output=[
-                    dict(
-                        name='b1_2_comp',
-                        budget_bytes=20,
-                        packages=[
-                            'obj/a/b1/c1/package_manifest.json',
-                            'obj/a/b2/c1/package_manifest.json',
-                            'obj/a/b1/c2/package_manifest.json'
-                        ]),
-                    dict(
-                        name='b_comp',
-                        budget_bytes=22,
-                        packages=[
-                            'obj/a/b/c2/package_manifest.json',
-                            'obj/a/b/c1/package_manifest.json'
-                        ])
-                ],
+                expected_output=dict(
+                    resource_budgets=[
+                        dict(
+                            name="Distributed shared libraries",
+                            paths=["lib_a", "lib_b"],
+                            budget_bytes=31,
+                            creep_budget_bytes=32),
+                        dict(
+                            name="ICU Data",
+                            paths=["icu"],
+                            budget_bytes=41,
+                            creep_budget_bytes=42)
+                    ],
+                    package_set_budgets=[
+                        dict(
+                            name="/system (drivers and early boot)",
+                            budget_bytes=53,
+                            creep_budget_bytes=52,
+                            merge=True,
+                            packages=["obj/system/package_manifest.json"]),
+                        dict(
+                            name="Core system+services",
+                            budget_bytes=21,
+                            creep_budget_bytes=22,
+                            merge=False,
+                            packages=[
+                                "obj/is_not_matched_1/package_manifest.json",
+                                "obj/is_not_matched_2/package_manifest.json",
+                            ]),
+                        dict(
+                            name='b1_2_comp',
+                            budget_bytes=20,
+                            creep_budget_bytes=12,
+                            merge=False,
+                            packages=[
+                                'obj/a/b1/c1/package_manifest.json',
+                                'obj/a/b1/c2/package_manifest.json',
+                                'obj/a/b2/c1/package_manifest.json',
+                            ]),
+                        dict(
+                            name='b_comp',
+                            budget_bytes=22,
+                            creep_budget_bytes=16,
+                            merge=False,
+                            packages=[
+                                'obj/a/b/c1/package_manifest.json',
+                                'obj/a/b/c2/package_manifest.json',
+                            ]),
+                    ]),
                 return_value=0),
             param(
                 name="failure_when_manifest_is_matched_twice",
                 size_limits=dict(
+                    core_limit=21,
+                    core_creep_limit=22,
+                    distributed_shlibs=[],
+                    distributed_shlibs_limit=31,
+                    distributed_shlibs_creep_limit=32,
+                    icu_data=[],
+                    icu_data_limit=41,
+                    icu_data_creep_limit=42,
                     components=[
                         dict(
                             component="comp1",
@@ -74,51 +131,22 @@ class ConvertTest(unittest.TestCase):
                             src=["a/b"]),
                     ]),
                 image_assembly_config=dict(
-                    base=["obj/a/b/c2/package_manifest.json"],
-                ),
+                    base=["obj/a/b/c2/package_manifest.json"]),
                 expected_output=None,
                 return_value=1),
             param(
-                name="success_when_size_limit_is_empty",
+                name=
+                "success_when_size_limit_and_image_assembly_config_is_empty",
                 size_limits=dict(),
-                image_assembly_config=dict(
-                    base=[],
-                    cache=[],
-                    system=[],
-                ),
-                expected_output=[],
-                return_value=0),
-            param(
-                name="success_when_there_is_no_base",
-                size_limits=dict(components=[]),
-                image_assembly_config=dict(
-                    cache=[],
-                    system=[],
-                ),
-                expected_output=[],
-                return_value=0),
-            param(
-                name="success_when_there_is_no_cache",
-                size_limits=dict(components=[]),
-                image_assembly_config=dict(
-                    base=[],
-                    system=[],
-                ),
-                expected_output=[],
-                return_value=0),
-            param(
-                name="success_when_there_is_no_system",
-                size_limits=dict(components=[]),
-                image_assembly_config=dict(
-                    base=[],
-                    cache=[],
-                ),
-                expected_output=[],
+                image_assembly_config=dict(),
+                expected_output=dict(
+                    resource_budgets=[], package_set_budgets=[]),
                 return_value=0),
         ])
     def test_run_main(
             self, name, size_limits, image_assembly_config, expected_output,
             return_value):
+        self.maxDiff = None
         with tempfile.TemporaryDirectory() as tmpdir:
 
             size_limits_path = os.path.join(tmpdir, "size_limits.json")
