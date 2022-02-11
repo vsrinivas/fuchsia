@@ -48,7 +48,7 @@ template("virtual_device_specification") {
         {
           label = get_label_info(":$target_name", "label_with_toolchain")
           name = "emulator_flags"
-          path = rebase_path(output, root_build_dir)
+          path = rebase_path(template_output, root_build_dir)
           type = "manifest"
         },
       ]
