@@ -8,7 +8,10 @@ use {
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fidl_fuchsia_boot as fboot,
+    fidl_fuchsia_io::FileProxy,
+    fuchsia_zbi::{ZbiParser, ZbiResult, ZbiType},
     futures::prelude::*,
+    io_util::{file, OPEN_RIGHT_READABLE},
     lazy_static::lazy_static,
     routing::capability_source::InternalCapability,
     std::{
@@ -21,6 +24,9 @@ use {
 lazy_static! {
     static ref BOOT_ARGS_CAPABILITY_NAME: CapabilityName = "fuchsia.boot.Arguments".into();
 }
+
+// TODO(fxb/91451): Rename this file.
+const BOOT_CONFIG_FILE: &str = "/boot/config/devmgr";
 
 struct Env {
     vars: HashMap<String, String>,
@@ -44,6 +50,88 @@ impl Env {
     pub fn mock_new(map: HashMap<String, String>) -> Self {
         Env { vars: map }
     }
+}
+
+pub struct Arguments {
+    vars: HashMap<String, String>,
+}
+
+impl Arguments {
+    pub fn new(parser: &mut Option<ZbiParser>) -> Arc<Self> {
+        let (cmdline_args, image_args) = match parser {
+            Some(parser) => {
+                let cmdline_args = match parser.try_get_item(ZbiType::Cmdline) {
+                    Ok(result) => {
+                        let _ = parser.release_item(ZbiType::Cmdline);
+                        Some(result)
+                    }
+                    Err(_) => None,
+                };
+
+                let image_args = match parser.try_get_item(ZbiType::ImageArgs) {
+                    Ok(result) => {
+                        let _ = parser.release_item(ZbiType::ImageArgs);
+                        Some(result)
+                    }
+                    Err(_) => None,
+                };
+
+                (cmdline_args, image_args)
+            }
+            None => (None, None),
+        };
+
+        // This config file may not be present depending on the device.
+        let config = file::open_in_namespace(BOOT_CONFIG_FILE, OPEN_RIGHT_READABLE).ok();
+
+        Arguments::new_from_sources(Env::new(), cmdline_args, image_args, config)
+    }
+
+    fn new_from_sources(
+        env: Env,
+        cmdline_args: Option<Vec<ZbiResult>>,
+        image_args: Option<Vec<ZbiResult>>,
+        config: Option<FileProxy>,
+    ) -> Arc<Self> {
+        // There is an arbitrary (but consistent) ordering between these four sources, where
+        // duplicate arguments in lower priority sources will be overwritten by arguments in
+        // higher priority sources. Within one source derived from the ZBI such as cmdline_args,
+        // the last time an argument occurs is canonically the chosen one.
+        //
+        // The chosen order is:
+        // 1) Environment
+        // 2) ZbiType::Cmdline
+        // 3) ZbiType::ImageArgs
+        // 4) Config file (hosted in bootfs)
+        let mut result = HashMap::new();
+        result.extend(env.vars);
+
+        if cmdline_args.is_some() {
+            // TODO(fxb/44784): This is currently done in bootsvc and passed via environment.
+        }
+
+        if image_args.is_some() {
+            // TODO(fxb/44784): This is currently done in bootsvc and passed via environment.
+        }
+
+        if config.is_some() {
+            // TODO(fxb/44784): This is currently done in bootsvc and passed via environment.
+        }
+
+        Arc::new(Self { vars: result })
+    }
+
+    fn get_bool_arg(self: &Arc<Self>, name: String, default: bool) -> bool {
+        let mut ret = default;
+        if let Ok(val) = self.var(name) {
+            if val == "0" || val == "false" || val == "off" {
+                ret = false;
+            } else {
+                ret = true;
+            }
+        }
+        ret
+    }
 
     fn var(&self, var: String) -> Result<&str, env::VarError> {
         if let Some(v) = self.vars.get(&var) {
@@ -58,32 +146,6 @@ impl Env {
     }
 }
 
-pub struct Arguments {
-    env: Env,
-}
-
-impl Arguments {
-    pub fn new() -> Arc<Self> {
-        Arguments::new_env(Env::new())
-    }
-
-    fn new_env(env: Env) -> Arc<Self> {
-        Arc::new(Self { env: env })
-    }
-
-    fn get_bool_arg(self: &Arc<Self>, name: String, default: bool) -> bool {
-        let mut ret = default;
-        if let Ok(val) = self.env.var(name) {
-            if val == "0" || val == "false" || val == "off" {
-                ret = false;
-            } else {
-                ret = true;
-            }
-        }
-        ret
-    }
-}
-
 #[async_trait]
 impl BuiltinCapability for Arguments {
     const NAME: &'static str = "Arguments";
@@ -95,12 +157,12 @@ impl BuiltinCapability for Arguments {
     ) -> Result<(), Error> {
         while let Some(req) = stream.try_next().await? {
             match req {
-                fboot::ArgumentsRequest::GetString { key, responder } => match self.env.var(key) {
+                fboot::ArgumentsRequest::GetString { key, responder } => match self.var(key) {
                     Ok(val) => responder.send(Some(val)),
                     _ => responder.send(None),
                 }?,
                 fboot::ArgumentsRequest::GetStrings { keys, responder } => {
-                    let mut vec = keys.into_iter().map(|x| self.env.var(x).ok());
+                    let mut vec = keys.into_iter().map(|x| self.var(x).ok());
                     responder.send(&mut vec)?
                 }
                 fboot::ArgumentsRequest::GetBool { key, defaultval, responder } => {
@@ -113,7 +175,6 @@ impl BuiltinCapability for Arguments {
                 }
                 fboot::ArgumentsRequest::Collect { prefix, responder } => {
                     let vec: Vec<_> = self
-                        .env
                         .vars()
                         .filter(|(k, _)| k.starts_with(&prefix))
                         .map(|(k, v)| k.to_owned() + "=" + &v)
@@ -134,12 +195,10 @@ impl BuiltinCapability for Arguments {
 mod tests {
     use {super::*, fuchsia_async as fasync, std::collections::HashMap};
 
-    fn serve_bootargs(test_env: HashMap<String, String>) -> Result<fboot::ArgumentsProxy, Error> {
+    fn serve_bootargs(args: Arc<Arguments>) -> Result<fboot::ArgumentsProxy, Error> {
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fboot::ArgumentsMarker>()?;
-        let env = Env::mock_new(test_env);
         fasync::Task::local(
-            Arguments::new_env(env)
-                .serve(stream)
+            args.serve(stream)
                 .unwrap_or_else(|e| panic!("Error while serving arguments service: {}", e)),
         )
         .detach();
@@ -154,7 +213,8 @@ mod tests {
                 .iter()
                 .map(|(a, b)| (a.to_string(), b.to_string()))
                 .collect();
-        let proxy = serve_bootargs(vars)?;
+        let proxy =
+            serve_bootargs(Arguments::new_from_sources(Env::mock_new(vars), None, None, None))?;
 
         let res = proxy.get_string("test_arg_1").await?;
         assert_ne!(res, None);
@@ -181,7 +241,8 @@ mod tests {
                 .iter()
                 .map(|(a, b)| (a.to_string(), b.to_string()))
                 .collect();
-        let proxy = serve_bootargs(vars)?;
+        let proxy =
+            serve_bootargs(Arguments::new_from_sources(Env::mock_new(vars), None, None, None))?;
 
         let req = vec!["test_arg_1", "test_arg_2", "test_arg_3"];
         let res = proxy.get_strings(&mut req.iter().map(|x| *x)).await?;
@@ -226,7 +287,8 @@ mod tests {
             ("not_specified", false, false),
             ("not_specified", true, true),
         ];
-        let proxy = serve_bootargs(vars)?;
+        let proxy =
+            serve_bootargs(Arguments::new_from_sources(Env::mock_new(vars), None, None, None))?;
 
         for (var, default, correct) in expected.iter() {
             let res = proxy.get_bool(var, *default).await?;
@@ -269,7 +331,8 @@ mod tests {
             ("not_specified", false, false),
             ("not_specified", true, true),
         ];
-        let proxy = serve_bootargs(vars)?;
+        let proxy =
+            serve_bootargs(Arguments::new_from_sources(Env::mock_new(vars), None, None, None))?;
 
         let mut req: Vec<fboot::BoolPair> = expected
             .iter()
@@ -303,7 +366,8 @@ mod tests {
         .iter()
         .map(|(a, b)| (a.to_string(), b.to_string()))
         .collect();
-        let proxy = serve_bootargs(vars)?;
+        let proxy =
+            serve_bootargs(Arguments::new_from_sources(Env::mock_new(vars), None, None, None))?;
 
         let res = proxy.collect("test.").await?;
         let expected = vec!["test.value1=3", "test.value2=", "test.bool=false"];

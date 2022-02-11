@@ -455,24 +455,30 @@ impl BuiltinEnvironment {
             take_startup_handle(HandleType::Resource.into()).map(zx::Resource::from);
 
         let zbi_vmo_handle = take_startup_handle(HandleType::BootdataVmo.into()).map(zx::Vmo::from);
-
-        let (factory_items_service, items_service) = match zbi_vmo_handle {
-            None => (None, None),
-            Some(zbi_vmo) => {
-                let mut zbi_parser = ZbiParser::new(zbi_vmo)
-                    .set_store_item(ZbiType::Cmdline)
+        let mut zbi_parser = match zbi_vmo_handle {
+            Some(zbi_vmo) => Some(
+                ZbiParser::new(zbi_vmo)
                     .set_store_item(ZbiType::Crashlog)
                     .set_store_item(ZbiType::KernelDriver)
                     .set_store_item(ZbiType::PlatformId)
                     .set_store_item(ZbiType::StorageBootfsFactory)
                     .set_store_item(ZbiType::StorageRamdisk)
-                    .set_store_item(ZbiType::ImageArgs)
                     .set_store_item(ZbiType::SerialNumber)
                     .set_store_item(ZbiType::BootloaderFile)
                     .set_store_item(ZbiType::DeviceTree)
                     .set_store_item(ZbiType::DriverMetadata)
-                    .parse()?;
+                    .parse()?,
+            ),
+            None => None,
+        };
 
+        // Set up BootArguments service.
+        let boot_args = BootArguments::new(&mut zbi_parser);
+        model.root().hooks.install(boot_args.hooks()).await;
+
+        let (factory_items_service, items_service) = match zbi_parser {
+            None => (None, None),
+            Some(mut zbi_parser) => {
                 let factory_items = FactoryItems::new(&mut zbi_parser)?;
                 model.root().hooks.install(factory_items.hooks()).await;
 
@@ -482,10 +488,6 @@ impl BuiltinEnvironment {
                 (Some(factory_items), Some(items))
             }
         };
-
-        // Set up BootArguments service.
-        let boot_args = BootArguments::new();
-        model.root().hooks.install(boot_args.hooks()).await;
 
         // Set up CrashRecords service.
         let crash_records_svc = CrashIntrospectSvc::new(crash_records);
