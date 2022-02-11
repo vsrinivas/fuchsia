@@ -28,9 +28,12 @@ class FakeInputDevice final : public fuchsia::input::report::InputDevice {
       : binding_(this, std::move(request), dispatcher) {}
 
   // Sets the fake's report, which will be read with |ReadInputReports| and
-  // |GetInputReport|. This also triggers the |reports_events_| signal which
-  // wakes up any clients waiting for report dta.
+  // |GetInputReport|. This also causes any InputReportReaders to receive data
+  // they are waiting for.
   void SetReports(std::vector<fuchsia::input::report::InputReport> reports);
+
+  // Sets the fake's report, which will be read with |GetFeatureReport|.
+  void SetReports(std::vector<fuchsia::input::report::FeatureReport> reports);
 
   // Sets the fake's descriptor, which will be read with |GetDescriptor|.
   void SetDescriptor(fuchsia::input::report::DeviceDescriptorPtr descriptor);
@@ -41,10 +44,7 @@ class FakeInputDevice final : public fuchsia::input::report::InputDevice {
   void GetDescriptor(GetDescriptorCallback callback) override;
   void SendOutputReport(fuchsia::input::report::OutputReport report,
                         SendOutputReportCallback callback) override;
-  void GetFeatureReport(GetFeatureReportCallback callback) override {
-    callback(
-        fuchsia::input::report::InputDevice_GetFeatureReport_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
-  }
+  void GetFeatureReport(GetFeatureReportCallback callback) override;
   void SetFeatureReport(::fuchsia::input::report::FeatureReport report,
                         SetFeatureReportCallback callback) override {
     callback(
@@ -66,6 +66,7 @@ class FakeInputDevice final : public fuchsia::input::report::InputDevice {
   fbl::Mutex lock_;
 
   std::vector<fuchsia::input::report::InputReport> reports_ __TA_GUARDED(lock_);
+  std::vector<fuchsia::input::report::FeatureReport> feature_reports_ __TA_GUARDED(lock_);
   fuchsia::input::report::DeviceDescriptorPtr descriptor_ __TA_GUARDED(lock_);
   std::optional<FakeInputReportsReader> reader_ __TA_GUARDED(lock_);
 };

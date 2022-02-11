@@ -327,6 +327,9 @@ TEST_F(PrintInputReport, PrintTouchInputDescriptor) {
 
   touch->mutable_contacts()->push_back(std::move(contact));
 
+  descriptor->mutable_touch()->mutable_feature()->set_supports_input_mode(true);
+  descriptor->mutable_touch()->mutable_feature()->set_supports_selective_reporting(true);
+
   fake_device_->SetDescriptor(std::move(descriptor));
 
   FakePrinter printer;
@@ -349,6 +352,9 @@ TEST_F(PrintInputReport, PrintTouchInputDescriptor) {
       "        Unit:     NONE\n",
       "        Min:         0\n",
       "        Max:       100\n",
+      "  Feature Report:\n",
+      "    Supports InputMode: 1\n",
+      "    Supports SelectiveReporting: 1\n",
   });
 
   print_input_report::PrintInputDescriptor(std::string("test"), &printer, std::move(*client_));
@@ -627,6 +633,32 @@ TEST_F(PrintInputReport, PrintInputDescriptorWithExponents) {
 
   print_input_report::PrintInputDescriptor(std::string("test"), &printer, std::move(*client_));
   loop_->RunUntilIdle();
+}
+
+TEST_F(PrintInputReport, PrintFeatureReport) {
+  fuchsia::input::report::FeatureReport report;
+  report.mutable_touch()->set_input_mode(
+      fuchsia::input::report::TouchConfigurationInputMode::WINDOWS_PRECISION_TOUCHPAD_COLLECTION);
+  report.mutable_touch()->mutable_selective_reporting()->set_surface_switch(true);
+  report.mutable_touch()->mutable_selective_reporting()->set_button_switch(true);
+
+  std::vector<fuchsia::input::report::FeatureReport> reports;
+  reports.push_back(std::move(report));
+  fake_device_->SetReports(std::move(reports));
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "Feature Report from file: test\n",
+      "  Touch Feature Report:\n",
+      "    Input Mode: 3\n",
+      "    Selective Reporting:\n",
+      "      Surface Switch: 1\n",
+      "      Button Switch: 1\n",
+  });
+
+  print_input_report::PrintFeatureReports("test", &printer, std::move(*client_));
+  loop_->RunUntilIdle();
+  printer.AssertSawAllStrings();
 }
 
 }  // namespace test

@@ -52,12 +52,31 @@ void FakeInputDevice::GetInputReport(::fuchsia::input::report::DeviceType device
   }
 }
 
+void FakeInputDevice::GetFeatureReport(GetFeatureReportCallback callback) {
+  fbl::AutoLock lock(&lock_);
+  if (feature_reports_.empty()) {
+    callback(
+        fuchsia::input::report::InputDevice_GetFeatureReport_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  } else {
+    fuchsia::input::report::InputDevice_GetFeatureReport_Response response(
+        std::move(feature_reports_[0]));
+    callback(fuchsia::input::report::InputDevice_GetFeatureReport_Result::WithResponse(
+        std::move(response)));
+    feature_reports_.erase(feature_reports_.begin());
+  }
+}
+
 void FakeInputDevice::SetReports(std::vector<fuchsia::input::report::InputReport> reports) {
   fbl::AutoLock lock(&lock_);
   reports_ = std::move(reports);
   if (reader_) {
     reader_->QueueCallback();
   }
+}
+
+void FakeInputDevice::SetReports(std::vector<fuchsia::input::report::FeatureReport> reports) {
+  fbl::AutoLock lock(&lock_);
+  feature_reports_ = std::move(reports);
 }
 
 std::vector<fuchsia::input::report::InputReport> FakeInputDevice::ReadReports() {
