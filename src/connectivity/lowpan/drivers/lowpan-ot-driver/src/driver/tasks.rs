@@ -194,6 +194,9 @@ where
             // Turn off ICMPv6 ping auto-reply.
             driver_state.ot_instance.icmp6_set_echo_mode(ot::Icmp6EchoMode::HandleDisabled);
 
+            // Enable SRP Server
+            driver_state.ot_instance.srp_server_set_enabled(true);
+
             // Bring up the network interface.
             driver_state.ot_instance.ip6_set_enabled(true).context("ip6_set_enabled")?;
 
