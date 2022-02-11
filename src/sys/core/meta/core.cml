@@ -38,6 +38,13 @@
             startup: "eager",
         },
         {
+            name: "mdns",
+            url: "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cm",
+
+            // TODO(https://fxbug.dev/93539): consider removing eager startup in non-eng builds.
+            startup: "eager",
+        },
+        {
             name: "setui_service",
             url: "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cm",
             on_terminate: "reboot",
@@ -286,6 +293,7 @@
             from: "parent",
             to: [
                 "#bluetooth-core",
+                "#mdns",
                 "#network",
             ],
         },
@@ -310,6 +318,7 @@
                 "#exceptions",
                 "#feedback",
                 "#last_reboot",
+                "#mdns",
                 "#remote-control",
             ],
         },
@@ -322,6 +331,7 @@
             to: [
                 "#cobalt",
                 "#feedback",
+                "#mdns",
                 "#pkg-resolver",
                 "#session-manager",
             ],
@@ -484,6 +494,7 @@
                 "#hwinfo",
                 "#last_reboot",
                 "#log-stats",
+                "#mdns",
                 "#network",
                 "#pkg-cache",
                 "#pkg-resolver",
@@ -1035,6 +1046,12 @@
             protocol: [ "fuchsia.feedback.internal.LastRebootDirectoryMigrator" ],
             from: "#last_reboot",
             to: "#feedback",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#mdns",
+            subdir: "mdns",
         },
     ],
     expose: [

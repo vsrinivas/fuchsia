@@ -17,7 +17,6 @@ group("service") {
   testonly = true
   deps = [
     ":mdns",
-    ":mdns_config",
     ":source_set",
   ]
 }
@@ -141,20 +140,22 @@ test("mdns_test") {
   }
 }
 
-fuchsia_component("component") {
+# TODO(https://fxbug.dev/90433): remove once integration tests no longer rely on
+# the legacy MDNS component.
+fuchsia_component("component-legacy") {
   component_name = "mdns"
   deps = [ ":bin" ]
   manifest = "meta/mdns.cmx"
 }
 
-fuchsia_package("mdns") {
-  deps = [ ":component" ]
+fuchsia_component("component") {
+  component_name = "mdns"
+  deps = [ ":bin" ]
+  manifest = "meta/mdns.cml"
 }
 
-config_data("mdns_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "mdns.config" ]
-  sources = [ rebase_path("config/service.config") ]
+fuchsia_package("mdns") {
+  deps = [ ":component" ]
 }
 
 config_data("mdns_fuchsia_udp_config") {
@@ -177,7 +178,7 @@ group("tests") {
 
 fuchsia_unittest_package("mdns-tests") {
   deps = [ ":mdns_test" ]
-  manifest = "meta/mdns_test.cmx"
+  manifest = "meta/mdns_test.cml"
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
@@ -280,7 +281,7 @@ fuchsia_test_package("mdns-netemul-tests") {
     ":mdns_netemul_multi_network_test",
   ]
   deps = [
-    ":component",
+    ":component-legacy",
     "//src/connectivity/network/netstack:component-debug-legacy",
     "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
     "//src/connectivity/network/tests:device_name_provider",

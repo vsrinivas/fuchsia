@@ -115,7 +115,6 @@ recovery_eng_packages =
 
       # Allow recovery to be discoverable via mDNS:
       "//src/connectivity/network/mdns/bundles:services",
-      "//src/connectivity/network/mdns/service:mdns_config",
       "//src/connectivity/network/mdns/service:mdns_fuchsia_udp_config",
 
       # Enable SSH (for engineering builds):

@@ -1,0 +1,45 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/lib/net_interfaces/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        binary: "bin/mdns",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.net.mdns.Publisher",
+                "fuchsia.net.mdns.Resolver",
+                "fuchsia.net.mdns.Subscriber",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.device.NameProvider",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+            ],
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.net.mdns.Publisher",
+                "fuchsia.net.mdns.Resolver",
+                "fuchsia.net.mdns.Subscriber",
+            ],
+            from: "self",
+        },
+    ],
+}

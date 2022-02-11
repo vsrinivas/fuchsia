@@ -244,6 +244,16 @@
             from: "#pkg-resolver",
         },
 
+        // TODO(https://fxbug.dev/90433): prune these once MDNS is a CFv2 component.
+        {
+            protocol: [
+                "fuchsia.net.mdns.Publisher",
+                "fuchsia.net.mdns.Resolver",
+                "fuchsia.net.mdns.Subscriber",
+            ],
+            from: "#mdns",
+        },
+
         // TODO(fxbug.dev/71830): Remove once the Feedback migration has completed.
         {
             protocol: "fuchsia.feedback.internal.LastRebootDirectoryMigrator",
