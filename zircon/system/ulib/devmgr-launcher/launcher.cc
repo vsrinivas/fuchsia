@@ -72,7 +72,8 @@ zx_status_t LaunchDriverIndex(const Args& args, zx::job& job, zx::channel svc_cl
   if (status != ZX_OK) {
     return status;
   }
-  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY, remote.release());
+  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE | ZX_FS_FLAG_DIRECTORY,
+                     remote.release());
   if (status != ZX_OK) {
     return status;
   }
@@ -176,7 +177,8 @@ zx_status_t LaunchFshost(const Args& args, zx::job& job, zx::channel svc_client,
   if (status != ZX_OK) {
     return status;
   }
-  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY, remote.release());
+  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE | ZX_FS_FLAG_DIRECTORY,
+                     remote.release());
   if (status != ZX_OK) {
     return status;
   }
@@ -324,7 +326,8 @@ zx_status_t LaunchDriverManager(const Args& args, zx::job& job, zx::channel devf
   if (status != ZX_OK) {
     return status;
   }
-  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY, remote.release());
+  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE | ZX_FS_FLAG_DIRECTORY,
+                     remote.release());
   if (status != ZX_OK) {
     return status;
   }
@@ -340,7 +343,8 @@ zx_status_t LaunchDriverManager(const Args& args, zx::job& job, zx::channel devf
   if (status != ZX_OK) {
     return status;
   }
-  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY, remote.release());
+  status = fdio_open("/pkg", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE | ZX_FS_FLAG_DIRECTORY,
+                     remote.release());
   if (status != ZX_OK) {
     return status;
   }
