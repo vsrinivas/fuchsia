@@ -292,7 +292,7 @@ SECTIONS
         *(.data.cpu_align_exclusive)
         . = ALIGN(128);
 
-        *(.data .data.* .gnu.linkonce.d.*)
+        *(.data .data.* .sdata .gnu.linkonce.d.*)
     }
 
     BootCpuidData : {
