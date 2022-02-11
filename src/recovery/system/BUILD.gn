@@ -220,12 +220,17 @@ rustc_binary("bin_installer") {
   source_root = "installer/main.rs"
   with_unit_tests = true
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
     "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy-rustc",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo-rustc",
     "//src/graphics/lib/compute/rive-rs",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -237,6 +242,8 @@ rustc_binary("bin_installer") {
     "//src/lib/ui/carnelian",
     "//src/lib/ui/fuchsia-framebuffer",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//src/sys/lib/payload_streamer",
     "//src/sys/pkg/lib/isolated-ota",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
@@ -247,6 +254,7 @@ rustc_binary("bin_installer") {
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:mockall",
     "//third_party/rust_crates:png",
+    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
@@ -261,8 +269,10 @@ rustc_binary("bin_installer") {
     "//src/sys/pkg/testing/mock-paver",
   ]
   sources = [
+    "installer/installer.rs",
     "installer/main.rs",
     "installer/menu.rs",
+    "installer/partition.rs",
   ]
 }
 

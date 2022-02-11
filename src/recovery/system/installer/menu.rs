@@ -9,6 +9,8 @@ const CONST_PROGRESS_MSG: &'static str = "Installing Fuchsia";
 
 const CONST_ERR_HEADLINE: &'static str = "ERROR Cannot install Fuchsia:";
 const CONST_ERR_USER_DECLINE: &'static str = "User declined";
+const CONST_ERR_NO_DISK: &'static str = "No available disks";
+const CONST_ERR_UNEXPECTED_EVENT: &'static str = "Unexpected Event";
 const CONST_ERR_UNEXPECTED_INPUT: &'static str = "Unexpected Input Event";
 pub const CONST_ERR_RESTART: &'static str = "Please Restart your Computer";
 
@@ -30,6 +32,8 @@ pub enum MenuState {
 pub enum MenuEvent {
     Navigate(Key),
     Enter,
+    GotBlockDevices(Vec<String>),
+    Error(String),
 }
 
 #[derive(Debug, PartialEq)]
@@ -72,13 +76,20 @@ impl MenuStateMachine {
         let new_state: MenuState = match self.state {
             MenuState::SelectInstall => match event {
                 MenuEvent::Navigate(pressed_key) => self.button_cycle(pressed_key, self.state),
-                MenuEvent::Enter => match self.get_selected_button_type() {
-                    MenuButtonType::USBInstall => MenuState::SelectDisk,
-                    _ => {
-                        self.error_msg = String::from(CONST_ERR_UNEXPECTED_INPUT);
+                MenuEvent::GotBlockDevices(devices) => {
+                    self.add_block_device_buttons(devices);
+                    if self.buttons.len() == 0 {
+                        self.error_msg = String::from(CONST_ERR_NO_DISK);
                         MenuState::Error
+                    } else {
+                        MenuState::SelectDisk
                     }
-                },
+                }
+                MenuEvent::Enter => MenuState::SelectInstall,
+                MenuEvent::Error(error_msg) => {
+                    self.error_msg = String::from(error_msg);
+                    MenuState::Error
+                }
             },
             MenuState::SelectDisk => match event {
                 MenuEvent::Navigate(pressed_key) => self.button_cycle(pressed_key, self.state),
@@ -89,6 +100,14 @@ impl MenuStateMachine {
                         MenuState::Error
                     }
                 },
+                MenuEvent::GotBlockDevices(_devices) => {
+                    self.error_msg = String::from(CONST_ERR_UNEXPECTED_EVENT);
+                    MenuState::Error
+                }
+                MenuEvent::Error(error_msg) => {
+                    self.error_msg = String::from(error_msg);
+                    MenuState::Error
+                }
             },
             MenuState::Warning => match event {
                 MenuEvent::Navigate(pressed_key) => self.button_cycle(pressed_key, self.state),
@@ -103,6 +122,14 @@ impl MenuStateMachine {
                         MenuState::Error
                     }
                 },
+                MenuEvent::GotBlockDevices(_devices) => {
+                    self.error_msg = String::from(CONST_ERR_UNEXPECTED_EVENT);
+                    MenuState::Error
+                }
+                MenuEvent::Error(error_msg) => {
+                    self.error_msg = String::from(error_msg);
+                    MenuState::Error
+                }
             },
             MenuState::Progress => MenuState::Progress,
             MenuState::Error => MenuState::Error,
@@ -141,34 +168,17 @@ impl MenuStateMachine {
 
     // Setup buttons & headings for current state
     fn setup_current_state(&mut self) {
-        self.buttons.clear();
-
         match self.state {
             MenuState::SelectInstall => {
                 self.heading = String::from(CONST_SELECT_INSTALL_HEADLINE);
 
+                self.buttons.clear();
                 let mut install_buttons = installation_method_buttons();
                 self.buttons.append(&mut install_buttons);
                 self.selected_button_index = 0;
             }
             MenuState::SelectDisk => {
                 self.heading = String::from(CONST_SELECT_DISK_HEADLINE);
-
-                let mut disk_buttons = vec![
-                    MenuButton::new(String::from("Placeholder Disk 1"), true, MenuButtonType::Disk),
-                    MenuButton::new(
-                        String::from("Placeholder Disk 2"),
-                        false,
-                        MenuButtonType::Disk,
-                    ),
-                    MenuButton::new(
-                        String::from("Placeholder Disk 3"),
-                        false,
-                        MenuButtonType::Disk,
-                    ),
-                ];
-                self.buttons.append(&mut disk_buttons);
-                self.selected_button_index = 0;
             }
             MenuState::Warning => {
                 self.heading = String::from(CONST_WARNING_HEADLINE);
@@ -183,13 +193,28 @@ impl MenuStateMachine {
                 self.selected_button_index = 0;
             }
             MenuState::Progress => {
+                self.buttons.clear();
                 self.heading = String::from(CONST_PROGRESS_MSG);
             }
             MenuState::Error => {
-                self.heading = String::from(CONST_ERR_HEADLINE);
                 self.buttons.clear();
+                self.heading = String::from(CONST_ERR_HEADLINE);
             }
         };
+    }
+
+    fn add_block_device_buttons(&mut self, devices: Vec<String>) {
+        self.buttons.clear();
+
+        for device in devices {
+            let disk_button = MenuButton::new(device, false, MenuButtonType::Disk);
+            self.buttons.push(disk_button);
+        }
+
+        if self.buttons.len() > 0 {
+            self.buttons[0].selected = true;
+            self.selected_button_index = 0;
+        }
     }
 
     pub fn get_state(&self) -> MenuState {
@@ -238,7 +263,6 @@ impl MenuButton {
     }
 }
 
-// Buttons for installation method options
 fn installation_method_buttons() -> Vec<MenuButton> {
     let install_buttons = vec![MenuButton::new(
         String::from(CONST_BUTTON_USB_INSTALL),
@@ -257,12 +281,10 @@ mod tests {
     #[test]
     fn test_create_menu() -> std::result::Result<(), anyhow::Error> {
         let menu = MenuStateMachine::new();
-
         let state = menu.get_state();
         assert_eq!(state, MenuState::SelectInstall);
         let heading = menu.get_heading();
         assert_eq!(heading, CONST_SELECT_INSTALL_HEADLINE);
-
         let selected_index = menu.selected_button_index;
         assert_eq!(selected_index, 0);
         let selected_type = menu.get_selected_button_type();
@@ -271,21 +293,17 @@ mod tests {
         assert_eq!(buttons.len(), 1);
         let button = buttons.first().unwrap();
         assert_eq!(button.get_text(), CONST_BUTTON_USB_INSTALL);
-
         Ok(())
     }
 
     #[test]
     fn test_navigate_install_screen() -> std::result::Result<(), anyhow::Error> {
         let mut menu = MenuStateMachine::new();
-
         menu.handle_event(Navigate(Key::Up));
-
         let state = menu.get_state();
         assert_eq!(state, MenuState::SelectInstall);
         let heading = menu.get_heading();
         assert_eq!(heading, CONST_SELECT_INSTALL_HEADLINE);
-
         let selected_index = menu.selected_button_index;
         assert_eq!(selected_index, 0);
         let selected_type = menu.get_selected_button_type();
@@ -294,14 +312,11 @@ mod tests {
         assert_eq!(buttons.len(), 1);
         let button = buttons.first().unwrap();
         assert_eq!(button.get_text(), CONST_BUTTON_USB_INSTALL);
-
         menu.handle_event(Navigate(Key::Down));
-
         let state = menu.get_state();
         assert_eq!(state, MenuState::SelectInstall);
         let heading = menu.get_heading();
         assert_eq!(heading, CONST_SELECT_INSTALL_HEADLINE);
-
         let selected_index = menu.selected_button_index;
         assert_eq!(selected_index, 0);
         let selected_type = menu.get_selected_button_type();
@@ -317,19 +332,92 @@ mod tests {
     #[test]
     fn test_select_usb_install() -> std::result::Result<(), anyhow::Error> {
         let mut menu = MenuStateMachine::new();
-
         menu.handle_event(MenuEvent::Enter);
-
+        let state = menu.get_state();
+        assert_eq!(state, MenuState::SelectInstall);
+        menu.handle_event(MenuEvent::GotBlockDevices(vec![String::from("/dev/hello")]));
         let state = menu.get_state();
         assert_eq!(state, MenuState::SelectDisk);
         let heading = menu.get_heading();
         assert_eq!(heading, CONST_SELECT_DISK_HEADLINE);
-
         let selected_index = menu.selected_button_index;
         assert_eq!(selected_index, 0);
         let selected_type = menu.get_selected_button_type();
         assert_eq!(selected_type, MenuButtonType::Disk);
+        let buttons = menu.get_buttons();
+        assert_eq!(buttons.len(), 1);
+        let button = buttons.first().unwrap();
+        assert_eq!(button.get_text(), String::from("/dev/hello"));
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_select_disk() -> std::result::Result<(), anyhow::Error> {
+        let mut menu = MenuStateMachine::new();
+        menu.handle_event(MenuEvent::Enter);
+        menu.handle_event(MenuEvent::GotBlockDevices(vec![String::from("/dev/hello")]));
+        menu.handle_event(MenuEvent::Enter);
+        let state = menu.get_state();
+        assert_eq!(state, MenuState::Warning);
+        let heading = menu.get_heading();
+        assert_eq!(heading, CONST_WARNING_HEADLINE);
+        let buttons = menu.get_buttons();
+        assert_eq!(buttons.len(), 2);
+        let button = buttons.first().unwrap();
+        assert_eq!(button.get_text(), String::from("Yes"));
+        let button = buttons.get(1).unwrap();
+        assert_eq!(button.get_text(), String::from("No"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_user_agrees() -> std::result::Result<(), anyhow::Error> {
+        let mut menu = MenuStateMachine::new();
+        menu.handle_event(MenuEvent::Enter);
+        menu.handle_event(MenuEvent::GotBlockDevices(vec![String::from("/dev/hello")]));
+        menu.handle_event(MenuEvent::Enter);
+        menu.handle_event(MenuEvent::Enter);
+        let state = menu.get_state();
+        assert_eq!(state, MenuState::Progress);
+        let heading = menu.get_heading();
+        assert_eq!(heading, CONST_PROGRESS_MSG);
+        Ok(())
+    }
+
+    #[test]
+    fn test_user_declines() -> std::result::Result<(), anyhow::Error> {
+        let mut menu = MenuStateMachine::new();
+        menu.handle_event(MenuEvent::Enter);
+        menu.handle_event(MenuEvent::GotBlockDevices(vec![String::from("/dev/hello")]));
+        menu.handle_event(MenuEvent::Enter);
+        menu.handle_event(MenuEvent::Navigate(Key::Down));
+        menu.handle_event(MenuEvent::Enter);
+        let state = menu.get_state();
+        assert_eq!(state, MenuState::Error);
+        let heading = menu.get_heading();
+        assert_eq!(heading, CONST_ERR_HEADLINE);
+        let err_msg = menu.get_error_msg();
+        assert_eq!(err_msg, CONST_ERR_USER_DECLINE);
+        Ok(())
+    }
+
+    #[test]
+    fn test_no_block_devices() -> std::result::Result<(), anyhow::Error> {
+        let mut menu = MenuStateMachine::new();
+        menu.handle_event(MenuEvent::Enter);
+        let state = menu.get_state();
+        assert_eq!(state, MenuState::SelectInstall);
+        menu.handle_event(MenuEvent::GotBlockDevices(Vec::new()));
+        let state = menu.get_state();
+        assert_eq!(state, MenuState::Error);
+        let heading = menu.get_heading();
+        assert_eq!(heading, CONST_ERR_HEADLINE);
+        let err_msg = menu.get_error_msg();
+        assert_eq!(err_msg, CONST_ERR_NO_DISK);
+        let buttons = menu.get_buttons();
+        assert_eq!(buttons.len(), 0);
         Ok(())
     }
 }

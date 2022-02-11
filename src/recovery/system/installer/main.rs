@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::anyhow;
 use anyhow::Error;
 use argh::FromArgs;
 use carnelian::{
@@ -14,16 +15,22 @@ use carnelian::{
         facets::{RiveFacet, TextFacet, TextFacetOptions, TextHorizontalAlignment},
         scene::{Scene, SceneBuilder},
     },
-    App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, LocalBoxFuture, Point,
-    Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, LocalBoxFuture,
+    MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::{point2, size2};
+use fuchsia_async::{self as fasync};
 use fuchsia_zircon::Event;
 use rive_rs::{self as rive};
 use std::path::PathBuf;
 
 mod menu;
-use menu::{Key, MenuEvent, MenuState, MenuStateMachine};
+use menu::{Key, MenuButtonType, MenuEvent, MenuState, MenuStateMachine};
+
+pub mod installer;
+use installer::{find_install_source, get_block_devices, get_bootloader_type};
+
+pub mod partition;
 
 const INSTALLER_HEADLINE: &'static str = "Fuchsia Workstation Installer";
 
@@ -42,6 +49,9 @@ enum InstallerMessages {
     MenuUp,
     MenuDown,
     MenuEnter,
+    Error(String),
+    GotInstallSource(String),
+    GotInstallDestinations(Vec<String>),
 }
 
 /// Installer
@@ -51,6 +61,17 @@ struct Args {
     /// rotate
     #[argh(option)]
     rotation: Option<DisplayRotation>,
+}
+
+struct InstallationPaths {
+    install_source: String,
+    install_destinations: Vec<String>,
+}
+
+impl InstallationPaths {
+    pub fn new() -> InstallationPaths {
+        InstallationPaths { install_source: String::new(), install_destinations: Vec::new() }
+    }
 }
 
 struct InstallerAppAssistant {
@@ -153,6 +174,7 @@ struct InstallerViewAssistant {
     face: FontFace,
     heading: &'static str,
     menu_state_machine: MenuStateMachine,
+    installation_paths: InstallationPaths,
     app_sender: AppSender,
     view_key: ViewKey,
     file: Option<rive::File>,
@@ -169,10 +191,12 @@ impl InstallerViewAssistant {
         InstallerViewAssistant::setup(app_sender, view_key)?;
 
         let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
+
         Ok(InstallerViewAssistant {
             face,
             heading: heading,
             menu_state_machine: MenuStateMachine::new(),
+            installation_paths: InstallationPaths::new(),
             app_sender: app_sender.clone(),
             view_key: 0,
             file,
@@ -194,7 +218,32 @@ impl InstallerViewAssistant {
                 self.menu_state_machine.handle_event(MenuEvent::Navigate(Key::Down));
             }
             InstallerMessages::MenuEnter => {
-                self.menu_state_machine.handle_event(MenuEvent::Enter);
+                // Get disks if usb install selected
+                match self.menu_state_machine.get_selected_button_type() {
+                    MenuButtonType::USBInstall => {
+                        // get installation targets
+                        fasync::Task::local(setup_installation_paths(
+                            self.app_sender.clone(),
+                            self.view_key,
+                        ))
+                        .detach();
+                    }
+                    _ => {
+                        self.menu_state_machine.handle_event(MenuEvent::Enter);
+                    }
+                }
+            }
+            InstallerMessages::Error(error_msg) => {
+                self.menu_state_machine.handle_event(MenuEvent::Error(error_msg.clone()));
+            }
+            InstallerMessages::GotInstallSource(install_source_path) => {
+                self.installation_paths.install_source = install_source_path.clone();
+            }
+            InstallerMessages::GotInstallDestinations(destinations) => {
+                self.installation_paths.install_destinations = destinations.to_vec();
+                // Send disks to menu
+                self.menu_state_machine
+                    .handle_event(MenuEvent::GotBlockDevices(destinations.to_vec()));
             }
         }
 
@@ -308,14 +357,32 @@ fn menu_builder(
     );
     builder.facet_at_location(subheading_facet, subheading_location);
 
+    // Default button properties
+    let mut text_size: f32 = target_size.width.min(target_size.height) / 20.0;
+
     // Render state specific things
     let menu_state = menu_state_machine.get_state();
     match menu_state {
         MenuState::SelectInstall => {
-            render_buttons_vec(builder, menu_state_machine, target_size, subheading_location, face);
+            render_buttons_vec(
+                builder,
+                menu_state_machine,
+                target_size,
+                subheading_location,
+                face,
+                text_size,
+            );
         }
         MenuState::SelectDisk => {
-            render_buttons_vec(builder, menu_state_machine, target_size, subheading_location, face);
+            text_size = target_size.width.min(target_size.height) / 33.0;
+            render_buttons_vec(
+                builder,
+                menu_state_machine,
+                target_size,
+                subheading_location,
+                face,
+                text_size,
+            );
         }
         MenuState::Warning => {
             // TODO(fxbug.dev/92116):): figure out \n alignment quirk so this can be one message
@@ -348,6 +415,7 @@ fn menu_builder(
                 target_size,
                 proceed_msg_location,
                 face,
+                text_size,
             );
         }
         MenuState::Progress => {}
@@ -383,8 +451,8 @@ fn render_buttons_vec(
     target_size: Size,
     heading_location: Point,
     face: &FontFace,
+    text_size: f32,
 ) {
-    let text_size: f32 = target_size.width.min(target_size.height) / 20.0;
     let menu_button_x: f32 = target_size.width * 0.2;
     let menu_button_y: f32 = heading_location.y + target_size.width.min(target_size.height) * 0.2;
     let menu_button_spacer: f32 = text_size * 1.5;
@@ -412,6 +480,59 @@ fn render_buttons_vec(
 
         button_spacer += menu_button_spacer;
     }
+}
+
+async fn get_installation_paths(app_sender: AppSender, view_key: ViewKey) -> Result<(), Error> {
+    let block_devices = get_block_devices().await?;
+    let bootloader_type = get_bootloader_type().await?;
+
+    // Find the location of the installer
+    let install_source =
+        find_install_source(block_devices.iter().map(|(part, _)| part).collect(), bootloader_type)
+            .await?;
+
+    // Send got installer messgae
+    app_sender.clone().queue_message(
+        MessageTarget::View(view_key),
+        make_message(InstallerMessages::GotInstallSource(install_source.clone())),
+    );
+
+    // Make list of available destinations for installation
+    let mut destinations = Vec::new();
+    for block_device in block_devices.iter() {
+        if &block_device.0 != install_source {
+            destinations.push(block_device.0.clone());
+        }
+    }
+
+    // Send error if no destinations found
+    if destinations.len() <= 0 {
+        return Err(anyhow!("Found no block devices for installation."));
+    };
+
+    // Else end destinations
+    app_sender.clone().queue_message(
+        MessageTarget::View(view_key),
+        make_message(InstallerMessages::GotInstallDestinations(destinations.clone())),
+    );
+
+    Ok(())
+}
+
+async fn setup_installation_paths(app_sender: AppSender, view_key: ViewKey) {
+    match get_installation_paths(app_sender.clone(), view_key).await {
+        Ok(_install_source) => {
+            println!("Found installer & block devices ");
+        }
+        Err(e) => {
+            // Send error
+            app_sender.clone().queue_message(
+                MessageTarget::View(view_key),
+                make_message(InstallerMessages::Error(e.to_string())),
+            );
+            println!("ERROR getting install target: {}", e);
+        }
+    };
 }
 
 fn main() -> Result<(), Error> {

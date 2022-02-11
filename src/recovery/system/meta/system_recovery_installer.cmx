@@ -13,7 +13,9 @@
             "class/input",
             "class/input-report",
             "sys/platform",
-            "sys/platform/pci"
+            "sys/platform/pci",
+            "pci-00:1e.4",
+            "pci-00:14.0",
         ],
         "features": [
             "build-info",

@@ -230,6 +230,10 @@ assemble_system("recovery-installer") {
 
   sysmgr_golden = "sysmgr-installer-golden.json"
 
+  # The installer needs to see all partitions on the system so that it can
+  #determine the installation source and destination
+  fshost_config = [ "gpt-all" ]
+
   # TODO(fxbug.dev/81569): Move this metadata to assemble_system.gni.
   metadata = {
     images = [
