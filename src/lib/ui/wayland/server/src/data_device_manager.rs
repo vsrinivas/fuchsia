@@ -7,7 +7,7 @@ use {
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
     crate::seat::Seat,
     anyhow::Error,
-    wayland::{
+    wayland_server_protocol::{
         WlDataDevice, WlDataDeviceManager, WlDataDeviceManagerRequest, WlDataDeviceRequest,
         WlDataSource, WlDataSourceRequest,
     },

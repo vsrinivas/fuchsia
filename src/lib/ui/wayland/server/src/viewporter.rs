@@ -7,7 +7,9 @@ use {
     crate::compositor::{Surface, SurfaceCommand, ViewportCropParams, ViewportScaleParams},
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
     anyhow::Error,
-    wp_viewporter::{WpViewport, WpViewportRequest, WpViewporter, WpViewporterRequest},
+    wp_viewporter_server_protocol::{
+        WpViewport, WpViewportRequest, WpViewporter, WpViewporterRequest,
+    },
 };
 
 /// An implementation of the wp_viewporter global.

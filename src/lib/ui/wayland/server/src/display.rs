@@ -21,7 +21,7 @@ use {
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
-    wayland::*,
+    wayland_server_protocol::*,
 };
 
 /// When the connection is created it is initialized with a 'wl_display' object

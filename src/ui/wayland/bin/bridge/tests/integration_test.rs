@@ -10,17 +10,20 @@ mod test {
         anyhow::Error,
         fidl_fuchsia_wayland::Server_Marker,
         fuchsia_async::{self as fasync},
-        fuchsia_wayland_core::{self as wl, Interface},
+        fuchsia_wayland_core::{self as wl, Interface, IntoMessage},
         fuchsia_zircon as zx,
-        wayland::{WlCompositor, WlDataDeviceManager, WlOutput, WlSeat, WlShm, WlSubcompositor},
-        wp_viewporter::WpViewporter,
-        xdg_shell::XdgWmBase,
-        zaura_shell::ZauraShell,
-        zcr_alpha_compositing_v1::ZcrAlphaCompositingV1,
-        zcr_secure_output_v1::ZcrSecureOutputV1,
-        zwp_linux_dmabuf_v1::ZwpLinuxDmabufV1,
-        zwp_pointer_constraints_v1::ZwpPointerConstraintsV1,
-        zwp_relative_pointer_v1::ZwpRelativePointerManagerV1,
+        wayland_client_protocol::{
+            WlCompositor, WlDataDeviceManager, WlDisplayRequest, WlOutput, WlSeat, WlShm,
+            WlSubcompositor,
+        },
+        wp_viewporter_client_protocol::WpViewporter,
+        xdg_shell_client_protocol::XdgWmBase,
+        zaura_shell_client_protocol::ZauraShell,
+        zcr_alpha_compositing_v1_client_protocol::ZcrAlphaCompositingV1,
+        zcr_secure_output_v1_client_protocol::ZcrSecureOutputV1,
+        zwp_linux_dmabuf_v1_client_protocol::ZwpLinuxDmabufV1,
+        zwp_pointer_constraints_v1_client_protocol::ZwpPointerConstraintsV1,
+        zwp_relative_pointer_v1_client_protocol::ZwpRelativePointerManagerV1,
     };
 
     async fn expect_global_with_name<I: Interface>(
@@ -62,25 +65,12 @@ mod test {
         bridge_proxy.connect(h1)?;
         let client_channel = fasync::Channel::from_channel(h2)?;
 
-        // Send get_registry(0x10000)
-        let mut message = wl::Message::new();
-        message.write_header(&wl::MessageHeader {
-            sender: 1,  // wl_display
-            opcode: 1,  // get_registry
-            length: 12, // header + new_id
-        })?;
-        message.write_arg(wl::Arg::NewId(0x10000))?;
+        // Get the registry and issue a Sync; this should cause the server to
+        // report all globals.
+        let message = WlDisplayRequest::GetRegistry { registry: 0x10000 }.into_message(1)?;
         let (bytes, mut handles) = message.take();
         client_channel.write(&bytes, &mut handles)?;
-
-        // Send sync(0x10001)
-        let mut message = wl::Message::new();
-        message.write_header(&wl::MessageHeader {
-            sender: 1,  // wl_display
-            opcode: 0,  // sync
-            length: 12, // header + new_id
-        })?;
-        message.write_arg(wl::Arg::NewId(0x10001))?;
+        let message = WlDisplayRequest::Sync { callback: 0x10001 }.into_message(1)?;
         let (bytes, mut handles) = message.take();
         client_channel.write(&bytes, &mut handles)?;
 

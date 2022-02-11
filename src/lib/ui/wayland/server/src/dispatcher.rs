@@ -14,15 +14,17 @@ use {
     parking_lot::Mutex,
     std::io::Read,
     std::sync::Arc,
-    wayland::{WlCompositor, WlDataDeviceManager, WlOutput, WlSeat, WlShm, WlSubcompositor},
-    wp_viewporter::WpViewporter,
-    xdg_shell::XdgWmBase,
-    zaura_shell::ZauraShell,
-    zcr_alpha_compositing_v1::ZcrAlphaCompositingV1,
-    zcr_secure_output_v1::ZcrSecureOutputV1,
-    zwp_linux_dmabuf_v1::ZwpLinuxDmabufV1,
-    zwp_pointer_constraints_v1::ZwpPointerConstraintsV1,
-    zwp_relative_pointer_v1::ZwpRelativePointerManagerV1,
+    wayland_server_protocol::{
+        WlCompositor, WlDataDeviceManager, WlOutput, WlSeat, WlShm, WlSubcompositor,
+    },
+    wp_viewporter_server_protocol::WpViewporter,
+    xdg_shell_server_protocol::XdgWmBase,
+    zaura_shell_server_protocol::ZauraShell,
+    zcr_alpha_compositing_v1_server_protocol::ZcrAlphaCompositingV1,
+    zcr_secure_output_v1_server_protocol::ZcrSecureOutputV1,
+    zwp_linux_dmabuf_v1_server_protocol::ZwpLinuxDmabufV1,
+    zwp_pointer_constraints_v1_server_protocol::ZwpPointerConstraintsV1,
+    zwp_relative_pointer_v1_server_protocol::ZwpRelativePointerManagerV1,
 };
 
 /// The main FIDL server that listens for incoming client connection

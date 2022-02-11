@@ -7,7 +7,7 @@ use {
     crate::object::{ObjectRef, RequestReceiver},
     anyhow::{format_err, Error},
     fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
-    wayland::*,
+    wayland_server_protocol::*,
 };
 
 /// The set of pixel formats that will be announced to clients.

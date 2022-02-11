@@ -8,7 +8,7 @@ use {
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
     anyhow::Error,
     fuchsia_wayland_core as wl,
-    zcr_secure_output_v1::{
+    zcr_secure_output_v1_server_protocol::{
         ZcrSecureOutputV1, ZcrSecureOutputV1Request, ZcrSecurityV1, ZcrSecurityV1Request,
     },
 };

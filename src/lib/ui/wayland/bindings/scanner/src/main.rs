@@ -6,11 +6,14 @@ use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-use wayland_scanner_lib::{Codegen, Parser, Protocol};
+use wayland_scanner_lib::{Codegen, CodegenTarget, Parser, Protocol};
 
 /// Generates wayland server bindings for the given protocol file.
 #[derive(StructOpt, Debug)]
 struct Options {
+    /// Flag to control which set of bindings is generated - client or server.
+    #[structopt(long = "target", parse(try_from_str))]
+    target: CodegenTarget,
     /// Input XML file
     #[structopt(short = "i", long = "input", parse(from_os_str))]
     input: PathBuf,
@@ -61,7 +64,7 @@ fn main() {
             return;
         }
     };
-    if let Err(e) = codegen.codegen(protocol, options.dependencies.as_slice()) {
+    if let Err(e) = codegen.codegen(options.target, protocol, options.dependencies.as_slice()) {
         println!("Failed to codegen rust module {}", e);
     }
 }

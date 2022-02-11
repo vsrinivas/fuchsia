@@ -9,7 +9,7 @@ use {
     anyhow::Error,
     fidl_fuchsia_ui_gfx::DisplayInfo,
     fuchsia_wayland_core as wl,
-    wayland::{wl_output, WlOutput, WlOutputEvent, WlOutputRequest},
+    wayland_server_protocol::{wl_output, WlOutput, WlOutputEvent, WlOutputRequest},
 };
 
 /// An implementation of the wl_output global.

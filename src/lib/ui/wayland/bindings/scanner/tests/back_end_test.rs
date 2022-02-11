@@ -6,7 +6,7 @@
 mod test {
     use fuchsia_wayland_core::{Arg, Enum, Fixed, FromArgs, IntoMessage};
     use fuchsia_zircon::{self as zx, HandleBased};
-    use test_protocol::{test_interface, TestInterfaceEvent, TestInterfaceRequest};
+    use test_protocol_server_protocol::{test_interface, TestInterfaceEvent, TestInterfaceRequest};
     use zerocopy::AsBytes;
 
     static SENDER_ID: u32 = 3;
@@ -318,7 +318,7 @@ mod test {
     #[test]
     fn test_deserialize_complex() {
         let (s1, s2) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
-        let request = test_protocol::TestInterfaceRequest::from_args(
+        let request = TestInterfaceRequest::from_args(
             8, /* opcode */
             vec![
                 Arg::Uint(UINT_VALUE),
@@ -333,7 +333,7 @@ mod test {
         .unwrap();
 
         match request {
-            test_protocol::TestInterfaceRequest::Complex {
+            TestInterfaceRequest::Complex {
                 uint_arg,
                 int_arg,
                 handle_arg1,
@@ -357,7 +357,7 @@ mod test {
     #[test]
     fn test_serialize_complex() {
         let (s1, s2) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
-        let event = test_protocol::TestInterfaceEvent::Complex {
+        let event = TestInterfaceEvent::Complex {
             uint_arg: UINT_VALUE,
             int_arg: INT_VALUE,
             handle_arg1: s1.into_handle(),
@@ -377,13 +377,13 @@ mod test {
 
     #[test]
     fn test_deserialize_request_invalid_opcode() {
-        let result = test_protocol::TestInterfaceRequest::from_args(111, vec![]);
+        let result = TestInterfaceRequest::from_args(111, vec![]);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_deserialize_request_message_too_short() {
-        let result = test_protocol::TestInterfaceRequest::from_args(0, vec![]);
+        let result = TestInterfaceRequest::from_args(0, vec![]);
         assert!(result.is_err());
     }
 

@@ -18,7 +18,7 @@ use {
     fuchsia_zircon::{self as zx, HandleBased},
     std::mem,
     std::sync::atomic::{AtomicUsize, Ordering},
-    wayland::{
+    wayland_server_protocol::{
         WlBufferEvent, WlCompositor, WlCompositorRequest, WlRegion, WlRegionRequest, WlSurface,
         WlSurfaceRequest,
     },

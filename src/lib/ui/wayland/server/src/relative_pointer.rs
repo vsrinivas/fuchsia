@@ -8,10 +8,9 @@ use {
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
     anyhow::Error,
     fuchsia_wayland_core as wl,
-    zwp_relative_pointer_v1::zwp_relative_pointer_v1::Event,
-    zwp_relative_pointer_v1::{
+    zwp_relative_pointer_v1_server_protocol::{
         ZwpRelativePointerManagerV1, ZwpRelativePointerManagerV1Request, ZwpRelativePointerV1,
-        ZwpRelativePointerV1Request,
+        ZwpRelativePointerV1Event, ZwpRelativePointerV1Request,
     },
 };
 
@@ -53,7 +52,7 @@ impl RelativePointer {
     ) -> Result<(), Error> {
         event_queue.post(
             this.id(),
-            Event::RelativeMotion {
+            ZwpRelativePointerV1Event::RelativeMotion {
                 utime_hi: (time_in_us >> 32) as u32,
                 utime_lo: (time_in_us & 0xffffffff) as u32,
                 dx,

@@ -6,7 +6,7 @@ use {
     crate::client::Client,
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
     anyhow::Error,
-    zwp_pointer_constraints_v1::{
+    zwp_pointer_constraints_v1_server_protocol::{
         ZwpConfinedPointerV1, ZwpConfinedPointerV1Request, ZwpLockedPointerV1,
         ZwpLockedPointerV1Request, ZwpPointerConstraintsV1, ZwpPointerConstraintsV1Request,
     },

@@ -7,5 +7,5 @@ mod codegen;
 mod parser;
 
 pub use crate::ast::{AstResult, Protocol};
-pub use crate::codegen::Codegen;
+pub use crate::codegen::{Codegen, CodegenTarget};
 pub use crate::parser::{ArgKind, Parser};

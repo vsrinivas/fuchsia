@@ -14,7 +14,7 @@ use {
     fuchsia_trace as ftrace,
     fuchsia_zircon::{self as zx, HandleBased},
     std::{cell::Cell, rc::Rc},
-    wayland::*,
+    wayland_server_protocol::*,
 };
 
 pub type ImageInstanceId = usize;

@@ -10,7 +10,7 @@ use {
     anyhow::Error,
     fidl_fuchsia_ui_gfx::DisplayInfo,
     fuchsia_wayland_core as wl,
-    zaura_shell::{
+    zaura_shell_server_protocol::{
         zaura_output, ZauraOutput, ZauraOutputRequest, ZauraShell, ZauraShellRequest, ZauraSurface,
         ZauraSurfaceRequest,
     },

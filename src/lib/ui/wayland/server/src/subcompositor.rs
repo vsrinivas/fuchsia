@@ -12,7 +12,9 @@ use {
     anyhow::{format_err, Error},
     fuchsia_wayland_core as wl,
     std::mem,
-    wayland::{WlSubcompositor, WlSubcompositorRequest, WlSubsurface, WlSubsurfaceRequest},
+    wayland_server_protocol::{
+        WlSubcompositor, WlSubcompositorRequest, WlSubsurface, WlSubsurfaceRequest,
+    },
 };
 
 /// An implementation of the wl_subcompositor global.

@@ -6,15 +6,24 @@ import("//src/lib/ui/wayland/bindings/protocol.gni")
 
 group("protocols") {
   deps = [
-    ":wayland",
-    ":wp_viewporter",
-    ":xdg_shell",
-    ":zaura_shell",
-    ":zcr_alpha_compositing_v1",
-    ":zcr_secure_output_v1",
-    ":zwp_linux_dmabuf_v1",
-    ":zwp_pointer_constraints_v1",
-    ":zwp_relative_pointer_v1",
+    ":wayland_client_protocol",
+    ":wayland_server_protocol",
+    ":wp_viewporter_client_protocol",
+    ":wp_viewporter_server_protocol",
+    ":xdg_shell_client_protocol",
+    ":xdg_shell_server_protocol",
+    ":zaura_shell_client_protocol",
+    ":zaura_shell_server_protocol",
+    ":zcr_alpha_compositing_v1_client_protocol",
+    ":zcr_alpha_compositing_v1_server_protocol",
+    ":zcr_secure_output_v1_client_protocol",
+    ":zcr_secure_output_v1_server_protocol",
+    ":zwp_linux_dmabuf_v1_client_protocol",
+    ":zwp_linux_dmabuf_v1_server_protocol",
+    ":zwp_pointer_constraints_v1_client_protocol",
+    ":zwp_pointer_constraints_v1_server_protocol",
+    ":zwp_relative_pointer_v1_client_protocol",
+    ":zwp_relative_pointer_v1_server_protocol",
   ]
 }
 

@@ -18,7 +18,7 @@ use {
         cell::{Cell, RefCell},
         rc::Rc,
     },
-    wayland::WlDisplayEvent,
+    wayland_server_protocol::WlDisplayEvent,
 };
 
 type Task = Box<dyn FnMut(&mut Client) -> Result<(), Error> + 'static>;

@@ -77,8 +77,8 @@ impl wl::Interface for TestInterface {
         wl::MessageGroupSpec(&[wl::MessageSpec(&[]), wl::MessageSpec(&[])]);
     const EVENTS: wl::MessageGroupSpec =
         wl::MessageGroupSpec(&[wl::MessageSpec(&[]), wl::MessageSpec(&[])]);
-    type Request = TestMessage;
-    type Event = TestMessage;
+    type Incoming = TestMessage;
+    type Outgoing = TestMessage;
 }
 
 pub struct TestInterface2;
@@ -91,8 +91,8 @@ impl wl::Interface for TestInterface2 {
         wl::MessageGroupSpec(&[wl::MessageSpec(&[]), wl::MessageSpec(&[])]);
     const EVENTS: wl::MessageGroupSpec =
         wl::MessageGroupSpec(&[wl::MessageSpec(&[]), wl::MessageSpec(&[])]);
-    type Request = TestMessage;
-    type Event = TestMessage;
+    type Incoming = TestMessage;
+    type Outgoing = TestMessage;
 }
 
 pub struct TestReceiver {

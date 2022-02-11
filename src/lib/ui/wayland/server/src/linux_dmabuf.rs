@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_ui_composition as composition, fuchsia_wayland_core as wl, fuchsia_zircon as zx,
     fuchsia_zircon::{EventPair, Handle, HandleBased},
     std::rc::Rc,
-    zwp_linux_dmabuf_v1::{
+    zwp_linux_dmabuf_v1_server_protocol::{
         ZwpLinuxBufferParamsV1, ZwpLinuxBufferParamsV1Request, ZwpLinuxDmabufV1,
         ZwpLinuxDmabufV1Event, ZwpLinuxDmabufV1Request,
     },

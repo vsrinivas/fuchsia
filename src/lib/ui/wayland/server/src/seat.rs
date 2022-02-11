@@ -14,7 +14,7 @@ use {
     fuchsia_zircon::{self as zx, HandleBased},
     std::collections::BTreeSet,
     std::collections::HashSet,
-    wayland::{
+    wayland_server_protocol::{
         wl_keyboard, wl_pointer, wl_seat, wl_touch, WlKeyboard, WlKeyboardEvent, WlKeyboardRequest,
         WlPointer, WlPointerRequest, WlSeat, WlSeatEvent, WlSeatRequest, WlTouch, WlTouchRequest,
     },

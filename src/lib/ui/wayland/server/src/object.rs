@@ -340,7 +340,7 @@ pub trait RequestReceiver<I: wl::Interface>: Any + Sized {
     ///   }
     fn receive(
         this: ObjectRef<Self>,
-        request: I::Request,
+        request: I::Incoming,
         client: &mut Client,
     ) -> Result<(), Error>;
 }
@@ -373,7 +373,7 @@ fn receive_message<I: wl::Interface, R: RequestReceiver<I>>(
     ftrace::duration!("wayland", "receive_message");
     let request = {
         ftrace::duration!("wayland", "I::Request::from_args");
-        I::Request::from_args(opcode, args).unwrap()
+        I::Incoming::from_args(opcode, args).unwrap()
     };
     if client.protocol_logging() {
         println!("--r-> {}", request.log(this));

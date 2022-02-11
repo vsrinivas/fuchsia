@@ -46,7 +46,8 @@ use {
         Arc,
     },
     std::{collections::BTreeSet, convert::TryInto},
-    xdg_shell::{
+    xdg_shell_server_protocol::{
+        self as xdg_shell,
         xdg_positioner::{Anchor, Gravity},
         xdg_toplevel, XdgPopupEvent, XdgPopupRequest, XdgPositionerRequest, XdgSurfaceEvent,
         XdgSurfaceRequest, XdgToplevelEvent, XdgToplevelRequest, XdgWmBase, XdgWmBaseRequest,

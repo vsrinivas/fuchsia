@@ -64,11 +64,11 @@ pub trait Interface {
     /// A description of the structure of event messages.
     const EVENTS: MessageGroupSpec;
 
-    /// The rust type that can hold the decoded request messages.
-    type Request: FromArgs;
+    /// The rust type that can hold the decoded incoming messages.
+    type Incoming: FromArgs;
 
-    /// The rust type that can hold the decoded event messages.
-    type Event: IntoMessage;
+    /// The rust type that can be decoded into outgoing messages.
+    type Outgoing: IntoMessage;
 }
 
 #[derive(Debug, Error)]

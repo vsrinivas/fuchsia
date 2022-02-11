@@ -8,7 +8,7 @@ use {
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
     anyhow::Error,
     fuchsia_wayland_core as wl,
-    zcr_alpha_compositing_v1::{
+    zcr_alpha_compositing_v1_server_protocol::{
         ZcrAlphaCompositingV1, ZcrAlphaCompositingV1Request, ZcrBlendingV1, ZcrBlendingV1Request,
     },
 };
