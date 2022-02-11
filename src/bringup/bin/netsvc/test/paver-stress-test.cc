@@ -47,7 +47,8 @@ TEST_F(PaverTest, WriteFvmManyLargeWrites) {
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
-  ASSERT_EQ(fake_svc_.fake_paver().GetCommandTrace(), std::vector<Command>{Command::kWriteVolumes});
+  ASSERT_EQ(fake_svc_.fake_paver().GetCommandTrace(),
+            std::vector<paver_test::Command>{paver_test::Command::kWriteVolumes});
 }
 
 #endif  // !__has_feature(address_sanitizer)
