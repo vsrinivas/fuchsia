@@ -35,9 +35,12 @@ TEST_F(ServerTest, Bad_ClientClosingChannelCausesUnbind) {
   }).wait_for([&](auto observations) {
       return observations.has(Observation::Kind::kOnComplete);
     }).then_observe([&](auto observations) {
-    EXPECT_EQ(2u, observations.size());
-    EXPECT_EQ(Observation::Kind::kOnUnbind, observations[0].kind());
-    EXPECT_EQ(Observation::Kind::kOnComplete, observations[1].kind());
+    // We are not opinionated about what has been observed, just that the last
+    // two observations must be unbinding and completion.
+    EXPECT_TRUE(2u <= observations.size());
+    auto last = observations.size() - 1;
+    EXPECT_EQ(Observation::Kind::kOnUnbind, observations[last - 1].kind());
+    EXPECT_EQ(Observation::Kind::kOnComplete, observations[last].kind());
   });
 }
 
