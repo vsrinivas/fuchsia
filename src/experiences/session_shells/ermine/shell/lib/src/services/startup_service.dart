@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// ignore_for_file: invalid_null_aware_operator
 import 'dart:async';
 import 'dart:convert' show json;
 import 'dart:io';
@@ -212,7 +211,7 @@ class StartupService extends activity.Listener {
   void logout() {
     // Exit the current isolate, which allows the parent to treat it as a logout
     // action.
-    WidgetsBinding.instance?.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       Isolate.current.setErrorsFatal(true);
       Isolate.current.kill(priority: Isolate.beforeNextEvent);
     });

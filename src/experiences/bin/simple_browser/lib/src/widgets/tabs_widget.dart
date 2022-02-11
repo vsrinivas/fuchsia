@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// ignore_for_file: invalid_null_aware_operator
 import 'package:flutter/material.dart';
 import 'package:internationalization/strings.dart';
 import '../blocs/tabs_bloc.dart';
@@ -648,7 +647,7 @@ class _TabWidgetState extends State<_TabWidget> {
         _hovering.value = true;
       },
       onExit: (_) {
-        WidgetsBinding.instance?.addPostFrameCallback((_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
           _hovering.value = false;
         });
       },

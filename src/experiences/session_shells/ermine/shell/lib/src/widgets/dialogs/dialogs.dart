@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// ignore_for_file: invalid_null_aware_operator
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/widgets/dialogs/dialog.dart';
 import 'package:ermine/src/widgets/dialogs/password_prompt.dart';
@@ -19,7 +18,7 @@ class Dialogs extends StatelessWidget {
   Widget build(BuildContext context) {
     // Display queued up dialogs if none are being displayed currently.
     if (!Navigator.canPop(context)) {
-      WidgetsBinding.instance?.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         _showAllDialogs(context);
       });
     }
