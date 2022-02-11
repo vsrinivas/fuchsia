@@ -17,6 +17,7 @@ use std::time::Duration;
 mod alarm;
 mod radio;
 mod reset;
+mod trel;
 mod udp;
 
 use openthread::ot::NetifIdentifier;

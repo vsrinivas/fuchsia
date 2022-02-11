@@ -30,6 +30,7 @@ rustc_library("openthread_fuchsia") {
     "src/backing/mod.rs",
     "src/backing/radio.rs",
     "src/backing/reset.rs",
+    "src/backing/trel.rs",
     "src/backing/udp.rs",
     "src/binding.rs",
     "src/lib.rs",
