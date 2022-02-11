@@ -5,11 +5,8 @@
 package staticanalysis
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -51,17 +48,54 @@ func TestClippyAnalyzer(t *testing.T) {
 			},
 			clippyOutputs: map[string][]clippyResult{
 				"foo.clippy": {
+					// Results without any primary span should be ignored.
 					{
-						Message: "this function has too many arguments (8/7)",
-						Code:    clippyCode{Code: "clippy::too_many_arguments"},
+						Message: "1 lint failed",
+						Code:    clippyCode{Code: "clippy::summary"},
+						Level:   "warning",
+					},
+					{
+						Message: "casting integer literal to `u64` is unnecessary",
+						Code:    clippyCode{Code: "clippy::unnecessary_cast"},
 						Level:   "warning",
 						Spans: []clippySpan{
 							{
-								FileName:    "../../src/foo.rs",
+								FileName: "../../src/foo.rs",
+								// Non-primary spans should be ignored.
+								Primary:     false,
 								LineStart:   1,
-								LineEnd:     2,
+								LineEnd:     1,
 								ColumnStart: 4,
 								ColumnEnd:   5,
+							},
+							{
+								FileName:    "../../src/foo.rs",
+								Primary:     true,
+								LineStart:   100,
+								LineEnd:     100,
+								ColumnStart: 14,
+								ColumnEnd:   24,
+							},
+						},
+						Children: []clippyResult{
+							{
+								Message: "I am a note",
+								// Children with level != "help" should be ignored.
+								Level: "note",
+							},
+							{
+								Message: "try",
+								Level:   "help",
+								Spans: []clippySpan{
+									{
+										Primary:              true,
+										SuggestedReplacement: "123_u64",
+									},
+								},
+							},
+							{
+								Message: "see https://clippy.example.com for docs",
+								Level:   "help",
 							},
 						},
 					},
@@ -70,18 +104,19 @@ func TestClippyAnalyzer(t *testing.T) {
 			expected: []*Finding{
 				{
 					Message: strings.Join([]string{
-						"this function has too many arguments (8/7)",
-						fmt.Sprintf("For more information, see %s", clippyLintURL("too_many_arguments")),
+						"casting integer literal to `u64` is unnecessary",
+						"help: try: `123_u64`",
+						"help: see https://clippy.example.com for docs",
 						"To reproduce locally, run `fx clippy -f src/foo.rs`",
 					}, "\n\n"),
-					Category:  "Clippy/warning/too_many_arguments",
+					Category:  "Clippy/warning/unnecessary_cast",
 					Path:      "src/foo.rs",
-					StartLine: 1,
-					EndLine:   2,
+					StartLine: 100,
+					EndLine:   100,
 					// StartChar and EndChar should be decremented from the
 					// one-based values produced by Clippy.
-					StartChar: 3,
-					EndChar:   4,
+					StartChar: 13,
+					EndChar:   23,
 				},
 			},
 		},
@@ -116,18 +151,17 @@ func TestClippyAnalyzer(t *testing.T) {
 			}
 
 			for path, results := range test.clippyOutputs {
-				var b bytes.Buffer
+				f, err := os.Create(filepath.Join(buildDir, path))
+				if err != nil {
+					t.Fatal(err)
+				}
+				enc := json.NewEncoder(f)
 				for _, result := range results {
-					encoded, err := json.Marshal(result)
-					if err != nil {
+					// Encode() automatically appends a newline, so the file will be in JSON
+					// lines format.
+					if err := enc.Encode(result); err != nil {
 						t.Fatal(err)
 					}
-					b.Write([]byte("\n"))
-					b.Write(encoded)
-				}
-				absPath := filepath.Join(buildDir, path)
-				if err := ioutil.WriteFile(absPath, b.Bytes(), 0o600); err != nil {
-					t.Fatal(err)
 				}
 			}
 
@@ -136,7 +170,7 @@ func TestClippyAnalyzer(t *testing.T) {
 				t.Fatal(err)
 			}
 			if diff := cmp.Diff(test.expected, findings, cmpopts.EquateEmpty()); diff != "" {
-				t.Errorf("clippy analyzer diff (-want +got): %s", diff)
+				t.Errorf("clippy analyzer diff (-want +got):\n%s", diff)
 			}
 		})
 	}

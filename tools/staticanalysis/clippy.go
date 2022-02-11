@@ -80,37 +80,63 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*Finding, 
 		if err := json.Unmarshal(line, &result); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal clippy output line (%q): %w", line, err)
 		}
-		// Note that some clippy findings are just summaries of all the other
-		// clippy findings and don't contain any spans. That's fine, we'll just
-		// skip them.
-		for _, span := range result.Spans {
-			spanPath, err := buildPathToCheckoutPath(span.FileName, c.buildDir, c.checkoutDir)
-			if err != nil {
-				return nil, err
-			}
-			// Each Clippy output file contains the findings from an entire Rust
-			// library that may contain many files, so skip findings from any
-			// file besides the one we're currently checking.
-			if spanPath != path {
+
+		primarySpan, ok := result.primarySpan(ctx)
+		if !ok {
+			// Skip any result that doesn't have any primary span. This will be
+			// the case for e.g. results that have no spans because they just
+			// summarize other results from the same library.
+			continue
+		}
+
+		spanPath, err := buildPathToCheckoutPath(primarySpan.FileName, c.buildDir, c.checkoutDir)
+		if err != nil {
+			return nil, err
+		}
+		// Each Clippy output file contains the findings from an entire Rust
+		// library that may contain many files, so skip findings from any
+		// file besides the one we're currently checking.
+		if spanPath != path {
+			continue
+		}
+
+		messageLines := []string{result.Message}
+
+		// Clippy output often contains "help" messages providing suggestions
+		// for fixes and links to documentation. Append these messages to the
+		// finding's text.
+		for _, child := range result.Children {
+			if child.Level != "help" {
 				continue
 			}
-			lintID := strings.TrimPrefix(result.Code.Code, "clippy::")
-			category := fmt.Sprintf("Clippy/%s/%s", result.Level, lintID)
-			findings = append(findings, &Finding{
-				Category: category,
-				Message: strings.Join([]string{
-					result.Message,
-					fmt.Sprintf("For more information, see %s", clippyLintURL(lintID)),
-					fmt.Sprintf("To reproduce locally, run `fx clippy -f %s`", spanPath),
-				}, "\n\n"),
-				Path:      spanPath,
-				StartLine: span.LineStart,
-				EndLine:   span.LineEnd,
-				StartChar: span.ColumnStart - 1,
-				EndChar:   span.ColumnEnd - 1,
-			})
+			msg := child.Message
+			if span, ok := child.primarySpan(ctx); ok && span.SuggestedReplacement != "" {
+				// If there's a suggested replacement, child.Message will be
+				// some text like "try" that is intended to be followed by the
+				// suggested replacement.
+				msg = fmt.Sprintf("%s: `%s`", child.Message, span.SuggestedReplacement)
+			}
+			messageLines = append(messageLines, fmt.Sprintf("help: %s", msg))
 		}
+
+		messageLines = append(messageLines, fmt.Sprintf("To reproduce locally, run `fx clippy -f %s`", path))
+
+		lintID := strings.TrimPrefix(result.Code.Code, "clippy::")
+		category := fmt.Sprintf("Clippy/%s/%s", result.Level, lintID)
+
+		findings = append(findings, &Finding{
+			Category:  category,
+			Message:   strings.Join(messageLines, "\n\n"),
+			Path:      path,
+			StartLine: primarySpan.LineStart,
+			EndLine:   primarySpan.LineEnd,
+			// Clippy uses one-based column numbers but staticanalysis finding
+			// character indices must be zero-based.
+			StartChar: primarySpan.ColumnStart - 1,
+			EndChar:   primarySpan.ColumnEnd - 1,
+		})
 	}
+
 	return findings, nil
 }
 
@@ -138,6 +164,30 @@ type clippyResult struct {
 	Level string `json:"level"`
 	// Spans is the file ranges that the finding applies to.
 	Spans []clippySpan `json:"spans"`
+	// Children lists auxiliary information that may be helpful for
+	// understanding the lint result (help messages, references to related code,
+	// etc.).
+	Children []clippyResult `json:"children"`
+}
+
+// primarySpan returns the first (presumed only) primary span, if any, of this
+// clippy result. It returns false if no primary span was found.
+func (cr *clippyResult) primarySpan(ctx context.Context) (clippySpan, bool) {
+	var primarySpans []clippySpan
+	for _, s := range cr.Spans {
+		if s.Primary {
+			primarySpans = append(primarySpans, s)
+		}
+	}
+	if len(primarySpans) == 0 {
+		return clippySpan{}, false
+	}
+	if len(primarySpans) > 1 {
+		// Note that some Clippy lints such as `uninit_vec` actually do have
+		// multiple primary spans, but we'll always use the first one.
+		logger.Warningf(ctx, "Multiple primary spans found in clippy result: %+v", cr)
+	}
+	return primarySpans[0], true
 }
 
 type clippyCode struct {
@@ -150,14 +200,15 @@ type clippySpan struct {
 	// Path relative to the build dir.
 	FileName string `json:"file_name"`
 
+	// Whether this is the primary span for the associated Clippy result.
+	Primary bool `json:"is_primary"`
+
+	// Suggested replacement text to fix the lint (optional).
+	SuggestedReplacement string `json:"suggested_replacement"`
+
 	LineStart int `json:"line_start"`
 	LineEnd   int `json:"line_end"`
 
 	ColumnStart int `json:"column_start"`
 	ColumnEnd   int `json:"column_end"`
-}
-
-// clippyLintURL returns the URL of the docs for a specific Clippy lint.
-func clippyLintURL(lintID string) string {
-	return "https://rust-lang.github.io/rust-clippy/master/index.html#" + lintID
 }
