@@ -47,9 +47,8 @@ void HandleOnOomReboot() {
   // detect (assert) if we attempt to allocate.
   ScopedMemoryAllocationDisabled allocation_disabled;
 
-  const int kSleepSeconds = 8;
-  printf("memory-pressure: pausing for %ds after OOM mem signal\n", kSleepSeconds);
-  zx_status_t status = Thread::Current::SleepRelative(ZX_SEC(kSleepSeconds));
+  printf("memory-pressure: pausing for %ums after OOM mem signal\n", gBootOptions->oom_timeout_ms);
+  zx_status_t status = Thread::Current::SleepRelative(ZX_MSEC(gBootOptions->oom_timeout_ms));
   if (status != ZX_OK) {
     printf("memory-pressure: sleep after OOM failed: %d\n", status);
   }

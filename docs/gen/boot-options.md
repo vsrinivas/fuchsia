@@ -185,7 +185,16 @@ If set to `jobkill`, when encountering OOM, the kernel attempts to kill jobs tha
 have the `ZX_PROP_JOB_KILL_ON_OOM` bit set to recover memory.
 
 If set to `reboot`, when encountering OOM, the kernel signals an out-of-memory
-event (see `zx_system_get_event()`), delays briefly, and then reboots the system.
+event (see `zx_system_get_event()`), waits some period, and then reboots the
+system. The length of the wait period is set by the
+`kernel.oom.reboot-timeout-ms` boot option.
+
+### kernel.oom.reboot-timeout-ms=\<uint32_t>
+**Default:** `0x1f40`
+
+This option sets the amount of time the kernel will wait before rebooting the
+system when it encounters an out-of-memory (OOM) situations. This option is
+only relevant when `kernel.oom.behavior` is set to `reboot`.
 
 ### kernel.mexec-force-high-ramdisk=\<bool>
 **Default:** `false`
