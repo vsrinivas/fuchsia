@@ -133,6 +133,13 @@
             from: "parent",
             to: "#session",
         },
+
+        // Allow components in the session to restart it (the session).
+        {
+            protocol: "fuchsia.session.Restarter",
+            from: "self",
+            to: "#session",
+        },
     ],
     expose: [
         {
