@@ -12,8 +12,6 @@ use {
     anyhow::Context as _,
     fuchsia_hash::Hash,
     package_directory::RootDir,
-    std::sync::Arc,
-    vfs::directory::entry::DirectoryEntry as _,
 };
 
 static DISABLE_RESTRICTIONS_FILE_PATH: &str = "data/pkgfs_disable_executability_restrictions";
@@ -119,20 +117,9 @@ impl SystemImage {
         })
     }
 
-    /// Consume this `SystemImage` and serve its contents over the provided `server_end`.
-    pub fn serve(
-        self,
-        scope: vfs::execution_scope::ExecutionScope,
-        flags: u32,
-        server_end: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
-    ) {
-        Arc::new(self.root_dir).open(
-            scope,
-            flags,
-            0,
-            vfs::path::Path::dot(),
-            server_end.into_channel().into(),
-        )
+    /// Consume self and return the contained `package_directory::RootDir`.
+    pub fn into_root_dir(self) -> RootDir {
+        self.root_dir
     }
 }
 
@@ -245,31 +232,5 @@ mod tests {
         let (_env, system_image) = TestEnv::new(SystemImageBuilder::new()).await;
 
         assert_eq!(system_image.non_static_allow_list().await, NonStaticAllowList::empty());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn serve_succeeds() {
-        let (_env, system_image) = TestEnv::new(SystemImageBuilder::new()).await;
-
-        let (proxy, server) = fidl::endpoints::create_proxy().unwrap();
-        system_image.serve(
-            package_directory::ExecutionScope::new(),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-            server,
-        );
-
-        assert_eq!(
-            files_async::readdir(&proxy).await.unwrap(),
-            vec![
-                files_async::DirEntry {
-                    name: "data".to_string(),
-                    kind: files_async::DirentKind::Directory
-                },
-                files_async::DirEntry {
-                    name: "meta".to_string(),
-                    kind: files_async::DirentKind::Directory
-                }
-            ]
-        );
     }
 }

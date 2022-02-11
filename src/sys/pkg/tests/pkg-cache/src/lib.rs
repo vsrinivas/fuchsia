@@ -518,25 +518,19 @@ where
             pkgfs_packages: io_util::directory::open_directory_no_describe(
                 realm_instance.root.get_exposed_dir(),
                 "pkgfs-packages",
-                // TODO(fxbug.dev/88871) Add OPEN_RIGHT_EXECUTABLE once pkg-cache uses VFS instead
-                // of ServiceFs to serve its out dir.
-                OPEN_RIGHT_READABLE,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
             )
             .expect("open pkgfs-packages"),
             pkgfs_versions: io_util::directory::open_directory_no_describe(
                 realm_instance.root.get_exposed_dir(),
                 "pkgfs-versions",
-                // TODO(fxbug.dev/88871) Add OPEN_RIGHT_EXECUTABLE once pkg-cache uses VFS instead
-                // of ServiceFs to serve its out dir.
-                OPEN_RIGHT_READABLE,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
             )
             .expect("open pkgfs-versions"),
             pkgfs: io_util::directory::open_directory_no_describe(
                 realm_instance.root.get_exposed_dir(),
                 "pkgfs",
-                // TODO(fxbug.dev/88871) Add OPEN_RIGHT_EXECUTABLE once pkg-cache uses VFS instead
-                // of ServiceFs to serve its out dir.
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
             )
             .expect("open pkgfs"),
         };
@@ -667,12 +661,10 @@ impl<P: PkgFs> TestEnv<P> {
     /// This proxy is not stored in Proxies because the directory is not served when there is no
     /// system_image package.
     async fn system_dir(&self) -> fidl_fuchsia_io::DirectoryProxy {
-        // TODO(fxbug.dev/88871) Add OPEN_RIGHT_EXECUTABLE once pkg-cache uses VFS instead of
-        // ServiceFs to serve its out dir.
         io_util::directory::open_directory(
             self.apps.realm_instance.root.get_exposed_dir(),
             "system",
-            OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
         )
         .await
         .expect("open system")

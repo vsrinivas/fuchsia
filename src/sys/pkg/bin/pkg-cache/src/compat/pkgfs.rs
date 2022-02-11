@@ -9,7 +9,8 @@ use {
     std::{collections::BTreeMap, sync::Arc},
     vfs::directory::{
         dirents_sink,
-        entry::{DirectoryEntry as _, EntryInfo},
+        entry::{DirectoryEntry, EntryInfo},
+        helper::DirectlyMutable as _,
         traversal_position::TraversalPosition,
     },
 };
@@ -90,8 +91,8 @@ async fn read_dirents<'a>(
     Ok((TraversalPosition::End, sink.seal()))
 }
 
-/// Serve the pkgfs compatibility directory:
-///   ${fs}/
+/// Make the pkgfs compatibility directory, which has the following structure:
+///   ./
 ///     system/
 ///     packages/
 ///     versions/
@@ -99,81 +100,43 @@ async fn read_dirents<'a>(
 ///       validation/
 ///         missing
 /// The "system" directory will only be added and served if `system_image.is_some()`.
-pub fn serve(
-    mut fs: fuchsia_component::server::ServiceFsDir<
-        '_,
-        impl fuchsia_component::server::ServiceObjTrait,
-    >,
+pub fn make_dir(
     base_packages: Arc<crate::BasePackages>,
     package_index: Arc<futures::lock::Mutex<crate::PackageIndex>>,
     non_static_allow_list: Arc<system_image::NonStaticAllowList>,
     executability_restrictions: system_image::ExecutabilityRestrictions,
     blobfs: blobfs::Client,
     system_image: Option<system_image::SystemImage>,
-    scope: vfs::execution_scope::ExecutionScope,
-) -> Result<(), anyhow::Error> {
+) -> Result<Arc<dyn DirectoryEntry>, anyhow::Error> {
+    let dir = vfs::pseudo_directory! {
+        "packages" => Arc::new(packages::PkgfsPackages::new(
+            Arc::clone(&base_packages),
+            Arc::clone(&package_index),
+            Arc::clone(&non_static_allow_list),
+            blobfs.clone(),
+        )),
+        "versions" => Arc::new(versions::PkgfsVersions::new(
+            Arc::clone(&base_packages),
+            Arc::clone(&package_index),
+            Arc::clone(&non_static_allow_list),
+            executability_restrictions,
+            blobfs.clone(),
+        )),
+        "ctl" => vfs::pseudo_directory! {
+            "validation" => Arc::new(validation::Validation::new(
+                blobfs.clone(),
+                base_packages.list_blobs().to_owned()
+            ))
+        },
+    };
+
     if let Some(system_image) = system_image {
-        let (system_proxy, system_server) =
-            fidl::endpoints::create_proxy().context("create pkgfs/system endpoints")?;
-        system_image.serve(
-            scope.clone(),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
-            system_server,
-        );
-        fs.add_remote("system", system_proxy);
+        let () = dir
+            .add_entry("system", Arc::new(system_image.into_root_dir()))
+            .context("adding system directory to pkgfs")?;
     }
 
-    let (packages_proxy, packages_server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
-            .context("create pkgfs/packages endpoints")?;
-    Arc::new(packages::PkgfsPackages::new(
-        Arc::clone(&base_packages),
-        Arc::clone(&package_index),
-        Arc::clone(&non_static_allow_list),
-        blobfs.clone(),
-    ))
-    .open(
-        scope.clone(),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
-        0,
-        vfs::path::Path::dot(),
-        packages_server.into_channel().into(),
-    );
-    fs.add_remote("packages", packages_proxy);
-
-    let (versions_proxy, versions_server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
-            .context("create pkgfs/versions endpoints")?;
-    Arc::new(versions::PkgfsVersions::new(
-        Arc::clone(&base_packages),
-        Arc::clone(&package_index),
-        Arc::clone(&non_static_allow_list),
-        executability_restrictions,
-        blobfs.clone(),
-    ))
-    .open(
-        scope.clone(),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
-        0,
-        vfs::path::Path::dot(),
-        versions_server.into_channel().into(),
-    );
-    fs.add_remote("versions", versions_proxy);
-
-    let (validation_proxy, validation_server) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
-            .context("create pkgfs/ctl/validation endpoints")?;
-    Arc::new(validation::Validation::new(blobfs.clone(), base_packages.list_blobs().to_owned()))
-        .open(
-            scope.clone(),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-            0,
-            vfs::path::Path::dot(),
-            validation_server.into_channel().into(),
-        );
-    fs.dir("ctl").add_remote("validation", validation_proxy);
-
-    Ok(())
+    Ok(dir)
 }
 
 /// Extension trait for convenient manipulation of unsigned integers acting as flags, e.g.
