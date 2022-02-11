@@ -680,7 +680,6 @@ void Guest::StartContainer() {
     case vm_tools::tremplin::StartContainerResponse::RUNNING:
     case vm_tools::tremplin::StartContainerResponse::STARTED:
       FX_LOGS(INFO) << "Container started";
-      SetupUser();
       break;
     case vm_tools::tremplin::StartContainerResponse::STARTING:
       FX_LOGS(INFO) << "Container starting";
@@ -716,9 +715,7 @@ void Guest::SetupUser() {
     case vm_tools::tremplin::SetUpUserResponse::EXISTS:
     case vm_tools::tremplin::SetUpUserResponse::SUCCESS:
       FX_LOGS(INFO) << "User created.";
-      AddMagmaDeviceToContainer();
-      SetupGPUDriversInContainer();
-      LaunchContainerShell();
+      StartContainer();
       break;
     case vm_tools::tremplin::SetUpUserResponse::FAILED:
       PostContainerFailure("Failed to create user: " + response.failure_reason());
@@ -777,7 +774,7 @@ grpc::Status Guest::UpdateCreateStatus(grpc::ServerContext* context,
   switch (request->status()) {
     case vm_tools::tremplin::ContainerCreationProgress::CREATED:
       FX_LOGS(INFO) << "Container created: " << request->container_name();
-      StartContainer();
+      SetupUser();
       break;
     case vm_tools::tremplin::ContainerCreationProgress::DOWNLOADING:
       PostContainerDownloadProgress(request->download_progress());
@@ -820,7 +817,6 @@ grpc::Status Guest::UpdateStartStatus(::grpc::ServerContext* context,
   switch (request->status()) {
     case vm_tools::tremplin::ContainerStartProgress::STARTED:
       FX_LOGS(INFO) << "Container started";
-      SetupUser();
       break;
     default:
       PostContainerFailure("Unknown start status: " + std::to_string(request->status()));
@@ -854,6 +850,15 @@ grpc::Status Guest::ContainerReady(grpc::ServerContext* context,
                                    const vm_tools::container::ContainerStartupInfo* request,
                                    vm_tools::EmptyMessage* response) {
   TRACE_DURATION("linux_runner", "Guest::ContainerReady");
+
+  // Add Magma GPU support to container.
+  AddMagmaDeviceToContainer();
+  SetupGPUDriversInContainer();
+
+  // Start required user services.
+  LaunchContainerShell();
+
+  // Connect to Garcon service in the container.
   // TODO(tjdetwiler): validate token.
   auto garcon_port = request->garcon_port();
   FX_LOGS(INFO) << "Container Ready; Garcon listening on port " << garcon_port;
@@ -862,14 +867,16 @@ grpc::Status Guest::ContainerReady(grpc::ServerContext* context,
     FX_CHECK(result.is_ok()) << "Failed to connect to Garcon";
     garcon_ = std::move(result.value());
     DumpContainerDebugInfo();
+
+    // Container is now Ready.
+    PostContainerStatus(fuchsia::virtualization::ContainerStatus::READY);
+
     return fpromise::ok();
   };
   auto task =
       NewGrpcVsockStub<vm_tools::container::Garcon>(socket_endpoint_, guest_cid_, garcon_port)
           .then(start_garcon);
   executor_.schedule_task(std::move(task));
-
-  PostContainerStatus(fuchsia::virtualization::ContainerStatus::READY);
 
   return grpc::Status::OK;
 }
