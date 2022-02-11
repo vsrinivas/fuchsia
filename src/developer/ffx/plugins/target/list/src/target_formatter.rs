@@ -187,8 +187,12 @@ impl TryFrom<Vec<bridge::Target>> for JsonTargetFormatter {
 }
 
 impl TargetFormatter for JsonTargetFormatter {
-    fn lines(&self, _default_nodename: Option<&str>) -> Vec<String> {
-        vec![serde_json::to_string(&self.targets).expect("should serialize")]
+    fn lines(&self, default_nodename: Option<&str>) -> Vec<String> {
+        let mut t = self.targets.clone();
+        t.iter_mut()
+            .find(|t| default_nodename.map(|n| t.nodename == n).unwrap_or(false))
+            .map(|s| s.is_default = true.into());
+        vec![serde_json::to_string(&t).expect("should serialize")]
     }
 }
 
@@ -281,11 +285,12 @@ macro_rules! make_structs_and_support_functions {
             }
         }
 
-        #[derive(Serialize, Debug, PartialEq, Eq)]
+        #[derive(Clone, Serialize, Debug, PartialEq, Eq)]
         pub(crate) struct JsonTarget {
             $(
                 $field: serde_json::Value,
             )*
+            is_default: serde_json::Value,
         }
 
         make_structs_and_support_functions!(@print_func $($field,)*);
@@ -445,6 +450,7 @@ impl TryFrom<bridge::Target> for JsonTarget {
             target_state: json!(StringifiedTarget::from_target_state(
                 target.target_state.ok_or(StringifyError::MissingTargetState)?,
             )),
+            is_default: false.into(),
         })
     }
 }
@@ -526,6 +532,9 @@ mod test {
             include_str!("../test_data/target_formatter_build_config_board_missing_golden");
         static ref JSON_BUILD_CONFIG_FULL_GOLDEN: &'static str =
             include_str!("../test_data/target_formatter_json_build_config_full_golden");
+        static ref JSON_BUILD_CONFIG_FULL_DEFAULT_TARGET_GOLDEN: &'static str = include_str!(
+            "../test_data/target_formatter_json_build_config_full_default_target_golden"
+        );
         static ref JSON_BUILD_CONFIG_PRODUCT_MISSING_GOLDEN: &'static str =
             include_str!("../test_data/target_formatter_json_build_config_product_missing_golden");
         static ref JSON_BUILD_CONFIG_BOARD_MISSING_GOLDEN: &'static str =
@@ -931,6 +940,18 @@ mod test {
         let formatter = JsonTargetFormatter::try_from(vec![t]).unwrap();
         let lines = formatter.lines(None);
         assert_eq!(lines.join("\n"), JSON_BUILD_CONFIG_FULL_GOLDEN.to_string());
+    }
+
+    #[test]
+    fn test_json_formatter_build_config_full_default_target() {
+        let b = String::from("board");
+        let p = String::from("default");
+        let mut t = make_valid_target();
+        t.board_config = Some(b);
+        t.product_config = Some(p);
+        let formatter = JsonTargetFormatter::try_from(vec![t]).unwrap();
+        let lines = formatter.lines(Some("fooberdoober"));
+        assert_eq!(lines.join("\n"), JSON_BUILD_CONFIG_FULL_DEFAULT_TARGET_GOLDEN.to_string());
     }
 
     #[test]
