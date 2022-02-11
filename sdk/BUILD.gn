@@ -392,6 +392,7 @@ sdk_molecule("core_lib") {
     "//sdk/lib/sys/cpp:cpp_sdk",
     "//sdk/lib/sys/cpp/testing:cpp_sdk",
     "//sdk/lib/sys/inspect/cpp:cpp_sdk",
+    "//sdk/lib/sys/testing:elf_test_runner_shard_sdk",
     "//sdk/lib/syslog",
     "//sdk/lib/syslog/structured_backend:structured_backend_sdk",
     "//sdk/lib/ui/scenic/cpp:cpp_sdk",
