@@ -110,6 +110,16 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     device_ptr->proto_ops_ = zx_args->proto_ops;
   }
 
+  // Add the metadata from add_args:
+  for (size_t i = 0; i < zx_args->metadata_count; i++) {
+    auto status =
+        device->AddMetadata(zx_args->metadata_list[i].type, zx_args->metadata_list[i].data,
+                            zx_args->metadata_list[i].length);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
   // Create NodeAddArgs from `zx_args`.
   fidl::Arena arena;
 

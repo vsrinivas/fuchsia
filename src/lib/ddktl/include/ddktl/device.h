@@ -16,6 +16,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 
+#include <deque>
 #include <type_traits>
 
 #include <ddktl/device-internal.h>
@@ -429,9 +430,51 @@ class Multibindable : public base_mixin {
   }
 };
 
+class MetadataList {
+ public:
+  MetadataList() {}
+  MetadataList& operator=(const MetadataList& other) {
+    data_list_.clear();
+    metadata_list_.clear();
+    ZX_ASSERT(other.metadata_list_.size() == other.data_list_.size());
+    for (size_t i = 0; i < other.metadata_list_.size(); ++i) {
+      data_list_.push_back(other.data_list_[i]);
+      metadata_list_.push_back({other.metadata_list_[i].type, data_list_.back()->data(),
+                                other.metadata_list_[i].length});
+    }
+    return *this;
+  }
+  MetadataList(const MetadataList& other) { *this = other; }
+  zx_status_t AddMetadata(zx_device_t* dev, uint32_t type) {
+    auto metadata_blob = GetMetadataBlob(dev, type);
+    if (!metadata_blob.is_ok()) {
+      return metadata_blob.error_value();
+    }
+    data_list_.emplace_back(
+        std::make_shared<std::vector<uint8_t>>(metadata_blob->begin(), metadata_blob->end()));
+    metadata_list_.push_back({type, data_list_.back()->data(), metadata_blob->size()});
+    return ZX_OK;
+  }
+
+  device_metadata_t* data() { return metadata_list_.data(); }
+  size_t count() { return metadata_list_.size(); }
+
+ private:
+  std::vector<std::shared_ptr<std::vector<uint8_t>>> data_list_;
+  std::vector<device_metadata_t> metadata_list_;
+};
+
 class DeviceAddArgs {
  public:
   DeviceAddArgs(const char* name) { args_.name = name; }
+  DeviceAddArgs& operator=(const DeviceAddArgs& other) {
+    metadata_list_ = std::move(other.metadata_list_);
+    args_ = other.args_;
+    args_.metadata_list = metadata_list_.data();
+    args_.metadata_count = metadata_list_.count();
+    return *this;
+  }
+  DeviceAddArgs(const DeviceAddArgs& other) { *this = other; }
 
   DeviceAddArgs& set_name(const char* name) {
     args_.name = name;
@@ -467,6 +510,13 @@ class DeviceAddArgs {
     args_.inspect_vmo = inspect_vmo.release();
     return *this;
   }
+  DeviceAddArgs& forward_metadata(zx_device_t* dev, uint32_t type) {
+    if (ZX_OK == metadata_list_.AddMetadata(dev, type)) {
+      args_.metadata_list = metadata_list_.data();
+      args_.metadata_count = metadata_list_.count();
+    }
+    return *this;
+  }
   DeviceAddArgs& set_outgoing_dir(zx::channel outgoing_dir) {
     args_.outgoing_dir_channel = outgoing_dir.release();
     return *this;
@@ -491,6 +541,7 @@ class DeviceAddArgs {
   const device_add_args_t& get() const { return args_; }
 
  private:
+  MetadataList metadata_list_;
   device_add_args_t args_ = {};
 };
 

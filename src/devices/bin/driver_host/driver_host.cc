@@ -352,6 +352,15 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
     return status;
   }
 
+  // Add the metadata from add_args:
+  for (size_t i = 0; i < add_args->metadata_count; i++) {
+    status = AddMetadata(child, add_args->metadata_list[i].type, add_args->metadata_list[i].data,
+                         add_args->metadata_list[i].length);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
   child->set_local_id(device_id);
   DeviceControllerConnection::Bind(std::move(conn), std::move(controller_endpoints->server),
                                    loop_.dispatcher());

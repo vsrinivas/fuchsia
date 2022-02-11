@@ -78,4 +78,49 @@ TEST(MetadataTest, MetadataArrayTests) {
   }
 }
 
+// Simple device to test DeviceAddArgs
+class TestDevice : public ddk::Device<TestDevice> {
+ public:
+  TestDevice(zx_device_t* parent) : ddk::Device<TestDevice>(parent) {}
+  void DdkRelease() {
+    // DdkRelease must delete this before it returns.
+    delete this;
+  }
+};
+
+TEST(MetadataTest, DeviceAddArgTests) {
+  // We use two parents here because if we added the metadata to the normal parent,
+  // it would be accessible through the child by recursion.
+  auto parent = MockDevice::FakeRootParent();           // Hold on to the parent during the test.
+  auto metadata_parent = MockDevice::FakeRootParent();  // This will actually have the metadata
+  constexpr size_t kMetadataType = 5;
+  struct MetadataType {
+    int data[4];
+    float data1;
+  };
+
+  constexpr size_t kMetadataArrayLen = 5;
+  MetadataType metadata_source[kMetadataArrayLen];
+  metadata_parent->SetMetadata(kMetadataType, &metadata_source, sizeof(metadata_source));
+
+  // Bind a new device:
+  auto dev = std::make_unique<TestDevice>(parent.get());
+  // Now, add the child, but allow it to get the metadata from the metadata_parent:
+  auto args = ddk::DeviceAddArgs("dut").forward_metadata(metadata_parent.get(), kMetadataType);
+  ASSERT_EQ(args.get().metadata_count, 1);
+  ASSERT_EQ(args.get().metadata_list[0].type, kMetadataType);
+
+  ASSERT_OK(dev->DdkAdd(args));
+  auto dev_ptr = dev.release();
+
+  // Now the metadata should be available in the device:
+  auto metadata_result = ddk::GetMetadataArray<MetadataType>(dev_ptr->zxdev(), kMetadataType);
+
+  ASSERT_TRUE(metadata_result.is_ok());
+  ASSERT_EQ(metadata_result->size(), kMetadataArrayLen);
+  for (size_t i = 0; i < metadata_result->size(); ++i) {
+    ASSERT_BYTES_EQ(&metadata_result.value()[i], &metadata_source[i], sizeof(MetadataType));
+  }
+}
+
 }  // namespace

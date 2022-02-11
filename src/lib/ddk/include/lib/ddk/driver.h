@@ -109,6 +109,13 @@ typedef struct device_performance_state_info {
   // particular performant state.
 } device_performance_state_info_t;
 
+//
+typedef struct device_metadata {
+  uint32_t type;
+  const void* data;
+  size_t length;
+} device_metadata_t;
+
 typedef struct device_add_args {
   // DEVICE_ADD_ARGS_VERSION
   uint64_t version;
@@ -135,6 +142,12 @@ typedef struct device_add_args {
 
   // Number of device string properties
   uint32_t str_prop_count;
+
+  // Metadata to pass to new device
+  const device_metadata_t* metadata_list;
+
+  // Number of metadata blobs in the list
+  size_t metadata_count;
 
   // List of power_states that the device supports.
   // List cannot be more than MAX_DEVICE_POWER_STATES size.
@@ -328,13 +341,6 @@ typedef struct device_fragment {
   uint32_t parts_count;
   const device_fragment_part_t* parts;
 } device_fragment_t;
-
-//
-typedef struct device_metadata {
-  uint32_t type;
-  const void* data;
-  size_t length;
-} device_metadata_t;
 
 // A description of the composite device with properties |props| and made of
 // |fragments| devices. If |spawn_colocated| is true, the composite device will
