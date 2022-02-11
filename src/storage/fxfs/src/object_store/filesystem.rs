@@ -315,7 +315,7 @@ impl FxFilesystem {
         }
         // Regardless of whether sync succeeds, we should close the device, since otherwise we will
         // crash instead of exiting gracefully.
-        self.device().close().await.expect("Failed to close device");
+        self.device().close().await.context("Failed to close device")?;
         sync_status.map(|_| ())
     }
 
