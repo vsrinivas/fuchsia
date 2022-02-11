@@ -38,7 +38,18 @@ pub(crate) fn poll_ot_udp_socket(
 
                 let mut message = ot::Message::udp_new(instance, None)?;
                 message.append(&buffer[..len])?;
-                let info = ot::message::Info::new(ot_udp_socket.sock_name(), ot_sockaddr);
+                let mut info = ot::message::Info::new(ot_udp_socket.sock_name(), ot_sockaddr);
+
+                // SAFETY: This method (`poll`) is guaranteed to only called from the same
+                //         thread that OpenThread is being serviced on, which is ultimately
+                //         the sole requirement for `PlatformBacking::as_ref()` to be
+                //         considered safe.
+                if let Some(thread_iface) = unsafe { PlatformBacking::as_ref().netif_index_thread }
+                {
+                    let scope_id = sock_addr.scope_id();
+                    debug!("inbound scope_id = {}", scope_id);
+                    info.set_host_interface(scope_id != thread_iface);
+                }
 
                 // TODO(fxbug.dev/93438): Set hop count. Figure out how to get this info.
                 // TODO(fxbug.dev/93438): Set ECN. Need to figure out how to get this info.
@@ -241,7 +252,17 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
             })?;
         }
 
-        let sockaddr: std::net::SocketAddrV6 = self.peer_name().into();
+        let mut sockaddr: std::net::SocketAddrV6 = self.peer_name().into();
+
+        if info.is_host_interface() {
+            // SAFETY: Must only be called from the same thread that OpenThread is running on.
+            //         This is guaranteed by the only caller of this method.
+            let platform_backing = unsafe { PlatformBacking::as_ref() };
+            let netif: ot::NetifIndex = platform_backing
+                .lookup_netif_index(ot::NetifIdentifier::Backbone)
+                .unwrap_or(ot::NETIF_INDEX_UNSPECIFIED);
+            sockaddr.set_scope_id(netif);
+        }
 
         let ret = match socket.as_ref().send_to(&data, &sockaddr.into()) {
             Ok(sent) if data.len() == sent => Ok(()),
@@ -291,7 +312,12 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
         );
 
         let socket = self.get_async_udp_socket().expect("socket not initialized");
-        let netif: ot::NetifIndex = 0;
+
+        // SAFETY: Must only be called from the same thread that OpenThread is running on.
+        //         This is guaranteed by the only caller of this method.
+        let platform_backing = unsafe { PlatformBacking::as_ref() };
+        let netif: ot::NetifIndex =
+            platform_backing.lookup_netif_index(netif).unwrap_or(ot::NETIF_INDEX_UNSPECIFIED);
 
         socket.as_ref().join_multicast_v6(addr, netif).map_err(move |err| {
             error!("Error: {:?}", err);
@@ -313,7 +339,12 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
             netif
         );
         let socket = self.get_async_udp_socket().expect("socket not initialized");
-        let netif: ot::NetifIndex = 0;
+
+        // SAFETY: Must only be called from the same thread that OpenThread is running on.
+        //         This is guaranteed by the only caller of this method.
+        let platform_backing = unsafe { PlatformBacking::as_ref() };
+        let netif: ot::NetifIndex =
+            platform_backing.lookup_netif_index(netif).unwrap_or(ot::NETIF_INDEX_UNSPECIFIED);
 
         socket.as_ref().leave_multicast_v6(addr, netif).map_err(move |err| {
             error!("Error: {:?}", err);

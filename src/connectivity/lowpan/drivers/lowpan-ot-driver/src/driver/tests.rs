@@ -64,7 +64,7 @@ where
     // Queue a network event that indicates we are enabled.
     network_interface.set_enabled(true).now_or_never().unwrap().unwrap();
 
-    let instance = ot::Instance::new(Platform::init(sink, stream));
+    let instance = ot::Instance::new(Platform::build().init(sink, stream));
 
     // Ignore all persistent storage and perform a factory reset.
     instance.erase_persistent_info().unwrap();

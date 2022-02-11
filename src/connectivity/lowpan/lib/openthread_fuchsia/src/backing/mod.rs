@@ -19,6 +19,7 @@ mod radio;
 mod reset;
 mod udp;
 
+use openthread::ot::NetifIdentifier;
 pub(crate) use udp::*;
 
 pub(super) struct PlatformBacking {
@@ -26,6 +27,10 @@ pub(super) struct PlatformBacking {
     pub(super) rcp_to_ot_receiver: RefCell<mpsc::Receiver<Vec<u8>>>,
     pub(super) task_alarm: Cell<Option<fasync::Task<()>>>,
     pub(super) timer_sender: fmpsc::Sender<usize>,
+    #[allow(dead_code)]
+    pub(super) netif_index_thread: Option<ot::NetifIndex>,
+    #[allow(dead_code)]
+    pub(super) netif_index_backbone: Option<ot::NetifIndex>,
 }
 
 impl PlatformBacking {
@@ -40,7 +45,7 @@ impl PlatformBacking {
     // SAFETY: Unsafe because the type system cannot enforce thread safety on globals.
     //         Caller should ensure that no other calls in this section are being
     //         simultaneously made on other threads.
-    unsafe fn as_ref() -> &'static PlatformBacking {
+    pub(super) unsafe fn as_ref() -> &'static PlatformBacking {
         Self::glob().as_ref().expect("Platform is uninitialized")
     }
 
@@ -56,5 +61,15 @@ impl PlatformBacking {
         // SAFETY: When we are dropped, we can safely assume no other simultaneous calls are
         //         being made on other threads.
         assert!(Self::glob().take().is_some(), "Tried to drop singleton that was never allocated");
+    }
+}
+
+impl PlatformBacking {
+    fn lookup_netif_index(&self, id: ot::NetifIdentifier) -> Option<ot::NetifIndex> {
+        match id {
+            NetifIdentifier::Backbone => self.netif_index_backbone,
+            NetifIdentifier::Thread => self.netif_index_thread,
+            NetifIdentifier::Unspecified => Some(ot::NETIF_INDEX_UNSPECIFIED),
+        }
     }
 }

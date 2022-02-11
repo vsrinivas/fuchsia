@@ -24,6 +24,7 @@ use config::Config;
 
 use crate::driver::OtDriver;
 use crate::prelude::*;
+use std::ffi::CString;
 
 mod config;
 mod convert_ext;
@@ -112,31 +113,59 @@ impl Config {
         Ok(client_side.into_proxy()?)
     }
 
-    async fn init_platform(&self) -> Result<OtPlatform, Error> {
+    fn get_backbone_netif_index(&self) -> Option<ot::NetifIndex> {
+        if self.backbone_name.is_empty() {
+            info!("Backbone interface is disabled");
+            return None;
+        }
+
+        let c_name = CString::new(self.backbone_name.as_bytes().to_vec())
+            .expect("Invalid backbone interface name");
+
+        // SAFETY: Calling `if_name_toindex` is safe assuming that the C-string pointer
+        //         being passed into it is valid, which is guaranteed by `CString::as_ptr()`.
+        let index = unsafe { libc::if_nametoindex(c_name.as_ptr()) };
+
+        if index == 0 {
+            error!("Unable to look up index of interface {:?}", self.backbone_name);
+            return None;
+        }
+
+        info!("Backbone interface is {:?} (index {})", self.backbone_name, index);
+
+        Some(index)
+    }
+
+    /// Async method which returns the future that runs the driver.
+    async fn prepare_to_run(&self) -> Result<impl Future<Output = Result<(), Error>>, Error> {
         let spinel_device_proxy = self.open_spinel_device_proxy().await?;
         fx_log_debug!("Spinel device proxy initialized");
 
         let spinel_sink = SpinelDeviceSink::new(spinel_device_proxy);
         let spinel_stream = spinel_sink.take_stream();
 
-        Ok(OtPlatform::init(spinel_sink, spinel_stream))
-    }
-
-    /// Async method which returns the future that runs the
-    async fn prepare_to_run(&self) -> Result<impl Future<Output = Result<(), Error>>, Error> {
-        let platform = self.init_platform().await.context("main:ot_platform_init")?;
-
-        let network_device_interface = TunNetworkInterface::try_new(Some(self.name.clone()))
+        let netif = TunNetworkInterface::try_new(Some(self.name.clone()))
             .await
             .context("Unable to start TUN driver")?;
+
+        let mut builder = OtPlatform::build().thread_netif_index(
+            netif
+                .get_index()
+                .try_into()
+                .expect("Network interface index is too large for OpenThread"),
+        );
+
+        if let Some(index) = self.get_backbone_netif_index() {
+            builder = builder.backbone_netif_index(index);
+        }
 
         let driver_future = run_driver(
             self.name.clone(),
             connect_to_protocol_at::<RegisterMarker>(self.service_prefix.as_str())
                 .context("Failed to connect to Lowpan Registry service")?,
             connect_to_protocol_at::<FactoryRegisterMarker>(self.service_prefix.as_str()).ok(),
-            ot::Instance::new(platform),
-            network_device_interface,
+            ot::Instance::new(builder.init(spinel_sink, spinel_stream)),
+            netif,
         );
 
         Ok(driver_future)

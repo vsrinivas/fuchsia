@@ -35,8 +35,11 @@ pub(crate) struct DriverArgs {
     )]
     pub max_auto_restarts: Option<u32>,
 
-    #[argh(option, long = "name", description = "name of interface")]
+    #[argh(option, long = "name", description = "name of network interface")]
     pub name: Option<String>,
+
+    #[argh(option, long = "backbone-name", description = "name of backbone network interface")]
+    pub backbone_name: Option<String>,
 
     #[argh(
         option,
@@ -64,6 +67,9 @@ pub(crate) struct Config {
     #[serde(default = "Config::default_name")]
     pub name: String,
 
+    #[serde(default = "Config::default_backbone_name")]
+    pub backbone_name: String,
+
     #[serde(default = "Config::default_log_level")]
     pub log_level: LogLevel,
 
@@ -78,6 +84,7 @@ impl Default for Config {
             service_prefix: Self::default_service_prefix(),
             max_auto_restarts: Self::default_max_auto_restarts(),
             name: Self::default_name(),
+            backbone_name: Self::default_backbone_name(),
             log_level: Self::default_log_level(),
             ot_radio_path: Self::default_ot_radio_path(),
         }
@@ -99,6 +106,10 @@ impl Config {
 
     fn default_name() -> String {
         "lowpan0".to_string()
+    }
+
+    fn default_backbone_name() -> String {
+        "wlanx95".to_string()
     }
 
     fn default_ot_radio_path() -> Option<String> {
@@ -163,6 +174,15 @@ impl Config {
         if let Some(tmp) = args.name {
             fx_log_info!("cmdline overriding name from {:?} to {:?}", self.name, tmp);
             self.name = tmp;
+        }
+
+        if let Some(tmp) = args.backbone_name {
+            fx_log_info!(
+                "cmdline overriding backbone_name from {:?} to {:?}",
+                self.backbone_name,
+                tmp
+            );
+            self.backbone_name = tmp;
         }
 
         if let Some(x) = args.verbosity {

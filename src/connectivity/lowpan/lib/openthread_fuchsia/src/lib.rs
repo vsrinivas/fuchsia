@@ -39,6 +39,45 @@ const FRAME_READY_BUFFER_LEN: usize = 2;
 
 const UDP_PACKET_MAX_LENGTH: usize = 1280usize;
 
+/// Builder type for the OpenThread platform. Create using [`Platform::builder()`].
+pub struct PlatformBuilder {
+    pub(crate) thread_netif_index: Option<u32>,
+    pub(crate) backbone_netif_index: Option<u32>,
+}
+
+impl PlatformBuilder {
+    #[must_use]
+    pub fn thread_netif_index(mut self, index: u32) -> Self {
+        self.thread_netif_index = Some(index);
+        self
+    }
+
+    #[must_use]
+    pub fn backbone_netif_index(mut self, index: u32) -> Self {
+        self.backbone_netif_index = Some(index);
+        self
+    }
+
+    /// Initializes the OpenThread platform.
+    ///
+    /// The instance returned by this method must be passed to
+    /// [`ot::Instance::new()`](openthread_rust::ot::Instance::new).
+    ///
+    /// The returned object is a singleton. Attempting to have more than one instance
+    /// around at a time will cause a panic.
+    pub fn init<SpinelSink, SpinelStream>(
+        self,
+        spinel_sink: SpinelSink,
+        spinel_stream: SpinelStream,
+    ) -> Platform
+    where
+        SpinelSink: SpinelDeviceClient + 'static,
+        SpinelStream: Stream<Item = Result<Vec<u8>, anyhow::Error>> + 'static + Unpin + Send,
+    {
+        Platform::init(self, spinel_sink, spinel_stream)
+    }
+}
+
 /// OpenThread Singleton Platform Implementation.
 ///
 /// An instance of this type must be passed to
@@ -54,14 +93,14 @@ pub struct Platform {
 }
 
 impl Platform {
-    /// Initializes the OpenThread platform.
-    ///
-    /// The instance returned by this method must be passed to
-    /// [`ot::Instance::new()`](openthread_rust::ot::Instance::new).
-    ///
-    /// The returned object is a singleton. Attempting to have more than one instance
-    /// around at a time will cause a panic.
-    pub fn init<SpinelSink, SpinelStream>(
+    #[must_use]
+    pub fn build() -> PlatformBuilder {
+        PlatformBuilder { thread_netif_index: None, backbone_netif_index: None }
+    }
+
+    /// This method is called by `PlatformBuilder::init`.
+    fn init<SpinelSink, SpinelStream>(
+        builder: PlatformBuilder,
         mut spinel_sink: SpinelSink,
         mut spinel_stream: SpinelStream,
     ) -> Self
@@ -136,6 +175,8 @@ impl Platform {
                 rcp_to_ot_receiver: RefCell::new(rcp_to_ot_receiver),
                 task_alarm: Cell::new(None),
                 timer_sender,
+                netif_index_thread: builder.thread_netif_index,
+                netif_index_backbone: builder.backbone_netif_index,
             });
 
             // Initialize the lower-level platform implementation
