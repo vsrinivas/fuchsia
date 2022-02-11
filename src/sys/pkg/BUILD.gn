@@ -15,6 +15,7 @@ group("tests") {
   public_deps = [
     "bin:tests",
     "lib:tests",
+    "scripts:tests",
     "testing:tests",
     "tests",
     "//src/sys/lib/fidl-fuchsia-pkg-ext:tests",
