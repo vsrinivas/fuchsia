@@ -1,0 +1,74 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.power.clientlevel;
+
+/// A value that represents the type of client using the protocol.
+///
+/// `ClientType` is used as a parameter for:
+///   1) [`Connector.Connect`] to connect a [`Watcher`] to the power level of
+///   the specified client type
+///   2) [`fuchsia.power.systemmode/ClientConfigurator.Get`] and
+///   [`fuchsia.power.systemmode/ClientConfigurator.Set`] to update the power
+///   configuration of the specified client type
+type ClientType = flexible enum {
+    WLAN = 1;
+};
+
+/// Allows a client to connect a [`Watcher`] to the power level of a given
+/// [`ClientType`].
+@discoverable
+protocol Connector {
+    /// Connects a [`Watcher`] to the power level of the specified
+    /// [`ClientType`].
+    ///
+    /// A client may call this method and begin using the [`Watcher`] client
+    /// endpoint immediately.
+    ///
+    /// If a power configuration does not exist for the provided `client_type`,
+    /// then the request will fail. On failure, both the `watcher` server
+    /// endpoint as well as the current `Connector` connection will be
+    /// terminated.
+    ///
+    /// + `client_type` specifies to which [`ClientType`] power level that
+    /// `watcher` should be connected. The value is valid iff a power
+    /// configuration exists for the provided `client_type`.
+    ///
+    /// + `watcher` is the server endpoint of a [`Watcher`] channel that will be
+    /// connected to the [`ClientType`] power level.
+    Connect(resource struct {
+        client_type ClientType;
+        watcher server_end:Watcher;
+    });
+};
+
+/// Allows a client to watch for changes to the power level of a given
+/// [`ClientType`].
+///
+/// This protocol cannot be connected to the service directly. Instead, the
+/// server endpoint of a `Watcher` channel must first be connected to the power
+/// level of the desired [`ClientType`] using the [`Connector.Connect`] method.
+/// The client endpoint of a `Watcher` channel is only useful after it has been
+/// connected in this way.
+protocol Watcher {
+    /// Watches for changes to the power level of the connected [`ClientType`].
+    ///
+    /// The power level for a given [`ClientType`] is determined according to
+    /// the power configuration for that [`ClientType`]. See the
+    /// [README.md](/src/power/power-manager/system_power_mode_config/README.md)
+    /// for more details.
+    ///
+    /// On a given connection, the first call will return immediately with the
+    /// current power level for the connected [`ClientType`]. Subsequent `Watch`
+    /// requests will only return a new `level` if the power level of the
+    /// connected [`ClientType`] has changed. This follows the [hanging
+    /// get](https://fuchsia.dev/fuchsia-src/concepts/api/fidl#hanging-get)
+    /// pattern.
+    ///
+    /// - `level` is an unsigned integer representing the power level of the
+    /// connected [`ClientType`].
+    Watch() -> (struct {
+        level uint64;
+    });
+};

@@ -1,0 +1,7 @@
+enum/member fuchsia.power.clientlevel/ClientType.WLAN 1
+flexible enum fuchsia.power.clientlevel/ClientType uint32
+protocol/member fuchsia.power.clientlevel/Connector.Connect(fuchsia.power.clientlevel/ClientType client_type,server_end:fuchsia.power.clientlevel/Watcher watcher)
+protocol fuchsia.power.clientlevel/Connector
+protocol/member fuchsia.power.clientlevel/Watcher.Watch() -> (uint64 level)
+protocol fuchsia.power.clientlevel/Watcher
+library fuchsia.power.clientlevel

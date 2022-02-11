@@ -1,0 +1,142 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.power.systemmode;
+
+using fuchsia.power.clientlevel;
+
+/// Enumerates the supported system power modes.
+///
+/// Power modes in the system are non-exclusive -- more than one could be active
+/// at any given time. They typically define a system-wide low-power state or
+/// power goal, like "battery-saver mode". See the
+/// [README.md](/src/power/power-manager/system_power_mode_config/README.md) for
+/// more details.
+///
+/// Note when adding a new variant: update [`MAX_MODE_MATCHES_PER_CLIENT`] to be
+/// equal to the number of `SystemMode` variants to support the "worst case"
+/// client configuration.
+// This is an empty placeholder for now, but will eventually grow to include a
+// variant for each of the supported system power modes.
+type SystemMode = flexible enum {};
+
+/// Possible error values returned by [`Requester.Request`].
+type ModeRequestError = flexible enum {
+    /// A generic error has occurred.
+    GENERIC = 1;
+};
+
+/// A protocol that can be used to request a change to the currently active
+/// system power modes.
+@discoverable
+protocol Requester {
+    /// Requests to set or clear a system power mode.
+    ///
+    /// The call returns immediately after the request has been received,
+    /// validated, and accepted. Actual system changes to be applied as a result
+    /// of this request will occur after the call has returned. Therefore, any
+    /// errors that occur while updating clients according to the new system
+    /// power mode are not propagated back to the caller. Instead, client
+    /// updates are applied on a "best effort" basis.
+    ///
+    /// An error returned by this method means the request itself is not valid
+    /// and was rejected. Details of the specific rejection reason are reflected
+    /// by the error value. In the event of an error, the channel will remain
+    /// open.
+    ///
+    /// A client can use this method to set or clear system power mode variants
+    /// independently. For example:
+    ///
+    ///   // battery is below the "low" threshold
+    ///   Request(LOW_BATTERY, true);
+    ///
+    ///   // device is now plugged into the wall
+    ///   Request(ON_AC_POWER, true);
+    ///
+    ///   // battery is now above the "low" threshold
+    ///   Request(LOW_BATTERY, false);
+    ///
+    /// + `mode` is the `SystemMode` to request to be set or cleared
+    /// + `set` should be true to request to set `mode`, or false to clear it
+    /// * error a [`ModeRequestError`] value indicating why the request was
+    /// rejected.
+    Request(struct {
+        mode SystemMode;
+        set bool;
+    }) -> (struct {}) error ModeRequestError;
+};
+
+/// Maximum number of [`ModeMatch`] entries that a [`ClientConfig`] may contain.
+///
+/// This value should be set equal to the number of [`SystemMode`] variants, as
+/// that is the number of entries required to support the "worst case" client
+/// configuration ("worst case" means a configuration where a mode match entry
+/// is needed for each of the supported power modes).
+const MAX_MODE_MATCHES_PER_CLIENT uint32 = 0;
+
+/// Defines the power configuration for a [`ClientType`].
+///
+/// For a client connected with a given [`ClientType`], the PowerManager will
+/// use the configured [`ClientConfig`] for that [`ClientType`] to choose the
+/// appropriate power level based on the currently active system power modes.
+/// The power level selection process is as follows for a given [`ClientType`]:
+///   1. Iterate through the [`ClientConfig.mode_matches`] entries. If the
+///   `mode` value specified by an entry is contained in the currently active
+///   system power modes, then the corresponding `power_level` from that entry
+///   will be selected as this client’s current power level, and iteration for
+///   this client will stop.
+///   2. If no entry in `mode_matches` was matched, then `default_level` will be
+///   selected as the client's current power level.
+type ClientConfig = struct {
+    mode_matches vector<ModeMatch>:MAX_MODE_MATCHES_PER_CLIENT;
+    default_level uint64;
+};
+
+/// Defines the mode-based match criterion for selecting a power level.
+///
+/// The power configuration for a given [`ClientType`] is made up of a
+/// collection of these `ModeMatch` entries. If an entry's specified `mode` is
+/// contained in the currently active system power modes, then its `power_level`
+/// will be selected as the client's power level.
+type ModeMatch = struct {
+    mode SystemMode;
+    power_level uint64;
+};
+
+/// A protocol that can be used to update the power configuration for a given
+/// [`ClientType`].
+@discoverable
+protocol ClientConfigurator {
+    /// Gets the power configuration for the given [`ClientType`].
+    ///
+    /// If there is no power configuration for `client_type` then the returned
+    /// value will be absent.
+    ///
+    /// + `client_type` specifies which [`ClientType`] [`ClientConfig`] to get
+    /// - `config` is the returned client-specific configuration, or an absent
+    /// value if `client_type` does not have an existing configuration
+    Get(struct {
+        client_type fuchsia.power.clientlevel.ClientType;
+    }) -> (struct {
+        config ClientConfig:optional;
+    });
+
+    /// Sets the power configuration for the given [`ClientType`].
+    ///
+    /// This method should be used in tandem with [`GetConfig`] in order to
+    /// update the existing power configuration for a given [`ClientType`]
+    /// without fully overwriting it.
+    ///
+    /// When the power configuration for a given [`ClientType`] is changed, the
+    /// Power Manager will reevaluate current power level of that [`ClientType`]
+    /// according to the new configuration. This reevaluation may result in a
+    /// new power level being sent to the connected client.
+    ///
+    /// + `client_type` specifies which [`ClientType`]'s [`ClientConfig`] to set
+    /// + `config` is the [`ClientConfig`] that will be set for [`client_type`]
+    Set(struct {
+        client_type fuchsia.power.clientlevel.ClientType;
+        config ClientConfig;
+    });
+};

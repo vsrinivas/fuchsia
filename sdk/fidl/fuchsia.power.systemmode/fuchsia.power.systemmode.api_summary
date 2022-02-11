@@ -1,0 +1,20 @@
+struct/member fuchsia.power.systemmode/ClientConfig.default_level uint64
+struct/member fuchsia.power.systemmode/ClientConfig.mode_matches vector<fuchsia.power.systemmode/ModeMatch>:0
+struct fuchsia.power.systemmode/ClientConfig
+protocol/member fuchsia.power.systemmode/ClientConfigurator.Get(fuchsia.power.clientlevel/ClientType client_type) -> (box<fuchsia.power.systemmode/ClientConfig> config)
+protocol/member fuchsia.power.systemmode/ClientConfigurator.Set(fuchsia.power.clientlevel/ClientType client_type,fuchsia.power.systemmode/ClientConfig config)
+protocol fuchsia.power.systemmode/ClientConfigurator
+const fuchsia.power.systemmode/MAX_MODE_MATCHES_PER_CLIENT uint32 0
+struct/member fuchsia.power.systemmode/ModeMatch.mode fuchsia.power.systemmode/SystemMode
+struct/member fuchsia.power.systemmode/ModeMatch.power_level uint64
+struct fuchsia.power.systemmode/ModeMatch
+enum/member fuchsia.power.systemmode/ModeRequestError.GENERIC 1
+flexible enum fuchsia.power.systemmode/ModeRequestError uint32
+protocol/member fuchsia.power.systemmode/Requester.Request(fuchsia.power.systemmode/SystemMode mode,bool set) -> (fuchsia.power.systemmode/Requester_Request_Result result)
+protocol fuchsia.power.systemmode/Requester
+struct fuchsia.power.systemmode/Requester_Request_Response
+union/member fuchsia.power.systemmode/Requester_Request_Result.err fuchsia.power.systemmode/ModeRequestError
+union/member fuchsia.power.systemmode/Requester_Request_Result.response fuchsia.power.systemmode/Requester_Request_Response
+strict union fuchsia.power.systemmode/Requester_Request_Result
+flexible enum fuchsia.power.systemmode/SystemMode uint32
+library fuchsia.power.systemmode
