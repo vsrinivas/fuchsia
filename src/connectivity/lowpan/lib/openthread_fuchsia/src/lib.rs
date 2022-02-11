@@ -37,6 +37,8 @@ const TIMER_BUFFER_LEN: usize = 20;
 // is effectively just a wakeup flag.
 const FRAME_READY_BUFFER_LEN: usize = 2;
 
+const UDP_PACKET_MAX_LENGTH: usize = 1280usize;
+
 /// OpenThread Singleton Platform Implementation.
 ///
 /// An instance of this type must be passed to
@@ -157,7 +159,16 @@ impl Drop for Platform {
 }
 
 impl ot::Platform for Platform {
-    unsafe fn process_poll(self: &mut Self, instance: &ot::Instance, cx: &mut Context<'_>) {
+    unsafe fn process_poll(&mut self, instance: &ot::Instance, cx: &mut Context<'_>) {
+        self.process_poll_alarm(instance, cx);
+        self.process_poll_radio(instance, cx);
+        self.process_poll_udp(instance, cx);
+        self.process_poll_tasks(cx);
+    }
+}
+
+impl Platform {
+    fn process_poll_alarm(&mut self, instance: &ot::Instance, cx: &mut Context<'_>) {
         let instance_ptr = instance.as_ot_ptr();
 
         while let Poll::Ready(Some(ptr_usize)) = self.timer_receiver.poll_next_unpin(cx) {
@@ -167,8 +178,14 @@ impl ot::Platform for Platform {
             // SAFETY: Must be called with a valid pointer to otInstance,
             //         must also only be called from the main OpenThread thread,
             //         which is a guarantee of this method.
-            platformAlarmProcess(instance_ptr);
+            unsafe {
+                platformAlarmProcess(instance_ptr);
+            }
         }
+    }
+
+    fn process_poll_radio(&mut self, instance: &ot::Instance, cx: &mut Context<'_>) {
+        let instance_ptr = instance.as_ot_ptr();
 
         while let Poll::Ready(Some(())) = self.rcp_to_ot_frame_ready_receiver.poll_next_unpin(cx) {
             trace!("Firing platformRadioProcess");
@@ -176,14 +193,27 @@ impl ot::Platform for Platform {
             // SAFETY: Must be called with a valid pointer to otInstance,
             //         must also only be called from the main OpenThread thread,
             //         which is a guarantee of this method.
-            platformRadioProcess(instance_ptr);
+            unsafe {
+                platformRadioProcess(instance_ptr);
+            }
         }
+    }
 
-        if let Poll::Ready(_) = self.rcp_to_ot_task.poll_unpin(cx) {
+    fn process_poll_udp(&mut self, instance: &ot::Instance, cx: &mut Context<'_>) {
+        for udp_socket in instance.udp_get_sockets() {
+            // This `poll` call comes from the trait `UdpSocketHelpers` in `backing/udp.rs`
+            if let Poll::Ready(Err(err)) = poll_ot_udp_socket(udp_socket, instance, cx) {
+                error!("Error in {:?}: {:?}", udp_socket, err);
+            }
+        }
+    }
+
+    fn process_poll_tasks(&mut self, cx: &mut Context<'_>) {
+        if Poll::Ready(()) == self.rcp_to_ot_task.poll_unpin(cx) {
             panic!("Platform: rcp_to_ot_task finished unexpectedly");
         }
 
-        if let Poll::Ready(_) = self.ot_to_rcp_task.poll_unpin(cx) {
+        if Poll::Ready(()) == self.ot_to_rcp_task.poll_unpin(cx) {
             panic!("Platform: ot_to_rcp_task finished unexpectedly");
         }
     }

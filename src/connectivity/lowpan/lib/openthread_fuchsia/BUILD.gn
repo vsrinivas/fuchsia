@@ -22,6 +22,7 @@ rustc_library("openthread_fuchsia") {
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:socket2",
   ]
 
   sources = [
@@ -29,6 +30,7 @@ rustc_library("openthread_fuchsia") {
     "src/backing/mod.rs",
     "src/backing/radio.rs",
     "src/backing/reset.rs",
+    "src/backing/udp.rs",
     "src/binding.rs",
     "src/lib.rs",
     "src/logging.rs",

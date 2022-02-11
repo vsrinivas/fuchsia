@@ -17,6 +17,9 @@ use std::time::Duration;
 mod alarm;
 mod radio;
 mod reset;
+mod udp;
+
+pub(crate) use udp::*;
 
 pub(super) struct PlatformBacking {
     pub(super) ot_to_rcp_sender: RefCell<mpsc::Sender<Vec<u8>>>,
