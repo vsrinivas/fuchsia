@@ -186,12 +186,12 @@ mod test_package {
                 "lib/mylib.so".to_string() => "host/mylib.so".to_string()
             },
             btreemap! {
-                "meta/my_component.cmx".to_string() => "host/my_component.cmx".to_string(),
+                "meta/my_component.cml".to_string() => "host/my_component.cml".to_string(),
                 "meta/package".to_string() => "host/meta/package".to_string()
             },
         )
         .unwrap();
-        let component_manifest_contents = "my_component.cmx contents";
+        let component_manifest_contents = "my_component.cml contents";
         let mut v = vec![];
         let meta_package = MetaPackage::from_name_and_variant(
             "my-package-name".parse().unwrap(),
@@ -201,7 +201,7 @@ mod test_package {
         let file_system = FakeFileSystem {
             content_map: hashmap! {
                 "host/mylib.so".to_string() => "mylib.so contents".as_bytes().to_vec(),
-                "host/my_component.cmx".to_string() => component_manifest_contents.as_bytes().to_vec(),
+                "host/my_component.cml".to_string() => component_manifest_contents.as_bytes().to_vec(),
                 "host/meta/package".to_string() => v
             },
         };

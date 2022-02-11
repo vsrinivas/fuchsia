@@ -20,7 +20,7 @@ use {
     http_uri_ext::HttpUriExt as _,
     lib::{
         extra_blob_contents, make_pkg_with_extra_blobs, resolve_package, test_package_bin,
-        test_package_cmx, ResolverVariant, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH,
+        test_package_cml, ResolverVariant, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH,
     },
     rand::prelude::*,
     std::{
@@ -41,7 +41,7 @@ async fn package_resolution() {
     let s = "package_resolution";
     let pkg = PackageBuilder::new(s)
         .add_resource_at(format!("bin/{}", s), &test_package_bin(s)[..])
-        .add_resource_at(format!("meta/{}.cmx", s), &test_package_cmx(s)[..])
+        .add_resource_at(format!("meta/{}.cml", s), &test_package_cml(s)[..])
         .add_resource_at("data/duplicate_a", "same contents".as_bytes())
         .add_resource_at("data/duplicate_b", "same contents".as_bytes())
         .build()
@@ -798,7 +798,7 @@ async fn test_https_endpoint(pkg_name: &str, bind_addr: impl Into<IpAddr>) {
 
     let pkg = PackageBuilder::new(pkg_name)
         .add_resource_at(format!("bin/{}", pkg_name), &test_package_bin(pkg_name)[..])
-        .add_resource_at(format!("meta/{}.cmx", pkg_name), &test_package_cmx(pkg_name)[..])
+        .add_resource_at(format!("meta/{}.cml", pkg_name), &test_package_cml(pkg_name)[..])
         .build()
         .await
         .unwrap();

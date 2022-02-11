@@ -239,12 +239,12 @@ mod test_build_with_file_system {
                 "lib/mylib.so".to_string() => "host/mylib.so".to_string()
             },
             btreemap! {
-                "meta/my_component.cmx".to_string() => "host/my_component.cmx".to_string(),
+                "meta/my_component.cml".to_string() => "host/my_component.cml".to_string(),
                 "meta/package".to_string() => "host/meta/package".to_string()
             },
         )
         .unwrap();
-        let component_manifest_contents = "my_component.cmx contents";
+        let component_manifest_contents = "my_component.cml contents";
         let mut v = vec![];
         let meta_package = MetaPackage::from_name_and_variant(
             "my-package-name".parse().unwrap(),
@@ -254,7 +254,7 @@ mod test_build_with_file_system {
         let file_system = FakeFileSystem {
             content_map: hashmap! {
                 "host/mylib.so".to_string() => "mylib.so contents".as_bytes().to_vec(),
-                "host/my_component.cmx".to_string() => component_manifest_contents.as_bytes().to_vec(),
+                "host/my_component.cml".to_string() => component_manifest_contents.as_bytes().to_vec(),
                 "host/meta/package".to_string() => v.clone()
             },
         };
@@ -268,7 +268,7 @@ mod test_build_with_file_system {
         let expected_meta_contents_bytes =
             b"lib/mylib.so=4a886105646222c10428e5793868b13f536752d4b87e6497cdf9caed37e67410\n";
         assert_eq!(actual_meta_contents_bytes.as_slice(), &expected_meta_contents_bytes[..]);
-        let actual_meta_component_bytes = reader.read_file("meta/my_component.cmx").unwrap();
+        let actual_meta_component_bytes = reader.read_file("meta/my_component.cml").unwrap();
         assert_eq!(actual_meta_component_bytes.as_slice(), component_manifest_contents.as_bytes());
     }
 

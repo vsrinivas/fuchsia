@@ -522,7 +522,7 @@ async fn font_manager_load_static_registry_failure_parse() {
 #[fasync::run_singlethreaded(test)]
 async fn font_manager_load_static_registry_failure_pkg_url() {
     let json = serde_json::to_string(&json!([
-        "fuchsia-pkg://includes-resource.com/foo#meta/resource.cmx"
+        "fuchsia-pkg://includes-resource.com/foo#meta/resource.cml"
     ]))
     .unwrap();
     let env = TestEnvBuilder::new()

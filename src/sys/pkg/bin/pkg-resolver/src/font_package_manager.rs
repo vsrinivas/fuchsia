@@ -241,7 +241,7 @@ pub mod tests {
 
     #[test]
     fn test_non_package_urls() -> Result<(), Error> {
-        let resource_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx")?;
+        let resource_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/foo#meta/foo.cml")?;
         assert_matches!(
             FontPackageManagerBuilder::new().add_package_url(resource_url.clone()),
             Err((_, LoadError::PkgUrl{ path: None, bad_url })) =>
@@ -325,7 +325,7 @@ pub mod tests {
             file_name,
             vec![
                 "fuchsia-pkg://fuchsia.com/font1",
-                "fuchsia-pkg://fuchsia.com/font2#meta/font2.cmx",
+                "fuchsia-pkg://fuchsia.com/font2#meta/font2.cml",
             ],
         )?;
 
