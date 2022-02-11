@@ -273,7 +273,7 @@ void Device::Remove() {
     return;
   }
   auto result = controller_->Remove();
-  if (!result.ok()) {
+  if (!result.ok() && !result.is_peer_closed()) {
     FDF_LOG(ERROR, "Failed to remove device '%s': %s", Name(), result.FormatDescription().data());
   }
 }
