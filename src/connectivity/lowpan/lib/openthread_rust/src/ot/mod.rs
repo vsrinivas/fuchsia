@@ -121,6 +121,9 @@ pub use platform::*;
 mod joiner;
 pub use joiner::*;
 
+mod trel;
+pub use trel::*;
+
 /// Trait implemented by all OpenThread instances.
 pub trait InstanceInterface:
     Ip6
@@ -137,6 +140,7 @@ pub trait InstanceInterface:
     + Radio
     + Joiner
     + Udp
+    + Trel
 {
 }
 

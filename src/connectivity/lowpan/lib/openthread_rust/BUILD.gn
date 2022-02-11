@@ -54,6 +54,7 @@ rustc_library("openthread") {
     "src/ot/state.rs",
     "src/ot/tasklets.rs",
     "src/ot/thread.rs",
+    "src/ot/trel.rs",
     "src/ot/types/border_router_config.rs",
     "src/ot/types/castable.rs",
     "src/ot/types/channel_mask.rs",
