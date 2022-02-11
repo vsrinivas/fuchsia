@@ -20,15 +20,15 @@
 use {
     crate::{
         in_tree::pbms_from_tree,
-        sdk::{fetch_from_gcs, fetch_from_sdk, local_entries},
+        sdk::{
+            fetch_fms_entries_from_sdk, fetch_from_gcs, local_entries, local_images_dir,
+            local_packages_dir,
+        },
     },
     anyhow::{bail, Context, Result},
     ffx_config::sdk::SdkVersion,
     fms::{find_product_bundle, Entries},
-    std::{
-        io::Write,
-        path::{Path, PathBuf},
-    },
+    std::{io::Write, path::Path},
 };
 
 mod in_tree;
@@ -45,9 +45,9 @@ pub async fn get_pbms(update_metadata: bool) -> Result<Entries> {
     match sdk.get_version() {
         SdkVersion::Version(version) => {
             if update_metadata {
-                fetch_from_sdk(version).await.context("fetch from sdk")?;
+                fetch_fms_entries_from_sdk(version).await.context("fetch from sdk")?;
             }
-            Ok(local_entries().await.context("read pbms entries")?)
+            Ok(local_entries(version).await.context("read pbms entries")?)
         }
         SdkVersion::InTree => {
             Ok(pbms_from_tree(sdk.get_path_prefix()).await.context("read from in-tree")?)
@@ -64,45 +64,75 @@ pub async fn get_pbms(update_metadata: bool) -> Result<Entries> {
 /// is used.
 ///
 /// `writer` is used to output user messages.
-pub async fn get_product_data<W>(product_name: &Option<String>, mut writer: W) -> Result<()>
+pub async fn get_product_data<W>(product_name: &Option<String>, writer: &mut W) -> Result<()>
 where
     W: Write + Sync,
 {
-    let data_path: PathBuf =
-        ffx_config::get("pbms.data.path").await.context("config get pbms.data.path")?;
+    let sdk = ffx_config::get_sdk().await.context("PBMS ffx config get sdk")?;
+    match sdk.get_version() {
+        SdkVersion::Version(version) => Ok(get_product_data_sdk(version, product_name, writer)
+            .await
+            .context("read pbms entries")?),
+        SdkVersion::InTree => {
+            unimplemented!();
+        }
+        SdkVersion::Unknown => bail!("Unable to determine SDK version vs. in-tree"),
+    }
+}
+
+/// Helper for `get_product_data()`, see docs there.
+///
+/// 'version' is the sdk version. It is used in the path to differentiate
+/// versions of the same product_name.
+async fn get_product_data_sdk<W>(
+    version: &str,
+    product_name: &Option<String>,
+    writer: &mut W,
+) -> Result<()>
+where
+    W: Write + Sync,
+{
     let entries = get_pbms(/*update_metadata=*/ true).await.context("get pbms")?;
     let product_bundle =
         find_product_bundle(&entries, product_name).context("find product bundle")?;
-    writeln!(writer, "Get product data for {:?}", product_bundle)?;
-    let local_dir = data_path.join(&product_bundle.name);
+    writeln!(writer, "Get product data for {:?}", product_bundle.name)?;
+    let local_dir = local_images_dir(version, &product_bundle.name).await?;
     for image in &product_bundle.images {
         writeln!(writer, "    image: {:?}", image)?;
-        match image.format.as_str() {
-            "files" => {
-                fetch_bundle_uri(&image.base_uri, &local_dir).await?;
-            }
-            "tgz" => {
-                fetch_bundle_uri(&image.base_uri, &local_dir).await?;
-            }
-            _ =>
-            // The schema currently defines only "files" or "tgz" (see RFC-100).
-            // This error could be a typo in the product bundle or a new image
-            // format has been added and this code needs an update.
-            {
-                bail!(
-                    "Unexpected image format ({:?}) in product bundle ({:?}). \
-                Supported formats are \"files\" and \"tgz\". \
-                Please report as a bug.",
-                    image.format,
-                    product_name
-                )
-            }
-        }
+        fetch_by_format(&image.format, &image.base_uri, &local_dir)
+            .await
+            .with_context(|| format!("Images for {}.", product_bundle.name))?;
     }
+    let local_dir = local_packages_dir(version, &product_bundle.name).await?;
     for package in &product_bundle.packages {
         writeln!(writer, "    package: {:?}", package.repo_uri)?;
+        fetch_by_format(&package.format, &package.repo_uri, &local_dir)
+            .await
+            .with_context(|| format!("Packages for {}.", product_bundle.name))?;
     }
     Ok(())
+}
+
+/// Download and expand data.
+///
+/// For a directory, all files in the directory are downloaded.
+/// For a .tgz file, the file is downloaded and expanded.
+async fn fetch_by_format(format: &str, uri: &str, local_dir: &Path) -> Result<()> {
+    match format {
+        "files" | "tgz" => fetch_bundle_uri(uri, &local_dir).await,
+        _ =>
+        // The schema currently defines only "files" or "tgz" (see RFC-100).
+        // This error could be a typo in the product bundle or a new image
+        // format has been added and this code needs an update.
+        {
+            bail!(
+                "Unexpected image format ({:?}) in product bundle. \
+            Supported formats are \"files\" and \"tgz\". \
+            Please report as a bug.",
+                format,
+            )
+        }
+    }
 }
 
 /// Download data from any of the supported schemes listed in RFC-100, Product

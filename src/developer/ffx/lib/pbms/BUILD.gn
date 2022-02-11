@@ -20,12 +20,17 @@ if (is_host) {
       "//src/lib/fuchsia-async",
       "//src/lib/gcs",
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:async-fs",
+      "//third_party/rust_crates:futures-lite",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:tempfile",
     ]
 
-    test_deps = [ "//third_party/rust_crates:tempfile" ]
+    test_deps = [
+      "//third_party/rust_crates:serial_test",
+      "//third_party/rust_crates:tempfile",
+    ]
 
     inputs = [
       "test_data/test_core.json",

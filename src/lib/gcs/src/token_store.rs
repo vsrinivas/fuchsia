@@ -70,6 +70,16 @@ pub enum GcsError {
     #[error("GCS refresh token is invalid. Please generate a new GCS OAUTH2 refresh token.")]
     NeedNewRefreshToken,
 
+    /// The access token is no longer valid (e.g. expired or revoked). Access
+    /// tokens are short lived and don't require user interaction to renew.
+    /// Refresh the access token and try the action again.
+    #[error("GCS access token is invalid. This should be handled. Report as a bug.")]
+    NeedNewAccessToken,
+
+    /// GCS returned an empty response for the request.
+    #[error("The requested gs:// URL contains no data (not found).")]
+    NotFound,
+
     /// The authorization code is empty string (or None). Likely a mistake in
     /// the calling application (e.g. calling new_with_code() with an empty
     /// string).
@@ -162,7 +172,7 @@ struct ExchangeAuthCodeResponse {
 }
 
 /// Response from the `/b/<bucket>/o` object listing API.
-#[derive(serde::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ListResponse {
     /// Continuation token; only present when there is more data.
@@ -173,7 +183,7 @@ struct ListResponse {
     items: Vec<ListResponseItem>,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ListResponseItem {
     /// GCS object name.
@@ -413,15 +423,27 @@ impl TokenStore {
     ) -> Result<Vec<String>> {
         Ok(match self.attempt_list(https_client, bucket, prefix).await {
             Err(e) => {
-                match &self.refresh_token {
-                    Some(_) => {
-                        // Refresh the access token and make one extra try.
-                        self.refresh_access_token(&https_client).await?;
-                        self.attempt_list(https_client, bucket, prefix).await?
+                match e.downcast_ref::<GcsError>() {
+                    Some(GcsError::NeedNewAccessToken) => {
+                        match &self.refresh_token {
+                            Some(_) => {
+                                // Refresh the access token and make one extra try.
+                                self.refresh_access_token(&https_client).await?;
+                                self.attempt_list(https_client, bucket, prefix).await?
+                            }
+                            None => {
+                                // With no refresh token, there's no option to retry.
+                                bail!(
+                                    "Access to gs://{}/{} requires authorization. Error {:?}",
+                                    bucket,
+                                    prefix,
+                                    e
+                                );
+                            }
+                        }
                     }
-                    None => {
-                        // With no refresh token, there's no option to retry.
-                        return Err(e);
+                    Some(_) | None => {
+                        bail!("Unable to list GCS data. Error {:?}", e);
                     }
                 }
             }
@@ -458,7 +480,7 @@ impl TokenStore {
             let res = self.send_request(https_client, url).await?;
             match res.status() {
                 StatusCode::FORBIDDEN | StatusCode::UNAUTHORIZED => {
-                    bail!("Auth required to list {}", base_url);
+                    bail!(GcsError::NeedNewAccessToken);
                 }
                 StatusCode::OK => {
                     let bytes = hyper::body::to_bytes(res.into_body()).await?;
@@ -473,6 +495,9 @@ impl TokenStore {
                     bail!("Failed to list {:?} {:?}", base_url, res);
                 }
             }
+        }
+        if results.is_empty() {
+            bail!(GcsError::NotFound);
         }
         Ok(results)
     }

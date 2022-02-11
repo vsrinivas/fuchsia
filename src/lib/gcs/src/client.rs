@@ -92,7 +92,6 @@ impl Client {
             self.token_store.list(&self.https, bucket, prefix).await.context("token store list")?;
         let output_dir = output_dir.as_ref();
         for object in objects {
-            println!("GCS fetch: {:?}", object);
             if let Some(relative_path) = object.strip_prefix(prefix) {
                 // Strip leading slash, if present.
                 let relative_path = if relative_path.starts_with("/") {
@@ -112,6 +111,7 @@ impl Client {
                     create_dir_all(&parent).context(format!("create dir all for {:?}", parent))?;
                 }
                 let mut file = File::create(output_path).context("create file")?;
+                println!("GCS fetch: gs://{}/{}", bucket, object);
                 self.write(bucket, &object, &mut file).await.context("write object")?;
             }
         }

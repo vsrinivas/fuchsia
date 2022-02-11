@@ -4,6 +4,9 @@
             "path": [
                 "$DATA/pbms"
             ]
-        }
+        },
+        "repos": [
+            "gs://fuchsia/development/{version}/sdk/product_bundles.json"
+        ]
     }
 }

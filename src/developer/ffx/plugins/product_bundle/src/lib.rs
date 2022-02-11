@@ -53,7 +53,7 @@ async fn pb_list<W: Write + Sync>(_sdk: Sdk, mut writer: W, cmd: &ListCommand) -
 }
 
 /// `ffx product-bundle get` sub-command.
-async fn pb_get<W: Write + Sync>(_sdk: Sdk, writer: W, cmd: &GetCommand) -> Result<()> {
+async fn pb_get<W: Write + Sync>(_sdk: Sdk, writer: &mut W, cmd: &GetCommand) -> Result<()> {
     get_product_data(&cmd.product_bundle_name, writer).await
 }
 
