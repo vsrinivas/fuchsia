@@ -7,6 +7,13 @@
             environment: "#full-resolver-env",
         },
     ],
+    use: [
+        {
+            protocol: "fuchsia.input.injection.InputDeviceRegistry",
+            from: "#ui",
+            dependency: "weak_for_migration",
+        },
+    ],
     offer: [
         {
             protocol: [ "fuchsia.logger.LogSink" ],

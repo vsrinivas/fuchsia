@@ -339,7 +339,6 @@
         {
             protocol: [
                 "fuchsia.element.GraphicalPresenter",
-                "fuchsia.input.injection.InputDeviceRegistry",
                 "fuchsia.session.Launcher",
             ],
             from: "#session-manager",

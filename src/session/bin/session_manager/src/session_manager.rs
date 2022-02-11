@@ -6,10 +6,6 @@ use {
     crate::startup,
     anyhow::{Context as _, Error},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
-    fidl_fuchsia_input_injection::{
-        InputDeviceRegistryMarker, InputDeviceRegistryProxy, InputDeviceRegistryRequest,
-        InputDeviceRegistryRequestStream,
-    },
     fidl_fuchsia_session::{
         LaunchConfiguration, LaunchError, LauncherRequest, LauncherRequestStream, RestartError,
         RestarterRequest, RestarterRequestStream,
@@ -31,7 +27,6 @@ enum IncomingRequest {
     GraphicalPresenter(felement::GraphicalPresenterRequestStream),
     Launcher(LauncherRequestStream),
     Restarter(RestarterRequestStream),
-    InputDeviceRegistry(InputDeviceRegistryRequestStream),
     Startup(StartupRequestStream),
 }
 
@@ -94,7 +89,6 @@ impl SessionManager {
             .add_fidl_service(IncomingRequest::GraphicalPresenter)
             .add_fidl_service(IncomingRequest::Launcher)
             .add_fidl_service(IncomingRequest::Restarter)
-            .add_fidl_service(IncomingRequest::InputDeviceRegistry)
             .add_fidl_service(IncomingRequest::Startup);
         fs.take_and_serve_directory_handle()?;
 
@@ -178,29 +172,6 @@ impl SessionManager {
                 self.handle_restarter_request_stream(request_stream)
                     .await
                     .context("Session Restarter request stream got an error.")?;
-            }
-            IncomingRequest::InputDeviceRegistry(request_stream) => {
-                // Connect to InputDeviceRegistry served by the session.
-                let (input_device_registry_proxy, server_end) =
-                    fidl::endpoints::create_proxy::<InputDeviceRegistryMarker>()
-                        .context("Failed to create InputDeviceRegistryProxy")?;
-                {
-                    let state = self.state.lock().await;
-                    let session_exposed_dir_channel = state.session_exposed_dir_channel.as_ref()
-                        .context("Failed to connect to InputDeviceRegistryProxy because no session was started")?;
-                    fdio::service_connect_at(
-                        session_exposed_dir_channel,
-                        "fuchsia.input.injection.InputDeviceRegistry",
-                        server_end.into_channel(),
-                    )
-                    .context("Failed to connect to InputDeviceRegistry service")?;
-                }
-                SessionManager::handle_input_device_registry_request_stream(
-                    request_stream,
-                    input_device_registry_proxy,
-                )
-                .await
-                .context("Input device registry request stream got an error.")?;
             }
             IncomingRequest::Startup(request_stream) => {
                 self.handle_startup_request_stream(request_stream)
@@ -336,35 +307,6 @@ impl SessionManager {
         Ok(())
     }
 
-    /// Serves a specified [`InputDeviceRegistryRequestStream`].
-    ///
-    /// # Parameters
-    /// - `request_stream`: the InputDeviceRegistryRequestStream.
-    /// - `input_device_registry_proxy`: the downstream InputDeviceRegistryProxy
-    ///   to which requests will be relayed.
-    ///
-    /// # Errors
-    /// When an error is encountered reading from the request stream.
-    pub async fn handle_input_device_registry_request_stream(
-        mut request_stream: InputDeviceRegistryRequestStream,
-        input_device_registry_proxy: InputDeviceRegistryProxy,
-    ) -> Result<(), Error> {
-        while let Some(request) = request_stream
-            .try_next()
-            .await
-            .context("Error handling input device registry request stream")?
-        {
-            match request {
-                InputDeviceRegistryRequest::Register { device, .. } => {
-                    input_device_registry_proxy
-                        .register(device)
-                        .context("Error handling InputDeviceRegistryRequest::Register")?;
-                }
-            }
-        }
-        Ok(())
-    }
-
     /// Handles calls to Launcher.Launch().
     ///
     /// # Parameters
@@ -433,11 +375,8 @@ impl SessionManager {
 mod tests {
     use {
         super::SessionManager,
-        assert_matches::assert_matches,
-        fidl::endpoints::{create_endpoints, create_proxy_and_stream, spawn_stream_handler},
+        fidl::endpoints::{create_proxy_and_stream, spawn_stream_handler},
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
-        fidl_fuchsia_input_injection::{InputDeviceRegistryMarker, InputDeviceRegistryRequest},
-        fidl_fuchsia_input_report::InputDeviceMarker,
         fidl_fuchsia_session::{
             LaunchConfiguration, LauncherMarker, LauncherProxy, RestartError, RestarterMarker,
             RestarterProxy,
@@ -576,41 +515,6 @@ mod tests {
             Err(RestartError::NotRunning),
             restarter.restart().await.expect("could not call Restart")
         );
-    }
-
-    #[fuchsia::test]
-    async fn handle_input_device_registry_request_stream_propagates_request_to_downstream_service()
-    {
-        let (local_proxy, local_request_stream) =
-            create_proxy_and_stream::<InputDeviceRegistryMarker>()
-                .expect("Failed to create local InputDeviceRegistry proxy and stream");
-        let (downstream_proxy, mut downstream_request_stream) =
-            create_proxy_and_stream::<InputDeviceRegistryMarker>()
-                .expect("Failed to create downstream InputDeviceRegistry proxy and stream");
-        let mut num_devices_registered = 0;
-
-        let local_server_fut = SessionManager::handle_input_device_registry_request_stream(
-            local_request_stream,
-            downstream_proxy,
-        );
-        let downstream_server_fut = async {
-            while let Some(request) = downstream_request_stream.try_next().await.unwrap() {
-                match request {
-                    InputDeviceRegistryRequest::Register { .. } => num_devices_registered += 1,
-                }
-            }
-        };
-
-        let (input_device_client, _input_device_server) = create_endpoints::<InputDeviceMarker>()
-            .expect("Failed to create InputDevice endpoints");
-        local_proxy
-            .register(input_device_client)
-            .expect("Failed to send registration request locally");
-        std::mem::drop(local_proxy); // Drop proxy to terminate `server_fut`.
-
-        assert_matches!(local_server_fut.await, Ok(()));
-        downstream_server_fut.await;
-        assert_eq!(num_devices_registered, 1);
     }
 
     #[fuchsia::test]
