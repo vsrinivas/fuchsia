@@ -52,12 +52,6 @@ fuchsia_component("wrapped-root-presenter") {
   deps = [ "//src/ui/bin/root_presenter:component_v1_for_test" ]
 }
 
-fuchsia_component("wrapped-hdcp") {
-  testonly = true
-  manifest = "meta/wrapped-hdcp.cml"
-  deps = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
-}
-
 fuchsia_component("wrapped-input-pipeline") {
   testonly = true
   manifest = "meta/wrapped-input-pipeline.cml"
@@ -71,9 +65,9 @@ fuchsia_component("scenic-test-realm") {
   manifest = "meta/scenic-test-realm.cml"
   deps = [
     ":scenic-for-test",
-    ":wrapped-hdcp",
     "//examples/fidl/rust/server:echo-server",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
   ]
 }
 

@@ -5,7 +5,7 @@
     children: [
         {
             name: "fake_display_provider",
-            url: "#meta/wrapped-hdcp.cm",
+            url: "#meta/hdcp.cm",
         },
         {
             name: "mock_cobalt",
