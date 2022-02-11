@@ -953,7 +953,7 @@ static int rate_to_scan_rate_flag(unsigned int rate) {
 static __le32 iwl_mvm_scan_config_rates(struct iwl_mvm* mvm) {
   struct ieee80211_supported_band* band;
   uint16_t rates = 0;
-  int i;
+  size_t i;
 
   band = &mvm->nvm_data->bands[WLAN_BAND_TWO_GHZ];
   for (i = 0; i < band->n_bitrates; i++) {
@@ -979,15 +979,15 @@ static void iwl_mvm_fill_scan_dwell(struct iwl_mvm* mvm, struct iwl_scan_dwell* 
 
 static void iwl_mvm_fill_channels(struct iwl_mvm* mvm, uint8_t* channels) {
   struct ieee80211_supported_band* band;
-  int i, j = 0;
+  size_t i = 0;
 
   band = &mvm->nvm_data->bands[WLAN_BAND_TWO_GHZ];
-  for (i = 0; i < band->n_channels; i++, j++) {
-    channels[j] = band->channels[i].ch_num;
+  for (i = 0; i < band->n_channels; i++) {
+    channels[i] = band->channels[i].ch_num;
   }
   band = &mvm->nvm_data->bands[WLAN_BAND_FIVE_GHZ];
-  for (i = 0; i < band->n_channels; i++, j++) {
-    channels[j] = band->channels[i].ch_num;
+  for (i = 0; i < band->n_channels; i++) {
+    channels[i] = band->channels[i].ch_num;
   }
 }
 

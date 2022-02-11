@@ -661,10 +661,10 @@ static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
 }
 #endif  // NEEDS_PORTING
 
-int iwl_init_sband_channels(struct iwl_nvm_data* data, struct ieee80211_supported_band* sband,
-                            int n_channels, wlan_band_t band) {
+size_t iwl_init_sband_channels(struct iwl_nvm_data* data, struct ieee80211_supported_band* sband,
+                               size_t n_channels, wlan_band_t band) {
   struct ieee80211_channel* chan = &data->channels[0];
-  int n = 0, idx = 0;
+  size_t n = 0, idx = 0;
 
   while (idx < n_channels && chan->band != band) {
     chan = &data->channels[++idx];

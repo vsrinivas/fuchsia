@@ -269,14 +269,14 @@ static uint32_t iwl_get_channel_flags(uint8_t ch_num, int ch_idx, bool is_5ghz, 
 // + Channel list in this driver,
 // + Band flags
 //
-static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
-                                struct iwl_nvm_data* data, const __le16* const nvm_ch_flags,
-                                uint32_t sbands_flags) {
-  int ch_idx;
-  int n_channels = 0;
+static size_t iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
+                                   struct iwl_nvm_data* data, const __le16* const nvm_ch_flags,
+                                   uint32_t sbands_flags) {
+  size_t ch_idx;
+  size_t n_channels = 0;
   struct ieee80211_channel* channel;
   uint16_t ch_flags;
-  int num_of_ch, num_2ghz_channels;
+  size_t num_of_ch, num_2ghz_channels;
   const uint8_t* nvm_chan;
 
   if (cfg->nvm_type != IWL_NVM_EXT) {
@@ -734,11 +734,10 @@ static void iwl_init_sbands(struct iwl_trans* trans, struct iwl_nvm_data* data,
                             uint32_t sbands_flags) {
   struct device* dev = trans->dev;
   const struct iwl_cfg* cfg = trans->cfg;
-  int n_channels;
-  int n_used = 0;
+  size_t n_used = 0;
   struct ieee80211_supported_band* sband;
 
-  n_channels = iwl_init_channel_map(dev, cfg, data, nvm_ch_flags, sbands_flags);
+  size_t n_channels = iwl_init_channel_map(dev, cfg, data, nvm_ch_flags, sbands_flags);
   sband = &data->bands[WLAN_BAND_TWO_GHZ];
   sband->band = WLAN_BAND_TWO_GHZ;
   sband->bitrates = &iwl_cfg80211_rates[RATES_24_OFFS];
@@ -775,7 +774,7 @@ static void iwl_init_sbands(struct iwl_trans* trans, struct iwl_nvm_data* data,
 #endif  // NEEDS_PORTING
 
   if (n_channels != n_used) {
-    IWL_ERR_DEV(dev, "NVM: used only %d of %d channels\n", n_used, n_channels);
+    IWL_ERR_DEV(dev, "NVM: used only %zu of %zu channels\n", n_used, n_channels);
   }
 }
 

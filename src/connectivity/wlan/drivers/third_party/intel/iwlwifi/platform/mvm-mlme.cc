@@ -123,8 +123,8 @@ void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_band_t* 
            sizeof(struct ieee80211_mcs_info));
     // TODO(fxbug.dev/36684): band_info->vht_caps =
 
-    ZX_ASSERT(sband->n_bitrates <= static_cast<int>(std::size(band_cap->basic_rate_list)));
-    for (int rate_idx = 0; rate_idx < sband->n_bitrates; ++rate_idx) {
+    ZX_ASSERT(sband->n_bitrates <= std::size(band_cap->basic_rate_list));
+    for (size_t rate_idx = 0; rate_idx < sband->n_bitrates; ++rate_idx) {
       band_cap->basic_rate_list[rate_idx] = cfg_rates_to_80211(sband->bitrates[rate_idx]);
     }
     band_cap->basic_rate_count = sband->n_bitrates;
@@ -142,8 +142,8 @@ void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_band_t* 
         ZX_ASSERT(0);  // Unknown band ID.
         break;
     }
-    ZX_ASSERT(sband->n_channels <= static_cast<int>(std::size(ch_list->channels)));
-    for (int ch_idx = 0; ch_idx < sband->n_channels; ++ch_idx) {
+    ZX_ASSERT(sband->n_channels <= std::size(ch_list->channels));
+    for (size_t ch_idx = 0; ch_idx < sband->n_channels; ++ch_idx) {
       ch_list->channels[ch_idx] = sband->channels[ch_idx].ch_num;
     }
   }
