@@ -541,7 +541,7 @@ impl RepoInner {
 
     async fn start_server_warn(&mut self) {
         if let Err(err) = self.start_server().await {
-            log::warn!("Failed to start repository server: {:#?}", err);
+            log::error!("Failed to start repository server: {:#?}", err);
         }
     }
 
