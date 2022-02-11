@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/access_test",
-        args: [ "--gunit_filter=-*.NoPerms:*.UsrReadOnly:*.UsrReadExec:*.SymlinkFollowed:*.SymlinkFollowedByDefault:*.SymlinkNoFollow" ],
+        args: [ "--gunit_filter=-*.NoPerms:*.UsrReadOnly:*.UsrReadExec:*.SymlinkFollowed:*.SymlinkFollowedByDefault:*.SymlinkNofollow" ],
     },
 }
