@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Result};
-use assembly_util::PackageBuilder;
 use fuchsia_hash::Hash;
-use fuchsia_pkg::PackageManifest;
+use fuchsia_pkg::{PackageBuilder, PackageManifest};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;

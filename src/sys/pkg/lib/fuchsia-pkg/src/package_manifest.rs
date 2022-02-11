@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use serde::{Deserialize, Serialize};
-
-use crate::{Package, PackageManifestError, PackageName, PackagePath, PackageVariant};
+use {
+    crate::{MetaPackage, Package, PackageManifestError, PackageName, PackagePath, PackageVariant},
+    serde::{Deserialize, Serialize},
+};
 
 const DEFAULT_PACKAGE_REPOSITORY: &str = "fuchsia.com";
 
@@ -13,6 +14,12 @@ const DEFAULT_PACKAGE_REPOSITORY: &str = "fuchsia.com";
 pub struct PackageManifest(VersionedPackageManifest);
 
 impl PackageManifest {
+    pub fn blobs(&self) -> &[BlobInfo] {
+        match &self.0 {
+            VersionedPackageManifest::Version1(manifest) => &manifest.blobs,
+        }
+    }
+
     pub fn into_blobs(self) -> Vec<BlobInfo> {
         match self.0 {
             VersionedPackageManifest::Version1(manifest) => manifest.blobs,
@@ -59,6 +66,39 @@ impl PackageManifest {
             repository: DEFAULT_PACKAGE_REPOSITORY.to_string(),
         };
         Ok(PackageManifest(VersionedPackageManifest::Version1(manifest_v1)))
+    }
+}
+
+pub struct PackageManifestBuilder {
+    manifest: PackageManifestV1,
+}
+
+impl PackageManifestBuilder {
+    pub fn new(meta_package: MetaPackage) -> Self {
+        Self {
+            manifest: PackageManifestV1 {
+                package: PackageMetadata {
+                    name: meta_package.name().to_owned(),
+                    version: meta_package.variant().to_owned(),
+                },
+                blobs: vec![],
+                repository: DEFAULT_PACKAGE_REPOSITORY.to_string(),
+            },
+        }
+    }
+
+    pub fn repository(mut self, repository: impl Into<String>) -> Self {
+        self.manifest.repository = repository.into();
+        self
+    }
+
+    pub fn add_blob(mut self, info: BlobInfo) -> Self {
+        self.manifest.blobs.push(info);
+        self
+    }
+
+    pub fn build(self) -> PackageManifest {
+        PackageManifest(VersionedPackageManifest::Version1(self.manifest))
     }
 }
 

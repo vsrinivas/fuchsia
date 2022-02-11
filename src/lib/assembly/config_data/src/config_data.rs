@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Result};
-use assembly_util::{
-    DuplicateKeyError, InsertUniqueExt, MapEntry, PackageBuilder, PathToStringExt,
-};
+use assembly_util::{DuplicateKeyError, InsertUniqueExt, MapEntry, PathToStringExt};
 use camino::Utf8PathBuf;
+use fuchsia_pkg::PackageBuilder;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 

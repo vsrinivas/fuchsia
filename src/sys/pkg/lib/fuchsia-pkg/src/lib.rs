@@ -11,10 +11,12 @@ mod errors;
 mod meta_contents;
 mod meta_package;
 mod package;
+mod package_builder;
 mod package_directory;
 mod package_manifest;
 mod package_manifest_list;
 mod path;
+mod path_to_string;
 
 pub use {
     crate::{
@@ -26,11 +28,13 @@ pub use {
         },
         meta_contents::MetaContents,
         meta_package::MetaPackage,
-        package::{BlobEntry, Package, PackageBuilder},
+        package::{BlobEntry, Package},
+        package_builder::PackageBuilder,
         package_directory::{LoadMetaContentsError, OpenRights, PackageDirectory, ReadHashError},
-        package_manifest::PackageManifest,
+        package_manifest::{BlobInfo, PackageManifest, PackageManifestBuilder},
         package_manifest_list::PackageManifestList,
         path::{PackageName, PackagePath, PackageVariant},
     },
     fuchsia_url::errors::PackagePathSegmentError,
+    path_to_string::PathToStringExt,
 };

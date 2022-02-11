@@ -58,12 +58,15 @@ pub fn build_with_file_system<'a>(
         }
         None => return Err(BuildError::MetaPackage(MetaPackageError::MetaPackageMissing)),
     };
+
     let mut package_builder = Package::builder(
         published_name.as_ref().parse().map_err(BuildError::PackageName)?,
         meta_package.variant().to_owned(),
     );
+
     let external_content_infos =
         get_external_content_infos(creation_manifest.external_contents(), file_system)?;
+
     for (path, info) in external_content_infos.iter() {
         package_builder.add_entry(
             path.to_string(),
@@ -72,11 +75,14 @@ pub fn build_with_file_system<'a>(
             info.size,
         );
     }
+
     let meta_contents = MetaContents::from_map(
         external_content_infos.iter().map(|(path, info)| (path.clone(), info.hash)).collect(),
     )?;
+
     let mut meta_contents_bytes = Vec::new();
     meta_contents.serialize(&mut meta_contents_bytes)?;
+
     let mut far_contents: BTreeMap<&str, Vec<u8>> = BTreeMap::new();
     for (resource_path, source_path) in creation_manifest.far_contents() {
         far_contents.insert(
@@ -84,6 +90,7 @@ pub fn build_with_file_system<'a>(
             file_system.read(source_path).map_err(|e| (e, source_path.to_string()))?,
         );
     }
+
     let insert_generated_file =
         |resource_path: &'static str, content, far_contents: &mut BTreeMap<_, _>| match far_contents
             .entry(resource_path)

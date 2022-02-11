@@ -2,21 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::PathToStringExt;
-use anyhow::{anyhow, Context, Result};
-use fuchsia_pkg::{CreationManifest, MetaPackage, PackageManifest};
-use std::{
-    collections::BTreeMap,
-    convert::TryInto,
-    path::{Path, PathBuf},
+use {
+    crate::{path_to_string::PathToStringExt, CreationManifest, MetaPackage, PackageManifest},
+    anyhow::{anyhow, Context, Result},
+    std::{
+        collections::BTreeMap,
+        convert::TryInto,
+        path::{Path, PathBuf},
+    },
 };
 
 const META_PACKAGE_PATH: &str = "meta/package";
 const ABI_REVISION_FILE_PATH: &str = "meta/fuchsia.abi/abi-revision";
 
 /// A builder for Fuchsia Packages
-///
-/// TODO: Consider moving to `fuchsia_pkg::builder::PackageBuilder`
 pub struct PackageBuilder {
     /// The name of the package being created.
     name: String,
@@ -226,7 +225,7 @@ impl PackageBuilder {
         let creation_manifest =
             CreationManifest::from_external_and_far_contents(blobs, far_contents)?;
 
-        let package_manifest = fuchsia_pkg::build(
+        let package_manifest = crate::build::build(
             &creation_manifest,
             metafar_path.as_ref(),
             published_name.as_ref().unwrap_or(&name),
@@ -292,7 +291,6 @@ fn create_meta_package_file(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::PathToStringExt;
     use fuchsia_merkle::MerkleTreeBuilder;
     use tempfile::{NamedTempFile, TempDir};
 

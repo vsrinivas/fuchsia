@@ -34,8 +34,8 @@ impl Package {
     }
 
     /// Create a new `PackageBuilder` from name and variant.
-    pub fn builder(name: PackageName, variant: PackageVariant) -> PackageBuilder {
-        PackageBuilder::new(name, variant)
+    pub(crate) fn builder(name: PackageName, variant: PackageVariant) -> Builder {
+        Builder::new(name, variant)
     }
 
     /// Generate a Package from a meta.far file.
@@ -52,23 +52,19 @@ impl Package {
     }
 }
 
-pub struct PackageBuilder {
+pub(crate) struct Builder {
     contents: HashMap<String, Hash>,
     meta_package: MetaPackage,
     blobs: BTreeMap<Hash, BlobEntry>,
 }
 
-impl PackageBuilder {
+impl Builder {
     pub fn new(name: PackageName, variant: PackageVariant) -> Self {
         Self {
             contents: HashMap::new(),
             meta_package: MetaPackage::from_name_and_variant(name, variant),
             blobs: BTreeMap::new(),
         }
-    }
-
-    pub fn from_meta_package(meta_package: MetaPackage) -> Self {
-        Self { contents: HashMap::new(), meta_package, blobs: BTreeMap::new() }
     }
 
     pub fn add_entry(&mut self, blob_path: String, hash: Hash, source_path: PathBuf, size: u64) {

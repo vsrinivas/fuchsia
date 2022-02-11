@@ -12,7 +12,7 @@ use {
     anyhow::{anyhow, Context, Result},
     errors::{ffx_bail, ffx_error},
     fidl_fuchsia_developer_bridge_ext::RepositorySpec,
-    fuchsia_pkg::{MetaContents, MetaPackage, PackageBuilder, PackageManifest},
+    fuchsia_pkg::{BlobInfo, MetaContents, MetaPackage, PackageManifestBuilder},
     futures::TryStreamExt,
     futures_lite::io::{copy, AsyncWriteExt},
     hyper::{
@@ -222,14 +222,23 @@ where
     futures::future::join_all(tasks).await;
 
     // Build the PackageManifest of this package.
-    let mut package_builder = PackageBuilder::from_meta_package(meta_package);
+    let mut builder = PackageManifestBuilder::new(meta_package);
+
     for (blob_path, hash) in meta_contents.iter() {
         let source_path = blob_output_path.join(&hash.to_string()).canonicalize()?;
-        let size = metadata(&source_path)?.len();
-        package_builder.add_entry(blob_path.to_string(), *hash, source_path, size);
+
+        builder = builder.add_blob(BlobInfo {
+            source_path: source_path
+                .to_str()
+                .with_context(|| format!("Path is not valid UTF-8: {}", source_path.display()))?
+                .to_string(),
+            path: blob_path.to_string(),
+            merkle: hash.clone(),
+            size: metadata(&source_path)?.len(),
+        });
     }
-    let package = package_builder.build()?;
-    let package_manifest = PackageManifest::from_package(package)?;
+
+    let package_manifest = builder.build();
     let package_manifest_path = output_path.join("package_manifest.json");
     let mut file = async_fs::File::create(package_manifest_path).await?;
     file.write_all(serde_json::to_string(&package_manifest)?.as_bytes()).await?;
@@ -264,126 +273,72 @@ mod test {
         },
         fuchsia_async as fasync,
         fuchsia_hyper::new_https_client,
-        fuchsia_pkg::{build_with_file_system, CreationManifest, FileSystem},
+        fuchsia_pkg::PackageBuilder,
         futures::io::AllowStdIo,
-        maplit::{btreemap, hashmap},
-        std::{
-            collections::HashMap,
-            fs::create_dir,
-            io::{self, Write},
-            net::Ipv4Addr,
-            path::Path,
-        },
+        maplit::hashmap,
+        std::{fs::create_dir, net::Ipv4Addr},
         tuf::{
-            crypto::HashAlgorithm,
-            interchange::Json,
-            metadata::{TargetDescription, TargetPath},
-            repo_builder::RepoBuilder,
+            interchange::Json, metadata::TargetPath, repo_builder::RepoBuilder,
             repository::FileSystemRepositoryBuilder,
         },
     };
-
-    struct FakeFileSystem {
-        content_map: HashMap<String, Vec<u8>>,
-    }
-
-    impl<'a> FileSystem<'a> for FakeFileSystem {
-        type File = &'a [u8];
-        fn open(&'a self, path: &str) -> Result<Self::File, io::Error> {
-            Ok(self.content_map.get(path).unwrap().as_slice())
-        }
-        fn len(&self, path: &str) -> Result<u64, io::Error> {
-            Ok(self.content_map.get(path).unwrap().len() as u64)
-        }
-        fn read(&self, path: &str) -> Result<Vec<u8>, io::Error> {
-            Ok(self.content_map.get(path).unwrap().clone())
-        }
-    }
-
-    fn create_meta_far(path: &Path) {
-        let creation_manifest = CreationManifest::from_external_and_far_contents(
-            btreemap! {
-                "lib/mylib.so".to_string() => "host/mylib.so".to_string()
-            },
-            btreemap! {
-                "meta/my_component.cmx".to_string() => "host/my_component.cmx".to_string(),
-                "meta/package".to_string() => "host/meta/package".to_string()
-            },
-        )
-        .unwrap();
-        let component_manifest_contents = "my_component.cmx contents";
-        let mut v = vec![];
-        let meta_package = MetaPackage::from_name_and_variant(
-            "my-package-name".parse().unwrap(),
-            "my-package-variant".parse().unwrap(),
-        );
-        meta_package.serialize(&mut v).unwrap();
-        let file_system = FakeFileSystem {
-            content_map: hashmap! {
-                "host/mylib.so".to_string() => Vec::new(),
-                "host/my_component.cmx".to_string() => component_manifest_contents.as_bytes().to_vec(),
-                "host/meta/package".to_string() => v
-            },
-        };
-
-        build_with_file_system(&creation_manifest, &path, "my-package-name", &file_system).unwrap();
-    }
-
-    fn write_file(path: PathBuf, body: &[u8]) {
-        let mut tmp = tempfile::NamedTempFile::new().unwrap();
-        tmp.write(body).unwrap();
-        tmp.persist(path).unwrap();
-    }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_download_package() {
         let manager = RepositoryManager::new();
 
         let tempdir = tempfile::tempdir().unwrap();
+
         let metadata_dir = tempdir.path().join("repository");
         create_dir(&metadata_dir).unwrap();
+
+        let build_path = tempdir.path().join("build");
+        let mut builder = PackageBuilder::new("my-package-name");
+        builder.add_contents_as_blob("lib/mylib.so", b"", &build_path).unwrap();
+        builder
+            .add_contents_to_far("meta/my_component.cmx", b"my_component.cmx contents", &build_path)
+            .unwrap();
+
+        let meta_far_path = tempdir.path().join("meta.far");
+        let manifest = builder.build(&build_path, &meta_far_path).unwrap();
+
+        // Copy the package blobs into the blobs directory.
         let blob_dir = metadata_dir.join("blobs");
         create_dir(&blob_dir).unwrap();
 
-        // Put meta.far and blob into blobs directory
-        let meta_far_path =
-            blob_dir.join("947015aca61730b5035469d86344aa9d68284143967e41496a9394b26ac8eabc");
-        create_meta_far(&meta_far_path);
+        let mut meta_far_merkle = None;
+        for blob in manifest.blobs() {
+            let merkle = blob.merkle.to_string();
 
-        let blob_path =
-            blob_dir.join("15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b");
-        write_file(blob_path, "".as_bytes());
+            if blob.path == "meta/" {
+                meta_far_merkle = Some(merkle.clone());
+            }
 
-        let description = TargetDescription::from_reader_with_custom(
-            AllowStdIo::new(File::open(meta_far_path).unwrap()),
-            &[HashAlgorithm::Sha256],
-            hashmap! {
-                "merkle".into() =>
-                    "947015aca61730b5035469d86344aa9d68284143967e41496a9394b26ac8eabc"
-                    .into(),
-            },
-        )
-        .await
-        .unwrap();
+            let mut src = std::fs::File::open(&blob.source_path).unwrap();
+            let mut dst = std::fs::File::create(blob_dir.join(merkle)).unwrap();
+            std::io::copy(&mut src, &mut dst).unwrap();
+        }
 
         // Write TUF metadata
         let key = repo_private_key();
-        RepoBuilder::create(
-            FileSystemRepositoryBuilder::<Json>::new(metadata_dir.clone()).build().unwrap(),
-        )
-        .trusted_root_keys(&[&key])
-        .trusted_targets_keys(&[&key])
-        .trusted_snapshot_keys(&[&key])
-        .trusted_timestamp_keys(&[&key])
-        .stage_root()
-        .unwrap()
-        .stage_targets_with_builder(|builder| {
-            builder.insert_target_description(TargetPath::new("test_package").unwrap(), description)
-        })
-        .unwrap()
-        .commit()
-        .await
-        .unwrap();
+        let repo = FileSystemRepositoryBuilder::<Json>::new(metadata_dir.clone()).build().unwrap();
+        RepoBuilder::create(repo)
+            .trusted_root_keys(&[&key])
+            .trusted_targets_keys(&[&key])
+            .trusted_snapshot_keys(&[&key])
+            .trusted_timestamp_keys(&[&key])
+            .stage_root()
+            .unwrap()
+            .add_target_with_custom(
+                TargetPath::new("test_package").unwrap(),
+                AllowStdIo::new(File::open(meta_far_path).unwrap()),
+                hashmap! { "merkle".into() => meta_far_merkle.unwrap().into() },
+            )
+            .await
+            .unwrap()
+            .commit()
+            .await
+            .unwrap();
 
         // Create the repository.
         let backend = PmRepository::new(tempdir.path().to_path_buf());

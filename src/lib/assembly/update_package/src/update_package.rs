@@ -6,8 +6,9 @@ use anyhow::{anyhow, Context, Result};
 use assembly_images_manifest::{Image, ImagesManifest};
 use assembly_partitions_config::PartitionsConfig;
 use assembly_update_packages_manifest::UpdatePackagesManifest;
-use assembly_util::{PackageBuilder, PathToStringExt};
+use assembly_util::PathToStringExt;
 use epoch::EpochFile;
+use fuchsia_pkg::PackageBuilder;
 use std::path::{Path, PathBuf};
 
 /// A builder that constructs update packages.
