@@ -1,6 +1,6 @@
-sdk://component_manifest/syslog
 sdk://component_manifest/sys/component
 sdk://component_manifest/sys/testing
+sdk://component_manifest/syslog
 sdk://component_manifest/vulkan
 sdk://docs/low_level
 sdk://docs/metadata_schemas
@@ -144,7 +144,6 @@ sdk://pkg/async-loop
 sdk://pkg/async-loop-cpp
 sdk://pkg/async-loop-default
 sdk://pkg/async-loop-testing
-sdk://pkg/async-testing
 sdk://pkg/fdio
 sdk://pkg/fidl
 sdk://pkg/fidl_base
@@ -164,9 +163,7 @@ sdk://pkg/scenic_cpp
 sdk://pkg/stdcompat
 sdk://pkg/svc
 sdk://pkg/sync
-sdk://pkg/sys_component_cpp_testing
 sdk://pkg/sys_cpp
-sdk://pkg/sys_cpp_testing
 sdk://pkg/sys_inspect_cpp
 sdk://pkg/sys_service_cpp
 sdk://pkg/syslog

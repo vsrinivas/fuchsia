@@ -16,6 +16,7 @@ import("config.gni")
 
 _sdk_public_deps = [
   ":core",
+  ":core_testing",
   ":e2e_testing",
   ":modular_testing",
   ":zircon_sysroot",
@@ -66,6 +67,7 @@ group("archives") {
   testonly = true
   public_deps = [
     ":core_archive",
+    ":core_testing_archive",
     ":e2e_testing_archive",
     ":fuchsia_dart_archive",
     ":modular_testing_archive",
@@ -379,7 +381,7 @@ sdk_molecule("host_tools") {
 
 sdk_molecule("core_lib") {
   visibility = [ ":*" ]
-  testonly = true
+
   deps = [
     "//sdk/lib/fdio:fdio_sdk",
     "//sdk/lib/fidl/cpp:cpp_sdk",
@@ -390,9 +392,7 @@ sdk_molecule("core_lib") {
     "//sdk/lib/stdcompat:stdcompat_sdk",
     "//sdk/lib/svc:svc_sdk",
     "//sdk/lib/sys/component:realm_builder_absolute_shard_sdk",
-    "//sdk/lib/sys/component/cpp/testing:cpp_library_sdk",
     "//sdk/lib/sys/cpp:cpp_sdk",
-    "//sdk/lib/sys/cpp/testing:cpp_sdk",
     "//sdk/lib/sys/inspect/cpp:cpp_sdk",
     "//sdk/lib/sys/testing:elf_test_runner_shard_sdk",
     "//sdk/lib/syslog",
@@ -408,7 +408,6 @@ sdk_molecule("core_lib") {
     "//zircon/system/ulib/async-loop:async-loop-default_sdk",
     "//zircon/system/ulib/async-loop:async-loop_sdk",
     "//zircon/system/ulib/async-loop/testing:async-loop-testing_sdk",
-    "//zircon/system/ulib/async-testing:async-testing_sdk",
     "//zircon/system/ulib/inspect:inspect_sdk",
     "//zircon/system/ulib/sync:sync_sdk",
     "//zircon/system/ulib/syslog:syslog_sdk",
@@ -421,7 +420,7 @@ sdk_molecule("core_lib") {
 # Pieces of the IDK sans host tools (which are in ":host_tools").
 sdk_molecule("core_idk") {
   visibility = [ ":*" ]
-  testonly = true
+
   deps = [
     ":core_lib",
     ":fidl",
@@ -436,6 +435,18 @@ sdk_molecule("core_idk") {
   ]
 }
 
+sdk_molecule("core_testing_idk") {
+  visibility = [ ":*" ]
+
+  testonly = true
+
+  deps = [
+    "//sdk/lib/sys/component/cpp/testing:cpp_library_sdk",
+    "//sdk/lib/sys/cpp/testing:cpp_sdk",
+    "//zircon/system/ulib/async-testing:async-testing_sdk",
+  ]
+}
+
 sdk("core") {
   id = sdk_id
 
@@ -443,12 +454,22 @@ sdk("core") {
 
   api = "manifests/core.manifest"
 
-  testonly = true
-
   deps = [
     ":core_idk",
     ":host_tools",
   ]
+}
+
+sdk("core_testing") {
+  id = sdk_id
+
+  testonly = true
+
+  category = "partner"
+
+  api = "manifests/core_testing.manifest"
+
+  deps = [ ":core_testing_idk" ]
 }
 
 sdk("core.modular") {
