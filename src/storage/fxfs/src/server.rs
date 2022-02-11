@@ -130,16 +130,19 @@ impl FxfsServer {
     async fn handle_admin(&self, scope: &ExecutionScope, req: AdminRequest) -> Result<bool, Error> {
         match req {
             AdminRequest::Shutdown { responder } => {
+                log::info!("Received shutdown request");
                 // TODO(csuter): shutdown is brutal and will just drop running tasks which could
                 // leave transactions in a half completed state.  VFS should be fixed so that it
                 // drops connections at some point that isn't midway through processing a request.
                 scope.shutdown();
                 self.closed.store(true, atomic::Ordering::Relaxed);
                 self.volume.volume().terminate().await;
+                log::info!("Volume terminated");
                 self.fs
                     .close()
                     .await
                     .unwrap_or_else(|e| log::error!("Failed to shutdown fxfs: {}", e));
+                log::info!("Filesystem instance terminated");
                 responder
                     .send()
                     .unwrap_or_else(|e| log::warn!("Failed to send shutdown response: {}", e));
