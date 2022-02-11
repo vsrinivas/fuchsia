@@ -858,15 +858,6 @@ class DecodedMessage<FidlType, Transport,
 
 }  // namespace unstable
 
-// TODO(fxbug.dev/82681): Remove aliases after migrating users.
-template <typename FidlType, typename Transport = internal::ChannelTransport>
-using UnownedEncodedMessage = unstable::UnownedEncodedMessage<FidlType, Transport>;
-template <typename FidlType, typename Transport = internal::ChannelTransport>
-using OwnedEncodedMessage = unstable::OwnedEncodedMessage<FidlType, Transport>;
-template <typename FidlType, typename Transport = internal::ChannelTransport,
-          typename Enable = void>
-using DecodedMessage = unstable::DecodedMessage<FidlType, Transport, Enable>;
-
 // Holds the result of converting an outgoing message to an incoming message.
 //
 // |OutgoingToIncomingMessage| objects own the bytes and handles resulting from
