@@ -106,7 +106,7 @@ TEST_P(AccelerationInputDeviceTest, ReadInputReports) {
 
   ASSERT_TRUE(loop_->RunUntilIdle());
 
-  // The FIDL callback runs on another thread by fake_ddk::FidlMessenger.
+  // The FIDL callback runs on another thread.
   // We will need to wait for the FIDL callback to finish before using |client|.
   ASSERT_TRUE(dut()->readers_created());
 
@@ -242,7 +242,7 @@ TEST_P(GyroscopeInputDeviceTest, ReadInputReports) {
 
   ASSERT_TRUE(loop_->RunUntilIdle());
 
-  // The FIDL callback runs on another thread by fake_ddk::FidlMessenger.
+  // The FIDL callback runs on another thread.
   // We will need to wait for the FIDL callback to finish before using |client|.
   ASSERT_TRUE(dut()->readers_created());
 
@@ -381,7 +381,7 @@ TEST_P(RgbcLightInputDeviceTest, ReadInputReports) {
 
   ASSERT_TRUE(loop_->RunUntilIdle());
 
-  // The FIDL callback runs on another thread by fake_ddk::FidlMessenger.
+  // The FIDL callback runs on another thread.
   // We will need to wait for the FIDL callback to finish before using |client|.
   ASSERT_TRUE(dut()->readers_created());
 
