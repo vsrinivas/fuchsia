@@ -15,26 +15,21 @@
 // creating a subclass of the ::Interface class for the protocol.
 class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
  public:
-  explicit EchoImpl(bool reverse) : reverse_(reverse) {}
-
   // Bind this implementation to a channel.
-  void Bind(std::unique_ptr<EchoImpl> self, async_dispatcher_t* dispatcher,
-            fidl::ServerEnd<fuchsia_examples::Echo> request) {
-    // Destroy |self| when the unbound handler completes.
-    fidl::OnUnboundFn<EchoImpl> unbound_handler =
-        [self = std::move(self)](EchoImpl* impl, fidl::UnbindInfo info,
-                                 fidl::ServerEnd<fuchsia_examples::Echo> server_end) {
-          if (info.is_user_initiated()) {
-            return;
-          }
-          if (info.is_peer_closed()) {
-            std::cout << "Client disconnected" << std::endl;
-            return;
-          }
-          std::cerr << "Server error: " << info << std::endl;
-        };
-    fidl::BindServer(dispatcher, std::move(request), this, std::move(unbound_handler));
-  }
+  EchoImpl(bool reverse, async_dispatcher_t* dispatcher,
+           fidl::ServerEnd<fuchsia_examples::Echo> request)
+      : reverse_(reverse),
+        binding_(fidl::BindServer(dispatcher, std::move(request), this,
+                                  // This is a fidl::OnUnboundFn<EchoImpl>.
+                                  [this](EchoImpl* impl, fidl::UnbindInfo info,
+                                         fidl::ServerEnd<fuchsia_examples::Echo> server_end) {
+                                    if (info.is_peer_closed()) {
+                                      std::cout << "Client disconnected" << std::endl;
+                                    } else if (!info.is_user_initiated()) {
+                                      std::cerr << "server error: " << info << std::endl;
+                                    }
+                                    delete this;
+                                  })) {}
 
   // Handle a SendString request by sending on OnString event with the request value. For
   // fire and forget methods, the completer can be used to close the channel with an epitaph.
@@ -55,6 +50,7 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
 
  private:
   const bool reverse_;
+  fidl::ServerBindingRef<fuchsia_examples::Echo> binding_;
 };
 
 int main(int argc, const char** argv) {
@@ -67,17 +63,14 @@ int main(int argc, const char** argv) {
   // Example of serving members of a service instance.
   auto add_regular_result = my_service.add_regular_echo(
       [&loop](fidl::ServerEnd<fuchsia_examples::Echo> request_channel) -> zx::status<> {
-        std::unique_ptr regular_impl = std::make_unique<EchoImpl>(false);
-        regular_impl->Bind(std::move(regular_impl), loop.dispatcher(), std::move(request_channel));
+        new EchoImpl(false, loop.dispatcher(), std::move(request_channel));
         return zx::ok();
       });
   ZX_ASSERT(add_regular_result.is_ok());
 
   auto add_reversed_result = my_service.add_reversed_echo(
       [&loop](fidl::ServerEnd<fuchsia_examples::Echo> request_channel) -> zx::status<> {
-        std::unique_ptr reversed_impl = std::make_unique<EchoImpl>(true);
-        reversed_impl->Bind(std::move(reversed_impl), loop.dispatcher(),
-                            std::move(request_channel));
+        new EchoImpl(true, loop.dispatcher(), std::move(request_channel));
         return zx::ok();
       });
   ZX_ASSERT(add_reversed_result.is_ok());

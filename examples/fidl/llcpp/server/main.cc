@@ -20,6 +20,8 @@
 #include <zircon/status.h>
 // [END includes]
 
+class EchoImpl;
+
 // [START impl]
 // An implementation of the Echo protocol. Protocols are implemented in LLCPP by
 // creating a subclass of the ::Interface class for the protocol.
@@ -27,31 +29,24 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
  public:
   // [START bind_server]
   // Bind this implementation to a channel.
-  void Bind(std::unique_ptr<EchoImpl> self, async_dispatcher_t* dispatcher,
-            fidl::ServerEnd<fuchsia_examples::Echo> request) {
-    // Destroy |self| when the unbound handler completes.
-    fidl::OnUnboundFn<EchoImpl> unbound_handler =
-        [self = std::move(self)](EchoImpl* impl, fidl::UnbindInfo info,
-                                 fidl::ServerEnd<fuchsia_examples::Echo> server_end) {
-          if (info.is_user_initiated()) {
-            return;
-          }
-          if (info.is_peer_closed()) {
-            std::cout << "Client disconnected" << std::endl;
-            return;
-          }
-          std::cerr << "server error: " << info << std::endl;
-        };
-    binding_ = fidl::BindServer(dispatcher, std::move(request), this, std::move(unbound_handler));
-  }
+  EchoImpl(async_dispatcher_t* dispatcher, fidl::ServerEnd<fuchsia_examples::Echo> request)
+      : binding_(fidl::BindServer(dispatcher, std::move(request), this,
+                                  // This is a fidl::OnUnboundFn<EchoImpl>.
+                                  [this](EchoImpl* impl, fidl::UnbindInfo info,
+                                         fidl::ServerEnd<fuchsia_examples::Echo> server_end) {
+                                    if (info.is_peer_closed()) {
+                                      std::cout << "Client disconnected" << std::endl;
+                                    } else if (!info.is_user_initiated()) {
+                                      std::cerr << "server error: " << info << std::endl;
+                                    }
+                                    delete this;
+                                  })) {}
   // [END bind_server]
 
   // Handle a SendString request by sending on OnString event with the request value. For
   // fire and forget methods, the completer can be used to close the channel with an epitaph.
   void SendString(SendStringRequestView request, SendStringCompleter::Sync& completer) override {
-    if (binding_) {
-      fidl::WireSendEvent(binding_.value())->OnString(request->value);
-    }
+    fidl::WireSendEvent(binding_)->OnString(request->value);
   }
 
   // Handle an EchoString request by responding with the request value. For two-way
@@ -63,7 +58,7 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
  private:
   // A reference back to the Binding that this class is bound to, which is used
   // to send events to the client.
-  cpp17::optional<fidl::ServerBindingRef<fuchsia_examples::Echo>> binding_;
+  fidl::ServerBindingRef<fuchsia_examples::Echo> binding_;
 };
 // [END impl]
 
@@ -91,9 +86,8 @@ int main(int argc, char** argv) {
             std::cout << "Incoming connection for "
                       << fidl::DiscoverableProtocolName<fuchsia_examples::Echo> << std::endl;
             // [START create_server]
-            // Create an instance of our EchoImpl.
-            std::unique_ptr server = std::make_unique<EchoImpl>();
-            server->Bind(std::move(server), dispatcher, std::move(request));
+            // Create an instance of our EchoImpl that destroys itself when the connection closes.
+            new EchoImpl(dispatcher, std::move(request));
             // [END create_server]
             return ZX_OK;
           }));

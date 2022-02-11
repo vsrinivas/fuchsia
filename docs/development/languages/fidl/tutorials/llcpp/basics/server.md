@@ -139,9 +139,9 @@ The implementation contains the following elements:
 
 * The class subclasses the [generated protocol class][bindings-iface] and
   overrides its pure virtual methods corresponding to the protocol methods.
-* It contains an optional `ServerBindingRef` in order to be able to send events
-  to the client. It gets set later in the class's `Bind()`  function.
-* The `Bind` method binds the implementation to a given `request`.
+* It contains a `ServerBindingRef` in order to be able to send events to the
+  client.
+* The constructor method binds the implementation to a given `request`.
 * The method for `EchoString` replies with the request value by using the
   completer.
 * The method for `SendString` uses the `binding_` member (if defined) to send
@@ -202,7 +202,7 @@ This new code requires the following additional dependencies:
 ### Initialize the event loop
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="2,3,4,5,32" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="2,3,4,5,31" %}
 ```
 
 The event loop is used to asynchronously listen for incoming connections and
@@ -230,27 +230,23 @@ serve capabilities (e.g. FIDL protocols) to other components.
 The server then registers the Echo protocol using `ougoing.svc_dir()->AddEntry()`.
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="17,18,19,20,21,22,23,24,25,26,27,28,29,30" %}
 ```
 
 The call to `AddEntry` installs a handler for the name of the FIDL protocol
 (`fuchsia_examples::Echo::Name`, which is the string `"fuchsia.examples.Echo"`).
 The handler will call the lambda function that we created, and this lambda
-function will call `EchoImpl::Bind` with the
+function will construct an `EchoImpl` with the
 `fidl::ServerEnd<fuchsia_examples::Echo>`, which internally wraps a
-`zx::channel`, that represents a request from a client.
-
-When a client requests access to `/svc/fuchsia.examples.Echo`, this function
-will be called with a channel that represents the request. This channel is bound
-to our server via the `Bind` function, and future requests from this client
-will call.
+`zx::channel`, that represents a request from a client. The `EchoImpl` stays
+alive until it is unbound, at which point it deletes itself.
 
 When the handler is called (i.e. when a client has requested to connect to the
 `/svc/fuchsia.examples.Echo` protocol), it binds the incoming channel to our
 `Echo` implementation, which will start listening for `Echo` requests on that
-channel and dispatch them to the `EchoImpl` instance. `EchoImpl`'s call to
-`fidl::BindServer` returns a `fidl::ServerBindingRef`, which is then stored so
-the instance can be able to send events back to the client.
+channel and dispatch them to the `EchoImpl` instance. `EchoImpl`'s constructor
+creates a `fidl::ServerBindingRef` which is used to send events back to the
+client.
 
 ## Test the server
 
