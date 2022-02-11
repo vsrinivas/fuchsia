@@ -33,12 +33,6 @@ declare_args() {
   # migrated in-place to the specified format when fshost mounts it.
   data_filesystem_format = "minfs"
 
-  # Soft migration; do not use
-  bundle_f2fs = false
-
-  # Soft migration; do not use
-  bundle_fxfs = false
-
   # If enabled, users can change the data partition from the default minfs filesystem to either fxfs
   # or f2fs by writing "fxfs" or "f2fs" to /data/fs_switch and then rebooting.
   fs_switch = false
