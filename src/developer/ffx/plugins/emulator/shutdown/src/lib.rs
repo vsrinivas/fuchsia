@@ -27,7 +27,7 @@ async fn attempt_shutdown(instance_dir: &PathBuf, proxy: &TargetCollectionProxy)
     }
 }
 
-#[ffx_plugin("emu.experimental", TargetCollectionProxy = "daemon::protocol")]
+#[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn shutdown(cmd: ShutdownCommand, proxy: TargetCollectionProxy) -> Result<()> {
     let ffx_config = FfxConfigWrapper::new();
     let instances: Vec<PathBuf> = if cmd.all {
