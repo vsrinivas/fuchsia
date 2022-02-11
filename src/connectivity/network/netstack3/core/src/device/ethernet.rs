@@ -714,7 +714,6 @@ pub(super) fn set_routing_enabled<C: EthernetIpLinkDeviceContext, I: Ip>(
     ctx: &mut C,
     device_id: C::DeviceId,
     enabled: bool,
-    ip_routing: bool,
 ) {
     match I::VERSION {
         IpVersion::V4 => {
@@ -727,66 +726,20 @@ pub(super) fn set_routing_enabled<C: EthernetIpLinkDeviceContext, I: Ip>(
                     device_id
                 );
 
-                // Make sure that the netstack is configured to route packets before
-                // considering this device a router and stopping router solicitations.
-                // If the netstack was not configured to route packets before, then we
-                // would still be considered a host, so we shouldn't stop soliciting
-                // routers.
-                if ip_routing {
-                    // TODO(ghanan): Handle transition from disabled to enabled: - start
-                    //               periodic router advertisements (if configured to do
-                    //               so)
-                    ctx.stop_soliciting_routers(device_id);
-                }
-
-                // Actually update the routing flag.
+                ctx.stop_soliciting_routers(device_id);
                 ctx.get_state_mut_with(device_id).ip.ipv6.ip_state.routing_enabled = true;
-
-                // Make sure that the netstack is configured to route packets before
-                // considering this device a router and starting periodic router
-                // advertisements.
-                if ip_routing {
-                    // Now that `device` is a router, join the all-routers multicast
-                    // group.
-                    ctx.join_ipv6_multicast(
-                        device_id,
-                        Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
-                    );
-                }
+                // Now that `device` is a router, join the all-routers multicast
+                // group.
+                ctx.join_ipv6_multicast(device_id, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
             } else {
                 trace!(
                     "set_ipv6_routing_enabled: disabling IPv6 routing for device {:?}",
                     device_id
                 );
 
-                // Make sure that the netstack is configured to route packets before
-                // considering this device a router and stopping periodic router
-                // advertisements. If the netstack was not configured to route packets
-                // before, then we would still be considered a host, so we wouldn't have
-                // any periodic router advertisements to stop.
-                if ip_routing {
-                    // Now that `device` is a host, leave the all-routers multicast
-                    // group.
-                    ctx.leave_ipv6_multicast(
-                        device_id,
-                        Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
-                    );
-                }
-
-                // Actually update the routing flag.
+                ctx.leave_ipv6_multicast(device_id, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
                 ctx.get_state_mut_with(device_id).ip.ipv6.ip_state.routing_enabled = false;
-
-                // We only need to start soliciting routers if we were not soliciting
-                // them before. We would only reach this point if there was a change in
-                // routing status for `device`. However, if the nestatck does not
-                // currently have routing enabled, the device would not have been
-                // considered a router before this routing change on the device, so it
-                // would have already solicited routers.
-                if ip_routing {
-                    // On transition from router -> host, start soliciting router
-                    // information.
-                    ctx.start_soliciting_routers(device_id);
-                }
+                ctx.start_soliciting_routers(device_id);
             }
         }
     }
@@ -1080,10 +1033,6 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
         // on `device_id`.
         self.del_ipv6_addr(device_id, &addr.into_specified()).unwrap();
     }
-
-    fn is_router(&self) -> bool {
-        IpLinkDeviceContext::is_router::<Ipv6>(self)
-    }
 }
 
 /// An implementation of the [`LinkDevice`] trait for Ethernet devices.
@@ -1188,7 +1137,6 @@ mod tests {
             add_arp_or_ndp_table_entry, get_counter_val, new_rng, DummyEventDispatcher,
             DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt, DUMMY_CONFIG_V4,
         },
-        Ipv4StateBuilder, Ipv6StateBuilder, StackStateBuilder,
     };
 
     struct DummyEthernetCtx {
@@ -1279,10 +1227,6 @@ mod tests {
     }
 
     impl IpLinkDeviceContext<EthernetLinkDevice, EthernetTimerId<DummyDeviceId>> for DummyCtx {
-        fn is_router<I: Ip>(&self) -> bool {
-            unimplemented!()
-        }
-
         fn is_device_usable(&self, _device: DummyDeviceId) -> bool {
             unimplemented!()
         }
@@ -1565,43 +1509,7 @@ mod tests {
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
         assert_empty(ctx.dispatcher.frames_sent().iter());
 
-        // Attempting to set router should work, but it still won't be able to
-        // route packets.
-        set_routing_enabled::<_, I>(&mut ctx, device, true).expect("error setting routing enabled");
-        assert!(is_routing_enabled::<I>(&ctx, device));
-        // Should not update other Ip routing status.
-        check_other_is_routing_enabled::<I>(&ctx, device, false);
-        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        // Still should not send ICMP because device has routing disabled.
-        assert_empty(ctx.dispatcher.frames_sent().iter());
-
-        // Test with netstack forwarding
-
-        let mut state_builder = StackStateBuilder::default();
-        let _: &mut Ipv4StateBuilder = state_builder.ipv4_builder().forward(true);
-        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
-        // Most tests do not need NDP's DAD or router solicitation so disable it
-        // here.
-        let mut ndp_config = ndp::NdpConfiguration::default();
-        ndp_config.set_max_router_solicitations(None);
-        state_builder.device_builder().set_default_ndp_config(ndp_config);
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.dad_transmits = None;
-        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut builder = DummyEventDispatcherBuilder::from_config(config.clone());
-        add_arp_or_ndp_table_entry(&mut builder, device_builder_id, src_ip.get(), src_mac);
-        let mut ctx = builder.build_with(state_builder, DummyEventDispatcher::default());
-
-        // Should not be a router (default).
-        assert!(!is_routing_enabled::<I>(&ctx, device));
-        check_other_is_routing_enabled::<I>(&ctx, device, false);
-
-        // Receiving a packet not destined for the node should not result in an
-        // unreachable message when routing is disabled.
-        receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
-        assert_empty(ctx.dispatcher.frames_sent().iter());
-
-        // Attempting to set router should work
+        // Set routing and expect packets to be forwarded.
         set_routing_enabled::<_, I>(&mut ctx, device, true).expect("error setting routing enabled");
         assert!(is_routing_enabled::<I>(&ctx, device));
         // Should not update other Ip routing status.

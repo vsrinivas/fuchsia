@@ -484,21 +484,13 @@ pub(crate) trait NdpContext<D: LinkDevice>:
         };
     }
 
-    /// Is the netstack currently operating as an IPv6 router?
-    ///
-    /// Returns `true` if the netstack is configured to route IPv6 packets not
-    /// destined for it. Note that this does not necessarily mean that routing
-    /// is enabled on any given interface. That is configured separately on a
-    /// per-interface basis.
-    fn is_router(&self) -> bool;
-
     /// Can `device_id` route IP packets not destined for it?
     ///
     /// If `is_router` returns `true`, we know that both the `device_id` and the
     /// netstack (`ctx`) have routing enabled; if `is_router` returns false,
     /// either `device_id` or the netstack (`ctx`) has routing disabled.
     fn is_router_device(&self, device_id: Self::DeviceId) -> bool {
-        self.is_router() && self.get_ip_device_state(device_id).routing_enabled
+        self.get_ip_device_state(device_id).routing_enabled
     }
 }
 
@@ -2679,7 +2671,7 @@ mod tests {
             get_assigned_ipv6_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
             is_ipv6_routing_enabled, state::Ipv6AddressEntry,
         },
-        Ctx, Instant, Ipv6StateBuilder, StackStateBuilder, TimerId, TimerIdInner,
+        Ctx, Instant, StackStateBuilder, TimerId, TimerIdInner,
     };
 
     type IcmpParseArgs = packet_formats::icmp::IcmpParseArgs<Ipv6Addr>;
@@ -4533,7 +4525,6 @@ mod tests {
         // device.
 
         let mut state_builder = StackStateBuilder::default();
-        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(false);
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.dad_transmits = None;
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
@@ -4570,63 +4561,8 @@ mod tests {
         let timers: Vec<(&DummyInstant, &TimerId)> =
             ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id).collect();
         assert_eq!(timers.len(), 1);
-        // Capture the instant when the timer was supposed to fire so we can
-        // make sure that a new timer doesn't replace the current one.
-        let instant = timers[0].0.clone();
 
         // Enable routing on device.
-        set_routing_enabled::<_, Ipv6>(&mut ctx, device, true)
-            .expect("error setting routing enabled");
-        assert!(is_ipv6_routing_enabled(&ctx, device));
-
-        // Should have not send any new packets and still have the original
-        // router solicitation timer set.
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
-        let timers: Vec<(&DummyInstant, &TimerId)> =
-            ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id).collect();
-        assert_eq!(timers.len(), 1);
-        assert_eq!(*timers[0].0, instant);
-
-        // Now make the netstack and a device actually routing capable.
-
-        let mut state_builder = StackStateBuilder::default();
-        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
-        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
-        ipv6_config.dad_transmits = None;
-        state_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ctx = DummyEventDispatcherBuilder::default()
-            .build_with(state_builder, DummyEventDispatcher::default());
-
-        assert_empty(ctx.dispatcher.frames_sent());
-        assert_empty(ctx.dispatcher.timer_events());
-
-        let device =
-            ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::initialize_device(&mut ctx, device);
-        let timer_id =
-            NdpTimerId::new_router_solicitation(device.try_into().expect("expected ethernet ID"))
-                .into();
-
-        // Send the first router solicitation.
-        assert_empty(ctx.dispatcher.frames_sent());
-        let timers: Vec<(&DummyInstant, &TimerId)> =
-            ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id).collect();
-        assert_eq!(timers.len(), 1);
-
-        assert_eq!(trigger_next_timer(&mut ctx).unwrap(), timer_id);
-
-        // Should have sent a frame and have a router solicitation timer setup.
-        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
-        assert_matches::assert_matches!(
-            parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &ctx.dispatcher.frames_sent()[0].1,
-                |_| {},
-            ),
-            Ok((_, _, _, _, _, _, _))
-        );
-        assert_eq!(ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id).count(), 1);
-
-        // Enable routing on the device.
         set_routing_enabled::<_, Ipv6>(&mut ctx, device, true)
             .expect("error setting routing enabled");
         assert!(is_ipv6_routing_enabled(&ctx, device));
@@ -5166,7 +5102,6 @@ mod tests {
         let mut ndp_config = NdpConfiguration::default();
         ndp_config.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_config(ndp_config);
-        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());

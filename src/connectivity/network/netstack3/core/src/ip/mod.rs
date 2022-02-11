@@ -317,90 +317,54 @@ impl Display for DummyDeviceId {
 }
 
 /// A builder for IPv4 state.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub struct Ipv4StateBuilder {
-    forward: bool,
     icmp: Icmpv4StateBuilder,
 }
 
-impl Default for Ipv4StateBuilder {
-    fn default() -> Ipv4StateBuilder {
-        // NOTE: We implement `Default` manually even though this implementation
-        // is equivalent to what `#[derive(Default)]` would produce in order to
-        // make the default values explicit.
-        Ipv4StateBuilder { forward: false, icmp: Icmpv4StateBuilder::default() }
-    }
-}
-
 impl Ipv4StateBuilder {
-    /// Enable or disable IP packet forwarding (default: disabled).
-    ///
-    /// If `forward` is true, then an incoming IP packet whose destination
-    /// address identifies a remote host will be forwarded to that host.
-    pub fn forward(&mut self, forward: bool) -> &mut Self {
-        self.forward = forward;
-        self
-    }
-
     /// Get the builder for the ICMPv4 state.
     pub fn icmpv4_builder(&mut self) -> &mut Icmpv4StateBuilder {
         &mut self.icmp
     }
 
     pub(crate) fn build<Instant: crate::Instant, D>(self) -> Ipv4State<Instant, D> {
+        let Ipv4StateBuilder { icmp } = self;
+
         Ipv4State {
             inner: IpStateInner {
-                forward: self.forward,
                 table: ForwardingTable::default(),
                 fragment_cache: IpPacketFragmentCache::default(),
                 pmtu_cache: PmtuCache::default(),
             },
-            icmp: self.icmp.build(),
+            icmp: icmp.build(),
             next_packet_id: 0,
         }
     }
 }
 
 /// A builder for IPv6 state.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub struct Ipv6StateBuilder {
-    forward: bool,
     icmp: Icmpv6StateBuilder,
 }
 
-impl Default for Ipv6StateBuilder {
-    fn default() -> Ipv6StateBuilder {
-        // NOTE: We implement `Default` manually even though this implementation
-        // is equivalent to what `#[derive(Default)]` would produce in order to
-        // make the default values explicit.
-        Ipv6StateBuilder { forward: false, icmp: Icmpv6StateBuilder::default() }
-    }
-}
-
 impl Ipv6StateBuilder {
-    /// Enable or disable IPv6 packet forwarding (default: disabled).
-    ///
-    /// If `forward` is true, then an incoming IPv6 packet whose destination
-    /// address identifies a remote host will be forwarded to that host.
-    pub fn forward(&mut self, forward: bool) -> &mut Self {
-        self.forward = forward;
-        self
-    }
-
     /// Get the builder for the ICMPv6 state.
     pub fn icmpv6_builder(&mut self) -> &mut Icmpv6StateBuilder {
         &mut self.icmp
     }
 
     pub(crate) fn build<Instant: crate::Instant, D>(self) -> Ipv6State<Instant, D> {
+        let Ipv6StateBuilder { icmp } = self;
+
         Ipv6State {
             inner: IpStateInner {
-                forward: self.forward,
                 table: ForwardingTable::default(),
                 fragment_cache: IpPacketFragmentCache::default(),
                 pmtu_cache: PmtuCache::default(),
             },
-            icmp: self.icmp.build(),
+            icmp: icmp.build(),
         }
     }
 }
@@ -426,7 +390,6 @@ pub(crate) struct Ipv6State<Instant: crate::Instant, D> {
 }
 
 struct IpStateInner<I: Ip, Instant: crate::Instant> {
-    forward: bool,
     table: ForwardingTable<I, DeviceId>,
     fragment_cache: IpPacketFragmentCache<I>,
     pmtu_cache: PmtuCache<I, Instant>,
@@ -1419,7 +1382,6 @@ enum ReceivePacketAction<A: IpAddress> {
 #[cfg_attr(test, derive(Debug, PartialEq))]
 enum DropReason {
     Tentative,
-    ForwardingDisabled,
     ForwardingDisabledInboundIface,
 }
 
@@ -1430,9 +1392,6 @@ impl Display for DropReason {
             "{}",
             match self {
                 DropReason::Tentative => "remote packet destined to tentative address",
-                DropReason::ForwardingDisabled => {
-                    "packet should be forwarded but forwarding is disabled"
-                }
                 DropReason::ForwardingDisabledInboundIface => {
                     "packet should be forwarded but packet's inbound interface has forwarding disabled"
                 }
@@ -1539,7 +1498,7 @@ fn receive_ip_packet_action_common<D: EventDispatcher, A: IpAddress>(
     is_device_routing_enabled: bool,
 ) -> ReceivePacketAction<A> {
     // The packet is not destined locally, so we attempt to forward it.
-    if !crate::ip::is_routing_enabled::<_, A::Version>(ctx) {
+    if !is_device_routing_enabled {
         // Forwarding is disabled; we are operating only as a host.
         //
         // For IPv4, per RFC 1122 Section 3.2.1.3, "A host MUST silently discard
@@ -1552,9 +1511,6 @@ fn receive_ip_packet_action_common<D: EventDispatcher, A: IpAddress>(
         // case is a Destination Unreachable message, we interpret the RFC text
         // to mean that, consistent with IPv4's behavior, we should silently
         // discard the packet in this case.
-        increment_counter!(ctx, "receive_ip_packet_action_common::routing_disabled_globally");
-        ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabled }
-    } else if !is_device_routing_enabled {
         increment_counter!(ctx, "receive_ip_packet_action_common::routing_disabled_per_device");
         ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabledInboundIface }
     } else {
@@ -2039,11 +1995,6 @@ fn get_icmp_error_message_destination<
         debug!("Can't send ICMP response to {}: no route to host", src_ip);
         None
     }
-}
-
-/// Is `ctx` configured to route packets?
-pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(ctx: &Ctx<D>) -> bool {
-    get_state_inner::<I, _>(&ctx.state).forward
 }
 
 /// Get the hop limit for new IP packets that will be sent out from `device`.
@@ -2620,8 +2571,6 @@ mod tests {
         let b = "bob";
         let dummy_config = I::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
-        let _: &mut Ipv4StateBuilder = state_builder.ipv4_builder().forward(true);
-        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
         ndp_config.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_config(ndp_config);
@@ -2696,7 +2645,6 @@ mod tests {
 
         let dummy_config = Ipv6::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
-        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
         ndp_config.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_config(ndp_config);
@@ -3412,20 +3360,7 @@ mod tests {
         }
 
         // Receive packet destined to a remote address when forwarding is
-        // disabled.
-        assert_eq!(
-            receive_ipv4_packet_action(&mut ctx, v4_dev, v4_config.remote_ip),
-            ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabled }
-        );
-        assert_eq!(
-            receive_ipv6_packet_action(&mut ctx, v6_dev, v6_config.remote_ip),
-            ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabled }
-        );
-
-        // Receive packet destined to a remote address when forwarding is
-        // enabled globally but disabled on the inbound interface.
-        ctx.state.ipv4.inner.forward = true;
-        ctx.state.ipv6.inner.forward = true;
+        // disabled on the inbound interface.
         assert_eq!(
             receive_ipv4_packet_action(&mut ctx, v4_dev, v4_config.remote_ip),
             ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabledInboundIface }

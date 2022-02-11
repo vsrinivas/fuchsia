@@ -96,14 +96,6 @@ pub(crate) trait IpLinkDeviceContext<D: LinkDevice, TimerId>:
     + FrameContext<EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
     + FrameContext<Buf<Vec<u8>>, <Self as DeviceIdContext<D>>::DeviceId>
 {
-    /// Is the netstack currently operating as a router for this IP version?
-    ///
-    /// Returns `true` if the netstack is configured to route IP packets not
-    /// destined for it for IP version `I`. Note that this does not necessarily
-    /// mean that routing is enabled on any given interface. That is configured
-    /// separately on a per-interface basis.
-    fn is_router<I: Ip>(&self) -> bool;
-
     /// Is `device` usable?
     ///
     /// That is, is it either initializing or initialized?
@@ -113,10 +105,6 @@ pub(crate) trait IpLinkDeviceContext<D: LinkDevice, TimerId>:
 impl<D: EventDispatcher> IpLinkDeviceContext<EthernetLinkDevice, EthernetTimerId<EthernetDeviceId>>
     for Ctx<D>
 {
-    fn is_router<I: Ip>(&self) -> bool {
-        crate::ip::is_routing_enabled::<_, I>(self)
-    }
-
     fn is_device_usable(&self, device: EthernetDeviceId) -> bool {
         is_device_usable(&self.state, device.into())
     }
@@ -791,9 +779,7 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId)
 
             // RFC 4861 section 6.3.7, it implies only a host sends router
             // solicitation messages.
-            if !(crate::ip::is_routing_enabled::<_, Ipv6>(ctx)
-                && crate::ip::device::is_ipv6_routing_enabled(ctx, device))
-            {
+            if !crate::ip::device::is_ipv6_routing_enabled(ctx, device) {
                 <Ctx<_> as NdpHandler<EthernetLinkDevice>>::start_soliciting_routers(ctx, id);
             }
         }
@@ -1062,12 +1048,9 @@ pub(crate) fn set_routing_enabled<D: EventDispatcher, I: Ip>(
     }
 
     match device.inner() {
-        DeviceIdInner::Ethernet(id) => Ok(self::ethernet::set_routing_enabled::<_, I>(
-            ctx,
-            id,
-            enabled,
-            crate::ip::is_routing_enabled::<_, I>(ctx),
-        )),
+        DeviceIdInner::Ethernet(id) => {
+            Ok(self::ethernet::set_routing_enabled::<_, I>(ctx, id, enabled))
+        }
         DeviceIdInner::Loopback => {
             // TODO(https://fxbug.dev/72378): Disallow changing route status on
             // loopback at IP device layer;

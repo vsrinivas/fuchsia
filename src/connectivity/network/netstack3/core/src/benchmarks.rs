@@ -33,7 +33,7 @@ use crate::ip::socket::IpSockCreationError;
 use crate::testutil::benchmarks::{black_box, Bencher};
 use crate::testutil::{DummyEventDispatcherBuilder, DummyInstant, FakeCryptoRng, DUMMY_CONFIG_V4};
 use crate::transport::udp::{BufferUdpContext, UdpContext};
-use crate::{Ipv4StateBuilder, StackStateBuilder, TimerId};
+use crate::{StackStateBuilder, TimerId};
 
 // NOTE: Extra tests that are too expensive to run during benchmarks can be
 // added by gating them on the `debug_assertions` configuration option. This
@@ -147,8 +147,6 @@ impl TimerContext<TimerId> for BenchmarkEventDispatcher {
 // sizes.
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let mut state_builder = StackStateBuilder::default();
-    let _: &mut Ipv4StateBuilder = state_builder.ipv4_builder().forward(true);
-
     // Most tests do not need NDP's DAD or router solicitation so disable it
     // here.
     let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
