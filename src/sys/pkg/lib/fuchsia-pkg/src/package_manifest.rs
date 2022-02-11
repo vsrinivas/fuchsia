@@ -7,8 +7,6 @@ use {
     serde::{Deserialize, Serialize},
 };
 
-const DEFAULT_PACKAGE_REPOSITORY: &str = "fuchsia.com";
-
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct PackageManifest(VersionedPackageManifest);
@@ -60,11 +58,7 @@ impl PackageManifest {
             name: package.meta_package().name().to_owned(),
             version: package.meta_package().variant().to_owned(),
         };
-        let manifest_v1 = PackageManifestV1 {
-            package: package_metadata,
-            blobs,
-            repository: DEFAULT_PACKAGE_REPOSITORY.to_string(),
-        };
+        let manifest_v1 = PackageManifestV1 { package: package_metadata, blobs, repository: None };
         Ok(PackageManifest(VersionedPackageManifest::Version1(manifest_v1)))
     }
 }
@@ -82,13 +76,13 @@ impl PackageManifestBuilder {
                     version: meta_package.variant().to_owned(),
                 },
                 blobs: vec![],
-                repository: DEFAULT_PACKAGE_REPOSITORY.to_string(),
+                repository: None,
             },
         }
     }
 
     pub fn repository(mut self, repository: impl Into<String>) -> Self {
-        self.manifest.repository = repository.into();
+        self.manifest.repository = Some(repository.into());
         self
     }
 
@@ -113,7 +107,8 @@ enum VersionedPackageManifest {
 struct PackageManifestV1 {
     package: PackageMetadata,
     blobs: Vec<BlobInfo>,
-    repository: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    repository: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -139,7 +134,85 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-    fn test_version1_blobs() {
+    fn test_version1_serialization() {
+        let manifest = PackageManifest(VersionedPackageManifest::Version1(PackageManifestV1 {
+            package: PackageMetadata {
+                name: "example".parse().unwrap(),
+                version: "0".parse().unwrap(),
+            },
+            blobs: vec![BlobInfo {
+                source_path: "../p1".into(),
+                path: "data/p1".into(),
+                merkle: "0000000000000000000000000000000000000000000000000000000000000000"
+                    .parse()
+                    .unwrap(),
+                size: 1,
+            }],
+            repository: None,
+        }));
+
+        assert_eq!(
+            serde_json::to_value(&manifest).unwrap(),
+            json!(
+                {
+                    "version": "1",
+                    "package": {
+                        "name": "example",
+                        "version": "0"
+                    },
+                    "blobs": [
+                        {
+                            "source_path": "../p1",
+                            "path": "data/p1",
+                            "merkle": "0000000000000000000000000000000000000000000000000000000000000000",
+                            "size": 1
+                        },
+                    ]
+                }
+            )
+        );
+
+        let manifest = PackageManifest(VersionedPackageManifest::Version1(PackageManifestV1 {
+            package: PackageMetadata {
+                name: "example".parse().unwrap(),
+                version: "0".parse().unwrap(),
+            },
+            blobs: vec![BlobInfo {
+                source_path: "../p1".into(),
+                path: "data/p1".into(),
+                merkle: "0000000000000000000000000000000000000000000000000000000000000000"
+                    .parse()
+                    .unwrap(),
+                size: 1,
+            }],
+            repository: Some("testrepository.org".into()),
+        }));
+
+        assert_eq!(
+            serde_json::to_value(&manifest).unwrap(),
+            json!(
+                {
+                    "version": "1",
+                    "repository": "testrepository.org",
+                    "package": {
+                        "name": "example",
+                        "version": "0"
+                    },
+                    "blobs": [
+                        {
+                            "source_path": "../p1",
+                            "path": "data/p1",
+                            "merkle": "0000000000000000000000000000000000000000000000000000000000000000",
+                            "size": 1
+                        },
+                    ]
+                }
+            )
+        );
+    }
+
+    #[test]
+    fn test_version1_deserialization() {
         let manifest = serde_json::from_value::<PackageManifest>(json!(
             {
                 "version": "1",
@@ -158,16 +231,61 @@ mod tests {
                 ]
             }
         )).expect("valid json");
+
         assert_eq!(
-            manifest.into_blobs(),
-            [BlobInfo {
-                source_path: "../p1".into(),
-                path: "data/p1".into(),
-                merkle: "0000000000000000000000000000000000000000000000000000000000000000"
-                    .parse()
-                    .unwrap(),
-                size: 1
-            }]
+            manifest,
+            PackageManifest(VersionedPackageManifest::Version1(PackageManifestV1 {
+                package: PackageMetadata {
+                    name: "example".parse().unwrap(),
+                    version: "0".parse().unwrap(),
+                },
+                blobs: vec![BlobInfo {
+                    source_path: "../p1".into(),
+                    path: "data/p1".into(),
+                    merkle: "0000000000000000000000000000000000000000000000000000000000000000"
+                        .parse()
+                        .unwrap(),
+                    size: 1
+                }],
+                repository: Some("testrepository.org".into()),
+            }))
+        );
+
+        let manifest = serde_json::from_value::<PackageManifest>(json!(
+            {
+                "version": "1",
+                "package": {
+                    "name": "example",
+                    "version": "0"
+                },
+                "blobs": [
+                    {
+                        "source_path": "../p1",
+                        "path": "data/p1",
+                        "merkle": "0000000000000000000000000000000000000000000000000000000000000000",
+                        "size": 1
+                    },
+                ]
+            }
+        )).expect("valid json");
+
+        assert_eq!(
+            manifest,
+            PackageManifest(VersionedPackageManifest::Version1(PackageManifestV1 {
+                package: PackageMetadata {
+                    name: "example".parse().unwrap(),
+                    version: "0".parse().unwrap(),
+                },
+                blobs: vec![BlobInfo {
+                    source_path: "../p1".into(),
+                    path: "data/p1".into(),
+                    merkle: "0000000000000000000000000000000000000000000000000000000000000000"
+                        .parse()
+                        .unwrap(),
+                    size: 1
+                }],
+                repository: None,
+            }))
         )
     }
 

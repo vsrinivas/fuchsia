@@ -112,7 +112,28 @@ mod test {
             published_name: String::from("package"),
         };
         cmd_package_build(cmd).unwrap();
-        assert_eq!("{\"version\":\"1\",\"package\":{\"name\":\"package\",\"version\":\"0\"},\"blobs\":[{\"source_path\":\"./out/meta.far\",\"path\":\"meta/\",\"merkle\":\"421f08d453e25059d5908923901582e683dbce82fe697e40656bd74e143a96a5\",\"size\":8192}],\"repository\":\"fuchsia.com\"}".to_owned(), read_to_string(package_manifest_path).unwrap());
+
+        let package_manifest = read_to_string(package_manifest_path).unwrap();
+
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&package_manifest).unwrap(),
+            serde_json::json!({
+                "version": "1",
+                "package": {
+                    "name": "package",
+                    "version": "0",
+                },
+                "blobs": [
+                    {
+                        "source_path": "./out/meta.far",
+                        "path": "meta/",
+                        "merkle": "421f08d453e25059d5908923901582e683dbce82fe697e40656bd74e143a96a5",
+                        "size": 8192,
+                    }
+                ],
+            }),
+        );
+
         Ok(())
     }
 
@@ -122,19 +143,19 @@ mod test {
         let root = tempdir.path();
         let build_manifest_path = root.join("build.manifest");
         let meta_package_path = root.join("package");
-        let emtpy_file_path = root.join("file");
+        let empty_file_path = root.join("file");
         let package_manifest_path = root.join("package_manifest.json");
 
         let mut build_manifest = File::create(&build_manifest_path).unwrap();
         let _package_manifest = File::create(&package_manifest_path).unwrap();
         let meta_package_file = File::create(&meta_package_path).unwrap();
-        File::create(&emtpy_file_path).unwrap();
+        File::create(&empty_file_path).unwrap();
 
         build_manifest.write_all(
             format!(
                 "meta/package={}\nfile={}",
                 meta_package_path.display(),
-                emtpy_file_path.display()
+                empty_file_path.display()
             )
             .as_bytes(),
         )?;
@@ -148,9 +169,35 @@ mod test {
             out: PathBuf::from("./out"),
             published_name: String::from("package"),
         };
-        let emtpy_file_path_string = emtpy_file_path.display().to_string();
         cmd_package_build(cmd).unwrap();
-        assert_eq!("{\"version\":\"1\",\"package\":{\"name\":\"package\",\"version\":\"0\"},\"blobs\":[{\"source_path\":\"\",\"path\":\"file\",\"merkle\":\"15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\",\"size\":0},{\"source_path\":\"./out/meta.far\",\"path\":\"meta/\",\"merkle\":\"d14b2158d0a08f826c5359a7c8af79432cdd70490f0366c6ffa832421444078f\",\"size\":12288}],\"repository\":\"fuchsia.com\"}".to_owned(), read_to_string(package_manifest_path).unwrap().as_str().replace(&emtpy_file_path_string, ""));
+
+        let package_manifest = read_to_string(package_manifest_path).unwrap();
+
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&package_manifest).unwrap(),
+            serde_json::json!({
+                "version": "1",
+                "package": {
+                    "name": "package",
+                    "version": "0",
+                },
+                "blobs": [
+                    {
+                        "source_path": empty_file_path.to_str().unwrap().to_owned(),
+                        "path": "file",
+                        "merkle": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
+                        "size": 0,
+                    },
+                    {
+                        "source_path": "./out/meta.far",
+                        "path": "meta/",
+                        "merkle": "d14b2158d0a08f826c5359a7c8af79432cdd70490f0366c6ffa832421444078f",
+                        "size": 12288,
+                    },
+                ],
+            }),
+        );
+
         Ok(())
     }
 }
