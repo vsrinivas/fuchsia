@@ -10,6 +10,7 @@
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
+#include <zircon/status.h>
 
 #include <algorithm>
 #include <bitset>
@@ -17,6 +18,7 @@
 
 #include <wlan/common/band.h>
 #include <wlan/common/ieee80211_codes.h>
+#include <wlan/drivers/log.h>
 
 #include "debug.h"
 
@@ -45,6 +47,7 @@ uint8_t ConvertScanType(wlan_mlme::ScanTypes scan_type) {
     case wlan_mlme::ScanTypes::PASSIVE:
       return WLAN_SCAN_TYPE_PASSIVE;
     default:
+      lerror("bad scan type: %u\n", scan_type);
       ZX_ASSERT(0);
   }
 }
@@ -64,6 +67,7 @@ uint8_t ConvertCBW(wlan_common::ChannelBandwidth cbw) {
     case wlan_common::ChannelBandwidth::CBW80P80:
       return CHANNEL_BANDWIDTH_CBW80P80;
   }
+  lerror("bad channel bandwidth: %u\n", cbw);
   ZX_ASSERT(0);
 }
 
@@ -151,6 +155,7 @@ wlan_internal::BssType ConvertBssType(uint8_t bss_type) {
     case BSS_TYPE_MESH:
       return wlan_internal::BssType::MESH;
     default:
+      lerror("bad bss type: %u\n", bss_type);
       ZX_ASSERT(0);
   }
 }
@@ -170,6 +175,7 @@ wlan_common::ChannelBandwidth ConvertCBW(channel_bandwidth_t cbw) {
     case CHANNEL_BANDWIDTH_CBW80P80:
       return wlan_common::ChannelBandwidth::CBW80P80;
     default:
+      lerror("bad channel bandwidth: %u\n", cbw);
       ZX_ASSERT(0);
   }
 }
@@ -256,6 +262,7 @@ uint8_t ConvertAuthType(wlan_mlme::AuthenticationTypes auth_type) {
     case wlan_mlme::AuthenticationTypes::SAE:
       return WLAN_AUTH_TYPE_SAE;
     default:
+      lerror("bad auth type: %u\n", auth_type);
       ZX_ASSERT(0);
   }
 }
@@ -271,6 +278,7 @@ uint8_t ConvertKeyType(wlan_mlme::KeyType key_type) {
     case wlan_mlme::KeyType::IGTK:
       return WLAN_KEY_TYPE_IGTK;
     default:
+      lerror("bad key type: %u\n", key_type);
       ZX_ASSERT(0);
   }
 }
@@ -330,6 +338,7 @@ wlan_mlme::ScanResultCode ConvertScanResultCode(uint8_t code) {
     case WLAN_SCAN_RESULT_CANCELED_BY_DRIVER_OR_FIRMWARE:
       return wlan_mlme::ScanResultCode::CANCELED_BY_DRIVER_OR_FIRMWARE;
     default:
+      lerror("bad scan result code: %u\n", code);
       ZX_ASSERT(0);
   }
 }
@@ -345,6 +354,7 @@ wlan_mlme::AuthenticationTypes ConvertAuthType(uint8_t auth_type) {
     case WLAN_AUTH_TYPE_SAE:
       return wlan_mlme::AuthenticationTypes::SAE;
     default:
+      lerror("bad auth type: %u\n", auth_type);
       ZX_ASSERT(0);
   }
 }
@@ -358,6 +368,7 @@ wlan_mlme::JoinResultCode ConvertJoinResultCode(uint8_t code) {
     case WLAN_JOIN_RESULT_INTERNAL_ERROR:
       return wlan_mlme::JoinResultCode::JOIN_FAILURE_TIMEOUT;
     default:
+      lerror("bad join result code: %u\n", code);
       ZX_ASSERT(0);
   }
 }
@@ -377,6 +388,7 @@ wlan_mlme::AuthenticateResultCode ConvertAuthResultCode(uint8_t code) {
     case WLAN_AUTH_RESULT_FAILURE_TIMEOUT:
       return wlan_mlme::AuthenticateResultCode::AUTH_FAILURE_TIMEOUT;
     default:
+      lerror("bad auth result code: %u\n", code);
       ZX_ASSERT(0);
   }
 }
@@ -396,6 +408,7 @@ uint8_t ConvertAuthResultCode(wlan_mlme::AuthenticateResultCode code) {
     case wlan_mlme::AuthenticateResultCode::AUTH_FAILURE_TIMEOUT:
       return WLAN_AUTH_RESULT_FAILURE_TIMEOUT;
     default:
+      lerror("bad auth result code: %u\n", code);
       ZX_ASSERT(0);
   }
 }
@@ -421,6 +434,7 @@ wlan_mlme::AssociateResultCode ConvertAssocResultCode(uint8_t code) {
     case WLAN_ASSOC_RESULT_REFUSED_TEMPORARILY:
       return wlan_mlme::AssociateResultCode::REFUSED_TEMPORARILY;
     default:
+      lerror("bad assoc result code: %u\n", code);
       ZX_ASSERT(0);
   }
 }
@@ -446,6 +460,7 @@ uint8_t ConvertAssocResultCode(wlan_mlme::AssociateResultCode code) {
     case wlan_mlme::AssociateResultCode::REFUSED_TEMPORARILY:
       return WLAN_ASSOC_RESULT_REFUSED_TEMPORARILY;
     default:
+      lerror("bad assoc result code: %u\n", code);
       ZX_ASSERT(0);
   }
 }
@@ -461,6 +476,7 @@ wlan_mlme::StartResultCode ConvertStartResultCode(uint8_t code) {
     case WLAN_START_RESULT_NOT_SUPPORTED:
       return wlan_mlme::StartResultCode::NOT_SUPPORTED;
     default:
+      lerror("bad start result code: %u\n", code);
       ZX_ASSERT(0);
   }
 }
@@ -474,6 +490,7 @@ wlan_mlme::StopResultCode ConvertStopResultCode(uint8_t code) {
     case WLAN_STOP_RESULT_INTERNAL_ERROR:
       return wlan_mlme::StopResultCode::INTERNAL_ERROR;
     default:
+      lerror("bad stop result code: %u\n", code);
       ZX_ASSERT(0);
   }
 }
@@ -485,6 +502,7 @@ wlan_mlme::EapolResultCode ConvertEapolResultCode(uint8_t code) {
     case WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE:
       return wlan_mlme::EapolResultCode::TRANSMISSION_FAILURE;
     default:
+      lerror("bad EAPOL result code: %u\n", code);
       ZX_ASSERT(0);
   }
 }
@@ -498,6 +516,7 @@ wlan_common::WlanMacRole ConvertMacRole(wlan_mac_role_t role) {
     case WLAN_MAC_ROLE_MESH:
       return wlan_common::WlanMacRole::MESH;
     default:
+      lerror("bad wlan_mac_role_t: %u\n", role);
       ZX_ASSERT(0);
   }
 }
@@ -506,6 +525,7 @@ void ConvertBandCapability(wlan_mlme::BandCapabilities* fidl_band,
                            const wlan_fullmac_band_capability_t& band) {
   zx_status_t status = ::wlan::common::ToFidl(&fidl_band->band, band.band);
   if (status != ZX_OK) {
+    lerror("bad wlan_band_t: status %s, band %u\n", zx_status_get_string(status), band.band);
     ZX_ASSERT(0);
   }
 
@@ -724,6 +744,7 @@ void ConvertMlmeStats(wlan_stats::MlmeStats* fidl_stats, const wlan_fullmac_mlme
       fidl_stats->set_ap_mlme_stats(BuildApMlmeStats(stats.stats.ap_mlme_stats));
       break;
     default:
+      lerror("bad mlme stats type: %u\n", stats.tag);
       ZX_ASSERT(0);
   }
 }

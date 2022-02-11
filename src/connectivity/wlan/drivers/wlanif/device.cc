@@ -17,6 +17,7 @@
 #include <zircon/status.h>
 
 #include <wlan/common/ieee80211_codes.h>
+#include <wlan/drivers/log.h>
 
 #include "convert.h"
 #include "debug.h"
