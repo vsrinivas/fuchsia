@@ -537,17 +537,7 @@
           "config": {
             "type": "object",
             "properties": {
-              "poll_interval_s": {
-                "type": "number",
-                "minimum": 0,
-                "exclusiveMinimum": true
-              },
-              "filter_time_constant_s": {
-                "type": "number",
-                "minimum": 0,
-                "exclusiveMinimum": true
-              },
-              "temperature_configs": {
+              "temperature_input_configs": {
                 "type": "array",
                 "minItems": 1,
                 "items": {
@@ -561,22 +551,32 @@
                     },
                     "reboot_temperature_c": {
                       "type": "number"
+                    },
+                    "poll_interval_s": {
+                      "type": "number",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
+                    },
+                    "filter_time_constant_s": {
+                      "type": "number",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
                     }
                   },
                   "additionalProperties": false,
                   "required": [
                     "temperature_handler_node_name",
                     "onset_temperature_c",
-                    "reboot_temperature_c"
+                    "reboot_temperature_c",
+                    "poll_interval_s",
+                    "filter_time_constant_s"
                   ]
                 }
               }
             },
             "additionalProperties": false,
             "required": [
-              "poll_interval_s",
-              "filter_time_constant_s",
-              "temperature_configs"
+              "temperature_input_configs"
             ]
           },
           "dependencies": {
@@ -601,7 +601,8 @@
             "additionalProperties": false,
             "required": [
               "system_shutdown_node",
-              "thermal_load_notify_nodes"
+              "thermal_load_notify_nodes",
+              "temperature_handler_node_names"
             ]
           }
         },

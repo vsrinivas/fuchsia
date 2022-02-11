@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::log_if_err;
-use crate::message::Message;
+use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::shutdown_request::{RebootReason, ShutdownRequest};
 use crate::temperature_handler::TemperatureFilter;
@@ -14,68 +14,63 @@ use anyhow::{format_err, Error, Result};
 use async_trait::async_trait;
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, Property};
-use futures::{
-    future::{join_all, FutureExt, LocalBoxFuture},
-    stream::FuturesUnordered,
-    StreamExt, TryFutureExt as _,
-};
+use futures::{StreamExt, TryFutureExt as _};
 use log::*;
 use serde_derive::Deserialize;
 use serde_json as json;
-use std::cell::Cell;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 /// Node: ThermalLoadDriver
 ///
-/// Summary: The purpose of this node is to determine and communicate the thermal load value in the
-///   system.
+/// Summary: The purpose of this node is to determine and communicate the thermal load value(s) in
+/// the system.
 ///
 ///   The behavior is unique from the ThermalPolicy node (which is also capable of determining and
 ///   communicating thermal load values) because it is purpose-built with the ability to source
-///   multiple temperature sensors to determine the thermal load value. It also differs from
-///   ThermalPolicy because it calculates ThermalLoad based on observed filtered temperature with
-///   respect to configured onset/reboot temperatures, whereas ThermalPolicy uses integral error
-///   (where "error" is the filtered temperature delta with respect to a configured target
-///   temperature).
+///   multiple temperature sensors to determine their individual thermal load values. It also
+///   differs from ThermalPolicy because it calculates ThermalLoad based on observed filtered
+///   temperature with respect to configured per-sensor onset/reboot temperatures, whereas
+///   ThermalPolicy uses proportional and integral errors (where "error" is the filtered temperature
+///   delta with respect to a configured target temperature).
 ///
-///   To do this, the node polls each of the provided temperature handler nodes at the specified
-///   polling interval. The temperature is used to calculate a per-sensor thermal load value (each
+///   To do this, the node polls each of the provided temperature handler nodes at their specified
+///   polling intervals. The temperature is used to calculate a per-sensor thermal load value (each
 ///   sensor may configure its own unique onset and reboot temperatures which define that sensor's
-///   thermal load range). The end-result thermal load value is determined to be the max from each
-///   sensor's calculated thermal load. This new thermal load value is then communicated to each
-///   node specified by `thermal_load_notify_nodes`.
+///   thermal load range). As the thermal load on a given sensor changes, the new load value is
+///   communicated to each of the `thermal_load_notify_nodes` nodes.
 ///
 /// Handles Messages: N/A
 ///
 /// Sends Messages:
-///     - SystemShutdown
-///     - UpdateThermalLoad
+///   - SystemShutdown
+///   - UpdateThermalLoad
+///   - GetDriverPath
 ///
 /// FIDL dependencies: N/A
 
 pub struct ThermalLoadDriverBuilder<'a> {
-    poll_interval: Seconds,
-    temperature_inputs: Vec<TemperatureInput>,
+    temperature_input_configs: Vec<TemperatureInputConfig>,
     system_shutdown_node: Rc<dyn Node>,
     thermal_load_notify_nodes: Vec<Rc<dyn Node>>,
     inspect_root: Option<&'a inspect::Node>,
 }
 
-impl<'a> ThermalLoadDriverBuilder<'a> {
+impl ThermalLoadDriverBuilder<'_> {
     pub fn new_from_json(json_data: json::Value, nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
         #[derive(Deserialize)]
-        struct TemperatureConfig {
+        struct JsonTemperatureInputConfig {
             temperature_handler_node_name: String,
             onset_temperature_c: f64,
             reboot_temperature_c: f64,
+            poll_interval_s: f64,
+            filter_time_constant_s: f64,
         }
 
         #[derive(Deserialize)]
         struct Config {
-            poll_interval_s: f64,
-            filter_time_constant_s: f64,
-            temperature_configs: Vec<TemperatureConfig>,
+            temperature_input_configs: Vec<JsonTemperatureInputConfig>,
         }
 
         #[derive(Deserialize)]
@@ -92,22 +87,17 @@ impl<'a> ThermalLoadDriverBuilder<'a> {
 
         let data: JsonData = json::from_value(json_data).unwrap();
         Self {
-            poll_interval: Seconds(data.config.poll_interval_s),
             system_shutdown_node: nodes[&data.dependencies.system_shutdown_node].clone(),
-            temperature_inputs: data
+            temperature_input_configs: data
                 .config
-                .temperature_configs
+                .temperature_input_configs
                 .iter()
-                .map(|config| TemperatureInput {
-                    name: config.temperature_handler_node_name.clone(),
-                    temperature_getter: Box::new(GetFilteredTemperature {
-                        filter: TemperatureFilter::new(
-                            nodes[&config.temperature_handler_node_name].clone(),
-                            Seconds(data.config.filter_time_constant_s),
-                        ),
-                    }),
+                .map(|config| TemperatureInputConfig {
+                    temperature_handler_node: nodes[&config.temperature_handler_node_name].clone(),
                     onset_temperature: Celsius(config.onset_temperature_c),
                     reboot_temperature: Celsius(config.reboot_temperature_c),
+                    poll_interval: Seconds(config.poll_interval_s),
+                    filter_time_constant: Seconds(config.filter_time_constant_s),
                 })
                 .collect(),
             thermal_load_notify_nodes: data
@@ -120,141 +110,165 @@ impl<'a> ThermalLoadDriverBuilder<'a> {
         }
     }
 
-    pub fn build<'b>(
-        self,
-        futures_out: &FuturesUnordered<LocalBoxFuture<'b, ()>>,
-    ) -> Result<Rc<ThermalLoadDriver>, Error> {
+    pub fn build(self) -> Result<Rc<ThermalLoadDriver>, Error> {
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
         let node = Rc::new(ThermalLoadDriver {
-            poll_interval: self.poll_interval,
-            inspect: InspectData::new(
-                inspect_root,
-                "ThermalLoadDriver".to_string(),
-                &self.temperature_inputs,
-            ),
-            temperature_inputs: self.temperature_inputs,
-            thermal_load: Cell::new(ThermalLoad(0)),
             system_shutdown_node: self.system_shutdown_node,
             thermal_load_notify_nodes: self.thermal_load_notify_nodes,
+            inspect: inspect_root.create_child("ThermalLoadDriver"),
+            polling_tasks: RefCell::new(Vec::new()),
         });
 
-        futures_out.push(node.clone().polling_loop());
+        // Spawn a polling task for each of the temperature input configs. The polling tasks are
+        // collected into the node's `polling_tasks` field.
+        self.temperature_input_configs
+            .into_iter()
+            .for_each(|config| node.create_polling_task(config));
+
         Ok(node)
     }
 }
 
 pub struct ThermalLoadDriver {
-    /// Time interval in seconds that the node will read a new temperature value from all
-    /// temperature inputs.
-    poll_interval: Seconds,
-
-    inspect: InspectData,
-
-    /// A vector of all temperature input sources. On each interval, every input in the vector is
-    /// polled for their new thermal load values.
-    temperature_inputs: Vec<TemperatureInput>,
-
-    /// Current thermal load cached value. Used to detect when the thermal load value has changed.
-    thermal_load: Cell<ThermalLoad>,
-
-    /// Node that we use to initiate a reboot when any temperature input source reaches their
-    /// configured reboot temperature.
+    /// Node that is used to initiate a system reboot when any temperature input source reaches
+    /// their configured reboot temperature.
     system_shutdown_node: Rc<dyn Node>,
 
-    /// Nodes that we notify when the thermal load value has changed.
+    /// Nodes that we notify when the thermal load value for any sensor has changed.
     thermal_load_notify_nodes: Vec<Rc<dyn Node>>,
+
+    /// Parent Inspect node for the ThermalLoadDriver node (named as "ThermalLoadDriver"). Each
+    /// polling task / temperature input source has a corresponding child node underneath this one.
+    inspect: inspect::Node,
+
+    /// Stores the Task objects that handle polling temperature sensors and taking appropriate
+    /// action as their thermal loads change. The bulk of the ThermalLoadDriver's real work happens
+    /// within these polling tasks. There exists a polling task for each individual temperature
+    /// sensor that this node monitors.
+    polling_tasks: RefCell<Vec<fasync::Task<()>>>,
 }
 
 impl ThermalLoadDriver {
-    /// Returns a future that calls `update_thermal_load` at `poll_interval`.
-    fn polling_loop<'a>(self: Rc<Self>) -> LocalBoxFuture<'a, ()> {
-        let mut periodic_timer = fasync::Interval::new(self.poll_interval.into());
+    /// Creates a new polling task to begin running immediately.
+    ///
+    /// The function uses the provided TemperatureInputConfig to create and spawn a new polling
+    /// task. The polling task is responsible for polling the temperature sensor at the configured
+    /// interval, then taking appropriate action to determine thermal load and/or initiate thermal
+    /// shutdown. The new polling task is added to the `polling_tasks` vector to retain ownership
+    /// (instead of detaching the Task).
+    fn create_polling_task(self: &Rc<Self>, config: TemperatureInputConfig) {
+        let this = self.clone();
+        let polling_future = async move {
+            // Query the TemperatureHandler to find out the driver's topological path. This path is
+            // used to identify the source of thermal load changes in the system.
+            let sensor_path = this.query_driver_path(&config.temperature_handler_node).await?;
 
-        async move {
+            // Each polling task gets its own Inspect node
+            let inspect = TemperatureInputInspect::new(&this.inspect, &sensor_path, &config);
+
+            let mut periodic_timer = fasync::Interval::new(config.poll_interval.into());
+            let temperature_input = TemperatureInput::new(config);
+            let mut cached_thermal_load = ThermalLoad(0);
+
+            // Enter the timer-based polling loop...
             while let Some(()) = periodic_timer.next().await {
-                log_if_err!(self.update_thermal_load().await, "Error while polling temperature");
-            }
-        }
-        .boxed_local()
-    }
+                // Read a new filtered temperature value. Errors are logged but the polling loop
+                // will continue on the next iteration.
+                let new_thermal_load = match temperature_input.get_thermal_load().await {
+                    Ok(load) => load,
+                    Err(e) => {
+                        error!(
+                            "Failed to get updated thermal load for {} (err = {})",
+                            &sensor_path, e
+                        );
+                        continue;
+                    }
+                };
 
-    /// Polls all temperature inputs to get their new individual thermal load values. The new
-    /// thermal load value is determined to be the max of these individual thermal loads. When the
-    /// thermal load value changes, each node in `thermal_load_notify_nodes` are sent a message to
-    /// update them.
-    async fn update_thermal_load(&self) -> Result<(), Error> {
-        // Poll each temperature input source in a separate future and join them, filtering out any
-        // error results
-        let thermal_loads = join_all(
-            self.temperature_inputs
-                .iter()
-                .map(|d| d.get_thermal_load().map_ok(move |r| (&d.name, r))),
-        )
-        .await
-        .into_iter()
-        .filter_map(|result| result.ok());
+                if new_thermal_load != cached_thermal_load {
+                    cached_thermal_load = new_thermal_load;
+                    inspect.log_thermal_load(new_thermal_load);
 
-        // Get the max of all the individual thermal loads
-        let new_thermal_load = thermal_loads
-            .map(|(name, load)| {
-                self.inspect.log_thermal_load(name, load);
-                load
-            })
-            .max()
-            .ok_or_else(|| format_err!("All thermal load updates failed"))?;
-
-        debug_assert!(new_thermal_load <= thermal_limiter::MAX_THERMAL_LOAD);
-
-        // If the thermal load value changed, then update all nodes in `thermal_load_notify_nodes`,
-        // or initiate a system reboot if any temperature input has reached their configured reboot
-        // temperature.
-        if new_thermal_load != self.thermal_load.get() {
-            self.thermal_load.set(new_thermal_load);
-
-            if new_thermal_load >= thermal_limiter::MAX_THERMAL_LOAD {
-                log_if_err!(
-                    self.send_message(
-                        &self.system_shutdown_node,
-                        &Message::SystemShutdown(ShutdownRequest::Reboot(
-                            RebootReason::HighTemperature,
-                        )),
-                    )
-                    .await,
-                    "Failed to send shutdown request"
-                );
-            } else {
-                // TODO(fxbug.dev/90157, pshickel): Correctly populate driver path
-                let driver_path = String::new();
-
-                let results = self
-                    .send_message_to_many(
-                        &self.thermal_load_notify_nodes,
-                        &Message::UpdateThermalLoad(new_thermal_load, driver_path),
-                    )
-                    .await;
-
-                match results.iter().find(|r| r.is_err()) {
-                    None => {}
-                    Some(err_result) => {
-                        log_if_err!(err_result, "Failed to send thermal load update")
+                    if new_thermal_load >= thermal_limiter::MAX_THERMAL_LOAD {
+                        log_if_err!(
+                            this.initiate_thermal_shutdown().await,
+                            "Failed to initiate thermal shutdown"
+                        );
+                    } else {
+                        log_if_err!(
+                            this.send_message_to_many(
+                                &this.thermal_load_notify_nodes,
+                                &Message::UpdateThermalLoad(new_thermal_load, sensor_path.clone())
+                            )
+                            .await
+                            .into_iter()
+                            .collect::<Result<Vec<_>, _>>(),
+                            "Failed to send thermal load update"
+                        );
                     }
                 }
             }
-        }
 
-        Ok(())
+            Ok(())
+        }
+        .unwrap_or_else(|e: Error| error!("Failed to monitor sensor (err = {})", e));
+
+        self.polling_tasks.borrow_mut().push(fasync::Task::local(polling_future));
+    }
+
+    /// Queries the provided TemperatureHandler node for its associated driver path.
+    async fn query_driver_path(&self, temperature_handler: &Rc<dyn Node>) -> Result<String> {
+        match self.send_message(temperature_handler, &Message::GetDriverPath).await {
+            Ok(MessageReturn::GetDriverPath(path)) => Ok(path),
+            _ => Err(format_err!("Failed to get driver path for {}", temperature_handler.name())),
+        }
+    }
+
+    /// Initiates a thermal shutdown.
+    ///
+    /// Sends a message to the SystemShutdown node to initiate a system shutdown due to extreme
+    /// temperatures.
+    async fn initiate_thermal_shutdown(&self) -> Result<()> {
+        match self
+            .send_message(
+                &self.system_shutdown_node,
+                &Message::SystemShutdown(ShutdownRequest::Reboot(RebootReason::HighTemperature)),
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.into()),
+        }
     }
 }
 
-/// Configuration and polling mechanism for a single temperature handler.
-struct TemperatureInput {
-    /// Name assigned to this temperature handler. Used mainly for logging and Inspect.
-    name: String,
+/// Describes the configuration for polling a single temperature sensor.
+struct TemperatureInputConfig {
+    /// TemperatureHandler node to be polled for temperature readings.
+    temperature_handler_node: Rc<dyn Node>,
 
-    /// Provides a mechanism to poll for the current temperature. Trait-ified for testability.
-    temperature_getter: Box<dyn GetTemperature>,
+    /// Temperature at which thermal load will begin to increase. A temperature value of
+    /// `onset_temperature` corresponds to a thermal load of 0. Beyond `onset_temperature`, thermal
+    /// load will increase linearly with temperature until reaching `reboot_temperature.
+    onset_temperature: Celsius,
+
+    /// Temperature at which this node will initiate a system reboot due to critical temperature. A
+    /// temperature value of `reboot_temperature` corresponds to a thermal load of 100.
+    reboot_temperature: Celsius,
+
+    /// Polling interval at which a new filtered temperature value will be read from the sensor.
+    poll_interval: Seconds,
+
+    /// Time constant to be used for filtering raw temperature readings.
+    filter_time_constant: Seconds,
+}
+
+/// Configuration and data source for a single temperature sensor.
+struct TemperatureInput {
+    /// Temperature filter instance to provide filtered temperature inputs.
+    temperature_filter: TemperatureFilter,
 
     /// Temperature at which thermal load will begin to increase. A temperature value of
     /// `onset_temperature` corresponds to a thermal load of 0. Beyond `onset_temperature`, thermal
@@ -267,42 +281,30 @@ struct TemperatureInput {
 }
 
 impl TemperatureInput {
-    /// Gets the current thermal load value for this temperature handler.
+    fn new(config: TemperatureInputConfig) -> Self {
+        let temperature_filter =
+            TemperatureFilter::new(config.temperature_handler_node, config.filter_time_constant);
+
+        Self {
+            temperature_filter,
+            onset_temperature: config.onset_temperature,
+            reboot_temperature: config.reboot_temperature,
+        }
+    }
+
+    /// Gets the current thermal load value for this temperature input.
     ///
     /// The function will first poll the temperature handler to retrieve the latest filtered
     /// temperature value. The temperature is then converted to a thermal load value by also
-    /// considering `onset_temperature` and `reboot_temperature`.
+    /// considering the configured `onset_temperature` and `reboot_temperature` parameters.
     async fn get_thermal_load(&self) -> Result<ThermalLoad> {
-        match self.temperature_getter.get_temperature().await {
-            Ok(temperature) => Ok(temperature_to_thermal_load(
-                temperature,
+        self.temperature_filter.get_temperature(get_current_timestamp()).await.map(|temperature| {
+            temperature_to_thermal_load(
+                temperature.filtered,
                 self.onset_temperature,
                 self.reboot_temperature,
-            )),
-            Err(e) => {
-                log::error!("Failed to get temperature from {} ({})", self.name, e);
-                Err(e)
-            }
-        }
-    }
-}
-
-/// Trait to provide a `get_temperature` function. In real code, `GetFilteredTemperature` is the
-/// only implementer. Test code will use this trait to inject custom temperature providers.
-#[async_trait(?Send)]
-trait GetTemperature {
-    async fn get_temperature(&self) -> Result<Celsius>;
-}
-
-struct GetFilteredTemperature {
-    filter: TemperatureFilter,
-}
-
-#[async_trait(?Send)]
-impl GetTemperature for GetFilteredTemperature {
-    /// Gets the current filtered temperature.
-    async fn get_temperature(&self) -> Result<Celsius> {
-        self.filter.get_temperature(get_current_timestamp()).await.map(|readings| readings.filtered)
+            )
+        })
     }
 }
 
@@ -325,20 +327,6 @@ fn temperature_to_thermal_load(
     }
 }
 
-// Implementing these traits lets us call `max()` on an iterator of ThermalLoads
-impl Eq for ThermalLoad {}
-impl Ord for ThermalLoad {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        if self.0 < other.0 {
-            std::cmp::Ordering::Less
-        } else if self.0 > other.0 {
-            std::cmp::Ordering::Greater
-        } else {
-            std::cmp::Ordering::Equal
-        }
-    }
-}
-
 #[async_trait(?Send)]
 impl Node for ThermalLoadDriver {
     fn name(&self) -> String {
@@ -346,59 +334,40 @@ impl Node for ThermalLoadDriver {
     }
 }
 
-struct InspectData {
-    thermal_load_properties: HashMap<String, inspect::UintProperty>,
+struct TemperatureInputInspect {
+    thermal_load_property: inspect::UintProperty,
+    _root: inspect::Node,
 }
 
-impl InspectData {
-    fn new(
-        parent: &inspect::Node,
-        name: String,
-        temperature_inputs: &Vec<TemperatureInput>,
-    ) -> Self {
-        let root = parent.create_child(name);
-        let temperature_inputs_node = root.create_child("temperature_inputs");
-
-        let mut thermal_load_properties = HashMap::new();
-        for temperature_input in temperature_inputs {
-            let child = temperature_inputs_node.create_child(&temperature_input.name);
-            child.record_double("onset_temperature_c", temperature_input.onset_temperature.0);
-            child.record_double("reboot_temperature_c", temperature_input.reboot_temperature.0);
-            thermal_load_properties
-                .insert(temperature_input.name.clone(), child.create_uint("thermal_load", 0));
-            temperature_inputs_node.record(child);
-        }
-
-        root.record(temperature_inputs_node);
-        parent.record(root);
-
-        InspectData { thermal_load_properties }
+impl TemperatureInputInspect {
+    fn new(parent: &inspect::Node, sensor_path: &str, config: &TemperatureInputConfig) -> Self {
+        let root = parent.create_child(sensor_path);
+        let thermal_load_property = root.create_uint("thermal_load", 0);
+        root.record_double("onset_temperature_c", config.onset_temperature.0);
+        root.record_double("reboot_temperature_c", config.reboot_temperature.0);
+        root.record_double("poll_interval_s", config.poll_interval.0);
+        root.record_double("filter_time_constant_s", config.filter_time_constant.0);
+        Self { thermal_load_property, _root: root }
     }
 
-    fn log_thermal_load(&self, name: &str, load: ThermalLoad) {
-        match self.thermal_load_properties.get(name) {
-            Some(property) => {
-                property.set(load.0.into());
-            }
-            None => {
-                error!("Unknown temperature input name: {}", name);
-            }
-        }
+    fn log_thermal_load(&self, load: ThermalLoad) {
+        self.thermal_load_property.set(load.0.into());
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNodeMaker};
+    use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNode, MockNodeMaker};
     use crate::{msg_eq, msg_ok_return};
     use fuchsia_inspect::assert_data_tree;
 
     /// Tests that each node config file has proper configuration for ThermalLoadDriver entries. The
-    /// test ensures that any nodes that are specified inside the temperature_configs object are
-    /// also specified under "dependencies". This is important not only for tracking the true
-    /// dependencies of a node, but also to be able to take advantage of the node dependency tests
-    /// in power_manager.rs (e.g. test_each_node_config_file_dependency_ordering).
+    /// test ensures that any TemperatureHandler nodes that are named inside the
+    /// temperature_input_configs array are also listed under the "dependencies" object. This is
+    /// important not only for tracking the true dependencies of a node, but also to be able to take
+    /// advantage of the node dependency tests in power_manager.rs (e.g.
+    /// test_each_node_config_file_dependency_ordering).
     #[test]
     pub fn test_config_files() -> Result<(), anyhow::Error> {
         crate::utils::test_each_node_config_file(|config_file| {
@@ -413,7 +382,7 @@ mod tests {
                     .iter()
                     .map(|node_name| node_name.as_str().unwrap())
                     .collect::<Vec<_>>();
-                let temperature_config_node_refs = node["config"]["temperature_configs"]
+                let temperature_config_node_refs = node["config"]["temperature_input_configs"]
                     .as_array()
                     .unwrap()
                     .iter()
@@ -425,7 +394,7 @@ mod tests {
                 if temperature_handler_node_deps != temperature_config_node_refs {
                     return Err(format_err!(
                         "TemperatureHandler nodes listed under \"dependencies\" must match
-                        the TemperatureHandler nodes referenced in \"temperature_configs\""
+                        the TemperatureHandler nodes referenced in \"temperature_input_configs\""
                     ));
                 }
             }
@@ -434,38 +403,41 @@ mod tests {
         })
     }
 
-    /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
+    /// Tests that well-formed node_config JSON can be used to create a new ThermalLoadDriverBuilder
+    /// instance.
     #[fasync::run_singlethreaded(test)]
     async fn test_new_from_json() {
         let json_data = json::json!({
             "type": "ThermalLoadDriver",
             "name": "thermal_load_driver",
             "config": {
-                "poll_interval_s": 3.4,
-                "filter_time_constant_s": 5.6,
-                "temperature_configs": [
-                    {
-                        "temperature_handler_node_name": "temp_sensor_1",
-                        "onset_temperature_c": 50.0,
-                        "reboot_temperature_c": 100.0,
-                    },
-                    {
-                        "temperature_handler_node_name": "temp_sensor_2",
-                        "onset_temperature_c": 50.0,
-                        "reboot_temperature_c": 100.0,
-                    }
-                ]
+              "temperature_input_configs": [
+                {
+                  "temperature_handler_node_name": "temp_sensor_1",
+                  "onset_temperature_c": 50.0,
+                  "reboot_temperature_c": 80.0,
+                  "poll_interval_s": 1.0,
+                  "filter_time_constant_s": 5.0
+                },
+                {
+                  "temperature_handler_node_name": "temp_sensor_2",
+                  "onset_temperature_c": 60.0,
+                  "reboot_temperature_c": 90.0,
+                  "poll_interval_s": 1.0,
+                  "filter_time_constant_s": 10.0
+                }
+              ]
             },
             "dependencies": {
-                "system_shutdown_node": "shutdown",
-                "temperature_handler_node_names": [
-                    "temp_sensor_1",
-                    "temp_sensor_2"
-                ],
-                "thermal_load_notify_nodes": [
-                    "thermal_limiter"
-                ]
-              },
+              "system_shutdown_node": "shutdown",
+              "thermal_load_notify_nodes": [
+                "thermal_limiter"
+              ],
+              "temperature_handler_node_names": [
+                "temp_sensor_1",
+                "temp_sensor_2"
+              ]
+            }
         });
 
         let mut nodes: HashMap<String, Rc<dyn Node>> = HashMap::new();
@@ -476,115 +448,167 @@ mod tests {
         let _ = ThermalLoadDriverBuilder::new_from_json(json_data, &nodes);
     }
 
-    /// A test-only struct for getting/setting fake temperature values. Mostly, this is useful to
-    /// bypass the temperature filtering that the real code uses and therefore makes tests a bit
-    /// more ergonomic.
-    struct FakeTemperatureGetter {
-        temperature_cache: Rc<Cell<Option<Celsius>>>,
+    // Convenience function to add an UpdateThermalLoad message to a mock node's expected messages.
+    fn expect_thermal_load(node: &Rc<MockNode>, thermal_load: u32, sensor_path: &str) {
+        node.add_msg_response_pair((
+            msg_eq!(UpdateThermalLoad(ThermalLoad(thermal_load), sensor_path.to_string())),
+            msg_ok_return!(UpdateThermalLoad),
+        ));
     }
-    impl FakeTemperatureGetter {
-        fn new(temperature_cache: Rc<Cell<Option<Celsius>>>) -> Self {
-            Self { temperature_cache }
+
+    // Convenience struct for running the ThermalLoadDriver's thermal input tasks.
+    struct NodeTestRunner {
+        mock_temperature_nodes: Vec<Rc<MockNode>>,
+        polling_tasks: Vec<fasync::Task<()>>,
+        executor: fasync::TestExecutor,
+    }
+
+    impl NodeTestRunner {
+        fn new(
+            executor: fasync::TestExecutor,
+            thermal_load_driver: Rc<ThermalLoadDriver>,
+            mock_temperature_nodes: Vec<Rc<MockNode>>,
+        ) -> Self {
+            executor.set_fake_time(fasync::Time::from_nanos(0));
+            let mut this = Self {
+                executor,
+                polling_tasks: thermal_load_driver.polling_tasks.take(),
+                mock_temperature_nodes,
+            };
+
+            // Initialize the polling tasks (required so each polling task has a chance to set up
+            // their timers)
+            this.run_polling_tasks();
+
+            this
         }
-    }
-    #[async_trait(?Send)]
-    impl GetTemperature for FakeTemperatureGetter {
-        async fn get_temperature(&self) -> Result<Celsius> {
-            Ok(self.temperature_cache.take().unwrap())
+
+        // Runs all polling tasks (one for each temperature input) for one iteration (stopping at
+        // their next timer).
+        fn run_polling_tasks(&mut self) {
+            // Run each polling task until stalled. The polling task will stall when it has
+            // completed one iteration and is waiting on the next iteration timer.
+            for task in self.polling_tasks.iter_mut() {
+                let _ = self.executor.run_until_stalled(task);
+            }
+        }
+
+        // Wakes each polling task's timer then runs the task until hitting the next timer.
+        fn wake_and_run_polling_tasks(&mut self) {
+            // Wake all pending timers and increment fake time accordingly
+            for _ in 0..self.polling_tasks.len() {
+                let wake_time = self.executor.wake_next_timer().unwrap();
+                if wake_time > self.executor.now() {
+                    self.executor.set_fake_time(wake_time);
+                }
+            }
+
+            // There should not be any more pending timers
+            assert_eq!(self.executor.wake_next_timer(), None);
+
+            self.run_polling_tasks();
+        }
+
+        // Sets a fake temperature value for each temperature input, then runs each polling task for
+        // one iteration.
+        fn iterate_with_temperature_inputs(&mut self, temperature_inputs: &[f64]) {
+            for (i, temperature) in temperature_inputs.iter().enumerate() {
+                self.mock_temperature_nodes[i].add_msg_response_pair((
+                    msg_eq!(ReadTemperature),
+                    msg_ok_return!(ReadTemperature(Celsius(*temperature))),
+                ));
+            }
+
+            self.wake_and_run_polling_tasks();
         }
     }
 
-    struct FakeTemperatureSetter {
-        temperature_cache: Rc<Cell<Option<Celsius>>>,
-    }
-    impl FakeTemperatureSetter {
-        fn new(temperature_cache: Rc<Cell<Option<Celsius>>>) -> Self {
-            Self { temperature_cache }
-        }
-        fn set_fake_temperature(&self, temperature: Celsius) {
-            self.temperature_cache.set(Some(temperature))
-        }
-    }
+    /// Tests the ThermalLoadDriver's ability to monitor multiple temperature input sources,
+    /// calculate their thermal loads independently, and send out thermal load change messages
+    /// correctly.
+    #[test]
+    fn test_multiple_temperature_inputs() {
+        let exec = fasync::TestExecutor::new_with_fake_time().unwrap();
 
-    /// Creates a new FakeTemperatureGetter and FakeTemperatureSetter that are bound together by a
-    /// shared "temperature cache".
-    fn fake_temperature_pair() -> (FakeTemperatureGetter, FakeTemperatureSetter) {
-        let temperature_cache = Rc::new(Cell::new(None));
-        (
-            FakeTemperatureGetter::new(temperature_cache.clone()),
-            FakeTemperatureSetter::new(temperature_cache),
-        )
-    }
-
-    /// Tests that with multiple temperature handler nodes providing input to the ThermalLoadDriver,
-    /// both are correctly polled for temperature and the correct thermal load value is ultimately
-    /// determined and messaged out to other nodes.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_multiple_temperature_inputs() {
+        // Create mock nodes
         let mut mock_maker = MockNodeMaker::new();
+        let system_shutdown_node = create_dummy_node();
         let mock_thermal_load_receiver = mock_maker.make("mock_thermal_load_receiver", vec![]);
-        let (fake_getter_1, fake_setter_1) = fake_temperature_pair();
-        let (fake_getter_2, fake_setter_2) = fake_temperature_pair();
+        let mock_temperature_handler_1 = mock_maker.make("temperature_handler_1", vec![]);
+        let mock_temperature_handler_2 = mock_maker.make("temperature_handler_2", vec![]);
 
-        let thermal_load_driver = ThermalLoadDriverBuilder {
-            poll_interval: Seconds(1.0),
-            temperature_inputs: vec![
-                TemperatureInput {
-                    name: "FakeTemperature1".to_string(),
-                    temperature_getter: Box::new(fake_getter_1),
+        // The ThermalLoadDriver asks for the driver path of all TemperatureHandler nodes during
+        // initialization
+        mock_temperature_handler_1.add_msg_response_pair((
+            msg_eq!(GetDriverPath),
+            msg_ok_return!(GetDriverPath("fake_driver_path_1".to_string())),
+        ));
+        mock_temperature_handler_2.add_msg_response_pair((
+            msg_eq!(GetDriverPath),
+            msg_ok_return!(GetDriverPath("fake_driver_path_2".to_string())),
+        ));
+
+        // Create the ThermalLoadDriver node. The node has two temperature input sources that are
+        // configured with differing onset/reboot temperatures, which adds a degree of testing for
+        // the ThermalLoadDriver's ability to track thermal load for each source separately.
+        let node = ThermalLoadDriverBuilder {
+            temperature_input_configs: vec![
+                TemperatureInputConfig {
+                    temperature_handler_node: mock_temperature_handler_1.clone(),
                     onset_temperature: Celsius(0.0),
-                    reboot_temperature: Celsius(100.0),
+                    reboot_temperature: Celsius(50.0),
+                    poll_interval: Seconds(1.0),
+                    filter_time_constant: Seconds(1.0),
                 },
-                TemperatureInput {
-                    name: "FakeTemperature2".to_string(),
-                    temperature_getter: Box::new(fake_getter_2),
+                TemperatureInputConfig {
+                    temperature_handler_node: mock_temperature_handler_2.clone(),
                     onset_temperature: Celsius(0.0),
                     reboot_temperature: Celsius(100.0),
+                    poll_interval: Seconds(1.0),
+                    filter_time_constant: Seconds(1.0),
                 },
             ],
-            system_shutdown_node: create_dummy_node(),
+            system_shutdown_node,
             thermal_load_notify_nodes: vec![mock_thermal_load_receiver.clone()],
             inspect_root: None,
         }
-        .build(&FuturesUnordered::new())
+        .build()
         .unwrap();
 
-        // Set some arbitrary fake temperature inputs and expect to appropriate thermal load value
-        // to be messaged out to the mock thermal load receiver node
-        fake_setter_1.set_fake_temperature(Celsius(20.0));
-        fake_setter_2.set_fake_temperature(Celsius(40.0));
-        mock_thermal_load_receiver.add_msg_response_pair((
-            msg_eq!(UpdateThermalLoad(ThermalLoad(40), String::new())),
-            msg_ok_return!(UpdateThermalLoad),
-        ));
-        assert!(thermal_load_driver.update_thermal_load().await.is_ok());
+        // Create the test runner
+        let mut node_runner = NodeTestRunner::new(
+            exec,
+            node,
+            vec![mock_temperature_handler_1, mock_temperature_handler_2],
+        );
 
-        // Set some arbitrary fake temperature inputs and expect to appropriate thermal load value
-        // to be messaged out to the mock thermal load receiver node
-        fake_setter_1.set_fake_temperature(Celsius(60.0));
-        fake_setter_2.set_fake_temperature(Celsius(50.0));
-        mock_thermal_load_receiver.add_msg_response_pair((
-            msg_eq!(UpdateThermalLoad(ThermalLoad(60), String::new())),
-            msg_ok_return!(UpdateThermalLoad),
-        ));
-        assert!(thermal_load_driver.update_thermal_load().await.is_ok());
+        // Increase mock_1 temperature, expect a corresponding thermal load update
+        expect_thermal_load(&mock_thermal_load_receiver, 20, "fake_driver_path_1");
+        node_runner.iterate_with_temperature_inputs(&[10.0, 0.0]);
 
-        // Set some arbitrary fake temperature inputs and expect to appropriate thermal load value
-        // to be messaged out to the mock thermal load receiver node
-        fake_setter_1.set_fake_temperature(Celsius(80.0));
-        fake_setter_2.set_fake_temperature(Celsius(80.0));
-        mock_thermal_load_receiver.add_msg_response_pair((
-            msg_eq!(UpdateThermalLoad(ThermalLoad(80), String::new())),
-            msg_ok_return!(UpdateThermalLoad),
-        ));
-        assert!(thermal_load_driver.update_thermal_load().await.is_ok());
+        // Increase mock_2 temperature, expect a corresponding thermal load update
+        expect_thermal_load(&mock_thermal_load_receiver, 40, "fake_driver_path_2");
+        node_runner.iterate_with_temperature_inputs(&[10.0, 40.0]);
+
+        // Both temperatures remain constant, expect no thermal load update
+        node_runner.iterate_with_temperature_inputs(&[10.0, 40.0]);
+
+        // Decrease temperature for both mocks, expect two corresponding thermal load updates
+        expect_thermal_load(&mock_thermal_load_receiver, 10, "fake_driver_path_1");
+        expect_thermal_load(&mock_thermal_load_receiver, 20, "fake_driver_path_2");
+        node_runner.iterate_with_temperature_inputs(&[5.0, 20.0]);
     }
 
     /// Tests that when any of the temperature handler input nodes exceed `reboot_temperature`, then
     /// the ThermalLoadDriver node initiates a system reboot due to high temperature.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_trigger_shutdown() {
+    #[test]
+    fn test_trigger_shutdown() {
+        let exec = fasync::TestExecutor::new_with_fake_time().unwrap();
+
+        // Create mock nodes
         let mut mock_maker = MockNodeMaker::new();
+        let mock_temperature_handler = mock_maker.make("temperature_handler", vec![]);
+        let mock_thermal_load_receiver = mock_maker.make("mock_thermal_load_receiver", vec![]);
         let system_shutdown_node = mock_maker.make(
             "mock_system_shutdown_node",
             vec![(
@@ -592,79 +616,117 @@ mod tests {
                 msg_ok_return!(SystemShutdown),
             )],
         );
-        let (fake_getter, fake_setter) = fake_temperature_pair();
-        let thermal_load_driver = ThermalLoadDriverBuilder {
-            poll_interval: Seconds(1.0),
-            temperature_inputs: vec![TemperatureInput {
-                name: "FakeTemperature1".to_string(),
-                temperature_getter: Box::new(fake_getter),
+
+        // The ThermalLoadDriver asks for the driver path of all TemperatureHandler nodes during
+        // initialization
+        mock_temperature_handler.add_msg_response_pair((
+            msg_eq!(GetDriverPath),
+            msg_ok_return!(GetDriverPath("fake_driver_path".to_string())),
+        ));
+
+        let node = ThermalLoadDriverBuilder {
+            temperature_input_configs: vec![TemperatureInputConfig {
+                temperature_handler_node: mock_temperature_handler.clone(),
                 onset_temperature: Celsius(0.0),
-                reboot_temperature: Celsius(100.0),
+                reboot_temperature: Celsius(50.0),
+                poll_interval: Seconds(1.0),
+                filter_time_constant: Seconds(1.0),
             }],
             system_shutdown_node,
-            thermal_load_notify_nodes: vec![],
+            thermal_load_notify_nodes: vec![mock_thermal_load_receiver],
             inspect_root: None,
         }
-        .build(&FuturesUnordered::new())
+        .build()
         .unwrap();
 
-        fake_setter.set_fake_temperature(Celsius(100.0));
-        assert!(thermal_load_driver.update_thermal_load().await.is_ok());
+        // Create the test runner
+        let mut node_runner = NodeTestRunner::new(exec, node, vec![mock_temperature_handler]);
+
+        // With a single iteration, this temperature will cause a system reboot
+        node_runner.iterate_with_temperature_inputs(&[50.0]);
+
+        // The system_shutdown_node mock verifies that the SystemShutdown message is sent by the
+        // ThermalLoadDriver
     }
 
     /// Tests that the expected Inspect properties are present.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_inspect_data() {
+    #[test]
+    fn test_inspect_data() {
+        let exec = fasync::TestExecutor::new_with_fake_time().unwrap();
         let inspector = inspect::Inspector::new();
 
-        // Create two temperature inputs and initialize with distinct arbitrary values
-        let (fake_getter1, fake_setter1) = fake_temperature_pair();
-        let (fake_getter2, fake_setter2) = fake_temperature_pair();
-        fake_setter1.set_fake_temperature(Celsius(30.0));
-        fake_setter2.set_fake_temperature(Celsius(60.0));
+        // Create mock nodes
+        let mut mock_maker = MockNodeMaker::new();
+        let mock_temperature_handler_1 = mock_maker.make("temperature_handler_1", vec![]);
+        let mock_temperature_handler_2 = mock_maker.make("temperature_handler_2", vec![]);
+        let mock_thermal_load_receiver = mock_maker.make("mock_thermal_load_receiver", vec![]);
+        let system_shutdown_node = mock_maker.make("mock_system_shutdown_node", vec![]);
 
-        let thermal_load_driver = ThermalLoadDriverBuilder {
-            poll_interval: Seconds(1.0),
-            temperature_inputs: vec![
-                TemperatureInput {
-                    name: "FakeTemperature1".to_string(),
-                    temperature_getter: Box::new(fake_getter1),
+        // The ThermalLoadDriver asks for the driver path of all TemperatureHandler nodes during
+        // initialization
+        mock_temperature_handler_1.add_msg_response_pair((
+            msg_eq!(GetDriverPath),
+            msg_ok_return!(GetDriverPath("fake_driver_path_1".to_string())),
+        ));
+        mock_temperature_handler_2.add_msg_response_pair((
+            msg_eq!(GetDriverPath),
+            msg_ok_return!(GetDriverPath("fake_driver_path_2".to_string())),
+        ));
+
+        let node = ThermalLoadDriverBuilder {
+            temperature_input_configs: vec![
+                TemperatureInputConfig {
+                    temperature_handler_node: mock_temperature_handler_1.clone(),
+                    onset_temperature: Celsius(0.0),
+                    reboot_temperature: Celsius(50.0),
+                    poll_interval: Seconds(1.0),
+                    filter_time_constant: Seconds(10.0),
+                },
+                TemperatureInputConfig {
+                    temperature_handler_node: mock_temperature_handler_2.clone(),
                     onset_temperature: Celsius(0.0),
                     reboot_temperature: Celsius(100.0),
-                },
-                TemperatureInput {
-                    name: "FakeTemperature2".to_string(),
-                    temperature_getter: Box::new(fake_getter2),
-                    onset_temperature: Celsius(10.0),
-                    reboot_temperature: Celsius(110.0),
+                    poll_interval: Seconds(2.0),
+                    filter_time_constant: Seconds(20.0),
                 },
             ],
-            system_shutdown_node: create_dummy_node(),
-            thermal_load_notify_nodes: vec![],
+            system_shutdown_node,
+            thermal_load_notify_nodes: vec![mock_thermal_load_receiver.clone()],
             inspect_root: Some(inspector.root()),
         }
-        .build(&FuturesUnordered::new())
+        .build()
         .unwrap();
 
-        // Run the `update_thermal_load` loop once to Inspect will be populated
-        assert!(thermal_load_driver.update_thermal_load().await.is_ok());
+        // Create the test runner
+        let mut node_runner = NodeTestRunner::new(
+            exec,
+            node,
+            vec![mock_temperature_handler_1, mock_temperature_handler_2],
+        );
+
+        // Provide some fake temperature values that cause a thermal load change for both inputs
+        expect_thermal_load(&mock_thermal_load_receiver, 20, "fake_driver_path_1");
+        expect_thermal_load(&mock_thermal_load_receiver, 50, "fake_driver_path_2");
+        node_runner.iterate_with_temperature_inputs(&[10.0, 50.0]);
 
         // Verify the expected thermal load values are present for both temperature inputs
         assert_data_tree!(
             inspector,
             root: {
                 ThermalLoadDriver: {
-                    temperature_inputs: {
-                        FakeTemperature1: {
-                            onset_temperature_c: 0.0,
-                            reboot_temperature_c: 100.0,
-                            thermal_load: 30u64
-                        },
-                        FakeTemperature2: {
-                            onset_temperature_c: 10.0,
-                            reboot_temperature_c: 110.0,
-                            thermal_load: 50u64
-                        }
+                    fake_driver_path_1: {
+                        onset_temperature_c: 0.0,
+                        reboot_temperature_c: 50.0,
+                        poll_interval_s: 1.0,
+                        filter_time_constant_s: 10.0,
+                        thermal_load: 20u64
+                    },
+                    fake_driver_path_2: {
+                        onset_temperature_c: 0.0,
+                        reboot_temperature_c: 100.0,
+                        poll_interval_s: 2.0,
+                        filter_time_constant_s: 20.0,
+                        thermal_load: 50u64
                     }
                 },
             }

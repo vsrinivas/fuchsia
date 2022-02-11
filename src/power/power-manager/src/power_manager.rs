@@ -199,7 +199,7 @@ impl PowerManager {
             .build()?,
             "ThermalLoadDriver" => {
                 thermal_load_driver::ThermalLoadDriverBuilder::new_from_json(json_data, &self.nodes)
-                    .build(node_futures)?
+                    .build()?
             }
             "ThermalPolicy" => {
                 thermal_policy::ThermalPolicyBuilder::new_from_json(json_data, &self.nodes)

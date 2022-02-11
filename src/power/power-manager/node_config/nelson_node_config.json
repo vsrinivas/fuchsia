@@ -79,23 +79,27 @@
     "type": "ThermalLoadDriver",
     "name": "thermal_load_driver",
     "config": {
-      "poll_interval_s": 1,
-      "filter_time_constant_s": 5,
-      "temperature_configs": [
+      "temperature_input_configs": [
         {
           "temperature_handler_node_name": "soc_pll_thermal",
           "onset_temperature_c": 92.0,
-          "reboot_temperature_c": 97.0
+          "reboot_temperature_c": 97.0,
+          "poll_interval_s": 1,
+          "filter_time_constant_s": 5
         },
         {
           "temperature_handler_node_name": "thermistor_thread",
           "onset_temperature_c": 65.0,
-          "reboot_temperature_c": 75.0
+          "reboot_temperature_c": 75.0,
+          "poll_interval_s": 1,
+          "filter_time_constant_s": 5
         },
         {
           "temperature_handler_node_name": "thermistor_audio",
           "onset_temperature_c": 73.0,
-          "reboot_temperature_c": 80.0
+          "reboot_temperature_c": 80.0,
+          "poll_interval_s": 1,
+          "filter_time_constant_s": 5
         }
       ]
     },
