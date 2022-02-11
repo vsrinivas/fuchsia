@@ -129,6 +129,35 @@ class TestDirectory : public fidl::testing::WireTestBase<fio::Directory> {
   OpenHandler open_handler_;
 };
 
+class TestDevice : public fidl::WireServer<fuchsia_driver_compat::Device> {
+  void GetTopologicalPath(GetTopologicalPathRequestView request,
+                          GetTopologicalPathCompleter::Sync& completer) override {
+    completer.Reply("/dev/test/my-device");
+  }
+
+  void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer) override {
+    std::vector<fuchsia_driver_compat::wire::Metadata> metadata;
+
+    std::vector<uint8_t> bytes_1 = {1, 2, 3};
+    zx::vmo vmo_1;
+    ASSERT_EQ(ZX_OK, zx::vmo::create(bytes_1.size(), 0, &vmo_1));
+    vmo_1.write(bytes_1.data(), 0, bytes_1.size());
+    size_t size = bytes_1.size();
+    ASSERT_EQ(ZX_OK, vmo_1.set_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size)));
+    metadata.push_back(fuchsia_driver_compat::wire::Metadata{.type = 1, .data = std::move(vmo_1)});
+
+    std::vector<uint8_t> bytes_2 = {4, 5, 6};
+    zx::vmo vmo_2;
+    ASSERT_EQ(ZX_OK, zx::vmo::create(bytes_1.size(), 0, &vmo_2));
+    vmo_2.write(bytes_2.data(), 0, bytes_2.size());
+    ASSERT_EQ(ZX_OK, vmo_2.set_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size)));
+    metadata.push_back(fuchsia_driver_compat::wire::Metadata{.type = 2, .data = std::move(vmo_2)});
+
+    completer.ReplySuccess(fidl::VectorView<fuchsia_driver_compat::wire::Metadata>::FromExternal(
+        metadata.data(), metadata.size()));
+  }
+};
+
 }  // namespace
 
 class DriverTest : public gtest::TestLoopFixture {
@@ -146,6 +175,8 @@ class DriverTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(pkg_endpoints.is_ok());
     auto svc_endpoints = fidl::CreateEndpoints<fio::Directory>();
     EXPECT_TRUE(svc_endpoints.is_ok());
+    auto compat_service_endpoints = fidl::CreateEndpoints<fio::Directory>();
+    EXPECT_TRUE(compat_service_endpoints.is_ok());
 
     // Setup the node.
     fidl::WireSharedClient<fuchsia_driver_framework::Node> node(std::move(node_endpoints->client),
@@ -170,6 +201,23 @@ class DriverTest : public gtest::TestLoopFixture {
     });
     fidl::BindServer(dispatcher(), std::move(pkg_endpoints->server), &pkg_directory_);
 
+    // Setup and bind "/fuchsia.driver.compat.Service" directory.
+    compat_service_directory_.SetOpenHandler([this](TestDirectory::OpenRequestView request) {
+      // We cheat here. Instead of creating a second TestDirectory for 'default', we open ourselves
+      // again.
+      if (request->path.get() == "default") {
+        fidl::ServerEnd<fio::Directory> server_end(request->object.TakeChannel());
+        fidl::BindServer(dispatcher(), std::move(server_end), &compat_service_directory_);
+      } else if (request->path.get() == "device") {
+        fidl::ServerEnd<fuchsia_driver_compat::Device> server_end(request->object.TakeChannel());
+        fidl::BindServer(dispatcher(), std::move(server_end), &test_device_);
+      } else {
+        FAIL() << "Unexpected service: " << request->path.get();
+      }
+    });
+    fidl::BindServer(dispatcher(), std::move(compat_service_endpoints->server),
+                     &compat_service_directory_);
+
     // Setup and bind "/svc" directory.
     svc_directory_.SetOpenHandler([this](TestDirectory::OpenRequestView request) {
       if (request->path.get() == fidl::DiscoverableProtocolName<flogger::LogSink>) {
@@ -193,13 +241,16 @@ class DriverTest : public gtest::TestLoopFixture {
 
     // Setup the namespace.
     fidl::Arena arena;
-    fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 2);
+    fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 3);
     ns_entries[0].Allocate(arena);
     ns_entries[0].set_path(arena, "/pkg");
     ns_entries[0].set_directory(std::move(pkg_endpoints->client));
     ns_entries[1].Allocate(arena);
     ns_entries[1].set_path(arena, "/svc");
     ns_entries[1].set_directory(std::move(svc_endpoints->client));
+    ns_entries[2].Allocate(arena);
+    ns_entries[2].set_path(arena, "/fuchsia.driver.compat.Service");
+    ns_entries[2].set_directory(std::move(compat_service_endpoints->client));
     auto ns = driver::Namespace::Create(ns_entries);
     EXPECT_EQ(ZX_OK, ns.status_value());
 
@@ -236,11 +287,13 @@ class DriverTest : public gtest::TestLoopFixture {
   TestNode node_;
   TestRootResource root_resource_;
   TestItems items_;
+  TestDevice test_device_;
   TestFile compat_file_;
   TestFile v1_test_file_;
   TestFile firmware_file_;
   TestDirectory pkg_directory_;
   TestDirectory svc_directory_;
+  TestDirectory compat_service_directory_;
 };
 
 TEST_F(DriverTest, Start) {
@@ -316,6 +369,34 @@ TEST_F(DriverTest, Start_DeviceAddNull) {
   EXPECT_FALSE(node().HasChildren());
   ASSERT_TRUE(RunLoopUntilIdle());
   EXPECT_TRUE(node().HasChildren());
+}
+
+TEST_F(DriverTest, Start_CheckCompatService) {
+  zx_protocol_device_t ops{};
+  auto driver = StartDriver("/pkg/driver/v1_device_add_null_test.so", &ops);
+
+  // Verify that v1_test.so has added a child device.
+  EXPECT_FALSE(node().HasChildren());
+  ASSERT_TRUE(RunLoopUntilIdle());
+  EXPECT_TRUE(node().HasChildren());
+
+  // Check topological path.
+  ASSERT_STREQ(driver->GetDevice().topological_path().data(), "/dev/test/my-device");
+
+  // Check metadata.
+  std::array<uint8_t, 3> expected_metadata;
+  std::array<uint8_t, 3> metadata;
+  size_t size = 0;
+
+  ASSERT_EQ(driver->GetDevice().GetMetadata(1, metadata.data(), metadata.size(), &size), ZX_OK);
+  ASSERT_EQ(size, 3ul);
+  expected_metadata = {1, 2, 3};
+  ASSERT_EQ(metadata, expected_metadata);
+
+  ASSERT_EQ(driver->GetDevice().GetMetadata(2, metadata.data(), metadata.size(), &size), ZX_OK);
+  ASSERT_EQ(size, 3ul);
+  expected_metadata = {4, 5, 6};
+  ASSERT_EQ(metadata, expected_metadata);
 }
 
 TEST_F(DriverTest, Start_RootResourceIsConstant) {

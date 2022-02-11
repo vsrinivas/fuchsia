@@ -125,18 +125,16 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
   compat_service_ = fbl::MakeRefCounted<fs::PseudoDir>();
   outgoing_.root_dir()->AddEntry("fuchsia.driver.compat.Service", compat_service_);
 
-  auto compat_connect = ConnectToParentCompatService()
-                            .and_then(fit::bind_member<&Driver::GetTopologicalPath>(this))
-                            .then([this](result<std::string, zx_status_t>& result)
-                                      -> fpromise::result<void, zx_status_t> {
-                              if (result.is_error()) {
-                                FDF_LOG(WARNING, "Connecting to compat service failed with %s",
-                                        zx_status_get_string(result.error()));
-                                return ok();
-                              }
-                              this->device_.set_topological_path(std::move(result.value()));
-                              return ok();
-                            });
+  auto compat_connect =
+      ConnectToParentCompatService()
+          .and_then(fit::bind_member<&Driver::GetDeviceInfo>(this))
+          .then([this](result<void, zx_status_t>& result) -> fpromise::result<void, zx_status_t> {
+            if (result.is_error()) {
+              FDF_LOG(WARNING, "Connecting to compat service failed with %s",
+                      zx_status_get_string(result.error()));
+            }
+            return ok();
+          });
 
   auto root_resource =
       fpromise::make_result_promise<zx::resource, zx_status_t>(error(ZX_ERR_ALREADY_BOUND)).box();
@@ -399,23 +397,49 @@ fpromise::promise<void, zx_status_t> Driver::ConnectToParentCompatService() {
   return fpromise::make_result_promise<void, zx_status_t>(ok());
 }
 
-promise<std::string, zx_status_t> Driver::GetTopologicalPath() {
+promise<void, zx_status_t> Driver::GetDeviceInfo() {
   if (!device_client_) {
-    return fpromise::make_result_promise<std::string, zx_status_t>(error(ZX_ERR_PEER_CLOSED));
+    return fpromise::make_result_promise<void, zx_status_t>(error(ZX_ERR_PEER_CLOSED));
   }
 
-  bridge<std::string, zx_status_t> bridge;
+  bridge<void, zx_status_t> topo_bridge;
   device_client_->GetTopologicalPath(
-      [completer = std::move(bridge.completer)](
-          fidl::WireUnownedResult<fuchsia_driver_compat::Device::GetTopologicalPath>&
-              result) mutable {
-        if (result.ok()) {
-          completer.complete_ok(std::string(result->path.data(), result->path.size()));
-        } else {
-          completer.complete_error(result.status());
-        }
+      [this, completer = std::move(topo_bridge.completer)](
+          fidl::WireResponse<fuchsia_driver_compat::Device::GetTopologicalPath>* response) mutable {
+        device_.set_topological_path(std::string(response->path.data(), response->path.size()));
+        completer.complete_ok();
       });
-  return bridge.consumer.promise_or(error(ZX_ERR_INTERNAL));
+
+  bridge<void, zx_status_t> metadata_bridge;
+  device_client_->GetMetadata(
+      [this, completer = std::move(metadata_bridge.completer)](
+          fidl::WireResponse<fuchsia_driver_compat::Device::GetMetadata>* response) mutable {
+        if (response->result.is_err()) {
+          completer.complete_error(response->result.err());
+          return;
+        }
+        for (auto& metadata : response->result.response().metadata) {
+          size_t size;
+          zx_status_t status =
+              metadata.data.get_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size));
+          if (status != ZX_OK) {
+            completer.complete_error(status);
+            return;
+          }
+          std::vector<uint8_t> data(size);
+          status = metadata.data.read(data.data(), 0, data.size());
+          if (status != ZX_OK) {
+            completer.complete_error(status);
+            return;
+          }
+
+          device_.AddMetadata(metadata.type, data.data(), data.size());
+        }
+        completer.complete_ok();
+      });
+
+  return topo_bridge.consumer.promise_or(error(ZX_ERR_INTERNAL))
+      .and_then(metadata_bridge.consumer.promise_or(error(ZX_ERR_INTERNAL)));
 }
 
 void* Driver::Context() const { return context_; }

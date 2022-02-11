@@ -48,6 +48,8 @@ class Driver {
 
   zx_status_t AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out);
 
+  Device& GetDevice() { return device_; }
+
  private:
   // Run the driver at `driver_path`.
   zx::status<> Run(fidl::ServerEnd<fuchsia_io::Directory> outgoing_dir,
@@ -78,7 +80,7 @@ class Driver {
   fpromise::result<> StopDriver(const zx_status_t& status);
 
   fpromise::promise<void, zx_status_t> ConnectToParentCompatService();
-  fpromise::promise<std::string, zx_status_t> GetTopologicalPath();
+  fpromise::promise<void, zx_status_t> GetDeviceInfo();
 
   fidl::WireSharedClient<fuchsia_driver_compat::Device> device_client_;
 

@@ -6,4 +6,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.driver.compat") {
   sources = [ "compat.fidl" ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

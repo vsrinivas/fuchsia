@@ -307,8 +307,8 @@ zx_status_t Device::AddMetadata(uint32_t type, const void* data, size_t size) {
 }
 
 zx_status_t Device::GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) {
-  auto it = linked_device_.metadata_.find(type);
-  if (it == linked_device_.metadata_.end()) {
+  auto it = metadata_.find(type);
+  if (it == metadata_.end()) {
     FDF_LOG(WARNING, "Metadata %#x for device '%s' not found", type, Name());
     return ZX_ERR_NOT_FOUND;
   }
@@ -323,8 +323,8 @@ zx_status_t Device::GetMetadata(uint32_t type, void* buf, size_t buflen, size_t*
 }
 
 zx_status_t Device::GetMetadataSize(uint32_t type, size_t* out_size) {
-  auto it = linked_device_.metadata_.find(type);
-  if (it == linked_device_.metadata_.end()) {
+  auto it = metadata_.find(type);
+  if (it == metadata_.end()) {
     FDF_LOG(WARNING, "Metadata %#x for device '%s' not found", type, Name());
     return ZX_ERR_NOT_FOUND;
   }
@@ -362,6 +362,37 @@ zx_status_t Device::StartCompatService(ServiceDir dir) {
 void Device::GetTopologicalPath(GetTopologicalPathRequestView request,
                                 GetTopologicalPathCompleter::Sync& completer) {
   completer.Reply(fidl::StringView::FromExternal(topological_path_));
+}
+
+void Device::GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer) {
+  std::vector<fuchsia_driver_compat::wire::Metadata> metadata;
+  metadata.reserve(metadata_.size());
+  for (auto& [type, data] : metadata_) {
+    fuchsia_driver_compat::wire::Metadata new_metadata;
+    new_metadata.type = type;
+    zx::vmo vmo;
+
+    zx_status_t status = zx::vmo::create(data.size(), 0, &new_metadata.data);
+    if (status != ZX_OK) {
+      completer.ReplyError(status);
+      return;
+    }
+    status = new_metadata.data.write(data.data(), 0, data.size());
+    if (status != ZX_OK) {
+      completer.ReplyError(status);
+      return;
+    }
+    size_t size = data.size();
+    status = new_metadata.data.set_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size));
+    if (status != ZX_OK) {
+      completer.ReplyError(status);
+      return;
+    }
+
+    metadata.push_back(std::move(new_metadata));
+  }
+  completer.ReplySuccess(fidl::VectorView<fuchsia_driver_compat::wire::Metadata>::FromExternal(
+      metadata.data(), metadata.size()));
 }
 
 }  // namespace compat

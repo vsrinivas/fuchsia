@@ -4,12 +4,24 @@
 
 library fuchsia.driver.compat;
 
+using zx;
+
+type Metadata = resource struct {
+    type uint32;
+    data zx.handle:VMO;
+};
+
 /// This API communicates with the DFv1 parent device.
 protocol Device {
     /// Get this device's topological path that it is exporting in /dev.
     GetTopologicalPath() -> (struct {
         path string:MAX;
     });
+
+    /// Get all of the metadata associated with this device.
+    GetMetadata() -> (resource struct {
+        metadata vector<Metadata>:MAX;
+    }) error zx.status;
 };
 
 /// This represents a service that the compatibility driver will offer to

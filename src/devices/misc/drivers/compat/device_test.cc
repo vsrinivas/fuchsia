@@ -292,24 +292,3 @@ TEST_F(DeviceTest, DeviceMetadata) {
   status = device.GetMetadata(DEVICE_METADATA_BOARD_PRIVATE, &found, sizeof(found), &found_size);
   ASSERT_EQ(ZX_ERR_NOT_FOUND, status);
 }
-
-TEST_F(DeviceTest, LinkedDeviceMetadata) {
-  // Create two devices.
-  zx_protocol_device_t ops{};
-  compat::Device parent("test-parent", nullptr, &ops, std::nullopt, std::nullopt, logger(),
-                        dispatcher());
-  compat::Device child("test-device", nullptr, &ops, std::nullopt, &parent, logger(), dispatcher());
-
-  // Add metadata to the parent device.
-  const uint64_t metadata = 0xAABBCCDDEEFF0011;
-  zx_status_t status = parent.AddMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
-  ASSERT_EQ(ZX_OK, status);
-
-  // Get the metadata from the child device.
-  uint64_t found = 0;
-  size_t found_size = 0;
-  status = child.GetMetadata(DEVICE_METADATA_PRIVATE, &found, sizeof(found), &found_size);
-  ASSERT_EQ(ZX_OK, status);
-  EXPECT_EQ(metadata, found);
-  EXPECT_EQ(sizeof(metadata), found_size);
-}

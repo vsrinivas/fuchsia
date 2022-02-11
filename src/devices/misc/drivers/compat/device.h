@@ -78,6 +78,7 @@ class Device : public std::enable_shared_from_this<Device>,
   // fuchsia.driver.compat.Compat
   void GetTopologicalPath(GetTopologicalPathRequestView request,
                           GetTopologicalPathCompleter::Sync& completer) override;
+  void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer) override;
 
   void RemoveChild(std::shared_ptr<Device>& child);
 
