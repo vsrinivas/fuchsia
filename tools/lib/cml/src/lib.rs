@@ -1114,7 +1114,7 @@ pub struct Document {
     ///     root will be exposed.
     /// -   `path`: The path in the component's outgoing directory from which this
     ///     directory is served.
-    /// -   `rights`: The maximum [directory rights](#directory-rights) that may be set
+    /// -   `rights`: The maximum [directory rights][doc-directory-rights] that may be set
     ///     when using this directory.
     ///
     /// # storage {#capability-storage}
@@ -1164,6 +1164,7 @@ pub struct Document {
     /// [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
     /// [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
     /// [doc-event]: /docs/concepts/components/v2/capabilities/event.md
+    /// [doc-directory-rights]: /docs/concepts/components/v2/capabilities/directory#directory-capability-rights
     /// [glossary.outgoing directory]: /docs/glossary/README.md#outgoing-directory
     pub capabilities: Option<Vec<Capability>>,
 
