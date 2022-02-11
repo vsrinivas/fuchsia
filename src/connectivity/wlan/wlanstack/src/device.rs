@@ -17,7 +17,6 @@ use {
     std::{collections::HashMap, marker::Unpin, sync::Arc},
     wlan_common::hasher::WlanHasher,
     wlan_inspect,
-    wlan_sme::{self, clone_utils},
 };
 
 use crate::{
@@ -181,7 +180,7 @@ fn create_sme<S>(
 where
     S: Stream<Item = stats_scheduler::StatsRequest> + Send + Unpin + 'static,
 {
-    let device_info = clone_utils::clone_device_info(device_info);
+    let device_info = device_info.clone();
     let (server, sme_fut) = match device_info.role {
         fidl_common::WlanMacRole::Client => {
             let (sender, receiver) = mpsc::unbounded();

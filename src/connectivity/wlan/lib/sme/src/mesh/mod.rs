@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        capabilities::get_device_band_cap, clone_utils, responder::Responder, MlmeRequest, MlmeSink,
-    },
+    crate::{capabilities::get_device_band_cap, responder::Responder, MlmeRequest, MlmeSink},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
     futures::channel::{mpsc, oneshot},
@@ -245,7 +243,7 @@ impl super::Station for MeshSme {
                             let open = fidl_mlme::MeshPeeringOpenAction {
                                 common: fidl_mlme::MeshPeeringCommon {
                                     local_link_id: 0,
-                                    ..clone_utils::clone_mesh_peering_common(&action.common)
+                                    ..action.common.clone()
                                 },
                             };
                             self.mlme_sink.send(MlmeRequest::SendMpOpenAction(open));
