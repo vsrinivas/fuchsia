@@ -100,10 +100,6 @@ type WlanInfoChannelList = struct {
     channels array<uint8, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
 };
 
-/// The maximum number of rates in WlanInfoBandInfo.
-// IEEE Std 802.11-2016 defines 12 values in dot11SupportedDataRatesRxTable
-const WLAN_INFO_BAND_INFO_MAX_RATES uint32 = 12;
-
 /// The maximum number of bands supported in a WlanInfo struct. For now this is 2
 /// to keep the struct a small, fixed size.
 const WLAN_INFO_MAX_BANDS uint32 = 2;

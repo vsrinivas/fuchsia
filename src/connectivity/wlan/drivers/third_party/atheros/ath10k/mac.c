@@ -153,7 +153,8 @@ static const struct ath10k_band ath10k_supported_bands[] = {
         // TODO(28891):
         // Unmark the "BasicRate" bit for the first 4 rates.
         // See IEEE Std 802.11-2016, 9.4.2.3 for encoding
-        .rates = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c},
+        .basic_rate_list = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c},
+        .basic_rate_count = 12,
         .base_freq = 2407,
         .n_channels = countof(ath10k_2ghz_channels),
         .channels = ath10k_2ghz_channels,
@@ -170,7 +171,8 @@ static const struct ath10k_band ath10k_supported_bands[] = {
         //     6 Mbps, 9 Mbps, 12 Mbps
         //   Supported rates:
         //     18 Mbps, 24 Mbps, 36 Mbps, 48 Mbps, 54 Mbps
-        .rates = {0x8c, 0x92, 0x98, 0x24, 0x30, 0x48, 0x60, 0x6c},
+        .basic_rate_list = {0x8c, 0x92, 0x98, 0x24, 0x30, 0x48, 0x60, 0x6c},
+        .basic_rate_count = 8,
         .base_freq = 5000,
         .n_channels = countof(ath10k_5ghz_channels),
         .channels = ath10k_5ghz_channels,

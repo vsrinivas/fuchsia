@@ -120,19 +120,19 @@ static const uint8_t iwl_ext_nvm_channels[] = {
 #define N_HW_ADDR_MASK 0xF
 
 /* rate data (static) */
-uint16_t iwl_cfg80211_rates[] = {
-    1 * 10,                // 1 Mbps
-    2 * 10,                // 2 Mbps
-    (uint16_t)(5.5 * 10),  // 5.5 Mbps
-    11 * 10,               // 11 Mbps
-    6 * 10,                // 6 Mbps
-    9 * 10,                // 9 Mbps
-    12 * 10,               // 12 Mbps
-    18 * 10,               // 18 Mbps
-    24 * 10,               // 24 Mbps
-    36 * 10,               // 36 Mbps
-    48 * 10,               // 48 Mbps
-    54 * 10,               // 54 Mbps
+uint8_t iwl_cfg80211_rates[] = {
+    1 * 10,               // 1 Mbps
+    2 * 10,               // 2 Mbps
+    (uint8_t)(5.5 * 10),  // 5.5 Mbps
+    11 * 10,              // 11 Mbps
+    6 * 10,               // 6 Mbps
+    9 * 10,               // 9 Mbps
+    12 * 10,              // 12 Mbps
+    18 * 10,              // 18 Mbps
+    24 * 10,              // 24 Mbps
+    36 * 10,              // 36 Mbps
+    48 * 10,              // 48 Mbps
+    54 * 10,              // 54 Mbps
 };
 #define RATES_24_OFFS 0
 #define N_RATES_24 ARRAY_SIZE(iwl_cfg80211_rates)
@@ -143,7 +143,7 @@ uint16_t iwl_cfg80211_rates[] = {
 //
 // Note that it is the 'hw_index' field in the original code and was removed in fxr/338189.
 //
-size_t iwl_get_rate_index(uint16_t rate) {
+size_t iwl_get_rate_index(uint8_t rate) {
   for (size_t i = 0; i < ARRAY_SIZE(iwl_cfg80211_rates); i++) {
     if (iwl_cfg80211_rates[i] == rate) {
       return i;

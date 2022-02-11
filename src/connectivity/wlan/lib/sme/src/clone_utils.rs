@@ -4,13 +4,13 @@
 
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_internal as fidl_internal;
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BandCapabilities};
+use fidl_fuchsia_wlan_mlme as fidl_mlme;
 
 pub fn clone_device_info(d: &fidl_mlme::DeviceInfo) -> fidl_mlme::DeviceInfo {
     fidl_mlme::DeviceInfo {
         sta_addr: d.sta_addr,
         role: d.role,
-        bands: clone_bands(&d.bands),
+        bands: d.bands.clone(),
         driver_features: d.driver_features.clone(),
         qos_capable: d.qos_capable,
     }
@@ -51,22 +51,6 @@ pub fn clone_bss_desc(d: &fidl_internal::BssDescription) -> fidl_internal::BssDe
         rssi_dbm: d.rssi_dbm,
         snr_db: d.snr_db,
     }
-}
-
-pub fn clone_band_cap(b: &BandCapabilities) -> BandCapabilities {
-    BandCapabilities {
-        band_id: b.band_id,
-        rates: b.rates.clone(),
-        base_frequency: b.base_frequency,
-        channels: b.channels.clone(),
-        ht_cap: b.ht_cap.as_ref().map(|v| Box::new(clone_ht_capabilities(v))),
-        vht_cap: b.vht_cap.as_ref().map(|v| Box::new(clone_vht_capabilities(v))),
-        capability_info: b.capability_info,
-    }
-}
-
-pub fn clone_bands(bv: &Vec<BandCapabilities>) -> Vec<BandCapabilities> {
-    bv.iter().map(clone_band_cap).collect()
 }
 
 pub fn clone_mesh_configuration(c: &fidl_mlme::MeshConfiguration) -> fidl_mlme::MeshConfiguration {

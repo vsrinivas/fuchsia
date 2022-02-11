@@ -96,7 +96,7 @@ static bool check_vif_up(struct brcmf_cfg80211_vif* vif) {
   return true;
 }
 
-static uint16_t __wl_rates[] = {
+static uint8_t __wl_rates[] = {
     BRCM_RATE_1M,  BRCM_RATE_2M,  BRCM_RATE_5M5, BRCM_RATE_11M, BRCM_RATE_6M,  BRCM_RATE_9M,
     BRCM_RATE_12M, BRCM_RATE_18M, BRCM_RATE_24M, BRCM_RATE_36M, BRCM_RATE_48M, BRCM_RATE_54M,
 };
@@ -4091,15 +4091,15 @@ static void brcmf_dump_if_band_cap(wlan_fullmac_band_capability_t* band) {
   }
   BRCMF_DBG_UNFILTERED("   band_id: %s", band_id_str);
 
-  if (band->num_rates > WLAN_INFO_BAND_INFO_MAX_RATES) {
-    BRCMF_DBG_UNFILTERED("Number of rates reported (%zu) exceeds limit (%du), truncating",
-                         band->num_rates, WLAN_INFO_BAND_INFO_MAX_RATES);
-    band->num_rates = WLAN_INFO_BAND_INFO_MAX_RATES;
+  if (band->basic_rate_count > fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES) {
+    BRCMF_DBG_UNFILTERED("Number of rates reported (%u) exceeds limit (%du), truncating",
+                         band->basic_rate_count, fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES);
+    band->basic_rate_count = fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES;
   }
-  char rates_str[WLAN_INFO_BAND_INFO_MAX_RATES * 6 + 1];
+  char rates_str[fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES * 6 + 1];
   char* str = rates_str;
-  for (unsigned i = 0; i < band->num_rates; i++) {
-    str += sprintf(str, "%s%d", i > 0 ? " " : "", band->rates[i]);
+  for (unsigned i = 0; i < band->basic_rate_count; i++) {
+    str += sprintf(str, "%s%d", i > 0 ? " " : "", band->basic_rate_list[i]);
   }
   BRCMF_DBG_UNFILTERED("     basic_rates: %s", rates_str);
 
@@ -4204,14 +4204,18 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
     wlan_fullmac_band_capability_t* band = &info->band_cap_list[i - 1];
     if (bandlist[i] == WLC_BAND_2G) {
       band->band_id = WLAN_INFO_BAND_TWO_GHZ;
-      band->num_rates = std::min<size_t>(WLAN_INFO_BAND_INFO_MAX_RATES, wl_g_rates_size);
-      memcpy(band->rates, wl_g_rates, band->num_rates * sizeof(uint16_t));
+      band->basic_rate_count =
+          std::min<size_t>(fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES, wl_g_rates_size);
+      memcpy(band->basic_rate_list, wl_g_rates,
+             band->basic_rate_count * sizeof(*band->basic_rate_list));
       band->base_frequency = 2407;
       band_2ghz = band;
     } else if (bandlist[i] == WLC_BAND_5G) {
       band->band_id = WLAN_INFO_BAND_FIVE_GHZ;
-      band->num_rates = std::min<size_t>(WLAN_INFO_BAND_INFO_MAX_RATES, wl_a_rates_size);
-      memcpy(band->rates, wl_a_rates, band->num_rates * sizeof(uint16_t));
+      band->basic_rate_count =
+          std::min<size_t>(fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES, wl_a_rates_size);
+      memcpy(band->basic_rate_list, wl_a_rates,
+             band->basic_rate_count * sizeof(*band->basic_rate_list));
       band->base_frequency = 5000;
       band_5ghz = band;
     }

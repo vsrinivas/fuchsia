@@ -94,7 +94,8 @@ wlan_softmac_band_capability_t FakeBandCapability(wlan_info_band_t band) {
               .vht_capability_info = 0x0f805032,
               .supported_vht_mcs_and_nss_set = 0x0000fffe0000fffe,
           },
-      .rates = {12, 24, 48, 54, 96, 108},
+      .basic_rate_count = 6,
+      .basic_rate_list = {12, 24, 48, 54, 96, 108},
       .supported_channels =
           {
               .base_freq = 0,

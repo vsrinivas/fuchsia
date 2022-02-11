@@ -149,7 +149,7 @@ fn get_band_id(primary_channel: u8) -> fidl_common::Band {
     }
 }
 
-pub fn get_device_band_info(
+pub fn get_device_band_cap(
     device_info: &fidl_mlme::DeviceInfo,
     channel: u8,
 ) -> Option<&fidl_mlme::BandCapabilities> {
@@ -301,7 +301,7 @@ mod tests {
     fn test_get_device_band_info() {
         assert_eq!(
             fidl_common::Band::WlanBand5Ghz,
-            get_device_band_info(
+            get_device_band_cap(
                 &fake_device_info_ht(wlan_common::ie::ChanWidthSet::TWENTY_FORTY),
                 36
             )

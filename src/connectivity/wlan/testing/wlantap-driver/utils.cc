@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/wlan/softmac/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
+#include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 
 #include <wlan/common/band.h>
@@ -21,6 +22,7 @@ namespace wlan {
 
 namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_device = ::fuchsia::wlan::device;
+namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_tap = ::fuchsia::wlan::tap;
 
 void FillSupportedPhys(
@@ -142,8 +144,9 @@ void ConvertBandInfoToCapability(const wlan_device::BandInfo& in,
     out->vht_supported = false;
   }
 
-  std::copy_n(in.rates.data(), std::min<size_t>(in.rates.size(), WLAN_INFO_BAND_INFO_MAX_RATES),
-              out->rates);
+  out->basic_rate_count =
+      std::min<size_t>(in.rates.size(), wlan_internal::MAX_SUPPORTED_BASIC_RATES);
+  std::copy_n(in.rates.data(), out->basic_rate_count, out->basic_rate_list);
 
   out->supported_channels.base_freq = in.supported_channels.base_freq;
   std::copy_n(

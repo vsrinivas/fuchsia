@@ -14,7 +14,7 @@ use remote_client::*;
 
 use {
     crate::{
-        capabilities::get_device_band_info, mlme_event_name, responder::Responder, MlmeRequest,
+        capabilities::get_device_band_cap, mlme_event_name, responder::Responder, MlmeRequest,
         MlmeSink,
     },
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
@@ -134,19 +134,17 @@ impl ApSme {
         let (responder, receiver) = Responder::new();
         self.state = self.state.take().map(|state| match state {
             State::Idle { mut ctx } => {
-                let band_cap = match get_device_band_info(
-                    &ctx.device_info,
-                    config.radio_cfg.channel.primary,
-                ) {
-                    None => {
-                        responder.respond(StartResult::InvalidArguments(format!(
-                            "Device has not band capabilities for channel {}",
-                            config.radio_cfg.channel.primary,
-                        )));
-                        return State::Idle { ctx };
-                    }
-                    Some(bc) => bc,
-                };
+                let band_cap =
+                    match get_device_band_cap(&ctx.device_info, config.radio_cfg.channel.primary) {
+                        None => {
+                            responder.respond(StartResult::InvalidArguments(format!(
+                                "Device has not band capabilities for channel {}",
+                                config.radio_cfg.channel.primary,
+                            )));
+                            return State::Idle { ctx };
+                        }
+                        Some(bc) => bc,
+                    };
 
                 let op_radio_cfg = match validate_radio_cfg(&band_cap, &config.radio_cfg) {
                     Err(result) => {
@@ -175,15 +173,23 @@ impl ApSme {
                     // confidentiality is required for all Data frames exchanged within the BSS.
                     .with_privacy(rsn_cfg.is_some());
 
-                let req = create_start_request(
+                let req = match create_start_request(
                     &op_radio_cfg,
                     &config.ssid,
                     rsn_cfg.as_ref(),
                     capabilities,
-                    &band_cap.rates,
-                );
+                    // The max length of fuchsia.wlan.mlme/BandCapabilities.basic_rates is
+                    // less than fuchsia.wlan.mlme/StartRequest.rates.
+                    &band_cap.basic_rates,
+                ) {
+                    Ok(req) => req,
+                    Err(result) => {
+                        responder.respond(result);
+                        return State::Idle { ctx };
+                    }
+                };
 
-                let rates = band_cap.rates.iter().map(|r| SupportedRate(*r)).collect();
+                let rates = band_cap.basic_rates.iter().map(|r| SupportedRate(*r)).collect();
 
                 ctx.mlme_sink.send(MlmeRequest::Start(req));
                 let event = Event::Sme { event: SmeEvent::StartTimeout };
@@ -818,8 +824,8 @@ fn create_start_request(
     ssid: &Ssid,
     ap_rsn: Option<&RsnCfg>,
     capabilities: mac::CapabilityInfo,
-    rates: &[u8],
-) -> fidl_mlme::StartRequest {
+    basic_rates: &[u8],
+) -> Result<fidl_mlme::StartRequest, StartResult> {
     let rsne_bytes = ap_rsn.as_ref().map(|RsnCfg { rsne, .. }| {
         let mut buf = Vec::with_capacity(rsne.len());
         if let Err(e) = rsne.write_into(&mut buf) {
@@ -830,14 +836,23 @@ fn create_start_request(
 
     let (channel_bandwidth, _secondary80) = op_radio_cfg.channel.cbw.to_fidl();
 
-    fidl_mlme::StartRequest {
+    if basic_rates.len() > fidl_internal::MAX_ASSOC_BASIC_RATES as usize {
+        error!(
+            "Too many basic rates ({}). Max is {}.",
+            basic_rates.len(),
+            fidl_internal::MAX_ASSOC_BASIC_RATES
+        );
+        return Err(StartResult::InternalError);
+    }
+
+    Ok(fidl_mlme::StartRequest {
         ssid: ssid.to_vec(),
         bss_type: fidl_internal::BssType::Infrastructure,
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: op_radio_cfg.channel.primary,
         capability_info: capabilities.raw(),
-        rates: rates.to_vec(),
+        rates: basic_rates.to_vec(),
         country: fidl_mlme::Country {
             // TODO(fxbug.dev/29490): Get config from wlancfg
             alpha2: ['U' as u8, 'S' as u8],
@@ -847,7 +862,7 @@ fn create_start_request(
         mesh_id: vec![],
         phy: op_radio_cfg.phy,
         channel_bandwidth,
-    }
+    })
 }
 
 #[cfg(test)]

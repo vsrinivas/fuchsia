@@ -9,7 +9,7 @@
 //! If successful, the capabilities will be extracted and saved.
 
 use {
-    crate::capabilities::{get_device_band_info, ClientCapabilities, StaCapabilities},
+    crate::capabilities::{get_device_band_cap, ClientCapabilities, StaCapabilities},
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
     wlan_common::{
@@ -72,23 +72,23 @@ pub(crate) fn derive_join_capabilities(
     device_info: &fidl_mlme::DeviceInfo,
 ) -> Result<ClientCapabilities, Error> {
     // Step 1 - Extract iface capabilities for this particular band we are joining
-    let band_info = get_device_band_info(&device_info, bss_channel.primary)
+    let band_cap = get_device_band_cap(&device_info, bss_channel.primary)
         .ok_or_else(|| format_err!("iface does not support BSS channel {}", bss_channel.primary))?;
 
     // Step 2.1 - Override CapabilityInfo
-    let capability_info = override_capability_info(CapabilityInfo(band_info.capability_info));
+    let capability_info = override_capability_info(CapabilityInfo(band_cap.capability_info));
 
     // Step 2.2 - Derive data rates
     // Both are safe to unwrap because SupportedRate is one byte and will not cause alignment issue.
-    let client_rates = band_info.rates.iter().map(|&r| SupportedRate(r)).collect::<Vec<_>>();
+    let client_rates = band_cap.basic_rates.iter().map(|&r| SupportedRate(r)).collect::<Vec<_>>();
     let rates = intersect_rates(ApRates(bss_rates), ClientRates(&client_rates))
         .map_err(|error| format_err!("could not intersect rates: {:?}", error))
-        .context(format!("deriving rates: {:?} + {:?}", band_info.rates, bss_rates))?;
+        .context(format!("deriving rates: {:?} + {:?}", band_cap.basic_rates, bss_rates))?;
 
     // Step 2.3 - Override HT Capabilities and VHT Capabilities
     // Here it is assumed that the channel specified by the BSS will never be invalid.
     let (ht_cap, vht_cap) =
-        override_ht_vht(band_info.ht_cap.as_ref(), band_info.vht_cap.as_ref(), bss_channel.cbw)?;
+        override_ht_vht(band_cap.ht_cap.as_ref(), band_cap.vht_cap.as_ref(), bss_channel.cbw)?;
 
     Ok(ClientCapabilities(StaCapabilities { capability_info, rates, ht_cap, vht_cap }))
 }

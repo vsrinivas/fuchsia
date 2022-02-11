@@ -96,7 +96,7 @@ type JoinRequest = struct {
     selected_bss internal.BssDescription;
     join_failure_timeout uint32;
     nav_sync_delay uint32;
-    op_rates bytes:internal.RATES_MAX_LEN;
+    op_rates bytes:internal.MAX_ASSOC_BASIC_RATES;
 };
 
 // MLME-JOIN.confirm (IEEE Std 802.11-2016, 6.3.4.3)
@@ -199,7 +199,7 @@ type DeauthenticateIndication = struct {
 type AssociateRequest = struct {
     peer_sta_address ieee80211.MacAddr;
     capability_info internal.CapabilityInfo;
-    rates bytes:internal.RATES_MAX_LEN;
+    rates bytes:internal.MAX_ASSOC_BASIC_RATES;
     qos_capable bool;
     qos_info QosInfo;
     ht_cap box<internal.HtCapabilities>;
@@ -233,7 +233,7 @@ type AssociateConfirm = struct {
     // TODO(fxbug.dev/43063): If we are able to intersect the capabilities with beacon before associating,
     // remove these fields.
     capability_info internal.CapabilityInfo;
-    rates bytes:internal.RATES_MAX_LEN;
+    rates bytes:internal.MAX_ASSOC_BASIC_RATES;
     wmm_param box<WmmParameter>;
     ht_cap box<internal.HtCapabilities>;
     vht_cap box<internal.VhtCapabilities>;
@@ -248,7 +248,7 @@ type AssociateIndication = struct {
     capability_info internal.CapabilityInfo;
     listen_interval uint16;
     ssid ieee80211.Ssid:optional;
-    rates bytes:internal.RATES_MAX_LEN;
+    rates bytes:internal.MAX_ASSOC_BASIC_RATES;
     // BSSMembershipSelectorSet
     rsne bytes:optional;
 
@@ -269,7 +269,7 @@ type AssociateResponse = struct {
 
     // This combines both the BSSBasicRateSet and the OperationalRateSet, as the MLME will split
     // them up.
-    rates bytes:internal.RATES_MAX_LEN;
+    rates bytes:internal.MAX_ASSOC_BASIC_RATES;
 
     // etc
 };
@@ -337,7 +337,7 @@ type StartRequest = struct {
 
     // This combines both the BSSBasicRateSet and the OperationalRateSet, as the MLME will split
     // them up.
-    rates bytes:internal.RATES_MAX_LEN;
+    rates bytes:internal.MAX_ASSOC_BASIC_RATES;
 
     // TODO(porce): Conditionally present. See IEEE Std 802.11-2016, 10.2, 11.8, 11.10.
     // See also dot11MultiDomainCapabilityActivated.

@@ -25,7 +25,8 @@ struct/member fuchsia.wlan.internal/HtCapabilities.bytes array<uint8,26>
 struct fuchsia.wlan.internal/HtCapabilities
 struct/member fuchsia.wlan.internal/HtOperation.bytes array<uint8,22>
 struct fuchsia.wlan.internal/HtOperation
-const fuchsia.wlan.internal/RATES_MAX_LEN uint8 22
+const fuchsia.wlan.internal/MAX_ASSOC_BASIC_RATES uint8 14
+const fuchsia.wlan.internal/MAX_SUPPORTED_BASIC_RATES uint8 12
 struct/member fuchsia.wlan.internal/SignalReportIndication.rssi_dbm int8
 struct/member fuchsia.wlan.internal/SignalReportIndication.snr_db int8
 struct fuchsia.wlan.internal/SignalReportIndication

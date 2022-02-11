@@ -4,8 +4,7 @@
 
 use {
     crate::{
-        capabilities::get_device_band_info, clone_utils, responder::Responder, MlmeRequest,
-        MlmeSink,
+        capabilities::get_device_band_cap, clone_utils, responder::Responder, MlmeRequest, MlmeSink,
     },
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
@@ -295,14 +294,14 @@ fn create_peering_params(
     peer: &fidl_mlme::MeshPeeringCommon,
     local_aid: Aid,
 ) -> Option<fidl_mlme::MeshPeeringParams> {
-    let band_caps = match get_device_band_info(device_info, config.channel) {
+    let band_cap = match get_device_band_cap(device_info, config.channel) {
         Some(x) => x,
         None => {
             error!("Failed to find band capabilities for channel {}", config.channel);
             return None;
         }
     };
-    let rates = peer.rates.iter().filter(|x| band_caps.rates.contains(x)).cloned().collect();
+    let rates = peer.rates.iter().filter(|x| band_cap.basic_rates.contains(x)).cloned().collect();
     Some(fidl_mlme::MeshPeeringParams { peer_sta_address: peer.peer_sta_address, local_aid, rates })
 }
 

@@ -26,7 +26,7 @@ type EapolIndication = struct {
 // This grouping is the industry's de factor standard.
 type BandCapabilities = struct {
     band_id fuchsia.wlan.common.Band;
-    rates bytes:internal.RATES_MAX_LEN;
+    basic_rates vector<uint8>:internal.MAX_SUPPORTED_BASIC_RATES;
     base_frequency uint16;
     channels bytes;
 
@@ -141,7 +141,7 @@ type CapturedFrameResult = struct {
 type NegotiatedCapabilities = struct {
     channel fuchsia.wlan.common.WlanChannel;
     capability_info internal.CapabilityInfo;
-    rates bytes:internal.RATES_MAX_LEN;
+    rates bytes:internal.MAX_ASSOC_BASIC_RATES;
     wmm_param box<WmmParameter>;
     ht_cap box<internal.HtCapabilities>;
     vht_cap box<internal.VhtCapabilities>;

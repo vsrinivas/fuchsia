@@ -3104,8 +3104,9 @@ static void ath10k_band_query_capability(struct ath10k* ar, const struct ath10k_
   }
 
   // rates
-  ZX_DEBUG_ASSERT(sizeof(wlan_band->rates) == sizeof(dev_band->rates));
-  memcpy(&wlan_band->rates, &dev_band->rates, sizeof(wlan_band->rates));
+  ZX_DEBUG_ASSERT(sizeof(wlan_band->basic_rate_list) >= sizeof(dev_band->basic_rate_count));
+  memcpy(&wlan_band->basic_rate_list, &dev_band->basic_rate_list, dev_band->basic_rate_count);
+  wlan_band->basic_rate_count = dev_band->basic_rate_count;
 
   // base_freq
   wlan_band->supported_channels.base_freq = dev_band->base_freq;

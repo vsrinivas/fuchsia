@@ -1,7 +1,7 @@
 struct/member fuchsia.wlan.mlme/AssociateConfirm.association_id uint16
 struct/member fuchsia.wlan.mlme/AssociateConfirm.capability_info uint16
 struct/member fuchsia.wlan.mlme/AssociateConfirm.ht_cap fuchsia.wlan.internal/HtCapabilities:optional
-struct/member fuchsia.wlan.mlme/AssociateConfirm.rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/AssociateConfirm.rates vector<uint8>:14
 struct/member fuchsia.wlan.mlme/AssociateConfirm.result_code fuchsia.wlan.ieee80211/StatusCode
 struct/member fuchsia.wlan.mlme/AssociateConfirm.vht_cap fuchsia.wlan.internal/VhtCapabilities:optional
 struct/member fuchsia.wlan.mlme/AssociateConfirm.wmm_param box<fuchsia.wlan.mlme/WmmParameter>
@@ -9,7 +9,7 @@ struct fuchsia.wlan.mlme/AssociateConfirm
 struct/member fuchsia.wlan.mlme/AssociateIndication.capability_info uint16
 struct/member fuchsia.wlan.mlme/AssociateIndication.listen_interval uint16
 struct/member fuchsia.wlan.mlme/AssociateIndication.peer_sta_address array<uint8,6>
-struct/member fuchsia.wlan.mlme/AssociateIndication.rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/AssociateIndication.rates vector<uint8>:14
 struct/member fuchsia.wlan.mlme/AssociateIndication.rsne vector<uint8>:optional
 struct/member fuchsia.wlan.mlme/AssociateIndication.ssid vector<uint8>:<32,optional>
 struct fuchsia.wlan.mlme/AssociateIndication
@@ -18,7 +18,7 @@ struct/member fuchsia.wlan.mlme/AssociateRequest.ht_cap fuchsia.wlan.internal/Ht
 struct/member fuchsia.wlan.mlme/AssociateRequest.peer_sta_address array<uint8,6>
 struct/member fuchsia.wlan.mlme/AssociateRequest.qos_capable bool
 struct/member fuchsia.wlan.mlme/AssociateRequest.qos_info uint8
-struct/member fuchsia.wlan.mlme/AssociateRequest.rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/AssociateRequest.rates vector<uint8>:14
 struct/member fuchsia.wlan.mlme/AssociateRequest.rsne vector<uint8>:optional
 struct/member fuchsia.wlan.mlme/AssociateRequest.vendor_ies vector<uint8>:optional
 struct/member fuchsia.wlan.mlme/AssociateRequest.vht_cap fuchsia.wlan.internal/VhtCapabilities:optional
@@ -26,7 +26,7 @@ struct fuchsia.wlan.mlme/AssociateRequest
 struct/member fuchsia.wlan.mlme/AssociateResponse.association_id uint16
 struct/member fuchsia.wlan.mlme/AssociateResponse.capability_info uint16
 struct/member fuchsia.wlan.mlme/AssociateResponse.peer_sta_address array<uint8,6>
-struct/member fuchsia.wlan.mlme/AssociateResponse.rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/AssociateResponse.rates vector<uint8>:14
 struct/member fuchsia.wlan.mlme/AssociateResponse.result_code fuchsia.wlan.mlme/AssociateResultCode
 struct fuchsia.wlan.mlme/AssociateResponse
 enum/member fuchsia.wlan.mlme/AssociateResultCode.REFUSED_AP_OUT_OF_MEMORY 5
@@ -68,10 +68,10 @@ enum/member fuchsia.wlan.mlme/AuthenticationTypes.SHARED_KEY 2
 strict enum fuchsia.wlan.mlme/AuthenticationTypes uint32
 struct/member fuchsia.wlan.mlme/BandCapabilities.band_id fuchsia.wlan.common/Band
 struct/member fuchsia.wlan.mlme/BandCapabilities.base_frequency uint16
+struct/member fuchsia.wlan.mlme/BandCapabilities.basic_rates vector<uint8>:12
 struct/member fuchsia.wlan.mlme/BandCapabilities.capability_info uint16
 struct/member fuchsia.wlan.mlme/BandCapabilities.channels vector<uint8>
 struct/member fuchsia.wlan.mlme/BandCapabilities.ht_cap fuchsia.wlan.internal/HtCapabilities:optional
-struct/member fuchsia.wlan.mlme/BandCapabilities.rates vector<uint8>:22
 struct/member fuchsia.wlan.mlme/BandCapabilities.vht_cap fuchsia.wlan.internal/VhtCapabilities:optional
 struct fuchsia.wlan.mlme/BandCapabilities
 struct/member fuchsia.wlan.mlme/CapturedFrameResult.frame vector<uint8>
@@ -140,7 +140,7 @@ struct/member fuchsia.wlan.mlme/JoinConfirm.result_code fuchsia.wlan.ieee80211/S
 struct fuchsia.wlan.mlme/JoinConfirm
 struct/member fuchsia.wlan.mlme/JoinRequest.join_failure_timeout uint32
 struct/member fuchsia.wlan.mlme/JoinRequest.nav_sync_delay uint32
-struct/member fuchsia.wlan.mlme/JoinRequest.op_rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/JoinRequest.op_rates vector<uint8>:14
 struct/member fuchsia.wlan.mlme/JoinRequest.selected_bss fuchsia.wlan.internal/BssDescription
 struct fuchsia.wlan.mlme/JoinRequest
 enum/member fuchsia.wlan.mlme/JoinResultCode.JOIN_FAILURE_TIMEOUT 1
@@ -263,7 +263,7 @@ struct fuchsia.wlan.mlme/MinstrelStatsResponse
 struct/member fuchsia.wlan.mlme/NegotiatedCapabilities.capability_info uint16
 struct/member fuchsia.wlan.mlme/NegotiatedCapabilities.channel fuchsia.wlan.common/WlanChannel
 struct/member fuchsia.wlan.mlme/NegotiatedCapabilities.ht_cap fuchsia.wlan.internal/HtCapabilities:optional
-struct/member fuchsia.wlan.mlme/NegotiatedCapabilities.rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/NegotiatedCapabilities.rates vector<uint8>:14
 struct/member fuchsia.wlan.mlme/NegotiatedCapabilities.vht_cap fuchsia.wlan.internal/VhtCapabilities:optional
 struct/member fuchsia.wlan.mlme/NegotiatedCapabilities.wmm_param box<fuchsia.wlan.mlme/WmmParameter>
 struct fuchsia.wlan.mlme/NegotiatedCapabilities
@@ -342,7 +342,7 @@ struct/member fuchsia.wlan.mlme/StartRequest.country fuchsia.wlan.mlme/Country
 struct/member fuchsia.wlan.mlme/StartRequest.dtim_period uint8
 struct/member fuchsia.wlan.mlme/StartRequest.mesh_id vector<uint8>:32
 struct/member fuchsia.wlan.mlme/StartRequest.phy fuchsia.wlan.common/WlanPhyType
-struct/member fuchsia.wlan.mlme/StartRequest.rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/StartRequest.rates vector<uint8>:14
 struct/member fuchsia.wlan.mlme/StartRequest.rsne vector<uint8>:optional
 struct/member fuchsia.wlan.mlme/StartRequest.ssid vector<uint8>:32
 struct fuchsia.wlan.mlme/StartRequest

@@ -403,8 +403,8 @@ type WlanFullmacSaeHandshakeInd = struct {
 type WlanFullmacBandCapability = struct {
     /// Values from enum Band (WLAN_BAND_*)
     band_id uint8;
-    num_rates uint64;
-    rates array<uint16, fuchsia.hardware.wlan.phyinfo.WLAN_INFO_BAND_INFO_MAX_RATES>;
+    basic_rate_count uint8;
+    basic_rate_list array<uint8, fuchsia.wlan.internal.MAX_SUPPORTED_BASIC_RATES>;
     base_frequency uint16;
     num_channels uint64;
     channels array<uint8, fuchsia.hardware.wlan.phyinfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;

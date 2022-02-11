@@ -106,7 +106,8 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
         .ht_caps = {},
         .vht_supported = false,
         .vht_caps = {},
-        .rates = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108},
+        .basic_rate_count = 12,
+        .basic_rate_list = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108},
         .supported_channels =
             {
                 .base_freq = 2417,
@@ -119,7 +120,8 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
         .ht_caps = {},
         .vht_supported = false,
         .vht_caps = {},
-        .rates = {12, 18, 24, 36, 48, 72, 96, 108},
+        .basic_rate_count = 8,
+        .basic_rate_list = {12, 18, 24, 36, 48, 72, 96, 108},
         .supported_channels =
             {
                 .base_freq = 5000,

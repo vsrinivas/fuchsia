@@ -558,7 +558,7 @@ fn supported_rates_for_band(
 ) -> Result<Vec<u8>, Error> {
     let band_cap = band_cap_for_band(&wlan_softmac_info, band)
         .ok_or(format_err!("no band found for band {:?}", band))?;
-    Ok(band_cap.rates.iter().cloned().filter(|r| *r > 0).collect())
+    Ok(band_cap.basic_rate_list[..band_cap.basic_rate_count as usize].to_vec())
 }
 
 // TODO(fxbug.dev/91038): This is not correct. Channel numbers do not imply band.

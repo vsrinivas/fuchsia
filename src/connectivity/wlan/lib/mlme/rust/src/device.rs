@@ -585,7 +585,8 @@ mod test_utils {
         },
         banjo_ddk_hw_wlan_ieee80211::*,
         banjo_fuchsia_hardware_wlan_phyinfo::*,
-        banjo_fuchsia_wlan_common as banjo_common, fuchsia_async as fasync,
+        banjo_fuchsia_wlan_common as banjo_common,
+        banjo_fuchsia_wlan_internal as banjo_wlan_internal, fuchsia_async as fasync,
         fuchsia_zircon as zircon,
         std::convert::TryInto,
     };
@@ -923,10 +924,11 @@ mod test_utils {
         let mut band_cap_list = [default_band_capability(); WLAN_INFO_MAX_BANDS as usize];
         band_cap_list[0] = banjo_wlan_softmac::WlanSoftmacBandCapability {
             band: WlanInfoBand::TWO_GHZ,
-            rates: arr!(
+            basic_rate_list: arr!(
                 [0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C],
-                WLAN_INFO_BAND_INFO_MAX_RATES as usize
+                banjo_wlan_internal::MAX_SUPPORTED_BASIC_RATES as usize
             ),
+            basic_rate_count: 8,
             supported_channels: WlanInfoChannelList {
                 base_freq: 2407,
                 channels: arr!(
@@ -944,7 +946,11 @@ mod test_utils {
         };
         band_cap_list[1] = banjo_wlan_softmac::WlanSoftmacBandCapability {
             band: WlanInfoBand::FIVE_GHZ,
-            rates: arr!([0x7E, 0x7F], WLAN_INFO_BAND_INFO_MAX_RATES as usize),
+            basic_rate_list: arr!(
+                [0x7E, 0x7F],
+                banjo_wlan_internal::MAX_SUPPORTED_BASIC_RATES as usize
+            ),
+            basic_rate_count: 2,
             supported_channels: WlanInfoChannelList {
                 base_freq: 5000,
                 channels: arr!(
@@ -1031,7 +1037,8 @@ mod test_utils {
                 vht_capability_info: 0,
                 supported_vht_mcs_and_nss_set: 0,
             },
-            rates: [0; WLAN_INFO_BAND_INFO_MAX_RATES as usize],
+            basic_rate_list: [0; banjo_wlan_internal::MAX_SUPPORTED_BASIC_RATES as usize],
+            basic_rate_count: 0,
             supported_channels: WlanInfoChannelList {
                 base_freq: 0,
                 channels: [0; WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize],

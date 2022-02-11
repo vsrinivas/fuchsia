@@ -649,7 +649,7 @@ std::string Describe(const wlan_softmac_band_capability& bc) {
   BUFFER("ht_caps:[%s]", Describe(bc.ht_caps).c_str());
   BUFFER("vht_supported:%u", bc.vht_supported);
   BUFFER("vht_caps:[to implement]");
-  BUFFER("rates:[%s]", DescribeArray(bc.rates, 12).c_str());
+  BUFFER("rates:[%s]", DescribeArray(bc.basic_rate_list, bc.basic_rate_count).c_str());
   BUFFER("supported_channels:[%s]", Describe(bc.supported_channels).c_str());
   return std::string(buf);
 }

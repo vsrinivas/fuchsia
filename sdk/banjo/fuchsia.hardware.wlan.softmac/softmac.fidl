@@ -23,11 +23,10 @@ type WlanSoftmacBandCapability = struct {
     vht_supported bool;
     vht_caps ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities;
 
-    // TODO(fxbug.dev/91036): The type of this field should be a vector. The current
-    // implementation relies on removing zeros from the array.
     /// Rates supported in this band, in units of 500 kbit/s (as defined in
     /// IEEE Std 802.11-2016, 9.4.2.3). For example, 1 Mbit/s is represented as 0x02.
-    rates array<uint8, fuchsia.hardware.wlan.phyinfo.WLAN_INFO_BAND_INFO_MAX_RATES>;
+    basic_rate_count uint8;
+    basic_rate_list array<uint8, fuchsia.wlan.internal.MAX_SUPPORTED_BASIC_RATES>;
 
     // TODO(fxbug.dev/91033): The information returned by this field should only be
     // required in SoftMAC implementations where scan cannot be offloaded to the
