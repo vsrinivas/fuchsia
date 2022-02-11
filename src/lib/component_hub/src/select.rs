@@ -13,12 +13,21 @@ use {
 
 static CAPABILITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
 
-// Given a v2 hub directory, collect components that expose |capability|.
-// This function is recursive and will find matching CMX and CML components.
-pub async fn find_components(
-    capability: String,
-    hub_dir: Directory,
-) -> Result<Vec<AbsoluteMoniker>> {
+/// Components that were found by |find_components|, separated into two vectors (one for components
+/// that expose the capability, the other for components that use the capability).
+pub struct MatchingComponents {
+    pub exposed: Vec<AbsoluteMoniker>,
+    pub used: Vec<AbsoluteMoniker>,
+}
+
+struct CapabilityExists {
+    exposed: bool,
+    used: bool,
+}
+
+/// Given a v2 hub directory, collect components that expose or use |capability|.
+/// This function is recursive and will find matching CMX and CML components.
+pub async fn find_components(capability: String, hub_dir: Directory) -> Result<MatchingComponents> {
     find_components_internal(capability, String::new(), AbsoluteMoniker::root(), hub_dir).await
 }
 
@@ -27,7 +36,7 @@ fn find_components_internal(
     name: String,
     moniker: AbsoluteMoniker,
     hub_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<AbsoluteMoniker>>> {
+) -> BoxFuture<'static, Result<MatchingComponents>> {
     async move {
         let mut futures = vec![];
         let children_dir = hub_dir.open_dir_readable("children")?;
@@ -52,14 +61,22 @@ fn find_components_internal(
         }
 
         let results = join_all(futures).await;
-        let mut matching_components = vec![];
+        let mut matching_components = MatchingComponents { exposed: vec![], used: vec![] };
+
         for result in results {
-            let mut result = result?;
-            matching_components.append(&mut result);
+            let MatchingComponents { mut exposed, mut used } = result?;
+            matching_components.exposed.append(&mut exposed);
+            matching_components.used.append(&mut used);
         }
 
-        if exposed_capability_exists_v2(hub_dir, capability).await? {
-            matching_components.push(moniker);
+        let CapabilityExists { exposed, used } =
+            capability_is_exposed_or_used_v2(hub_dir, capability).await?;
+
+        if exposed {
+            matching_components.exposed.push(moniker.clone());
+        }
+        if used {
+            matching_components.used.push(moniker.clone());
         }
 
         Ok(matching_components)
@@ -73,7 +90,7 @@ fn find_cmx_realms(
     capability: String,
     moniker: AbsoluteMoniker,
     hub_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<AbsoluteMoniker>>> {
+) -> BoxFuture<'static, Result<MatchingComponents>> {
     async move {
         let c_dir = hub_dir.open_dir_readable("c")?;
         let c_future = find_cmx_components_in_c_dir(capability.clone(), moniker.clone(), c_dir);
@@ -83,12 +100,13 @@ fn find_cmx_realms(
 
         let (matching_components_c, matching_components_r) = join(c_future, r_future).await;
 
-        let mut matching_components_c = matching_components_c?;
+        let MatchingComponents { mut exposed, mut used } = matching_components_c?;
         let mut matching_components_r = matching_components_r?;
 
-        matching_components_c.append(&mut matching_components_r);
+        exposed.append(&mut matching_components_r.exposed);
+        used.append(&mut matching_components_r.used);
 
-        Ok(matching_components_c)
+        Ok(MatchingComponents { exposed, used })
     }
     .boxed()
 }
@@ -99,23 +117,33 @@ fn find_cmx_components(
     capability: String,
     moniker: AbsoluteMoniker,
     hub_dir: Directory,
-) -> BoxFuture<'static, Result<Vec<AbsoluteMoniker>>> {
+) -> BoxFuture<'static, Result<MatchingComponents>> {
     async move {
-        let mut matching_components = vec![];
+        let mut matching_components_exposed = vec![];
+        let mut matching_components_used = vec![];
 
         // Component runners can have a `c` dir with child components
         if hub_dir.exists("c").await? {
             let c_dir = hub_dir.open_dir_readable("c")?;
-            let mut child_components =
+            let MatchingComponents { mut exposed, mut used } =
                 find_cmx_components_in_c_dir(capability.clone(), moniker.clone(), c_dir).await?;
-            matching_components.append(&mut child_components);
+            matching_components_exposed.append(&mut exposed);
+            matching_components_used.append(&mut used);
         }
 
-        if exposed_capability_exists_v1(hub_dir, capability).await? {
-            matching_components.push(moniker);
+        let CapabilityExists { exposed, used } =
+            capability_is_exposed_or_used_v1(hub_dir, capability).await?;
+        if exposed {
+            matching_components_exposed.push(moniker.clone());
+        }
+        if used {
+            matching_components_used.push(moniker.clone())
         }
 
-        Ok(matching_components)
+        Ok(MatchingComponents {
+            exposed: matching_components_exposed,
+            used: matching_components_used,
+        })
     }
     .boxed()
 }
@@ -124,7 +152,7 @@ async fn find_cmx_components_in_c_dir(
     capability: String,
     moniker: AbsoluteMoniker,
     c_dir: Directory,
-) -> Result<Vec<AbsoluteMoniker>> {
+) -> Result<MatchingComponents> {
     // Get all CMX child components
     let child_component_names = c_dir.entries().await?;
     let mut future_children = vec![];
@@ -141,10 +169,12 @@ async fn find_cmx_components_in_c_dir(
     }
 
     let results = join_all(future_children).await;
-    let mut flattened_components = vec![];
+    let mut flattened_components = MatchingComponents { exposed: vec![], used: vec![] };
+
     for result in results {
-        let mut components = result?;
-        flattened_components.append(&mut components);
+        let MatchingComponents { mut exposed, mut used } = result?;
+        flattened_components.exposed.append(&mut exposed);
+        flattened_components.used.append(&mut used);
     }
     Ok(flattened_components)
 }
@@ -153,7 +183,7 @@ async fn find_cmx_realms_in_r_dir(
     capability: String,
     moniker: AbsoluteMoniker,
     r_dir: Directory,
-) -> Result<Vec<AbsoluteMoniker>> {
+) -> Result<MatchingComponents> {
     // Get all CMX child realms
     let mut future_realms = vec![];
     for child_realm_name in r_dir.entries().await? {
@@ -167,11 +197,14 @@ async fn find_cmx_realms_in_r_dir(
         }
     }
     let results = join_all(future_realms).await;
-    let mut flattened_components = vec![];
+    let mut flattened_components = MatchingComponents { exposed: vec![], used: vec![] };
+
     for result in results {
-        let mut components = result?;
-        flattened_components.append(&mut components);
+        let MatchingComponents { mut exposed, mut used } = result?;
+        flattened_components.exposed.append(&mut exposed);
+        flattened_components.used.append(&mut used);
     }
+
     Ok(flattened_components)
 }
 
@@ -185,29 +218,49 @@ async fn open_all_job_ids(job_ids_dir: Directory) -> Result<Vec<Directory>> {
     Ok(dirs)
 }
 
-// Returns true if |capability| is exposed by this v2 component. False otherwise.
-async fn exposed_capability_exists_v2(hub_dir: Directory, capability: String) -> Result<bool> {
+/// Determine if |capability| is exposed or used by this v2 component.
+async fn capability_is_exposed_or_used_v2(
+    hub_dir: Directory,
+    capability: String,
+) -> Result<CapabilityExists> {
     if !hub_dir.exists("resolved").await? {
         // We have no information about an unresolved component
-        return Ok(false);
+        return Ok(CapabilityExists { exposed: false, used: false });
     }
 
     let exec_dir = hub_dir.open_dir_readable("resolved/expose")?;
-    let capabilities = get_capabilities(exec_dir).await?;
-    Ok(capabilities.iter().any(|c| c.as_str() == capability))
+    let expose_capabilities = get_capabilities(exec_dir).await?;
+
+    let use_dir = hub_dir.open_dir_readable("resolved/use")?;
+    let used_capabilities = get_capabilities(use_dir).await?;
+
+    Ok(CapabilityExists {
+        exposed: expose_capabilities.iter().any(|c| c.as_str() == capability),
+        used: used_capabilities.iter().any(|c| c.as_str() == capability),
+    })
 }
 
-// Returns true if |capability| is exposed by this v1 component. False otherwise.
-async fn exposed_capability_exists_v1(hub_dir: Directory, capability: String) -> Result<bool> {
+/// Determine if |capability| is exposed or used by this v1 component.
+async fn capability_is_exposed_or_used_v1(
+    hub_dir: Directory,
+    capability: String,
+) -> Result<CapabilityExists> {
     if !hub_dir.exists("out").await? {
         // No `out` directory implies no exposed capabilities
-        return Ok(false);
+        return Ok(CapabilityExists { exposed: false, used: false });
     }
 
     let out_dir = hub_dir.open_dir_readable("out")?;
-    let capabilities =
+    let out_capabilities =
         get_capabilities(out_dir).on_timeout(CAPABILITY_TIMEOUT, || Ok(vec![])).await?;
-    Ok(capabilities.iter().any(|c| c.as_str() == capability))
+    let in_dir = hub_dir.open_dir_readable("in")?;
+    let in_capabilities =
+        get_capabilities(in_dir).on_timeout(CAPABILITY_TIMEOUT, || Ok(vec![])).await?;
+
+    Ok(CapabilityExists {
+        exposed: out_capabilities.iter().any(|c| c.as_str() == capability),
+        used: in_capabilities.iter().any(|c| c.as_str() == capability),
+    })
 }
 
 // Get all entries in a capabilities directory. If there is a "svc" directory, traverse it and
@@ -247,10 +300,11 @@ mod tests {
         fs::create_dir(root.join("children")).unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components =
+        let MatchingComponents { exposed, used } =
             find_components("fuchsia.logger.LogSink".to_string(), hub_dir).await.unwrap();
 
-        assert!(components.is_empty());
+        assert!(exposed.is_empty());
+        assert!(used.is_empty());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -265,17 +319,25 @@ mod tests {
         //    |- expose
         //       |- svc
         //          |- fuchsia.logger.LogSink
+        //    |- use
+        //       |- svc
+        //          |- fuchsia.logger.LogSink
         fs::create_dir(root.join("children")).unwrap();
         fs::create_dir_all(root.join("resolved/expose/svc")).unwrap();
         File::create(root.join("resolved/expose/svc/fuchsia.logger.LogSink")).unwrap();
+        fs::create_dir_all(root.join("resolved/use/svc")).unwrap();
+        File::create(root.join("resolved/use/svc/fuchsia.logger.LogSink")).unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let mut components =
+        let MatchingComponents { mut exposed, mut used } =
             find_components("fuchsia.logger.LogSink".to_string(), hub_dir).await.unwrap();
 
-        assert_eq!(components.len(), 1);
-        let component = components.remove(0);
-        assert!(component.is_root());
+        assert_eq!(exposed.len(), 1);
+        assert_eq!(used.len(), 1);
+        let exposed_component = exposed.remove(0);
+        let used_component = used.remove(0);
+        assert!(exposed_component.is_root());
+        assert!(used_component.is_root());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -289,15 +351,22 @@ mod tests {
         // |- resolved
         //    |- expose
         //       |- hub
+        //    |- use
+        //       |- hub
         fs::create_dir(root.join("children")).unwrap();
         fs::create_dir_all(root.join("resolved/expose/hub")).unwrap();
+        fs::create_dir_all(root.join("resolved/use/hub")).unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let mut components = find_components("hub".to_string(), hub_dir).await.unwrap();
+        let MatchingComponents { mut exposed, mut used } =
+            find_components("hub".to_string(), hub_dir).await.unwrap();
 
-        assert_eq!(components.len(), 1);
-        let component = components.remove(0);
-        assert!(component.is_root());
+        assert_eq!(exposed.len(), 1);
+        assert_eq!(used.len(), 1);
+        let exposed_component = exposed.remove(0);
+        let used_component = used.remove(0);
+        assert!(exposed_component.is_root());
+        assert!(used_component.is_root());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -312,24 +381,33 @@ mod tests {
         //       |- children
         //       |- resolved
         //          |- expose
+        //          |- use
         //             |- minfs
         // |- resolved
         //    |- expose
+        //       |- minfs
+        //    |- use
         fs::create_dir(root.join("children")).unwrap();
-        fs::create_dir_all(root.join("resolved/expose")).unwrap();
+        fs::create_dir_all(root.join("resolved/expose/minfs")).unwrap();
+        fs::create_dir_all(root.join("resolved/use")).unwrap();
 
         {
             let core = root.join("children/core");
             fs::create_dir_all(core.join("children")).unwrap();
-            fs::create_dir_all(core.join("resolved/expose/minfs")).unwrap();
+            fs::create_dir_all(core.join("resolved/expose")).unwrap();
+            fs::create_dir_all(core.join("resolved/use/minfs")).unwrap();
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let mut components = find_components("minfs".to_string(), hub_dir).await.unwrap();
+        let MatchingComponents { mut exposed, mut used } =
+            find_components("minfs".to_string(), hub_dir).await.unwrap();
 
-        assert_eq!(components.len(), 1);
-        let component = components.remove(0);
-        assert_eq!(component, vec!["core"].into());
+        assert_eq!(exposed.len(), 1);
+        assert_eq!(used.len(), 1);
+        let exposed_component = exposed.remove(0);
+        let used_component = used.remove(0);
+        assert!(exposed_component.is_root());
+        assert_eq!(used_component, vec!["core"].into());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -349,6 +427,8 @@ mod tests {
         //                   |- c
         //                      |- sshd.cmx
         //                         |- 9898
+        //                            |- in
+        //                               |- dev
         //                            |- out
         //                               |- dev
         fs::create_dir(root.join("children")).unwrap();
@@ -362,16 +442,21 @@ mod tests {
             {
                 let sshd = appmgr.join("exec/out/hub/c/sshd.cmx/9898");
                 fs::create_dir_all(&sshd).unwrap();
+                fs::create_dir_all(sshd.join("in/dev")).unwrap();
                 fs::create_dir_all(sshd.join("out/dev")).unwrap();
             }
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let mut components = find_components("dev".to_string(), hub_dir).await.unwrap();
+        let MatchingComponents { mut exposed, mut used } =
+            find_components("dev".to_string(), hub_dir).await.unwrap();
 
-        assert_eq!(components.len(), 1);
-        let component = components.remove(0);
-        assert_eq!(component, vec!["appmgr", "sshd.cmx"].into());
+        assert_eq!(exposed.len(), 1);
+        assert_eq!(used.len(), 1);
+        let exposed_component = exposed.remove(0);
+        let used_component = used.remove(0);
+        assert_eq!(exposed_component, vec!["appmgr", "sshd.cmx"].into());
+        assert_eq!(used_component, vec!["appmgr", "sshd.cmx"].into());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -394,6 +479,8 @@ mod tests {
         //                            |- c
         //                               |- foo.cmx
         //                                  |- 1919
+        //                                     |- in
+        //                                        |- dev
         //                                     |- out
         //                                        |- dev
         fs::create_dir(root.join("children")).unwrap();
@@ -408,6 +495,8 @@ mod tests {
                 let sshd = appmgr.join("exec/out/hub/c/sshd.cmx/9898");
                 fs::create_dir_all(&sshd).unwrap();
                 {
+                    let dev = sshd.join("c/foo.cmx/1919/in/dev");
+                    fs::create_dir_all(&dev).unwrap();
                     let dev = sshd.join("c/foo.cmx/1919/out/dev");
                     fs::create_dir_all(&dev).unwrap();
                 }
@@ -415,11 +504,15 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let mut components = find_components("dev".to_string(), hub_dir).await.unwrap();
+        let MatchingComponents { mut exposed, mut used } =
+            find_components("dev".to_string(), hub_dir).await.unwrap();
 
-        assert_eq!(components.len(), 1);
-        let component = components.remove(0);
-        assert_eq!(component, vec!["appmgr", "sshd.cmx", "foo.cmx"].into());
+        assert_eq!(exposed.len(), 1);
+        assert_eq!(used.len(), 1);
+        let exposed_component = exposed.remove(0);
+        let used_component = used.remove(0);
+        assert_eq!(exposed_component, vec!["appmgr", "sshd.cmx", "foo.cmx"].into());
+        assert_eq!(used_component, vec!["appmgr", "sshd.cmx", "foo.cmx"].into());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -454,8 +547,10 @@ mod tests {
         }
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let components = find_components("dev".to_string(), hub_dir).await.unwrap();
+        let MatchingComponents { exposed, used } =
+            find_components("dev".to_string(), hub_dir).await.unwrap();
 
-        assert!(components.is_empty());
+        assert!(exposed.is_empty());
+        assert!(used.is_empty());
     }
 }

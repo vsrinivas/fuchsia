@@ -90,6 +90,7 @@ async fn find_components_with_capability(
     let hub_dir = Directory::from_proxy(root);
     Ok(find_components(capability.to_string(), hub_dir)
         .await?
+        .exposed
         .iter()
         .map(|c| c.to_string().split_off(1))
         .collect())

@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Result},
-    component_hub::{io::Directory, select::find_components},
+    component_hub::{io::Directory, select::find_components, select::MatchingComponents},
     errors::ffx_error,
     ffx_component::SELECTOR_FORMAT_HELP,
     ffx_component_select_args::{
@@ -43,10 +43,22 @@ async fn select_capability(remote_proxy: rc::RemoteControlProxy, capability: &st
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
-    let matching_components = find_components(capability.to_string(), hub_dir).await?;
-    for component in matching_components {
-        println!("{}", component);
+    let MatchingComponents { exposed, used } =
+        find_components(capability.to_string(), hub_dir).await?;
+
+    if !exposed.is_empty() {
+        println!("Exposed:");
+        for component in exposed {
+            println!("  {}", component);
+        }
     }
+    if !used.is_empty() {
+        println!("Used:");
+        for component in used {
+            println!("  {}", component);
+        }
+    }
+
     Ok(())
 }
 

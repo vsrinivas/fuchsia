@@ -49,12 +49,15 @@ async fn show() {
     let resolved = component.resolved.as_ref().unwrap();
 
     let incoming_capabilities = &resolved.incoming_capabilities;
-    assert_eq!(incoming_capabilities.len(), 2);
+    assert_eq!(incoming_capabilities.len(), 3);
 
     let incoming_capability = &incoming_capabilities[0];
-    assert_eq!(incoming_capability, "fuchsia.logger.LogSink");
+    assert_eq!(incoming_capability, "fuchsia.foo.Bar");
 
     let incoming_capability = &incoming_capabilities[1];
+    assert_eq!(incoming_capability, "fuchsia.logger.LogSink");
+
+    let incoming_capability = &incoming_capabilities[2];
     assert_eq!(incoming_capability, "hub");
 
     assert_eq!(resolved.config.len(), 2);
@@ -75,21 +78,26 @@ async fn select() {
     let hub_path = PathBuf::from("/hub");
     let hub_dir = Directory::from_namespace(hub_path).unwrap();
 
-    let mut components =
+    let select::MatchingComponents { mut exposed, mut used } =
         select::find_components("fuchsia.foo.Bar".to_string(), hub_dir).await.unwrap();
 
-    assert_eq!(components.len(), 1);
-    let component = components.remove(0);
-    assert!(component.is_root());
+    assert_eq!(exposed.len(), 1);
+    assert_eq!(used.len(), 1);
+    let exposed_component = exposed.remove(0);
+    let used_component = used.remove(0);
+    assert!(exposed_component.is_root());
+    assert!(used_component.is_root());
 
     let hub_path = PathBuf::from("/hub");
     let hub_dir = Directory::from_namespace(hub_path).unwrap();
 
-    let mut components = select::find_components("minfs".to_string(), hub_dir).await.unwrap();
+    let select::MatchingComponents { mut exposed, used } =
+        select::find_components("minfs".to_string(), hub_dir).await.unwrap();
 
-    assert_eq!(components.len(), 1);
-    let component = components.remove(0);
-    assert!(component.is_root());
+    assert_eq!(exposed.len(), 1);
+    assert_eq!(used.len(), 0);
+    let exposed_component = exposed.remove(0);
+    assert!(exposed_component.is_root());
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

@@ -27,6 +27,10 @@
             rights: [ "r*" ],
             path: "/hub",
         },
+
+        // This capability isn't actually being used.
+        // `select` should still be able to find it.
+        { protocol: "fuchsia.foo.Bar" },
     ],
     expose: [
         // These capabilities aren't actually being served.
