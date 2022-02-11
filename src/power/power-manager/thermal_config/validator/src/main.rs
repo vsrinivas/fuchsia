@@ -45,11 +45,11 @@ mod tests {
     use tempfile::TempDir;
 
     fn get_valid_configs() -> Vec<PathBuf> {
-        get_configs("valid_test_configs")
+        get_configs("valid_thermal_test_configs")
     }
 
     fn get_invalid_configs() -> Vec<PathBuf> {
-        get_configs("invalid_test_configs")
+        get_configs("invalid_thermal_test_configs")
     }
 
     // Gets the test configs located under the given subdirectory

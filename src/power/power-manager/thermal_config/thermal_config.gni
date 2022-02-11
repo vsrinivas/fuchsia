@@ -51,6 +51,7 @@ template("thermal_config") {
                            ])
 
     tool = "//src/power/power-manager/thermal_config/validator"
+    tool_output_name = "thermal_config_validator"
 
     inputs = [ invoker.config_file ]
     outputs = [ "$target_gen_dir/$target_name.validated" ]

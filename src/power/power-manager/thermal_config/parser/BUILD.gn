@@ -22,14 +22,14 @@ rustc_library("parser") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_unittest_package("parser-tests") {
+fuchsia_unittest_package("thermal-config-parser-tests") {
   deps = [ ":parser_test" ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":parser-tests",
     ":parser_test($host_toolchain)",
+    ":thermal-config-parser-tests",
   ]
 }

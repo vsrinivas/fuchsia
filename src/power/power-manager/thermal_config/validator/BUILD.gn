@@ -7,6 +7,7 @@ import("//build/testing/host_test_data.gni")
 
 if (is_host) {
   rustc_binary("validator") {
+    name = "thermal_config_validator"
     with_unit_tests = true
     deps = [
       "//src/power/power-manager/thermal_config/parser",
@@ -15,22 +16,24 @@ if (is_host) {
     ]
 
     test_deps = [
-      ":invalid_test_configs",
-      ":valid_test_configs",
+      ":invalid_thermal_test_configs",
+      ":valid_thermal_test_configs",
       "//third_party/rust_crates:tempfile",
     ]
 
     sources = [ "src/main.rs" ]
   }
 
-  host_test_data("valid_test_configs") {
+  host_test_data("valid_thermal_test_configs") {
     sources = [ "../test_configs/valid_test_config.json5" ]
-    outputs = [ "${root_out_dir}/valid_test_configs/{{source_file_part}}" ]
+    outputs =
+        [ "${root_out_dir}/valid_thermal_test_configs/{{source_file_part}}" ]
   }
 
-  host_test_data("invalid_test_configs") {
+  host_test_data("invalid_thermal_test_configs") {
     sources = [ "../test_configs/invalid_test_config.json5" ]
-    outputs = [ "${root_out_dir}/invalid_test_configs/{{source_file_part}}" ]
+    outputs =
+        [ "${root_out_dir}/invalid_thermal_test_configs/{{source_file_part}}" ]
   }
 }
 

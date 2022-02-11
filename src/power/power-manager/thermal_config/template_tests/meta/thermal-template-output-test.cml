@@ -5,14 +5,14 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/template_output_test",
+        binary: "bin/thermal_template_output_test",
     },
     use: [
         {
             directory: "config-data",
             rights: [ "r*" ],
             path: "/config/data",
-            subdir: "template-output-test-pkg",
+            subdir: "thermal-template-output-test-pkg",
         },
     ],
 }
