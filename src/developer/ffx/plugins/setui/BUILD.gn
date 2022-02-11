@@ -9,6 +9,7 @@ ffx_plugin("ffx_setui") {
   edition = "2018"
 
   plugin_deps = [
+    "audio:ffx_setui_audio",
     "do_not_disturb:ffx_setui_do_not_disturb",
     "factory_reset:ffx_setui_factory_reset",
     "night_mode:ffx_setui_night_mode",

@@ -1,0 +1,29 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_setui_audio") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+  args_with_unit_tests = true
+
+  args_deps = [
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//src/developer/ffx/plugins/setui/utils:utils",
+  ]
+
+  test_deps = [ "//third_party/rust_crates:test-case" ]
+
+  args_sources = [ "src/args.rs" ]
+
+  sources = [ "src/lib.rs" ]
+}
