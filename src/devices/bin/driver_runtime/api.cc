@@ -117,7 +117,12 @@ __EXPORT void fdf_handle_close(fdf_handle_t channel_handle) {
 // fdf_dispatcher_t interface
 __EXPORT fdf_status_t fdf_dispatcher_create(uint32_t options, const char* scheduler_role,
                                             size_t scheduler_role_len,
+                                            fdf_dispatcher_destructed_observer_t* observer,
                                             fdf_dispatcher_t** out_dispatcher) {
+  // TODO(fxbug.dev/87840): remove this once implemented.
+  if (observer) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   driver_runtime::Dispatcher* dispatcher;
   auto status =
       driver_runtime::Dispatcher::Create(options, scheduler_role, scheduler_role_len, &dispatcher);
@@ -140,7 +145,9 @@ __EXPORT uint32_t fdf_dispatcher_get_options(fdf_dispatcher_t* dispatcher) {
   return dispatcher->options();
 }
 
-__EXPORT void fdf_dispatcher_destroy(fdf_dispatcher_t* dispatcher) { return dispatcher->Destroy(); }
+__EXPORT void fdf_dispatcher_destroy_async(fdf_dispatcher_t* dispatcher) {
+  return dispatcher->Destroy();
+}
 
 __EXPORT void fdf_internal_push_driver(const void* driver) { driver_context::PushDriver(driver); }
 

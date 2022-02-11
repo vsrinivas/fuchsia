@@ -78,7 +78,7 @@ void ChannelTest::TearDown() {
 
   arena_.reset();
 
-  fdf_dispatcher_destroy(fdf_dispatcher_);
+  fdf_dispatcher_destroy_async(fdf_dispatcher_);
 
   ASSERT_EQ(0, driver_runtime::gHandleTableArena.num_allocated());
 
@@ -319,7 +319,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCallbackOnClose) {
   loop_.Quit();
   loop_.JoinThreads();
 
-  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(async_dispatcher));
+  async_dispatcher->Destroy();
 }
 
 TEST_F(ChannelTest, CancelSynchronousDispatcherCallbackOnClose) {
@@ -351,7 +351,7 @@ TEST_F(ChannelTest, CancelSynchronousDispatcherCallbackOnClose) {
 
   ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 0);
 
-  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(sync_dispatcher));
+  sync_dispatcher->Destroy();
 }
 
 // Tests cancelling a channel read that has not yet been queued with the synchronized dispatcher.
@@ -370,7 +370,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelUnqueuedRead) {
 
   ASSERT_OK(channel_read->Cancel());  // Cancellation should always succeed for sync dispatchers.
 
-  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(sync_dispatcher));
+  sync_dispatcher->Destroy();
 }
 
 // Tests cancelling a channel read that has been queued with the synchronized dispatcher.
@@ -420,7 +420,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelQueuedRead) {
   loop_.Quit();
   loop_.JoinThreads();
 
-  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(sync_dispatcher));
+  sync_dispatcher->Destroy();
 }
 
 // Tests cancelling a channel read that has been queued with the synchronized dispatcher.
@@ -471,7 +471,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelQueuedReadFromTask) {
   loop_.Quit();
   loop_.JoinThreads();
 
-  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(sync_dispatcher));
+  sync_dispatcher->Destroy();
 }
 
 TEST_F(ChannelTest, SyncDispatcherCancelTaskFromChannelRead) {
@@ -512,7 +512,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelTaskFromChannelRead) {
   loop_.Quit();
   loop_.JoinThreads();
 
-  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(sync_dispatcher));
+  sync_dispatcher->Destroy();
 }
 
 // Tests cancelling a channel read that has not yet been queued with the unsynchronized dispatcher.
@@ -544,7 +544,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelUnqueuedRead) {
   loop_.Quit();
   loop_.JoinThreads();
 
-  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(unsync_dispatcher));
+  unsync_dispatcher->Destroy();
 }
 
 // Tests cancelling a channel read that has been queued with the unsynchronized dispatcher.
@@ -596,7 +596,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedRead) {
   loop_.Quit();
   loop_.JoinThreads();
 
-  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(unsync_dispatcher));
+  unsync_dispatcher->Destroy();
 }
 
 // Tests cancelling a channel read that has been queued with the unsynchronized dispatcher,
@@ -656,7 +656,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedReadFails) {
   loop_.Quit();
   loop_.JoinThreads();
 
-  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(unsync_dispatcher));
+  unsync_dispatcher->Destroy();
 }
 
 // Tests that you can wait on and read pending messages from a channel even if the peer is closed.
@@ -1087,7 +1087,7 @@ void ReplyAndWait(const Message& request, uint32_t message_count, fdf::Channel s
     }
   }
 
-  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(dispatcher));
+  dispatcher->Destroy();
 }
 
 template <uint32_t reply_data_size, uint32_t reply_handle_count, uint32_t accumulated_messages = 0>
@@ -1226,7 +1226,7 @@ TEST_F(ChannelTest, CallManagedThreadAllowsSyncCalls) {
 
   sync_completion_wait(&call_complete, ZX_TIME_INFINITE);
 
-  fdf_dispatcher_destroy(static_cast<fdf_dispatcher_t*>(allow_sync_calls_dispatcher));
+  allow_sync_calls_dispatcher->Destroy();
 }
 
 TEST_F(ChannelTest, CallPendingTransactionsUseDifferentIds) {

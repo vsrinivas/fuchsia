@@ -86,7 +86,7 @@ void DispatcherTest::TearDown() {
     fdf_handle_close(remote_ch2_);
   }
   for (auto* dispatcher : dispatchers_) {
-    fdf_dispatcher_destroy(dispatcher);
+    fdf_dispatcher_destroy_async(dispatcher);
   }
 }
 
@@ -757,7 +757,7 @@ TEST_F(DispatcherTest, DestroyDispatcherInAsyncLoopCallback) {
       remote_ch_, 0 /* options */,
       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
         ASSERT_OK(status);
-        fdf_dispatcher_destroy(dispatcher);
+        fdf_dispatcher_destroy_async(dispatcher);
         completion.Signal();
         delete channel_read;
       });
