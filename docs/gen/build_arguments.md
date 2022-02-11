@@ -54,7 +54,7 @@ Set to true to enable legacy data partition names.
 
 **Current value (from the default):** `true`
 
-From //src/storage/fshost/generated_fshost_config.gni:47
+From //src/storage/fshost/generated_fshost_config.gni:41
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -645,20 +645,6 @@ See https://fuchsia.dev/fuchsia-src/development/hardware/installer
 
 From //build/images/args.gni:31
 
-### bundle_f2fs
-Soft migration; do not use
-
-**Current value (from the default):** `false`
-
-From //src/storage/fshost/generated_fshost_config.gni:37
-
-### bundle_fxfs
-Soft migration; do not use
-
-**Current value (from the default):** `false`
-
-From //src/storage/fshost/generated_fshost_config.gni:40
-
 ### cache_package_labels
 If you add package labels to this variable, the packages will be included
 in the 'cache' package set, which represents an additional set of software
@@ -747,11 +733,29 @@ and compare the outputs' contents for reproducibility.
 
 From //build/tracer/tracer.gni:13
 
+### check_rustc_consistency
+Check consistency between local and remote rust compiles.
+This check is slow and expensive and mostly intended for CI.
+
+Requires GN args:
+  `enable_rbe = true`
+
+
+**Current value (from the default):** `false`
+
+From //build/toolchain/rbe.gni:70
+
 ### check_rustc_determinism
 Check of determinism of rustc targets by running locally twice
 and comparing outputs, failing if any differences are found.
 Even though this check doesn't involve RBE, it uses the same
 wrapper script, which knows what output files to expect and compare.
+
+Build outputs that depend on time are discouraged because they
+impact caching.
+If your result depends on the current time, this check will
+definitely fail.  If it depends on only the date, there is still
+a nonzero chance of failure, if the rerun falls on the next day.
 
 Requires GN args:
   `enable_rbe = true`
@@ -764,7 +768,7 @@ Ignores:
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/rbe.gni:52
+From //build/toolchain/rbe.gni:62
 
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
@@ -1650,14 +1654,14 @@ or f2fs by writing "fxfs" or "f2fs" to /data/fs_switch and then rebooting.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/generated_fshost_config.gni:44
+From //src/storage/fshost/generated_fshost_config.gni:38
 
 ### fshost_watch_for_nand
 Make fshost watch for NAND devices.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/generated_fshost_config.gni:50
+From //src/storage/fshost/generated_fshost_config.gni:44
 
 ### fuchsia_async_trace_level_logging
 Determines whether the fuchsia_async library used by many Rust targets will be compiled
@@ -3620,7 +3624,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"9Jg5aoY-ZHbPR9h6Q4qiN2e2QFIEtY7aUn2NfKSGf3QC"`
+**Current value (from the default):** `"XJj9WwQ5ZIufh8195356YT-rfrxfxUL44aixzXq6oL8C"`
 
 From //build/rust/config.gni:30
 
