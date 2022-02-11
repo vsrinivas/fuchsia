@@ -5,11 +5,11 @@
 use {
     anyhow::{Context as _, Error},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_examples_intl_manager::{PropertyManagerRequest, PropertyManagerRequestStream},
     fidl_fuchsia_intl::{
         LocaleId, Profile, PropertyProviderControlHandle, PropertyProviderRequest,
         PropertyProviderRequestStream, TimeZoneId,
     },
+    fidl_fuchsia_test_intl_manager::{PropertyManagerRequest, PropertyManagerRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
@@ -300,11 +300,11 @@ async fn main() -> Result<(), Error> {
 mod test {
     use {
         anyhow::{Context as _, Error},
-        fidl_fuchsia_examples_intl_manager::{PropertyManagerMarker, PropertyManagerProxy},
         fidl_fuchsia_intl::{
             CalendarId, LocaleId, Profile, PropertyProviderEventStream, PropertyProviderMarker,
             PropertyProviderProxy, TemperatureUnit, TimeZoneId,
         },
+        fidl_fuchsia_test_intl_manager::{PropertyManagerMarker, PropertyManagerProxy},
         fuchsia_async as fasync,
         fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
         futures::{self, prelude::*},
@@ -366,7 +366,7 @@ mod test {
                 Route::new()
                     .capability(Capability::protocol_by_name("fuchsia.intl.PropertyProvider"))
                     .capability(Capability::protocol_by_name(
-                        "fuchsia.examples.intl.manager.PropertyManager",
+                        "fuchsia.test.intl.manager.PropertyManager",
                     ))
                     .from(&intl_property_manager)
                     .to(Ref::parent()),

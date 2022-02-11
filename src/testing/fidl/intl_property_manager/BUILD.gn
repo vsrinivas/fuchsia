@@ -1,0 +1,99 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("manager") {
+  testonly = true
+  public_deps = [
+    ":intl_property_manager",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":intl_property_manager_tests" ]
+}
+
+rustc_binary("intl_property_manager_bin") {
+  name = "intl_property_manager"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/syslog/rust:syslog",
+    "//src/testing/fidl/intl_property_manager/fidl:fuchsia.test.intl.manager-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:clap",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [ "//src/lib/fuchsia-component-test" ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("intl_property_manager_component") {
+  component_name = "intl_property_manager"
+  manifest = "meta/intl_property_manager.cml"
+  deps = [ ":intl_property_manager_bin" ]
+}
+
+fuchsia_component("intl_property_manager_component_v1") {
+  component_name = "intl_property_manager_v1"
+  manifest = "meta/intl_property_manager.cmx"
+  deps = [ ":intl_property_manager_bin" ]
+}
+
+fuchsia_component("intl_property_manager_without_flags_component") {
+  component_name = "intl_property_manager_without_flags"
+  manifest = "meta/intl_property_manager_without_flags.cml"
+  deps = [ ":intl_property_manager_bin" ]
+}
+
+fuchsia_component("intl_property_manager_without_flags_component_v1") {
+  component_name = "intl_property_manager_without_flags_v1"
+  manifest = "meta/intl_property_manager_without_flags.cmx"
+  deps = [ ":intl_property_manager_bin" ]
+}
+
+fuchsia_package("intl_property_manager") {
+  deps = [
+    ":intl_property_manager_component",
+    ":intl_property_manager_component_v1",
+    ":intl_property_manager_without_flags_component",
+    ":intl_property_manager_without_flags_component_v1",
+  ]
+}
+
+fuchsia_component("intl_property_manager_tests_component") {
+  testonly = true
+  component_name = "intl_property_manager_tests"
+  manifest = "meta/intl_property_manager_test.cml"
+  deps = [ ":intl_property_manager_bin_test" ]
+}
+
+fuchsia_test_package("intl_property_manager_tests") {
+  test_components = [ ":intl_property_manager_tests_component" ]
+  deps = [
+    ":intl_property_manager_component",
+    ":intl_property_manager_without_flags_component",
+  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
