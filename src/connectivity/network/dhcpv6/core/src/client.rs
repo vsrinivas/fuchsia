@@ -122,12 +122,6 @@ const T1_MIN_LIFETIME_RATIO: Ratio<u32> = Ratio::new_raw(1, 2);
 /// [RFC 8415, Section 21.4]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.4
 const T2_T1_RATIO: Ratio<u32> = Ratio::new_raw(8, 5);
 
-/// The value representing infinity lifetime, as described in
-/// [RFC 8415, Section 7.7].
-///
-/// [RFC 8415, Section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.4
-const INFINITY: u32 = u32::MAX;
-
 /// Calculates retransmission timeout based on formulas defined in [RFC 8415, Section 15].
 /// A zero `prev_retrans_timeout` indicates this is the first transmission, so
 /// `initial_retrans_timeout` will be used.
@@ -1043,10 +1037,20 @@ impl ServerDiscovery {
 //    messages not later than at the T1/T2 times associated
 //    with any of the client's bindings (earliest T1/T2).
 fn maybe_get_nonzero_min(old_value: v6::TimeValue, new_value: v6::TimeValue) -> v6::TimeValue {
-    match (old_value, new_value) {
-        (old_t, v6::TimeValue::Zero) => old_t,
-        (v6::TimeValue::Zero, new_t) => new_t,
-        (old_t, new_t) => std::cmp::min(old_t, new_t),
+    match old_value {
+        v6::TimeValue::Zero => new_value,
+        v6::TimeValue::NonZero(old_t) => v6::TimeValue::NonZero(get_nonzero_min(old_t, new_value)),
+    }
+}
+
+// Returns the min value greater than zero.
+fn get_nonzero_min(
+    old_value: v6::NonZeroTimeValue,
+    new_value: v6::TimeValue,
+) -> v6::NonZeroTimeValue {
+    match new_value {
+        v6::TimeValue::Zero => old_value,
+        v6::TimeValue::NonZero(new_val) => std::cmp::min(old_value, new_val),
     }
 }
 
@@ -1234,11 +1238,19 @@ fn request_from_alternate_server_or_restart_server_discovery<R: Rng>(
     );
 }
 
-fn compute_t(min: u32, ratio: Ratio<u32>) -> u32 {
-    if min == INFINITY {
-        INFINITY
-    } else {
-        ratio.checked_mul(&Ratio::new_raw(min, 1)).map_or(INFINITY, |t| t.to_integer())
+fn compute_t(min: v6::NonZeroTimeValue, ratio: Ratio<u32>) -> v6::NonZeroTimeValue {
+    match min {
+        v6::NonZeroTimeValue::Finite(t) => {
+            ratio.checked_mul(&Ratio::new_raw(t.get(), 1)).map_or(
+                v6::NonZeroTimeValue::Infinity,
+                |t| {
+                    v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(t.to_integer()).expect(
+                        "non-zero ratio of NonZeroOrMaxU32 value should be NonZeroOrMaxU32",
+                    ))
+                },
+            )
+        }
+        v6::NonZeroTimeValue::Infinity => v6::NonZeroTimeValue::Infinity,
     }
 }
 
@@ -1559,7 +1571,10 @@ impl Requesting {
         let mut t1 = v6::TimeValue::Zero;
         let mut t2 = v6::TimeValue::Zero;
         let mut min_preferred_lifetime = v6::TimeValue::Zero;
-        let mut min_valid_lifetime = v6::TimeValue::Zero;
+        // Ok to initialize with Infinity, `get_nonzero_min` will pick a
+        // smaller value once we see an IA with a valid lifetime less than
+        // Infinity.
+        let mut min_valid_lifetime = v6::NonZeroTimeValue::Infinity;
         let mut addresses: HashMap<v6::IAID, AddressEntry> = HashMap::new();
 
         let mut dns_servers: Option<Vec<Ipv6Addr>> = None;
@@ -1697,8 +1712,7 @@ impl Requesting {
                                         );
                                         continue;
                                     }
-                                    v6::TimeValue::Finite(_t) => {}
-                                    v6::TimeValue::Infinity => {}
+                                    v6::TimeValue::NonZero(_t) => {}
                                 }
                                 iaaddr_opt = Some(iaaddr_data);
                             }
@@ -1765,7 +1779,7 @@ impl Requesting {
                                     min_preferred_lifetime,
                                     iaaddr_data.preferred_lifetime(),
                                 );
-                                min_valid_lifetime = maybe_get_nonzero_min(
+                                min_valid_lifetime = get_nonzero_min(
                                     min_valid_lifetime,
                                     iaaddr_data.valid_lifetime(),
                                 );
@@ -2044,34 +2058,25 @@ impl Requesting {
         let t1 = match t1 {
             v6::TimeValue::Zero => {
                 let min = match min_preferred_lifetime {
-                    v6::TimeValue::Zero => match min_valid_lifetime {
-                        v6::TimeValue::Zero => {
-                            panic!("IAs with valid lifetime 0 are discarded")
-                        }
-                        v6::TimeValue::Finite(t) => t.get(),
-                        v6::TimeValue::Infinity => INFINITY,
-                    },
-                    v6::TimeValue::Finite(t) => t.get(),
-                    v6::TimeValue::Infinity => INFINITY,
+                    v6::TimeValue::Zero => min_valid_lifetime,
+                    v6::TimeValue::NonZero(t) => t,
                 };
                 compute_t(min, T1_MIN_LIFETIME_RATIO)
             }
             // TODO(https://fxbug.dev/76765): set renew timer.
-            v6::TimeValue::Finite(t) => t.get(),
-            v6::TimeValue::Infinity => INFINITY,
+            v6::TimeValue::NonZero(t) => t,
         };
         // T2 must be >= T1, compute its value based on T1.
         let t2 = match t2 {
             v6::TimeValue::Zero => compute_t(t1, T2_T1_RATIO),
             // TODO(https://fxbug.dev/76766): set rebind timer.
-            v6::TimeValue::Finite(t) => {
-                if t.get() < t1 {
+            v6::TimeValue::NonZero(t2_val) => {
+                if t2_val < t1 {
                     compute_t(t1, T2_T1_RATIO)
                 } else {
-                    t.get()
+                    t2_val
                 }
             }
-            v6::TimeValue::Infinity => INFINITY,
         };
 
         // TODO(https://fxbug.dev/72701) Send AddressWatcher update with
@@ -2081,8 +2086,8 @@ impl Requesting {
                 client_id,
                 addresses,
                 server_id,
-                t1: Duration::from_secs(t1.into()),
-                t2: Duration::from_secs(t2.into()),
+                t1,
+                t2,
                 dns_servers: dns_servers.unwrap_or(Vec::new()),
                 solicit_max_rt,
             }),
@@ -2143,10 +2148,10 @@ struct AddressAssigned {
     /// The time interval after which the client contacts the server that
     /// assigned addresses to the client, to extend the lifetimes of the
     /// assigned addresses.
-    t1: Duration,
+    t1: v6::NonZeroTimeValue,
     /// The time interval after which the client contacts any server to extend
     /// the lifetimes of the assigned addresses.
-    t2: Duration,
+    t2: v6::NonZeroTimeValue,
     /// Stores the DNS servers received from the reply.
     dns_servers: Vec<Ipv6Addr>,
     /// The [SOL_MAX_RT](https://datatracker.ietf.org/doc/html/rfc8415#section-21.24)
@@ -2750,10 +2755,13 @@ pub(crate) mod testutil {
 
     /// Gets the `u32` value inside a `v6::TimeValue`.
     fn get_value(t: v6::TimeValue) -> u32 {
+        const INFINITY: u32 = u32::MAX;
         match t {
             v6::TimeValue::Zero => 0,
-            v6::TimeValue::Finite(t) => t.get(),
-            v6::TimeValue::Infinity => INFINITY,
+            v6::TimeValue::NonZero(non_zero_tv) => match non_zero_tv {
+                v6::NonZeroTimeValue::Finite(t) => t.get(),
+                v6::NonZeroTimeValue::Infinity => INFINITY,
+            },
         }
     }
 
@@ -2857,6 +2865,8 @@ mod tests {
     use rand::rngs::mock::StepRng;
     use test_case::test_case;
     use testutil::TestIdentityAssociation;
+
+    const INFINITY: u32 = u32::MAX;
 
     #[test]
     fn send_information_request_and_receive_reply() {
@@ -3300,14 +3310,14 @@ mod tests {
         let valid_lifetime = 20;
         let ia = IdentityAssociation {
             address: std_ip_v6!("::ffff:c00a:1ff"),
-            preferred_lifetime: v6::TimeValue::Finite(
+            preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                 v6::NonZeroOrMaxU32::new(preferred_lifetime)
                     .expect("should succeed for non-zero or u32::MAX values"),
-            ),
-            valid_lifetime: v6::TimeValue::Finite(
+            )),
+            valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                 v6::NonZeroOrMaxU32::new(valid_lifetime)
                     .expect("should succeed for non-zero or u32::MAX values"),
-            ),
+            )),
         };
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
             ia.address,
@@ -3771,14 +3781,14 @@ mod tests {
                 AddressEntry::new_assigned(
                     IdentityAssociation {
                         address: address2,
-                        preferred_lifetime: v6::TimeValue::Finite(
+                        preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                             v6::NonZeroOrMaxU32::new(preferred_lifetime_value)
                                 .expect("should succeed for non-zero or u32::MAX values"),
-                        ),
-                        valid_lifetime: v6::TimeValue::Finite(
+                        )),
+                        valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                             v6::NonZeroOrMaxU32::new(valid_lifetime_value)
                                 .expect("should succeed for non-zero or u32::MAX values"),
-                        ),
+                        )),
                     },
                     None,
                 ),
@@ -3911,16 +3921,36 @@ mod tests {
             // If T1/T2 are 0, they should be computed as as 0.5 * minimum
             // preferred lifetime, and 0.8 * minimum preferred lifetime
             // respectively.
-            ((100, 160, 0, 0), (120, 180, 0, 0), 50, 80),
-            ((INFINITY, INFINITY, 0, 0), (120, 180, 0, 0), 60, 96),
+            (
+                (100, 160, 0, 0),
+                (120, 180, 0, 0),
+                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(50).expect("shoud succeed")),
+                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(80).expect("shoud succeed")),
+            ),
+            (
+                (INFINITY, INFINITY, 0, 0),
+                (120, 180, 0, 0),
+                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("shoud succeed")),
+                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(96).expect("shoud succeed")),
+            ),
             // If T1/T2 are 0, and the minimum preferred lifetime, is infinity,
             // T1/T2 should also be infinity.
-            ((INFINITY, INFINITY, 0, 0), (INFINITY, INFINITY, 0, 0), INFINITY, INFINITY),
+            (
+                (INFINITY, INFINITY, 0, 0),
+                (INFINITY, INFINITY, 0, 0),
+                v6::NonZeroTimeValue::Infinity,
+                v6::NonZeroTimeValue::Infinity,
+            ),
             // If T1/T2 are set, and have different values across IAs, T1/T2
             // should be computed as the minimum T1/T2. NOTE: the server should
             // send the same T1/T2 across all IA, but the client should be
             // prepared for the server sending different T1/T2 values.
-            ((100, 160, 40, 70), (120, 180, 50, 80), 40, 70),
+            (
+                (100, 160, 40, 70),
+                (120, 180, 50, 80),
+                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(40).expect("shoud succeed")),
+                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(70).expect("shoud succeed")),
+            ),
         ] {
             let client_id = v6::duid_uuid();
             let Transition { state, actions: _, transaction_id } = Requesting::start(
@@ -3981,8 +4011,8 @@ mod tests {
                 }) => (t1, t2),
                 state => panic!("unexpected state {:?}", state),
             };
-            assert_eq!(t1, Duration::from_secs(expected_t1.into()));
-            assert_eq!(t2, Duration::from_secs(expected_t2.into()));
+            assert_eq!(t1, expected_t1.into());
+            assert_eq!(t2, expected_t2.into());
         }
     }
 
@@ -4208,41 +4238,41 @@ mod tests {
             vec![
                 TestIdentityAssociation {
                     address: std_ip_v6!("::ffff:c00a:1ff"),
-                    preferred_lifetime: v6::TimeValue::Finite(
+                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                         v6::NonZeroOrMaxU32::new(100)
                             .expect("should succeed for non-zero or u32::MAX values"),
-                    ),
-                    valid_lifetime: v6::TimeValue::Finite(
+                    )),
+                    valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                         v6::NonZeroOrMaxU32::new(120)
                             .expect("should succeed for non-zero or u32::MAX values"),
-                    ),
-                    t1: v6::TimeValue::Finite(
+                    )),
+                    t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                         v6::NonZeroOrMaxU32::new(T1)
                             .expect("should succeed for non-zero or u32::MAX values"),
-                    ),
-                    t2: v6::TimeValue::Finite(
+                    )),
+                    t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                         v6::NonZeroOrMaxU32::new(T2)
                             .expect("should succeed for non-zero or u32::MAX values"),
-                    ),
+                    )),
                 },
                 TestIdentityAssociation {
                     address: std_ip_v6!("::ffff:c00a:2ff"),
-                    preferred_lifetime: v6::TimeValue::Finite(
+                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                         v6::NonZeroOrMaxU32::new(150)
                             .expect("should succeed for non-zero or u32::MAX values"),
-                    ),
-                    valid_lifetime: v6::TimeValue::Finite(
+                    )),
+                    valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                         v6::NonZeroOrMaxU32::new(180)
                             .expect("should succeed for non-zero or u32::MAX values"),
-                    ),
-                    t1: v6::TimeValue::Finite(
+                    )),
+                    t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                         v6::NonZeroOrMaxU32::new(T1)
                             .expect("should succeed for non-zero or u32::MAX values"),
-                    ),
-                    t2: v6::TimeValue::Finite(
+                    )),
+                    t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                         v6::NonZeroOrMaxU32::new(T2)
                             .expect("should succeed for non-zero or u32::MAX values"),
-                    ),
+                    )),
                 },
             ],
             StepRng::new(std::u64::MAX / 2, 0),
@@ -4260,8 +4290,8 @@ mod tests {
                 t2: got_t2,
                 dns_servers: _,
                 solicit_max_rt: _,
-            })) if *got_t1 == Duration::from_secs(T1.into()) &&
-                   *got_t2 == Duration::from_secs(T2.into())
+            })) if *got_t1 == v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(T1).expect("should succeed")) &&
+                   *got_t2 == v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(T2).expect("should succeed"))
         );
     }
 
@@ -4571,31 +4601,39 @@ mod tests {
     #[test_case(v6::TimeValue::Zero, v6::TimeValue::Zero, v6::TimeValue::Zero)]
     #[test_case(
         v6::TimeValue::Zero,
-        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
-        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
-    )]
-    #[test_case(v6::TimeValue::Zero, v6::TimeValue::Infinity, v6::TimeValue::Infinity)]
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")))
+     )]
     #[test_case(
-        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
         v6::TimeValue::Zero,
-        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity)
     )]
     #[test_case(
-        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
-        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values")),
-        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values"))
-    )]
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))),
+        v6::TimeValue::Zero,
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")))
+     )]
     #[test_case(
-        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
-        v6::TimeValue::Infinity,
-        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
-    )]
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values"))),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values")))
+     )]
     #[test_case(
-        v6::TimeValue::Infinity,
-        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
-        v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")))
+     )]
+    #[test_case(
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")))
+     )]
+    #[test_case(
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity)
     )]
-    #[test_case(v6::TimeValue::Infinity, v6::TimeValue::Infinity, v6::TimeValue::Infinity)]
     fn maybe_get_nonzero_min(
         old_value: v6::TimeValue,
         new_value: v6::TimeValue,
@@ -4604,11 +4642,61 @@ mod tests {
         assert_eq!(super::maybe_get_nonzero_min(old_value, new_value), expected_value);
     }
 
-    #[test_case(INFINITY, T1_MIN_LIFETIME_RATIO, INFINITY)]
-    #[test_case(100, T1_MIN_LIFETIME_RATIO, 50)]
-    #[test_case(INFINITY, T2_T1_RATIO, INFINITY)]
-    #[test_case(INFINITY - 1, T2_T1_RATIO, INFINITY)]
-    fn compute_t(min: u32, ratio: Ratio<u32>, expected_t: u32) {
+    #[test_case(
+        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
+        v6::TimeValue::Zero,
+        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
+    )]
+    #[test_case(
+        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values"))),
+        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values"))
+    )]
+    #[test_case(
+        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values")),
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
+        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
+    )]
+    #[test_case(
+        v6::NonZeroTimeValue::Infinity,
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))),
+        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
+    )]
+    #[test_case(
+        v6::NonZeroTimeValue::Infinity,
+        v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
+        v6::NonZeroTimeValue::Infinity
+    )]
+    #[test_case(
+        v6::NonZeroTimeValue::Infinity,
+        v6::TimeValue::Zero,
+        v6::NonZeroTimeValue::Infinity
+    )]
+    fn get_nonzero_min(
+        old_value: v6::NonZeroTimeValue,
+        new_value: v6::TimeValue,
+        expected_value: v6::NonZeroTimeValue,
+    ) {
+        assert_eq!(super::get_nonzero_min(old_value, new_value), expected_value);
+    }
+
+    #[test_case(
+        v6::NonZeroTimeValue::Infinity,
+        T1_MIN_LIFETIME_RATIO,
+        v6::NonZeroTimeValue::Infinity
+    )]
+    #[test_case(
+        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(100).expect("should succeed")),
+        T1_MIN_LIFETIME_RATIO,
+        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(50).expect("should succeed"))
+    )]
+    #[test_case(v6::NonZeroTimeValue::Infinity, T2_T1_RATIO, v6::NonZeroTimeValue::Infinity)]
+    #[test_case(
+        v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(INFINITY - 1).expect("should succeed")),
+        T2_T1_RATIO,
+        v6::NonZeroTimeValue::Infinity
+    )]
+    fn compute_t(min: v6::NonZeroTimeValue, ratio: Ratio<u32>, expected_t: v6::NonZeroTimeValue) {
         assert_eq!(super::compute_t(min, ratio), expected_t);
     }
 
@@ -4666,14 +4754,14 @@ mod tests {
     ) {
         let ia = IdentityAssociation {
             address,
-            preferred_lifetime: v6::TimeValue::Finite(
+            preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                 v6::NonZeroOrMaxU32::new(60)
                     .expect("should succeed for non-zero or u32::MAX values"),
-            ),
-            valid_lifetime: v6::TimeValue::Finite(
+            )),
+            valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                 v6::NonZeroOrMaxU32::new(90)
                     .expect("should succeed for non-zero or u32::MAX values"),
-            ),
+            )),
         };
         assert_eq!(NonConfiguredIA::new(ia, configured_address).is_some(), expect_ia_is_some);
     }

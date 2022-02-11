@@ -230,26 +230,36 @@ mod private {
 
 pub use private::*;
 
-/// A representation of T1/T2 times to relay the fact that certain values have
-/// special significance as described in RFC 8415, [section 14.2] and
-/// [section 7.7].
+/// A representation of time values for lifetimes to relay the fact that zero is
+/// not a valid time value, and that `Infinity` has special significance, as
+/// described in RFC 8415, [section
+/// 14.2] and [section 7.7].
+///
+/// [section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+/// [section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum NonZeroTimeValue {
+    /// The value is set to a value greater than 0 and less than `Infinity`.
+    Finite(NonZeroOrMaxU32),
+    /// `u32::MAX` representing `Infinity`, as described in
+    /// [RFC 8415, section 7.7].
+    ///
+    /// [RFC 8415, section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
+    Infinity,
+}
+
+/// A representation of time values for lifetimes to relay the fact that certain
+/// values have special significance as described in RFC 8415, [section 14.2]
+/// and [section 7.7].
 ///
 /// [section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
 /// [section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TimeValue {
-    /// The value is left to the discretion of the client per [RFC 8415,
-    /// section 14.2].
-    ///
-    /// [RFC 8415, section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+    /// The value is zero.
     Zero,
-    /// The value is set to a value greater than 0 and less than `Infinity`.
-    Finite(NonZeroOrMaxU32),
-    /// `u32::MAX` representing "infinity", the client will never attempt to
-    /// extend the lifetime, as described in per [RFC 8415, section 7.7].
-    ///
-    /// [RFC 8415, section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
-    Infinity,
+    /// The value is non-zero.
+    NonZero(NonZeroTimeValue),
 }
 
 impl TimeValue {
@@ -257,10 +267,10 @@ impl TimeValue {
     fn new(t: u32) -> TimeValue {
         match t {
             0 => TimeValue::Zero,
-            u32::MAX => TimeValue::Infinity,
-            t => TimeValue::Finite(
+            u32::MAX => TimeValue::NonZero(NonZeroTimeValue::Infinity),
+            t => TimeValue::NonZero(NonZeroTimeValue::Finite(
                 NonZeroOrMaxU32::new(t).expect("should succeed for non zero or u32::MAX values"),
-            ),
+            )),
         }
     }
 }
@@ -1505,26 +1515,29 @@ mod tests {
     }
 
     #[test_case(TimeValue::new(0), TimeValue::Zero)]
-    #[test_case(TimeValue::new(5), TimeValue::Finite(NonZeroOrMaxU32::new(5).expect("should succeed for non zero or u32::MAX values")))]
-    #[test_case(TimeValue::new(u32::MAX), TimeValue::Infinity)]
+    #[test_case(TimeValue::new(5), TimeValue::NonZero(NonZeroTimeValue::Finite(NonZeroOrMaxU32::new(5).expect("should succeed for non zero or u32::MAX values"))))]
+    #[test_case(TimeValue::new(u32::MAX), TimeValue::NonZero(NonZeroTimeValue::Infinity))]
     fn test_time_value_new(time_value: TimeValue, expected_variant: TimeValue) {
         assert_eq!(time_value, expected_variant);
     }
 
-    #[test]
-    fn test_time_value_ord() {
-        assert!(
-            TimeValue::Zero
-                < TimeValue::Finite(
+    #[test_case(
+       NonZeroTimeValue::Finite(
                     NonZeroOrMaxU32::new(1)
                         .expect("should succeed for non zero or u32::MAX values")
-                )
-        );
+                ))]
+    #[test_case(NonZeroTimeValue::Infinity)]
+    fn test_time_value_ord(non_zero_tv: NonZeroTimeValue) {
+        assert!(TimeValue::Zero < TimeValue::NonZero(non_zero_tv));
+    }
+
+    #[test]
+    fn test_non_zero_time_value_ord() {
         assert!(
-            TimeValue::Finite(
+            NonZeroTimeValue::Finite(
                 NonZeroOrMaxU32::new(u32::MAX - 1)
                     .expect("should succeed for non zero or u32::MAX values")
-            ) < TimeValue::Infinity
+            ) < NonZeroTimeValue::Infinity
         );
     }
 
