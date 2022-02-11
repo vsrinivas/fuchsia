@@ -89,7 +89,7 @@ async fn main() -> Result<(), Error> {
             Ok(())
         }
         SubCommand::Fsck(_) => {
-            let fs = mount::mount(device, crypt).await?;
+            let fs = mount::mount(device).await?;
             let options = fsck::FsckOptions {
                 fail_on_warning: false,
                 halt_on_error: false,
@@ -97,7 +97,7 @@ async fn main() -> Result<(), Error> {
                 on_error: |err| eprintln!("{:?}", err.to_string()),
                 verbose: args.verbose,
             };
-            fsck::fsck_with_options(&fs, options).await
+            fsck::fsck_with_options(&fs, Some(crypt), options).await
         }
     }
 }
