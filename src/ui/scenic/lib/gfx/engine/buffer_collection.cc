@@ -33,7 +33,10 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
     fuchsia::sysmem::BufferCollectionTokenSyncPtr sync_token = buffer_collection_token.BindSync();
     zx_status_t status =
         sync_token->Duplicate(std::numeric_limits<uint32_t>::max(), vulkan_token.NewRequest());
-    FX_DCHECK(status == ZX_OK);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Cannot duplicate token. The client may have invalidated the token.";
+      return fitx::failed();
+    }
 
     // Reassign the channel to the non-sync interface handle.
     buffer_collection_token = sync_token.Unbind();
@@ -123,9 +126,10 @@ bool BufferCollectionInfo::BuffersAreAllocated() {
     // guaranteed that the collection is allocated above.
     status = buffer_collection_ptr_->WaitForBuffersAllocated(&allocation_status,
                                                              &buffer_collection_info_);
-    // Failures here would be an issue with sysmem, and so we DCHECK.
-    FX_DCHECK(allocation_status == ZX_OK);
-    FX_DCHECK(status == ZX_OK);
+    if (status != ZX_OK || allocation_status != ZX_OK) {
+      FX_LOGS(ERROR) << "WaitForBuffersAllocated failed: " << status << ":" << allocation_status;
+      return false;
+    }
 
     // Perform a DCHECK here as well to insure the collection has at least one vmo, because
     // it shouldn't have been able to be allocated with less than that.
