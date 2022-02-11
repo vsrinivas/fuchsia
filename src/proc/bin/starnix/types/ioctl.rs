@@ -2,80 +2,71 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use crate::types::*;
 
-#[cfg(test)]
-pub struct IoctlRequest {
-    pub dir: u32,
-    pub _type: u32,
-    pub number: u32,
-    pub size: u32,
-}
-
-#[cfg(test)]
-impl IoctlRequest {
-    pub fn new(request: u32) -> IoctlRequest {
-        IoctlRequest {
-            dir: decode_ioctl_dir(request),
-            _type: decode_ioctl_type(request),
-            number: decode_ioctl_number(request),
-            size: decode_ioctl_size(request),
-        }
-    }
-}
-
-#[cfg(test)]
-pub fn decode_ioctl_dir(number: u32) -> u32 {
-    (number >> _IOC_DIRSHIFT) & _IOC_DIRMASK
-}
-
-#[cfg(test)]
-pub fn decode_ioctl_type(number: u32) -> u32 {
-    (number >> _IOC_TYPESHIFT) & _IOC_TYPEMASK
-}
-
-#[cfg(test)]
-pub fn decode_ioctl_number(number: u32) -> u32 {
-    (number >> _IOC_NRSHIFT) & _IOC_NRMASK
-}
-
-#[cfg(test)]
-pub fn decode_ioctl_size(number: u32) -> u32 {
-    (number >> _IOC_SIZESHIFT) & _IOC_SIZEMASK
-}
-
-#[cfg(test)]
-fn new_ioctl(dir: u32, _type: u32, number: u32, size: u32) -> u32 {
+const fn new_ioctl(dir: u32, _type: u8, number: u32, size: u32) -> u32 {
     (dir << _IOC_DIRSHIFT)
-        | (_type << _IOC_TYPESHIFT)
+        | ((_type as u32) << _IOC_TYPESHIFT)
         | (number << _IOC_NRSHIFT)
         | (size << _IOC_SIZESHIFT)
 }
 
 #[cfg(test)]
-pub fn encode_ioctl(_type: u32, number: u32) -> u32 {
+pub const fn encode_ioctl(_type: u8, number: u32) -> u32 {
     new_ioctl(_IOC_NONE, _type, number, 0)
 }
 
 #[cfg(test)]
-pub fn encode_ioctl_read<T>(_type: u32, number: u32) -> u32 {
+pub const fn encode_ioctl_read<T>(_type: u8, number: u32) -> u32 {
     new_ioctl(_IOC_READ, _type, number, std::mem::size_of::<T>() as u32)
 }
 
 #[cfg(test)]
-pub fn encode_ioctl_write<T>(_type: u32, number: u32) -> u32 {
+pub const fn encode_ioctl_write<T>(_type: u8, number: u32) -> u32 {
     new_ioctl(_IOC_WRITE, _type, number, std::mem::size_of::<T>() as u32)
 }
 
-#[cfg(test)]
-pub fn encode_ioctl_write_read<T>(_type: u32, number: u32) -> u32 {
+pub const fn encode_ioctl_write_read<T>(_type: u8, number: u32) -> u32 {
     new_ioctl(_IOC_READ | _IOC_WRITE, _type, number, std::mem::size_of::<T>() as u32)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    pub struct IoctlRequest {
+        pub dir: u32,
+        pub _type: u32,
+        pub number: u32,
+        pub size: u32,
+    }
+
+    impl IoctlRequest {
+        pub fn new(request: u32) -> IoctlRequest {
+            IoctlRequest {
+                dir: decode_ioctl_dir(request),
+                _type: decode_ioctl_type(request),
+                number: decode_ioctl_number(request),
+                size: decode_ioctl_size(request),
+            }
+        }
+    }
+
+    pub fn decode_ioctl_dir(number: u32) -> u32 {
+        (number >> _IOC_DIRSHIFT) & _IOC_DIRMASK
+    }
+
+    pub fn decode_ioctl_type(number: u32) -> u32 {
+        (number >> _IOC_TYPESHIFT) & _IOC_TYPEMASK
+    }
+
+    pub fn decode_ioctl_number(number: u32) -> u32 {
+        (number >> _IOC_NRSHIFT) & _IOC_NRMASK
+    }
+
+    pub fn decode_ioctl_size(number: u32) -> u32 {
+        (number >> _IOC_SIZESHIFT) & _IOC_SIZEMASK
+    }
 
     #[test]
     fn test_encode() {

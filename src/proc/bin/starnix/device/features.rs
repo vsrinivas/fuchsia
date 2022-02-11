@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::device::wayland::serve_wayland;
+use crate::device::{binder::DevBinder, wayland::serve_wayland};
 use crate::task::CurrentTask;
 use crate::types::*;
 
@@ -18,6 +18,20 @@ pub fn run_features<'a>(entries: &'a Vec<String>, current_task: &CurrentTask) ->
                     current_task,
                     b"/data/tmp/wayland-0".to_vec(),
                     b"/data/tmp/wayland-1".to_vec(),
+                )?;
+            }
+            "binder" => {
+                // Load the binder driver.
+                let kernel = current_task.kernel();
+                let mut device_registry = kernel.device_registry.write();
+                device_registry.register_chrdev(DevBinder::new())?;
+
+                // Add a device file to /dev
+                let devfs = crate::fs::devfs::dev_tmp_fs(&*kernel);
+                devfs.root().create_node(
+                    b"binder",
+                    FileMode::IFCHR | FileMode::from_bits(0o666),
+                    DevBinder::DEVICE_ID,
                 )?;
             }
             feature => {

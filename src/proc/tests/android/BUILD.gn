@@ -33,6 +33,18 @@ fuchsia_component("sh") {
   manifest = "meta/sh.cml"
 }
 
+resource("binder_smoke_test_bin") {
+  sources = [
+    "//prebuilt/starnix/tests/syscalls/linux-amd64/android/binder_smoke_test",
+  ]
+  outputs = [ "data/tests/binder_smoke_test" ]
+}
+
+fuchsia_test_component("binder_smoke_test") {
+  manifest = "meta/binder_smoke_test.cml"
+  deps = [ ":binder_smoke_test_bin" ]
+}
+
 fuchsia_test_component("java_hello_world") {
   manifest = "meta/java_hello_world.cml"
 }
@@ -68,6 +80,7 @@ fuchsia_test_package("test_android_distro") {
     ":boringssl_self_test64",
     ":java_hello_world",
     ":sh_test",
+    ":binder_smoke_test",
   ]
 
   # This package intentionally contains many non-Fuchia ELF binaries that
