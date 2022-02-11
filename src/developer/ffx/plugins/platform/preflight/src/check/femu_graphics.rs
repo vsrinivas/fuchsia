@@ -19,8 +19,8 @@ lazy_static! {
 
     // Regex to match the supported video cards on Linux. Includes:
     // * NVIDIA Corporation Quadro-based cards
-    // * All Intel Gen9 integrated graphics cards
-    static ref LINUX_SUPPORTED_CARDS_RE: Regex = Regex::new(r"^(?:Intel .*(?:HD|UHD|Iris|Iris Pro|Iris Plus) Graphics P?\d{3} .*|NVIDIA.+Quadro.+)$").unwrap();
+    // * Vulkan capable Intel graphics cards
+    static ref LINUX_SUPPORTED_CARDS_RE: Regex = Regex::new(r"^(?:Intel .*(?:HD|UHD|Iris|Iris Pro|Iris Plus) Graphics P?\d{3} .*|Intel .*Iris Xe Graphics.*|NVIDIA.+Quadro.+)$").unwrap();
 
     // Regex to extract graphics cards on MacOS. Matches output strings from `system_profiler` like:
     // Chipset Model: Intel UHD Graphics 630
