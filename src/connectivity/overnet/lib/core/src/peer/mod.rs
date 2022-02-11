@@ -748,7 +748,6 @@ async fn client_conn_stream(
 
     let _track_connection = TrackClientConnection::new(&get_router()?, peer_node_id).await;
 
-    let on_link_status_ack = &Mutex::new(None);
     let conn_stream_writer = &Mutex::new(conn_stream_writer);
 
     let cmd_conn_stats = conn_stats.clone();
@@ -787,7 +786,6 @@ async fn client_conn_stream(
                             my_node_id,
                             peer_node_id,
                             &mut bytes,
-                            on_link_status_ack,
                             coding_context,
                         )
                         .await
@@ -880,20 +878,14 @@ async fn client_conn_handle_incoming_frame(
     my_node_id: NodeId,
     peer_node_id: NodeId,
     bytes: &mut [u8],
-    on_link_status_ack: &Mutex<Option<oneshot::Sender<()>>>,
     coding_context: coding::Context,
 ) -> Result<(), Error> {
     let msg: PeerReply = decode_fidl_with_context(coding_context, bytes)?;
     log::trace!("[{:?} clipeer:{:?}] got reply {:?}", my_node_id, peer_node_id, msg);
     match msg {
         PeerReply::UpdateLinkStatusAck(_) => {
-            on_link_status_ack
-                .lock()
-                .await
-                .take()
-                .ok_or_else(|| format_err!("Got link status ack without sending link status"))?
-                .send(())
-                .map_err(|_| format_err!("Failed to send link status ack"))?;
+            // XXX(raggi): prior code attempted to send to a None under a lock
+            // here, seemingly unused, but may have influenced total ordering?
         }
     }
     Ok(())
