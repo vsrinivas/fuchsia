@@ -146,6 +146,26 @@ fn main() {
                 ]),
                 ..UseEventStreamDeprecated::EMPTY
             }),
+            Use::EventStream(UseEventStream {
+                source_names: Some(vec![
+                    "events".to_string(),
+                    "other".to_string(),
+                    "some".to_string(),
+                ]),
+                source: Some(Ref::Parent(ParentRef {})),
+                target_path: Some("/testdir/my_stream".to_string()),
+                scope: Some(vec![Ref::Child(ChildRef {
+                    collection: None,
+                    name: "logger".to_string(),
+                })]),
+                ..UseEventStream::EMPTY
+            }),
+            Use::EventStream(UseEventStream {
+                source_names: Some(vec!["filtered".to_string()]),
+                source: Some(Ref::Parent(ParentRef {})),
+                target_path: Some("/svc/fuchsia.component.EventStream".to_string()),
+                ..UseEventStream::EMPTY
+            }),
             Use::Protocol(UseProtocol {
                 dependency_type: Some(DependencyType::Strong),
                 source: Some(Ref::Parent(ParentRef {})),

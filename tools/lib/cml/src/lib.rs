@@ -73,7 +73,8 @@ pub enum CapabilityId {
     Runner(Name),
     Resolver(Name),
     Event(Name),
-    EventStream(Name),
+    EventStreamDeprecated(Name),
+    EventStream(Path),
 }
 
 /// Generates a `Vec<Name>` -> `Vec<CapabilityId>` conversion function.
@@ -109,6 +110,7 @@ impl CapabilityId {
             CapabilityId::Runner(_) => "runner",
             CapabilityId::Resolver(_) => "resolver",
             CapabilityId::Event(_) => "event",
+            CapabilityId::EventStreamDeprecated(_) => "event_stream_deprecated",
             CapabilityId::EventStream(_) => "event_stream",
         }
     }
@@ -120,6 +122,7 @@ impl CapabilityId {
             CapabilityId::UsedProtocol(p) => path::Path::new(p.as_str()).parent(),
             CapabilityId::UsedDirectory(p) => Some(path::Path::new(p.as_str())),
             CapabilityId::UsedStorage(p) => Some(path::Path::new(p.as_str())),
+            CapabilityId::EventStream(p) => path::Path::new(p.as_str()).parent(),
             _ => None,
         }
     }
@@ -178,9 +181,15 @@ impl CapabilityId {
                     .collect()),
             };
         } else if let Some(name) = use_.event_stream_deprecated() {
-            return Ok(vec![CapabilityId::EventStream(name)]);
+            return Ok(vec![CapabilityId::EventStreamDeprecated(name)]);
+        } else if let Some(_) = use_.event_stream() {
+            if let Some(path) = use_.path() {
+                return Ok(vec![CapabilityId::EventStream(path.clone())]);
+            }
+            return Ok(vec![CapabilityId::EventStream(Path::new(
+                "/svc/fuchsia.component.EventStream".to_string(),
+            )?)]);
         }
-
         // Unsupported capability type.
         let supported_keywords = use_
             .supported()
@@ -426,6 +435,7 @@ impl fmt::Display for CapabilityId {
             | CapabilityId::UsedProtocol(p)
             | CapabilityId::UsedDirectory(p)
             | CapabilityId::UsedStorage(p) => p.as_str(),
+            CapabilityId::EventStreamDeprecated(p) => p.as_str(),
             CapabilityId::EventStream(p) => p.as_str(),
             CapabilityId::Protocol(p) | CapabilityId::Directory(p) => p.as_str(),
         };
@@ -500,6 +510,16 @@ pub struct OneOrManyOfferToRefs;
     unique_items = true
 )]
 pub struct OneOrManyOfferFromRefs;
+
+/// Generates deserializer for `OneOrMany<UseFromRef>`.
+#[derive(OneOrMany, Debug, Clone)]
+#[one_or_many(
+    expected = "one or an array of \"#<collection-name>\", or \"#<child-name>\"",
+    inner_type = "EventScope",
+    min_length = 1,
+    unique_items = true
+)]
+pub struct OneOrManyEventScope;
 
 /// The stop timeout configured in an environment.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -601,6 +621,14 @@ pub enum UseFromRef {
     Named(Name),
     /// A reference to this component.
     Self_,
+}
+
+/// The scope of an event.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
+#[reference(expected = "\"#<collection-name>\", \"#<child-name>\", or none")]
+pub enum EventScope {
+    /// A reference to a child or a collection.
+    Named(Name),
 }
 
 /// A reference in an `expose from`.
@@ -1944,13 +1972,13 @@ pub struct Capability {
     pub runner: Option<Name>,
     pub resolver: Option<Name>,
     pub event: Option<Name>,
+    pub event_stream: Option<OneOrMany<Name>>,
     pub from: Option<CapabilityFromRef>,
     pub path: Option<Path>,
     pub rights: Option<Rights>,
     pub backing_dir: Option<Name>,
     pub subdir: Option<RelativePath>,
     pub storage_id: Option<StorageId>,
-    pub mode: Option<EventMode>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -2064,6 +2092,8 @@ pub struct Use {
     pub subdir: Option<RelativePath>,
     pub event: Option<OneOrMany<Name>>,
     pub event_stream_deprecated: Option<Name>,
+    pub event_stream: Option<OneOrMany<Name>>,
+    pub scope: Option<OneOrMany<EventScope>>,
     pub filter: Option<Map<String, Value>>,
     pub modes: Option<EventModes>,
     pub subscriptions: Option<EventSubscriptions>,
@@ -2139,6 +2169,7 @@ pub trait CapabilityClause {
     fn resolver(&self) -> Option<OneOrMany<Name>>;
     fn event(&self) -> Option<OneOrMany<Name>>;
     fn event_stream_deprecated(&self) -> Option<Name>;
+    fn event_stream(&self) -> Option<OneOrMany<Name>>;
 
     /// Returns the name of the capability for display purposes.
     /// If `service()` returns `Some`, the capability name must be "service", etc.
@@ -2214,6 +2245,9 @@ impl CapabilityClause for Capability {
     }
     fn event(&self) -> Option<OneOrMany<Name>> {
         self.event.as_ref().map(|n| OneOrMany::One(n.clone()))
+    }
+    fn event_stream(&self) -> Option<OneOrMany<Name>> {
+        self.event_stream.clone()
     }
     fn event_stream_deprecated(&self) -> Option<Name> {
         None
@@ -2291,6 +2325,9 @@ impl CapabilityClause for DebugRegistration {
     fn event(&self) -> Option<OneOrMany<Name>> {
         None
     }
+    fn event_stream(&self) -> Option<OneOrMany<Name>> {
+        None
+    }
     fn event_stream_deprecated(&self) -> Option<Name> {
         None
     }
@@ -2352,6 +2389,9 @@ impl CapabilityClause for Use {
     fn event_stream_deprecated(&self) -> Option<Name> {
         self.event_stream_deprecated.clone()
     }
+    fn event_stream(&self) -> Option<OneOrMany<Name>> {
+        self.event_stream.clone()
+    }
     fn capability_type(&self) -> &'static str {
         if self.service.is_some() {
             "service"
@@ -2364,6 +2404,8 @@ impl CapabilityClause for Use {
         } else if self.event.is_some() {
             "event"
         } else if self.event_stream_deprecated.is_some() {
+            "event_stream_deprecated"
+        } else if self.event_stream.is_some() {
             "event_stream"
         } else {
             panic!("Missing capability name")
@@ -2453,6 +2495,9 @@ impl CapabilityClause for Expose {
     fn event_stream_deprecated(&self) -> Option<Name> {
         None
     }
+    fn event_stream(&self) -> Option<OneOrMany<Name>> {
+        None
+    }
     fn capability_type(&self) -> &'static str {
         if self.service.is_some() {
             "service"
@@ -2533,6 +2578,9 @@ impl CapabilityClause for Offer {
     }
     fn event(&self) -> Option<OneOrMany<Name>> {
         self.event.clone()
+    }
+    fn event_stream(&self) -> Option<OneOrMany<Name>> {
+        None
     }
     fn event_stream_deprecated(&self) -> Option<Name> {
         None
@@ -2832,6 +2880,7 @@ mod tests {
         Use {
             service: None,
             protocol: None,
+            scope: None,
             directory: None,
             storage: None,
             from: None,
@@ -2841,6 +2890,7 @@ mod tests {
             subdir: None,
             event: None,
             event_stream_deprecated: None,
+            event_stream: None,
             filter: None,
             modes: None,
             subscriptions: None,
@@ -2884,6 +2934,21 @@ mod tests {
                 CapabilityId::UsedService("/svc/a".parse().unwrap()),
                 CapabilityId::UsedService("/svc/b".parse().unwrap())
             ]
+        );
+        assert_eq!(
+            CapabilityId::from_use(&Use {
+                event_stream: Some(OneOrMany::One(Name::new("test".to_string()).unwrap())),
+                path: Some(cm_types::Path::new("/svc/myevent".to_string()).unwrap()),
+                ..empty_use()
+            },)?,
+            vec![CapabilityId::EventStream("/svc/myevent".parse().unwrap()),]
+        );
+        assert_eq!(
+            CapabilityId::from_use(&Use {
+                event_stream: Some(OneOrMany::One(Name::new("test".to_string()).unwrap())),
+                ..empty_use()
+            },)?,
+            vec![CapabilityId::EventStream("/svc/fuchsia.component.EventStream".parse().unwrap()),]
         );
         assert_eq!(
             CapabilityId::from_use(&Use {

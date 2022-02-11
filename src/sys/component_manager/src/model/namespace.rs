@@ -141,6 +141,9 @@ impl IncomingNamespace {
                     // as these are capabilities used by the framework itself
                     // and not given to components directly.
                 }
+                cm_rust::UseDecl::EventStream(_) => {
+                    // TODO(fxbug.dev/81980): install EventStream at the requested path.
+                }
             }
         }
 

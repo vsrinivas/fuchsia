@@ -429,6 +429,9 @@ fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut Depende
                 // capabilities which cannot or are not used from a child can be ignored.
                 continue;
             }
+            UseDecl::EventStream(_) => {
+                continue;
+            }
         };
         match use_ {
             UseDecl::Protocol(UseProtocolDecl { dependency_type, .. })

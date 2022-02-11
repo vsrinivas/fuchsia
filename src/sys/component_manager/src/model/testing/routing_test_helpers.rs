@@ -487,6 +487,10 @@ impl RoutingTest {
                 UseDecl::Protocol(s) => Some(s.target_path.dirname),
                 UseDecl::Storage(s) => Some(s.target_path.to_string()),
                 UseDecl::Event(_) | UseDecl::EventStreamDeprecated(_) => None,
+                UseDecl::EventStream(_) => {
+                    // TODO(fxbug.dev/81980): Route EventStream path
+                    None
+                }
             })
             .collect();
         let mut expected_paths = vec![];

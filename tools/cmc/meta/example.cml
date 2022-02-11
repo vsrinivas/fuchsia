@@ -103,6 +103,20 @@
                 },
             ],
         },
+        {
+            event_stream: [
+                "events",
+                "other",
+                "some",
+            ],
+            from: "parent",
+            path: "/testdir/my_stream",
+            scope: [ "#logger" ],
+        },
+        {
+            event_stream: "filtered",
+            from: "parent",
+        },
     ],
     offer: [
         {

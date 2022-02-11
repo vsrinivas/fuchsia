@@ -14,6 +14,7 @@ type Use = flexible union {
     4: storage UseStorage;
     5: event UseEvent;
     6: event_stream_deprecated UseEventStreamDeprecated;
+    7: event_stream UseEventStream;
 };
 
 /// Declares a service used by a component, which was offered to it.
@@ -159,4 +160,24 @@ type UseEventStreamDeprecated = table {
     /// The set of events to which this EventStream is subscribed.
     /// Note: This vector must be non-empty.
     2: subscriptions vector<EventSubscription>:MAX_NUM_EVENT_STREAM_SUBSCRIPTIONS;
+};
+
+/// Declares an EventStream used by a component.
+type UseEventStream = table {
+    /// The names of the event streams.
+    1: source_names vector<name>:MAX;
+
+    /// The provider of the event. Must be `parent`, `framework`, or `child`.
+    2: source Ref;
+
+    /// When an event is used from framework, the scope is required to specify
+    /// the child (or array of children) which the event will be about.
+    /// When the event is used from parent, the scope can be used to downscope
+    /// the event to a certain child scope, otherwise the event will carry the
+    /// scope coming from the parent.
+    3: scope vector<Ref>:MAX;
+
+    /// The path where the capability should be installed in the component's namespace.
+    /// Must be an absolute path starting with /.
+    4: target_path name;
 };

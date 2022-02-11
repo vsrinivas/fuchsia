@@ -212,6 +212,7 @@ pub enum UseDecl {
     Storage(UseStorageDecl),
     Event(UseEventDecl),
     EventStreamDeprecated(UseEventStreamDeprecatedDecl),
+    EventStream(UseEventStreamDecl),
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -310,6 +311,16 @@ fidl_translations_symmetrical_enums!(fdecl::EventMode, EventMode, Sync, Async);
 pub struct UseEventStreamDeprecatedDecl {
     pub name: CapabilityName,
     pub subscriptions: Vec<EventSubscription>,
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fdecl::UseEventStream")]
+pub struct UseEventStreamDecl {
+    pub source_names: Vec<CapabilityName>,
+    pub source: UseSource,
+    pub scope: Option<Vec<EventScope>>,
+    pub target_path: CapabilityPath,
 }
 
 #[cfg_attr(
@@ -1196,6 +1207,7 @@ fidl_translations_identical!(bool);
 fidl_translations_identical!(Vec<bool>);
 fidl_translations_identical!(String);
 fidl_translations_identical!(Vec<String>);
+fidl_translations_identical!(Vec<CapabilityName>);
 fidl_translations_identical!(fdecl::StartupMode);
 fidl_translations_identical!(fdecl::OnTerminate);
 fidl_translations_identical!(fdecl::Durability);
@@ -1204,6 +1216,30 @@ fidl_translations_identical!(fio::Operations);
 fidl_translations_identical!(fdecl::EnvironmentExtends);
 fidl_translations_identical!(fdecl::StorageId);
 fidl_translations_identical!(Vec<fprocess::HandleInfo>);
+
+impl FidlIntoNative<Vec<EventScope>> for Vec<fidl_fuchsia_component_decl::Ref> {
+    fn fidl_into_native(self) -> Vec<EventScope> {
+        self.into_iter().map(|s| s.fidl_into_native()).collect()
+    }
+}
+
+impl NativeIntoFidl<Vec<fidl_fuchsia_component_decl::Ref>> for Vec<EventScope> {
+    fn native_into_fidl(self) -> Vec<fidl_fuchsia_component_decl::Ref> {
+        self.into_iter().map(|s| s.native_into_fidl()).collect()
+    }
+}
+
+impl FidlIntoNative<Vec<UseSource>> for Vec<fidl_fuchsia_component_decl::Ref> {
+    fn fidl_into_native(self) -> Vec<UseSource> {
+        self.into_iter().map(|s| s.fidl_into_native()).collect()
+    }
+}
+
+impl NativeIntoFidl<Vec<fidl_fuchsia_component_decl::Ref>> for Vec<UseSource> {
+    fn native_into_fidl(self) -> Vec<fidl_fuchsia_component_decl::Ref> {
+        self.into_iter().map(|s| s.native_into_fidl()).collect()
+    }
+}
 
 fidl_translations_from_into!(cm_types::AllowedOffers, fdecl::AllowedOffers);
 fidl_translations_from_into!(CapabilityName, String);
@@ -1283,6 +1319,7 @@ impl UseDecl {
             UseDecl::Protocol(d) => Some(&d.target_path),
             UseDecl::Directory(d) => Some(&d.target_path),
             UseDecl::Storage(d) => Some(&d.target_path),
+            UseDecl::EventStream(d) => Some(&d.target_path),
             UseDecl::Event(_) | UseDecl::EventStreamDeprecated(_) => None,
         }
     }
@@ -1292,6 +1329,7 @@ impl UseDecl {
             UseDecl::Event(event_decl) => Some(&event_decl.source_name),
             UseDecl::Storage(storage_decl) => Some(&storage_decl.source_name),
             UseDecl::EventStreamDeprecated(event_stream_decl) => Some(&event_stream_decl.name),
+            UseDecl::EventStream(_) => None,
             UseDecl::Service(_) | UseDecl::Protocol(_) | UseDecl::Directory(_) => None,
         }
     }
@@ -1391,6 +1429,7 @@ pub trait CapabilityDeclCommon: Send + Sync {
 pub enum CapabilityTypeName {
     Directory,
     Event,
+    EventStreamDeprecated,
     EventStream,
     Protocol,
     Resolver,
@@ -1404,6 +1443,7 @@ impl fmt::Display for CapabilityTypeName {
         let display_name = match &self {
             CapabilityTypeName::Directory => "directory",
             CapabilityTypeName::Event => "event",
+            CapabilityTypeName::EventStreamDeprecated => "event_stream_deprecated",
             CapabilityTypeName::EventStream => "event_stream",
             CapabilityTypeName::Protocol => "protocol",
             CapabilityTypeName::Resolver => "resolver",
@@ -1423,7 +1463,8 @@ impl From<&UseDecl> for CapabilityTypeName {
             UseDecl::Directory(_) => Self::Directory,
             UseDecl::Storage(_) => Self::Storage,
             UseDecl::Event(_) => Self::Event,
-            UseDecl::EventStreamDeprecated(_) => Self::EventStream,
+            UseDecl::EventStreamDeprecated(_) => Self::EventStreamDeprecated,
+            UseDecl::EventStream(_) => Self::EventStream,
         }
     }
 }
@@ -1560,6 +1601,38 @@ impl NativeIntoFidl<fdecl::Ref> for UseSource {
                 fdecl::Ref::Capability(fdecl::CapabilityRef { name: name.to_string() })
             }
             UseSource::Child(name) => fdecl::Ref::Child(fdecl::ChildRef { name, collection: None }),
+        }
+    }
+}
+
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EventScope {
+    Child(ChildRef),
+    Collection(String),
+}
+
+impl FidlIntoNative<EventScope> for fdecl::Ref {
+    fn fidl_into_native(self) -> EventScope {
+        match self {
+            fdecl::Ref::Child(c) => {
+                if let Some(_) = c.collection {
+                    panic!("Dynamic children scopes are not supported for EventStreams");
+                } else {
+                    EventScope::Child(ChildRef { name: c.name, collection: None })
+                }
+            }
+            fdecl::Ref::Collection(collection) => EventScope::Collection(collection.name),
+            _ => panic!("invalid EventScope variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<fdecl::Ref> for EventScope {
+    fn native_into_fidl(self) -> fdecl::Ref {
+        match self {
+            EventScope::Child(child) => fdecl::Ref::Child(child.native_into_fidl()),
+            EventScope::Collection(name) => fdecl::Ref::Collection(fdecl::CollectionRef { name }),
         }
     }
 }
@@ -2026,6 +2099,22 @@ mod tests {
                         mode: Some(fdecl::EventMode::Sync),
                         ..fdecl::UseEvent::EMPTY
                     }),
+                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            collection: None,
+                            name: "test".to_string(),
+                        })),
+                        source_names: Some(vec!["stopped".to_string()]),
+                        scope: Some(vec![
+                            fdecl::Ref::Child(fdecl::ChildRef {
+                                collection: None,
+                                name:"a".to_string(),
+                        }), fdecl::Ref::Collection(fdecl::CollectionRef {
+                            name:"b".to_string(),
+                        })]),
+                        target_path: Some("/svc/test".to_string()),
+                        ..fdecl::UseEventStream::EMPTY
+                    }),
                 ]),
                 exposes: Some(vec![
                     fdecl::Expose::Protocol(fdecl::ExposeProtocol {
@@ -2408,6 +2497,12 @@ mod tests {
                             target_name: "diagnostics_ready".into(),
                             filter: Some(hashmap!{"path".to_string() =>  DictionaryValue::Str("/diagnostics".to_string())}),
                             mode: EventMode::Sync,
+                        }),
+                        UseDecl::EventStream(UseEventStreamDecl {
+                            source: UseSource::Child("test".to_string()),
+                            scope: Some(vec![EventScope::Child(ChildRef{ name: "a".to_string(), collection: None}), EventScope::Collection("b".to_string())]),
+                            source_names: vec![CapabilityName::from("stopped")],
+                            target_path: CapabilityPath::from_str("/svc/test").unwrap(),
                         }),
                     ],
                     exposes: vec![

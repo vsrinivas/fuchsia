@@ -373,7 +373,8 @@ impl ComponentCapability {
                 UseDecl::Service(_) => CapabilityTypeName::Service,
                 UseDecl::Storage(_) => CapabilityTypeName::Storage,
                 UseDecl::Event(_) => CapabilityTypeName::Event,
-                UseDecl::EventStreamDeprecated(_) => CapabilityTypeName::EventStream,
+                UseDecl::EventStreamDeprecated(_) => CapabilityTypeName::EventStreamDeprecated,
+                UseDecl::EventStream(_) => CapabilityTypeName::EventStream,
             },
             ComponentCapability::Environment(env) => match env {
                 EnvironmentCapability::Runner { .. } => CapabilityTypeName::Runner,

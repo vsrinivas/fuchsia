@@ -567,15 +567,55 @@ impl<'a> ValidationContext<'a> {
                 check_path(u.target_path.as_ref(), "UseStorage", "target_path", &mut self.errors);
             }
             fdecl::Use::EventStreamDeprecated(e) => {
-                self.validate_event_stream(e);
+                self.validate_event_stream_deprecated(e);
             }
             fdecl::Use::Event(_) => {
                 // Skip events. We must have already validated by this point.
                 // See `validate_use_decls`.
             }
+            fdecl::Use::EventStream(u) => {
+                self.validate_event_stream(u);
+            }
             _ => {
                 self.errors.push(Error::invalid_field("Component", "use"));
             }
+        }
+    }
+
+    fn validate_event_stream(&mut self, u: &fdecl::UseEventStream) {
+        match u.source {
+            Some(fdecl::Ref::Child(_)) | Some(fdecl::Ref::Parent(_)) => {}
+            Some(fdecl::Ref::Framework(_)) => match &u.scope {
+                Some(value) if value.is_empty() => {
+                    self.errors.push(Error::invalid_field("UseEventStream", "scope"));
+                }
+                Some(_) => {}
+                None => {
+                    self.errors.push(Error::missing_field("UseEventStream", "scope"));
+                }
+            },
+            _ => {
+                self.errors.push(Error::invalid_field("UseEventStream", "source"));
+            }
+        }
+        if let Some(scope) = &u.scope {
+            for reference in scope {
+                if !matches!(reference, fdecl::Ref::Child(_) | fdecl::Ref::Collection(_)) {
+                    self.errors.push(Error::invalid_field("UseEventStream", "scope"));
+                }
+            }
+        }
+        check_path(u.target_path.as_ref(), "UseEventStream", "target_path", &mut self.errors);
+        if let Some(names) = &u.source_names {
+            // TODO: Validate names once Expose/Offer are implemented
+            if names.len() == 0 {
+                self.errors.push(Error::invalid_field("UseEventStream", "source_names"));
+            }
+            for name in names {
+                check_name(Some(name), "UseEventStream", "source_names", &mut self.errors);
+            }
+        } else {
+            self.errors.push(Error::missing_field("UseEventStream", "source_names"));
         }
     }
 
@@ -698,7 +738,10 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_event_stream(&mut self, event_stream: &'a fdecl::UseEventStreamDeprecated) {
+    fn validate_event_stream_deprecated(
+        &mut self,
+        event_stream: &'a fdecl::UseEventStreamDeprecated,
+    ) {
         check_name(event_stream.name.as_ref(), "UseEventStream", "name", &mut self.errors);
         if let Some(name) = event_stream.name.as_ref() {
             if !self.all_event_streams.insert(name) {
@@ -3507,6 +3550,126 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::missing_field("UseEventStream", "subscriptions"),
                 Error::empty_field("UseEventStream", "subscriptions"),
+            ])),
+        },
+        test_validate_event_stream_must_have_target_path => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                        source_names: Some(vec!["bar".to_string()]),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        ..fdecl::UseEventStream::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::MissingField(DeclField { decl: "UseEventStream".to_string(), field: "target_path".to_string() })
+            ])),
+        },
+        test_validate_event_stream_must_have_source_names => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target_path: Some("/svc/something".to_string()),
+                        ..fdecl::UseEventStream::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::MissingField(DeclField { decl: "UseEventStream".to_string(), field: "source_names".to_string() })
+            ])),
+        },
+        test_validate_event_stream_must_have_nonempty_source_names => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target_path: Some("/svc/something".to_string()),
+                        source_names: (Some(vec![])),
+                        ..fdecl::UseEventStream::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::InvalidField(DeclField { decl: "UseEventStream".to_string(), field: "source_names".to_string() })
+            ])),
+        },
+        test_validate_event_stream_scope_must_be_child_or_collection => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target_path: Some("/svc/something".to_string()),
+                        source_names: (Some(vec!["some_source".to_string()])),
+                        scope: Some(vec![fdecl::Ref::Framework(fdecl::FrameworkRef{})]),
+                        ..fdecl::UseEventStream::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::InvalidField(DeclField { decl: "UseEventStream".to_string(), field: "scope".to_string() })
+            ])),
+        },
+        test_validate_event_stream_source_must_be_parent_framework_or_child => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                        source: Some(fdecl::Ref::Debug(fdecl::DebugRef{})),
+                        target_path: Some("/svc/something".to_string()),
+                        source_names: (Some(vec!["some_source".to_string()])),
+                        scope: Some(vec![]),
+                        ..fdecl::UseEventStream::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::InvalidField(DeclField { decl: "UseEventStream".to_string(), field: "source".to_string() })
+            ])),
+        },
+        test_validate_event_stream_source_framework_must_have_nonempty_scope => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                        source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef{})),
+                        target_path: Some("/svc/something".to_string()),
+                        source_names: (Some(vec!["some_source".to_string()])),
+                        scope: Some(vec![]),
+                        ..fdecl::UseEventStream::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::InvalidField(DeclField { decl: "UseEventStream".to_string(), field: "scope".to_string() })
+            ])),
+        },
+        test_validate_event_stream_source_framework_must_specify_scope => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                        source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef{})),
+                        target_path: Some("/svc/something".to_string()),
+                        source_names: (Some(vec!["some_source".to_string()])),
+                        ..fdecl::UseEventStream::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::MissingField(DeclField { decl: "UseEventStream".to_string(), field: "scope".to_string() })
             ])),
         },
         test_validate_uses_no_runner => {

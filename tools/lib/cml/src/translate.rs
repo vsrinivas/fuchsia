@@ -6,9 +6,10 @@ use {
     crate::{
         error::Error, AnyRef, AsClause, Capability, CapabilityClause, Child, Collection, ConfigKey,
         ConfigNestedValueType, ConfigValueType, DebugRegistration, Document, Environment,
-        EnvironmentExtends, EnvironmentRef, EventMode, EventModesClause, EventSubscriptionsClause,
-        Expose, ExposeFromRef, ExposeToRef, FromClause, Offer, OneOrMany, Path, PathClause,
-        Program, ResolverRegistration, RightsClause, RunnerRegistration, Use, UseFromRef,
+        EnvironmentExtends, EnvironmentRef, EventMode, EventModesClause, EventScope,
+        EventSubscriptionsClause, Expose, ExposeFromRef, ExposeToRef, FromClause, Offer, OneOrMany,
+        Path, PathClause, Program, ResolverRegistration, RightsClause, RunnerRegistration, Use,
+        UseFromRef,
     },
     cm_types::{self as cm, Name},
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
@@ -33,7 +34,7 @@ pub fn compile(
         uses: document
             .r#use
             .as_ref()
-            .map(|u| translate_use(u, &all_capability_names, &all_children))
+            .map(|u| translate_use(u, &all_capability_names, &all_children, &all_collections))
             .transpose()?,
         exposes: document
             .expose
@@ -190,6 +191,7 @@ fn translate_use(
     use_in: &Vec<Use>,
     all_capability_names: &HashSet<Name>,
     all_children: &HashSet<&Name>,
+    all_collections: &HashSet<&Name>,
 ) -> Result<Vec<fdecl::Use>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
@@ -313,6 +315,47 @@ fn translate_use(
                 }),
                 ..fdecl::UseEventStreamDeprecated::EMPTY
             }));
+        } else if let Some(names) = &use_.event_stream {
+            let source_names = annotate_type::<Vec<cm_types::Name>>(names.clone().into())
+                .iter()
+                .map(|name| name.to_string())
+                .collect();
+            let scopes = match use_.scope.clone() {
+                Some(value) => Some(annotate_type::<Vec<EventScope>>(value.into())),
+                None => None,
+            };
+            let internal_error = format!("Internal error in all_target_use_paths when translating an EventStream. Please file a bug.");
+            out_uses.push(fdecl::Use::EventStream(fdecl::UseEventStream {
+                source_names: Some(source_names),
+                scope: match scopes {
+                    Some(values) => {
+                        let mut output = vec![];
+                        for value in &values {
+                            output.push(translate_child_or_collection_ref(
+                                value.into(),
+                                &all_children,
+                                &all_collections,
+                            )?);
+                        }
+                        Some(output)
+                    }
+                    None => None,
+                },
+                source: Some(extract_use_source(use_, all_capability_names, all_children)?),
+                target_path: Some(
+                    annotate_type::<Vec<cm_types::Path>>(
+                        all_target_use_paths(use_, use_)
+                            .ok_or_else(|| Error::internal(internal_error.clone()))?
+                            .into(),
+                    )
+                    .iter()
+                    .next()
+                    .ok_or_else(|| Error::internal(internal_error.clone()))?
+                    .as_str()
+                    .to_string(),
+                ),
+                ..fdecl::UseEventStream::EMPTY
+            }));
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));
         };
@@ -415,6 +458,20 @@ fn translate_expose(
         }
     }
     Ok(out_exposes)
+}
+
+impl<T> Into<Vec<T>> for OneOrMany<T> {
+    fn into(self) -> Vec<T> {
+        match self {
+            OneOrMany::One(one) => vec![one],
+            OneOrMany::Many(many) => many,
+        }
+    }
+}
+
+// Allows the above Into to work by annotating the type.
+fn annotate_type<T>(val: T) -> T {
+    val
 }
 
 /// `offer` rules route multiple capabilities from multiple sources to multiple targets.
@@ -1116,6 +1173,10 @@ where
     } else if let Some(_) = in_obj.event_stream_deprecated() {
         let path = to_obj.path().expect("no path on event stream");
         Some(OneOrMany::One(path.clone()))
+    } else if let Some(_) = in_obj.event_stream() {
+        let default_path = Path::new("/svc/fuchsia.component.EventStream".to_string()).unwrap();
+        let path = to_obj.path().unwrap_or(&default_path);
+        Some(OneOrMany::One(path.clone()))
     } else {
         None
     }
@@ -1542,6 +1603,13 @@ mod tests {
                                 "mode": "sync"
                             }
                         ]
+                    },
+                    {
+                        "event_stream": "bar_stream",
+                    },
+                    {
+                        "event_stream": ["foobar", "stream"],
+                        "scope": ["#logger", "#modular"]
                     }
                 ],
                 "capabilities": [
@@ -1551,8 +1619,22 @@ mod tests {
                         "backing_dir": "minfs",
                         "storage_id": "static_instance_id_or_moniker",
                     }
-                ]
-            }),
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "environment": "#env_one"
+                    }
+                ],
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent",
+                    },
+                ],
+            }
+        ),
             output = fdecl::Component {
                 uses: Some(vec![
                     fdecl::Use::Protocol (
@@ -1708,7 +1790,27 @@ mod tests {
                             },
                         ]),
                         ..fdecl::UseEventStreamDeprecated::EMPTY
+                    }),
+                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                        source_names: Some(vec!["bar_stream".to_string()]),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target_path: Some("/svc/fuchsia.component.EventStream".to_string()),
+                        ..fdecl::UseEventStream::EMPTY
+                    }),
+                    fdecl::Use::EventStream(fdecl::UseEventStream {
+                        source_names: Some(vec!["foobar".to_string(), "stream".to_string()]),
+                        scope: Some(vec![fdecl::Ref::Child(fdecl::ChildRef{name:"logger".to_string(), collection: None}), fdecl::Ref::Collection(fdecl::CollectionRef{name:"modular".to_string()})]),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
+                        target_path: Some("/svc/fuchsia.component.EventStream".to_string()),
+                        ..fdecl::UseEventStream::EMPTY
                     })
+                ]),
+                collections:Some(vec![
+                    fdecl::Collection{
+                        name:Some("modular".to_string()),
+                        durability:Some(fdecl::Durability::Persistent),
+                        ..fdecl::Collection::EMPTY
+                    },
                 ]),
                 capabilities: Some(vec![
                     fdecl::Capability::Storage(fdecl::Storage {
@@ -1719,6 +1821,15 @@ mod tests {
                         storage_id: Some(fdecl::StorageId::StaticInstanceIdOrMoniker),
                         ..fdecl::Storage::EMPTY
                     }),
+                ]),
+                children: Some(vec![
+                    fdecl::Child{
+                        name:Some("logger".to_string()),
+                        url:Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup:Some(fdecl::StartupMode::Lazy),
+                        environment: Some("env_one".to_string()),
+                        ..fdecl::Child::EMPTY
+                    }
                 ]),
                 ..default_component_decl()
             },

@@ -421,6 +421,9 @@ impl<'a> ValidationContext<'a> {
         if use_.event.is_some() && use_.from.is_none() {
             return Err(Error::validate("\"from\" should be present with \"event\""));
         }
+        if use_.event_stream.is_some() && use_.from.is_none() {
+            return Err(Error::validate("\"from\" should be present with \"event_stream\""));
+        }
         if use_.event.is_none() && use_.filter.is_some() {
             return Err(Error::validate("\"filter\" can only be used with \"event\""));
         }
@@ -432,6 +435,9 @@ impl<'a> ValidationContext<'a> {
         }
         if use_.from == Some(cml::UseFromRef::Self_) && use_.event.is_some() {
             return Err(Error::validate("\"from: self\" cannot be used with \"event\""));
+        }
+        if use_.from == Some(cml::UseFromRef::Self_) && use_.event_stream.is_some() {
+            return Err(Error::validate("\"from: self\" cannot be used with \"event_stream\""));
         }
 
         if let Some(source) = DependencyNode::use_from_ref(use_.from.as_ref()) {
@@ -1627,6 +1633,13 @@ mod tests {
                             "mode": "async",
                         }]
                   },
+                  {
+                   "event_stream": ["started", "stopped", "running"],
+                   "scope":["#test"],
+                   "path":"/svc/testpath",
+                   "as": "my_cool_stream",
+                   "from":"parent",
+                  },
                 ],
                 "capabilities": [
                     {
@@ -1647,6 +1660,53 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"from\" should be present with \"event\""
         ),
+        test_cml_use_event_stream_duplicate(
+            json!({
+                "use": [
+                    { "event_stream": ["started", "started"], "from" : "parent" },
+                ]
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid value: array with duplicate element, expected a name or nonempty array of names, with unique elements"
+        ),
+        test_cml_use_event_stream_overlapping_path(
+            json!({
+                "use": [
+
+                    { "directory": "foobarbaz", "path": "/foo/bar/baz", "rights": [ "r*" ] },
+                    {
+                        "event_stream": ["started"],
+                        "path": "/foo/bar/baz/er",
+                        "from": "parent",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "directory \"/foo/bar/baz\" is a prefix of \"use\" target event_stream \"/foo/bar/baz/er\""
+        ),
+        test_cml_use_event_stream_no_from(
+            json!({
+                "use": [
+
+                    {
+                        "event_stream": ["started"],
+                        "path": "/foo/bar/baz/er",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"from\" should be present with \"event_stream\""
+        ),
+        test_cml_use_event_stream_invalid_path(
+            json!({
+                "use": [
+
+                    {
+                        "event_stream": ["started"],
+                        "path": "my_stream",
+                        "from": "parent",
+                    },
+                ],
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"my_stream\", expected a path with leading `/` and non-empty segments"
+        ),
         test_cml_use_event_self_ref(
             json!({
                 "use": [
@@ -1657,6 +1717,19 @@ mod tests {
                 ]
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"from: self\" cannot be used with \"event\""
+        ),
+        test_cml_use_event_stream_self_ref(
+            json!({
+                "use": [
+
+                    {
+                        "event_stream": ["started"],
+                        "path": "/svc/my_stream",
+                        "from": "self",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"from: self\" cannot be used with \"event_stream\""
         ),
         test_cml_use_missing_props(
             json!({
@@ -1762,7 +1835,7 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream_deprecated`, `filter`, `modes`, `subscriptions`, `dependency`"
+            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream_deprecated`, `event_stream`, `scope`, `filter`, `modes`, `subscriptions`, `dependency`"
         ),
 
         test_cml_use_disallows_nested_dirs_directory(
