@@ -56,9 +56,8 @@ group("test") {
   if (is_host && is_linux) {
     # Chromedriver prebuilt is only available for linux-x64
     deps = [
-      # TODO(fxbug.dev/92694): Reenable after ui->sl4f route is in place.
-      # ":workstation_chrome_advanced_smoke_test($host_toolchain)",
-      # ":workstation_chrome_smoke_test($host_toolchain)",
+      ":workstation_chrome_advanced_smoke_test($host_toolchain)",
+      ":workstation_chrome_smoke_test($host_toolchain)",
     ]
   }
 }
