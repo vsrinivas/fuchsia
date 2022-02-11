@@ -362,9 +362,11 @@ void arm64_feature_init() {
 
     auto isar0 = arch::ArmIdAa64IsaR0El1::Read();
 
-    // Other values are reserved.  When assigned they will probably be
-    // supersets of FEAT_PMULL, but don't presume that.
+    // By D13.1.3 "Principles of the ID scheme for fields in ID registers", it
+    // is safe to assume that values assigned in the future will describe
+    // supersets of the existing options.
     switch (isar0.aes()) {
+      default:
       case arch::ArmIdAa64IsaR0El1::Aes::kPmull:
         arm64_isa_features |= ZX_ARM64_FEATURE_ISA_PMULL;
         [[fallthrough]];
