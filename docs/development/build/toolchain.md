@@ -68,19 +68,17 @@ cipd install fuchsia/sdk/core/mac-amd64 latest -root ${IDK_DIR}
 
 ### Sysroot for Linux
 
-To include compiler runtimes and C++ library for Linux, download the sysroot
-for both `arm64` and `x64`. Both sysroots must be located in
-the directory pointed by the `${SYSROOT_DIR}` variable.
+To include compiler runtimes and C++ library for Linux, download the sysroot.
+It must be located in the directory pointed by the `${SYSROOT_DIR}` variable.
 
 ```bash
 SYSROOT_DIR=${HOME}/fuchsia-sysroot/
 ```
 
-To download the latest sysroots, you can use the following:
+To download the latest sysroot, you can use the following:
 
 ```bash
-cipd install fuchsia/sysroot/linux-arm64 latest -root ${SYSROOT_DIR}/linux-arm64
-cipd install fuchsia/sysroot/linux-amd64 latest -root ${SYSROOT_DIR}/linux-x64
+cipd install fuchsia/third_party/sysroot/linux latest -root ${SYSROOT_DIR}
 ```
 
 {% dynamic if user.is_googler %}
@@ -173,8 +171,8 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_CXX_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
   -DCMAKE_ASM_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
   -DLLVM_ENABLE_LTO=OFF \
-  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-x64 \
-  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-arm64 \
+  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR} \
+  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR} \
   -DFUCHSIA_SDK=${IDK_DIR} \
   -DCMAKE_INSTALL_PREFIX= \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
@@ -210,8 +208,8 @@ cmake -GNinja \
   -DCMAKE_CXX_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
   -DCMAKE_ASM_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
   -DCMAKE_INSTALL_PREFIX= \
-  -DSTAGE2_LINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-arm64 \
-  -DSTAGE2_LINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-x64 \
+  -DSTAGE2_LINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR} \
+  -DSTAGE2_LINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR} \
   -DSTAGE2_FUCHSIA_SDK=${IDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia.cmake \
   ${LLVM_SRCDIR}/llvm
@@ -254,8 +252,7 @@ GOMA_DIR=${FUCHSIA_SRCDIR}/prebuilt/third_party/goma/linux-x64/
 
 # Download necessary dependencies
 cipd install fuchsia/sdk/core/linux-amd64 latest -root ${IDK_DIR}
-cipd install fuchsia/sysroot/linux-arm64 latest -root ${SYSROOT_DIR}/linux-arm64
-cipd install fuchsia/sysroot/linux-amd64 latest -root ${SYSROOT_DIR}/linux-x64
+cipd install fuchsia/third_party/sysroot/linux latest -root ${SYSROOT_DIR}
 
 # CMake invocation
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
@@ -264,8 +261,8 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
   -DCMAKE_CXX_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
   -DLLVM_ENABLE_LTO=OFF \
-  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-x64 \
-  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-arm64 \
+  -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR} \
+  -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR} \
   -DFUCHSIA_SDK=${IDK_DIR} \
   -DCMAKE_INSTALL_PREFIX= \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia-stage2.cmake \
