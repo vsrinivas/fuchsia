@@ -315,7 +315,7 @@ through the [Realm Builder shard][realm-builder-shard].
 This shard offers the following capabilities to the test component:
 
 ```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/lib/sys/component/realm_builder.shard.cml" region_tag="collection_offers" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/lib/sys/component/realm_builder_base.shard.cml" region_tag="collection_offers" adjust_indentation="auto" %}
 ```
 
 To route a capability that isn't in the Realm Builder shard,
@@ -503,7 +503,7 @@ controller, see [offering external capabilities](#routes-from-outside).
 [expose]: https://fuchsia.dev/reference/cml#expose
 [namespaces]: /docs/concepts/process/namespaces.md
 [offer]: https://fuchsia.dev/reference/cml#offer
-[realm-builder-shard]: /sdk/lib/sys/component/realm_builder.shard.cml
+[realm-builder-shard]: /sdk/lib/sys/component/realm_builder_base.shard.cml
 [realms]: /docs/concepts/components/v2/realms.md
 [resolver]: /docs/concepts/components/v2/capabilities/resolvers.md
 [runner]: /docs/concepts/components/v2/capabilities/runners.md
