@@ -94,8 +94,7 @@ struct IsFidlMessage<::fidl::WireRequest<::test_doccomments::Interface::Method>>
 
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_doccomments::Interface::Method>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -123,8 +122,7 @@ struct IsFidlMessage<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>>
 
 template <>
 struct TypeTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));

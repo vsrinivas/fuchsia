@@ -12,9 +12,6 @@
 
 namespace fidl {
 
-// The table of any FIDL method with zero in/out parameters.
-extern "C" const fidl_type_t _llcpp_coding_AnyZeroArgMessageTable;
-
 namespace internal {
 // |EncodeIovecEtc| converts an object and its children to an array of iovecs and an array of
 // handles, which can be used as inputs to |zx_channel_write| and |zx_channel_call| with the

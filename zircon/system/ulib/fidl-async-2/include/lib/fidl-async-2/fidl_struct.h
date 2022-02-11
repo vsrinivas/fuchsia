@@ -205,7 +205,9 @@ class FidlStruct {
  private:
   void reset_internal(const FidlCStruct* to_copy_and_own_handles) {
     if (ptr_) {
-      fidl_close_handles(fidl::TypeTraits<FidlLlcppStruct>::kType, ptr_, nullptr);
+      if (fidl::TypeTraits<FidlLlcppStruct>::kType != nullptr) {
+        fidl_close_handles(fidl::TypeTraits<FidlLlcppStruct>::kType, ptr_, nullptr);
+      }
     }
     if (to_copy_and_own_handles) {
       storage_ = *to_copy_and_own_handles;

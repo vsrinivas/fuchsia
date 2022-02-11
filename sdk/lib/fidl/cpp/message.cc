@@ -64,6 +64,10 @@ zx_status_t HLCPPIncomingBody::Transform(const internal::WireFormatMetadata& met
   zx_status_t status = ZX_OK;
   switch (version) {
     case internal::WireFormatVersion::kV1: {
+      if (type == nullptr) {
+        break;
+      }
+
       // Transform to V2.
       status = internal__fidl_validate__v1__may_break(type, bytes_.data(), bytes_.actual(),
                                                       handles_.actual(), error_msg_out);

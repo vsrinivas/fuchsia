@@ -452,10 +452,7 @@ For this example, the following types are generated:
 The naming scheme for requests is `[Method]Request`. The naming scheme for
 responses is `[Method]Response`. The naming scheme for events is `[Method]Event`.
 
-<!-- TODO(fxbug.dev/91160): Remove when AnyZeroArgMessage is no more -->
-Any empty request, response, or event is aliased to `fidl::AnyZeroArgMessage`,
-which is a type representing an empty message, instead of having a new type
-generated.
+Any empty request, response, or event is represented by a `nullptr`.
 
 ### Client {#client}
 

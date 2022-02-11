@@ -24,7 +24,7 @@ class GoodMessage {
         fidl::HandleDispositionPart());
   }
 
-  const fidl_type_t* type() const { return &::fidl::_llcpp_coding_AnyZeroArgMessageTable; }
+  const fidl_type_t* type() const { return nullptr; }
 
  private:
   FIDL_ALIGNDECL fidl_message_header_t content_ = {};
@@ -41,7 +41,7 @@ class BadMessage {
         fidl::HandleDispositionPart());
   }
 
-  const fidl_type_t* type() const { return &::fidl::_llcpp_coding_AnyZeroArgMessageTable; }
+  const fidl_type_t* type() const { return nullptr; }
 
  private:
   FIDL_ALIGNDECL std::array<uint8_t, sizeof(fidl_message_header_t) * 2> too_large_;

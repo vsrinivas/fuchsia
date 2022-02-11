@@ -251,8 +251,7 @@ template <>
 struct TypeTraits<
     ::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                             LibfuzzerNeedsNonemptyProtocol>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -288,8 +287,7 @@ template <>
 struct TypeTraits<
     ::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                              LibfuzzerNeedsNonemptyProtocol>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -894,8 +892,7 @@ struct IsFidlMessage<::fidl::WireRequest<
 template <>
 struct TypeTraits<::fidl::WireRequest<
     ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -931,8 +928,7 @@ template <>
 struct TypeTraits<
     ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
                             AlwaysAppearsInImportingLibrary>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));

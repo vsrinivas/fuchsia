@@ -124,7 +124,7 @@ struct TypeTraits<{{ .WireRequest }}> {
   {{- if .RequestArgs }}
     &{{ .Request.WireCodingTable }};
   {{- else }}
-    &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    nullptr;
   {{- end }}
   static constexpr uint32_t kMaxNumHandles = {{ .Request.TypeShapeV2.MaxHandles }};
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN({{ .Request.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t));
@@ -165,9 +165,9 @@ template <>
 struct TypeTraits<{{ .WireEvent }}> {
   static constexpr const fidl_type_t* kType =
   {{- if .ResponseArgs }}
-  &{{ .Response.WireCodingTable }};
+    &{{ .Response.WireCodingTable }};
   {{- else }}
-  &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    nullptr;
   {{- end }}
   static constexpr uint32_t kMaxNumHandles = {{ .Response.TypeShapeV2.MaxHandles }};
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN({{ .Response.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t));
@@ -205,9 +205,9 @@ template <>
 struct TypeTraits<{{ .WireResponse }}> {
   static constexpr const fidl_type_t* kType =
   {{- if .ResponseArgs }}
-  &{{ .Response.WireCodingTable }};
+    &{{ .Response.WireCodingTable }};
   {{- else }}
-  &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    nullptr;
   {{- end }}
   static constexpr uint32_t kMaxNumHandles = {{ .Response.TypeShapeV2.MaxHandles }};
   static constexpr uint32_t kPrimarySize = FIDL_ALIGN({{ .Response.TypeShapeV2.InlineSize }} + sizeof(fidl_message_header_t));

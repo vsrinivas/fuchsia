@@ -11,6 +11,7 @@
 #include <stdalign.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <algorithm>
@@ -417,7 +418,6 @@ zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fid
                            uint32_t num_backing_buffer, uint32_t* out_actual_iovec,
                            uint32_t* out_actual_handles, const char** out_error_msg) {
   // Use debug asserts for preconditions that are not user dependent to avoid the runtime cost.
-  ZX_DEBUG_ASSERT(type != nullptr);
   ZX_DEBUG_ASSERT(iovecs != nullptr);
   ZX_DEBUG_ASSERT(out_actual_iovec != nullptr);
   ZX_DEBUG_ASSERT(out_actual_handles != nullptr);
@@ -440,11 +440,11 @@ zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fid
                 "Cannot provide non-zero handle count and null handle pointer");
 
   zx_status_t status;
-  uint32_t primary_size;
-  uint32_t next_out_of_line;
-  if (unlikely((status = fidl::PrimaryObjectSize<WireFormatVersion>(
-                    type, num_backing_buffer, &primary_size, &next_out_of_line, out_error_msg)) !=
-               ZX_OK)) {
+  uint32_t primary_size = 0;
+  uint32_t next_out_of_line = 0;
+  if (type != nullptr && unlikely((status = fidl::PrimaryObjectSize<WireFormatVersion>(
+                                       type, num_backing_buffer, &primary_size, &next_out_of_line,
+                                       out_error_msg)) != ZX_OK)) {
     return status;
   }
 
@@ -453,6 +453,9 @@ zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fid
   uint32_t header_size = is_transactional ? sizeof(fidl_message_header_t) : 0;
   primary_size += header_size;
   next_out_of_line += header_size;
+  if (unlikely(type == nullptr && num_backing_buffer != primary_size)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   // Zero the last 8 bytes so padding will be zero after memcpy.
   *reinterpret_cast<uint64_t*>(__builtin_assume_aligned(
@@ -461,6 +464,8 @@ zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fid
   // Copy the primary object, taking care to include space for the header if one was specified.
   memcpy(backing_buffer, value, primary_size);
 
+  // Create an encoder - this is necessary even if there is no message body to ensure that the lone
+  // iovec gets constructed properly.
   EncodeArgs args = {
       .encoding_configuration = encoding_configuration,
       .backing_buffer = static_cast<uint8_t*>(backing_buffer),
@@ -474,13 +479,17 @@ zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fid
       .out_error_msg = out_error_msg,
   };
   FidlEncoder<WireFormatVersion> encoder(args);
-  ::fidl::Walk<WireFormatVersion>(encoder, type,
-                                  {.source_object = static_cast<uint8_t*>(value) + header_size,
-                                   .dest = backing_buffer + header_size});
-  if (unlikely(encoder.status() != ZX_OK)) {
-    *out_actual_handles = 0;
-    FidlHandleCloseMany(handles, encoder.num_out_handles());
-    return ZX_ERR_INVALID_ARGS;
+
+  // No need to actually encode messages with no body.
+  if (type != nullptr) {
+    ::fidl::Walk<WireFormatVersion>(encoder, type,
+                                    {.source_object = static_cast<uint8_t*>(value) + header_size,
+                                     .dest = backing_buffer + header_size});
+    if (unlikely(encoder.status() != ZX_OK)) {
+      *out_actual_handles = 0;
+      FidlHandleCloseMany(handles, encoder.num_out_handles());
+      return ZX_ERR_INVALID_ARGS;
+    }
   }
 
   *out_actual_iovec = encoder.num_out_iovecs();

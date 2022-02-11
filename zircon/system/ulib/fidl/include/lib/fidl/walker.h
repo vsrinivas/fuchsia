@@ -857,6 +857,10 @@ Result Walker<VisitorImpl, WireFormatVersion>::WalkVector(
 // |start|          is the starting point for the walk.
 template <FidlWireFormatVersion WireFormatVersion, typename VisitorImpl>
 void Walk(VisitorImpl& visitor, const fidl_type_t* type, typename VisitorImpl::Position start) {
+  // It is pointless to walk in cases where |type == nullptr|, so ensure that such walkers are never
+  // constructed.
+  ZX_ASSERT(type != nullptr);
+
   internal::Walker<VisitorImpl, WireFormatVersion> walker(&visitor);
   walker.Walk(type, start);
 }

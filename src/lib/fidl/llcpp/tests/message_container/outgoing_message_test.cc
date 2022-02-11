@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fidl.llcpp.empty.test/cpp/wire_messaging.h>
 #include <fidl/fidl.llcpp.linearized.test/cpp/wire_types.h>
 #include <fidl/fidl.test.misc/cpp/wire_messaging.h>
 #include <lib/fidl/llcpp/message.h>
+#include <zircon/errors.h>
 
 #include <iterator>
 
@@ -405,4 +407,57 @@ TEST(OutgoingMessage, SettingTxIdRequiresTransactionalMessagePositive) {
                                                        &request);
   ASSERT_EQ(ZX_OK, encoded.status());
   encoded.GetOutgoingMessage().set_txid(1);
+}
+
+TEST(OutgoingMessage, GoodEncodeNoBody) {
+  zx_channel_iovec_t iovecs[1];
+  //   zx_handle_t handles[1];
+  //   fidl_channel_handle_metadata_t handle_metadata[1];
+  uint8_t backing_buffer[16];
+  fidl::OutgoingMessage msg =
+      fidl::OutgoingMessage::CreateInternal(fidl::OutgoingMessage::ConstructorArgs{
+          .transport_vtable = &fidl::internal::ChannelTransport::VTable,
+          .iovecs = iovecs,
+          .iovec_capacity = std::size(iovecs),
+          .handles = nullptr,
+          .handle_metadata = nullptr,
+          .handle_capacity = 0u,
+          .backing_buffer = backing_buffer,
+          .backing_buffer_capacity = std::size(backing_buffer),
+      });
+
+  using Request = fidl::WireRequest<fidl_llcpp_empty_test::OnlyEmpty::Empty>;
+  Request request;
+  fidl_init_txn_header(
+      &request._hdr, 1,
+      ::fidl::internal::WireOrdinal<::fidl_llcpp_empty_test::OnlyEmpty::Empty>::value);
+
+  msg.Encode<Request>(fidl::internal::WireFormatVersion::kV1, &request);
+  ASSERT_EQ(ZX_OK, msg.status());
+}
+
+TEST(OutgoingMessage, BadEncodeNoBodyBufferTooLarge) {
+  zx_channel_iovec_t iovecs[1];
+  uint8_t backing_buffer[24];  // Too large for body-less message
+  fidl::OutgoingMessage msg =
+      fidl::OutgoingMessage::CreateInternal(fidl::OutgoingMessage::ConstructorArgs{
+          .transport_vtable = &fidl::internal::ChannelTransport::VTable,
+          .iovecs = iovecs,
+          .iovec_capacity = std::size(iovecs),
+          .handles = nullptr,
+          .handle_metadata = nullptr,
+          .handle_capacity = 0u,
+          .backing_buffer = backing_buffer,
+          .backing_buffer_capacity = std::size(backing_buffer),
+      });
+
+  using Request = fidl::WireRequest<fidl_llcpp_empty_test::OnlyEmpty::Empty>;
+  Request request;
+  fidl_init_txn_header(
+      &request._hdr, 1,
+      ::fidl::internal::WireOrdinal<::fidl_llcpp_empty_test::OnlyEmpty::Empty>::value);
+
+  msg.Encode<Request>(fidl::internal::WireFormatVersion::kV1, &request);
+  ASSERT_FALSE(msg.ok());
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, msg.status());
 }

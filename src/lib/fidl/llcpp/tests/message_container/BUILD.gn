@@ -20,6 +20,10 @@ fidl("fidl.llcpp.linearized.test") {
   sources = [ "linearized.test.fidl" ]
 }
 
+fidl("fidl.llcpp.empty.test") {
+  sources = [ "empty.test.fidl" ]
+}
+
 fidl("fidl.llcpp.buffersize.test") {
   sources = [ "buffersize.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
@@ -36,6 +40,7 @@ test("fidl_llcpp_message_container_tests_bin") {
     "wire_format_metadata_test.cc",
   ]
   deps = [
+    ":fidl.llcpp.empty.test_llcpp",
     ":fidl.llcpp.linearized.test_llcpp",
     "//sdk/testing/fidl:fidl_test_llcpp",
     "//src/lib/fidl/llcpp/tests:types_test_utils",

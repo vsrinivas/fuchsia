@@ -9,6 +9,7 @@
 #include <lib/fidl/trace.h>
 #include <lib/fidl/transformer.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <cstring>
 #include <string>
@@ -174,7 +175,8 @@ void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_v
     return;
   }
 
-  if (internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V2_TO_V1, message_type)) {
+  if (message_type == nullptr ||
+      internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V2_TO_V1, message_type)) {
     return;
   }
 
@@ -211,18 +213,22 @@ void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOption
   }
 }
 
-// TODO(azaslavsky): update this method
 void OutgoingMessage::DecodeImplForCall(const internal::CodingConfig& coding_config,
                                         const fidl_type_t* response_type, uint8_t* bytes,
                                         uint32_t* in_out_num_bytes, fidl_handle_t* handles,
                                         fidl_handle_metadata_t* handle_metadata,
                                         uint32_t num_handles) {
   fidl_message_header_t& header = reinterpret_cast<fidl_message_header_t&>(*bytes);
-  // TODO(azaslavsky): maybe replace?
-  // fidl_message_header_t header;
-  // memcpy(&header, result_bytes, sizeof(header));
+  if (response_type == nullptr) {
+    return;
+  } else if (unlikely(*in_out_num_bytes <= sizeof(fidl_message_header_t))) {
+    SetResult(fidl::Result::DecodeError(ZX_ERR_BUFFER_TOO_SMALL,
+                                        "non-nullptr response_type must be larger than 16 bytes"));
+    return;
+  }
 
   if ((header.flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) == 0 &&
+      response_type != nullptr &&
       !internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V1_TO_V2, response_type)) {
     auto transformed_bytes = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
     uint32_t transformed_num_bytes = *in_out_num_bytes;
@@ -436,7 +442,8 @@ void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
       return;
     }
 
-    if (!internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V1_TO_V2, message_type)) {
+    if (message_type == nullptr ||
+        !internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V1_TO_V2, message_type)) {
       *out_transformed_buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
       uint32_t actual_num_bytes = 0;
       status = internal__fidl_transform__may_break(

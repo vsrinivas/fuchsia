@@ -483,6 +483,11 @@ class IncomingMessage : public ::fidl::Result {
   template <typename FidlType>
   void Decode(std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
     ZX_ASSERT(is_transactional_);
+
+    // If this is an empty message, there is nothing to decode, so exit early.
+    if (fidl::TypeTraits<FidlType>::kType == nullptr) {
+      return;
+    }
     Decode(fidl::TypeTraits<FidlType>::kType, out_transformed_buffer);
   }
 
@@ -496,6 +501,7 @@ class IncomingMessage : public ::fidl::Result {
   void Decode(internal::WireFormatVersion wire_format_version,
               std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
     ZX_ASSERT(!is_transactional_);
+    ZX_ASSERT(fidl::TypeTraits<FidlType>::kType != nullptr);
     Decode(wire_format_version, fidl::TypeTraits<FidlType>::kType,
            fidl::IsFidlMessage<FidlType>::value, out_transformed_buffer);
   }

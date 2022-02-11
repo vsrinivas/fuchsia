@@ -1028,8 +1028,7 @@ struct IsFidlMessage<::fidl::WireRequest<
 template <>
 struct TypeTraits<::fidl::WireRequest<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -1062,8 +1061,7 @@ struct IsFidlMessage<::fidl::WireRequest<
 template <>
 struct TypeTraits<::fidl::WireRequest<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -1096,8 +1094,7 @@ struct IsFidlMessage<::fidl::WireResponse<
 template <>
 struct TypeTraits<::fidl::WireResponse<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -1131,8 +1128,7 @@ struct IsFidlMessage<::fidl::WireRequest<
 template <>
 struct TypeTraits<::fidl::WireRequest<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -1288,8 +1284,7 @@ template <>
 struct TypeTraits<
     ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::
                              WithRequestEmptyResponse>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -1404,8 +1399,7 @@ struct IsFidlMessage<::fidl::WireEvent<
 template <>
 struct TypeTraits<::fidl::WireEvent<
     ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -5291,8 +5285,7 @@ struct IsFidlMessage<
 template <>
 struct TypeTraits<
     ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -5361,8 +5354,7 @@ struct IsFidlMessage<
 template <>
 struct TypeTraits<
     ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -5431,8 +5423,7 @@ struct IsFidlMessage<
 template <>
 struct TypeTraits<
     ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -5502,8 +5493,7 @@ struct IsFidlMessage<
 template <>
 struct TypeTraits<
     ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -6592,8 +6582,7 @@ struct IsFidlMessage<
 template <>
 struct TypeTraits<
     ::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
@@ -7188,8 +7177,7 @@ struct IsFidlMessage<
 template <>
 struct TypeTraits<
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>> {
-  static constexpr const fidl_type_t* kType =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
       FIDL_ALIGN(0 + sizeof(fidl_message_header_t));
