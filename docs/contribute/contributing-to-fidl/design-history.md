@@ -7,7 +7,8 @@ reader up to speed with FIDL's history and current direction.
 Previously, these design documents were called [FTPs] or FIDL Tuning Proposals.
 The FTP process was later [merged into][rfc-0017] the RFC process. Because of
 the way FTPs were renumbered as RFCs, RFC numbers do not imply chronology.
-However, each individual list on this page shows RFCs in chronological order.
+However, each individual list on this page shows RFCs in chronological order:
+by submission date for FTP-turned-RFCs, and by review date for all later RFCs.
 
 ## By theme
 
@@ -29,10 +30,10 @@ primary theme, even if it touches on multiple themes.
 * [RFC-0061: Extensible unions][rfc-0061]
 * [RFC-0020: Interface ordinal hashing][rfc-0020]
 * [RFC-0021: Soft transitions for methods add and remove][rfc-0021]
-* [RFC-0024: Mandatory source compatibility][rfc-0024]
-* [RFC-0029: Increasing method ordinals][rfc-0029]
 * [RFC-0033: Handling of unknown fields and strictness][rfc-0033]
+* [RFC-0029: Increasing method ordinals][rfc-0029]
 * [RFC-0037: Transactional message header v3][rfc-0037]
+* [RFC-0024: Mandatory source compatibility][rfc-0024]
 * [RFC-0040: Identifier uniqueness][rfc-0040]
 * [RFC-0048: Explicit union ordinals][rfc-0048]
 * [RFC-0083: FIDL versioning][rfc-0083]
@@ -48,18 +49,21 @@ primary theme, even if it touches on multiple themes.
 * (Rejected) [RFC-0065: No optional strings or vectors][rfc-0065]
 * (Rejected) [RFC-0064: Box\<Knox\>][rfc-0064]
 * [RFC-0023: Compositional model for protocols][rfc-0023]
+* (Rejected) [RFC-0042: Non nullable types][rfc-0042]
 * [RFC-0041: Support for unifying services and devices][rfc-0041]
 * (Rejected) [RFC-0044: Extensible method arguments][rfc-0044]
-* [RFC-0052: Type aliasing and new types][rfc-0052]
 * [RFC-0054: Parameter attributes][rfc-0054]
+* [RFC-0052: Type aliasing and new types][rfc-0052]
 * [RFC-0137: Discard unknown data in FIDL][rfc-0137]
 
 ### Syntax
 
+* (Rejected) [RFC-0036: Update to struct declarations][rfc-0036]
 * (Rejected) [RFC-0038: Separating layout from constraints][rfc-0038]
 * (Rejected) [RFC-0039: Types come second][rfc-0039]
 * [RFC-0050: Syntax revamp][rfc-0050]
 * [RFC-0086: Updates to RFC-0050: FIDL attributes syntax][rfc-0086]
+* (Rejected) [RFC-0088: Updates to RFC-0050: FIDL bits, enum, and constraints syntax][rfc-0088]
 * [RFC-0087: Updates to RFC-0050: FIDL method parameter syntax][rfc-0087]
 
 ### Ergonomics
@@ -73,20 +77,21 @@ primary theme, even if it touches on multiple themes.
 
 ### Performance
 
+* (Rejected) [RFC-0045: Zero-size empty structs][rfc-0045]
 * (Rejected) [RFC-0026: Envelopes everywhere][rfc-0026]
 * [RFC-0027: You only pay for what you use][rfc-0027]
 * (Rejected) [RFC-0032: Efficient envelopes][rfc-0032]
 * (Rejected) [RFC-0035: Automatic flow tracing][rfc-0035]
-* (Rejected) [RFC-0045: Zero-size empty structs][rfc-0045]
 * [RFC-0113: Efficient envelopes][rfc-0113]
 * [RFC-0114: Inlining small values in FIDL envelopes][rfc-0114]
+* [RFC-0149: FIDL encode validation not mandatory][rfc-0149]
 
 ### Safety & security
 
-* [RFC-0051: Safer structs for C++][rfc-0051]
+* (Rejected) [RFC-0051: Safer structs for C++][rfc-0051]
 * (Rejected) [RFC-0062: Method impossible][rfc-0062]
-* [RFC-0028: Handle rights][rfc-0028]
 * (Rejected) [RFC-0034: Null terminate strings][rfc-0034]
+* [RFC-0028: Handle rights][rfc-0028]
 
 ### Tooling
 
@@ -109,26 +114,30 @@ primary theme, even if it touches on multiple themes.
 This section lists RFCs that introduced new feature that are easily visible in
 the FIDL language. It only includes current features, not obsolete ones.
 
-| Feature              | RFC        | Note
-| -------------------- | -----------| ------------------------------------------
-| struct defaults      | [RFC-0022] | Default values for struct members
-| `table`              | [RFC-0047], [RFC-0132] | Forward and backward compatible data type
-| `///`                | [RFC-0055] | Documentation comments
-| `struct Empty {};`   | [RFC-0056] | Empty structs
-| `error`              | [RFC-0060] | Method error result syntax
-| `union`              | [RFC-0061] | Initially called `xunion`, replaced the old static unions
-| `[Selector]`         | [RFC-0020] | Override method hashing with an explicit selector
-| `[Transitional]`     | [RFC-0021] | Attribute for soft transitioning method addition/removal
-| `compose`            | [RFC-0023] | Renamed `interface` to `protocol`, added the `compose` feature
-| `bits`               | [RFC-0025] | Bit flags types
-| handle rights        | [RFC-0028] | Annotate required or excluded handle rights
-| `strict`, `flexible` | [RFC-0033] | Strict and flexible types
-| `service`            | [RFC-0041] | Services are collection of protocols
-| `alias`, `type`      | [RFC-0052] | Replaced `using` aliases with `alias` and `type`
-| `resource`           | [RFC-0057] | Value and resource types
+| Feature                  | RFC        | Note
+| ------------------------ | -----------| ------------------------------------------
+| struct defaults          | [RFC-0022] | Default values for struct members
+| `table`                  | [RFC-0047] | Forward and backward compatible data type
+| `///`                    | [RFC-0055] | Documentation comments
+| `struct Empty {};`       | [RFC-0056] | Empty structs
+| `error`                  | [RFC-0060] | Method error result syntax
+| `union`                  | [RFC-0061] | Initially called `xunion`, replaced the old static unions
+| `@selector`              | [RFC-0020] | Override method hashing with an explicit selector
+| `@transitional`          | [RFC-0021] | Attribute for soft transitioning method addition/removal
+| `compose`                | [RFC-0023] | Renamed `interface` to `protocol`, added the `compose` feature
+| `bits`                   | [RFC-0025] | Bit flags types
+| `strict`, `flexible`     | [RFC-0033] | Strict and flexible types
+| handle rights            | [RFC-0028] | Annotate required or excluded handle rights
+| `service`                | [RFC-0041] | Services are collection of protocols
+| `alias`, `type`          | [RFC-0052] | Replaced `using` aliases with `alias` and `type`
+| `resource`               | [RFC-0057] | Value and resource types
+| anonymous layouts        | [RFC-0050] | Inline type definitions, named contextually or with `@generated_name`
+| `@available`             | [RFC-0083] | Version annotations
+| `Method(table { ... })`  | [RFC-0087] | Tables and unions as top-level request/response types
+| `open`, `closed`, `ajar` | [RFC-0138] | Open and closed interactions
 
-<!-- TODO(fxbug.dev/67858): Uncomment when implemented. -->
-<!-- | `@available`      | [RFC-0083] | Version annotations -->
+<!-- TODO(fxbug.dev/93457): Uncomment when accepted. -->
+<!-- | `terminal`        | [RFC-NNNN] | Terminal events -->
 
 ## Current status
 
@@ -140,8 +149,8 @@ _Legend:_
 | -------------------------- | ------------------------------------------------------
 | Unpublished                | Never made public nor formally reviewed
 | Withdrawn                  | Made public, but never formally reviewed
+| In review                  | Made public, review pending
 | Implemented                | Accepted, implemented, still accurate
-| Unimplemented              | Accepted but never implemented, no plans to do so
 | Partially implemented      | Accepted and partially implemented, no plans to finish
 | Implementation in progress | Accepted, implementation in progress
 | Amended                    | Accepted, still mostly accurate, but amended by a later RFC
@@ -153,12 +162,12 @@ _Legend:_
 | ---------- | ------------------------------ | --------------------------------
 | [RFC-0018] | FTP process: A modest proposal | Superseded by [RFC-0017]
 | [RFC-0019] | Type aliases with using | Superseded by [RFC-0052]
-| [RFC-0022] | Default values for struct members | Partially implemented: only in HLCPP, Dart
-| [RFC-0051] | Safer structs for C++ | Unimplemented: [change][safer-structs-impl] was never merged
+| [RFC-0022] | Default values for struct members | Partially implemented: only in HLCPP, Dart <!-- TDOO(fxbug.dev/93470): Change to "Superseded" when struct defaults are removed. -->
+| [RFC-0051] | Safer structs for C++ | Rejected
 | [RFC-0062] | Method impossible | Rejected
+| [RFC-0053] | Epitaphs | Implemented <!-- TODO(fxbug.dev/93457): Change to "Superseded" when we have terminal events. -->
 | [RFC-0066] | Programmer advisory explicit defaults | Implemented
-| [RFC-0047] | Tables | Implemented
-| [RFC-0053] | Epitaphs | Implemented
+| [RFC-0047] | Tables | Amended by [RFC-0116], [RFC-0132]
 | [RFC-0055] | Documentation comments | Amended by [RFC-0043]
 | [RFC-0063] | OrdinalRange | Rejected; Superseded by [RFC-0020]
 | &ndash;    | FIDL in FIDL | Unpublished; Protobuf [can do this][protobuf-self-describe]
@@ -173,61 +182,65 @@ _Legend:_
 | [RFC-0020] | Interface ordinal hashing | Implemented
 | [RFC-0021] | Soft transitions for methods add and remove | Implemented
 | [RFC-0023] | Compositional model for protocols | Implemented
-| [RFC-0024] | Mandatory source compatibility | Implemented; see also [source_compatibility]
+| [RFC-0045] | Zero-size empty structs | Rejected
 | [RFC-0025] | Bit flags | Implemented
 | [RFC-0026] | Envelopes everywhere | Rejected
 | [RFC-0027] | You only pay for what you use | Implemented
-| [RFC-0028] | Handle rights | Implementation in progress
-| [RFC-0029] | Increasing method ordinals | Superseded by [RFC-0037]
 | [RFC-0030] | FIDL is little endian | Implemented
 | [RFC-0031] | Typed epitaphs | Rejected
-| [RFC-0032] | Efficient envelopes | Rejected (accepted at first, later rejected)
-| [RFC-0033] | Handling of unknown fields and strictness | Implemented
+| [RFC-0032] | Efficient envelopes | Rejected; Superseded by [RFC-0113]
+| [RFC-0033] | Handling of unknown fields and strictness | Amended by [RFC-0137]
 | [RFC-0034] | Null terminate strings | Rejected
+| [RFC-0029] | Increasing method ordinals | Superseded by [RFC-0037]
 | [RFC-0035] | Automatic flow tracing | Rejected
 | [RFC-0036] | Update to struct declarations | Rejected
 | [RFC-0037] | Transactional message header v3 | Implemented
 | [RFC-0038] | Separating layout from constraints | Rejected; Superseded by [RFC-0050]
 | [RFC-0039] | Types come second | Rejected; Superseded by [RFC-0050]
-| [RFC-0040] | Identifier uniqueness | Implemented (rejected at first, later accepted)
-| [RFC-0041] | Support for unifying services and devices | Implemented
+| [RFC-0028] | Handle rights | Implemented
 | [RFC-0042] | Non nullable types | Rejected (April Fools)
-| [RFC-0043] | Documentation comment format | Implemented
+| [RFC-0024] | Mandatory source compatibility | Implemented; see also [source_compatibility]
+| [RFC-0040] | Identifier uniqueness | Implemented (rejected at first, later accepted)
+| [RFC-0041] | Support for unifying services and devices | [Partially implemented](https://fxbug.dev/8035#c36): only in C++, Rust
 | [RFC-0044] | Extensible method arguments | Rejected; Superseded by [RFC-0087]
-| [RFC-0045] | Zero-size empty structs | Rejected
+| [RFC-0043] | Documentation comment format | Implemented
 | &ndash;    | Versioning | Unpublished; Superseded by [RFC-0083]
 | &ndash;    | Required table fields | Unpublished
 | [RFC-0048] | Explicit union ordinals | Implemented
-| [RFC-0049] | FIDL tuning process evolution | Implemented
-| [RFC-0050] | Syntax revamp | Implementation in progress
+| [RFC-0049] | FIDL tuning process evolution | Superseded by [RFC-0017]
 | &ndash;    | Unified view of optionality | Unpublished
-| [RFC-0052] | Type aliasing and new types | Implementation in progress
 | &ndash;    | Iterators | Unpublished; see also [measure-tape] (a pragmatic solution)
-| [RFC-0054] | Parameter attributes | Implemented
+| [RFC-0054] | Parameter attributes | Superseded by [RFC-0050]
+| [RFC-0052] | Type aliasing and new types | [Implementation in progress](https://fxbug.dev/7807)
 | &ndash;    | Restrict non-numeric floating point values | Unpublished
 | &ndash;    | Constant expressions | Unpublished
 | [RFC-0057] | Default no handles | Implemented
+| [RFC-0050] | Syntax revamp | Amended by [RFC-0086], [RFC-0087], [RFC-0088]
 | &ndash;    | FIDL text format | Unpublished
 | [RFC-0059] | Reserved bits in vector, string, and array count fields | Implemented; reserved bits no longer used by LLCPP
+| [RFC-0017] | The FTP Process is dead, long live the RFC Process! | Implemented
 | &ndash;    | FIDL Large message support | [Withdrawn][large-message-cl]
-| [RFC-0076] | FIDL API summaries | Implementation in progress
-| [RFC-0083] | FIDL versioning | Implementation in progress
-| [RFC-0086] | Updates to RFC-0050: FIDL attributes syntax | Implementation in progress
-| [RFC-0087] | Updates to RFC-0050: FIDL method parameter syntax | Implementation in progress
-| [RFC-0097] | FIDL Toolchain | Implemented
-| [RFC-0113] | Efficient envelopes | Implementation in progress
-| [RFC-0114] | Inlining small values in FIDL envelopes | Implementation in progress
+| [RFC-0076] | FIDL API summaries | Implemented
+| [RFC-0083] | FIDL versioning | [Implementation in progress](https://fxbug.dev/67858)
+| [RFC-0086] | Updates to RFC-0050: FIDL attributes syntax | Implemented
+| [RFC-0088] | Updates to RFC-0050: FIDL bits, enum, and constraints syntax | Rejected
+| [RFC-0087] | Updates to RFC-0050: FIDL method parameter syntax | [Implementation in progress](https://fxbug.dev/76349)
+| [RFC-0097] | FIDL Toolchain | [Implementation in progress](https://fxbug.dev/39407)
+| [RFC-0113] | Efficient envelopes | Implemented
+| [RFC-0114] | Inlining small values in FIDL envelopes | Implemented
 | [RFC-0116] | Wire format support for sparser FIDL tables | Rejected
-| [RFC-0120] | Standalone use of FIDL | Implementation in progress
+| [RFC-0120] | Standalone use of the FIDL wire format | [Implementation in progress](https://fxbug.dev/45252)
 | [RFC-0131] | Design principles of the FIDL wire format | Implemented
 | [RFC-0132] | FIDL table size limit | [Implemented](https://fuchsia-review.googlesource.com/c/fuchsia/+/583988)
-| [RFC-0137] | Discard unknown data in FIDL | Implementation in progress
-| [RFC-0138] | Handling unknown interactions | Implementation in progress
+| [RFC-0137] | Discard unknown data in FIDL | [Implementation in progress](https://fxbug.dev/85383)
+| [RFC-0138] | Handling unknown interactions | [Implementation in progress](https://fxbug.dev/88366)
+| [RFC-0149] | FIDL encode validation not mandatory | Implemented
+| &ndash;    | Remove support for FIDL struct defaults | [In review](https://fuchsia-review.googlesource.com/c/fuchsia/+/623161)
+| &ndash;    | Terminal events | [In review](https://fuchsia-review.googlesource.com/c/fuchsia/+/632266/)
 
 <!-- link labels -->
 [rfcs]: /docs/contribute/governance/rfcs/README.md#proposals
 [ftps]: /docs/contribute/governance/deprecated-ftp-process.md
-[safer-structs-impl]: https://fuchsia-review.googlesource.com/c/garnet/+/139083
 [protobuf-self-describe]: https://developers.google.com/protocol-buffers/docs/techniques#self-description
 [measure-tape]: /tools/fidl/measure-tape/README.md
 [source_compatibility]: /src/tests/fidl/source_compatibility/README.md
@@ -294,3 +307,4 @@ _Legend:_
 [rfc-0132]: /docs/contribute/governance/rfcs/0132_fidl_table_size_limit.md
 [rfc-0137]: /docs/contribute/governance/rfcs/0137_discard_unknown_data_in_fidl.md
 [rfc-0138]: /docs/contribute/governance/rfcs/0138_handling_unknown_interactions.md
+[rfc-0149]: /docs/contribute/governance/rfcs/0149_fidl_encode_validation_not_mandatory.md

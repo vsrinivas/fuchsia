@@ -9,7 +9,9 @@ Note: Formerly known as [FTP](../deprecated-ftp-process.md)-007.
 
 Add a mechanism for forward and backwards compatible compound data types to the FIDL language.
 
-See also:
+### Relation to other RFCs
+
+This RFC was later amended by:
 
 * [RFC-0116: Wire format support for sparser FIDL tables](0116_fidl_sparser_tables.md)
 * [RFC-0132: FIDL table size limit](0132_fidl_table_size_limit.md)

@@ -14,6 +14,12 @@ Use a new attribute `[Deprecated]` to indicate deprecation of types (enums,
 structs, unions, using declarations), consts, methods, or whole interfaces.
 Carry this over to target languages in the best possible way.
 
+### Relation to other RFCs
+
+This RFC was superseded by:
+
+* [RFC-0083: FIDL versioning](0083_fidl_versioning.md)
+
 ## Motivation
 
 We have a number of comments indicating that a type, method, or interface

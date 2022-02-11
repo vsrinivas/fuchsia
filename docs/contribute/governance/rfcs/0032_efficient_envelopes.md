@@ -6,13 +6,13 @@
 Note: A version of this RFC was resubmitted and accepted as
 [RFC-0113](0113_efficient_envelopes.md)
 
-**Formerly known as [FTP](../deprecated-ftp-process.md)-032.**
+Note: Formerly known as [FTP](../deprecated-ftp-process.md)-032.
 
 _"Turning Envelopes into Postcards"_
 
 ## Rejection rationale
 
-In February 21, 2019, this RFC was initially accepted. The FIDL team worked to
+On February 21, 2019, this RFC was initially accepted. The FIDL team worked to
 stabilize the wire format for most of 2019, culminating in an all-hands-on-deck
 effort which spanned Q3 and Q4. The migration completed on Dec 1<sup>st</sup>,
 2019.
@@ -40,10 +40,12 @@ change would have no material impact.
 
 It's time to face the truth, this ain't going to happen. Rejected.
 
-**June 2021: this topic was revisited and performance was measured with
-targeted benchmarks. This was conclusive and [RFC-0113](
-/docs/contribute/governance/rfcs/0113_efficient_envelopes.md) proposed
-reintroducing the change, which was accepted.**
+### Relation to other RFCs
+
+In June 2021, this topic was revisited and performance was measured with
+targeted benchmarks. This was conclusive and
+[RFC-0113](0113_efficient_envelopes.md) proposed reintroducing the change, which
+was accepted.
 
 ## Summary
 

@@ -3,7 +3,7 @@
 # {{ rfc.name }}: {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-Note: this is a resubmission of previously rejected
+Note: This is a resubmission of the previously rejected
 [RFC-0032](0032_efficient_envelopes.md).
 
 _"Turning Envelopes into Postcards"_
