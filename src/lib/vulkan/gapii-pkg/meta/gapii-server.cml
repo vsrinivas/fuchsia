@@ -1,0 +1,23 @@
+{
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        binary: "bin/gapii-server",
+    },
+    capabilities: [
+        {
+            directory: "gapii-pkg",
+            rights: [ "rx*" ],
+            path: "/pkg",
+        },
+    ],
+    expose: [
+        {
+            directory: "gapii-pkg",
+            from: "self",
+            rights: [ "rx*" ],
+        },
+    ],
+}

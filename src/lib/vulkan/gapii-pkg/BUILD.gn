@@ -1,0 +1,53 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("../layers.gni")
+
+# To prevent confusion, restrict default visibility.
+visibility = [ ":*" ]
+
+executable("gapii-server-bin") {
+  output_name = "gapii-server"
+
+  sources = [ "gapii_server.cc" ]
+
+  deps = [
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/svc",
+  ]
+}
+
+resource("override-json") {
+  sources = [ "resources/VkLayer_override.json" ]
+  outputs = [ "data/vulkan/implicit_layer.d/{{source_file_part}}" ]
+}
+
+resource("gapii-so") {
+  # Use placeholder name "libgapii.txt" until we're actually
+  # building libgapii.so.
+  sources = [ "resources/libgapii.txt" ]
+  outputs = [ "lib/{{source_file_part}}" ]
+}
+
+fuchsia_component("gapii-server-component") {
+  manifest = "meta/gapii-server.cml"
+  component_name = "gapii-server"
+  deps = [
+    ":gapii-server-bin",
+    ":gapii-so",
+    ":override-json",
+  ]
+}
+
+fuchsia_package("gapii-pkg") {
+  visibility += [ "*" ]
+  deps = [ ":gapii-server-component" ]
+}

@@ -1,0 +1,1 @@
+libgapii.so text contents
