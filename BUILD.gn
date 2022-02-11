@@ -58,6 +58,10 @@ declare_args() {
   # artifact set, which represents an additional set of host-only software that
   # is produced by the build.
   host_labels = []
+
+  # Extra sdk() archive labels to be uploaded to the artifacts store. This is
+  # an extension mechanism for SDK bits outside of the main repository.
+  sdk_archive_labels = []
 }
 
 if (host_os == "mac") {
@@ -526,7 +530,7 @@ build_api_module("images") {
 build_api_module("sdk_archives") {
   testonly = true
   data_keys = [ "sdk_archives" ]
-  deps = [ "//sdk:archives" ]
+  deps = [ "//sdk:archives" ] + sdk_archive_labels
 }
 
 # Describes the platforms available for testing, in the file:
