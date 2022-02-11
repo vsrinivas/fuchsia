@@ -3,7 +3,7 @@
 # {{ rfc.name }}: {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-# Rejection rationale
+## Rejection rationale
 
 Note: Formerly known as [FTP](../deprecated-ftp-process.md)-010.
 
