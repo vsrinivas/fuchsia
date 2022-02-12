@@ -141,7 +141,8 @@ class Example_foo_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_error::Example_foo_Result>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit Example_foo_Result(std::shared_ptr<Storage_> storage)
@@ -295,7 +296,7 @@ struct ::fidl::internal::TypeTraits<::test_error::Example_foo_Response> final {
 };
 
 template <>
-struct CodingTraits<::test_error::Example_foo_Response> final
+struct internal::NaturalCodingTraits<::test_error::Example_foo_Response> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_error::Example_foo_Response, 8, 8> {};
 #endif  // __Fuchsia__
@@ -315,7 +316,7 @@ struct ::fidl::internal::TypeTraits<::test_error::ExampleFooTopResponse> final {
 };
 
 template <>
-struct CodingTraits<::test_error::ExampleFooTopResponse> final
+struct internal::NaturalCodingTraits<::test_error::ExampleFooTopResponse> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_error::ExampleFooTopResponse, 24, 16> {};
 #endif  // __Fuchsia__
@@ -334,7 +335,7 @@ struct ::fidl::internal::TypeTraits<::test_error::ExampleFooRequest> final {
 };
 
 template <>
-struct CodingTraits<::test_error::ExampleFooRequest> final
+struct internal::NaturalCodingTraits<::test_error::ExampleFooRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_error::ExampleFooRequest, 16, 16> {};
 #endif  // __Fuchsia__
@@ -344,15 +345,8 @@ struct IsFidlType<::test_error::Example_foo_Result> : public std::true_type {};
 template <>
 struct IsUnion<::test_error::Example_foo_Result> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_error::Example_foo_Result> : public std::true_type {
-};
-
-template <>
-struct CodingTraits<::test_error::Example_foo_Result> final
+struct internal::NaturalCodingTraits<::test_error::Example_foo_Result> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_error::Example_foo_Result> {};
 

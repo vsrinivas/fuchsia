@@ -84,7 +84,8 @@ class UnionSize8Alignment4 final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize8Alignment4>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
       kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionSize8Alignment4(std::shared_ptr<Storage_> storage)
@@ -244,7 +245,8 @@ class UnionSize36Alignment4 final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize36Alignment4>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
       kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionSize36Alignment4(std::shared_ptr<Storage_> storage)
@@ -404,7 +406,8 @@ class UnionSize12Alignment4 final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize12Alignment4>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
       kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionSize12Alignment4(std::shared_ptr<Storage_> storage)
@@ -629,7 +632,8 @@ class UnionSize24Alignment8 final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize24Alignment8>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
       kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionSize24Alignment8(std::shared_ptr<Storage_> storage)
@@ -758,9 +762,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_unionsandwich::SandwichUnionSize8Alignment4> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_unionsandwich::SandwichUnionSize8Alignment4, 40, 32> {};
+struct internal::NaturalCodingTraits<
+    ::test_unionsandwich::SandwichUnionSize8Alignment4>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_unionsandwich::SandwichUnionSize8Alignment4, 40, 32> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -781,9 +786,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_unionsandwich::SandwichUnionSize36Alignment4> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_unionsandwich::SandwichUnionSize36Alignment4, 40, 32> {};
+struct internal::NaturalCodingTraits<
+    ::test_unionsandwich::SandwichUnionSize36Alignment4>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_unionsandwich::SandwichUnionSize36Alignment4, 40, 32> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -804,9 +810,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_unionsandwich::SandwichUnionSize12Alignment4> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_unionsandwich::SandwichUnionSize12Alignment4, 40, 32> {};
+struct internal::NaturalCodingTraits<
+    ::test_unionsandwich::SandwichUnionSize12Alignment4>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_unionsandwich::SandwichUnionSize12Alignment4, 40, 32> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -826,9 +833,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_unionsandwich::StructSize16Alignment8> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_unionsandwich::StructSize16Alignment8, 16, 16> {};
+struct internal::NaturalCodingTraits<
+    ::test_unionsandwich::StructSize16Alignment8>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_unionsandwich::StructSize16Alignment8, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -849,9 +857,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_unionsandwich::SandwichUnionSize24Alignment8> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_unionsandwich::SandwichUnionSize24Alignment8, 40, 32> {};
+struct internal::NaturalCodingTraits<
+    ::test_unionsandwich::SandwichUnionSize24Alignment8>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_unionsandwich::SandwichUnionSize24Alignment8, 40, 32> {};
 #endif  // __Fuchsia__
 
 template <>
@@ -861,17 +870,10 @@ template <>
 struct IsUnion<::test_unionsandwich::UnionSize8Alignment4>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_unionsandwich::UnionSize8Alignment4>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_unionsandwich::UnionSize8Alignment4> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<
-          ::test_unionsandwich::UnionSize8Alignment4> {};
+struct internal::NaturalCodingTraits<::test_unionsandwich::UnionSize8Alignment4>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_unionsandwich::UnionSize8Alignment4> {};
 
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize36Alignment4>
@@ -880,17 +882,11 @@ template <>
 struct IsUnion<::test_unionsandwich::UnionSize36Alignment4>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_unionsandwich::UnionSize36Alignment4>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_unionsandwich::UnionSize36Alignment4> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<
-          ::test_unionsandwich::UnionSize36Alignment4> {};
+struct internal::NaturalCodingTraits<
+    ::test_unionsandwich::UnionSize36Alignment4>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_unionsandwich::UnionSize36Alignment4> {};
 
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize12Alignment4>
@@ -899,17 +895,11 @@ template <>
 struct IsUnion<::test_unionsandwich::UnionSize12Alignment4>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_unionsandwich::UnionSize12Alignment4>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_unionsandwich::UnionSize12Alignment4> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<
-          ::test_unionsandwich::UnionSize12Alignment4> {};
+struct internal::NaturalCodingTraits<
+    ::test_unionsandwich::UnionSize12Alignment4>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_unionsandwich::UnionSize12Alignment4> {};
 
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize24Alignment8>
@@ -918,16 +908,10 @@ template <>
 struct IsUnion<::test_unionsandwich::UnionSize24Alignment8>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_unionsandwich::UnionSize24Alignment8>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_unionsandwich::UnionSize24Alignment8> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<
-          ::test_unionsandwich::UnionSize24Alignment8> {};
+struct internal::NaturalCodingTraits<
+    ::test_unionsandwich::UnionSize24Alignment8>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_unionsandwich::UnionSize24Alignment8> {};
 
 }  // namespace fidl

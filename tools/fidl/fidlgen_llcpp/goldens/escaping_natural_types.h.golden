@@ -89,9 +89,9 @@ struct ::fidl::internal::TypeTraits<::test_escaping::DocCommentWithQuotes>
 };
 
 template <>
-struct CodingTraits<::test_escaping::DocCommentWithQuotes> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_escaping::DocCommentWithQuotes, 1, 1> {};
+struct internal::NaturalCodingTraits<::test_escaping::DocCommentWithQuotes>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_escaping::DocCommentWithQuotes, 1, 1> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

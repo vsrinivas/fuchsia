@@ -116,7 +116,8 @@ class OnlyLlcpp final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::OnlyLlcpp>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
       kMembers = {std::nullopt, std::nullopt};
 
   explicit OnlyLlcpp(std::shared_ptr<Storage_> storage)
@@ -416,7 +417,8 @@ class DenyEachBinding_OnlyDenySyzkaller_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit DenyEachBinding_OnlyDenySyzkaller_Result(
@@ -663,7 +665,8 @@ class DenyEachBinding_OnlyDenyRust_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit DenyEachBinding_OnlyDenyRust_Result(
@@ -912,7 +915,8 @@ class DenyEachBinding_OnlyDenyLibfuzzer_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit DenyEachBinding_OnlyDenyLibfuzzer_Result(
@@ -1159,7 +1163,8 @@ class DenyEachBinding_OnlyDenyGo_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit DenyEachBinding_OnlyDenyGo_Result(std::shared_ptr<Storage_> storage)
@@ -1402,7 +1407,8 @@ class DenyEachBinding_OnlyDenyDart_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit DenyEachBinding_OnlyDenyDart_Result(
@@ -1843,7 +1849,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -1869,7 +1875,8 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_bindingsdenylist::OnlyAppearsInImportingLibrary>
+struct internal::NaturalCodingTraits<
+    ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::OnlyAppearsInImportingLibrary, 1, 1> {
 };
@@ -1894,7 +1901,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -1921,7 +1928,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -1948,7 +1955,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response,
@@ -1974,7 +1981,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse,
@@ -2000,7 +2007,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -2027,7 +2034,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -2053,7 +2060,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -2079,7 +2086,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse,
@@ -2105,7 +2112,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response,
@@ -2131,7 +2138,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse,
@@ -2157,7 +2164,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -2183,7 +2190,8 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>
+struct internal::NaturalCodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1, 1> {};
@@ -2208,7 +2216,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -2234,7 +2242,8 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>
+struct internal::NaturalCodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1, 1> {};
@@ -2258,7 +2267,8 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
+struct internal::NaturalCodingTraits<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1, 1> {};
@@ -2270,15 +2280,8 @@ struct IsFidlType<::test_bindingsdenylist::OnlyLlcpp> : public std::true_type {
 template <>
 struct IsUnion<::test_bindingsdenylist::OnlyLlcpp> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_bindingsdenylist::OnlyLlcpp>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_bindingsdenylist::OnlyLlcpp> final
+struct internal::NaturalCodingTraits<::test_bindingsdenylist::OnlyLlcpp> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_bindingsdenylist::OnlyLlcpp> {};
 
@@ -2291,16 +2294,8 @@ struct IsUnion<
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
@@ -2313,16 +2308,8 @@ template <>
 struct IsUnion<::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result> {
@@ -2337,16 +2324,8 @@ struct IsUnion<
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
@@ -2359,15 +2338,9 @@ template <>
 struct IsUnion<::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
+struct internal::NaturalCodingTraits<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result> {};
 
@@ -2378,16 +2351,8 @@ template <>
 struct IsUnion<::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result> {

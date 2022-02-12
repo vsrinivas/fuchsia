@@ -1053,7 +1053,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding7ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding7ByteMiddle> final
+struct internal::NaturalCodingTraits<::test_padding::Padding7ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding7ByteMiddle, 16, 16> {};
 #endif  // __Fuchsia__
@@ -1072,7 +1072,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding7ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding7ByteEnd> final
+struct internal::NaturalCodingTraits<::test_padding::Padding7ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding7ByteEnd, 16, 16> {};
 #endif  // __Fuchsia__
@@ -1092,7 +1092,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding6ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding6ByteMiddle> final
+struct internal::NaturalCodingTraits<::test_padding::Padding6ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding6ByteMiddle, 16, 16> {};
 #endif  // __Fuchsia__
@@ -1111,7 +1111,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding6ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding6ByteEnd> final
+struct internal::NaturalCodingTraits<::test_padding::Padding6ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding6ByteEnd, 16, 16> {};
 #endif  // __Fuchsia__
@@ -1131,7 +1131,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding5ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding5ByteMiddle> final
+struct internal::NaturalCodingTraits<::test_padding::Padding5ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding5ByteMiddle, 16, 16> {};
 #endif  // __Fuchsia__
@@ -1150,7 +1150,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding5ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding5ByteEnd> final
+struct internal::NaturalCodingTraits<::test_padding::Padding5ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding5ByteEnd, 16, 16> {};
 #endif  // __Fuchsia__
@@ -1170,7 +1170,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding4ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding4ByteMiddle> final
+struct internal::NaturalCodingTraits<::test_padding::Padding4ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding4ByteMiddle, 16, 16> {};
 #endif  // __Fuchsia__
@@ -1189,7 +1189,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding4ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding4ByteEnd> final
+struct internal::NaturalCodingTraits<::test_padding::Padding4ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding4ByteEnd, 16, 16> {};
 #endif  // __Fuchsia__
@@ -1211,9 +1211,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding4ByteAlignmentLength12> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_padding::Padding4ByteAlignmentLength12, 12, 12> {};
+struct internal::NaturalCodingTraits<
+    ::test_padding::Padding4ByteAlignmentLength12>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_padding::Padding4ByteAlignmentLength12, 12, 12> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1231,7 +1232,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding3ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding3ByteMiddle> final
+struct internal::NaturalCodingTraits<::test_padding::Padding3ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding3ByteMiddle, 8, 8> {};
 #endif  // __Fuchsia__
@@ -1250,7 +1251,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding3ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding3ByteEnd> final
+struct internal::NaturalCodingTraits<::test_padding::Padding3ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding3ByteEnd, 8, 8> {};
 #endif  // __Fuchsia__
@@ -1270,7 +1271,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding2ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding2ByteMiddle> final
+struct internal::NaturalCodingTraits<::test_padding::Padding2ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding2ByteMiddle, 8, 8> {};
 #endif  // __Fuchsia__
@@ -1289,7 +1290,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding2ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding2ByteEnd> final
+struct internal::NaturalCodingTraits<::test_padding::Padding2ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding2ByteEnd, 8, 8> {};
 #endif  // __Fuchsia__
@@ -1311,9 +1312,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding2ByteAlignmentLength6> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_padding::Padding2ByteAlignmentLength6, 6, 6> {};
+struct internal::NaturalCodingTraits<
+    ::test_padding::Padding2ByteAlignmentLength6>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_padding::Padding2ByteAlignmentLength6, 6, 6> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1331,7 +1333,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding1ByteMiddle> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding1ByteMiddle> final
+struct internal::NaturalCodingTraits<::test_padding::Padding1ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding1ByteMiddle, 4, 4> {};
 #endif  // __Fuchsia__
@@ -1350,7 +1352,7 @@ struct ::fidl::internal::TypeTraits<::test_padding::Padding1ByteEnd> final {
 };
 
 template <>
-struct CodingTraits<::test_padding::Padding1ByteEnd> final
+struct internal::NaturalCodingTraits<::test_padding::Padding1ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding1ByteEnd, 4, 4> {};
 #endif  // __Fuchsia__

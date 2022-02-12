@@ -127,7 +127,8 @@ class UnionWithAttributes final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::UnionWithAttributes>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
       kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionWithAttributes(std::shared_ptr<Storage_> storage)
@@ -232,7 +233,8 @@ class Union final {
   std::shared_ptr<Storage_> storage_;
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_union::Union>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 4>
       kMembers = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
   explicit Union(std::shared_ptr<Storage_> storage)
@@ -404,7 +406,8 @@ class StrictUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictUnion>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 4>
       kMembers = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
   explicit StrictUnion(std::shared_ptr<Storage_> storage)
@@ -513,7 +516,8 @@ class StrictSimpleXUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictSimpleXUnion>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 4>
       kMembers = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
   explicit StrictSimpleXUnion(std::shared_ptr<Storage_> storage)
@@ -610,7 +614,8 @@ class StrictFoo final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictFoo>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit StrictFoo(std::shared_ptr<Storage_> storage)
@@ -689,7 +694,8 @@ class StrictBoundedXUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictBoundedXUnion>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
       kMembers = {std::nullopt, std::nullopt};
 
   explicit StrictBoundedXUnion(std::shared_ptr<Storage_> storage)
@@ -859,7 +865,8 @@ class ReverseOrdinalUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ReverseOrdinalUnion>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ReverseOrdinalUnion(std::shared_ptr<Storage_> storage)
@@ -1055,7 +1062,8 @@ class StrictPizzaOrPasta final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictPizzaOrPasta>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit StrictPizzaOrPasta(std::shared_ptr<Storage_> storage)
@@ -1149,7 +1157,8 @@ class PizzaOrPasta final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::PizzaOrPasta>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit PizzaOrPasta(std::shared_ptr<Storage_> storage)
@@ -1242,7 +1251,8 @@ class FlexiblePizzaOrPasta final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::FlexiblePizzaOrPasta>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit FlexiblePizzaOrPasta(std::shared_ptr<Storage_> storage)
@@ -1337,7 +1347,8 @@ class ExplicitPizzaOrPasta final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitPizzaOrPasta>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ExplicitPizzaOrPasta(std::shared_ptr<Storage_> storage)
@@ -1431,7 +1442,8 @@ class OlderSimpleUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::OlderSimpleUnion>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit OlderSimpleUnion(std::shared_ptr<Storage_> storage)
@@ -1676,7 +1688,8 @@ class NewerSimpleUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::NewerSimpleUnion>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 4>
       kMembers = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
   explicit NewerSimpleUnion(std::shared_ptr<Storage_> storage)
@@ -1791,7 +1804,8 @@ class FlexibleUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::FlexibleUnion>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 4>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 4>
       kMembers = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
 
   explicit FlexibleUnion(std::shared_ptr<Storage_> storage)
@@ -1889,7 +1903,8 @@ class FlexibleFoo final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::FlexibleFoo>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit FlexibleFoo(std::shared_ptr<Storage_> storage)
@@ -1970,7 +1985,8 @@ class FieldCollision final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::FieldCollision>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
       kMembers = {std::nullopt, std::nullopt};
 
   explicit FieldCollision(std::shared_ptr<Storage_> storage)
@@ -2058,7 +2074,8 @@ class ExplicitXUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitXUnion>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ExplicitXUnion(std::shared_ptr<Storage_> storage)
@@ -2216,7 +2233,8 @@ class ExplicitUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitUnion>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ExplicitUnion(std::shared_ptr<Storage_> storage)
@@ -2307,7 +2325,8 @@ class ExplicitStrictFoo final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitStrictFoo>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ExplicitStrictFoo(std::shared_ptr<Storage_> storage)
@@ -2400,7 +2419,8 @@ class ExplicitFoo final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::ExplicitFoo>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ExplicitFoo(std::shared_ptr<Storage_> storage)
@@ -2532,7 +2552,8 @@ class XUnionContainingEmptyStruct final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::XUnionContainingEmptyStruct>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
       kMembers = {std::nullopt, std::nullopt};
 
   explicit XUnionContainingEmptyStruct(std::shared_ptr<Storage_> storage)
@@ -2578,9 +2599,9 @@ struct ::fidl::internal::TypeTraits<::test_union::StructWithNullableXUnion>
 };
 
 template <>
-struct CodingTraits<::test_union::StructWithNullableXUnion> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_union::StructWithNullableXUnion, 24, 16> {};
+struct internal::NaturalCodingTraits<::test_union::StructWithNullableXUnion>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_union::StructWithNullableXUnion, 24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2604,7 +2625,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_union::
         TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
     final
@@ -2627,7 +2648,7 @@ struct ::fidl::internal::TypeTraits<::test_union::Pizza> final {
 };
 
 template <>
-struct CodingTraits<::test_union::Pizza> final
+struct internal::NaturalCodingTraits<::test_union::Pizza> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza,
                                                          16, 16> {};
 #endif  // __Fuchsia__
@@ -2645,7 +2666,7 @@ struct ::fidl::internal::TypeTraits<::test_union::Pasta> final {
 };
 
 template <>
-struct CodingTraits<::test_union::Pasta> final
+struct internal::NaturalCodingTraits<::test_union::Pasta> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta,
                                                          16, 16> {};
 #endif  // __Fuchsia__
@@ -2671,7 +2692,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_union::
         TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
     final
@@ -2695,7 +2716,7 @@ struct ::fidl::internal::TypeTraits<::test_union::NullableUnionStruct> final {
 };
 
 template <>
-struct CodingTraits<::test_union::NullableUnionStruct> final
+struct internal::NaturalCodingTraits<::test_union::NullableUnionStruct> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_union::NullableUnionStruct, 24, 16> {};
 #endif  // __Fuchsia__
@@ -2714,7 +2735,7 @@ struct ::fidl::internal::TypeTraits<::test_union::UnionSandwich> final {
 };
 
 template <>
-struct CodingTraits<::test_union::UnionSandwich> final
+struct internal::NaturalCodingTraits<::test_union::UnionSandwich> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_union::UnionSandwich, 40, 32> {};
 #endif  // __Fuchsia__
@@ -2732,7 +2753,7 @@ struct ::fidl::internal::TypeTraits<::test_union::Empty> final {
 };
 
 template <>
-struct CodingTraits<::test_union::Empty> final
+struct internal::NaturalCodingTraits<::test_union::Empty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Empty, 1,
                                                          1> {};
 #endif  // __Fuchsia__
@@ -2742,15 +2763,8 @@ struct IsFidlType<::test_union::UnionWithAttributes> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::UnionWithAttributes> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::UnionWithAttributes> : public std::true_type {
-};
-
-template <>
-struct CodingTraits<::test_union::UnionWithAttributes> final
+struct internal::NaturalCodingTraits<::test_union::UnionWithAttributes> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::UnionWithAttributes> {};
 
@@ -2759,14 +2773,8 @@ struct IsFidlType<::test_union::Union> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::Union> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::Union> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::Union> final
+struct internal::NaturalCodingTraits<::test_union::Union> final
     : public ::fidl::internal::NaturalUnionCodingTraits<::test_union::Union> {};
 
 template <>
@@ -2774,14 +2782,8 @@ struct IsFidlType<::test_union::StrictUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::StrictUnion> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::StrictUnion> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::StrictUnion> final
+struct internal::NaturalCodingTraits<::test_union::StrictUnion> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::StrictUnion> {};
 
@@ -2790,15 +2792,8 @@ struct IsFidlType<::test_union::StrictSimpleXUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::StrictSimpleXUnion> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::StrictSimpleXUnion> : public std::true_type {
-};
-
-template <>
-struct CodingTraits<::test_union::StrictSimpleXUnion> final
+struct internal::NaturalCodingTraits<::test_union::StrictSimpleXUnion> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::StrictSimpleXUnion> {};
 
@@ -2807,14 +2802,8 @@ struct IsFidlType<::test_union::StrictFoo> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::StrictFoo> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::StrictFoo> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::StrictFoo> final
+struct internal::NaturalCodingTraits<::test_union::StrictFoo> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::StrictFoo> {};
 
@@ -2823,15 +2812,8 @@ struct IsFidlType<::test_union::StrictBoundedXUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::StrictBoundedXUnion> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::StrictBoundedXUnion> : public std::true_type {
-};
-
-template <>
-struct CodingTraits<::test_union::StrictBoundedXUnion> final
+struct internal::NaturalCodingTraits<::test_union::StrictBoundedXUnion> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::StrictBoundedXUnion> {};
 
@@ -2840,15 +2822,8 @@ struct IsFidlType<::test_union::ReverseOrdinalUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::ReverseOrdinalUnion> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::ReverseOrdinalUnion> : public std::true_type {
-};
-
-template <>
-struct CodingTraits<::test_union::ReverseOrdinalUnion> final
+struct internal::NaturalCodingTraits<::test_union::ReverseOrdinalUnion> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::ReverseOrdinalUnion> {};
 
@@ -2857,15 +2832,8 @@ struct IsFidlType<::test_union::StrictPizzaOrPasta> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::StrictPizzaOrPasta> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::StrictPizzaOrPasta> : public std::true_type {
-};
-
-template <>
-struct CodingTraits<::test_union::StrictPizzaOrPasta> final
+struct internal::NaturalCodingTraits<::test_union::StrictPizzaOrPasta> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::StrictPizzaOrPasta> {};
 
@@ -2874,14 +2842,8 @@ struct IsFidlType<::test_union::PizzaOrPasta> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::PizzaOrPasta> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::PizzaOrPasta> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::PizzaOrPasta> final
+struct internal::NaturalCodingTraits<::test_union::PizzaOrPasta> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::PizzaOrPasta> {};
 
@@ -2891,15 +2853,8 @@ struct IsFidlType<::test_union::FlexiblePizzaOrPasta> : public std::true_type {
 template <>
 struct IsUnion<::test_union::FlexiblePizzaOrPasta> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::FlexiblePizzaOrPasta>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::FlexiblePizzaOrPasta> final
+struct internal::NaturalCodingTraits<::test_union::FlexiblePizzaOrPasta> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::FlexiblePizzaOrPasta> {};
 
@@ -2909,15 +2864,8 @@ struct IsFidlType<::test_union::ExplicitPizzaOrPasta> : public std::true_type {
 template <>
 struct IsUnion<::test_union::ExplicitPizzaOrPasta> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::ExplicitPizzaOrPasta>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::ExplicitPizzaOrPasta> final
+struct internal::NaturalCodingTraits<::test_union::ExplicitPizzaOrPasta> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::ExplicitPizzaOrPasta> {};
 
@@ -2926,14 +2874,8 @@ struct IsFidlType<::test_union::OlderSimpleUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::OlderSimpleUnion> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::OlderSimpleUnion> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::OlderSimpleUnion> final
+struct internal::NaturalCodingTraits<::test_union::OlderSimpleUnion> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::OlderSimpleUnion> {};
 
@@ -2942,14 +2884,8 @@ struct IsFidlType<::test_union::NewerSimpleUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::NewerSimpleUnion> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::NewerSimpleUnion> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::NewerSimpleUnion> final
+struct internal::NaturalCodingTraits<::test_union::NewerSimpleUnion> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::NewerSimpleUnion> {};
 
@@ -2958,14 +2894,8 @@ struct IsFidlType<::test_union::FlexibleUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::FlexibleUnion> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::FlexibleUnion> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::FlexibleUnion> final
+struct internal::NaturalCodingTraits<::test_union::FlexibleUnion> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::FlexibleUnion> {};
 
@@ -2974,14 +2904,8 @@ struct IsFidlType<::test_union::FlexibleFoo> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::FlexibleFoo> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::FlexibleFoo> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::FlexibleFoo> final
+struct internal::NaturalCodingTraits<::test_union::FlexibleFoo> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::FlexibleFoo> {};
 
@@ -2990,14 +2914,8 @@ struct IsFidlType<::test_union::FieldCollision> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::FieldCollision> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::FieldCollision> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::FieldCollision> final
+struct internal::NaturalCodingTraits<::test_union::FieldCollision> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::FieldCollision> {};
 
@@ -3006,14 +2924,8 @@ struct IsFidlType<::test_union::ExplicitXUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::ExplicitXUnion> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::ExplicitXUnion> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::ExplicitXUnion> final
+struct internal::NaturalCodingTraits<::test_union::ExplicitXUnion> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::ExplicitXUnion> {};
 
@@ -3022,14 +2934,8 @@ struct IsFidlType<::test_union::ExplicitUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::ExplicitUnion> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::ExplicitUnion> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::ExplicitUnion> final
+struct internal::NaturalCodingTraits<::test_union::ExplicitUnion> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::ExplicitUnion> {};
 
@@ -3038,14 +2944,8 @@ struct IsFidlType<::test_union::ExplicitStrictFoo> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::ExplicitStrictFoo> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::ExplicitStrictFoo> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::ExplicitStrictFoo> final
+struct internal::NaturalCodingTraits<::test_union::ExplicitStrictFoo> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::ExplicitStrictFoo> {};
 
@@ -3054,14 +2954,8 @@ struct IsFidlType<::test_union::ExplicitFoo> : public std::true_type {};
 template <>
 struct IsUnion<::test_union::ExplicitFoo> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::ExplicitFoo> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::ExplicitFoo> final
+struct internal::NaturalCodingTraits<::test_union::ExplicitFoo> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_union::ExplicitFoo> {};
 
@@ -3072,16 +2966,9 @@ template <>
 struct IsUnion<::test_union::XUnionContainingEmptyStruct>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_union::XUnionContainingEmptyStruct>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_union::XUnionContainingEmptyStruct> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<
-          ::test_union::XUnionContainingEmptyStruct> {};
+struct internal::NaturalCodingTraits<::test_union::XUnionContainingEmptyStruct>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_union::XUnionContainingEmptyStruct> {};
 
 }  // namespace fidl

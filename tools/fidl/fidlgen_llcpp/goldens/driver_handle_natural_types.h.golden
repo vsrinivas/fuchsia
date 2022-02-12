@@ -63,7 +63,7 @@ class ServerEndWrapper final {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>>{
           &Storage_::value, 0, 0,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CHANNEL,
                .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
@@ -111,7 +111,7 @@ class ClientEndWrapper final {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>{
           &Storage_::value, 0, 0,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CHANNEL,
                .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
@@ -140,9 +140,9 @@ struct ::fidl::internal::TypeTraits<::test_driverhandle::ServerEndWrapper>
 };
 
 template <>
-struct CodingTraits<::test_driverhandle::ServerEndWrapper> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_driverhandle::ServerEndWrapper, 4, 4> {};
+struct internal::NaturalCodingTraits<::test_driverhandle::ServerEndWrapper>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_driverhandle::ServerEndWrapper, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -164,9 +164,9 @@ struct ::fidl::internal::TypeTraits<::test_driverhandle::ClientEndWrapper>
 };
 
 template <>
-struct CodingTraits<::test_driverhandle::ClientEndWrapper> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_driverhandle::ClientEndWrapper, 4, 4> {};
+struct internal::NaturalCodingTraits<::test_driverhandle::ClientEndWrapper>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_driverhandle::ClientEndWrapper, 4, 4> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

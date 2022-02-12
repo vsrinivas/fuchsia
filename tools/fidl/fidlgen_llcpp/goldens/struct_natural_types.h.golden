@@ -149,7 +149,7 @@ struct ::fidl::internal::TypeTraits<::test_struct::Simple> final {
 };
 
 template <>
-struct CodingTraits<::test_struct::Simple> final
+struct internal::NaturalCodingTraits<::test_struct::Simple> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple,
                                                          2, 2> {};
 #endif  // __Fuchsia__
@@ -168,7 +168,7 @@ struct ::fidl::internal::TypeTraits<::test_struct::BasicStruct> final {
 };
 
 template <>
-struct CodingTraits<::test_struct::BasicStruct> final
+struct internal::NaturalCodingTraits<::test_struct::BasicStruct> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_struct::BasicStruct, 24, 24> {};
 #endif  // __Fuchsia__

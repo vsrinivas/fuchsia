@@ -329,7 +329,7 @@ struct ::fidl::internal::TypeTraits<::test_emptystruct::Empty> final {
 };
 
 template <>
-struct CodingTraits<::test_emptystruct::Empty> final
+struct internal::NaturalCodingTraits<::test_emptystruct::Empty> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_emptystruct::Empty, 1, 1> {};
 #endif  // __Fuchsia__
@@ -351,9 +351,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_emptystruct::EmptyProtocolSendRequest> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_emptystruct::EmptyProtocolSendRequest, 1, 1> {};
+struct internal::NaturalCodingTraits<
+    ::test_emptystruct::EmptyProtocolSendRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_emptystruct::EmptyProtocolSendRequest, 1, 1> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -374,7 +375,8 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
+struct internal::NaturalCodingTraits<
+    ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1, 1> {};
@@ -398,7 +400,8 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
+struct internal::NaturalCodingTraits<
+    ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1, 1> {
 };
@@ -421,9 +424,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_emptystruct::EmptyProtocolReceiveRequest> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1> {};
+struct internal::NaturalCodingTraits<
+    ::test_emptystruct::EmptyProtocolReceiveRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

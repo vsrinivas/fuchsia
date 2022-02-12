@@ -141,9 +141,9 @@ struct ::fidl::internal::TypeTraits<::test_inheritance::SuperFooTopResponse>
 };
 
 template <>
-struct CodingTraits<::test_inheritance::SuperFooTopResponse> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_inheritance::SuperFooTopResponse, 8, 8> {};
+struct internal::NaturalCodingTraits<::test_inheritance::SuperFooTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_inheritance::SuperFooTopResponse, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -161,7 +161,7 @@ struct ::fidl::internal::TypeTraits<::test_inheritance::SuperFooRequest> final {
 };
 
 template <>
-struct CodingTraits<::test_inheritance::SuperFooRequest> final
+struct internal::NaturalCodingTraits<::test_inheritance::SuperFooRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_inheritance::SuperFooRequest, 16, 16> {};
 #endif  // __Fuchsia__

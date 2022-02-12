@@ -82,7 +82,7 @@ class NonInlineStructTestStruct final {
           &Storage_::element, 0, 0},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle>{
           &Storage_::h, 8, 8,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_NONE, .rights = 0x80000000})});
 };
 
@@ -432,9 +432,11 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_encapsulatedstructs::NonInlineStructTestStruct, 16, 16> {};
+struct internal::NaturalCodingTraits<
+    ::test_encapsulatedstructs::NonInlineStructTestStruct>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_encapsulatedstructs::NonInlineStructTestStruct, 16, 16> {
+};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -453,9 +455,9 @@ struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::Int8Int32>
 };
 
 template <>
-struct CodingTraits<::test_encapsulatedstructs::Int8Int32> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_encapsulatedstructs::Int8Int32, 8, 8> {};
+struct internal::NaturalCodingTraits<::test_encapsulatedstructs::Int8Int32>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_encapsulatedstructs::Int8Int32, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -474,9 +476,9 @@ struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::Int16Int8>
 };
 
 template <>
-struct CodingTraits<::test_encapsulatedstructs::Int16Int8> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_encapsulatedstructs::Int16Int8, 4, 4> {};
+struct internal::NaturalCodingTraits<::test_encapsulatedstructs::Int16Int8>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_encapsulatedstructs::Int16Int8, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -495,9 +497,9 @@ struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::ArrayInt16Int8>
 };
 
 template <>
-struct CodingTraits<::test_encapsulatedstructs::ArrayInt16Int8> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_encapsulatedstructs::ArrayInt16Int8, 12, 12> {};
+struct internal::NaturalCodingTraits<::test_encapsulatedstructs::ArrayInt16Int8>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_encapsulatedstructs::ArrayInt16Int8, 12, 12> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -518,9 +520,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_encapsulatedstructs::StructPaddingTestStruct> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_encapsulatedstructs::StructPaddingTestStruct, 24, 24> {};
+struct internal::NaturalCodingTraits<
+    ::test_encapsulatedstructs::StructPaddingTestStruct>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_encapsulatedstructs::StructPaddingTestStruct, 24, 24> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -542,9 +545,9 @@ struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::TopLevelStruct>
 };
 
 template <>
-struct CodingTraits<::test_encapsulatedstructs::TopLevelStruct> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_encapsulatedstructs::TopLevelStruct, 40, 40> {};
+struct internal::NaturalCodingTraits<::test_encapsulatedstructs::TopLevelStruct>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_encapsulatedstructs::TopLevelStruct, 40, 40> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

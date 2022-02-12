@@ -63,10 +63,12 @@ class UnionWithHandle final {
   std::shared_ptr<Storage_> storage_;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_handlesintypes::UnionWithHandle>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
-      kMembers = {std::nullopt,
-                  std::make_optional<::fidl::HandleInformation>(
-                      {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})};
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
+      kMembers = {
+          std::nullopt,
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
+              {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})};
 
   explicit UnionWithHandle(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -127,7 +129,7 @@ class TableWithHandle final {
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, ::zx::vmo>{
           1, &Storage_::h,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})});
 };
 
@@ -223,21 +225,21 @@ class HandlesInTypes final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo>{
           &Storage_::normal_handle, 0, 0,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::std::vector<::zx::vmo>>{
           &Storage_::handle_in_vec, 8, 8,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_,
                                             ::std::array<::zx::vmo, 5>>{
           &Storage_::handle_in_array, 24, 24,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::vector<::std::array<::zx::vmo, 5>>>{
           &Storage_::handle_in_mixed_vec_array, 48, 48,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::test_handlesintypes::TableWithHandle>{
@@ -271,9 +273,9 @@ struct ::fidl::internal::TypeTraits<::test_handlesintypes::HandlesInTypes>
 };
 
 template <>
-struct CodingTraits<::test_handlesintypes::HandlesInTypes> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_handlesintypes::HandlesInTypes, 104, 96> {};
+struct internal::NaturalCodingTraits<::test_handlesintypes::HandlesInTypes>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_handlesintypes::HandlesInTypes, 104, 96> {};
 #endif  // __Fuchsia__
 
 template <>
@@ -284,7 +286,7 @@ struct IsFidlType<::test_handlesintypes::TableWithHandle>
     : public std::true_type {};
 
 template <>
-struct CodingTraits<::test_handlesintypes::TableWithHandle>
+struct internal::NaturalCodingTraits<::test_handlesintypes::TableWithHandle>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_handlesintypes::TableWithHandle> {};
 
@@ -298,28 +300,21 @@ template <>
 struct IsUnion<::test_handlesintypes::UnionWithHandle> : public std::true_type {
 };
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_handlesintypes::UnionWithHandle>
-    : public std::true_type {};
+struct internal::NaturalCodingTraits<::test_handlesintypes::UnionWithHandle>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_handlesintypes::UnionWithHandle> {};
 
 template <>
-struct CodingTraits<::test_handlesintypes::UnionWithHandle> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<
-          ::test_handlesintypes::UnionWithHandle> {};
-
-template <>
-struct CodingTraits<::test_handlesintypes::obj_type> {
+struct internal::NaturalCodingTraits<::test_handlesintypes::obj_type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_handlesintypes::obj_type* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder,
+                     ::test_handlesintypes::obj_type* value, size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_handlesintypes::obj_type>(offset) = *value;
   }

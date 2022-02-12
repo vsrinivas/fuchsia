@@ -94,7 +94,7 @@ struct ::fidl::internal::TypeTraits<::test_importedconstvalues::MyStruct>
 };
 
 template <>
-struct CodingTraits<::test_importedconstvalues::MyStruct> final
+struct internal::NaturalCodingTraits<::test_importedconstvalues::MyStruct> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_importedconstvalues::MyStruct, 1, 1> {};
 #endif  // __Fuchsia__

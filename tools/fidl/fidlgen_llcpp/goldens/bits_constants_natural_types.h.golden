@@ -29,15 +29,15 @@ constexpr ::test_bitsconstants::BitsType Const1 =
 namespace fidl {
 
 template <>
-struct CodingTraits<::test_bitsconstants::BitsType> {
+struct internal::NaturalCodingTraits<::test_bitsconstants::BitsType> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_bitsconstants::BitsType* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder,
+                     ::test_bitsconstants::BitsType* value, size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_bitsconstants::BitsType>(offset) = *value;
   }

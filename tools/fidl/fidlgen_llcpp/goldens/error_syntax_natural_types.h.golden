@@ -171,7 +171,8 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
@@ -370,7 +371,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -397,7 +398,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_errorsyntax::
@@ -424,7 +425,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -441,16 +442,8 @@ struct IsUnion<
     ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<

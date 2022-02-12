@@ -105,7 +105,7 @@ struct ::fidl::internal::TypeTraits<::test_vectors::ExampleUseOfVectors> final {
 };
 
 template <>
-struct CodingTraits<::test_vectors::ExampleUseOfVectors> final
+struct internal::NaturalCodingTraits<::test_vectors::ExampleUseOfVectors> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_vectors::ExampleUseOfVectors, 32, 32> {};
 #endif  // __Fuchsia__

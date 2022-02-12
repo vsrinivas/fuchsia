@@ -843,7 +843,7 @@ template <>
 struct IsFidlType<::test_table::TableWithAttributes> : public std::true_type {};
 
 template <>
-struct CodingTraits<::test_table::TableWithAttributes>
+struct internal::NaturalCodingTraits<::test_table::TableWithAttributes>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::TableWithAttributes> {};
 
@@ -851,7 +851,7 @@ template <>
 struct IsFidlType<::test_table::SimpleTable> : public std::true_type {};
 
 template <>
-struct CodingTraits<::test_table::SimpleTable>
+struct internal::NaturalCodingTraits<::test_table::SimpleTable>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::SimpleTable> {};
 
@@ -859,7 +859,7 @@ template <>
 struct IsFidlType<::test_table::ReverseOrdinalTable> : public std::true_type {};
 
 template <>
-struct CodingTraits<::test_table::ReverseOrdinalTable>
+struct internal::NaturalCodingTraits<::test_table::ReverseOrdinalTable>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::ReverseOrdinalTable> {};
 
@@ -867,7 +867,7 @@ template <>
 struct IsFidlType<::test_table::OlderSimpleTable> : public std::true_type {};
 
 template <>
-struct CodingTraits<::test_table::OlderSimpleTable>
+struct internal::NaturalCodingTraits<::test_table::OlderSimpleTable>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::OlderSimpleTable> {};
 
@@ -875,7 +875,7 @@ template <>
 struct IsFidlType<::test_table::NewerSimpleTable> : public std::true_type {};
 
 template <>
-struct CodingTraits<::test_table::NewerSimpleTable>
+struct internal::NaturalCodingTraits<::test_table::NewerSimpleTable>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::NewerSimpleTable> {};
 
@@ -883,7 +883,7 @@ template <>
 struct IsFidlType<::test_table::ExtensionTable> : public std::true_type {};
 
 template <>
-struct CodingTraits<::test_table::ExtensionTable>
+struct internal::NaturalCodingTraits<::test_table::ExtensionTable>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::ExtensionTable> {};
 
@@ -892,7 +892,7 @@ struct IsFidlType<::test_table::SixtyFourOrdinalTable> : public std::true_type {
 };
 
 template <>
-struct CodingTraits<::test_table::SixtyFourOrdinalTable>
+struct internal::NaturalCodingTraits<::test_table::SixtyFourOrdinalTable>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::SixtyFourOrdinalTable> {};
 
@@ -900,7 +900,7 @@ template <>
 struct IsFidlType<::test_table::EmptyTable> : public std::true_type {};
 
 template <>
-struct CodingTraits<::test_table::EmptyTable>
+struct internal::NaturalCodingTraits<::test_table::EmptyTable>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::EmptyTable> {};
 

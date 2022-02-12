@@ -325,135 +325,135 @@ class Handles final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle>{
           &Storage_::plain_handle, 0, 0,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_NONE, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::bti>{
           &Storage_::bti_handle, 4, 4,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_BTI, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::channel>{
           &Storage_::channel_handle, 8, 8,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CHANNEL, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::clock>{
           &Storage_::clock_handle, 12, 12,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CLOCK, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::debuglog>{
           &Storage_::debuglog_handle, 16, 16,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_LOG, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::event>{
           &Storage_::event_handle, 20, 20,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_EVENT, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::eventpair>{
           &Storage_::eventpair_handle, 24, 24,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_EVENTPAIR, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::exception>{
           &Storage_::exception_handle, 28, 28,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_EXCEPTION, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::fifo>{
           &Storage_::fifo_handle, 32, 32,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_FIFO, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::guest>{
           &Storage_::guest_handle, 36, 36,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_GUEST, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::interrupt>{
           &Storage_::interrupt_handle, 40, 40,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_INTERRUPT, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::iommu>{
           &Storage_::iommu_handle, 44, 44,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_IOMMU, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::job>{
           &Storage_::job_handle, 48, 48,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_JOB, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::pager>{
           &Storage_::pager_handle, 52, 52,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_PAGER, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::pmt>{
           &Storage_::pmt_handle, 56, 56,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_PMT, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::port>{
           &Storage_::port_handle, 60, 60,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_PORT, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::process>{
           &Storage_::process_handle, 64, 64,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_PROCESS, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::profile>{
           &Storage_::profile_handle, 68, 68,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_PROFILE, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::resource>{
           &Storage_::resource_handle, 72, 72,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_RESOURCE, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
           &Storage_::socket_handle, 76, 76,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_SOCKET, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::suspend_token>{
           &Storage_::suspendtoken_handle, 80, 80,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_SUSPEND_TOKEN,
                .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::thread>{
           &Storage_::thread_handle, 84, 84,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_THREAD, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::timer>{
           &Storage_::timer_handle, 88, 88,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_TIMER, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::vcpu>{
           &Storage_::vcpu_handle, 92, 92,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_VCPU, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmar>{
           &Storage_::vmar_handle, 96, 96,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_VMAR, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo>{
           &Storage_::vmo_handle, 100, 100,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo>{
           &Storage_::rights_handle, 104, 104,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x5})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle>{
           &Storage_::aliased_plain_handle_field, 108, 108,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_NONE, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo>{
           &Storage_::aliased_subtype_handle_field, 112, 112,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})},
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo>{
           &Storage_::aliased_rights_handle_field, 116, 116,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x1})},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_handles::SomeProtocol>>{
           &Storage_::some_protocol, 120, 120,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CHANNEL,
                .rights = ZX_DEFAULT_CHANNEL_RIGHTS})},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_handles::SomeProtocol>>{
           &Storage_::request_some_protocol, 124, 124,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CHANNEL,
                .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
@@ -478,20 +478,21 @@ struct ::fidl::internal::TypeTraits<::test_handles::Handles> final {
 };
 
 template <>
-struct CodingTraits<::test_handles::Handles> final
+struct internal::NaturalCodingTraits<::test_handles::Handles> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_handles::Handles, 128, 128> {};
 #endif  // __Fuchsia__
 
 template <>
-struct CodingTraits<::test_handles::obj_type> {
+struct internal::NaturalCodingTraits<::test_handles::obj_type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_handles::obj_type* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder, ::test_handles::obj_type* value,
+                     size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_handles::obj_type>(offset) = *value;
   }

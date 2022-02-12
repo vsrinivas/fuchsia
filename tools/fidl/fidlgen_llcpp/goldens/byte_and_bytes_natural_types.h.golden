@@ -124,7 +124,7 @@ struct ::fidl::internal::TypeTraits<::test_byteandbytes::ByteAndBytes> final {
 };
 
 template <>
-struct CodingTraits<::test_byteandbytes::ByteAndBytes> final
+struct internal::NaturalCodingTraits<::test_byteandbytes::ByteAndBytes> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_byteandbytes::ByteAndBytes, 56, 56> {};
 #endif  // __Fuchsia__

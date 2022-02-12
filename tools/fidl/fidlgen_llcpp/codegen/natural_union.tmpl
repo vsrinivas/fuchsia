@@ -84,12 +84,12 @@ class {{ .Name }} final {
     std::shared_ptr<Storage_> CloneStorage_() const;
   {{- end }}
   friend struct ::fidl::internal::NaturalUnionCodingTraits<{{ . }}>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, {{ Add 1 (len .Members) }}> kMembers = {
+  static constexpr std::array<std::optional<::fidl::internal::NaturalHandleInformation>, {{ Add 1 (len .Members) }}> kMembers = {
     std::nullopt
     {{- range .Members }}
       ,
       {{- if .HandleInformation -}}
-        std::make_optional<::fidl::HandleInformation>({
+        std::make_optional<::fidl::internal::NaturalHandleInformation>({
           .object_type = {{ .HandleInformation.ObjectType }},
           .rights = {{ .HandleInformation.Rights }}
         })
@@ -144,13 +144,8 @@ class {{ .Name }} final {
   template <>
   struct IsUnion<{{ . }}> : public std::true_type {};
 
-  // IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-  // because we would like to disable the HLCPP fallback coding trait defined for !IsFidlXUnion.
   template <>
-  struct IsFidlXUnion<{{ . }}> : public std::true_type {};
-
-  template <>
-  struct CodingTraits<{{ . }}> final
+  struct internal::NaturalCodingTraits<{{ . }}> final
     : public ::fidl::internal::NaturalUnionCodingTraits<{{ . }}> {};
 
 {{- end }}

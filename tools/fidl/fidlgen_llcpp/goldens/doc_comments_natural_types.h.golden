@@ -197,7 +197,8 @@ class StrictUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_doccomments::StrictUnion>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
       kMembers = {std::nullopt, std::nullopt};
 
   explicit StrictUnion(std::shared_ptr<Storage_> storage)
@@ -277,7 +278,8 @@ class FlexibleUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_doccomments::FlexibleUnion>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
       kMembers = {std::nullopt, std::nullopt};
 
   explicit FlexibleUnion(std::shared_ptr<Storage_> storage)
@@ -326,7 +328,7 @@ struct ::fidl::internal::TypeTraits<::test_doccomments::Struct> final {
 };
 
 template <>
-struct CodingTraits<::test_doccomments::Struct> final
+struct internal::NaturalCodingTraits<::test_doccomments::Struct> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_doccomments::Struct, 4, 4> {};
 #endif  // __Fuchsia__
@@ -335,7 +337,7 @@ template <>
 struct IsFidlType<::test_doccomments::Table> : public std::true_type {};
 
 template <>
-struct CodingTraits<::test_doccomments::Table>
+struct internal::NaturalCodingTraits<::test_doccomments::Table>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_doccomments::Table> {};
 
@@ -344,14 +346,8 @@ struct IsFidlType<::test_doccomments::StrictUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_doccomments::StrictUnion> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_doccomments::StrictUnion> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_doccomments::StrictUnion> final
+struct internal::NaturalCodingTraits<::test_doccomments::StrictUnion> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_doccomments::StrictUnion> {};
 
@@ -360,28 +356,21 @@ struct IsFidlType<::test_doccomments::FlexibleUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_doccomments::FlexibleUnion> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_doccomments::FlexibleUnion> : public std::true_type {
-};
-
-template <>
-struct CodingTraits<::test_doccomments::FlexibleUnion> final
+struct internal::NaturalCodingTraits<::test_doccomments::FlexibleUnion> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_doccomments::FlexibleUnion> {};
 
 template <>
-struct CodingTraits<::test_doccomments::MyStrictBits> {
+struct internal::NaturalCodingTraits<::test_doccomments::MyStrictBits> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_doccomments::MyStrictBits* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder,
+                     ::test_doccomments::MyStrictBits* value, size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_doccomments::MyStrictBits>(offset) =
         *value;
@@ -394,15 +383,15 @@ struct CodingTraits<::test_doccomments::MyStrictBits> {
   }
 };
 template <>
-struct CodingTraits<::test_doccomments::MyFlexibleBits> {
+struct internal::NaturalCodingTraits<::test_doccomments::MyFlexibleBits> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_doccomments::MyFlexibleBits* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder,
+                     ::test_doccomments::MyFlexibleBits* value, size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_doccomments::MyFlexibleBits>(offset) =
         *value;
@@ -416,15 +405,15 @@ struct CodingTraits<::test_doccomments::MyFlexibleBits> {
 };
 
 template <>
-struct CodingTraits<::test_doccomments::MyStrictEnum> {
+struct internal::NaturalCodingTraits<::test_doccomments::MyStrictEnum> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_doccomments::MyStrictEnum* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder,
+                     ::test_doccomments::MyStrictEnum* value, size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_doccomments::MyStrictEnum>(offset) =
         *value;
@@ -437,15 +426,15 @@ struct CodingTraits<::test_doccomments::MyStrictEnum> {
   }
 };
 template <>
-struct CodingTraits<::test_doccomments::MyFlexibleEnum> {
+struct internal::NaturalCodingTraits<::test_doccomments::MyFlexibleEnum> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_doccomments::MyFlexibleEnum* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder,
+                     ::test_doccomments::MyFlexibleEnum* value, size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_doccomments::MyFlexibleEnum>(offset) =
         *value;

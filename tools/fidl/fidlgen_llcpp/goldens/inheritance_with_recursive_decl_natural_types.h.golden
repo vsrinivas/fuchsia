@@ -67,7 +67,7 @@ class ParentFirstRequest final {
           Storage_,
           ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>{
           &Storage_::request, 0, 0,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CHANNEL,
                .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
@@ -120,7 +120,7 @@ class ChildSecondRequest final {
           Storage_,
           ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>{
           &Storage_::request, 0, 0,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CHANNEL,
                .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
@@ -151,7 +151,8 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_inheritancewithrecursivedecl::ParentFirstRequest>
+struct internal::NaturalCodingTraits<
+    ::test_inheritancewithrecursivedecl::ParentFirstRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_inheritancewithrecursivedecl::ParentFirstRequest, 4, 4> {
 };
@@ -178,7 +179,8 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_inheritancewithrecursivedecl::ChildSecondRequest>
+struct internal::NaturalCodingTraits<
+    ::test_inheritancewithrecursivedecl::ChildSecondRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_inheritancewithrecursivedecl::ChildSecondRequest, 4, 4> {
 };

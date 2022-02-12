@@ -17,14 +17,15 @@
 namespace fidl {
 
 template <>
-struct CodingTraits<::test_bits::StrictBits> {
+struct internal::NaturalCodingTraits<::test_bits::StrictBits> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint64_t);
   static constexpr size_t inline_size_v2 = sizeof(uint64_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_bits::StrictBits* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder, ::test_bits::StrictBits* value,
+                     size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_bits::StrictBits>(offset) = *value;
   }
@@ -35,14 +36,15 @@ struct CodingTraits<::test_bits::StrictBits> {
   }
 };
 template <>
-struct CodingTraits<::test_bits::MyBits> {
+struct internal::NaturalCodingTraits<::test_bits::MyBits> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_bits::MyBits* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder, ::test_bits::MyBits* value,
+                     size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_bits::MyBits>(offset) = *value;
   }
@@ -53,14 +55,15 @@ struct CodingTraits<::test_bits::MyBits> {
   }
 };
 template <>
-struct CodingTraits<::test_bits::FlexibleBits> {
+struct internal::NaturalCodingTraits<::test_bits::FlexibleBits> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint64_t);
   static constexpr size_t inline_size_v2 = sizeof(uint64_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_bits::FlexibleBits* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder, ::test_bits::FlexibleBits* value,
+                     size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_bits::FlexibleBits>(offset) = *value;
   }

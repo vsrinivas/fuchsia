@@ -151,9 +151,9 @@ struct ::fidl::internal::TypeTraits<::test_drivertwoway::TwoWayAddTopResponse>
 };
 
 template <>
-struct CodingTraits<::test_drivertwoway::TwoWayAddTopResponse> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_drivertwoway::TwoWayAddTopResponse, 2, 2> {};
+struct internal::NaturalCodingTraits<::test_drivertwoway::TwoWayAddTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_drivertwoway::TwoWayAddTopResponse, 2, 2> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -172,9 +172,9 @@ struct ::fidl::internal::TypeTraits<::test_drivertwoway::TwoWayAddRequest>
 };
 
 template <>
-struct CodingTraits<::test_drivertwoway::TwoWayAddRequest> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_drivertwoway::TwoWayAddRequest, 4, 4> {};
+struct internal::NaturalCodingTraits<::test_drivertwoway::TwoWayAddRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_drivertwoway::TwoWayAddRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

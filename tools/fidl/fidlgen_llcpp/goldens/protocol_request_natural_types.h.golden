@@ -68,7 +68,7 @@ class ParentTakeChildRequestRequest final {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_protocolrequest::Child>>{
           &Storage_::r, 0, 0,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CHANNEL,
                .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
@@ -116,7 +116,7 @@ class ParentTakeChildRequest final {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_protocolrequest::Child>>{
           &Storage_::c, 0, 0,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CHANNEL,
                .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
@@ -165,7 +165,7 @@ class ParentGetChildTopResponse final {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_protocolrequest::Child>>{
           &Storage_::c, 0, 0,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CHANNEL,
                .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
@@ -216,7 +216,7 @@ class ParentGetChildRequestTopResponse final {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_protocolrequest::Child>>{
           &Storage_::r, 0, 0,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CHANNEL,
                .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
@@ -247,9 +247,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocolrequest::ParentTakeChildRequestRequest> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocolrequest::ParentTakeChildRequestRequest, 4, 4> {};
+struct internal::NaturalCodingTraits<
+    ::test_protocolrequest::ParentTakeChildRequestRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocolrequest::ParentTakeChildRequestRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -272,9 +273,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocolrequest::ParentTakeChildRequest> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocolrequest::ParentTakeChildRequest, 4, 4> {};
+struct internal::NaturalCodingTraits<
+    ::test_protocolrequest::ParentTakeChildRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocolrequest::ParentTakeChildRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -298,9 +300,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocolrequest::ParentGetChildTopResponse> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocolrequest::ParentGetChildTopResponse, 4, 4> {};
+struct internal::NaturalCodingTraits<
+    ::test_protocolrequest::ParentGetChildTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocolrequest::ParentGetChildTopResponse, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -324,7 +327,8 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocolrequest::ParentGetChildRequestTopResponse>
+struct internal::NaturalCodingTraits<
+    ::test_protocolrequest::ParentGetChildRequestTopResponse>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocolrequest::ParentGetChildRequestTopResponse, 4, 4> {};

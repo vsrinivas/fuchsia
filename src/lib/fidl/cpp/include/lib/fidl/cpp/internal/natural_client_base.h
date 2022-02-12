@@ -10,7 +10,7 @@
 namespace fidl {
 namespace internal {
 
-// Common functionality to all |fidl::NaturalClientImpl<Protocol>| sub-classes.
+// Common functionality to all |fidl::internal::NaturalClientImpl<Protocol>| sub-classes.
 //
 // Each |NaturalClientImpl| has access to a |messenger| through which they can
 // send FIDL messages and register outstanding transactions.

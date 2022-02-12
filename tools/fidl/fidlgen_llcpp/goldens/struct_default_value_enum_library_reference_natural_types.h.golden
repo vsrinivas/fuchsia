@@ -93,9 +93,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_structdefaultvalueenumlibraryreference::Foo> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_structdefaultvalueenumlibraryreference::Foo, 4, 4> {};
+struct internal::NaturalCodingTraits<
+    ::test_structdefaultvalueenumlibraryreference::Foo>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_structdefaultvalueenumlibraryreference::Foo, 4, 4> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

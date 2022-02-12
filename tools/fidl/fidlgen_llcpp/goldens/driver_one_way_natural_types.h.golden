@@ -140,7 +140,7 @@ struct ::fidl::internal::TypeTraits<::test_driveroneway::Payload> final {
 };
 
 template <>
-struct CodingTraits<::test_driveroneway::Payload> final
+struct internal::NaturalCodingTraits<::test_driveroneway::Payload> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_driveroneway::Payload, 4, 4> {};
 #endif  // __Fuchsia__
@@ -161,9 +161,9 @@ struct ::fidl::internal::TypeTraits<::test_driveroneway::OneWaySendRequest>
 };
 
 template <>
-struct CodingTraits<::test_driveroneway::OneWaySendRequest> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_driveroneway::OneWaySendRequest, 4, 4> {};
+struct internal::NaturalCodingTraits<::test_driveroneway::OneWaySendRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_driveroneway::OneWaySendRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 }  // namespace fidl

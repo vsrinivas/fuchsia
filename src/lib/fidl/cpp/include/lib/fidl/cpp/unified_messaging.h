@@ -84,8 +84,9 @@ template <typename Payload = const cpp17::nullopt_t&>
   // |cpp17::nullopt|, which is of type |cpp17::nullopt_t|.
   constexpr bool kHasPayload = !std::is_same_v<cpp20::remove_cvref_t<Payload>, cpp17::nullopt_t>;
   if constexpr (kHasPayload) {
-    encoder.Alloc(::fidl::EncodingInlineSize<Payload, ::fidl::Encoder>(&encoder));
-    ::fidl::CodingTraits<Payload>::Encode(&encoder, &payload, sizeof(fidl_message_header_t));
+    encoder.Alloc(::fidl::internal::NaturalEncodingInlineSize<Payload>(&encoder));
+    ::fidl::internal::NaturalCodingTraits<Payload>::Encode(&encoder, &payload,
+                                                           sizeof(fidl_message_header_t));
   }
 
   return encoder.GetMessage();

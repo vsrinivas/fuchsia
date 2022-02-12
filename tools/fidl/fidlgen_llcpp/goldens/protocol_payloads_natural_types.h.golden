@@ -137,7 +137,8 @@ class MainProtocol_TwoWayImportWithError_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit MainProtocol_TwoWayImportWithError_Result(
@@ -394,7 +395,8 @@ class MainProtocol_TwoWayAnonWithError_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit MainProtocol_TwoWayAnonWithError_Result(
@@ -580,7 +582,8 @@ class MainProtocol_OnImportWithError_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocolpayloads::MainProtocol_OnImportWithError_Result>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit MainProtocol_OnImportWithError_Result(
@@ -832,7 +835,8 @@ class MainProtocol_OnAnonWithError_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit MainProtocol_OnAnonWithError_Result(
@@ -1410,7 +1414,8 @@ class MainProtocol_TwoWayLocalWithError_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit MainProtocol_TwoWayLocalWithError_Result(
@@ -1595,7 +1600,8 @@ class MainProtocol_OnLocalWithError_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit MainProtocol_OnLocalWithError_Result(
@@ -1725,7 +1731,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -1752,7 +1758,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Response>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -1779,7 +1785,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -1805,7 +1811,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest,
@@ -1831,7 +1837,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocol_OnAnonWithError_Response>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::MainProtocol_OnAnonWithError_Response,
@@ -1856,7 +1862,8 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest>
+struct internal::NaturalCodingTraits<
+    ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest, 24, 16> {
@@ -1882,7 +1889,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest,
@@ -1907,7 +1914,8 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>
+struct internal::NaturalCodingTraits<
+    ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse, 8, 8> {};
@@ -1931,7 +1939,8 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonRequest>
+struct internal::NaturalCodingTraits<
+    ::test_protocolpayloads::MainProtocolTwoWayAnonRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::MainProtocolTwoWayAnonRequest, 8, 8> {
 };
@@ -1955,7 +1964,8 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocolpayloads::MainProtocolOneWayAnonRequest>
+struct internal::NaturalCodingTraits<
+    ::test_protocolpayloads::MainProtocolOneWayAnonRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::MainProtocolOneWayAnonRequest, 8, 8> {
 };
@@ -1979,9 +1989,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_protocolpayloads::MainProtocolOnAnonRequest> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocolpayloads::MainProtocolOnAnonRequest, 8, 8> {};
+struct internal::NaturalCodingTraits<
+    ::test_protocolpayloads::MainProtocolOnAnonRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocolpayloads::MainProtocolOnAnonRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2000,9 +2011,10 @@ struct ::fidl::internal::TypeTraits<::test_protocolpayloads::LocalStructPayload>
 };
 
 template <>
-struct CodingTraits<::test_protocolpayloads::LocalStructPayload> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocolpayloads::LocalStructPayload, 8, 8> {};
+struct internal::NaturalCodingTraits<
+    ::test_protocolpayloads::LocalStructPayload>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocolpayloads::LocalStructPayload, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2024,7 +2036,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
@@ -2050,7 +2062,7 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest,
@@ -2066,16 +2078,8 @@ struct IsUnion<
     ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<
-    ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
@@ -2090,16 +2094,8 @@ template <>
 struct IsUnion<::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<
-    ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
@@ -2113,16 +2109,8 @@ template <>
 struct IsUnion<::test_protocolpayloads::MainProtocol_OnImportWithError_Result>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<
-    ::test_protocolpayloads::MainProtocol_OnImportWithError_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocol_OnImportWithError_Result>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
@@ -2135,16 +2123,8 @@ template <>
 struct IsUnion<::test_protocolpayloads::MainProtocol_OnAnonWithError_Result>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<
-    ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result> {
@@ -2159,16 +2139,8 @@ struct IsUnion<
     ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<
-    ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
@@ -2181,16 +2153,8 @@ template <>
 struct IsUnion<::test_protocolpayloads::MainProtocol_OnLocalWithError_Result>
     : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<
-    ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<
+struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result> {

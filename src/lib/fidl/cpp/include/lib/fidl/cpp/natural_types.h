@@ -5,9 +5,9 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_TYPES_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_TYPES_H_
 
-#include <lib/fidl/cpp/coding_traits.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_types.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/wire_types.h>
 #include <lib/stdcompat/optional.h>
@@ -22,96 +22,6 @@
 namespace fidl {
 
 class Decoder;
-
-template <typename T>
-struct CodingTraits<cpp17::optional<std::vector<T>>> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_vector_t);
-  static constexpr size_t inline_size_v2 = sizeof(fidl_vector_t);
-
-  template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, cpp17::optional<std::vector<T>>* value, size_t offset,
-                     cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    if (value->has_value()) {
-      fidl::CodingTraits<std::vector<T>>::Encode(encoder, &value->value(), offset,
-                                                 maybe_handle_info);
-      return;
-    }
-    fidl_vector_t* vec = encoder->template GetPtr<fidl_vector_t>(offset);
-    vec->count = 0;
-    vec->data = reinterpret_cast<char*>(FIDL_ALLOC_ABSENT);
-  }
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, cpp17::optional<std::vector<T>>* value, size_t offset) {
-    fidl_vector_t* vec = decoder->template GetPtr<fidl_vector_t>(offset);
-    if (vec->data == nullptr) {
-      ZX_ASSERT(vec->count == 0);
-      value->reset();
-      return;
-    }
-    std::vector<T> unwrapped;
-    fidl::CodingTraits<std::vector<T>>::Decode(decoder, &unwrapped, offset);
-    value->emplace(std::move(unwrapped));
-  }
-};
-
-template <>
-struct CodingTraits<cpp17::optional<std::string>> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_string_t);
-  static constexpr size_t inline_size_v2 = sizeof(fidl_string_t);
-
-  template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, cpp17::optional<std::string>* value, size_t offset,
-                     cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(!maybe_handle_info.has_value());
-    if (value->has_value()) {
-      fidl::CodingTraits<std::string>::Encode(encoder, &value->value(), offset);
-      return;
-    }
-    fidl_string_t* string = encoder->template GetPtr<fidl_string_t>(offset);
-    string->size = 0;
-    string->data = reinterpret_cast<char*>(FIDL_ALLOC_ABSENT);
-  }
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, cpp17::optional<std::string>* value, size_t offset) {
-    fidl_string_t* string = decoder->template GetPtr<fidl_string_t>(offset);
-    if (string->data == nullptr) {
-      ZX_ASSERT(string->size == 0);
-      value->reset();
-      return;
-    }
-    std::string unwrapped;
-    fidl::CodingTraits<std::string>::Decode(decoder, &unwrapped, offset);
-    value->emplace(unwrapped);
-  }
-};
-
-template <typename T>
-struct CodingTraits<std::unique_ptr<T>, typename std::enable_if<IsUnion<T>::value>::type> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_xunion_t);
-  static constexpr size_t inline_size_v2 = sizeof(fidl_xunion_v2_t);
-
-  template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, std::unique_ptr<T>* value, size_t offset,
-                     cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    if (*value) {
-      CodingTraits<T>::Encode(encoder, value->get(), offset, maybe_handle_info);
-      return;
-    }
-
-    // Buffer is zero-initialized.
-  }
-
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, std::unique_ptr<T>* value, size_t offset) {
-    fidl_xunion_v2_t* u = decoder->template GetPtr<fidl_xunion_v2_t>(offset);
-    if (FidlIsZeroEnvelope(&u->envelope)) {
-      *value = nullptr;
-      return;
-    }
-    *value = std::make_unique<T>();
-    CodingTraits<T>::Decode(decoder, value->get(), offset);
-  }
-};
 
 namespace internal {
 
@@ -228,7 +138,7 @@ template <typename FidlType>
   }
   ::fidl::Decoder decoder{std::move(hlcpp_body)};
   FidlType value{};
-  ::fidl::CodingTraits<FidlType>::Decode(&decoder, &value, 0);
+  ::fidl::internal::NaturalCodingTraits<FidlType>::Decode(&decoder, &value, 0);
   return ::fitx::ok(std::move(value));
 }
 
@@ -250,8 +160,8 @@ template <typename FidlType>
   // the wire format version of the encoded message is the same as the one
   // used in HLCPP.
   ::fidl::BodyEncoder encoder(DefaultHLCPPEncoderWireFormat());
-  encoder.Alloc(::fidl::EncodingInlineSize<FidlType, ::fidl::Encoder>(&encoder));
-  ::fidl::CodingTraits<FidlType>::Encode(&encoder, &value, 0);
+  encoder.Alloc(::fidl::internal::NaturalEncodingInlineSize<FidlType>(&encoder));
+  ::fidl::internal::NaturalCodingTraits<FidlType>::Encode(&encoder, &value, 0);
   return EncodeResult(coding_table, std::move(encoder));
 }
 

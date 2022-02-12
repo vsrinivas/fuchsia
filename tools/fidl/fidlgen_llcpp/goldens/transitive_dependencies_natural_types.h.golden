@@ -86,7 +86,7 @@ struct ::fidl::internal::TypeTraits<::test_transitivedependencies::Baz> final {
 };
 
 template <>
-struct CodingTraits<::test_transitivedependencies::Baz> final
+struct internal::NaturalCodingTraits<::test_transitivedependencies::Baz> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_transitivedependencies::Baz, 4, 4> {};
 #endif  // __Fuchsia__

@@ -17,14 +17,15 @@
 namespace fidl {
 
 template <>
-struct CodingTraits<::test_enum::MyStrictEnum> {
+struct internal::NaturalCodingTraits<::test_enum::MyStrictEnum> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_enum::MyStrictEnum* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder, ::test_enum::MyStrictEnum* value,
+                     size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_enum::MyStrictEnum>(offset) = *value;
   }
@@ -35,15 +36,17 @@ struct CodingTraits<::test_enum::MyStrictEnum> {
   }
 };
 template <>
-struct CodingTraits<::test_enum::MyFlexibleEnumWithCustomUnknown> {
+struct internal::NaturalCodingTraits<
+    ::test_enum::MyFlexibleEnumWithCustomUnknown> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_enum::MyFlexibleEnumWithCustomUnknown* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder,
+                     ::test_enum::MyFlexibleEnumWithCustomUnknown* value,
+                     size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_enum::MyFlexibleEnumWithCustomUnknown>(
         offset) = *value;
@@ -58,14 +61,15 @@ struct CodingTraits<::test_enum::MyFlexibleEnumWithCustomUnknown> {
   }
 };
 template <>
-struct CodingTraits<::test_enum::MyFlexibleEnum> {
+struct internal::NaturalCodingTraits<::test_enum::MyFlexibleEnum> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_enum::MyFlexibleEnum* value, size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder, ::test_enum::MyFlexibleEnum* value,
+                     size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_enum::MyFlexibleEnum>(offset) = *value;
   }
@@ -76,15 +80,15 @@ struct CodingTraits<::test_enum::MyFlexibleEnum> {
   }
 };
 template <>
-struct CodingTraits<::test_enum::MyEmptyFlexibleEnum> {
+struct internal::NaturalCodingTraits<::test_enum::MyEmptyFlexibleEnum> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   template <class EncoderImpl>
-  static void Encode(
-      EncoderImpl* encoder, ::test_enum::MyEmptyFlexibleEnum* value,
-      size_t offset,
-      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(EncoderImpl* encoder,
+                     ::test_enum::MyEmptyFlexibleEnum* value, size_t offset,
+                     cpp17::optional<NaturalHandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_enum::MyEmptyFlexibleEnum>(offset) =
         *value;

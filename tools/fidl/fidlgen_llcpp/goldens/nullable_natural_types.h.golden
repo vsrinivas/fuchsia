@@ -316,7 +316,7 @@ class StructWithNullableRequest final {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ServerEnd<::test_nullable::SimpleProtocol>>{
           &Storage_::val, 0, 0,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CHANNEL,
                .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
@@ -366,7 +366,7 @@ class StructWithNullableProtocol final {
       ::fidl::internal::NaturalStructMember<
           Storage_, ::fidl::ClientEnd<::test_nullable::SimpleProtocol>>{
           &Storage_::val, 0, 0,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_CHANNEL,
                .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
 };
@@ -410,7 +410,7 @@ class StructWithNullableHandle final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo>{
           &Storage_::val, 0, 0,
-          std::make_optional<::fidl::HandleInformation>(
+          std::make_optional<::fidl::internal::NaturalHandleInformation>(
               {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})});
 };
 
@@ -479,7 +479,8 @@ class SimpleUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_nullable::SimpleUnion>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 3>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
       kMembers = {std::nullopt, std::nullopt, std::nullopt};
 
   explicit SimpleUnion(std::shared_ptr<Storage_> storage)
@@ -694,9 +695,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableVector>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableVector> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_nullable::StructWithNullableVector, 16, 16> {};
+struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableVector>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_nullable::StructWithNullableVector, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -715,9 +716,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableUnion>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableUnion> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_nullable::StructWithNullableUnion, 24, 16> {};
+struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableUnion>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_nullable::StructWithNullableUnion, 24, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -736,9 +737,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableStruct>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableStruct> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_nullable::StructWithNullableStruct, 8, 8> {};
+struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableStruct>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_nullable::StructWithNullableStruct, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -757,9 +758,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableString>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableString> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_nullable::StructWithNullableString, 16, 16> {};
+struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableString>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_nullable::StructWithNullableString, 16, 16> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -781,9 +782,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableRequest>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableRequest> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_nullable::StructWithNullableRequest, 4, 4> {};
+struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_nullable::StructWithNullableRequest, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -805,9 +806,10 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableProtocol>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableProtocol> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_nullable::StructWithNullableProtocol, 4, 4> {};
+struct internal::NaturalCodingTraits<
+    ::test_nullable::StructWithNullableProtocol>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_nullable::StructWithNullableProtocol, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -829,9 +831,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableHandle>
 };
 
 template <>
-struct CodingTraits<::test_nullable::StructWithNullableHandle> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_nullable::StructWithNullableHandle, 4, 4> {};
+struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableHandle>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_nullable::StructWithNullableHandle, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -851,9 +853,10 @@ struct ::fidl::internal::TypeTraits<
 };
 
 template <>
-struct CodingTraits<::test_nullable::SimpleProtocolAddTopResponse> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_nullable::SimpleProtocolAddTopResponse, 4, 4> {};
+struct internal::NaturalCodingTraits<
+    ::test_nullable::SimpleProtocolAddTopResponse>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_nullable::SimpleProtocolAddTopResponse, 4, 4> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -872,9 +875,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::SimpleProtocolAddRequest>
 };
 
 template <>
-struct CodingTraits<::test_nullable::SimpleProtocolAddRequest> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_nullable::SimpleProtocolAddRequest, 8, 8> {};
+struct internal::NaturalCodingTraits<::test_nullable::SimpleProtocolAddRequest>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_nullable::SimpleProtocolAddRequest, 8, 8> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -891,7 +894,7 @@ struct ::fidl::internal::TypeTraits<::test_nullable::Int32Wrapper> final {
 };
 
 template <>
-struct CodingTraits<::test_nullable::Int32Wrapper> final
+struct internal::NaturalCodingTraits<::test_nullable::Int32Wrapper> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_nullable::Int32Wrapper, 4, 4> {};
 #endif  // __Fuchsia__
@@ -901,14 +904,8 @@ struct IsFidlType<::test_nullable::SimpleUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_nullable::SimpleUnion> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_nullable::SimpleUnion> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_nullable::SimpleUnion> final
+struct internal::NaturalCodingTraits<::test_nullable::SimpleUnion> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_nullable::SimpleUnion> {};
 

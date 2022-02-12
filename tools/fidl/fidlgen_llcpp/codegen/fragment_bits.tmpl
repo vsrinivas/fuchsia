@@ -126,13 +126,13 @@ using {{ .Name }} = {{ .Unified }};
 
 {{- define "Bits:Traits:NaturalTypesHeader" }}
   template <>
-  struct CodingTraits<{{ . }}> {
+  struct internal::NaturalCodingTraits<{{ . }}> {
     static constexpr size_t inline_size_v1_no_ee = sizeof({{ .Type }});
     static constexpr size_t inline_size_v2 = sizeof({{ .Type }});
 
     template <class EncoderImpl>
     static void Encode(EncoderImpl* encoder, {{ . }}* value, size_t offset,
-                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+                      cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
       ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
       *encoder->template GetPtr<{{ . }}>(offset) = *value;
     }
@@ -141,5 +141,4 @@ using {{ .Name }} = {{ .Unified }};
       *value = *decoder->template GetPtr<{{ . }}>(offset);
     }
   };
-
 {{- end }}

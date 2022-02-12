@@ -80,7 +80,7 @@ class {{ .Name }} final {
       ::fidl::internal::NaturalTableMember<Storage_, {{ $m.Type }}>{
         {{ $m.Ordinal }}, &Storage_::{{ $m.Name }}
         {{- if $m.HandleInformation -}}
-          , std::make_optional<::fidl::HandleInformation>({
+          , std::make_optional<::fidl::internal::NaturalHandleInformation>({
             .object_type = {{ $m.HandleInformation.ObjectType }},
             .rights = {{ $m.HandleInformation.Rights }}
           })
@@ -110,7 +110,8 @@ class {{ .Name }} final {
   */}}
 
   template <>
-  struct CodingTraits<{{ . }}> : public ::fidl::internal::NaturalTableCodingTraits<{{ . }}> {};
+  struct internal::NaturalCodingTraits<{{ . }}> :
+    public ::fidl::internal::NaturalTableCodingTraits<{{ . }}> {};
 {{ end }}
 
 

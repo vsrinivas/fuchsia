@@ -100,7 +100,7 @@ class {{ .Name }} final {
       ::fidl::internal::NaturalStructMember<Storage_, {{ $m.Type }}>{
         &Storage_::{{ $m.Name }}, {{ $m.OffsetV1 }}, {{ $m.OffsetV2 }}
         {{- if $m.HandleInformation -}}
-          ,std::make_optional<::fidl::HandleInformation>({
+          ,std::make_optional<::fidl::internal::NaturalHandleInformation>({
             .object_type = {{ $m.HandleInformation.ObjectType }},
             .rights = {{ $m.HandleInformation.Rights }}
           })
@@ -136,7 +136,7 @@ class {{ .Name }} final {
   };
 
   template <>
-  struct CodingTraits<{{ . }}> final
+  struct internal::NaturalCodingTraits<{{ . }}> final
     : public ::fidl::internal::NaturalStructCodingTraits<{{ . }},
         {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}> {};
 

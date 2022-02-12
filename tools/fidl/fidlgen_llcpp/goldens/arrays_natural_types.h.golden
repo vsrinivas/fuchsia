@@ -78,7 +78,8 @@ class UnionSmallArray final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_arrays::UnionSmallArray>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
       kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionSmallArray(std::shared_ptr<Storage_> storage)
@@ -155,7 +156,8 @@ class UnionLargeArray final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_arrays::UnionLargeArray>;
-  static constexpr std::array<std::optional<::fidl::HandleInformation>, 2>
+  static constexpr std::array<
+      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
       kMembers = {std::nullopt, std::nullopt};
 
   explicit UnionLargeArray(std::shared_ptr<Storage_> storage)
@@ -398,7 +400,7 @@ struct ::fidl::internal::TypeTraits<::test_arrays::StructSmallArray> final {
 };
 
 template <>
-struct CodingTraits<::test_arrays::StructSmallArray> final
+struct internal::NaturalCodingTraits<::test_arrays::StructSmallArray> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_arrays::StructSmallArray, 8, 8> {};
 #endif  // __Fuchsia__
@@ -417,7 +419,7 @@ struct ::fidl::internal::TypeTraits<::test_arrays::StructLargeArray> final {
 };
 
 template <>
-struct CodingTraits<::test_arrays::StructLargeArray> final
+struct internal::NaturalCodingTraits<::test_arrays::StructLargeArray> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_arrays::StructLargeArray, 400, 400> {};
 #endif  // __Fuchsia__
@@ -426,7 +428,7 @@ template <>
 struct IsFidlType<::test_arrays::TableSmallArray> : public std::true_type {};
 
 template <>
-struct CodingTraits<::test_arrays::TableSmallArray>
+struct internal::NaturalCodingTraits<::test_arrays::TableSmallArray>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_arrays::TableSmallArray> {};
 
@@ -434,7 +436,7 @@ template <>
 struct IsFidlType<::test_arrays::TableLargeArray> : public std::true_type {};
 
 template <>
-struct CodingTraits<::test_arrays::TableLargeArray>
+struct internal::NaturalCodingTraits<::test_arrays::TableLargeArray>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_arrays::TableLargeArray> {};
 
@@ -443,14 +445,8 @@ struct IsFidlType<::test_arrays::UnionSmallArray> : public std::true_type {};
 template <>
 struct IsUnion<::test_arrays::UnionSmallArray> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_arrays::UnionSmallArray> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_arrays::UnionSmallArray> final
+struct internal::NaturalCodingTraits<::test_arrays::UnionSmallArray> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_arrays::UnionSmallArray> {};
 
@@ -459,14 +455,8 @@ struct IsFidlType<::test_arrays::UnionLargeArray> : public std::true_type {};
 template <>
 struct IsUnion<::test_arrays::UnionLargeArray> : public std::true_type {};
 
-// IsFidlXUnion is an HLCPP trait, which needs to be defined in the short-term
-// because we would like to disable the HLCPP fallback coding trait defined for
-// !IsFidlXUnion.
 template <>
-struct IsFidlXUnion<::test_arrays::UnionLargeArray> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test_arrays::UnionLargeArray> final
+struct internal::NaturalCodingTraits<::test_arrays::UnionLargeArray> final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_arrays::UnionLargeArray> {};
 
