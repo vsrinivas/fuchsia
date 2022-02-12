@@ -118,7 +118,7 @@ void usage(const char* prog_name) {
 
   printf("\n    By default, signal is a sine wave. If no frequency is provided, %s Hz is used\n",
          kFrequencyDefaultHz);
-  printf("  --%s[=<FREQ>]  \t   Play sine wave at given frequency (Hz)\n", kSineWaveSwitch);
+  printf("  --%s[=<FREQ>]  \t   Play sine wave at given frequency, in Hz\n", kSineWaveSwitch);
   printf("  --%s[=<FREQ>]  \t   Play square wave at given frequency\n", kSquareWaveSwitch);
   printf("  --%s[=<FREQ>]  \t   Play rising sawtooth wave at given frequency\n",
          kSawtoothWaveSwitch);
@@ -131,7 +131,7 @@ void usage(const char* prog_name) {
 
   printf("\n    By default, play signal for %s seconds, at amplitude %s\n", kDurationDefaultSecs,
          kAmplitudeNotSpecifiedScale);
-  printf("  --%s=<DURATION_SECS>\t   Set playback length, in seconds\n", kDurationSwitch);
+  printf("  --%s=<SECS>\t\t   Set playback length, in seconds\n", kDurationSwitch);
   printf("  --%s[=<AMPL>]\t   Set amplitude (0.0=silence, 1.0=full-scale, %s if only '--%s')\n",
          kAmplitudeSwitch, kAmplitudeNoValueScale, kAmplitudeSwitch);
 
@@ -217,10 +217,10 @@ void usage(const char* prog_name) {
          kStreamRampSwitch, kStreamRampTargetGainDefaultDb);
   printf("\t\t\t   If '--%s' is not provided, ramping starts at unity stream gain (%.1f dB)\n",
          kStreamGainSwitch, kUnityGainDb);
-  printf("  --%s=<END_DB>\t   Set a different ramp target gain (dB). Implies '--%s'\n",
-         kStreamRampTargetGainSwitch, kStreamRampSwitch);
-  printf("  --%s=<MSECS>\t   Set a specific ramp duration, in milliseconds. Implies '--%s'\n",
+  printf("  --%s=<SECS>\t   Set a specific ramp duration, in seconds. Implies '--%s'\n",
          kStreamRampDurationSwitch, kStreamRampSwitch);
+  printf("  --%s=<END_DB>\t   Set a different ramp target gain, in dB. Implies '--%s'\n",
+         kStreamRampTargetGainSwitch, kStreamRampSwitch);
 
   printf("\n  --%s\t\t   Play signal using an ultrasound renderer\n", kUltrasoundSwitch);
 
@@ -487,14 +487,16 @@ int main(int argc, const char** argv) {
     media_app.set_ramp_target_gain_db(std::stof(target_gain_db_str));
 
     // Convert signal duration of doublefloat seconds, to int64 nanoseconds.
-    auto ramp_duration_nsec = static_cast<zx_duration_t>(media_app.get_duration() * 1000000000.0);
+    auto ramp_duration_nsec =
+        static_cast<zx_duration_t>(media_app.get_duration() * 1'000'000'000.0);
     if (command_line.HasOption(kStreamRampDurationSwitch)) {
       std::string ramp_duration_str = "";
       command_line.GetOptionValue(kStreamRampDurationSwitch, &ramp_duration_str);
 
       if (ramp_duration_str != "") {
-        // Convert input of doublefloat milliseconds, to int64 nanoseconds.
-        ramp_duration_nsec = static_cast<zx_duration_t>(std::stod(ramp_duration_str) * 1000000.0);
+        // Convert input of doublefloat seconds, to int64 nanoseconds.
+        ramp_duration_nsec =
+            static_cast<zx_duration_t>(std::stod(ramp_duration_str) * 1'000'000'000.0);
       }
     }
     media_app.set_ramp_duration_nsec(ramp_duration_nsec);

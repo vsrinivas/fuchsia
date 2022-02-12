@@ -458,12 +458,13 @@ void MediaApp::DisplayConfigurationSettings() {
   printf("\nAudioRenderer configured for %d-channel %s at %u Hz with the %s usage", num_channels_,
          SampleFormatToString(sample_format_), frame_rate_, usage_str);
 
-  if (ramp_target_gain_db_.has_value()) {
-    printf(",\nramping stream gain from %.3f dB to %.3f dB over %.6lf seconds (%ld nanoseconds)",
-           stream_gain_db_.value(), ramp_target_gain_db_.value(),
-           static_cast<double>(ramp_duration_nsec_) / 1000000000, ramp_duration_nsec_);
-  } else if (stream_gain_db_.has_value()) {
+  if (stream_gain_db_.has_value()) {
     printf(",\nsetting stream gain to %.3f dB", stream_gain_db_.value());
+  }
+  if (ramp_target_gain_db_.has_value()) {
+    printf(",%s\nramping stream gain to %.3f dB over %.1lf seconds (%ld nanoseconds)",
+           (stream_gain_db_.has_value() ? " then" : ""), ramp_target_gain_db_.value(),
+           static_cast<double>(ramp_duration_nsec_) / 1'000'000'000.0, ramp_duration_nsec_);
   }
   if (stream_mute_.has_value()) {
     printf(",\nafter explicitly %s this stream", stream_mute_.value() ? "muting" : "unmuting");
