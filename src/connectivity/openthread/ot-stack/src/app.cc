@@ -750,4 +750,14 @@ extern "C" void otPlatTrelRegisterService(otInstance* aInstance, uint16_t aPort,
 extern "C" void otPlatTrelSend(otInstance* aInstance, const uint8_t* aUdpPayload,
                                uint16_t aUdpPayloadLen, const otSockAddr* aDestSockAddr) {}
 
+extern "C" bool otPlatInfraIfHasAddress(uint32_t aInfraIfIndex, const otIp6Address* aAddress) {
+  return false;
+}
+
+extern "C" otError otPlatInfraIfSendIcmp6Nd(uint32_t aInfraIfIndex,
+                                            const otIp6Address* aDestAddress,
+                                            const uint8_t* aBuffer, uint16_t aBufferLength) {
+  return OT_ERROR_NONE;
+}
+
 }  // namespace otstack
