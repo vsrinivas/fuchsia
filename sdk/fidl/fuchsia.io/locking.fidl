@@ -42,7 +42,7 @@ protocol AdvisoryLocking {
     /// * `ZX_ERR_ACCESS_DENIED` This connection does not have sufficient rights
     ///   to acquire the given type of lock.
     @transitional
-    @selector("fuchsia.io2/AdvisoryLocking.AdvisoryLock")
+    @selector("fuchsia.io/AdvisoryLocking.AdvisoryLock")
     AdvisoryLock(struct {
         request AdvisoryLockRequest;
     }) -> (struct {}) error zx.status;
