@@ -269,6 +269,7 @@ class BaseCapturer : public AudioObject,
   fbl::RefPtr<VersionedTimelineFunction> ref_pts_to_fractional_frame_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();
   bool discontinuity_ FXL_GUARDED_BY(mix_domain_->token()) = true;
+  // Running frame number in the capture stream.
   int64_t frame_pointer_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
   uint64_t overflow_count_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
 

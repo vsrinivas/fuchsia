@@ -130,11 +130,11 @@ class CapturePacketQueue {
   //     if (mix_state.capture_timestamp == NO_TIMESTAMP) {
   //       mix_state.capture_timestamp = current_timestamp;
   //     }
-  //     if (mix_state.rames > max_mix_frames) {
+  //     if (mix_state.frames > max_mix_frames) {
   //       mix_state.frames = max_mix_frames;
   //     }
-  //     mix(mix_state.target, state.mix_frames);
-  //     pq->FinishMixerJob(state);
+  //     mix(mix_state.target, mix_state.frames);
+  //     pq->FinishMixerJob(mix_state);
   //   }
   //
   struct PacketMixState {

@@ -36,6 +36,9 @@ static constexpr uint16_t kCaptureOverflowWarningInterval = 100;
 // capture presentation delay. Today (before any attempt at optimization), a particularly heavy mix
 // pass may take longer than 1.5 msec on a DEBUG build(!) on relevant hardware. The constant below
 // accounts for this, with additional padding for safety.
+//
+// TODO(fxbug.dev/91258): increase this, to account for worst-case cross-clock rate mismatches and
+// mixes that may take longer than 1.5 msec.
 const zx::duration kPresentationDelayPadding = zx::msec(3);
 
 constexpr int64_t kMaxTimePerCapture = ZX_MSEC(50);
@@ -468,6 +471,22 @@ void BaseCapturer::ReportStart() { reporter_->StartSession(zx::clock::get_monoto
 
 void BaseCapturer::ReportStop() { reporter_->StopSession(zx::clock::get_monotonic()); }
 
+// Note that each source is returning presentation delay based on ITS OWN clock, so comparing them
+// (with std::max) is not strictly accurate. Also, we THEN store the worst-case presentation delay
+// and use it in our position calculations, which are based on OUR clock.
+//
+// Accurately incorporating clock differences into this delay would require us to recompute it for
+// every mix, since device clocks and capture clocks can be rate-adjusted at any time. Continuous
+// recalculation seems excessive, as the vast majority of clocks will differ by +/-10 ppm.
+//
+// That said, in the worst-case a clock can diverge from MONOTONIC by +/- 1000 ppm, so the maximum
+// rate difference between two clocks is 2000 ppm or 0.2%. Fortunately, kPresentationDelayPadding
+// includes a 2x safety factor (1.5 ms is considered sufficient; it is set to 3 ms). This extra
+// padding is greater than our 0.2% of uncertainty, for any capture presentation delays less than
+// 750 ms. That said, kPresentationDelayPadding assumes that the longest capture mix is 1.5 ms -- an
+// assumption that should be verified/updated.
+// TODO(fxbug.dev/91258): pad this further if needed, based on worst-case capture mix measurements.
+// Or reconsider continuously recalculating this delay.
 void BaseCapturer::RecomputePresentationDelay() {
   TRACE_DURATION("audio", "BaseCapturer::RecomputePresentationDelay");
 
@@ -569,28 +588,33 @@ zx_status_t BaseCapturer::Process() {
     // Establish the frame pointer.
     // We continue at the current frame pointer, unless there was a discontinuity,
     // at which point we need to recompute the frame pointer.
-    auto ref_now = reference_clock().Read();
-    auto [ref_pts_to_frac_frame, _] = ref_pts_to_fractional_frame_->get();
-    FX_CHECK(ref_pts_to_frac_frame.invertible());
+    auto dest_ref_now = reference_clock().Read();
+    auto [dest_ref_pts_to_frac_frame, _] = ref_pts_to_fractional_frame_->get();
+    FX_CHECK(dest_ref_pts_to_frac_frame.invertible());
 
     if (discontinuity_) {
       // On discontinuities, align the target frame with the current time.
       discontinuity_ = false;
       mix_state->flags |= fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY;
-      frame_pointer_ = Fixed::FromRaw(ref_pts_to_frac_frame.Apply(ref_now.get())).Floor();
+      frame_pointer_ = Fixed::FromRaw(dest_ref_pts_to_frac_frame.Apply(dest_ref_now.get())).Floor();
     }
 
-    // If we woke too soon to perform the requested mix, sleep until it's safe
-    // to read the last frame.
-    auto ref_safe_time = ref_now - presentation_delay_;
-    int64_t safe_frame = Fixed::FromRaw(ref_pts_to_frac_frame.Apply(ref_safe_time.get())).Floor();
-    int64_t last_frame = frame_pointer_ + mix_state->frames;
-    if (last_frame > safe_frame) {
-      auto ref_last_frame_time =
-          zx::time(ref_pts_to_frac_frame.Inverse().Apply(Fixed(last_frame).raw_value()));
+    // If we woke too soon to perform the requested mix, sleep until we can read the last frame.
+    //
+    // Note that presentation_delay_ is inherently inaccurate by up to 2000 ppm (see comment where
+    // kPresentationDelayPadding is defined), but we have padded this duration in order to (among
+    // other things) accommodate worst-case difference between source/capturer ref clocks.
+    auto dest_ref_safe_time = dest_ref_now - presentation_delay_;
+    int64_t dest_safe_frame =
+        Fixed::FromRaw(dest_ref_pts_to_frac_frame.Apply(dest_ref_safe_time.get())).Floor();
+    int64_t dest_last_frame = frame_pointer_ + mix_state->frames;
+    if (dest_last_frame > dest_safe_frame) {
+      auto dest_ref_last_frame_time =
+          zx::time(dest_ref_pts_to_frac_frame.Inverse().Apply(Fixed(dest_last_frame).raw_value()));
 
-      auto ref_wakeup_time = ref_last_frame_time + presentation_delay_;
-      auto mono_wakeup_time = reference_clock().MonotonicTimeFromReferenceTime(ref_wakeup_time);
+      auto dest_ref_wakeup_time = dest_ref_last_frame_time + presentation_delay_;
+      auto mono_wakeup_time =
+          reference_clock().MonotonicTimeFromReferenceTime(dest_ref_wakeup_time);
 
       zx_status_t status = mix_timer_.PostForTime(mix_domain_->dispatcher(), mono_wakeup_time);
       if (status != ZX_OK) {
@@ -609,7 +633,7 @@ zx_status_t BaseCapturer::Process() {
     // Assign a timestamp if one has not already been assigned.
     if (mix_state->capture_timestamp == fuchsia::media::NO_TIMESTAMP) {
       mix_state->capture_timestamp =
-          ref_pts_to_frac_frame.Inverse().Apply(Fixed(frame_pointer_).raw_value());
+          dest_ref_pts_to_frac_frame.Inverse().Apply(Fixed(frame_pointer_).raw_value());
     }
 
     // Mix the requested number of frames.
@@ -791,14 +815,14 @@ void BaseCapturer::UpdateFormat(Format format) {
 
   reporter().SetFormat(format);
 
-  auto ref_now = reference_clock().Read();
+  auto dest_ref_now = reference_clock().Read();
   ref_pts_to_fractional_frame_->Update(TimelineFunction(
-      0, ref_now.get(), Fixed(format_->frames_per_second()).raw_value(), zx::sec(1).get()));
+      0, dest_ref_now.get(), Fixed(format_->frames_per_second()).raw_value(), zx::sec(1).get()));
 
   // Pre-compute the ratio between frames and clock mono ticks. Also figure out
   // the maximum number of frames we are allowed to mix and capture at a time.
   //
-  // Some sources (like AudioOutputs) have a limited amount of time which they
+  // Some sources (like AudioOutputs or TapStages) have a limited amount of time which they
   // are able to hold onto data after presentation. We need to wait until after
   // presentation time to capture these frames, but if we batch up too much
   // work, then the AudioOutput may have overwritten the data before we decide
