@@ -644,8 +644,11 @@
               "temperature_handler_node": {
                 "type": "string"
               },
-              "thermal_limiter_node": {
-                "type": "string"
+              "thermal_load_notify_nodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               }
             },
             "additionalProperties": false,
@@ -654,7 +657,7 @@
               "platform_metrics_node",
               "system_power_handler_node",
               "temperature_handler_node",
-              "thermal_limiter_node"
+              "thermal_load_notify_nodes"
             ]
           },
           "config": {

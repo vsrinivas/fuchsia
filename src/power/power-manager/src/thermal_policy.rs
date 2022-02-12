@@ -78,7 +78,7 @@ impl<'a> ThermalPolicyBuilder<'a> {
             cpu_control_nodes: Vec<String>,
             system_power_handler_node: String,
             temperature_handler_node: String,
-            thermal_limiter_node: String,
+            thermal_load_notify_nodes: Vec<String>,
             platform_metrics_node: String,
         }
 
@@ -98,7 +98,12 @@ impl<'a> ThermalPolicyBuilder<'a> {
                 .map(|node| nodes[node].clone())
                 .collect(),
             sys_pwr_handler: nodes[&data.dependencies.system_power_handler_node].clone(),
-            thermal_limiter_node: nodes[&data.dependencies.thermal_limiter_node].clone(),
+            thermal_load_notify_nodes: data
+                .dependencies
+                .thermal_load_notify_nodes
+                .iter()
+                .map(|node_name| nodes[node_name].clone())
+                .collect(),
             crash_report_handler: nodes[&data.dependencies.crash_report_handler_node].clone(),
             platform_metrics_node: nodes[&data.dependencies.platform_metrics_node].clone(),
             policy_params: ThermalPolicyParams {
@@ -196,9 +201,9 @@ pub struct ThermalConfig {
     /// node responds to the SystemShutdown message.
     pub sys_pwr_handler: Rc<dyn Node>,
 
-    /// The node which will impose thermal limits on external clients according to the thermal load
-    /// of the system. It is expected that this node responds to the UpdateThermalLoad message.
-    pub thermal_limiter_node: Rc<dyn Node>,
+    /// The nodes that are interested in receiving updated thermal load values. It is expected that
+    /// these nodes respond to the UpdateThermalLoad message.
+    pub thermal_load_notify_nodes: Vec<Rc<dyn Node>>,
 
     /// The node used for filing a crash report. It is expected that this node responds to the
     /// FileCrashReport message.
@@ -536,11 +541,13 @@ impl ThermalPolicy {
                 "new_load" => new_load.0
             );
 
-            self.send_message(
-                &self.config.thermal_limiter_node,
+            self.send_message_to_many(
+                &self.config.thermal_load_notify_nodes,
                 &Message::UpdateThermalLoad(new_load, self.driver_path.to_string()),
             )
-            .await?;
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?;
         }
 
         Ok(())
@@ -1118,7 +1125,7 @@ pub mod tests {
             temperature_node: create_dummy_node(),
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
-            thermal_limiter_node: create_dummy_node(),
+            thermal_load_notify_nodes: vec![create_dummy_node()],
             crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
             platform_metrics_node: create_dummy_node(),
@@ -1145,7 +1152,7 @@ pub mod tests {
             temperature_node: create_dummy_node(),
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
-            thermal_limiter_node: create_dummy_node(),
+            thermal_load_notify_nodes: vec![create_dummy_node()],
             crash_report_handler: create_dummy_node(),
             policy_params,
             platform_metrics_node: create_dummy_node(),
@@ -1220,7 +1227,7 @@ pub mod tests {
             ),
             cpu_control_nodes: vec![cpu_node_1, cpu_node_2],
             sys_pwr_handler: mock_maker.make("SysPwrNode", vec![]),
-            thermal_limiter_node: mock_maker.make("ThermalLimiterNode", vec![]),
+            thermal_load_notify_nodes: vec![mock_maker.make("ThermalLimiterNode", vec![])],
             crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
             platform_metrics_node: create_dummy_node(),
@@ -1250,7 +1257,7 @@ pub mod tests {
             ),
             cpu_control_nodes: vec![mock_maker.make("CpuCtrlNode", vec![])],
             sys_pwr_handler: mock_maker.make("SysPwrNode", vec![]),
-            thermal_limiter_node: mock_maker.make("ThermalLimiterNode", vec![]),
+            thermal_load_notify_nodes: vec![mock_maker.make("ThermalLimiterNode", vec![])],
             crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
             platform_metrics_node: create_dummy_node(),
@@ -1335,7 +1342,7 @@ pub mod tests {
                 ),
             ],
             sys_pwr_handler: create_dummy_node(),
-            thermal_limiter_node: create_dummy_node(),
+            thermal_load_notify_nodes: vec![create_dummy_node()],
             crash_report_handler: create_dummy_node(),
             policy_params,
             platform_metrics_node: create_dummy_node(),
@@ -1470,7 +1477,7 @@ pub mod tests {
                 ],
                 "system_power_handler_node": "sys_power",
                 "temperature_handler_node": "temperature",
-                "thermal_limiter_node": "limiter",
+                "thermal_load_notify_nodes": ["limiter"],
                 "crash_report_handler_node": "crash_report",
                 "platform_metrics_node": "metrics"
               },
@@ -1513,7 +1520,7 @@ pub mod tests {
             temperature_node: mock_temperature.clone(),
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
-            thermal_limiter_node: create_dummy_node(),
+            thermal_load_notify_nodes: vec![create_dummy_node()],
             crash_report_handler: mock_maker.make(
                 "CrashReport",
                 vec![(
@@ -1646,7 +1653,7 @@ pub mod tests {
             temperature_node: create_dummy_node(),
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
-            thermal_limiter_node: create_dummy_node(),
+            thermal_load_notify_nodes: vec![create_dummy_node()],
             crash_report_handler: mock_maker.make(
                 "CrashReportMock",
                 vec![(
@@ -1683,13 +1690,13 @@ pub mod tests {
             ),
             cpu_control_nodes: vec![create_dummy_node()],
             sys_pwr_handler: create_dummy_node(),
-            thermal_limiter_node: mock_maker.make(
+            thermal_load_notify_nodes: vec![mock_maker.make(
                 "ThermalLimiter",
                 vec![(
                     msg_eq!(UpdateThermalLoad(ThermalLoad(20), "Sensor1".to_string())),
                     msg_ok_return!(UpdateThermalLoad),
                 )],
-            ),
+            )],
             crash_report_handler: create_dummy_node(),
             policy_params: default_policy_params(),
             platform_metrics_node: create_dummy_node(),
@@ -1703,6 +1710,54 @@ pub mod tests {
         // When `process_thermal_load` runs, the new ThermalLoad value will be sent to the mock
         // ThermalLimiter node. The mock will verify the correct sensor path is found in the
         // UpdateThermalLoad message.
+        assert_eq!(node.process_thermal_load(Nanoseconds(1), ThermalLoad(20)).await.unwrap(), ());
+    }
+
+    /// Tests that each of the configured `thermal_load_notify_nodes` nodes receive an
+    /// UpdateThermalLoad message as expected.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_multiple_thermal_load_notify_nodes() {
+        let mut mock_maker = MockNodeMaker::new();
+
+        // Set up the ThermalPolicy node
+        let thermal_config = ThermalConfig {
+            temperature_node: mock_maker.make(
+                "TemperatureNode",
+                vec![(
+                    msg_eq!(GetDriverPath),
+                    msg_ok_return!(GetDriverPath("Sensor1".to_string())),
+                )],
+            ),
+            cpu_control_nodes: vec![create_dummy_node()],
+            sys_pwr_handler: create_dummy_node(),
+            thermal_load_notify_nodes: vec![
+                mock_maker.make(
+                    "ThermalLoadNotify1",
+                    vec![(
+                        msg_eq!(UpdateThermalLoad(ThermalLoad(20), "Sensor1".to_string())),
+                        msg_ok_return!(UpdateThermalLoad),
+                    )],
+                ),
+                mock_maker.make(
+                    "ThermalLoadNotify2",
+                    vec![(
+                        msg_eq!(UpdateThermalLoad(ThermalLoad(20), "Sensor1".to_string())),
+                        msg_ok_return!(UpdateThermalLoad),
+                    )],
+                ),
+            ],
+            crash_report_handler: create_dummy_node(),
+            policy_params: default_policy_params(),
+            platform_metrics_node: create_dummy_node(),
+        };
+
+        let node = ThermalPolicyBuilder::new(thermal_config)
+            .build(&FuturesUnordered::new())
+            .await
+            .unwrap();
+
+        // When `process_thermal_load` runs, the mocks will verify they each receive the
+        // UpdateThermalLoad message
         assert_eq!(node.process_thermal_load(Nanoseconds(1), ThermalLoad(20)).await.unwrap(), ());
     }
 }

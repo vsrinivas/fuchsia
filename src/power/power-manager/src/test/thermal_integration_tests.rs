@@ -373,7 +373,7 @@ impl<'a> ThermalPolicyTest<'a> {
             temperature_node,
             cpu_control_nodes: vec![cpu_control_node],
             sys_pwr_handler,
-            thermal_limiter_node,
+            thermal_load_notify_nodes: vec![thermal_limiter_node],
             crash_report_handler: create_dummy_node(),
             policy_params,
             platform_metrics_node: create_dummy_node(),

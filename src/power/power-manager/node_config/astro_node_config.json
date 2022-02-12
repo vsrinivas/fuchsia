@@ -101,7 +101,9 @@
         "cpu_control"
       ],
       "system_power_handler_node": "sys_shutdown",
-      "thermal_limiter_node": "thermal_limiter",
+      "thermal_load_notify_nodes": [
+        "thermal_limiter"
+      ],
       "platform_metrics_node": "platform_metrics"
     },
     "config": {
