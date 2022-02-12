@@ -14,6 +14,7 @@ source_set("lib") {
   sources = [ "fastboot.cc" ]
   public_configs = [ ":include" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/zxc",
   ]
@@ -21,6 +22,8 @@ source_set("lib") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
+    "//src/storage/lib/paver",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
 }

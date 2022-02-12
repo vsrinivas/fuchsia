@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/fastboot/fastboot.h>
+#include <lib/fdio/directory.h>
+#include <lib/fidl-async/cpp/bind.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/syslog/global.h>
 #include <zircon/status.h>
 
@@ -83,6 +87,10 @@ const std::vector<Fastboot::CommandEntry> Fastboot::GetCommandTable() {
           .name = "download",
           .cmd = &Fastboot::Download,
       },
+      {
+          .name = "flash",
+          .cmd = &Fastboot::Flash,
+      },
   });
   return *kCommandTable;
 }
@@ -97,6 +105,9 @@ const Fastboot::VariableHashTable& Fastboot::GetVariableTable() {
 }
 
 Fastboot::Fastboot(size_t max_download_size) : max_download_size_(max_download_size) {}
+
+Fastboot::Fastboot(size_t max_download_size, fidl::ClientEnd<fuchsia_io::Directory> svc_root)
+    : max_download_size_(max_download_size), svc_root_(std::move(svc_root)) {}
 
 zx::status<> Fastboot::ProcessPacket(Transport* transport) {
   if (!transport->PeekPacketSize()) {
@@ -202,6 +213,102 @@ zx::status<> Fastboot::GetVar(const std::string& command, Transport* transport) 
 zx::status<std::string> Fastboot::GetVarMaxDownloadSize(const std::vector<std::string_view>&,
                                                         Transport*) {
   return zx::ok(fxl::StringPrintf("0x%08zx", max_download_size_));
+}
+
+zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> Fastboot::ConnectToPaver() {
+  // If `svc_root_` is not set, use the system svc root.
+  if (!svc_root_) {
+    zx::channel request, service_root;
+    zx_status_t status = zx::channel::create(0, &request, &service_root);
+    if (status != ZX_OK) {
+      FX_LOGF(ERROR, kFastbootLogTag, "Failed to create channel %s", zx_status_get_string(status));
+      return zx::error(ZX_ERR_INTERNAL);
+    }
+
+    status = fdio_service_connect("/svc/.", request.release());
+    if (status != ZX_OK) {
+      FX_LOGF(ERROR, kFastbootLogTag, "Failed to connect to svc root %s",
+              zx_status_get_string(status));
+      return zx::error(ZX_ERR_INTERNAL);
+    }
+    svc_root_ = fidl::ClientEnd<fuchsia_io::Directory>(std::move(service_root));
+  }
+
+  // Connect to the paver
+  auto paver_svc = service::ConnectAt<fuchsia_paver::Paver>(svc_root_);
+  if (!paver_svc.is_ok()) {
+    FX_LOGF(ERROR, kFastbootLogTag, "Unable to open /svc/fuchsia.paver.Paver");
+    return zx::error(paver_svc.error_value());
+  }
+
+  return zx::ok(fidl::BindSyncClient(std::move(*paver_svc)));
+}
+
+zx::status<> Fastboot::WriteFirmware(fuchsia_paver::wire::Configuration config,
+                                     std::string_view firmware_type, Transport* transport,
+                                     fidl::WireSyncClient<fuchsia_paver::DataSink>& data_sink) {
+  fuchsia_mem::wire::Buffer buf;
+  buf.size = download_vmo_mapper_.size();
+  buf.vmo = download_vmo_mapper_.Release();
+  auto ret = data_sink->WriteFirmware(config, fidl::StringView::FromExternal(firmware_type),
+                                      std::move(buf));
+  if (ret.status() != ZX_OK) {
+    return SendResponse(ResponseType::kFail, "Failed to invoke paver bootloader write", transport,
+                        zx::error(ret.status()));
+  }
+
+  if (ret->result.is_status() && ret->result.status() != ZX_OK) {
+    return SendResponse(ResponseType::kFail, "Failed to write bootloader", transport,
+                        zx::error(ret->result.status()));
+  }
+
+  if (ret->result.is_unsupported() && ret->result.unsupported()) {
+    return SendResponse(ResponseType::kFail, "Firmware type is not supported", transport);
+  }
+
+  return SendResponse(ResponseType::kOkay, "", transport);
+}
+
+zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
+  std::vector<std::string_view> args =
+      fxl::SplitString(command, ":", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+  if (args.size() < 2) {
+    return SendResponse(ResponseType::kFail, "Not enough arguments", transport);
+  }
+
+  auto paver_client_res = ConnectToPaver();
+  if (paver_client_res.is_error()) {
+    return SendResponse(ResponseType::kFail, "Failed to connect to paver", transport,
+                        zx::error(paver_client_res.status_value()));
+  }
+
+  // Connect to the data sink
+  auto data_sink_endpoints = fidl::CreateEndpoints<fuchsia_paver::DataSink>();
+  if (data_sink_endpoints.is_error()) {
+    return SendResponse(ResponseType::kFail, "Unable to create data sink endpoint", transport,
+                        zx::error(data_sink_endpoints.status_value()));
+  }
+  auto [data_sink_local, data_sink_remote] = std::move(*data_sink_endpoints);
+  paver_client_res.value()->FindDataSink(std::move(data_sink_remote));
+  auto data_sink = fidl::BindSyncClient(std::move(data_sink_local));
+
+  if (args[1] == "bootloader_a") {
+    std::string_view firmware_type = args.size() == 3 ? args[2] : "";
+    return WriteFirmware(fuchsia_paver::wire::Configuration::kA, firmware_type, transport,
+                         data_sink);
+  } else if (args[1] == "bootloader_b") {
+    std::string_view firmware_type = args.size() == 3 ? args[2] : "";
+    return WriteFirmware(fuchsia_paver::wire::Configuration::kB, firmware_type, transport,
+                         data_sink);
+  } else if (args[1] == "bootloader_r") {
+    std::string_view firmware_type = args.size() == 3 ? args[2] : "";
+    return WriteFirmware(fuchsia_paver::wire::Configuration::kRecovery, firmware_type, transport,
+                         data_sink);
+  } else {
+    return SendResponse(ResponseType::kFail, "Unsupported partition", transport);
+  }
+
+  return zx::ok();
 }
 
 }  // namespace fastboot

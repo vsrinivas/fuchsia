@@ -5,6 +5,8 @@
 #ifndef SRC_FIRMWARE_LIB_FASTBOOT_INCLUDE_LIB_FASTBOOT_FASTBOOT_H_
 #define SRC_FIRMWARE_LIB_FASTBOOT_INCLUDE_LIB_FASTBOOT_FASTBOOT_H_
 
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/status.h>
 #include <stddef.h>
@@ -62,6 +64,8 @@ class Transport {
 class __EXPORT Fastboot {
  public:
   explicit Fastboot(size_t max_download_size);
+  // For test svc_root injection
+  Fastboot(size_t max_download_size, fidl::ClientEnd<fuchsia_io::Directory> svc_root);
   zx::status<> ProcessPacket(Transport *transport);
 
  private:
@@ -74,12 +78,19 @@ class __EXPORT Fastboot {
   size_t max_download_size_;
   size_t remaining_download_ = 0;
   fzl::OwnedVmoMapper download_vmo_mapper_;
+  // Channel to svc.
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root_;
 
   zx::status<> GetVar(const std::string &command, Transport *transport);
   zx::status<std::string> GetVarMaxDownloadSize(const std::vector<std::string_view> &, Transport *);
-  zx::status<> Download(const std::string &command, Transport *sender);
+  zx::status<> Download(const std::string &command, Transport *transport);
+  zx::status<> Flash(const std::string &command, Transport *transport);
 
   void ClearDownload();
+  zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> ConnectToPaver();
+  zx::status<> WriteFirmware(fuchsia_paver::wire::Configuration config,
+                             std::string_view firmware_type, Transport *transport,
+                             fidl::WireSyncClient<fuchsia_paver::DataSink> &data_sink);
 
   struct CommandEntry {
     const char *name;

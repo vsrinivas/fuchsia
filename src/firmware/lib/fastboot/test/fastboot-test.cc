@@ -1,14 +1,26 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.paver/cpp/wire.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fastboot/fastboot.h>
+#include <lib/fidl-async/cpp/bind.h>
 
+#include <unordered_map>
 #include <vector>
 
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <zxtest/zxtest.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/storage/testing/fake-paver.h"
 
 namespace fastboot {
 
@@ -242,6 +254,185 @@ TEST(FastbootTest, DownloadFailsOnNotEnoughArgument) {
   transport.AddInPacket(command);
   zx::status<> ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
+  const std::vector<std::string>& sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+class FastbootFlashTest : public FastbootDownloadTest {
+ protected:
+  FastbootFlashTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), vfs_(loop_.dispatcher()) {
+    // Set up a svc root directory with a paver service entry.
+    auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+    root_dir->AddEntry(
+        fidl::DiscoverableProtocolName<fuchsia_paver::Paver>,
+        fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<fuchsia_paver::Paver> request) {
+          return fake_paver_.Connect(loop_.dispatcher(), std::move(request));
+        }));
+    zx::status server_end = fidl::CreateEndpoints(&svc_local_);
+    ASSERT_OK(server_end.status_value());
+    vfs_.ServeDirectory(root_dir, std::move(server_end.value()));
+    loop_.StartThread("fastboot-flash-test-loop");
+  }
+
+  fidl::ClientEnd<fuchsia_io::Directory>& svc_chan() { return svc_local_; }
+
+  paver_test::FakePaver& paver() { return fake_paver_; }
+
+  ~FastbootFlashTest() { loop_.Shutdown(); }
+
+  void TestFlashBootloader(Fastboot& fastboot, fuchsia_paver::wire::Configuration config,
+                           const std::string& type_suffix) {
+    std::vector<uint8_t> download_content(256, 1);
+    ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+
+    paver_test::FakePaver& fake_paver = paver();
+    fake_paver.set_expected_payload_size(download_content.size());
+
+    std::unordered_map<fuchsia_paver::wire::Configuration, std::string> config_to_partition = {
+        {fuchsia_paver::wire::Configuration::kA, "bootloader_a"},
+        {fuchsia_paver::wire::Configuration::kB, "bootloader_b"},
+        {fuchsia_paver::wire::Configuration::kRecovery, "bootloader_r"},
+    };
+
+    TestTransport transport;
+    std::string command = "flash:" + config_to_partition[config] + type_suffix;
+
+    transport.AddInPacket(command);
+    zx::status<> ret = fastboot.ProcessPacket(&transport);
+    ASSERT_TRUE(ret.is_ok());
+
+    std::vector<std::string> expected_packets = {"OKAY"};
+    ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+  }
+
+  void TestFlashBootloaderNoFirmwareType(Fastboot& fastboot,
+                                         fuchsia_paver::wire::Configuration config) {
+    fake_paver_.set_supported_firmware_type("");
+    ASSERT_NO_FATAL_FAILURE(TestFlashBootloader(fastboot, config, ""));
+    ASSERT_EQ(fake_paver_.last_firmware_type(), "");
+  }
+
+  void TestFlashBootloaderWithFirmwareType(Fastboot& fastboot,
+                                           fuchsia_paver::wire::Configuration config,
+                                           const std::string& type) {
+    fake_paver_.set_supported_firmware_type(type);
+    ASSERT_NO_FATAL_FAILURE(TestFlashBootloader(fastboot, config, ":" + type));
+    ASSERT_EQ(fake_paver_.last_firmware_type(), type);
+  }
+
+  async::Loop loop_;
+  fs::SynchronousVfs vfs_;
+  paver_test::FakePaver fake_paver_;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
+};
+
+TEST_F(FastbootFlashTest, FlashFailsOnNotEnoughArguments) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+
+  std::vector<uint8_t> download_content(256, 1);
+  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+
+  std::string command = "flash";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  const std::vector<std::string>& sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, FlashFailsOnUnsupportedPartition) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+
+  std::vector<uint8_t> download_content(256, 1);
+  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+
+  std::string command = "flash:unknown-partition";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  const std::vector<std::string>& sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, FlashBooloaderASlot) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  ASSERT_NO_FATAL_FAILURE(
+      TestFlashBootloaderNoFirmwareType(fastboot, fuchsia_paver::wire::Configuration::kA));
+}
+
+TEST_F(FastbootFlashTest, FlashBooloaderBSlot) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  ASSERT_NO_FATAL_FAILURE(
+      TestFlashBootloaderNoFirmwareType(fastboot, fuchsia_paver::wire::Configuration::kB));
+}
+
+TEST_F(FastbootFlashTest, FlashBooloaderRSlot) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  ASSERT_NO_FATAL_FAILURE(
+      TestFlashBootloaderNoFirmwareType(fastboot, fuchsia_paver::wire::Configuration::kRecovery));
+}
+
+TEST_F(FastbootFlashTest, FlashBooloaderASlotWithFirmwareType) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  ASSERT_NO_FATAL_FAILURE(TestFlashBootloaderWithFirmwareType(
+      fastboot, fuchsia_paver::wire::Configuration::kA, "firmware_type"));
+}
+
+TEST_F(FastbootFlashTest, FlashBooloaderBSlotWithFirmwareType) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  ASSERT_NO_FATAL_FAILURE(TestFlashBootloaderWithFirmwareType(
+      fastboot, fuchsia_paver::wire::Configuration::kB, "firmware_type"));
+}
+
+TEST_F(FastbootFlashTest, FlashBooloaderRSlotWithFirmwareType) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  ASSERT_NO_FATAL_FAILURE(TestFlashBootloaderWithFirmwareType(
+      fastboot, fuchsia_paver::wire::Configuration::kRecovery, "firmware_type"));
+}
+
+TEST_F(FastbootFlashTest, FlashBooloaderWriteFail) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+
+  // Insert a write firmware error
+  paver_test::FakePaver& fake_paver = paver();
+  std::vector<uint8_t> download_content(256, 1);
+  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+  fake_paver.set_expected_payload_size(0);
+
+  std::string command = "flash:bootloader_a";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_FALSE(ret.is_ok());
+
+  const std::vector<std::string>& sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, FlashBooloaderUnsupportedFirmwareType) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+
+  // Insert an unsupported firmware failure
+  paver_test::FakePaver& fake_paver = paver();
+  fake_paver.set_supported_firmware_type("unsupported");
+
+  std::vector<uint8_t> download_content(256, 1);
+  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+
+  std::string command = "flash:bootloader_a";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
   const std::vector<std::string>& sent_packets = transport.GetOutPackets();
   ASSERT_EQ(sent_packets.size(), 1ULL);
   ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);

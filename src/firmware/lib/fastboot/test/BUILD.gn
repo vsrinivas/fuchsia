@@ -15,7 +15,12 @@ test("fastboot-test") {
   include_dirs = [ "../include" ]
   deps = [
     "..:lib",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//src/lib/fxl",
+    "//src/lib/storage/vfs/cpp",
+    "//src/storage/testing:fake-paver",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
