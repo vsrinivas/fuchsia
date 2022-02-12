@@ -11,7 +11,6 @@ group("util") {
 
 fuchsia_shell_package("mdns-util") {
   deps = [ ":bin" ]
-  manifest = "meta/mdns-util.cmx"
 }
 
 executable("bin") {
