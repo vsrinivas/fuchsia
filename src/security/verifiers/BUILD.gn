@@ -8,7 +8,6 @@ import("//build/host.gni")
 # compilation.
 group("verifiers") {
   deps = [
-    "//src/security/verifiers/verify_route_sources($host_toolchain)",
     "//src/security/verifiers/verify_routes($host_toolchain)",
     "//src/security/verifiers/verify_static_pkgs($host_toolchain)",
   ]

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
+import("//src/developer/ffx/build/ffx_action.gni")
 
 # Check the route sources specified in a config file.
 #
@@ -35,7 +35,7 @@ template("verify_route_sources") {
   assert(defined(invoker.config_path),
          "verify_route_sources() must specify config_path")
 
-  compiled_action("${target_name}") {
+  ffx_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -45,8 +45,6 @@ template("verify_route_sources") {
                              "visibility",
                            ])
 
-    tool = "//src/security/verifiers/verify_route_sources:bin"
-    tool_output_name = "scrutiny_verify_route_sources"
     stamp_file = "$target_gen_dir/$target_name.verified"
     depfile = "$target_gen_dir/$target_name.d"
     published_packages = "//build/images:publish"
@@ -60,11 +58,14 @@ template("verify_route_sources") {
     outputs = [ stamp_file ]
 
     args = [
+      "scrutiny",
+      "verify",
+      "route-sources",
       "--build-path",
       rebase_path(root_build_dir),
       "--zbi",
       rebase_path(invoker.zbi, root_build_dir),
-      "--manifest",
+      "--blobfs-manifest",
       rebase_path(invoker.blobfs_manifest, root_build_dir),
       "--stamp",
       rebase_path(stamp_file, root_build_dir),

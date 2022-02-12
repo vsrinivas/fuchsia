@@ -12,6 +12,7 @@ ffx_plugin("ffx_scrutiny_verify") {
     "bootfs:ffx_scrutiny_bootfs",
     "component_resolvers:ffx_scrutiny_component_resolvers",
     "kernel_cmdline:ffx_scrutiny_kernel_cmdline",
+    "route_sources:ffx_scrutiny_route_sources",
     "routes:ffx_scrutiny_routes",
   ]
   deps = [

@@ -10,7 +10,13 @@ if (is_host) {
     name = "scrutiny_plugins"
     with_unit_tests = true
     edition = "2018"
-    visibility = [ "//src/security/scrutiny/*" ]
+    visibility = [
+      "//src/security/scrutiny/*",
+
+      # TODO(fxbug.dev/93569): Shared types should be exposed on a public
+      # interface instead of making this visibility exception.
+      "//src/developer/ffx/plugins/scrutiny/verify/route_sources/*",
+    ]
     deps = [
       "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
       "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",

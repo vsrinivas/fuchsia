@@ -1,10 +1,11 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Result},
-    clap::{App, Arg},
+    anyhow::{anyhow, bail, Context, Error, Result},
+    ffx_core::ffx_plugin,
+    ffx_scrutiny_route_sources_args::ScrutinyRouteSourcesCommand,
     scrutiny_config::{Config, LoggingConfig, ModelConfig, PluginConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_plugins::verify::{RouteSourceError, VerifyRouteSourcesResults},
@@ -21,9 +22,9 @@ struct VerifyRouteSources {
     route_sources_query_path: String,
     build_path: String,
     zbi_path: String,
-    depfile_path: String,
+    depfile_path: Option<String>,
     manifest_path: String,
-    stamp_path: String,
+    stamp_path: Option<String>,
 }
 
 impl VerifyRouteSources {
@@ -89,80 +90,33 @@ impl VerifyRouteSources {
         }
 
         // Write out the depfile.
-        let deps: Vec<String> = route_sources_results.deps.into_iter().collect();
-        let mut depfile = File::create(&self.depfile_path).context("Failed to create dep file")?;
-        write!(depfile, "{}: {}", self.stamp_path, deps.join(" "))
-            .context("Failed to write to dep file")?;
+        if let Some(depfile_path) = self.depfile_path.as_ref() {
+            let stamp_path = self
+                .stamp_path
+                .as_ref()
+                .ok_or(anyhow!("Cannot specify depfile without specifying stamp"))?;
+
+            let deps: Vec<String> = route_sources_results.deps.into_iter().collect();
+            let mut depfile = File::create(depfile_path).context("Failed to create dep file")?;
+            write!(depfile, "{}: {}", stamp_path, deps.join(" "))
+                .context("Failed to write to dep file")?;
+        }
 
         Ok(())
     }
 }
+#[ffx_plugin()]
+pub async fn scrutiny_route_sources(cmd: ScrutinyRouteSourcesCommand) -> Result<(), Error> {
+    if cmd.depfile.is_some() && cmd.stamp.is_none() {
+        bail!("Cannot specify --depfile without --stamp");
+    }
 
-fn main() -> Result<()> {
-    simplelog::SimpleLogger::init(simplelog::LevelFilter::Error, simplelog::Config::default())?;
-    let args = App::new("scrutiny_route_sources")
-        .version("1.0")
-        .author("Fuchsia Authors")
-        .about("Check the selected component's route sources.")
-        .arg(
-            Arg::with_name("stamp")
-                .long("stamp")
-                .required(true)
-                .help("The stamp file output location.")
-                .value_name("stamp")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("depfile")
-                .long("depfile")
-                .required(true)
-                .help("The depfile output location.")
-                .value_name("depfile")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("manifest")
-                .long("manifest")
-                .required(true)
-                .help("The blobfs manifest input location.")
-                .value_name("manifest")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("config")
-                .long("config")
-                .required(true)
-                .help("Path to configuration file that defines component routes to check.")
-                .value_name("config")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("zbi")
-                .long("zbi")
-                .required(true)
-                .help("Path to the ZBI to verify.")
-                .value_name("zbi")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("build-path")
-                .long("build-path")
-                .required(true)
-                .help("Root path to build artifacts.")
-                .value_name("build-path")
-                .takes_value(true),
-        )
-        .get_matches();
-    let route_sources_query_path =
-        args.value_of("config").expect("failed to find the config path").to_string();
-    let build_path =
-        args.value_of("build-path").expect("failed to find the build path").to_string();
-    let zbi_path = args.value_of("zbi").expect("failed to find the zbi path").to_string();
-    let depfile_path =
-        args.value_of("depfile").expect("failed to find the depfile path").to_string();
-    let manifest_path =
-        args.value_of("manifest").expect("failed to find the blobfs manifest path").to_string();
-    let stamp_path = args.value_of("stamp").expect("failed to find the stamp path").to_string();
+    let route_sources_query_path = cmd.config;
+    let build_path = cmd.build_path;
+    let zbi_path = cmd.zbi;
+    let depfile_path = cmd.depfile;
+    let manifest_path = cmd.blobfs_manifest;
+    let stamp_path = cmd.stamp;
 
     let verifier = VerifyRouteSources {
         route_sources_query_path,
@@ -172,11 +126,11 @@ fn main() -> Result<()> {
         manifest_path,
         stamp_path: stamp_path.clone(),
     };
-    match verifier.verify() {
-        Ok(()) => {
-            fs::write(stamp_path, "Verified").expect("Failed to write stamp file");
-            Ok(())
-        }
-        error => error,
+    verifier.verify()?;
+
+    if let Some(stamp_path) = stamp_path {
+        fs::write(stamp_path, "Verified").context("Failed to write stamp file")?;
     }
+
+    Ok(())
 }
