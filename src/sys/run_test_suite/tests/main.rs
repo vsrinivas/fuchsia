@@ -77,9 +77,13 @@ type TestMuxReporter = run_test_suite_lib::output::MultiplexedReporter<
     TestShellReporter,
     run_test_suite_lib::output::DirectoryReporter,
 >;
+type TestMuxMuxReporter = run_test_suite_lib::output::MultiplexedReporter<
+    TestMuxReporter,
+    run_test_suite_lib::output::ShellReporter<std::io::BufWriter<std::fs::File>>,
+>;
+type TestOutputView = run_test_suite_lib::output::ShellWriterView<Vec<u8>>;
 
-fn create_shell_reporter(
-) -> (TestShellReporter, run_test_suite_lib::output::ShellWriterView<Vec<u8>>) {
+fn create_shell_reporter() -> (TestShellReporter, TestOutputView) {
     run_test_suite_lib::output::ShellReporter::new_expose_writer_for_test()
 }
 
@@ -90,8 +94,7 @@ fn create_dir_reporter() -> (run_test_suite_lib::output::DirectoryReporter, temp
     (dir_reporter, tmp_dir)
 }
 
-fn create_shell_and_dir_reporter(
-) -> (TestMuxReporter, run_test_suite_lib::output::ShellWriterView<Vec<u8>>, tempfile::TempDir) {
+fn create_shell_and_dir_reporter() -> (TestMuxReporter, TestOutputView, tempfile::TempDir) {
     let (shell_reporter, output) = create_shell_reporter();
     let (dir_reporter, tmp_dir) = create_dir_reporter();
     (
@@ -101,17 +104,32 @@ fn create_shell_and_dir_reporter(
     )
 }
 
+/// Runs a test with a reporter that saves in the directory output format and shell output.
+/// This also automatically saves the shell output to a file in custom artifacts.
+async fn run_with_reporter<F, Fut>(case_name: &str, test_fn: F)
+where
+    F: FnOnce(TestMuxMuxReporter, TestOutputView, tempfile::TempDir) -> Fut,
+    Fut: futures::future::Future<Output = ()>,
+{
+    let file_for_shell_reporter =
+        std::fs::File::create(format!("custom_artifacts/{}_shell.txt", case_name)).unwrap();
+    let file_reporter = run_test_suite_lib::output::ShellReporter::new(std::io::BufWriter::new(
+        file_for_shell_reporter,
+    ));
+    let (mux_reporter, output, tmpdir) = create_shell_and_dir_reporter();
+    let mux_mux_reporter =
+        run_test_suite_lib::output::MultiplexedReporter::new(mux_reporter, file_reporter);
+    test_fn(mux_mux_reporter, output, tmpdir).await;
+}
+
 /// run specified test once. Returns suite result and output to shell.
 async fn run_test_once(
+    reporter: impl 'static + run_test_suite_lib::output::Reporter + Send + Sync,
     test_params: TestParams,
     min_log_severity: Option<Severity>,
-) -> Result<
-    (Outcome, run_test_suite_lib::output::ShellWriterView<Vec<u8>>, tempfile::TempDir),
-    RunTestSuiteError,
-> {
-    let (reporter, output, tmp_dir) = create_shell_and_dir_reporter();
+) -> Result<Outcome, RunTestSuiteError> {
     let run_reporter = run_test_suite_lib::output::RunReporter::new(reporter);
-    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
+    Ok(run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
         vec![test_params],
@@ -120,13 +138,18 @@ async fn run_test_once(
         run_reporter,
         futures::future::pending(),
     )
-    .await;
-    Ok((outcome, output, tmp_dir))
+    .await)
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_no_clean_exit() {
-    let (outcome, output, output_dir) = run_test_once(
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_no_clean_exit(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
+    let outcome = run_test_once(
+        reporter,
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm",
             ),
@@ -182,9 +205,13 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-af
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_passing_v2_test() {
-    let (reporter, output, output_dir) = create_shell_and_dir_reporter();
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_passing_v2_test(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
     let reporter = output::RunReporter::new(reporter);
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
@@ -255,9 +282,13 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-exa
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_stderr_test() {
-    let (reporter, output, output_dir) = create_shell_and_dir_reporter();
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_stderr_test(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
     let reporter = output::RunReporter::new(reporter);
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
@@ -346,9 +377,13 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_passing_v2_test_multiple_times() {
-    let (reporter, _, output_dir) = create_shell_and_dir_reporter();
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_passing_v2_test_multiple_times(
+    reporter: TestMuxMuxReporter,
+    _: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
     let reporter = output::RunReporter::new(reporter);
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
@@ -387,9 +422,13 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_multiple_passing_tests() {
-    let (reporter, _, output_dir) = create_shell_and_dir_reporter();
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_multiple_passing_tests(
+    reporter: TestMuxMuxReporter,
+    _: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
     let reporter = output::RunReporter::new(reporter);
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
@@ -437,15 +476,20 @@ async fn launch_and_test_multiple_passing_tests() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_with_filter() {
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_with_filter(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
     );
 
     test_params.test_filters = Some(vec!["*Test3".to_string()]);
-    let (outcome, output, output_dir) =
-        run_test_once(test_params, None).await.expect("Running test should not fail");
+    let outcome =
+        run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
 
     let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm'
 [RUNNING]	Example.Test3
@@ -481,15 +525,20 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-exa
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_with_multiple_filter() {
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_with_multiple_filter(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
     );
 
     test_params.test_filters = Some(vec!["*Test3".to_string(), "*Test1".to_string()]);
-    let (outcome, output, output_dir) =
-        run_test_once(test_params, None).await.expect("Running test should not fail");
+    let outcome =
+        run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
 
     let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm'
 [RUNNING]	Example.Test1
@@ -531,14 +580,14 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-exa
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn launch_with_filter_no_matching_cases() {
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
     );
 
     test_params.test_filters = Some(vec!["matches-nothing".to_string()]);
-    let (outcome, _, _) = run_test_once(test_params, None).await.unwrap();
+    let outcome = run_test_once(output::NoopReporter, test_params, None).await.unwrap();
 
     match outcome {
         Outcome::Error { origin } => {
@@ -552,9 +601,15 @@ async fn launch_with_filter_no_matching_cases() {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_empty_test() {
-    let (outcome, _, output_dir) = run_test_once(
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_empty_test(
+    reporter: TestMuxMuxReporter,
+    _: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
+    let outcome = run_test_once(
+        reporter,
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cm",
         ),
@@ -582,9 +637,15 @@ async fn launch_and_test_empty_test() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_huge_test() {
-    let (outcome, _, output_dir) = run_test_once(
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_huge_test(
+    reporter: TestMuxMuxReporter,
+    _: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
+    let outcome = run_test_once(
+        reporter,
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/huge-test-example.cm",
         ),
@@ -620,9 +681,15 @@ async fn launch_and_test_huge_test() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_disabled_test_exclude_disabled() {
-    let (outcome, output, output_dir) = run_test_once(
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_disabled_test_exclude_disabled(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
+    let outcome = run_test_once(
+        reporter,
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
             ),
@@ -671,14 +738,19 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-ex
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_disabled_test_include_disabled() {
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_disabled_test_include_disabled(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
     );
     test_params.also_run_disabled_tests = true;
-    let (outcome, output, output_dir) =
-        run_test_once(test_params, None).await.expect("Running test should not fail");
+    let outcome =
+        run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
 
     let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm'
 [RUNNING]	Example.Test1
@@ -727,9 +799,15 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-ex
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_failing_test() {
-    let (outcome, output, output_dir) = run_test_once(
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_failing_test(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
+    let outcome = run_test_once(
+            reporter,
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
             ),
@@ -786,10 +864,14 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-exa
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_failing_v2_test_multiple_times() {
-    let (dir_reporter, output_dir) = create_dir_reporter();
-    let reporter = output::RunReporter::new(dir_reporter);
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_failing_v2_test_multiple_times(
+    reporter: TestMuxMuxReporter,
+    _: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
+    let reporter = output::RunReporter::new(reporter);
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                     .expect("connecting to RunBuilderProxy"),
@@ -824,9 +906,15 @@ async fn launch_and_test_failing_v2_test_multiple_times() {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_incomplete_test() {
-    let (outcome, output, output_dir) = run_test_once(
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_incomplete_test(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
+    let outcome = run_test_once(
+            reporter,
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm",
             ),
@@ -884,9 +972,15 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_test_invalid_test() {
-    let (outcome, output, output_dir) = run_test_once(
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_test_invalid_test(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
+    let outcome = run_test_once(
+        reporter,
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm",
             ),
@@ -946,9 +1040,15 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-exa
 // This test also acts an example on how to right a v2 test.
 // This will launch a echo_realm which will inject echo_server, launch v2 test which will
 // then test that server out and return back results.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn launch_and_run_echo_test() {
-    let (outcome, output, _) = run_test_once(
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn launch_and_run_echo_test(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    _: tempfile::TempDir,
+) {
+    let outcome = run_test_once(
+        reporter,
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm",
         ),
@@ -969,14 +1069,15 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.
     assert_eq!(outcome, Outcome::Passed);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_timeout() {
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_timeout(reporter: TestMuxMuxReporter, output: TestOutputView, _: tempfile::TempDir) {
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(1);
-    let (outcome, output, _) =
-        run_test_once(test_params, None).await.expect("Running test should not fail");
+    let outcome =
+        run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
     let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm'
 [RUNNING]	LongRunningTest.LongRunning
 [TIMED_OUT]	LongRunningTest.LongRunning
@@ -989,10 +1090,14 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_tes
     assert_eq!(outcome, Outcome::Timedout);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
 // when a test times out, we should not run it again.
-async fn test_timeout_multiple_times() {
-    let (reporter, output, output_dir) = create_shell_and_dir_reporter();
+async fn test_timeout_multiple_times(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
     let reporter = output::RunReporter::new(reporter);
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
@@ -1061,9 +1166,13 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_tes
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_continue_on_timeout() {
-    let (reporter, _, output_dir) = create_shell_and_dir_reporter();
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_continue_on_timeout(
+    reporter: TestMuxMuxReporter,
+    _: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
     let reporter = output::RunReporter::new(reporter);
     let mut long_test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
@@ -1138,9 +1247,13 @@ async fn test_continue_on_timeout() {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_stop_after_n_failures() {
-    let (reporter, _, output_dir) = create_shell_and_dir_reporter();
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_stop_after_n_failures(
+    reporter: TestMuxMuxReporter,
+    _: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
     let reporter = output::RunReporter::new(reporter);
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
@@ -1199,14 +1312,19 @@ async fn test_stop_after_n_failures() {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_passes_with_large_timeout() {
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_passes_with_large_timeout(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    _: tempfile::TempDir,
+) {
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
-    let (outcome, output, _) =
-        run_test_once(test_params, None).await.expect("Running test should not fail");
+    let outcome =
+        run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
 
     let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm'
 [RUNNING]	EchoTest
@@ -1220,14 +1338,19 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.
     assert_eq!(outcome, Outcome::Passed);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_logging_component() {
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_logging_component(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
-    let (outcome, output, output_dir) =
-        run_test_once(test_params, None).await.expect("Running test should not fail");
+    let outcome =
+        run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
 
     let expected_logs =
         "[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] DEBUG: Logging initialized
@@ -1271,13 +1394,18 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm 
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_logging_component_min_severity() {
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_logging_component_min_severity(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    _: tempfile::TempDir,
+) {
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
-    let (outcome, output, _) = run_test_once(test_params, Some(Severity::Info))
+    let outcome = run_test_once(reporter, test_params, Some(Severity::Info))
         .await
         .expect("Running test should not fail");
 
@@ -1294,13 +1422,18 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm 
     assert_eq!(outcome, Outcome::Passed);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_stdout_and_log_ansi() {
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_stdout_and_log_ansi(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    _: tempfile::TempDir,
+) {
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
-    let (outcome, output, _) = run_test_once(test_params, Some(Severity::Info))
+    let outcome = run_test_once(reporter, test_params, Some(Severity::Info))
         .await
         .expect("Running test should not fail");
 
@@ -1319,9 +1452,13 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test
     assert_eq!(outcome, Outcome::Passed);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_stdout_and_log_filter_ansi() {
-    let (reporter, output, _) = create_shell_and_dir_reporter();
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_stdout_and_log_filter_ansi(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    _: tempfile::TempDir,
+) {
     let reporter = output::RunReporter::new_ansi_filtered(reporter);
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
@@ -1375,8 +1512,9 @@ async fn test_max_severity(max_severity: Severity) {
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
     test_params.max_severity_logs = Some(max_severity);
-    let (outcome, output, _output_dir) =
-        run_test_once(test_params, None).await.expect("Running test should not fail");
+    let (reporter, output) = create_shell_reporter();
+    let outcome =
+        run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
 
     let expected_output_prefix = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm'
 [RUNNING]	log_and_exit
@@ -1426,13 +1564,13 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_te
     assert_eq!(outcome, expected_outcome);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_does_not_resolve() {
     let test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/nonexistant_test.cm",
     );
     let log_opts = None;
-    let (outcome, _, _) = run_test_once(test_params, log_opts).await.unwrap();
+    let outcome = run_test_once(output::NoopReporter, test_params, log_opts).await.unwrap();
     let origin_error = match outcome {
         Outcome::Error { origin } => origin,
         other => panic!("Expected an error outcome but got {:?}", other),
@@ -1444,10 +1582,14 @@ async fn test_does_not_resolve() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_stdout_to_directory() {
-    let (dir_reporter, output_dir) = create_dir_reporter();
-    let reporter = run_test_suite_lib::output::RunReporter::new(dir_reporter);
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_stdout_to_directory(
+    reporter: TestMuxMuxReporter,
+    _: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
+    let reporter = output::RunReporter::new(reporter);
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
     );
@@ -1508,10 +1650,14 @@ async fn test_stdout_to_directory() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_syslog_to_directory() {
-    let (dir_reporter, output_dir) = create_dir_reporter();
-    let reporter = run_test_suite_lib::output::RunReporter::new(dir_reporter);
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_syslog_to_directory(
+    reporter: TestMuxMuxReporter,
+    _: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
+    let reporter = output::RunReporter::new(reporter);
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
     );
@@ -1566,10 +1712,14 @@ async fn test_syslog_to_directory() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_custom_artifacts_to_directory() {
-    let (dir_reporter, output_dir) = create_dir_reporter();
-    let reporter = run_test_suite_lib::output::RunReporter::new(dir_reporter);
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_custom_artifacts_to_directory(
+    reporter: TestMuxMuxReporter,
+    _: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
+    let reporter = output::RunReporter::new(reporter);
     let test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/custom_artifact_user.cm",
     );
@@ -1620,10 +1770,14 @@ async fn test_custom_artifacts_to_directory() {
     );
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_terminate_signal() {
-    let (dir_reporter, output_dir) = create_dir_reporter();
-    let reporter = run_test_suite_lib::output::RunReporter::new(dir_reporter);
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_terminate_signal(
+    reporter: TestMuxMuxReporter,
+    _: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
+    let reporter = output::RunReporter::new(reporter);
     let test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
@@ -1666,10 +1820,14 @@ async fn test_terminate_signal() {
     // simultaneously, we'll need to support writing to multiple reporters at once as well.
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_terminate_signal_multiple_suites() {
-    let (dir_reporter, output_dir) = create_dir_reporter();
-    let reporter = run_test_suite_lib::output::RunReporter::new(dir_reporter);
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_terminate_signal_multiple_suites(
+    reporter: TestMuxMuxReporter,
+    _: TestOutputView,
+    output_dir: tempfile::TempDir,
+) {
+    let reporter = output::RunReporter::new(reporter);
     let test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );

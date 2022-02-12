@@ -19,6 +19,10 @@
             protocol: "fuchsia.test.manager.RunBuilder",
             from: "#test_manager",
         },
+        {
+            storage: "custom_artifacts",
+            path: "/custom_artifacts",
+        },
     ],
     offer: [
         {
