@@ -316,7 +316,12 @@ To migrate this test to the Test Runner Framework, do the following:
                 {
                     protocol: [ "fuchsia.proto.SomeProtocol" ],
                 },
-                // Note: Wrapped legacy component can only use protocol capabilities.
+                // Note: Wrapped legacy component manifest can only "use"
+                // protocol capabilities. cmx file of the legacy component will
+                // define what other non-protocol capabilities it gets (example
+                // isolated-tmp, /dev, etc). These capabilities will come
+                // directly from the system and can't be mocked or forwarded
+                // from the test to legacy components.
             ],
             // expose capability provided by mock component.
             capabilities: [
