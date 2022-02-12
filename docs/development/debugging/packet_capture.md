@@ -15,7 +15,7 @@ Packet capture is a fundamental tool for developing, debugging, and testing netw
 Make sure to bundle `tcpdump` into your set of base packages.
 
 ```shell
-$ fx set core.x64 --with-base //src/connectivity/network/tcpdump
+$ fx set core.x64 --with-base //third_party/tcpdump
 $ fx build
 ```
 
@@ -32,7 +32,7 @@ By default, this command captures packets for 30 seconds. To configure the durat
 If you don't know the network interface name, run `fx sniff` without options. The error message shows you what interfaces are available. Alternatively, run:
 
 ```shell
-[host] $ fx shell net if list       # Take note of `filepath` in output
+[host] $ fx shell net if list
 ```
 
 ### Show the hexdump of packets over the ethernet interface
