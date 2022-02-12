@@ -66,6 +66,10 @@ fn split_off_node(
 
     let mut node_instructions = bytecode.split_off(NODE_TYPE_HEADER_SZ);
     let remaining_bytecode = node_instructions.split_off(node_inst_sz as usize);
+
+    let mut verification = InstructionVerification::new(symbol_table, &node_instructions);
+    verification.verify_instruction_bytecode()?;
+
     Ok((Node { name_id: node_id, instructions: node_instructions }, remaining_bytecode))
 }
 
@@ -701,7 +705,7 @@ mod test {
         bytecode.extend_from_slice(&node_name_2);
 
         let primary_node_inst = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
-        let additional_node_inst_1 = [0x02, 0x01, 0, 0, 0, 0x02, 0x02, 0, 0, 0x10];
+        let additional_node_inst_1 = [0x02, 0x01, 0, 0, 0, 0x02, 0x01, 0, 0, 0, 0x10];
         let additional_node_inst_2 = [0x30, 0x30];
 
         let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
@@ -940,7 +944,7 @@ mod test {
         bytecode.extend_from_slice(&[3, 0, 0, 0]);
         bytecode.extend_from_slice(&primary_node_name_2);
 
-        let primary_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x02, 0, 0, 0x10];
+        let primary_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x01, 0, 0, 0, 0x10];
         let primary_node_inst_2 = [0x30];
 
         let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
@@ -1037,7 +1041,11 @@ mod test {
         );
         bytecode.extend_from_slice(&additional_node_inst);
 
-        assert_eq!(Err(BytecodeError::InvalidNodeType(0)), DecodedRules::new(bytecode));
+        // Instructions for the primary node end, the next byte is the node type for the next node.
+        assert_eq!(
+            Err(BytecodeError::InvalidOp(RawNodeType::Additional as u8)),
+            DecodedRules::new(bytecode)
+        );
     }
 
     #[test]
@@ -1074,7 +1082,9 @@ mod test {
         // Add the additional node with a size that's too small.
         append_node_header(&mut bytecode, RawNodeType::Additional, 3, 1);
         bytecode.extend_from_slice(&additional_node_inst);
-        assert_eq!(Err(BytecodeError::InvalidNodeType(1)), DecodedRules::new(bytecode));
+
+        // Reach end when trying to read in value type after the inequality operator (0x02).
+        assert_eq!(Err(BytecodeError::UnexpectedEnd), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -1104,6 +1114,566 @@ mod test {
         bytecode.extend_from_slice(&primary_node_inst);
 
         assert_eq!(Err(BytecodeError::IncorrectNodeSectionSize), DecodedRules::new(bytecode));
+    }
+
+    #[test]
+    fn test_invalid_value_type_composite_primary() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        // There is no value type enum for 0x05.
+        let primary_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x05, 0, 0, 0, 0x10];
+
+        let additional_node_inst = [0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 2) + primary_node_inst.len() + additional_node_inst.len())
+                as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+
+        // Add the additional node.
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst);
+
+        assert_eq!(Err(BytecodeError::InvalidValueType(0x05)), DecodedRules::new(bytecode));
+    }
+
+    #[test]
+    fn test_invalid_value_type_composite_additional() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        let primary_node_inst = [0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
+
+        // There is no value type enum for 0x05.
+        let additional_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x05, 0, 0, 0, 0x10];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 2) + primary_node_inst.len() + additional_node_inst.len())
+                as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+
+        // Add the additional node.
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst);
+
+        assert_eq!(Err(BytecodeError::InvalidValueType(0x05)), DecodedRules::new(bytecode));
+    }
+
+    #[test]
+    fn test_value_key_missing_in_symbols_composite_primary() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        // There is no key type (type 0x00) with key 0x10000000.
+        let primary_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x00, 0, 0, 0, 0x10];
+
+        let additional_node_inst = [0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 2) + primary_node_inst.len() + additional_node_inst.len())
+                as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+
+        // Add the additional node.
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst);
+
+        assert_eq!(
+            Err(BytecodeError::MissingEntryInSymbolTable(0x10000000)),
+            DecodedRules::new(bytecode)
+        );
+    }
+
+    #[test]
+    fn test_value_key_missing_in_symbols_composite_additional() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        let primary_node_inst = [0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
+
+        // There is no key type (type 0x00) with key 0x10000000.
+        let additional_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x00, 0, 0, 0, 0x10];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 2) + primary_node_inst.len() + additional_node_inst.len())
+                as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+
+        // Add the additional node.
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst);
+
+        assert_eq!(
+            Err(BytecodeError::MissingEntryInSymbolTable(0x10000000)),
+            DecodedRules::new(bytecode)
+        );
+    }
+
+    #[test]
+    fn test_value_string_missing_in_symbols_composite_primary() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        // There is no string literal (type 0x02) with key 0x10000000.
+        let primary_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x02, 0, 0, 0, 0x10];
+
+        let additional_node_inst = [0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 2) + primary_node_inst.len() + additional_node_inst.len())
+                as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+
+        // Add the additional node.
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst);
+
+        assert_eq!(
+            Err(BytecodeError::MissingEntryInSymbolTable(0x10000000)),
+            DecodedRules::new(bytecode)
+        );
+    }
+
+    #[test]
+    fn test_value_string_missing_in_symbols_composite_additional() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        let primary_node_inst = [0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
+
+        // There is no string literal (type 0x02) with key 0x10000000.
+        let additional_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x02, 0, 0, 0, 0x10];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 2) + primary_node_inst.len() + additional_node_inst.len())
+                as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+
+        // Add the additional node.
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst);
+
+        assert_eq!(
+            Err(BytecodeError::MissingEntryInSymbolTable(0x10000000)),
+            DecodedRules::new(bytecode)
+        );
+    }
+
+    #[test]
+    fn test_value_enum_missing_in_symbols_composite_primary() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        // There is no enum value (type 0x04) with key 0x10000000.
+        let primary_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x04, 0, 0, 0, 0x10];
+
+        let additional_node_inst = [0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 2) + primary_node_inst.len() + additional_node_inst.len())
+                as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+
+        // Add the additional node.
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst);
+
+        assert_eq!(
+            Err(BytecodeError::MissingEntryInSymbolTable(0x10000000)),
+            DecodedRules::new(bytecode)
+        );
+    }
+
+    #[test]
+    fn test_value_enum_missing_in_symbols_composite_additional() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        let primary_node_inst = [0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
+
+        // There is no enum value (type 0x04) with key 0x10000000.
+        let additional_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x04, 0, 0, 0, 0x10];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 2) + primary_node_inst.len() + additional_node_inst.len())
+                as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+
+        // Add the additional node.
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst);
+
+        assert_eq!(
+            Err(BytecodeError::MissingEntryInSymbolTable(0x10000000)),
+            DecodedRules::new(bytecode)
+        );
+    }
+
+    #[test]
+    fn test_value_invalid_bool_composite_primary() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        // 0x10000000 is not a valid bool value.
+        let primary_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x03, 0, 0, 0, 0x10];
+
+        let additional_node_inst = [0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 2) + primary_node_inst.len() + additional_node_inst.len())
+                as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+
+        // Add the additional node.
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst);
+
+        assert_eq!(Err(BytecodeError::InvalidBoolValue(0x10000000)), DecodedRules::new(bytecode));
+    }
+
+    #[test]
+    fn test_value_invalid_bool_composite_additional() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        let primary_node_inst = [0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
+
+        // 0x10000000 is not a valid bool value.
+        let additional_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x03, 0, 0, 0, 0x10];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 2) + primary_node_inst.len() + additional_node_inst.len())
+                as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+
+        // Add the additional node.
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst);
+
+        assert_eq!(Err(BytecodeError::InvalidBoolValue(0x10000000)), DecodedRules::new(bytecode));
+    }
+
+    #[test]
+    fn test_invalid_outofbounds_jump_offset_composite_primary() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        // There is a jump 4 that would go out of bounds for the primary node instructions.
+        let primary_node_inst =
+            [0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0, 0x10, 0x04, 0, 0, 0];
+
+        let additional_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x02, 0, 0, 0x10];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 2) + primary_node_inst.len() + additional_node_inst.len())
+                as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+
+        // Add the additional node.
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst);
+
+        assert_eq!(Err(BytecodeError::InvalidJumpLocation), DecodedRules::new(bytecode));
+    }
+
+    #[test]
+    fn test_invalid_outofbounds_jump_offset_composite_additional() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        let primary_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x01, 0, 0, 0, 0x10];
+
+        // There is a jump 4 that would go out of bounds for the additional node instructions.
+        let additional_node_inst =
+            [0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0, 0x10, 0x04, 0, 0, 0];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 2) + primary_node_inst.len() + additional_node_inst.len())
+                as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+
+        // Add the additional node.
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst);
+
+        assert_eq!(Err(BytecodeError::InvalidJumpLocation), DecodedRules::new(bytecode));
     }
 
     #[test]
