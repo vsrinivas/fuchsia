@@ -5,6 +5,7 @@
 #ifndef LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_INTERNAL_H_
 #define LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_INTERNAL_H_
 
+#include <lib/fdf/dispatcher.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
@@ -32,6 +33,12 @@ void fdf_internal_push_driver(const void* driver);
 
 // Removes the driver at the top of the thread's current call stack.
 void fdf_internal_pop_driver();
+
+// Blocks the current thread until |dispatcher| is idle.
+// This is useful for testing.
+// This should not be called from a thread managed by the driver runtime,
+// such as from tasks or ChannelRead callbacks.
+fdf_status_t fdf_internal_wait_until_dispatcher_idle(fdf_dispatcher_t* dispatcher);
 
 __END_CDECLS
 

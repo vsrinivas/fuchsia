@@ -248,11 +248,19 @@ std::unique_ptr<driver_runtime::CallbackRequest> Dispatcher::RegisterCallbackWit
 
 void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* request,
                                          fdf_status_t callback_reason) {
+  auto idle_check = fit::defer([this]() {
+    fbl::AutoLock lock(&callback_lock_);
+    ZX_ASSERT(num_active_threads_ > 0);
+    num_active_threads_--;
+    IdleCheckLocked();
+  });
+
   // Whether we want to call the callback now, or queue it to be run on the async loop.
   bool direct_call = false;
   std::unique_ptr<driver_runtime::CallbackRequest> callback_request;
   {
     fbl::AutoLock lock(&callback_lock_);
+    num_active_threads_++;
     if (shutting_down_) {
       return;
     }
@@ -333,17 +341,23 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
                                    fbl::RefPtr<Dispatcher> dispatcher_ref) {
   ZX_ASSERT(dispatcher_ref != nullptr);
 
-  auto event_begin_wait = fit::defer([&]() {
+  bool event_begin_wait = true;
+  auto defer = fit::defer([&]() {
     fbl::AutoLock lock(&callback_lock_);
 
-    if (event_waiter && !shutting_down_) {
+    if (event_waiter && !shutting_down_ && event_begin_wait) {
       event_waiter->BeginWaitWithRef(std::move(event_waiter), dispatcher_ref);
     }
+
+    ZX_ASSERT(num_active_threads_ > 0);
+    num_active_threads_--;
+    IdleCheckLocked();
   });
 
   fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> to_call;
   {
     fbl::AutoLock lock(&callback_lock_);
+    num_active_threads_++;
 
     // Parallel callbacks are not allowed in synchronized dispatchers.
     // We should not be scheduled to run on two different dispatcher threads,
@@ -379,7 +393,7 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
     // For synchronized dispatchers, parallel callbacks are disallowed.
     if (unsynchronized_ && !callback_queue_.is_empty()) {
       event_waiter->BeginWaitWithRef(std::move(event_waiter), dispatcher_ref);
-      event_begin_wait.cancel();
+      event_begin_wait = false;
     }
   }
 
@@ -401,6 +415,38 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
     if (callback_queue_.is_empty() && event_waiter->signaled()) {
       event_waiter_->designal();
     }
+  }
+}
+
+zx::status<zx::event> Dispatcher::RegisterForIdleEvent() {
+  fbl::AutoLock lock_(&callback_lock_);
+  auto event = idle_event_manager_.GetIdleEvent();
+  if (event.is_error()) {
+    return event;
+  }
+  if (IsIdleLocked()) {
+    zx_status_t status = idle_event_manager_.Signal();
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+  }
+  return event;
+}
+
+fdf_status_t Dispatcher::WaitUntilIdle() {
+  ZX_ASSERT(!IsRuntimeManagedThread());
+  auto event = RegisterForIdleEvent();
+  if (event.is_error()) {
+    return event.status_value();
+  }
+  return event->wait_one(ZX_EVENT_SIGNALED, zx::time::infinite(), nullptr);
+}
+
+bool Dispatcher::IsIdleLocked() { return (num_active_threads_ == 0) && callback_queue_.is_empty(); }
+
+void Dispatcher::IdleCheckLocked() {
+  if (IsIdleLocked()) {
+    idle_event_manager_.Signal();
   }
 }
 
@@ -432,6 +478,32 @@ zx_status_t Dispatcher::EventWaiter::BeginWaitWithRef(std::unique_ptr<EventWaite
   ZX_ASSERT(dispatcher != nullptr);
   event->dispatcher_ref_ = dispatcher;
   return BeginWait(std::move(event), dispatcher->process_shared_dispatcher_);
+}
+
+zx::status<zx::event> Dispatcher::IdleEventManager::GetIdleEvent() {
+  if (!event_.is_valid()) {
+    // If this is the first waiter to register, we need to create the
+    // idle event manager's event.
+    zx_status_t status = zx::event::create(0, &event_);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+  }
+  zx::event dup;
+  zx_status_t status = event_.duplicate(ZX_RIGHTS_BASIC, &dup);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(std::move(dup));
+}
+
+zx_status_t Dispatcher::IdleEventManager::Signal() {
+  if (!event_.is_valid()) {
+    return ZX_OK;  // No-one is waiting for idle events.
+  }
+  zx_status_t status = event_.signal(0u, ZX_EVENT_SIGNALED);
+  event_.reset();
+  return status;
 }
 
 }  // namespace driver_runtime

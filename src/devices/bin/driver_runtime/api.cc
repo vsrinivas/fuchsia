@@ -152,3 +152,7 @@ __EXPORT void fdf_dispatcher_destroy_async(fdf_dispatcher_t* dispatcher) {
 __EXPORT void fdf_internal_push_driver(const void* driver) { driver_context::PushDriver(driver); }
 
 __EXPORT void fdf_internal_pop_driver() { driver_context::PopDriver(); }
+
+__EXPORT fdf_status_t fdf_internal_wait_until_dispatcher_idle(fdf_dispatcher_t* dispatcher) {
+  return dispatcher->WaitUntilIdle();
+}

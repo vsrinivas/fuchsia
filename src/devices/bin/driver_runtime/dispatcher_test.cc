@@ -49,8 +49,8 @@ class DispatcherTest : public RuntimeTestCase {
   // Registers an async read, which on callback will signal |entered_callback| and block
   // until |complete_blocking_read| is signaled.
   static void RegisterAsyncReadBlock(fdf_handle_t ch, fdf_dispatcher_t* dispatcher,
-                                     sync_completion_t* entered_callback,
-                                     sync_completion_t* complete_blocking_read);
+                                     sync::Completion* entered_callback,
+                                     sync::Completion* complete_blocking_read);
 
   fdf_handle_t local_ch_;
   fdf_handle_t remote_ch_;
@@ -128,14 +128,14 @@ void DispatcherTest::RegisterAsyncReadReply(fdf_handle_t read_channel, fdf_dispa
 
 // static
 void DispatcherTest::RegisterAsyncReadBlock(fdf_handle_t ch, fdf_dispatcher_t* dispatcher,
-                                            sync_completion_t* entered_callback,
-                                            sync_completion_t* complete_blocking_read) {
+                                            sync::Completion* entered_callback,
+                                            sync::Completion* complete_blocking_read) {
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       ch, 0 /* options */,
       [=](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
         ASSERT_OK(status);
-        sync_completion_signal(entered_callback);
-        ASSERT_OK(sync_completion_wait(complete_blocking_read, ZX_TIME_INFINITE));
+        entered_callback->Signal();
+        ASSERT_OK(complete_blocking_read->Wait(zx::time::infinite()));
         delete channel_read;
       });
   ASSERT_OK(channel_read->Begin(dispatcher));
@@ -214,8 +214,8 @@ TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacks) {
 
   // We shouldn't actually block on a dispatcher that doesn't have ALLOW_SYNC_CALLS set,
   // but this is just for synchronizing the test.
-  sync_completion_t entered_callback;
-  sync_completion_t complete_blocking_read;
+  sync::Completion entered_callback;
+  sync::Completion complete_blocking_read;
   ASSERT_NO_FATAL_FAILURE(
       RegisterAsyncReadBlock(local_ch_, dispatcher, &entered_callback, &complete_blocking_read));
 
@@ -229,7 +229,7 @@ TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacks) {
     ASSERT_EQ(ZX_OK, fdf_channel_write(remote_ch_, 0, nullptr, nullptr, 0, nullptr, 0));
   }
 
-  ASSERT_OK(sync_completion_wait(&entered_callback, ZX_TIME_INFINITE));
+  ASSERT_OK(entered_callback.Wait(zx::time::infinite()));
 
   // Write another request. This should also be queued on the async loop.
   std::thread t1 = std::thread([&] {
@@ -245,7 +245,7 @@ TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacks) {
   ASSERT_FALSE(sync_completion_signaled(&read_completion));
 
   // Complete the first callback.
-  sync_completion_signal(&complete_blocking_read);
+  complete_blocking_read.Signal();
 
   // The second callback should complete now.
   ASSERT_OK(sync_completion_wait(&read_completion, ZX_TIME_INFINITE));
@@ -266,8 +266,8 @@ TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacksReentrant) {
 
   struct ReadClient {
     fdf_handle_t channel;
-    sync_completion_t entered_callback;
-    sync_completion_t complete_blocking_read;
+    sync::Completion entered_callback;
+    sync::Completion complete_blocking_read;
   };
 
   std::vector<ReadClient> local(kNumClients);
@@ -289,8 +289,8 @@ TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacksReentrant) {
     loop_.StartThread();
   }
 
-  ASSERT_OK(sync_completion_wait(&local[0].entered_callback, ZX_TIME_INFINITE));
-  sync_completion_signal(&local[0].complete_blocking_read);
+  ASSERT_OK(local[0].entered_callback.Wait(zx::time::infinite()));
+  local[0].complete_blocking_read.Signal();
 
   // Check that we aren't blocking the second thread by posting a task to another
   // dispatcher.
@@ -308,11 +308,11 @@ TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacksReentrant) {
 
   // Allow all the read callbacks to complete.
   for (uint32_t i = 1; i < kNumClients; i++) {
-    sync_completion_signal(&local[i].complete_blocking_read);
+    local[i].complete_blocking_read.Signal();
   }
 
   for (uint32_t i = 0; i < kNumClients; i++) {
-    ASSERT_OK(sync_completion_wait(&local[i].entered_callback, ZX_TIME_INFINITE));
+    ASSERT_OK(local[i].entered_callback.Wait(zx::time::infinite()));
   }
 
   loop_.Quit();
@@ -471,8 +471,8 @@ TEST_F(DispatcherTest, AllowSyncCallsDoesNotDirectlyCall) {
                                            blocking_driver, &blocking_dispatcher));
 
   // Queue a blocking request.
-  sync_completion_t entered_callback;
-  sync_completion_t complete_blocking_read;
+  sync::Completion entered_callback;
+  sync::Completion complete_blocking_read;
   ASSERT_NO_FATAL_FAILURE(RegisterAsyncReadBlock(remote_ch_, blocking_dispatcher, &entered_callback,
                                                  &complete_blocking_read));
 
@@ -485,10 +485,10 @@ TEST_F(DispatcherTest, AllowSyncCallsDoesNotDirectlyCall) {
     ASSERT_EQ(ZX_OK, fdf_channel_write(local_ch_, 0, nullptr, nullptr, 0, nullptr, 0));
   }
 
-  ASSERT_OK(sync_completion_wait(&entered_callback, ZX_TIME_INFINITE));
+  ASSERT_OK(entered_callback.Wait(zx::time::infinite()));
 
   // Signal and wait for the blocking read handler to return.
-  sync_completion_signal(&complete_blocking_read);
+  complete_blocking_read.Signal();
   loop_.Quit();
   loop_.JoinThreads();
 }
@@ -511,8 +511,8 @@ TEST_F(DispatcherTest, AllowSyncCallsDoesNotBlockGlobalLoop) {
   ASSERT_EQ(ZX_OK, fdf_channel_create(0, &blocking_local_ch, &blocking_remote_ch));
 
   // Queue a blocking read.
-  sync_completion_t entered_callback;
-  sync_completion_t complete_blocking_read;
+  sync::Completion entered_callback;
+  sync::Completion complete_blocking_read;
   ASSERT_NO_FATAL_FAILURE(RegisterAsyncReadBlock(blocking_remote_ch, blocking_dispatcher,
                                                  &entered_callback, &complete_blocking_read));
 
@@ -523,7 +523,7 @@ TEST_F(DispatcherTest, AllowSyncCallsDoesNotBlockGlobalLoop) {
     ASSERT_EQ(ZX_OK, fdf_channel_write(blocking_local_ch, 0, nullptr, nullptr, 0, nullptr, 0));
   }
 
-  ASSERT_OK(sync_completion_wait(&entered_callback, ZX_TIME_INFINITE));
+  ASSERT_OK(entered_callback.Wait(zx::time::infinite()));
 
   sync_completion_t read_completion;
   ASSERT_NO_FATAL_FAILURE(SignalOnChannelReadable(remote_ch_, dispatcher, &read_completion));
@@ -540,7 +540,7 @@ TEST_F(DispatcherTest, AllowSyncCallsDoesNotBlockGlobalLoop) {
   ASSERT_NO_FATAL_FAILURE(AssertRead(remote_ch_, nullptr, 0, nullptr, 0));
 
   // Signal and wait for the blocking read handler to return.
-  sync_completion_signal(&complete_blocking_read);
+  complete_blocking_read.Signal();
   loop_.Quit();
   loop_.JoinThreads();
 
@@ -858,6 +858,203 @@ TEST_F(DispatcherTest, CancelTaskAlreadyRunning) {
   });
   ASSERT_OK(task.Post(async_dispatcher));
   ASSERT_OK(completion.Wait(zx::time::infinite()));
+}
+
+//
+// WaitUntilIdle tests
+//
+
+TEST_F(DispatcherTest, WaitUntilIdle) {
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+
+  ASSERT_TRUE(dispatcher->IsIdle());
+  ASSERT_OK(fdf_internal_wait_until_dispatcher_idle(dispatcher));
+  ASSERT_TRUE(dispatcher->IsIdle());
+}
+
+TEST_F(DispatcherTest, WaitUntilIdleWithDirectCall) {
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+
+  // We shouldn't actually block on a dispatcher that doesn't have ALLOW_SYNC_CALLS set,
+  // but this is just for synchronizing the test.
+  sync::Completion entered_callback;
+  sync::Completion complete_blocking_read;
+  ASSERT_NO_FATAL_FAILURE(
+      RegisterAsyncReadBlock(local_ch_, dispatcher, &entered_callback, &complete_blocking_read));
+
+  std::thread t1 = std::thread([&] {
+    // Make the call not reentrant, so that the read will run immediately once the write happens.
+    driver_context::PushDriver(CreateFakeDriver());
+    auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+    ASSERT_EQ(ZX_OK, fdf_channel_write(remote_ch_, 0, nullptr, nullptr, 0, nullptr, 0));
+  });
+
+  // Wait for the read callback to be called, it will block until we signal it to complete.
+  ASSERT_OK(entered_callback.Wait(zx::time::infinite()));
+
+  ASSERT_FALSE(dispatcher->IsIdle());
+
+  // Start a thread that blocks until the dispatcher is idle.
+  sync::Completion wait_started;
+  sync::Completion wait_complete;
+  std::thread t2 = std::thread([&] {
+    wait_started.Signal();
+    ASSERT_OK(fdf_internal_wait_until_dispatcher_idle(dispatcher));
+    ASSERT_TRUE(dispatcher->IsIdle());
+    wait_complete.Signal();
+  });
+
+  ASSERT_OK(wait_started.Wait(zx::time::infinite()));
+  ASSERT_FALSE(wait_complete.signaled());
+  ASSERT_FALSE(dispatcher->IsIdle());
+
+  complete_blocking_read.Signal();
+
+  // Dispatcher should be idle now.
+  ASSERT_OK(wait_complete.Wait(zx::time::infinite()));
+
+  t1.join();
+  t2.join();
+}
+
+TEST_F(DispatcherTest, WaitUntilIdleWithAsyncLoop) {
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+
+  // We shouldn't actually block on a dispatcher that doesn't have ALLOW_SYNC_CALLS set,
+  // but this is just for synchronizing the test.
+  sync::Completion entered_callback;
+  sync::Completion complete_blocking_read;
+  ASSERT_NO_FATAL_FAILURE(
+      RegisterAsyncReadBlock(local_ch_, dispatcher, &entered_callback, &complete_blocking_read));
+
+  // Call is reentrant, so the read will be queued on the async loop.
+  ASSERT_EQ(ZX_OK, fdf_channel_write(remote_ch_, 0, nullptr, nullptr, 0, nullptr, 0));
+  ASSERT_FALSE(dispatcher->IsIdle());
+
+  // Wait for the read callback to be called, it will block until we signal it to complete.
+  ASSERT_OK(entered_callback.Wait(zx::time::infinite()));
+
+  ASSERT_FALSE(dispatcher->IsIdle());
+
+  complete_blocking_read.Signal();
+  ASSERT_OK(fdf_internal_wait_until_dispatcher_idle(dispatcher));
+  ASSERT_TRUE(dispatcher->IsIdle());
+}
+
+TEST_F(DispatcherTest, WaitUntilIdleCanceledRead) {
+  loop_.Quit();
+  loop_.JoinThreads();
+  loop_.ResetQuit();
+
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+
+  auto channel_read = std::make_unique<fdf::ChannelRead>(
+      local_ch_, 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        ASSERT_FALSE(true);  // This callback should never be called.
+      });
+  ASSERT_OK(channel_read->Begin(dispatcher));
+
+  // Call is reentrant, so the read will be queued on the async loop.
+  ASSERT_EQ(ZX_OK, fdf_channel_write(remote_ch_, 0, nullptr, nullptr, 0, nullptr, 0));
+  ASSERT_FALSE(dispatcher->IsIdle());
+
+  ASSERT_OK(channel_read->Cancel());
+
+  ASSERT_OK(fdf_internal_wait_until_dispatcher_idle(dispatcher));
+}
+
+TEST_F(DispatcherTest, WaitUntilIdleWithAsyncLoopMultipleThreads) {
+  loop_.Quit();
+  loop_.JoinThreads();
+  loop_.ResetQuit();
+
+  constexpr uint32_t kNumThreads = 2;
+  constexpr uint32_t kNumClients = 22;
+
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "scheduler_role",
+                                           CreateFakeDriver(), &dispatcher));
+
+  struct ReadClient {
+    fdf::Channel channel;
+    sync::Completion entered_callback;
+    sync::Completion complete_blocking_read;
+  };
+
+  std::vector<ReadClient> local(kNumClients);
+  std::vector<fdf::Channel> remote(kNumClients);
+
+  for (uint32_t i = 0; i < kNumClients; i++) {
+    auto channels = fdf::ChannelPair::Create(0);
+    ASSERT_OK(channels.status_value());
+    local[i].channel = std::move(channels->end0);
+    remote[i] = std::move(channels->end1);
+    ASSERT_NO_FATAL_FAILURE(RegisterAsyncReadBlock(local[i].channel.get(), dispatcher,
+                                                   &local[i].entered_callback,
+                                                   &local[i].complete_blocking_read));
+  }
+
+  fdf::Arena arena;
+  for (uint32_t i = 0; i < kNumClients; i++) {
+    // Call is considered reentrant and will be queued on the async loop.
+    auto write_status = remote[i].Write(0, arena, nullptr, 0, cpp20::span<zx_handle_t>());
+    ASSERT_OK(write_status.status_value());
+  }
+
+  for (uint32_t i = 0; i < kNumThreads; i++) {
+    loop_.StartThread();
+  }
+
+  ASSERT_OK(local[0].entered_callback.Wait(zx::time::infinite()));
+  local[0].complete_blocking_read.Signal();
+
+  ASSERT_FALSE(dispatcher->IsIdle());
+
+  // Allow all the read callbacks to complete.
+  for (uint32_t i = 1; i < kNumClients; i++) {
+    local[i].complete_blocking_read.Signal();
+  }
+
+  ASSERT_OK(fdf_internal_wait_until_dispatcher_idle(dispatcher));
+
+  for (uint32_t i = 0; i < kNumClients; i++) {
+    ASSERT_TRUE(local[i].complete_blocking_read.signaled());
+  }
+}
+
+TEST_F(DispatcherTest, WaitUntilIdleMultipleDispatchers) {
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+
+  fdf_dispatcher_t* dispatcher2;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher2));
+
+  // We shouldn't actually block on a dispatcher that doesn't have ALLOW_SYNC_CALLS set,
+  // but this is just for synchronizing the test.
+  sync::Completion entered_callback;
+  sync::Completion complete_blocking_read;
+  ASSERT_NO_FATAL_FAILURE(
+      RegisterAsyncReadBlock(local_ch_, dispatcher, &entered_callback, &complete_blocking_read));
+
+  // Call is reentrant, so the read will be queued on the async loop.
+  ASSERT_EQ(ZX_OK, fdf_channel_write(remote_ch_, 0, nullptr, nullptr, 0, nullptr, 0));
+  ASSERT_FALSE(dispatcher->IsIdle());
+
+  // Wait for the read callback to be called, it will block until we signal it to complete.
+  ASSERT_OK(entered_callback.Wait(zx::time::infinite()));
+
+  ASSERT_FALSE(dispatcher->IsIdle());
+  ASSERT_TRUE(dispatcher2->IsIdle());
+  ASSERT_OK(fdf_internal_wait_until_dispatcher_idle(dispatcher2));
+
+  complete_blocking_read.Signal();
+  ASSERT_OK(fdf_internal_wait_until_dispatcher_idle(dispatcher));
+  ASSERT_TRUE(dispatcher->IsIdle());
 }
 
 //

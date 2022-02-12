@@ -10,6 +10,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
+#include <lib/zx/status.h>
+
+#include <vector>
 
 #include <fbl/auto_lock.h>
 #include <fbl/canary.h>
@@ -18,6 +21,7 @@
 
 #include "src/devices/bin/driver_runtime/async_loop_owned_event_handler.h"
 #include "src/devices/bin/driver_runtime/callback_request.h"
+#include "src/devices/bin/driver_runtime/driver_context.h"
 
 // Loop shared across all dispatchers in a process.
 class ProcessSharedLoop {
@@ -106,6 +110,19 @@ class Dispatcher : public async_dispatcher_t, public fbl::RefCounted<Dispatcher>
   // May return nullptr if no such callback is found.
   std::unique_ptr<CallbackRequest> CancelAsyncOperation(void* operation);
 
+  // Returns true if the dispatcher has no active threads or queued requests.
+  // This unlocked version of |IsIdleLocked| is called by tests.
+  bool IsIdle() {
+    fbl::AutoLock lock(&callback_lock_);
+    return IsIdleLocked();
+  }
+
+  // Returns ownership of an event that will be signaled once the dispatcher is idle.
+  zx::status<zx::event> RegisterForIdleEvent();
+
+  // Blocks the current thread until the dispatcher is idle.
+  fdf_status_t WaitUntilIdle();
+
   // Returns the dispatcher options specified by the user.
   uint32_t options() const { return options_; }
   bool unsynchronized() const { return unsynchronized_; }
@@ -179,11 +196,35 @@ class Dispatcher : public async_dispatcher_t, public fbl::RefCounted<Dispatcher>
     fbl::RefPtr<Dispatcher> dispatcher_ref_;
   };
 
+  class IdleEventManager {
+   public:
+    // Returns a duplicate of the event that will be signaled when the dispatcher is next idle.
+    zx::status<zx::event> GetIdleEvent();
+    // Signal and reset the idle event.
+    zx_status_t Signal();
+
+   private:
+    zx::event event_;
+  };
+
   // Calls |callback_request|.
   void DispatchCallback(std::unique_ptr<driver_runtime::CallbackRequest> callback_request);
   // Calls the callbacks in |callback_queue_|.
   void DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
                          fbl::RefPtr<Dispatcher> dispatcher_ref);
+
+  // Cancels the callbacks in |to_cancel|, and drops the initial reference to the dispatcher.
+  void CompleteDestroy(fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> to_cancel);
+
+  // Returns true if the dispatcher has no active threads or queued requests.
+  bool IsIdleLocked() __TA_REQUIRES(&callback_lock_);
+
+  // Checks whether the dispatcher has entered and idle state and if so notifies any registered
+  // waiters.
+  void IdleCheckLocked() __TA_REQUIRES(&callback_lock_);
+
+  // Returns true if the current thread is managed by the driver runtime.
+  bool IsRuntimeManagedThread() { return !driver_context::IsCallStackEmpty(); }
 
   // Dispatcher options set by the user.
   uint32_t options_;
@@ -214,6 +255,11 @@ class Dispatcher : public async_dispatcher_t, public fbl::RefCounted<Dispatcher>
 
   // True if |Destroy| has been called.
   bool shutting_down_ __TA_GUARDED(&callback_lock_) = false;
+
+  // Number of threads currently servicing callbacks.
+  size_t num_active_threads_ __TA_GUARDED(&callback_lock_) = 0;
+
+  IdleEventManager idle_event_manager_ __TA_GUARDED(&callback_lock_);
 
   fbl::Canary<fbl::magic("FDFD")> canary_;
 };
