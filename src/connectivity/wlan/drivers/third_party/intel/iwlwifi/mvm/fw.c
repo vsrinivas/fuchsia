@@ -1170,12 +1170,12 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
     goto error;
   }
 
-#if 0   // NEEDS_PORTING
-    // TODO(fxbug.dev/29818): port iwl_mvm_add_aux_sta later.
-    /* Add auxiliary station for scanning */
-    ret = iwl_mvm_add_aux_sta(mvm);
-    if (ret) { goto error; }
-#endif  // NEEDS_PORTING
+  /* Add auxiliary station for scanning */
+  ret = iwl_mvm_add_aux_sta(mvm);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvm, "Add AUX sta failed: %s\n", zx_status_get_string(ret));
+    goto error;
+  }
 
   /* Add all the PHY contexts with a default value */
   wlan_channel_t chandef = {

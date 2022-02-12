@@ -949,25 +949,22 @@ static inline void iwl_trans_txq_free(struct iwl_trans* trans, int queue) {
   trans->ops->txq_free(trans, queue);
 }
 
-#if 0   // NEEDS_PORTING
-static inline int
-iwl_trans_txq_alloc(struct iwl_trans* trans,
-                    __le16 flags, uint8_t sta_id, uint8_t tid,
-                    int cmd_id, int size,
-                    unsigned int wdg_timeout) {
-    if (WARN_ON_ONCE(!trans->ops->txq_alloc)) {
-        return -ENOTSUPP;
-    }
+static inline zx_status_t iwl_trans_txq_alloc(struct iwl_trans* trans, __le16 flags, uint8_t sta_id,
+                                              uint8_t tid, int cmd_id, int size,
+                                              unsigned int wdg_timeout) {
+  if (WARN_ON_ONCE(!trans->ops->txq_alloc)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
-        IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-        return -EIO;
-    }
+  if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
+    IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+    return ZX_ERR_IO;
+  }
 
-    return trans->ops->txq_alloc(trans, flags, sta_id, tid,
-                                 cmd_id, size, wdg_timeout);
+  return trans->ops->txq_alloc(trans, flags, sta_id, tid, cmd_id, size, wdg_timeout);
 }
 
+#if 0   // NEEDS_PORTING
 static inline void iwl_trans_txq_set_shared_mode(struct iwl_trans* trans,
         int queue, bool shared_mode) {
     if (trans->ops->txq_set_shared_mode) {

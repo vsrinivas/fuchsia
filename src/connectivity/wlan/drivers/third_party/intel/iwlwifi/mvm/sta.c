@@ -747,7 +747,6 @@ static int iwl_mvm_find_free_queue(struct iwl_mvm* mvm, uint8_t sta_id, int minq
   return -1;
 }
 
-#if 0   // NEEDS_PORTING
 static int iwl_mvm_tvqm_enable_txq(struct iwl_mvm* mvm, uint8_t sta_id, uint8_t tid,
                                    unsigned int timeout) {
   int queue, size = IWL_DEFAULT_QUEUE_SIZE;
@@ -772,6 +771,7 @@ static int iwl_mvm_tvqm_enable_txq(struct iwl_mvm* mvm, uint8_t sta_id, uint8_t 
   return queue;
 }
 
+#if 0   // NEEDS_PORTING
 static int iwl_mvm_sta_alloc_queue_tvqm(struct iwl_mvm* mvm, struct ieee80211_sta* sta, uint8_t ac,
                                         int tid) {
   struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
@@ -1494,11 +1494,13 @@ static void iwl_mvm_realloc_queues_after_restart(struct iwl_mvm* mvm, struct iee
     }
   }
 }
+#endif  // NEEDS_PORTING
 
-static int iwl_mvm_add_int_sta_common(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta,
-                                      const uint8_t* addr, uint16_t mac_id, uint16_t color) {
+static zx_status_t iwl_mvm_add_int_sta_common(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta,
+                                              const uint8_t* addr, uint16_t mac_id,
+                                              uint16_t color) {
   struct iwl_mvm_add_sta_cmd cmd;
-  int ret;
+  zx_status_t ret;
   uint32_t status = ADD_STA_SUCCESS;
 
   iwl_assert_lock_held(&mvm->mutex);
@@ -1520,22 +1522,21 @@ static int iwl_mvm_add_int_sta_common(struct iwl_mvm* mvm, struct iwl_mvm_int_st
   }
 
   ret = iwl_mvm_send_cmd_pdu_status(mvm, ADD_STA, iwl_mvm_add_sta_cmd_size(mvm), &cmd, &status);
-  if (ret) {
+  if (ret != ZX_OK) {
     return ret;
   }
 
   switch (status & IWL_ADD_STA_STATUS_MASK) {
     case ADD_STA_SUCCESS:
       IWL_DEBUG_INFO(mvm, "Internal station added.\n");
-      return 0;
+      return ZX_OK;
     default:
-      ret = -EIO;
+      ret = ZX_ERR_IO;
       IWL_ERR(mvm, "Add internal station failed, status=0x%x\n", status);
       break;
   }
   return ret;
 }
-#endif  // NEEDS_PORTING
 
 zx_status_t iwl_mvm_add_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta) {
   int ret, sta_id;
@@ -1916,7 +1917,7 @@ zx_status_t iwl_mvm_rm_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_s
   return ret;
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 int iwl_mvm_rm_sta_id(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint8_t sta_id) {
   int ret = iwl_mvm_rm_sta_common(mvm, sta_id);
 
@@ -1925,13 +1926,16 @@ int iwl_mvm_rm_sta_id(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint8_t st
   RCU_INIT_POINTER(mvm->fw_id_to_mac_id[sta_id], NULL);
   return ret;
 }
+#endif  // NEEDS_PORTING
 
-int iwl_mvm_allocate_int_sta(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta, uint32_t qmask,
-                             enum nl80211_iftype iftype, enum iwl_sta_type type) {
+zx_status_t iwl_mvm_allocate_int_sta(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta,
+                                     uint32_t qmask, wlan_mac_role_t iftype,
+                                     enum iwl_sta_type type) {
   if (!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) || sta->sta_id == IWL_MVM_INVALID_STA) {
     sta->sta_id = iwl_mvm_find_free_sta_id(mvm, iftype);
     if (WARN_ON_ONCE(sta->sta_id == IWL_MVM_INVALID_STA)) {
-      return -ENOSPC;
+      IWL_WARN(mvm, "int_sta should be not in-use (instead it is %d)\n", sta->sta_id);
+      return ZX_ERR_NO_RESOURCES;
     }
   }
 
@@ -1939,12 +1943,17 @@ int iwl_mvm_allocate_int_sta(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta, u
   sta->type = type;
 
   /* put a non-NULL value so iterating over the stations won't stop */
-  rcu_assign_pointer(mvm->fw_id_to_mac_id[sta->sta_id], ERR_PTR(-EINVAL));
-  return 0;
+  static struct iwl_mvm_sta dummy = {};
+  iwl_rcu_store(mvm->fw_id_to_mac_id[sta->sta_id], &dummy);
+  return ZX_OK;
 }
 
 void iwl_mvm_dealloc_int_sta(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta) {
-  RCU_INIT_POINTER(mvm->fw_id_to_mac_id[sta->sta_id], NULL);
+  if (sta->sta_id == IWL_MVM_INVALID_STA) {
+    return;  // already released.
+  }
+
+  iwl_rcu_store(mvm->fw_id_to_mac_id[sta->sta_id], NULL);
   memset(sta, 0, sizeof(struct iwl_mvm_int_sta));
   sta->sta_id = IWL_MVM_INVALID_STA;
 }
@@ -1970,24 +1979,25 @@ static void iwl_mvm_enable_aux_snif_queue(struct iwl_mvm* mvm, uint16_t* queue, 
   }
 }
 
-int iwl_mvm_add_aux_sta(struct iwl_mvm* mvm) {
-  int ret;
+zx_status_t iwl_mvm_add_aux_sta(struct iwl_mvm* mvm) {
+  zx_status_t ret;
 
   iwl_assert_lock_held(&mvm->mutex);
 
   /* Allocate aux station and assign to it the aux queue */
   ret = iwl_mvm_allocate_int_sta(mvm, &mvm->aux_sta, BIT(mvm->aux_queue),
-                                 NL80211_IFTYPE_UNSPECIFIED, IWL_STA_AUX_ACTIVITY);
-  if (ret) {
+                                 0 /* NL80211_IFTYPE_UNSPECIFIED */, IWL_STA_AUX_ACTIVITY);
+  if (ret != ZX_OK) {
     return ret;
   }
 
   /* Map Aux queue to fifo - needs to happen before adding Aux station */
-  if (!iwl_mvm_has_new_tx_api(mvm))
+  if (!iwl_mvm_has_new_tx_api(mvm)) {
     iwl_mvm_enable_aux_snif_queue(mvm, &mvm->aux_queue, mvm->aux_sta.sta_id, IWL_MVM_TX_FIFO_MCAST);
+  }
 
   ret = iwl_mvm_add_int_sta_common(mvm, &mvm->aux_sta, NULL, MAC_INDEX_AUX, 0);
-  if (ret) {
+  if (ret != ZX_OK) {
     iwl_mvm_dealloc_int_sta(mvm, &mvm->aux_sta);
     return ret;
   }
@@ -1996,12 +2006,14 @@ int iwl_mvm_add_aux_sta(struct iwl_mvm* mvm) {
    * For 22000 firmware and on we cannot add queue to a station unknown
    * to firmware so enable queue here - after the station was added
    */
-  if (iwl_mvm_has_new_tx_api(mvm))
+  if (iwl_mvm_has_new_tx_api(mvm)) {
     iwl_mvm_enable_aux_snif_queue(mvm, &mvm->aux_queue, mvm->aux_sta.sta_id, IWL_MVM_TX_FIFO_MCAST);
+  }
 
-  return 0;
+  return ZX_OK;
 }
 
+#if 0   // NEEDS_PORTING
 int iwl_mvm_add_snif_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
   int ret;
@@ -2042,6 +2054,7 @@ int iwl_mvm_rm_snif_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
 }
 
 void iwl_mvm_dealloc_snif_sta(struct iwl_mvm* mvm) { iwl_mvm_dealloc_int_sta(mvm, &mvm->snif_sta); }
+#endif  // NEEDS_PORTING
 
 void iwl_mvm_del_aux_sta(struct iwl_mvm* mvm) {
   iwl_assert_lock_held(&mvm->mutex);
@@ -2049,6 +2062,7 @@ void iwl_mvm_del_aux_sta(struct iwl_mvm* mvm) {
   iwl_mvm_dealloc_int_sta(mvm, &mvm->aux_sta);
 }
 
+#if 0  // NEEDS_PORTING
 /*
  * Send the add station command for the vif's broadcast station.
  * Assumes that the station was already allocated.

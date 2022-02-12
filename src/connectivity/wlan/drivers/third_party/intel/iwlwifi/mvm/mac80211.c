@@ -974,7 +974,7 @@ zx_status_t __iwl_mvm_mac_start(struct iwl_mvm* mvm) {
     // Silently return ZX_OK for now. TODO(fxbug.dev/93496).
     return ZX_OK;
   }
-  
+
   iwl_assert_lock_held(&mvm->mutex);
 
   if (test_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status)) {
@@ -1110,10 +1110,10 @@ void __iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
   iwl_mvm_async_handlers_purge(mvm);
   /* async_handlers_list is empty and will stay empty: HW is stopped */
 
-#if 0   // NEEDS_PORTING
-    /* the fw is stopped, the aux sta is dead: clean up driver state */
-    iwl_mvm_del_aux_sta(mvm);
+  /* the fw is stopped, the aux sta is dead: clean up driver state */
+  iwl_mvm_del_aux_sta(mvm);
 
+#if 0   // NEEDS_PORTING
     /*
      * Clear IN_HW_RESTART and HW_RESTART_REQUESTED flag when stopping the
      * hw (as restart_complete() won't be called in this case) and mac80211

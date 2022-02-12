@@ -281,6 +281,13 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
     // This must be called after we verify the expected commands and restore the mock command
     // callback so that the stop command doesn't mess up the test case expectation.
     device_->WlanSoftmacStop();
+
+    // The AUX sta is added in iwl_mvm_up(). In the normal process, it is deleted in the
+    // __iwl_mvm_mac_stop(), which is out of this test scope. So, manually call it to remove it.
+    mtx_lock(&mvmvif_->mvm->mutex);
+    iwl_mvm_del_aux_sta(mvmvif_->mvm);
+    mtx_unlock(&mvmvif_->mvm->mutex);
+
     VerifyStaHasBeenRemoved();
   }
 
@@ -623,6 +630,20 @@ TEST_F(MacInterfaceTest, TestFailedAddSta) {
   ASSERT_EQ(ZX_ERR_BUFFER_TOO_SMALL, ConfigureBss(&kBssConfig));
 }
 
+// Test whether the AUX sta (for active scan) is added.
+//
+TEST_F(MacInterfaceTest, TestAuxSta) {
+  ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
+  ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+
+  auto aux_sta = &mvmvif_->mvm->aux_sta;
+  EXPECT_EQ(IWL_STA_AUX_ACTIVITY, aux_sta->type);
+  EXPECT_NE(IWL_MVM_INVALID_STA, aux_sta->sta_id);
+  EXPECT_NE(nullptr, mvmvif_->mvm->fw_id_to_mac_id[0]);  // Assume it is the first one.
+
+  // The removal check is done in VerifyStaHasBeenRemoved() of MacInterfaceTest deconstructor.
+}
+
 // Test exception handling in driver.
 //
 TEST_F(MacInterfaceTest, TestExceptionHandling) {
@@ -641,7 +662,8 @@ TEST_F(MacInterfaceTest, TestExceptionHandling) {
 
   // Test the case we run out of slots for STA.
   std::list<std::unique_ptr<::wlan::iwlwifi::WlanSoftmacDevice>> devices;
-  for (size_t i = 0; i < IWL_MVM_STATION_COUNT; i++) {
+  size_t available_num = IWL_MVM_STATION_COUNT - 1;  // minus the aux_sta.
+  for (size_t i = 0; i < available_num; i++) {
     // Pretend the STA is not assigned so that we can add it again.
     devices.emplace_back(std::make_unique<::wlan::iwlwifi::WlanSoftmacDevice>(
         nullptr, sim_trans_.iwl_trans(), 0, mvmvif_.get()));
