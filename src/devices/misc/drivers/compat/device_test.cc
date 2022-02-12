@@ -285,3 +285,35 @@ TEST_F(DeviceTest, DeviceMetadata) {
   status = device.GetMetadata(DEVICE_METADATA_BOARD_PRIVATE, &found, sizeof(found), &found_size);
   ASSERT_EQ(ZX_ERR_NOT_FOUND, status);
 }
+
+TEST_F(DeviceTest, DeviceFragmentMetadata) {
+  // Create a device.
+  zx_protocol_device_t ops{};
+  compat::Device device("test-device", nullptr, {}, &ops, std::nullopt, logger(), dispatcher());
+
+  // Add metadata to the device.
+  const uint64_t metadata = 0xAABBCCDDEEFF0011;
+  zx_status_t status = device.AddMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+  ASSERT_EQ(ZX_OK, status);
+
+  // Get the metadata.
+  uint64_t found = 0;
+  size_t found_size = 0;
+  status = device_get_fragment_metadata(device.ZxDevice(), "fragment-name", DEVICE_METADATA_PRIVATE,
+                                        &found, sizeof(found), &found_size);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(metadata, found);
+  EXPECT_EQ(sizeof(metadata), found_size);
+}
+
+TEST_F(DeviceTest, GetFragmentProtocolFromDevice) {
+  // Create a device with a get_protocol hook.
+  zx_protocol_device_t ops{};
+  ops.get_protocol = [](void* ctx, uint32_t proto_id, void* protocol) {
+    EXPECT_EQ(ZX_PROTOCOL_BLOCK, proto_id);
+    return ZX_OK;
+  };
+  compat::Device with("with-protocol", nullptr, {}, &ops, std::nullopt, logger(), dispatcher());
+  ASSERT_EQ(ZX_OK, device_get_fragment_protocol(with.ZxDevice(), "fragment-name", ZX_PROTOCOL_BLOCK,
+                                                nullptr));
+}

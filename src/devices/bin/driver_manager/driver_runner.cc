@@ -277,11 +277,13 @@ std::vector<Node::OwnedOffer>& Node::offers() const {
 
 fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() const {
   auto primary_parent = PrimaryParent(parents_);
+  // If this node is colocated with its parent, then provide the symbols.
   if (primary_parent != nullptr && primary_parent->driver_host_ == driver_host_) {
-    // If this node is colocated with its parent, then provide the symbols.
+    // If we are a composite node, then take the symbols of our primary parent.
+    auto& symbols = (parents_.size() > 1) ? primary_parent->symbols_ : symbols_;
     // TODO(fxbug.dev/7999): Remove const_cast once VectorView supports const.
     return fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(
-        const_cast<decltype(symbols_)&>(symbols_));
+        const_cast<decltype(symbols_)&>(symbols));
   }
   return {};
 }

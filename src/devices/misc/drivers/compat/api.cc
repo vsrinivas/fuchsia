@@ -140,19 +140,37 @@ __EXPORT void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fid
   *new_txn = *new_ddk_txn.DeviceFidlTxn();
 }
 
-__EXPORT uint32_t device_get_fragment_count(zx_device_t* dev) { return 0; }
+__EXPORT uint32_t device_get_fragment_count(zx_device_t* dev) {
+  // TODO(fxbug.dev/93678): Fully support composite devices.
+  FDF_LOGL(ERROR, dev->logger(), "DFv2 does not support device_get_fragment_count API yet");
+  return 0;
+}
 
 __EXPORT void device_get_fragments(zx_device_t* dev, composite_device_fragment_t* comp_list,
-                                   size_t comp_count, size_t* comp_actual) {}
+                                   size_t comp_count, size_t* comp_actual) {
+  // TODO(fxbug.dev/93678): Fully support composite devices.
+  FDF_LOGL(ERROR, dev->logger(), "DFv2 does not support device_get_fragments API yet");
+  *comp_actual = 0;
+}
 
 __EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* dev, const char* name,
                                                   uint32_t proto_id, void* out) {
-  return ZX_ERR_NOT_SUPPORTED;
+  // TODO(fxbug.dev/93678): Fully support composite devices.
+  FDF_LOGL(WARNING, dev->logger(),
+           "DFv2 currently only supports primary fragment. Driver requests fragment %s but we are "
+           "returning the primary",
+           name);
+  return dev->GetProtocol(proto_id, out);
 }
 
 __EXPORT zx_status_t device_get_fragment_metadata(zx_device_t* dev, const char* name, uint32_t type,
                                                   void* buf, size_t buflen, size_t* actual) {
-  return ZX_ERR_NOT_SUPPORTED;
+  // TODO(fxbug.dev/93678): Fully support composite devices.
+  FDF_LOGL(WARNING, dev->logger(),
+           "DFv2 currently only supports primary fragment. Driver requests fragment %s but we are "
+           "returning the primary",
+           name);
+  return dev->GetMetadata(type, buf, buflen, actual);
 }
 
 __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out,

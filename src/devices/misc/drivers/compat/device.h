@@ -69,6 +69,7 @@ class Device : public std::enable_shared_from_this<Device>,
   void set_topological_path(std::string path) { topological_path_ = std::move(path); }
 
   fpromise::scope& scope() { return scope_; }
+  driver::Logger& logger() { return logger_; }
 
  private:
   using Metadata = std::vector<uint8_t>;
