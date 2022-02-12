@@ -44,11 +44,13 @@ print_usage_and_exit() {
   echo "Build Termina images for Machina."
   echo ""
   echo "Usage:"
-  echo "  update_cipd_prebuilts.sh work_dir (x64|arm64) [-n] [-f]"
+  echo "  update_cipd_prebuilts.sh work_dir (x64|arm64) [-t target] [-n] [-f]"
   echo ""
   echo "Where:"
   echo "      work_dir - An empty directory to place source trees and build artifacts."
   echo "      Note: script may generate contents of ~125 GB"
+  echo ""
+  echo "   -t target - An optional target: all,clean,debian,angle"
   echo ""
   echo "   -n Dry run. Don't actually upload anything, just show what would be"
   echo "      uploaded."
@@ -118,11 +120,20 @@ build_debian_drivers() {
     echo "Debian build only supports x64"
   fi
 
+  local chroot_dir="${debian_dir}/chroot"
+
   if [ ! -d ${debian_dir} ]; then
-    sudo debootstrap --arch amd64 bullseye ${debian_dir} http://deb.debian.org/debian
-    sudo chroot ${debian_dir} bash -c "dpkg --add-architecture i386"
-    sudo chroot ${debian_dir} bash -c "apt update"
-    sudo chroot ${debian_dir} bash -c "apt install --yes git gcc-multilib g++-multilib meson \
+    mkdir -p ${debian_dir}/src
+
+    sudo debootstrap --arch amd64 bullseye ${chroot_dir} http://deb.debian.org/debian
+
+    # Bind mount sources into chroot so we can edit as regular user outside the chroot
+    sudo mkdir ${chroot_dir}/src
+    sudo mount --bind ${debian_dir}/src ${chroot_dir}/src
+
+    sudo chroot ${chroot_dir} bash -c "dpkg --add-architecture i386"
+    sudo chroot ${chroot_dir} bash -c "apt update"
+    sudo chroot ${chroot_dir} bash -c "apt install --yes git gcc-multilib g++-multilib meson \
       python3-setuptools python3-mako rapidjson-dev googletest libvulkan-dev libvulkan-dev:i386 \
       pkg-config bison flex libwayland-dev libwayland-dev:i386 wayland-protocols \
       libwayland-egl-backend-dev libwayland-egl-backend-dev:i386 libdrm-dev libdrm-dev:i386 \
@@ -134,17 +145,18 @@ build_debian_drivers() {
       libxcb-glx0-dev:i386 libxcb-shm0-dev libxcb-shm0-dev:i386 libxxf86vm-dev libxxf86vm-dev:i386 \
       libpciaccess-dev libpciaccess-dev:i386"
 
-    sudo chroot ${debian_dir} bash -c "git clone https://fuchsia.googlesource.com/third_party/mesa"
-    sudo chroot ${debian_dir} bash -c "git clone https://fuchsia.googlesource.com/fuchsia mesa/subprojects/fuchsia"
+    # Mesa for 32bit ICD build
+    git clone https://fuchsia.googlesource.com/third_party/mesa ${debian_dir}/src/mesa
+    git clone https://fuchsia.googlesource.com/fuchsia ${debian_dir}/src/mesa/subprojects/fuchsia
 
-    sudo chroot ${debian_dir} bash -c "mkdir -p mesa/build"
-    sudo chroot ${debian_dir} bash -c "echo \"${meson_cross_file}\" > mesa/build/crossfile"
+    mkdir -p ${debian_dir}/src/mesa/build32
+    echo "${meson_cross_file}" > ${debian_dir}/src/mesa/build32/crossfile
 
-    sudo chroot ${debian_dir} bash -c "cd mesa/subprojects/fuchsia && ln -s src/graphics/lib/magma/meson-top/meson.build meson.build"
-    sudo chroot ${debian_dir} bash -c "cd mesa/subprojects/fuchsia && ln -s src/graphics/lib/magma/meson-top/meson_options.txt meson_options.txt"
+    (cd ${debian_dir}/src/mesa/subprojects/fuchsia && ln -s src/graphics/lib/magma/meson-top/meson.build meson.build)
+    (cd ${debian_dir}/src/mesa/subprojects/fuchsia && ln -s src/graphics/lib/magma/meson-top/meson_options.txt meson_options.txt)
 
-    sudo chroot ${debian_dir} bash -c "PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig \
-      meson --cross-file mesa/build/crossfile --buildtype release mesa/build mesa \
+    sudo chroot ${chroot_dir} bash -c "PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig \
+      meson --cross-file /src/mesa/build32/crossfile --buildtype release /src/mesa/build32 /src/mesa \
       -Ddriver-backend=magma \
       -Ddri-drivers= \
       -Dgallium-drivers= \
@@ -157,27 +169,27 @@ build_debian_drivers() {
       -Dprefix=/usr \
       -Dlibdir=lib/i386-linux-gnu"
 
-    prefix="/zink/out/install"
+    prefix="/src/zink/out/install"
 
-    sudo chroot ${debian_dir} bash -c "mkdir -p zink/src ${prefix}"
-    sudo chroot ${debian_dir} bash -c "echo \"${meson_cross_file}\" > zink/crossfile"
+    mkdir -p ${debian_dir}/src/zink/src ${debian_dir}${prefix}
+    echo "${meson_cross_file}" > ${debian_dir}/src/zink/crossfile
 
     # For dependencies that are newer than the system provided, build from source
-    sudo chroot ${debian_dir} bash -c "git clone https://gitlab.freedesktop.org/wayland/wayland-protocols -b 1.24 zink/src/wayland-protocols"
-    sudo chroot ${debian_dir} bash -c "meson --prefix=${prefix} zink/src/wayland-protocols zink/out/wayland-protocols"
-    sudo chroot ${debian_dir} bash -c "ninja -C zink/out/wayland-protocols install"
+    git clone https://gitlab.freedesktop.org/wayland/wayland-protocols -b 1.24 ${debian_dir}/src/zink/src/wayland-protocols
+    git clone https://gitlab.freedesktop.org/mesa/drm.git -b libdrm-2.4.109 ${debian_dir}/src/zink/src/drm
+    git clone https://fuchsia.googlesource.com/third_party/mesa -b sandbox/zink-magma ${debian_dir}/src/zink/src/mesa
 
-    sudo chroot ${debian_dir} bash -c "git clone https://gitlab.freedesktop.org/mesa/drm.git -b libdrm-2.4.109 zink/src/drm"
-    sudo chroot ${debian_dir} bash -c "meson --prefix=${prefix} zink/src/drm zink/out/drm/build64"
-    sudo chroot ${debian_dir} bash -c "ninja -C zink/out/drm/build64 install"
-    sudo chroot ${debian_dir} bash -c "PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig \
-      meson --cross-file zink/crossfile --prefix=${prefix} zink/src/drm zink/out/drm/build32"
-    sudo chroot ${debian_dir} bash -c "ninja -C zink/out/drm/build32 install"
+    sudo chroot ${chroot_dir} bash -c "meson --prefix=${prefix} /src/zink/src/wayland-protocols /src/zink/out/wayland-protocols"
+    sudo chroot ${chroot_dir} bash -c "ninja -C /src/zink/out/wayland-protocols install"
 
-    sudo chroot ${debian_dir} bash -c "git clone https://fuchsia.googlesource.com/third_party/mesa -b sandbox/zink-magma zink/src/mesa"
+    sudo chroot ${chroot_dir} bash -c "meson --prefix=${prefix} /src/zink/src/drm /src/zink/out/drm/build64"
+    sudo chroot ${chroot_dir} bash -c "ninja -C /src/zink/out/drm/build64 install"
+    sudo chroot ${chroot_dir} bash -c "PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig \
+      meson --cross-file /src/zink/crossfile --prefix=${prefix} /src/zink/src/drm /src/zink/out/drm/build32"
+    sudo chroot ${chroot_dir} bash -c "ninja -C /src/zink/out/drm/build32 install"
 
-    sudo chroot ${debian_dir} bash -c "PKG_CONFIG_PATH=${prefix}/lib/pkgconfig:${prefix}/share/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig \
-      meson --cross-file zink/crossfile --buildtype release zink/src/mesa zink/out/mesa/build32 \
+    sudo chroot ${chroot_dir} bash -c "PKG_CONFIG_PATH=${prefix}/lib/pkgconfig:${prefix}/share/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig \
+      meson --cross-file /src/zink/crossfile --buildtype release /src/zink/src/mesa /src/zink/out/mesa/build32 \
       -Ddrm-stubs=true \
       -Ddri-drivers= \
       -Dgallium-drivers=zink \
@@ -192,8 +204,8 @@ build_debian_drivers() {
       -Ddri-search-path=/opt/google/cros-containers/drivers/lib32/dri \
       -Dsysconfdir=/opt/google/cros-containers/etc"
 
-    sudo chroot ${debian_dir} bash -c "PKG_CONFIG_PATH=${prefix}/lib64/pkgconfig:${prefix}/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig \
-      meson --buildtype release zink/src/mesa zink/out/mesa/build64  \
+    sudo chroot ${chroot_dir} bash -c "PKG_CONFIG_PATH=${prefix}/lib64/pkgconfig:${prefix}/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig \
+      meson --buildtype release /src/zink/src/mesa /src/zink/out/mesa/build64  \
       -Ddrm-stubs=true \
       -Ddri-drivers= \
       -Dgallium-drivers=zink \
@@ -209,9 +221,28 @@ build_debian_drivers() {
       -Dsysconfdir=/opt/google/cros-containers/etc"
   fi
 
-  sudo chroot ${debian_dir} bash -c "ninja -C mesa/build"
-  sudo chroot ${debian_dir} bash -c "ninja -C zink/out/mesa/build64"
-  sudo chroot ${debian_dir} bash -c "ninja -C zink/out/mesa/build32"
+  sudo chroot ${chroot_dir} bash -c "ninja -C /src/mesa/build32"
+  sudo chroot ${chroot_dir} bash -c "ninja -C /src/zink/out/mesa/build64"
+  sudo chroot ${chroot_dir} bash -c "ninja -C /src/zink/out/mesa/build32"
+}
+
+copy_debian_drivers() {
+  local -r debian_dir="$1"
+  local -r dest_dir="$2"
+
+  mkdir -p "${dest_dir}/lib64"
+  cp -fv "${debian_dir}/src/zink/out/mesa/build64/src/gallium/targets/dri/libgallium_dri.so" "${dest_dir}/lib64/zink_dri.so"
+  cp -fv "${debian_dir}/src/zink/out/mesa/build64/src/glx/libGL.so.1.2.0" "${dest_dir}/lib64"
+  cp -fv "${debian_dir}/src/zink/out/mesa/build64/src/egl/libEGL.so.1.0.0" "${dest_dir}/lib64"
+  cp -fv "${debian_dir}/src/zink/out/mesa/build64/src/mapi/es2api/libGLESv2.so.2.0.0" "${dest_dir}/lib64"
+
+  mkdir -p "${dest_dir}/lib32"
+  cp -fv "${debian_dir}/src/mesa/build32/src/intel/vulkan/libvulkan_intel.so" "${dest_dir}/lib32"
+
+  cp -fv "${debian_dir}/src/zink/out/mesa/build32/src/gallium/targets/dri/libgallium_dri.so" "${dest_dir}/lib32/zink_dri.so"
+  cp -fv "${debian_dir}/src/zink/out/mesa/build32/src/glx/libGL.so.1.2.0" "${dest_dir}/lib32"
+  cp -fv "${debian_dir}/src/zink/out/mesa/build32/src/egl/libEGL.so.1.0.0" "${dest_dir}/lib32"
+  cp -fv "${debian_dir}/src/zink/out/mesa/build32/src/mapi/es2api/libGLESv2.so.2.0.0" "${dest_dir}/lib32"
 }
 
 build_angle() {
@@ -311,11 +342,14 @@ main() {
     print_usage_and_exit
   fi
 
-  while getopts "nfh" FLAG; do
+  target="all"
+
+  while getopts "nft:h" FLAG; do
     case "${FLAG}" in
     n) dry_run=true ;;
     f) force=true ;;
     h) print_usage_and_exit 0 ;;
+    t) target=${OPTARG} ;;
     *) print_usage_and_exit 1 ;;
     esac
   done
@@ -326,7 +360,11 @@ main() {
     exit 1
   fi
 
-  echo "Working in ${work_dir}..."
+  if [[ "${target}" != "all" && "${target}" != "debian" && "${target}" != "angle" && "${target}" != "clean" ]]; then
+    print_usage_and_exit 1
+  fi
+
+  echo "Working on target ${target} in ${work_dir}..."
 
   declare -r cipd="${FUCHSIA_DIR}/.jiri_root/bin/cipd"
   declare -r dry_run=${dry_run}
@@ -350,62 +388,64 @@ main() {
            path=\"prebuilt/virtualization/packages/termina_guest/images/${arch}\"
            internal=\"true\"/>"
 
-  echo "*** Prepare chromeos tree"
-  create_cros_tree "${work_dir}/cros" "${termina_revision}"
-
-  if [ "${arch}" == "x64" ]; then
-    echo "*** Prepare debian and build"
-    build_debian_drivers "${work_dir}/debian" "${arch}"
-
-    echo "*** Copy debian drivers to chromeos tree"
-    dest_dir=${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files
-
-    mkdir -p "${dest_dir}/lib64"
-    cp -fv "${work_dir}/debian/zink/out/mesa/build64/src/gallium/targets/dri/libgallium_dri.so" "${dest_dir}/lib64/zink_dri.so"
-    cp -fv "${work_dir}/debian/zink/out/mesa/build64/src/glx/libGL.so.1.2.0" "${dest_dir}/lib64"
-    cp -fv "${work_dir}/debian/zink/out/mesa/build64/src/egl/libEGL.so.1.0.0" "${dest_dir}/lib64"
-    cp -fv "${work_dir}/debian/zink/out/mesa/build64/src/mapi/es2api/libGLESv2.so.2.0.0" "${dest_dir}/lib64"
-
-    mkdir -p "${dest_dir}/lib32"
-    cp -fv "${work_dir}/debian/mesa/build/src/intel/vulkan/libvulkan_intel.so" "${dest_dir}/lib32"
-
-    cp -fv "${work_dir}/debian/zink/out/mesa/build32/src/gallium/targets/dri/libgallium_dri.so" "${dest_dir}/lib32/zink_dri.so"
-    cp -fv "${work_dir}/debian/zink/out/mesa/build32/src/glx/libGL.so.1.2.0" "${dest_dir}/lib32"
-    cp -fv "${work_dir}/debian/zink/out/mesa/build32/src/egl/libEGL.so.1.0.0" "${dest_dir}/lib32"
-    cp -fv "${work_dir}/debian/zink/out/mesa/build32/src/mapi/es2api/libGLESv2.so.2.0.0" "${dest_dir}/lib32"
+  if [ "${target}" == "all" ]; then
+    echo "*** Prepare chromeos tree"
+    create_cros_tree "${work_dir}/cros" "${termina_revision}"
   fi
 
-  echo "*** Prepare ANGLE and build"
-  build_angle "${work_dir}/angle" "${arch}"
+  if [[ "${target}" == "all" || "${target}" == "debian" ]]; then
+    if [ "${arch}" == "x64" ]; then
+      echo "*** Prepare debian and build"
+      build_debian_drivers "${work_dir}/debian" "${arch}"
 
-  # Tael board is 32bit userspace so we can't link in our 64bit libraries
-  if [ "${arch}" == "x64" ]; then
-    echo "*** Copy ANGLE outputs to chromeos tree"
-    dest_dir=${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files
-    mkdir -p "${dest_dir}/angle"
-    cp -fv "${work_dir}/angle/out/libEGL.so.1" "${dest_dir}/angle"
-    cp -fv "${work_dir}/angle/out/libGLESv2.so.2" "${dest_dir}/angle"
+      echo "*** Copy debian drivers to chromeos tree"
+      dest_dir=${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files
+      copy_debian_drivers "${work_dir}/debian" "${dest_dir}"
+    fi
   fi
 
-  echo "*** Build Termina image"
-  build_termina_image "${arch}" "${work_dir}/cros"
+  if [[ "${target}" == "all" || "${target}" == "angle" ]]; then
+    echo "*** Prepare ANGLE and build"
+    build_angle "${work_dir}/angle" "${arch}"
 
-  echo "*** Copy Termina image"
-  cp -av "${work_dir}/cros/chroot/home/${USER}/termina-${board}-image" "${work_dir}"
+    # Tael board is 32bit userspace so we can't link in our 64bit libraries
+    if [ "${arch}" == "x64" ]; then
+      echo "*** Copy ANGLE outputs to chromeos tree"
+      dest_dir=${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files
+      mkdir -p "${dest_dir}/angle"
+      cp -fv "${work_dir}/angle/out/libEGL.so.1" "${dest_dir}/angle"
+      cp -fv "${work_dir}/angle/out/libGLESv2.so.2" "${dest_dir}/angle"
+    fi
+  fi
 
-  options=()
-  options+=("create")
-  options+=("-in" "${work_dir}/termina-${board}-image")
-  options+=("-name" "fuchsia_internal/linux/termina-${arch}")
-  options+=("-install-mode" "copy")
-  options+=("-tag" "termina-custom:${termina_revision}")
+  if [[ "${target}" == "all" ]]; then
+    echo "*** Build Termina image"
+    build_termina_image "${arch}" "${work_dir}/cros"
 
-  echo cipd ${options[*]}
-  if [ "$dry_run" != true ] ; then
-    echo "*** Running CIPD - note the instance ID"
-    ${cipd} ${options[*]}
-    echo "Update //integration/fuchsia/prebuilts with the following:"
-    echo "${jiri_entries}"
+    echo "*** Copy Termina image"
+    cp -av "${work_dir}/cros/chroot/home/${USER}/termina-${board}-image" "${work_dir}"
+
+    options=()
+    options+=("create")
+    options+=("-in" "${work_dir}/termina-${board}-image")
+    options+=("-name" "fuchsia_internal/linux/termina-${arch}")
+    options+=("-install-mode" "copy")
+    options+=("-tag" "termina-custom:${termina_revision}")
+
+    echo cipd ${options[*]}
+    if [ "$dry_run" != true ] ; then
+      echo "*** Running CIPD - note the instance ID"
+      ${cipd} ${options[*]}
+      echo "Update //integration/fuchsia/prebuilts with the following:"
+      echo "${jiri_entries}"
+    fi
+  fi
+
+  if [[ "${target}" == "clean" ]]; then
+    if [[ -d "${work_dir}/debian/chroot/src" ]]; then
+      sudo umount -q "${work_dir}/debian/chroot/src"
+    fi
+    sudo rm -rf ${work_dir}/*
   fi
 
   echo "*** Done"
