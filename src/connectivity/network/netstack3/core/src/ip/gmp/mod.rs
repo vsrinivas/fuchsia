@@ -434,7 +434,7 @@ impl<S, P: ProtocolSpecific> GmpHostState<S, P> {
 /// * `old` is `None` if there are currently no timers, otherwise `Some(t)`
 ///   where `t` is the old instant when the currently installed timer should
 ///   fire.
-/// * `resp_time` is the maximum response time required by Query message.
+/// * `max_resp_time` is the maximum response time required by Query message.
 /// * `now` is the current time.
 /// * `actions` is a mutable reference to the actions being built.
 ///
@@ -444,20 +444,17 @@ impl<S, P: ProtocolSpecific> GmpHostState<S, P> {
 fn compute_timer_expiration<I: Instant, P: ProtocolSpecific, R: Rng>(
     rng: &mut R,
     old: Option<I>,
-    resp_time: Duration,
+    max_resp_time: Duration,
     now: I,
     actions: &mut Actions<P>,
 ) -> I {
-    let resp_time_deadline = P::get_max_resp_time(resp_time);
-    if resp_time_deadline.as_millis() == 0 {
+    let max_resp_time = P::get_max_resp_time(max_resp_time);
+    if max_resp_time.as_millis() == 0 {
         now
     } else {
-        let new_deadline = now.checked_add(resp_time_deadline).unwrap();
-        let urgent = match old {
-            Some(old) => new_deadline < old,
-            None => true,
-        };
-        let delay = random_report_timeout(rng, resp_time_deadline);
+        let new_deadline = now.checked_add(max_resp_time).unwrap();
+        let urgent = old.map(|old| new_deadline < old).unwrap_or(true);
+        let delay = random_report_timeout(rng, max_resp_time);
         let timer_expiration = if urgent { now.checked_add(delay).unwrap() } else { old.unwrap() };
         if urgent {
             actions.push_generic(GmpAction::ScheduleReportTimer(delay));

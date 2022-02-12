@@ -134,6 +134,18 @@ impl<T: Eq + Hash> RefCountedHashSet<T> {
     pub(crate) fn contains(&self, value: &T) -> bool {
         self.inner.contains_key(value)
     }
+
+    /// Returns the number of values in the set.
+    #[cfg(test)]
+    pub(crate) fn len(&self) -> usize {
+        self.inner.inner.len()
+    }
+
+    /// Iterates over values and reference counts.
+    #[cfg(test)]
+    pub(crate) fn iter_counts(&self) -> impl Iterator<Item = (&'_ T, usize)> + '_ {
+        self.inner.inner.iter().map(|(key, (count, ()))| (key, *count))
+    }
 }
 
 #[cfg(test)]

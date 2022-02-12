@@ -49,7 +49,7 @@ const PMTU_PLATEAUS: [u32; 12] =
     [65535, 32000, 17914, 8166, 4352, 2002, 1492, 1280, 1006, 508, 296, 68];
 
 /// The timer ID for the path MTU cache.
-#[derive(Default, Clone, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct PmtuTimerId<I: Ip>(IpVersionMarker<I>);
 
 /// The execution context for the path MTU cache.
@@ -377,7 +377,10 @@ mod tests {
 
     use crate::{
         assert_empty,
-        context::{testutil::DummyTimerCtxExt, InstantContext},
+        context::{
+            testutil::{DummyInstant, DummyTimerCtxExt},
+            InstantContext,
+        },
         testutil::TestIpExt,
     };
 
@@ -441,7 +444,7 @@ mod tests {
         let duration = Duration::from_secs(1);
 
         // Advance time to 1s.
-        assert_eq!(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)), 0);
+        assert_empty(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)));
 
         // Update pmtu from local to remote. PMTU should be updated to
         // `new_mtu1` and last updated instant should be updated to the start of
@@ -459,7 +462,7 @@ mod tests {
         );
 
         // Advance time to 2s.
-        assert_eq!(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)), 0);
+        assert_empty(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)));
 
         // Make sure the update worked. PMTU should be updated to `new_mtu1` and
         // last updated instant should be updated to the start of the test + 1s
@@ -478,7 +481,7 @@ mod tests {
         let new_mtu2 = u32::from(I::MINIMUM_LINK_MTU) + 100;
 
         // Advance time to 3s.
-        assert_eq!(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)), 0);
+        assert_empty(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)));
 
         // Updating again should return the last pmtu PMTU should be updated to
         // `new_mtu2` and last updated instant should be updated to the start of
@@ -497,7 +500,7 @@ mod tests {
         );
 
         // Advance time to 4s.
-        assert_eq!(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)), 0);
+        assert_empty(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)));
 
         // Make sure the update worked. PMTU should be updated to `new_mtu2` and
         // last updated instant should be updated to the start of the test + 3s
@@ -516,7 +519,7 @@ mod tests {
         let new_mtu3 = new_mtu2 - 10;
 
         // Advance time to 5s.
-        assert_eq!(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)), 0);
+        assert_empty(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)));
 
         // Make sure update only if new PMTU is less than current (it is). PMTU
         // should be updated to `new_mtu3` and last updated instant should be
@@ -535,7 +538,7 @@ mod tests {
         );
 
         // Advance time to 6s.
-        assert_eq!(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)), 0);
+        assert_empty(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)));
 
         // Make sure the update worked. PMTU should be updated to `new_mtu3` and
         // last updated instant should be updated to the start of the test + 5s
@@ -555,7 +558,7 @@ mod tests {
         let new_mtu4 = new_mtu3 + 50;
 
         // Advance time to 7s.
-        assert_eq!(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)), 0);
+        assert_empty(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)));
 
         // Make sure update only if new PMTU is less than current (it isn't)
         assert_eq!(
@@ -572,7 +575,7 @@ mod tests {
         );
 
         // Advance time to 8s.
-        assert_eq!(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)), 0);
+        assert_empty(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)));
 
         // Make sure the update didn't work. PMTU and last updated should not
         // have changed.
@@ -590,7 +593,7 @@ mod tests {
         let low_mtu = u32::from(I::MINIMUM_LINK_MTU) - 1;
 
         // Advance time to 9s.
-        assert_eq!(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)), 0);
+        assert_empty(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)));
 
         // Updating with MTU value less than the minimum MTU should fail.
         assert_eq!(
@@ -607,7 +610,7 @@ mod tests {
         );
 
         // Advance time to 10s.
-        assert_eq!(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)), 0);
+        assert_empty(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)));
 
         // Make sure the update didn't work. PMTU and last updated should not
         // have changed.
@@ -630,14 +633,14 @@ mod tests {
         let mut cache = PmtuCache::default();
 
         // Make sure there are no timers.
-        assert_empty(ctx.timers().iter());
+        ctx.assert_no_timers_installed();
 
         let new_mtu1 = u32::from(I::MINIMUM_LINK_MTU) + 50;
         let start_time = ctx.now();
         let duration = Duration::from_secs(1);
 
         // Advance time to 1s.
-        assert_eq!(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)), 0);
+        assert_empty(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)));
 
         // Update pmtu from local to remote. PMTU should be updated to
         // `new_mtu1` and last updated instant should be updated to the start of
@@ -655,10 +658,13 @@ mod tests {
         );
 
         // Make sure a task got scheduled.
-        assert_eq!(ctx.timers().len(), 1);
+        ctx.assert_timers_installed([(
+            PmtuTimerId::default(),
+            DummyInstant::from(MAINTENANCE_PERIOD + Duration::from_secs(1)),
+        )]);
 
         // Advance time to 2s.
-        assert_eq!(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)), 0);
+        assert_empty(ctx.trigger_timers_for(duration, get_timer_handler(&mut cache)));
 
         // Make sure the update worked. PMTU should be updated to `new_mtu1` and
         // last updated instant should be updated to the start of the test + 1s
@@ -675,7 +681,7 @@ mod tests {
         );
 
         // Advance time to 30mins.
-        assert_eq!(ctx.trigger_timers_for(duration * 1798, get_timer_handler(&mut cache)), 0);
+        assert_empty(ctx.trigger_timers_for(duration * 1798, get_timer_handler(&mut cache)));
 
         // Update pmtu from local to another remote. PMTU should be updated to
         // `new_mtu1` and last updated instant should be updated to the start of
@@ -691,7 +697,10 @@ mod tests {
 
         // Make sure there is still a task scheduled. (we know no timers got
         // triggered because the `run_for` methods returned 0 so far).
-        assert_eq!(ctx.timers().len(), 1);
+        ctx.assert_timers_installed([(
+            PmtuTimerId::default(),
+            DummyInstant::from(MAINTENANCE_PERIOD + Duration::from_secs(1)),
+        )]);
 
         // Make sure the update worked. PMTU should be updated to `new_mtu2` and
         // last updated instant should be updated to the start of the test +
@@ -714,7 +723,11 @@ mod tests {
         );
 
         // Advance time to 1hr + 1s. Should have triggered a timer.
-        assert_eq!(ctx.trigger_timers_for(duration * 1801, get_timer_handler(&mut cache)), 1);
+        ctx.trigger_timers_for_and_expect(
+            duration * 1801,
+            [PmtuTimerId::default()],
+            get_timer_handler(&mut cache),
+        );
         // Make sure none of the cache data has been marked as stale and
         // removed.
         assert_eq!(
@@ -733,10 +746,17 @@ mod tests {
             start_time + (duration * 1800)
         );
         // Should still have another task scheduled.
-        assert_eq!(ctx.timers().len(), 1);
+        ctx.assert_timers_installed([(
+            PmtuTimerId::default(),
+            DummyInstant::from(MAINTENANCE_PERIOD * 2 + Duration::from_secs(1)),
+        )]);
 
         // Advance time to 3hr + 1s. Should have triggered 2 timers.
-        assert_eq!(ctx.trigger_timers_for(duration * 7200, get_timer_handler(&mut cache)), 2);
+        ctx.trigger_timers_for_and_expect(
+            duration * 7200,
+            [PmtuTimerId::default(), PmtuTimerId::default()],
+            get_timer_handler(&mut cache),
+        );
         // Make sure only the earlier PMTU data got marked as stale and removed.
         assert_eq!(cache.get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get()), None);
         assert_eq!(
@@ -749,10 +769,17 @@ mod tests {
             start_time + (duration * 1800)
         );
         // Should still have another task scheduled.
-        assert_eq!(ctx.timers().len(), 1);
+        ctx.assert_timers_installed([(
+            PmtuTimerId::default(),
+            DummyInstant::from(MAINTENANCE_PERIOD * 4 + Duration::from_secs(1)),
+        )]);
 
         // Advance time to 4hr + 1s. Should have triggered 1 timers.
-        assert_eq!(ctx.trigger_timers_for(duration * 3600, get_timer_handler(&mut cache)), 1);
+        ctx.trigger_timers_for_and_expect(
+            duration * 3600,
+            [PmtuTimerId::default()],
+            get_timer_handler(&mut cache),
+        );
         // Make sure both PMTU data got marked as stale and removed.
         assert_eq!(cache.get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get()), None);
         assert_eq!(
@@ -762,6 +789,6 @@ mod tests {
         assert_eq!(cache.get_pmtu(dummy_config.local_ip.get(), other_ip.get()), None);
         assert_eq!(cache.get_last_updated(dummy_config.local_ip.get(), other_ip.get()), None);
         // Should not have a task scheduled since there is no more PMTU data.
-        assert_empty(ctx.timers().iter());
+        ctx.assert_no_timers_installed();
     }
 }

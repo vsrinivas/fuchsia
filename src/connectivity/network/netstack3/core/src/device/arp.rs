@@ -731,10 +731,14 @@ mod tests {
     use test_case::test_case;
 
     use super::*;
-    use crate::assert_empty;
-    use crate::context::testutil::{DummyInstant, DummyNetwork, DummyTimerCtxExt};
-    use crate::context::InstantContext;
-    use crate::device::ethernet::EthernetLinkDevice;
+    use crate::{
+        assert_empty,
+        context::{
+            testutil::{DummyInstant, DummyNetwork, DummyTimerCtxExt},
+            InstantContext,
+        },
+        device::ethernet::EthernetLinkDevice,
+    };
 
     const TEST_LOCAL_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const TEST_REMOTE_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
@@ -742,6 +746,17 @@ mod tests {
     const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
     const TEST_INVALID_MAC: Mac = Mac::new([0, 0, 0, 0, 0, 0]);
+    const TEST_ENTRY_EXPIRATION_TIMER_ID: ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()> =
+        ArpTimerId {
+            device_id: (),
+            inner: ArpTimerIdInner::EntryExpiration { proto_addr: TEST_REMOTE_IPV4 },
+            _marker: PhantomData,
+        };
+    const TEST_REQUEST_RETRY_TIMER_ID: ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()> = ArpTimerId {
+        device_id: (),
+        inner: ArpTimerIdInner::RequestRetry { proto_addr: TEST_REMOTE_IPV4 },
+        _marker: PhantomData,
+    };
 
     /// A dummy `ArpContext` that stores frames, address resolution events, and
     /// address resolution failure events.
@@ -871,7 +886,7 @@ mod tests {
         instant: Duration,
         id: ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>,
     ) {
-        assert_eq!(ctx.timers().as_slice(), [(DummyInstant::from(instant), id)]);
+        ctx.timer_ctx().assert_timers_installed([(id, DummyInstant::from(instant))]);
     }
 
     fn validate_single_retry_timer(ctx: &DummyCtx, instant: Duration, addr: Ipv4Addr) {
@@ -1023,15 +1038,17 @@ mod tests {
         assert_eq!(lookup(&mut ctx, device_id_0, TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // We should have installed a single retry timer.
-        assert_eq!(ctx.timers().len(), 1);
+        let deadline = ctx.now() + DEFAULT_ARP_REQUEST_PERIOD;
+        let timer = ArpTimerId::new_request_retry(device_id_0, TEST_REMOTE_IPV4);
+        ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
 
         // Deinitializing a different ID should not impact the current timer.
         deinitialize(&mut ctx, device_id_1);
-        assert_eq!(ctx.timers().len(), 1);
+        ctx.timer_ctx().assert_timers_installed([(timer, deadline)]);
 
         // Deinitializing the correct ID should cancel the timer.
         deinitialize(&mut ctx, device_id_0);
-        assert_empty(ctx.timers().iter());
+        ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -1146,7 +1163,10 @@ mod tests {
             );
 
             // Trigger the ARP request retry timer.
-            assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
+            assert_eq!(
+                ctx.trigger_next_timer(TimerHandler::handle_timer),
+                Some(TEST_REQUEST_RETRY_TIMER_ID)
+            );
         }
 
         // We should have sent DEFAULT_ARP_REQUEST_MAX_TRIES requests total. We
@@ -1164,7 +1184,7 @@ mod tests {
         );
 
         // There shouldn't be any timers installed.
-        assert_empty(ctx.timers().iter());
+        ctx.timer_ctx().assert_no_timers_installed();
 
         // The table entry should have been completely removed.
         assert_eq!(ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4), None);
@@ -1498,7 +1518,7 @@ mod tests {
         insert_static_neighbor(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // The timer should have been canceled.
-        assert_empty(ctx.timers().iter());
+        ctx.timer_ctx().assert_no_timers_installed();
 
         // We should have notified the device layer.
         assert_eq!(ctx.get_ref().addr_resolved.as_slice(), [(TEST_REMOTE_IPV4, TEST_REMOTE_MAC)]);
@@ -1522,7 +1542,7 @@ mod tests {
         insert_static_neighbor(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // The timer should have been canceled.
-        assert_empty(ctx.timers().iter());
+        ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -1540,14 +1560,17 @@ mod tests {
         validate_single_entry_timer(&ctx, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, TEST_REMOTE_IPV4);
 
         // Trigger the entry expiration timer.
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
+        assert_eq!(
+            ctx.trigger_next_timer(TimerHandler::handle_timer),
+            Some(TEST_ENTRY_EXPIRATION_TIMER_ID)
+        );
 
         // The right amount of time should have elapsed.
         assert_eq!(ctx.now(), DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD));
         // The entry should have been removed.
         assert_eq!(ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4), None);
         // The timer should have been canceled.
-        assert_empty(ctx.timers().iter());
+        ctx.timer_ctx().assert_no_timers_installed();
         // The device layer should have been notified.
         assert_eq!(ctx.get_ref().addr_resolution_expired, [TEST_REMOTE_IPV4]);
     }
@@ -1568,13 +1591,10 @@ mod tests {
         insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // Let 5 seconds elapse.
-        assert_eq!(
-            ctx.trigger_timers_until_instant(
-                DummyInstant::from(Duration::from_secs(5)),
-                TimerHandler::handle_timer
-            ),
-            0
-        );
+        assert_empty(ctx.trigger_timers_until_instant(
+            DummyInstant::from(Duration::from_secs(5)),
+            TimerHandler::handle_timer,
+        ));
 
         // The entry should still be there.
         assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
@@ -1590,18 +1610,18 @@ mod tests {
         );
 
         // Let the remaining time elapse to the first entry expiration timer.
-        assert_eq!(
-            ctx.trigger_timers_until_instant(
-                DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD),
-                TimerHandler::handle_timer
-            ),
-            0
-        );
+        assert_empty(ctx.trigger_timers_until_instant(
+            DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD),
+            TimerHandler::handle_timer,
+        ));
         // The entry should still be there.
         assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
 
         // Trigger the entry expiration timer.
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
+        assert_eq!(
+            ctx.trigger_next_timer(TimerHandler::handle_timer),
+            Some(TEST_ENTRY_EXPIRATION_TIMER_ID)
+        );
         // The right amount of time should have elapsed.
         assert_eq!(
             ctx.now(),
@@ -1620,9 +1640,9 @@ mod tests {
         let mut ctx = DummyCtx::default();
 
         insert_static_neighbor(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
-        assert_empty(ctx.timers().iter());
+        ctx.timer_ctx().assert_no_timers_installed();
 
         insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
-        assert_empty(ctx.timers().iter());
+        ctx.timer_ctx().assert_no_timers_installed();
     }
 }

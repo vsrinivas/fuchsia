@@ -489,12 +489,18 @@ mod tests {
     use packet_formats::igmp::messages::IgmpMembershipQueryV2;
     use rand_xorshift::XorShiftRng;
 
-    use crate::assert_empty;
-    use crate::context::testutil::{DummyInstant, DummyTimerCtxExt};
-    use crate::context::DualStateContext;
-    use crate::ip::gmp::{Action, GmpAction, MemberState};
-    use crate::ip::DummyDeviceId;
-    use crate::testutil::{new_rng, FakeCryptoRng};
+    use crate::{
+        assert_empty,
+        context::{
+            testutil::{DummyInstant, DummyTimerCtxExt},
+            DualStateContext,
+        },
+        ip::{
+            gmp::{Action, GmpAction, MemberState},
+            DummyDeviceId,
+        },
+        testutil::{new_rng, run_with_many_seeds, FakeCryptoRng},
+    };
 
     /// A dummy [`IgmpContext`] that stores the [`MulticastGroupSet`] and an
     /// optional IPv4 address and subnet that may be returned in calls to
@@ -551,70 +557,74 @@ mod tests {
 
     #[test]
     fn test_igmp_state_with_igmpv1_router() {
-        let mut rng = new_rng(0);
-        let (mut s, _actions) = GmpStateMachine::join_group(&mut rng, DummyInstant::default());
-        let Actions(actions) =
-            s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
-        assert_eq!(
-            actions,
-            [Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(
-                DEFAULT_V1_ROUTER_PRESENT_TIMEOUT
-            ))]
-        );
-        let actions = s.report_timer_expired();
-        assert!(at_least_one_action(
-            actions,
-            Action::<Igmpv2ProtocolSpecific>::Generic(GmpAction::SendReport(
-                Igmpv2ProtocolSpecific { v1_router_present: true },
-            )),
-        ));
+        run_with_many_seeds(|seed| {
+            let mut rng = new_rng(seed);
+            let (mut s, _actions) = GmpStateMachine::join_group(&mut rng, DummyInstant::default());
+            let Actions(actions) =
+                s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
+            assert_eq!(
+                actions,
+                [Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(
+                    DEFAULT_V1_ROUTER_PRESENT_TIMEOUT
+                ))]
+            );
+            let actions = s.report_timer_expired();
+            assert!(at_least_one_action(
+                actions,
+                Action::<Igmpv2ProtocolSpecific>::Generic(GmpAction::SendReport(
+                    Igmpv2ProtocolSpecific { v1_router_present: true },
+                )),
+            ));
+        });
     }
 
     #[test]
     fn test_igmp_state_igmpv1_router_present_timer_expires() {
-        let mut rng = new_rng(0);
-        let (mut s, _actions) = GmpStateMachine::<_, Igmpv2ProtocolSpecific>::join_group(
-            &mut rng,
-            DummyInstant::default(),
-        );
-        let Actions(actions) =
-            s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
-        assert_eq!(
-            actions,
-            [Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(
-                DEFAULT_V1_ROUTER_PRESENT_TIMEOUT
-            ))]
-        );
-        match s.get_inner() {
-            MemberState::Delaying(state) => {
-                assert!(state.get_protocol_specific().v1_router_present);
+        run_with_many_seeds(|seed| {
+            let mut rng = new_rng(seed);
+            let (mut s, _actions) = GmpStateMachine::<_, Igmpv2ProtocolSpecific>::join_group(
+                &mut rng,
+                DummyInstant::default(),
+            );
+            let Actions(actions) =
+                s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
+            assert_eq!(
+                actions,
+                [Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(
+                    DEFAULT_V1_ROUTER_PRESENT_TIMEOUT
+                ))]
+            );
+            match s.get_inner() {
+                MemberState::Delaying(state) => {
+                    assert!(state.get_protocol_specific().v1_router_present);
+                }
+                _ => panic!("Wrong State!"),
             }
-            _ => panic!("Wrong State!"),
-        }
-        s.v1_router_present_timer_expired();
-        match s.get_inner() {
-            MemberState::Delaying(state) => {
-                assert!(!state.get_protocol_specific().v1_router_present);
+            s.v1_router_present_timer_expired();
+            match s.get_inner() {
+                MemberState::Delaying(state) => {
+                    assert!(!state.get_protocol_specific().v1_router_present);
+                }
+                _ => panic!("Wrong State!"),
             }
-            _ => panic!("Wrong State!"),
-        }
-        let Actions(actions) =
-            s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
-        assert_eq!(
-            actions,
-            [Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(
-                DEFAULT_V1_ROUTER_PRESENT_TIMEOUT
-            ))]
-        );
-        let Actions(actions) = s.report_received();
-        assert_eq!(actions, [Action::Generic(GmpAction::StopReportTimer)]);
-        s.v1_router_present_timer_expired();
-        match s.get_inner() {
-            MemberState::Idle(state) => {
-                assert!(!state.get_protocol_specific().v1_router_present);
+            let Actions(actions) =
+                s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
+            assert_eq!(
+                actions,
+                [Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(
+                    DEFAULT_V1_ROUTER_PRESENT_TIMEOUT
+                ))]
+            );
+            let Actions(actions) = s.report_received();
+            assert_eq!(actions, [Action::Generic(GmpAction::StopReportTimer)]);
+            s.v1_router_present_timer_expired();
+            match s.get_inner() {
+                MemberState::Idle(state) => {
+                    assert!(!state.get_protocol_specific().v1_router_present);
+                }
+                _ => panic!("Wrong State!"),
             }
-            _ => panic!("Wrong State!"),
-        }
+        });
     }
 
     const MY_ADDR: SpecifiedAddr<Ipv4Addr> =
@@ -624,6 +634,12 @@ mod tests {
     const GROUP_ADDR: MulticastAddr<Ipv4Addr> = Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS;
     const GROUP_ADDR_2: MulticastAddr<Ipv4Addr> =
         unsafe { MulticastAddr::new_unchecked(Ipv4Addr::new([224, 0, 0, 4])) };
+    const REPORT_DELAY_TIMER_ID: IgmpTimerId<DummyDeviceId> =
+        IgmpTimerId::ReportDelay { device: DummyDeviceId, group_addr: GROUP_ADDR };
+    const REPORT_DELAY_TIMER_ID_2: IgmpTimerId<DummyDeviceId> =
+        IgmpTimerId::ReportDelay { device: DummyDeviceId, group_addr: GROUP_ADDR_2 };
+    const V1_ROUTER_PRESENT_TIMER_ID: IgmpTimerId<DummyDeviceId> =
+        IgmpTimerId::V1RouterPresent { device: DummyDeviceId };
 
     fn receive_igmp_query(ctx: &mut DummyCtx, resp_time: Duration) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipQueryV2>::new_with_resp_time(
@@ -649,8 +665,9 @@ mod tests {
         ctx.receive_igmp_packet(DummyDeviceId, OTHER_HOST_ADDR, MY_ADDR, buff);
     }
 
-    fn setup_simple_test_environment() -> DummyCtx {
+    fn setup_simple_test_environment(seed: u128) -> DummyCtx {
         let mut ctx = DummyCtx::default();
+        ctx.seed_rng(seed);
         ctx.get_mut().addr_subnet = Some(AddrSubnet::new(MY_ADDR.get(), 24).unwrap());
         ctx
     }
@@ -665,113 +682,154 @@ mod tests {
 
     #[test]
     fn test_igmp_simple_integration() {
-        let mut ctx = setup_simple_test_environment();
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+        run_with_many_seeds(|seed| {
+            let mut ctx = setup_simple_test_environment(seed);
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
 
-        receive_igmp_query(&mut ctx, Duration::from_secs(10));
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
+            receive_igmp_query(&mut ctx, Duration::from_secs(10));
+            assert_eq!(
+                ctx.trigger_next_timer(TimerHandler::handle_timer),
+                Some(REPORT_DELAY_TIMER_ID)
+            );
 
-        // We should get two Igmpv2 reports - one for the unsolicited one for
-        // the host to turn into Delay Member state and the other one for the
-        // timer being fired.
-        assert_eq!(ctx.frames().len(), 2);
+            // We should get two Igmpv2 reports - one for the unsolicited one
+            // for the host to turn into Delay Member state and the other one
+            // for the timer being fired.
+            assert_eq!(ctx.frames().len(), 2);
+        });
     }
 
     #[test]
     fn test_igmp_integration_fallback_from_idle() {
-        let mut ctx = setup_simple_test_environment();
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_eq!(ctx.frames().len(), 1);
+        run_with_many_seeds(|seed| {
+            let mut ctx = setup_simple_test_environment(seed);
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(ctx.frames().len(), 1);
 
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        assert_eq!(ctx.frames().len(), 2);
+            assert_eq!(
+                ctx.trigger_next_timer(TimerHandler::handle_timer),
+                Some(REPORT_DELAY_TIMER_ID)
+            );
+            assert_eq!(ctx.frames().len(), 2);
 
-        receive_igmp_query(&mut ctx, Duration::from_secs(10));
+            receive_igmp_query(&mut ctx, Duration::from_secs(10));
 
-        // We have received a query, hence we are falling back to Delay Member
-        // state.
-        let IgmpGroupState(group_state) =
-            IgmpContext::get_state_mut(&mut ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
-        match group_state.get_inner() {
-            MemberState::Delaying(_) => {}
-            _ => panic!("Wrong State!"),
-        }
+            // We have received a query, hence we are falling back to Delay
+            // Member state.
+            let IgmpGroupState(group_state) =
+                IgmpContext::get_state_mut(&mut ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
+            match group_state.get_inner() {
+                MemberState::Delaying(_) => {}
+                _ => panic!("Wrong State!"),
+            }
 
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        assert_eq!(ctx.frames().len(), 3);
-        ensure_ttl_ihl_rtr(&ctx);
+            assert_eq!(
+                ctx.trigger_next_timer(TimerHandler::handle_timer),
+                Some(REPORT_DELAY_TIMER_ID)
+            );
+            assert_eq!(ctx.frames().len(), 3);
+            ensure_ttl_ihl_rtr(&ctx);
+        });
     }
 
     #[test]
     fn test_igmp_integration_igmpv1_router_present() {
-        let mut ctx = setup_simple_test_environment();
+        run_with_many_seeds(|seed| {
+            let mut ctx = setup_simple_test_environment(seed);
 
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_eq!(ctx.timers().len(), 1);
-        let instant1 = ctx.timers()[0].0.clone();
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            let now = ctx.now();
+            ctx.timer_ctx().assert_timers_installed([(
+                REPORT_DELAY_TIMER_ID,
+                now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL),
+            )]);
+            let instant1 = ctx.timer_ctx().timers()[0].0.clone();
 
-        receive_igmp_query(&mut ctx, Duration::from_secs(0));
-        assert_eq!(ctx.frames().len(), 1);
+            receive_igmp_query(&mut ctx, Duration::from_secs(0));
+            assert_eq!(ctx.frames().len(), 1);
 
-        // Since we have heard from the v1 router, we should have set our flag.
-        let IgmpGroupState(group_state) =
-            IgmpContext::get_state_mut(&mut ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
-        match group_state.get_inner() {
-            MemberState::Delaying(state) => {
-                assert!(state.get_protocol_specific().v1_router_present)
+            // Since we have heard from the v1 router, we should have set our
+            // flag.
+            let IgmpGroupState(group_state) =
+                IgmpContext::get_state_mut(&mut ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
+            match group_state.get_inner() {
+                MemberState::Delaying(state) => {
+                    assert!(state.get_protocol_specific().v1_router_present)
+                }
+                _ => panic!("Wrong State!"),
             }
-            _ => panic!("Wrong State!"),
-        }
 
-        assert_eq!(ctx.frames().len(), 1);
-        // Two timers: one for the delayed report, one for the v1 router timer.
-        assert_eq!(ctx.timers().len(), 2);
-        let instant2 = ctx.timers()[1].0.clone();
-        assert_eq!(instant1, instant2);
+            assert_eq!(ctx.frames().len(), 1);
+            // Two timers: one for the delayed report, one for the v1 router
+            // timer.
+            let now = ctx.now();
+            ctx.timer_ctx().assert_timers_installed([
+                (REPORT_DELAY_TIMER_ID, now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL)),
+                (V1_ROUTER_PRESENT_TIMER_ID, now..=(now + DEFAULT_V1_ROUTER_PRESENT_TIMEOUT)),
+            ]);
+            let instant2 = ctx.timer_ctx().timers()[1].0.clone();
+            assert_eq!(instant1, instant2);
 
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        // After the first timer, we send out our V1 report.
-        assert_eq!(ctx.frames().len(), 2);
-        // The last frame being sent should be a V1 report.
-        let (_, frame) = ctx.frames().last().unwrap();
-        // 34 and 0x12 are hacky but they can quickly tell it is a V1 report.
-        assert_eq!(frame[24], 0x12);
+            assert_eq!(
+                ctx.trigger_next_timer(TimerHandler::handle_timer),
+                Some(REPORT_DELAY_TIMER_ID)
+            );
+            // After the first timer, we send out our V1 report.
+            assert_eq!(ctx.frames().len(), 2);
+            // The last frame being sent should be a V1 report.
+            let (_, frame) = ctx.frames().last().unwrap();
+            // 34 and 0x12 are hacky but they can quickly tell it is a V1
+            // report.
+            assert_eq!(frame[24], 0x12);
 
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        // After the second timer, we should reset our flag for v1 routers.
-        let IgmpGroupState(group_state) =
-            IgmpContext::get_state_mut(&mut ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
-        match group_state.get_inner() {
-            MemberState::Idle(state) => assert!(!state.get_protocol_specific().v1_router_present),
-            _ => panic!("Wrong State!"),
-        }
+            assert_eq!(
+                ctx.trigger_next_timer(TimerHandler::handle_timer),
+                Some(V1_ROUTER_PRESENT_TIMER_ID)
+            );
+            // After the second timer, we should reset our flag for v1 routers.
+            let IgmpGroupState(group_state) =
+                IgmpContext::get_state_mut(&mut ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
+            match group_state.get_inner() {
+                MemberState::Idle(state) => {
+                    assert!(!state.get_protocol_specific().v1_router_present)
+                }
+                _ => panic!("Wrong State!"),
+            }
 
-        receive_igmp_query(&mut ctx, Duration::from_secs(10));
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        assert_eq!(ctx.frames().len(), 3);
-        // Now we should get V2 report
-        assert_eq!(ctx.frames().last().unwrap().1[24], 0x16);
-        ensure_ttl_ihl_rtr(&ctx);
+            receive_igmp_query(&mut ctx, Duration::from_secs(10));
+            assert_eq!(
+                ctx.trigger_next_timer(TimerHandler::handle_timer),
+                Some(REPORT_DELAY_TIMER_ID)
+            );
+            assert_eq!(ctx.frames().len(), 3);
+            // Now we should get V2 report
+            assert_eq!(ctx.frames().last().unwrap().1[24], 0x16);
+            ensure_ttl_ihl_rtr(&ctx);
+        });
     }
 
     #[test]
     fn test_igmp_integration_delay_reset_timer() {
-        let mut ctx = setup_simple_test_environment();
         // This seed value was chosen to later produce a timer duration > 100ms.
-        ctx.seed_rng(123456);
+        let mut ctx = setup_simple_test_environment(123456);
         assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_eq!(ctx.timers().len(), 1);
-        let instant1 = ctx.timers()[0].0.clone();
+        let now = ctx.now();
+        ctx.timer_ctx().assert_timers_installed([(
+            REPORT_DELAY_TIMER_ID,
+            now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL),
+        )]);
+        let instant1 = ctx.timer_ctx().timers()[0].0.clone();
         let start = ctx.now();
         let duration = Duration::from_micros(((instant1 - start).as_micros() / 2) as u64);
         assert!(duration.as_millis() > 100);
         receive_igmp_query(&mut ctx, duration);
         assert_eq!(ctx.frames().len(), 1);
-        assert_eq!(ctx.timers().len(), 1);
-        let instant2 = ctx.timers()[0].0.clone();
+        let now = ctx.now();
+        ctx.timer_ctx().assert_timers_installed([(REPORT_DELAY_TIMER_ID, now..=(now + duration))]);
+        let instant2 = ctx.timer_ctx().timers()[0].0.clone();
         // Because of the message, our timer should be reset to a nearer future.
         assert!(instant2 <= instant1);
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
+        assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(REPORT_DELAY_TIMER_ID));
         assert!(ctx.now() - start <= duration);
         assert_eq!(ctx.frames().len(), 2);
         // Make sure it is a V2 report.
@@ -781,131 +839,179 @@ mod tests {
 
     #[test]
     fn test_igmp_integration_last_send_leave() {
-        let mut ctx = setup_simple_test_environment();
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_eq!(ctx.timers().len(), 1);
-        // The initial unsolicited report.
-        assert_eq!(ctx.frames().len(), 1);
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        // The report after the delay.
-        assert_eq!(ctx.frames().len(), 2);
-        assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
-        // Our leave message.
-        assert_eq!(ctx.frames().len(), 3);
+        run_with_many_seeds(|seed| {
+            let mut ctx = setup_simple_test_environment(seed);
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            let now = ctx.now();
+            ctx.timer_ctx().assert_timers_installed([(
+                REPORT_DELAY_TIMER_ID,
+                now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL),
+            )]);
+            // The initial unsolicited report.
+            assert_eq!(ctx.frames().len(), 1);
+            assert_eq!(
+                ctx.trigger_next_timer(TimerHandler::handle_timer),
+                Some(REPORT_DELAY_TIMER_ID)
+            );
+            // The report after the delay.
+            assert_eq!(ctx.frames().len(), 2);
+            assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+            // Our leave message.
+            assert_eq!(ctx.frames().len(), 3);
 
-        let leave_frame = &ctx.frames().last().unwrap().1;
+            let leave_frame = &ctx.frames().last().unwrap().1;
 
-        // Make sure it is a leave message.
-        assert_eq!(leave_frame[24], 0x17);
-        // Make sure the destination is ALL-ROUTERS (224.0.0.2).
-        assert_eq!(leave_frame[16], 224);
-        assert_eq!(leave_frame[17], 0);
-        assert_eq!(leave_frame[18], 0);
-        assert_eq!(leave_frame[19], 2);
-        ensure_ttl_ihl_rtr(&ctx);
+            // Make sure it is a leave message.
+            assert_eq!(leave_frame[24], 0x17);
+            // Make sure the destination is ALL-ROUTERS (224.0.0.2).
+            assert_eq!(leave_frame[16], 224);
+            assert_eq!(leave_frame[17], 0);
+            assert_eq!(leave_frame[18], 0);
+            assert_eq!(leave_frame[19], 2);
+            ensure_ttl_ihl_rtr(&ctx);
+        });
     }
 
     #[test]
     fn test_igmp_integration_not_last_does_not_send_leave() {
-        let mut ctx = setup_simple_test_environment();
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_eq!(ctx.timers().len(), 1);
-        assert_eq!(ctx.frames().len(), 1);
-        receive_igmp_report(&mut ctx);
-        assert_empty(ctx.timers().iter());
-        // The report should be discarded because we have received from someone
-        // else.
-        assert_eq!(ctx.frames().len(), 1);
-        assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
-        // A leave message is not sent.
-        assert_eq!(ctx.frames().len(), 1);
-        ensure_ttl_ihl_rtr(&ctx);
+        run_with_many_seeds(|seed| {
+            let mut ctx = setup_simple_test_environment(seed);
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            let now = ctx.now();
+            ctx.timer_ctx().assert_timers_installed([(
+                REPORT_DELAY_TIMER_ID,
+                now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL),
+            )]);
+            assert_eq!(ctx.frames().len(), 1);
+            receive_igmp_report(&mut ctx);
+            ctx.timer_ctx().assert_no_timers_installed();
+            // The report should be discarded because we have received from
+            // someone else.
+            assert_eq!(ctx.frames().len(), 1);
+            assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+            // A leave message is not sent.
+            assert_eq!(ctx.frames().len(), 1);
+            ensure_ttl_ihl_rtr(&ctx);
+        });
     }
 
     #[test]
     fn test_receive_general_query() {
-        let mut ctx = setup_simple_test_environment();
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR_2), GroupJoinResult::Joined(()));
-        assert_eq!(ctx.timers().len(), 2);
-        // The initial unsolicited report.
-        assert_eq!(ctx.frames().len(), 2);
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        assert_eq!(ctx.frames().len(), 4);
-        receive_igmp_general_query(&mut ctx, Duration::from_secs(10));
-        // Two new timers should be there.
-        assert_eq!(ctx.timers().len(), 2);
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        // Two new reports should be sent.
-        assert_eq!(ctx.frames().len(), 6);
-        ensure_ttl_ihl_rtr(&ctx);
+        run_with_many_seeds(|seed| {
+            let mut ctx = setup_simple_test_environment(seed);
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(
+                ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR_2),
+                GroupJoinResult::Joined(())
+            );
+            let now = ctx.now();
+            let range = now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL);
+            ctx.timer_ctx().assert_timers_installed([
+                (REPORT_DELAY_TIMER_ID, range.clone()),
+                (REPORT_DELAY_TIMER_ID_2, range),
+            ]);
+            // The initial unsolicited report.
+            assert_eq!(ctx.frames().len(), 2);
+            ctx.trigger_timers_and_expect_unordered(
+                [REPORT_DELAY_TIMER_ID, REPORT_DELAY_TIMER_ID_2],
+                TimerHandler::handle_timer,
+            );
+            assert_eq!(ctx.frames().len(), 4);
+            const RESP_TIME: Duration = Duration::from_secs(10);
+            receive_igmp_general_query(&mut ctx, RESP_TIME);
+            // Two new timers should be there.
+            let now = ctx.now();
+            let range = now..=(now + RESP_TIME);
+            ctx.timer_ctx().assert_timers_installed([
+                (REPORT_DELAY_TIMER_ID, range.clone()),
+                (REPORT_DELAY_TIMER_ID_2, range),
+            ]);
+            ctx.trigger_timers_and_expect_unordered(
+                [REPORT_DELAY_TIMER_ID, REPORT_DELAY_TIMER_ID_2],
+                TimerHandler::handle_timer,
+            );
+            // Two new reports should be sent.
+            assert_eq!(ctx.frames().len(), 6);
+            ensure_ttl_ihl_rtr(&ctx);
+        });
     }
 
     #[test]
     fn test_skip_igmp() {
-        // Test that we properly skip executing any `Actions` when IGMP is
-        // disabled for the device.
+        run_with_many_seeds(|seed| {
+            // Test that we properly skip executing any `Actions` when IGMP is
+            // disabled for the device.
 
-        let mut ctx = DummyCtx::default();
-        ctx.get_mut().igmp_enabled = false;
+            let mut ctx = DummyCtx::default();
+            ctx.seed_rng(seed);
+            ctx.get_mut().igmp_enabled = false;
 
-        // Assert that no observable effects have taken place.
-        let assert_no_effect = |ctx: &DummyCtx| {
-            assert_empty(ctx.timers());
-            assert_empty(ctx.frames());
-        };
+            // Assert that no observable effects have taken place.
+            let assert_no_effect = |ctx: &DummyCtx| {
+                ctx.timer_ctx().assert_no_timers_installed();
+                assert_empty(ctx.frames());
+            };
 
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        // We should have joined the group but not executed any `Actions`.
-        assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
-        assert_no_effect(&ctx);
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            // We should have joined the group but not executed any `Actions`.
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_no_effect(&ctx);
 
-        receive_igmp_report(&mut ctx);
-        // We should have executed the transition but not executed any
-        // `Actions`.
-        assert_gmp_state!(ctx, &GROUP_ADDR, Idle);
-        assert_no_effect(&ctx);
+            receive_igmp_report(&mut ctx);
+            // We should have executed the transition but not executed any
+            // `Actions`.
+            assert_gmp_state!(ctx, &GROUP_ADDR, Idle);
+            assert_no_effect(&ctx);
 
-        receive_igmp_query(&mut ctx, Duration::from_secs(10));
-        // We should have executed the transition but not executed any
-        // `Actions`.
-        assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
-        assert_no_effect(&ctx);
+            receive_igmp_query(&mut ctx, Duration::from_secs(10));
+            // We should have executed the transition but not executed any
+            // `Actions`.
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_no_effect(&ctx);
 
-        assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
-        // We should have left the group but not executed any `Actions`.
-        assert!(ctx.get_ref().groups.get(&GROUP_ADDR).is_none());
-        assert_no_effect(&ctx);
+            assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+            // We should have left the group but not executed any `Actions`.
+            assert!(ctx.get_ref().groups.get(&GROUP_ADDR).is_none());
+            assert_no_effect(&ctx);
+        });
     }
 
     #[test]
     fn test_igmp_integration_with_local_join_leave() {
-        // Simple IGMP integration test to check that when we call top-level
-        // multicast join and leave functions, IGMP is performed.
+        run_with_many_seeds(|seed| {
+            // Simple IGMP integration test to check that when we call top-level
+            // multicast join and leave functions, IGMP is performed.
 
-        let mut ctx = setup_simple_test_environment();
+            let mut ctx = setup_simple_test_environment(seed);
 
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
-        assert_eq!(ctx.frames().len(), 1);
-        assert_eq!(ctx.timers().len(), 1);
-        ensure_ttl_ihl_rtr(&ctx);
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_eq!(ctx.frames().len(), 1);
+            let now = ctx.now();
+            let range = now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL);
+            ctx.timer_ctx().assert_timers_installed([(REPORT_DELAY_TIMER_ID, range.clone())]);
+            ensure_ttl_ihl_rtr(&ctx);
 
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::AlreadyMember);
-        assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
-        assert_eq!(ctx.frames().len(), 1);
-        assert_eq!(ctx.timers().len(), 1);
+            assert_eq!(
+                ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR),
+                GroupJoinResult::AlreadyMember
+            );
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_eq!(ctx.frames().len(), 1);
+            ctx.timer_ctx().assert_timers_installed([(REPORT_DELAY_TIMER_ID, range.clone())]);
 
-        assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::StillMember);
-        assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
-        assert_eq!(ctx.frames().len(), 1);
-        assert_eq!(ctx.timers().len(), 1);
+            assert_eq!(
+                ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR),
+                GroupLeaveResult::StillMember
+            );
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_eq!(ctx.frames().len(), 1);
+            ctx.timer_ctx().assert_timers_installed([(REPORT_DELAY_TIMER_ID, range)]);
 
-        assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
-        assert_eq!(ctx.frames().len(), 2);
-        assert_empty(ctx.timers().iter());
-        ensure_ttl_ihl_rtr(&ctx);
+            assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+            assert_eq!(ctx.frames().len(), 2);
+            ctx.timer_ctx().assert_no_timers_installed();
+            ensure_ttl_ihl_rtr(&ctx);
+        });
     }
 }

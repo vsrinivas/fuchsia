@@ -433,13 +433,18 @@ mod tests {
     use rand_xorshift::XorShiftRng;
 
     use super::*;
-    use crate::assert_empty;
-    use crate::context::testutil::{DummyInstant, DummyTimerCtxExt};
-    use crate::context::DualStateContext;
-    use crate::ip::gmp::{Action, MemberState};
-    use crate::ip::DummyDeviceId;
-    use crate::testutil;
-    use crate::testutil::{new_rng, FakeCryptoRng};
+    use crate::{
+        assert_empty,
+        context::{
+            testutil::{DummyInstant, DummyTimerCtxExt},
+            DualStateContext,
+        },
+        ip::{
+            gmp::{Action, MemberState},
+            DummyDeviceId,
+        },
+        testutil::{new_rng, run_with_many_seeds, FakeCryptoRng},
+    };
 
     /// A dummy [`MldContext`] that stores the [`MldInterface`] and an optional
     /// IPv6 link-local address that may be returned in calls to
@@ -492,19 +497,23 @@ mod tests {
 
     #[test]
     fn test_mld_immediate_report() {
-        // Most of the test surface is covered by the GMP implementation, MLD
-        // specific part is mostly passthrough. This test case is here because
-        // MLD allows a router to ask for report immediately, by specifying the
-        // `MaxRespDelay` to be 0. If this is the case, the host should send the
-        // report immediately instead of setting a timer.
-        let mut rng = new_rng(0);
-        let (mut s, _actions) = GmpStateMachine::<_, MldProtocolSpecific>::join_group(
-            &mut rng,
-            DummyInstant::default(),
-        );
-        let actions = s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
-        let vec = actions.into_iter().collect::<Vec<Action<_>>>();
-        assert_eq!(vec, [Action::Specific(ImmediateIdleState)]);
+        run_with_many_seeds(|seed| {
+            // Most of the test surface is covered by the GMP implementation,
+            // MLD specific part is mostly passthrough. This test case is here
+            // because MLD allows a router to ask for report immediately, by
+            // specifying the `MaxRespDelay` to be 0. If this is the case, the
+            // host should send the report immediately instead of setting a
+            // timer.
+            let mut rng = new_rng(seed);
+            let (mut s, _actions) = GmpStateMachine::<_, MldProtocolSpecific>::join_group(
+                &mut rng,
+                DummyInstant::default(),
+            );
+            let actions =
+                s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
+            let vec = actions.into_iter().collect::<Vec<Action<_>>>();
+            assert_eq!(vec, [Action::Specific(ImmediateIdleState)]);
+        });
     }
 
     const MY_IP: SpecifiedAddr<Ipv6Addr> = unsafe {
@@ -516,6 +525,8 @@ mod tests {
     const ROUTER_MAC: Mac = Mac::new([6, 5, 4, 3, 2, 1]);
     const GROUP_ADDR: MulticastAddr<Ipv6Addr> =
         unsafe { MulticastAddr::new_unchecked(Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0, 0, 3])) };
+    const TIMER_ID: MldReportDelay<DummyDeviceId> =
+        MldReportDelay { device: DummyDeviceId, group_addr: GROUP_ADDR };
 
     fn receive_mld_query(
         ctx: &mut DummyCtx,
@@ -620,99 +631,114 @@ mod tests {
 
     #[test]
     fn test_mld_simple_integration() {
-        let mut ctx = DummyCtx::default();
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+        run_with_many_seeds(|seed| {
+            let mut ctx = DummyCtx::default();
+            ctx.seed_rng(seed);
 
-        receive_mld_query(&mut ctx, Duration::from_secs(10), GROUP_ADDR);
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
 
-        // We should get two MLD reports - one for the unsolicited one for the
-        // host to turn into Delay Member state and the other one for the timer
-        // being fired.
-        assert_eq!(ctx.frames().len(), 2);
-        // The frames are all reports.
-        for (_, frame) in ctx.frames() {
-            ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
-            ensure_slice_addr(&frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
-        }
+            receive_mld_query(&mut ctx, Duration::from_secs(10), GROUP_ADDR);
+            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(TIMER_ID));
+
+            // We should get two MLD reports - one for the unsolicited one for
+            // the host to turn into Delay Member state and the other one for
+            // the timer being fired.
+            assert_eq!(ctx.frames().len(), 2);
+            // The frames are all reports.
+            for (_, frame) in ctx.frames() {
+                ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
+                ensure_slice_addr(&frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+            }
+        });
     }
 
     #[test]
     fn test_mld_immediate_query() {
-        testutil::set_logger_for_test();
-        let mut ctx = DummyCtx::default();
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_eq!(ctx.frames().len(), 1);
+        run_with_many_seeds(|seed| {
+            let mut ctx = DummyCtx::default();
+            ctx.seed_rng(seed);
 
-        receive_mld_query(&mut ctx, Duration::from_secs(0), GROUP_ADDR);
-        // The query says that it wants to hear from us immediately.
-        assert_eq!(ctx.frames().len(), 2);
-        // There should be no timers set.
-        assert!(!ctx.trigger_next_timer(TimerHandler::handle_timer));
-        // The frames are all reports.
-        for (_, frame) in ctx.frames() {
-            ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
-            ensure_slice_addr(&frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
-        }
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(ctx.frames().len(), 1);
+
+            receive_mld_query(&mut ctx, Duration::from_secs(0), GROUP_ADDR);
+            // The query says that it wants to hear from us immediately.
+            assert_eq!(ctx.frames().len(), 2);
+            // There should be no timers set.
+            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), None);
+            // The frames are all reports.
+            for (_, frame) in ctx.frames() {
+                ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
+                ensure_slice_addr(&frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+            }
+        });
     }
 
     #[test]
     fn test_mld_integration_fallback_from_idle() {
-        let mut ctx = DummyCtx::default();
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_eq!(ctx.frames().len(), 1);
+        run_with_many_seeds(|seed| {
+            let mut ctx = DummyCtx::default();
+            ctx.seed_rng(seed);
 
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        assert_eq!(ctx.frames().len(), 2);
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(ctx.frames().len(), 1);
 
-        receive_mld_query(&mut ctx, Duration::from_secs(10), GROUP_ADDR);
+            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(TIMER_ID));
+            assert_eq!(ctx.frames().len(), 2);
 
-        // We have received a query, hence we are falling back to Delay Member
-        // state.
-        let MldGroupState(group_state) =
-            MldContext::get_state_mut(&mut ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
-        match group_state.get_inner() {
-            MemberState::Delaying(_) => {}
-            _ => panic!("Wrong State!"),
-        }
+            receive_mld_query(&mut ctx, Duration::from_secs(10), GROUP_ADDR);
 
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        assert_eq!(ctx.frames().len(), 3);
-        // The frames are all reports.
-        for (_, frame) in ctx.frames() {
-            ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
-            ensure_slice_addr(&frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
-        }
+            // We have received a query, hence we are falling back to Delay
+            // Member state.
+            let MldGroupState(group_state) =
+                MldContext::get_state_mut(&mut ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
+            match group_state.get_inner() {
+                MemberState::Delaying(_) => {}
+                _ => panic!("Wrong State!"),
+            }
+
+            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(TIMER_ID));
+            assert_eq!(ctx.frames().len(), 3);
+            // The frames are all reports.
+            for (_, frame) in ctx.frames() {
+                ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
+                ensure_slice_addr(&frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+            }
+        });
     }
 
     #[test]
     fn test_mld_integration_immediate_query_wont_fallback() {
-        let mut ctx = DummyCtx::default();
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_eq!(ctx.frames().len(), 1);
+        run_with_many_seeds(|seed| {
+            let mut ctx = DummyCtx::default();
+            ctx.seed_rng(seed);
 
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        assert_eq!(ctx.frames().len(), 2);
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(ctx.frames().len(), 1);
 
-        receive_mld_query(&mut ctx, Duration::from_secs(0), GROUP_ADDR);
+            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(TIMER_ID));
+            assert_eq!(ctx.frames().len(), 2);
 
-        // Since it is an immediate query, we will send a report immediately and
-        // turn into Idle state again.
-        let MldGroupState(group_state) =
-            MldContext::get_state_mut(&mut ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
-        match group_state.get_inner() {
-            MemberState::Idle(_) => {}
-            _ => panic!("Wrong State!"),
-        }
+            receive_mld_query(&mut ctx, Duration::from_secs(0), GROUP_ADDR);
 
-        // No timers!
-        assert!(!ctx.trigger_next_timer(TimerHandler::handle_timer));
-        assert_eq!(ctx.frames().len(), 3);
-        // The frames are all reports.
-        for (_, frame) in ctx.frames() {
-            ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
-            ensure_slice_addr(&frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
-        }
+            // Since it is an immediate query, we will send a report immediately
+            // and turn into Idle state again.
+            let MldGroupState(group_state) =
+                MldContext::get_state_mut(&mut ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
+            match group_state.get_inner() {
+                MemberState::Idle(_) => {}
+                _ => panic!("Wrong State!"),
+            }
+
+            // No timers!
+            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), None);
+            assert_eq!(ctx.frames().len(), 3);
+            // The frames are all reports.
+            for (_, frame) in ctx.frames() {
+                ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
+                ensure_slice_addr(&frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+            }
+        });
     }
 
     #[test]
@@ -722,18 +748,24 @@ mod tests {
         // value below.
         ctx.seed_rng(123456);
         assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_eq!(ctx.timers().len(), 1);
-        let instant1 = ctx.timers()[0].0.clone();
+        ctx.timer_ctx().assert_timers_installed([(
+            TIMER_ID,
+            DummyInstant::from(Duration::from_micros(590_354)),
+        )]);
+        let instant1 = ctx.timer_ctx().timers()[0].0.clone();
         let start = ctx.now();
         let duration = instant1 - start;
 
         receive_mld_query(&mut ctx, duration, GROUP_ADDR);
         assert_eq!(ctx.frames().len(), 1);
-        assert_eq!(ctx.timers().len(), 1);
-        let instant2 = ctx.timers()[0].0.clone();
+        ctx.timer_ctx().assert_timers_installed([(
+            TIMER_ID,
+            DummyInstant::from(Duration::from_micros(34_751)),
+        )]);
+        let instant2 = ctx.timer_ctx().timers()[0].0.clone();
         // This new timer should be sooner.
         assert!(instant2 <= instant1);
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
+        assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(TIMER_ID));
         assert!(ctx.now() - start <= duration);
         assert_eq!(ctx.frames().len(), 2);
         // The frames are all reports.
@@ -745,153 +777,192 @@ mod tests {
 
     #[test]
     fn test_mld_integration_last_send_leave() {
-        let mut ctx = DummyCtx::default();
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_eq!(ctx.timers().len(), 1);
-        // The initial unsolicited report.
-        assert_eq!(ctx.frames().len(), 1);
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        // The report after the delay.
-        assert_eq!(ctx.frames().len(), 2);
-        assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
-        // Our leave message.
-        assert_eq!(ctx.frames().len(), 3);
-        // The first two messages should be reports.
-        ensure_frame(&ctx.frames()[0].1, 131, GROUP_ADDR, GROUP_ADDR);
-        ensure_slice_addr(&ctx.frames()[0].1, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
-        ensure_frame(&ctx.frames()[1].1, 131, GROUP_ADDR, GROUP_ADDR);
-        ensure_slice_addr(&ctx.frames()[1].1, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
-        // The last one should be the done message whose destination is all
-        // routers.
-        ensure_frame(
-            &ctx.frames()[2].1,
-            132,
-            Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
-            GROUP_ADDR,
-        );
-        ensure_slice_addr(&ctx.frames()[2].1, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+        run_with_many_seeds(|seed| {
+            let mut ctx = DummyCtx::default();
+            ctx.seed_rng(seed);
+
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            let now = ctx.now();
+            ctx.timer_ctx().assert_timers_installed([(
+                TIMER_ID,
+                now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL),
+            )]);
+            // The initial unsolicited report.
+            assert_eq!(ctx.frames().len(), 1);
+            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(TIMER_ID));
+            // The report after the delay.
+            assert_eq!(ctx.frames().len(), 2);
+            assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+            // Our leave message.
+            assert_eq!(ctx.frames().len(), 3);
+            // The first two messages should be reports.
+            ensure_frame(&ctx.frames()[0].1, 131, GROUP_ADDR, GROUP_ADDR);
+            ensure_slice_addr(&ctx.frames()[0].1, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+            ensure_frame(&ctx.frames()[1].1, 131, GROUP_ADDR, GROUP_ADDR);
+            ensure_slice_addr(&ctx.frames()[1].1, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+            // The last one should be the done message whose destination is all
+            // routers.
+            ensure_frame(
+                &ctx.frames()[2].1,
+                132,
+                Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
+                GROUP_ADDR,
+            );
+            ensure_slice_addr(&ctx.frames()[2].1, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+        });
     }
 
     #[test]
     fn test_mld_integration_not_last_does_not_send_leave() {
-        let mut ctx = DummyCtx::default();
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_eq!(ctx.timers().len(), 1);
-        assert_eq!(ctx.frames().len(), 1);
-        receive_mld_report(&mut ctx, GROUP_ADDR);
-        assert_empty(ctx.timers().iter());
-        // The report should be discarded because we have received from someone
-        // else.
-        assert_eq!(ctx.frames().len(), 1);
-        assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
-        // A leave message is not sent.
-        assert_eq!(ctx.frames().len(), 1);
-        // The frames are all reports.
-        for (_, frame) in ctx.frames() {
-            ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
-            ensure_slice_addr(&frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
-        }
+        run_with_many_seeds(|seed| {
+            let mut ctx = DummyCtx::default();
+            ctx.seed_rng(seed);
+
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            let now = ctx.now();
+            ctx.timer_ctx().assert_timers_installed([(
+                TIMER_ID,
+                now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL),
+            )]);
+            assert_eq!(ctx.frames().len(), 1);
+            receive_mld_report(&mut ctx, GROUP_ADDR);
+            ctx.timer_ctx().assert_no_timers_installed();
+            // The report should be discarded because we have received from someone
+            // else.
+            assert_eq!(ctx.frames().len(), 1);
+            assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+            // A leave message is not sent.
+            assert_eq!(ctx.frames().len(), 1);
+            // The frames are all reports.
+            for (_, frame) in ctx.frames() {
+                ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
+                ensure_slice_addr(&frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+            }
+        });
     }
 
     #[test]
     fn test_mld_with_link_local() {
-        let mut ctx = DummyCtx::default();
-        ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
-        for (_, frame) in ctx.frames() {
-            ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
-            ensure_slice_addr(&frame, 8, 24, MY_MAC.to_ipv6_link_local().addr().get());
-        }
+        run_with_many_seeds(|seed| {
+            let mut ctx = DummyCtx::default();
+            ctx.seed_rng(seed);
+
+            ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(TIMER_ID));
+            for (_, frame) in ctx.frames() {
+                ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
+                ensure_slice_addr(&frame, 8, 24, MY_MAC.to_ipv6_link_local().addr().get());
+            }
+        });
     }
 
     #[test]
     fn test_skip_mld() {
-        // Test that we properly skip executing any `Actions` for addresses that
-        // we're supposed to skip (see the comment in `run_actions`) and when
-        // MLD is disabled for the device.
-        let test = |mut ctx: DummyCtx, group| {
-            ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
+        run_with_many_seeds(|seed| {
+            // Test that we properly skip executing any `Actions` for addresses
+            // that we're supposed to skip (see the comment in `run_actions`)
+            // and when MLD is disabled for the device.
+            let test = |mut ctx: DummyCtx, group| {
+                ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
 
-            // Assert that no observable effects have taken place.
-            let assert_no_effect = |ctx: &DummyCtx| {
-                assert_empty(ctx.timers());
-                assert_empty(ctx.frames());
+                // Assert that no observable effects have taken place.
+                let assert_no_effect = |ctx: &DummyCtx| {
+                    ctx.timer_ctx().assert_no_timers_installed();
+                    assert_empty(ctx.frames());
+                };
+
+                assert_eq!(ctx.gmp_join_group(DummyDeviceId, group), GroupJoinResult::Joined(()));
+                // We should have joined the group but not executed any
+                // `Actions`.
+                assert_gmp_state!(ctx, &group, Delaying);
+                assert_no_effect(&ctx);
+
+                receive_mld_report(&mut ctx, group);
+                // We should have executed the transition but not executed any
+                // `Actions`.
+                assert_gmp_state!(ctx, &group, Idle);
+                assert_no_effect(&ctx);
+
+                receive_mld_query(&mut ctx, Duration::from_secs(10), group);
+                // We should have executed the transition but not executed any
+                // `Actions`.
+                assert_gmp_state!(ctx, &group, Delaying);
+                assert_no_effect(&ctx);
+
+                assert_eq!(ctx.gmp_leave_group(DummyDeviceId, group), GroupLeaveResult::Left(()));
+                // We should have left the group but not executed any `Actions`.
+                assert!(ctx.get_ref().groups.get(&group).is_none());
+                assert_no_effect(&ctx);
             };
 
-            assert_eq!(ctx.gmp_join_group(DummyDeviceId, group), GroupJoinResult::Joined(()));
-            // We should have joined the group but not executed any `Actions`.
-            assert_gmp_state!(ctx, &group, Delaying);
-            assert_no_effect(&ctx);
+            let new_ctx = || {
+                let mut ctx = DummyCtx::default();
+                ctx.seed_rng(seed);
+                ctx
+            };
 
-            receive_mld_report(&mut ctx, group);
-            // We should have executed the transition but not executed any
-            // `Actions`.
-            assert_gmp_state!(ctx, &group, Idle);
-            assert_no_effect(&ctx);
+            // Test that we skip executing `Actions` for addresses we're
+            // supposed to skip.
+            test(new_ctx(), Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS);
+            let mut bytes = Ipv6::MULTICAST_SUBNET.network().ipv6_bytes();
+            // Manually set the "scope" field to 0.
+            bytes[1] = bytes[1] & 0xF0;
+            let reserved0 = MulticastAddr::new(Ipv6Addr::from_bytes(bytes)).unwrap();
+            // Manually set the "scope" field to 1 (interface-local).
+            bytes[1] = (bytes[1] & 0xF0) | 1;
+            let iface_local = MulticastAddr::new(Ipv6Addr::from_bytes(bytes)).unwrap();
+            test(new_ctx(), reserved0);
+            test(new_ctx(), iface_local);
 
-            receive_mld_query(&mut ctx, Duration::from_secs(10), group);
-            // We should have executed the transition but not executed any
-            // `Actions`.
-            assert_gmp_state!(ctx, &group, Delaying);
-            assert_no_effect(&ctx);
-
-            assert_eq!(ctx.gmp_leave_group(DummyDeviceId, group), GroupLeaveResult::Left(()));
-            // We should have left the group but not executed any `Actions`.
-            assert!(ctx.get_ref().groups.get(&group).is_none());
-            assert_no_effect(&ctx);
-        };
-
-        // Test that we skip executing `Actions` for addresses we're supposed to
-        // skip.
-        test(DummyCtx::default(), Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS);
-        let mut bytes = Ipv6::MULTICAST_SUBNET.network().ipv6_bytes();
-        // Manually set the "scope" field to 0.
-        bytes[1] = bytes[1] & 0xF0;
-        let reserved0 = MulticastAddr::new(Ipv6Addr::from_bytes(bytes)).unwrap();
-        // Manually set the "scope" field to 1 (interface-local).
-        bytes[1] = (bytes[1] & 0xF0) | 1;
-        let iface_local = MulticastAddr::new(Ipv6Addr::from_bytes(bytes)).unwrap();
-        test(DummyCtx::default(), reserved0);
-        test(DummyCtx::default(), iface_local);
-
-        // Test that we skip executing `Actions` when MLD is disabled on the
-        // device.
-        let mut ctx = DummyCtx::default();
-        ctx.get_mut().mld_enabled = false;
-        test(ctx, GROUP_ADDR);
+            // Test that we skip executing `Actions` when MLD is disabled on the
+            // device.
+            let mut ctx = new_ctx();
+            ctx.get_mut().mld_enabled = false;
+            test(ctx, GROUP_ADDR);
+        });
     }
 
     #[test]
     fn test_mld_integration_with_local_join_leave() {
-        // Simple MLD integration test to check that when we call top-level
-        // multicast join and leave functions, MLD is performed.
+        run_with_many_seeds(|seed| {
+            // Simple MLD integration test to check that when we call top-level
+            // multicast join and leave functions, MLD is performed.
+            let mut ctx = DummyCtx::default();
+            ctx.seed_rng(seed);
 
-        let mut ctx = DummyCtx::default();
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_eq!(ctx.frames().len(), 1);
+            let now = ctx.now();
+            let range = now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL);
+            ctx.timer_ctx().assert_timers_installed([(TIMER_ID, range.clone())]);
+            let frame = &ctx.frames().last().unwrap().1;
+            ensure_frame(frame, 131, GROUP_ADDR, GROUP_ADDR);
+            ensure_slice_addr(frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
 
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-        assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
-        assert_eq!(ctx.frames().len(), 1);
-        assert_eq!(ctx.timers().len(), 1);
-        let frame = &ctx.frames().last().unwrap().1;
-        ensure_frame(frame, 131, GROUP_ADDR, GROUP_ADDR);
-        ensure_slice_addr(frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+            assert_eq!(
+                ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR),
+                GroupJoinResult::AlreadyMember
+            );
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_eq!(ctx.frames().len(), 1);
+            ctx.timer_ctx().assert_timers_installed([(TIMER_ID, range.clone())]);
 
-        assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::AlreadyMember);
-        assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
-        assert_eq!(ctx.frames().len(), 1);
-        assert_eq!(ctx.timers().len(), 1);
+            assert_eq!(
+                ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR),
+                GroupLeaveResult::StillMember
+            );
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_eq!(ctx.frames().len(), 1);
+            ctx.timer_ctx().assert_timers_installed([(TIMER_ID, range)]);
 
-        assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::StillMember);
-        assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
-        assert_eq!(ctx.frames().len(), 1);
-        assert_eq!(ctx.timers().len(), 1);
-
-        assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
-        assert_eq!(ctx.frames().len(), 2);
-        assert_empty(ctx.timers().iter());
-        let frame = &ctx.frames().last().unwrap().1;
-        ensure_frame(frame, 132, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS, GROUP_ADDR);
-        ensure_slice_addr(frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+            assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+            assert_eq!(ctx.frames().len(), 2);
+            ctx.timer_ctx().assert_no_timers_installed();
+            let frame = &ctx.frames().last().unwrap().1;
+            ensure_frame(frame, 132, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS, GROUP_ADDR);
+            ensure_slice_addr(frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+        });
     }
 }

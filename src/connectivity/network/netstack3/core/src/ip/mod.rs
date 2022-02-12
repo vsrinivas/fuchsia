@@ -300,7 +300,7 @@ pub trait IpDeviceIdContext<I: Ip> {
 /// `DummyDeviceId` is provided for use in implementing
 /// `IpDeviceIdContext::DeviceId` in tests. Unlike `()`, it implements the
 /// `Display` trait, which is a requirement of `IpDeviceIdContext::DeviceId`.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 #[cfg(test)]
 pub(crate) struct DummyDeviceId;
 

@@ -480,25 +480,43 @@ impl<D: EventDispatcher> CounterContext for Ctx<D> {
 /// will take care of the rest.
 #[cfg(test)]
 pub(crate) mod testutil {
-    use alloc::boxed::Box;
-    use alloc::collections::{BinaryHeap, HashMap};
-    use alloc::vec::Vec;
-    use core::fmt::{self, Debug, Formatter};
-    use core::hash::Hash;
-    use core::ops;
+    use alloc::{
+        boxed::Box,
+        collections::{BinaryHeap, HashMap},
+        format,
+        string::String,
+        vec::Vec,
+    };
+    use core::{
+        fmt::{self, Debug, Formatter},
+        hash::Hash,
+        ops::{self, RangeBounds},
+    };
 
+    use assert_matches::assert_matches;
     use packet::Buf;
     use rand_xorshift::XorShiftRng;
 
     use super::*;
-    use crate::testutil::FakeCryptoRng;
-    use crate::Instant;
+    use crate::{
+        data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult},
+        testutil::FakeCryptoRng,
+        Instant,
+    };
 
     /// A dummy implementation of `Instant` for use in testing.
     #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
     pub struct DummyInstant {
         // A DummyInstant is just an offset from some arbitrary epoch.
         offset: Duration,
+    }
+
+    impl DummyInstant {
+        const LATEST: DummyInstant = DummyInstant { offset: Duration::MAX };
+
+        fn saturating_add(self, dur: Duration) -> DummyInstant {
+            DummyInstant { offset: self.offset.saturating_add(dur) }
+        }
     }
 
     impl From<Duration> for DummyInstant {
@@ -524,8 +542,8 @@ pub(crate) mod testutil {
     impl ops::Add<Duration> for DummyInstant {
         type Output = DummyInstant;
 
-        fn add(self, other: Duration) -> DummyInstant {
-            DummyInstant { offset: self.offset + other }
+        fn add(self, dur: Duration) -> DummyInstant {
+            DummyInstant { offset: self.offset + dur }
         }
     }
 
@@ -540,8 +558,8 @@ pub(crate) mod testutil {
     impl ops::Sub<Duration> for DummyInstant {
         type Output = DummyInstant;
 
-        fn sub(self, other: Duration) -> DummyInstant {
-            DummyInstant { offset: self.offset - other }
+        fn sub(self, dur: Duration) -> DummyInstant {
+            DummyInstant { offset: self.offset - dur }
         }
     }
 
@@ -633,7 +651,110 @@ pub(crate) mod testutil {
     impl<Id: Clone> DummyTimerCtx<Id> {
         /// Get an ordered list of all currently-scheduled timers.
         pub(crate) fn timers(&self) -> Vec<(DummyInstant, Id)> {
-            self.timers.clone().into_sorted_vec().into_iter().map(|t| (t.0, t.1)).collect()
+            self.timers
+                .clone()
+                .into_sorted_vec()
+                .into_iter()
+                .map(|InstantAndData(i, id)| (i, id))
+                .collect()
+        }
+    }
+
+    pub(crate) trait DummyInstantRange: Debug {
+        fn contains(&self, i: DummyInstant) -> bool;
+    }
+
+    impl DummyInstantRange for DummyInstant {
+        fn contains(&self, i: DummyInstant) -> bool {
+            self == &i
+        }
+    }
+
+    impl<B: RangeBounds<DummyInstant> + Debug> DummyInstantRange for B {
+        fn contains(&self, i: DummyInstant) -> bool {
+            RangeBounds::contains(self, &i)
+        }
+    }
+
+    impl<Id: Debug + Clone + Hash + Eq> DummyTimerCtx<Id> {
+        /// Asserts that `self` contains exactly the timers in `timers`.
+        ///
+        /// Each timer must be present, and its deadline must fall into the
+        /// specified range. Ranges may be specified either as a specific
+        /// [`DummyInstant`] or as any [`RangeBounds<DummyInstant>`].
+        ///
+        /// # Panics
+        ///
+        /// Panics if `timers` contains the same ID more than once or if `self`
+        /// does not contain exactly the timers in `timers`.
+        ///
+        /// [`RangeBounds<DummyInstant>`]: core::ops::RangeBounds
+        #[track_caller]
+        pub(crate) fn assert_timers_installed<
+            R: DummyInstantRange,
+            I: IntoIterator<Item = (Id, R)>,
+        >(
+            &self,
+            timers: I,
+        ) {
+            let mut timers = timers.into_iter().fold(HashMap::new(), |mut timers, (id, range)| {
+                assert_matches!(timers.insert(id, range), None);
+                timers
+            });
+
+            enum Error<Id, R: DummyInstantRange> {
+                ExpectedButMissing { id: Id, range: R },
+                UnexpectedButPresent { id: Id, instant: DummyInstant },
+                UnexpectedInstant { id: Id, range: R, instant: DummyInstant },
+            }
+
+            let mut errors = Vec::new();
+
+            // Make sure that all installed timers were expected (present in
+            // `timers`).
+            for InstantAndData(instant, id) in self.timers.iter().cloned() {
+                match timers.remove(&id) {
+                    None => errors.push(Error::UnexpectedButPresent { id, instant }),
+                    Some(range) => {
+                        if !range.contains(instant) {
+                            errors.push(Error::UnexpectedInstant { id, range, instant })
+                        }
+                    }
+                }
+            }
+
+            // Make sure that all expected timers were already found in
+            // `self.timers` (and removed from `timers`).
+            errors
+                .extend(timers.drain().map(|(id, range)| Error::ExpectedButMissing { id, range }));
+
+            if errors.len() > 0 {
+                let mut s = String::from("Unexpected timer contents:");
+                for err in errors {
+                    s += &match err {
+                        Error::ExpectedButMissing { id, range } => {
+                            format!("\n\tMissing timer {:?} with deadline {:?}", id, range)
+                        }
+                        Error::UnexpectedButPresent { id, instant } => {
+                            format!("\n\tUnexpected timer {:?} with deadline {:?}", id, instant)
+                        }
+                        Error::UnexpectedInstant { id, range, instant } => format!(
+                            "\n\tTimer {:?} has unexpected deadline {:?} (wanted {:?})",
+                            id, instant, range
+                        ),
+                    };
+                }
+                panic!("{}", s);
+            }
+        }
+
+        /// Asserts that no timers are installed.
+        ///
+        /// # Panics
+        ///
+        /// Panics if any timers are installed.
+        pub(crate) fn assert_no_timers_installed(&self) {
+            self.assert_timers_installed::<DummyInstant, _>([]);
         }
     }
 
@@ -689,27 +810,23 @@ pub(crate) mod testutil {
         }
     }
 
-    pub(crate) trait DummyTimerCtxExt<Id>: AsMut<DummyTimerCtx<Id>> + Sized {
-        /// Trigger the next timer, if any, by calling `f` on it.
+    pub(crate) trait DummyTimerCtxExt<Id: Clone>: AsMut<DummyTimerCtx<Id>> + Sized {
+        /// Triggers the next timer, if any, by calling `f` on it.
         ///
-        /// `trigger_next_timer` triggers the next timer, if any, and advances
-        /// the internal clock to the timer's scheduled time. It returns whether
-        /// a timer was triggered.
-        fn trigger_next_timer<F: FnMut(&mut Self, Id)>(&mut self, mut f: F) -> bool {
-            match self.as_mut().timers.pop() {
-                Some(InstantAndData(t, id)) => {
-                    self.as_mut().instant.time = t;
-                    f(self, id);
-                    true
-                }
-                None => false,
-            }
+        /// `trigger_next_timer` triggers the next timer, if any, advances the
+        /// internal clock to the timer's scheduled time, and returns its ID.
+        fn trigger_next_timer<F: FnMut(&mut Self, Id)>(&mut self, mut f: F) -> Option<Id> {
+            self.as_mut().timers.pop().map(|InstantAndData(t, id)| {
+                self.as_mut().instant.time = t;
+                f(self, id.clone());
+                id
+            })
         }
 
-        /// Skip current time forward until `instant`, triggering all timers
-        /// until then, inclusive, by calling `f` on them.
+        /// Skips the current time forward until `instant`, triggering all
+        /// timers until then, inclusive, by calling `f` on them.
         ///
-        /// Returns the number of timers triggered.
+        /// Returns the timers which were triggered.
         ///
         /// # Panics
         ///
@@ -718,43 +835,129 @@ pub(crate) mod testutil {
             &mut self,
             instant: DummyInstant,
             mut f: F,
-        ) -> usize {
-            assert!(instant > self.as_mut().now());
-            let mut timers_fired = 0;
+        ) -> Vec<Id> {
+            assert!(instant >= self.as_mut().now());
+            let mut timers = Vec::new();
 
-            while let Some(tmr) = self.as_mut().timers.peek() {
-                if tmr.0 > instant {
-                    break;
-                }
-
-                assert!(self.trigger_next_timer(&mut f));
-                timers_fired += 1;
+            while self
+                .as_mut()
+                .timers
+                .peek()
+                .map(|InstantAndData(i, _id)| i <= &instant)
+                .unwrap_or(false)
+            {
+                timers.push(self.trigger_next_timer(&mut f).unwrap())
             }
 
             assert!(self.as_mut().now() <= instant);
             self.as_mut().instant.time = instant;
 
-            timers_fired
+            timers
         }
 
-        /// Skip current time forward by `duration`, triggering all timers until
-        /// then, inclusive, by calling `f` on them.
+        /// Skips the current time forward by `duration`, triggering all timers
+        /// until then, inclusive, by calling `f` on them.
         ///
-        /// Returns the number of timers triggered.
+        /// Returns the timers which were triggered.
         fn trigger_timers_for<F: FnMut(&mut Self, Id)>(
             &mut self,
             duration: Duration,
             f: F,
-        ) -> usize {
-            let instant = self.as_mut().now() + duration;
+        ) -> Vec<Id> {
+            let instant = self.as_mut().now().saturating_add(duration);
             // We know the call to `self.trigger_timers_until_instant` will not
             // panic because we provide an instant that is greater than or equal
             // to the current time.
             self.trigger_timers_until_instant(instant, f)
         }
+
+        /// Triggers timers and expects them to be the given timers.
+        ///
+        /// The number of timers to be triggered is taken to be the number of
+        /// timers produced by `timers`. Timers may be triggered in any order.
+        ///
+        /// # Panics
+        ///
+        /// Panics under the following conditions:
+        /// - Fewer timers could be triggered than expected
+        /// - Timers were triggered that were not expected
+        /// - Timers that were expected were not triggered
+        #[track_caller]
+        fn trigger_timers_and_expect_unordered<
+            I: IntoIterator<Item = Id>,
+            F: FnMut(&mut Self, Id),
+        >(
+            &mut self,
+            timers: I,
+            f: F,
+        ) where
+            Id: Debug + Hash + Eq,
+        {
+            self.trigger_timers_until_and_expect_unordered(DummyInstant::LATEST, timers, f);
+        }
+
+        /// Triggers timers until `instant` and expects them to be the given
+        /// timers.
+        ///
+        /// Like `trigger_timers_and_expect_unordered`, except that timers will
+        /// only be triggered until `instant` (inclusive).
+        fn trigger_timers_until_and_expect_unordered<
+            I: IntoIterator<Item = Id>,
+            F: FnMut(&mut Self, Id),
+        >(
+            &mut self,
+            instant: DummyInstant,
+            timers: I,
+            mut f: F,
+        ) where
+            Id: Debug + Hash + Eq,
+        {
+            let mut timers =
+                timers.into_iter().fold(RefCountedHashSet::default(), |mut timers, id| {
+                    let _: InsertResult<()> = timers.insert(id);
+                    timers
+                });
+
+            while timers.len() > 0
+                && self.as_mut().timers.peek().map(|tmr| tmr.0 <= instant).unwrap_or(false)
+            {
+                let id = self
+                    .trigger_next_timer(&mut f)
+                    .expect("unexpectedly ran out of timers to fire");
+                match timers.remove(id.clone()) {
+                    RemoveResult::Removed(()) | RemoveResult::StillPresent => {}
+                    RemoveResult::NotPresent => panic!("triggered unexpected timer: {:?}", id),
+                }
+            }
+
+            if timers.len() > 0 {
+                let mut s = String::from("Expected timers did not trigger:");
+                for (id, count) in timers.iter_counts() {
+                    s += &format!("\n\t{count}x {id:?}");
+                }
+                panic!("{}", s);
+            }
+        }
+
+        /// Triggers timers for `duration` and expects them to be the given
+        /// timers.
+        ///
+        /// Like `trigger_timers_and_expect_unordered`, except that timers will
+        /// only be triggered for `duration` (inclusive).
+        fn trigger_timers_for_and_expect<I: IntoIterator<Item = Id>, F: FnMut(&mut Self, Id)>(
+            &mut self,
+            duration: Duration,
+            timers: I,
+            f: F,
+        ) where
+            Id: Debug + Hash + Eq,
+        {
+            let instant = self.as_mut().now().saturating_add(duration);
+            self.trigger_timers_until_and_expect_unordered(instant, timers, f);
+        }
     }
 
-    impl<Id, T: AsMut<DummyTimerCtx<Id>>> DummyTimerCtxExt<Id> for T {}
+    impl<Id: Clone, T: AsMut<DummyTimerCtx<Id>>> DummyTimerCtxExt<Id> for T {}
 
     /// A dummy [`FrameContext`].
     pub struct DummyFrameCtx<Meta> {
@@ -902,12 +1105,9 @@ pub(crate) mod testutil {
         pub(crate) fn get_counter(&self, ctr: &str) -> usize {
             self.counters.counters.borrow().get(ctr).cloned().unwrap_or(0)
         }
-    }
 
-    impl<S, Id: Clone, Meta> DummyCtx<S, Id, Meta> {
-        /// Get an ordered list of all currently-scheduled timers.
-        pub(crate) fn timers(&self) -> Vec<(DummyInstant, Id)> {
-            self.timers.timers()
+        pub(crate) fn timer_ctx(&self) -> &DummyTimerCtx<Id> {
+            &self.timers
         }
     }
 
@@ -941,7 +1141,7 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<S, Id: PartialEq, Meta> TimerContext<Id> for DummyCtx<S, Id, Meta> {
+    impl<S, Id: Debug + PartialEq, Meta> TimerContext<Id> for DummyCtx<S, Id, Meta> {
         fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
             self.timers.schedule_timer_instant(time, id)
         }
@@ -1361,7 +1561,7 @@ pub(crate) mod testutil {
 
             // When no timers are installed, `trigger_next_timer` should return
             // `false`.
-            assert!(!ctx.trigger_next_timer(TimerHandler::handle_timer));
+            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), None);
             assert_eq!(ctx.get_ref().as_slice(), []);
 
             const ONE_SEC: Duration = Duration::from_secs(1);
@@ -1378,7 +1578,7 @@ pub(crate) mod testutil {
             // Timer with id `0` scheduled to execute at `ONE_SEC_INSTANT`.
             assert_eq!(ctx.scheduled_instant(0).unwrap(), ONE_SEC_INSTANT);
 
-            assert!(ctx.trigger_next_timer(TimerHandler::handle_timer));
+            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), Some(0));
             assert_eq!(ctx.get_ref().as_slice(), [(0, ONE_SEC_INSTANT)]);
 
             // After the timer fires, it should not still be scheduled at some
@@ -1391,14 +1591,14 @@ pub(crate) mod testutil {
             // Once it's been triggered, it should be canceled and not
             // triggerable again.
             ctx = Default::default();
-            assert!(!ctx.trigger_next_timer(TimerHandler::handle_timer));
+            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), None);
             assert_eq!(ctx.get_ref().as_slice(), []);
 
             // If we schedule a timer but then cancel it, it shouldn't fire.
             ctx = Default::default();
             assert_eq!(ctx.schedule_timer(ONE_SEC, 0), None);
             assert_eq!(ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
-            assert!(!ctx.trigger_next_timer(TimerHandler::handle_timer));
+            assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), None);
             assert_eq!(ctx.get_ref().as_slice(), []);
 
             // If we schedule a timer but then schedule the same ID again, the
@@ -1416,7 +1616,7 @@ pub(crate) mod testutil {
             assert_eq!(ctx.schedule_timer(Duration::from_secs(2), 2), None,);
             assert_eq!(
                 ctx.trigger_timers_until_instant(ONE_SEC_INSTANT, TimerHandler::handle_timer),
-                2
+                alloc::vec![0, 1],
             );
 
             // The first two timers should have fired.

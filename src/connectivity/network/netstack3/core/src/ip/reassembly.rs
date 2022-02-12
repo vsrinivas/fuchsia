@@ -52,7 +52,7 @@ use crate::context::TimerContext;
 /// of a packet. Note, "first fragment" does not mean a fragment with offset 0;
 /// it means the first fragment packet we receive with a new combination of
 /// source address, destination address and fragment identification value.
-const REASSEMBLY_TIMEOUT_SECONDS: u64 = 60;
+const REASSEMBLY_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// Number of bytes per fragment block for IPv4 and IPv6.
 ///
@@ -625,14 +625,11 @@ impl<I: Ip> IpPacketFragmentCache<I> {
             // We have no reassembly data yet so this fragment is the first one
             // associated with the given `key`. Create a new entry in the hash
             // table and schedule a timer to reset the entry after
-            // `REASSEMBLY_TIMEOUT_SECONDS` seconds.
+            // `` seconds.
             //
             // Since there was no entry, there should also have been no timer
             // installed.
-            assert_eq!(
-                ctx.schedule_timer(Duration::from_secs(REASSEMBLY_TIMEOUT_SECONDS), key),
-                None
-            );
+            assert_eq!(ctx.schedule_timer(REASSEMBLY_TIMEOUT, key), None);
             FragmentCacheData::default()
         })
     }
@@ -706,9 +703,11 @@ mod tests {
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
-    use crate::assert_empty;
-    use crate::context::testutil::DummyTimerCtxExt;
-    use crate::testutil::{DUMMY_CONFIG_V4, DUMMY_CONFIG_V6};
+    use crate::{
+        assert_empty,
+        context::testutil::{DummyInstant, DummyTimerCtxExt},
+        testutil::{DUMMY_CONFIG_V4, DUMMY_CONFIG_V6},
+    };
 
     type DummyCtx<I> = crate::context::testutil::DummyTimerCtx<FragmentCacheKey<<I as Ip>::Addr>>;
 
@@ -978,6 +977,12 @@ mod tests {
         move |_ctx, id| cache.handle_timer(id)
     }
 
+    /// Gets a `FragmentCacheKey` with the remote and local IP addresses hard
+    /// coded to their test values.
+    fn test_key<I: TestIpExt>(id: u32) -> FragmentCacheKey<I::Addr> {
+        FragmentCacheKey::new(I::DUMMY_CONFIG.remote_ip.get(), I::DUMMY_CONFIG.local_ip.get(), id)
+    }
+
     #[test]
     fn test_ipv4_reassembly_not_needed() {
         let mut ctx = DummyCtx::<Ipv4>::default();
@@ -1080,9 +1085,10 @@ mod tests {
         let mut ctx = DummyCtx::<I>::default();
         let mut cache = IpPacketFragmentCache::<I>::default();
         let fragment_id = 5;
+        let key = test_key::<I>(fragment_id.into());
 
         // Make sure no timers in the dispatcher yet.
-        assert_empty(ctx.timers().iter());
+        ctx.assert_no_timers_installed();
         assert_eq!(cache.size, 0);
 
         // Test that we properly reset fragment cache on timer.
@@ -1090,13 +1096,13 @@ mod tests {
         // Process fragment #0
         process_ip_fragment(&mut cache, &mut ctx, fragment_id, 0, true, ExpectedResult::NeedMore);
         // Make sure a timer got added.
-        assert_eq!(ctx.timers().len(), 1);
+        ctx.assert_timers_installed([(key, DummyInstant::from(REASSEMBLY_TIMEOUT))]);
         validate_size(&cache);
 
         // Process fragment #1
         process_ip_fragment(&mut cache, &mut ctx, fragment_id, 1, true, ExpectedResult::NeedMore);
         // Make sure no new timers got added or fired.
-        assert_eq!(ctx.timers().len(), 1);
+        ctx.assert_timers_installed([(key, DummyInstant::from(REASSEMBLY_TIMEOUT))]);
         validate_size(&cache);
 
         // Process fragment #2
@@ -1109,14 +1115,14 @@ mod tests {
             ExpectedResult::Ready { total_body_len: 24 },
         );
         // Make sure no new timers got added or fired.
-        assert_eq!(ctx.timers().len(), 1);
+        ctx.assert_timers_installed([(key, DummyInstant::from(REASSEMBLY_TIMEOUT))]);
         validate_size(&cache);
 
         // Trigger the timer (simulate a timer for the fragmented packet)
-        assert!(ctx.trigger_next_timer(get_timer_handler(&mut cache)));
+        assert_eq!(ctx.trigger_next_timer(get_timer_handler(&mut cache)), Some(key));
 
         // Make sure no other times exist..
-        assert_empty(ctx.timers().iter());
+        ctx.assert_no_timers_installed();
         assert_eq!(cache.size, 0);
 
         // Attempt to reassemble the packet but get an error since the fragment
@@ -1173,10 +1179,12 @@ mod tests {
         validate_size(&cache);
 
         // Trigger the timers, which will clear the cache.
-        let timers = ctx.trigger_timers_for(
-            Duration::from_secs(REASSEMBLY_TIMEOUT_SECONDS + 1),
-            get_timer_handler(&mut cache),
-        );
+        let timers = ctx
+            .trigger_timers_for(
+                REASSEMBLY_TIMEOUT + Duration::from_secs(1),
+                get_timer_handler(&mut cache),
+            )
+            .len();
         assert!(timers == 171 || timers == 293); // ipv4 || ipv6
         assert_eq!(cache.size, 0);
         validate_size(&cache);
@@ -1429,9 +1437,8 @@ mod tests {
         );
 
         // Advance time by 30s (should be at 30s now).
-        assert_eq!(
+        assert_empty(
             ctx.trigger_timers_for(Duration::from_secs(30), get_timer_handler(&mut cache)),
-            0
         );
 
         // Process fragment #2 for packet #0
@@ -1445,9 +1452,8 @@ mod tests {
         );
 
         // Advance time by 10s (should be at 40s now).
-        assert_eq!(
+        assert_empty(
             ctx.trigger_timers_for(Duration::from_secs(10), get_timer_handler(&mut cache)),
-            0
         );
 
         // Process fragment #1 for packet #2
@@ -1466,9 +1472,8 @@ mod tests {
         try_reassemble_ip_packet(&mut cache, &mut ctx, fragment_id_0, 24);
 
         // Advance time by 10s (should be at 50s now).
-        assert_eq!(
+        assert_empty(
             ctx.trigger_timers_for(Duration::from_secs(10), get_timer_handler(&mut cache)),
-            0
         );
 
         // Process fragment #0 for packet #1
@@ -1488,13 +1493,14 @@ mod tests {
 
         // Advance time by 10s (should be at 60s now)), triggering the timer for
         // the reassembly of packet #1
-        assert_eq!(
-            ctx.trigger_timers_for(Duration::from_secs(10), get_timer_handler(&mut cache)),
-            1
+        ctx.trigger_timers_for_and_expect(
+            Duration::from_secs(10),
+            [test_key::<I>(fragment_id_1.into())],
+            get_timer_handler(&mut cache),
         );
 
         // Make sure no other times exist.
-        assert_empty(ctx.timers().iter());
+        ctx.assert_no_timers_installed();
 
         // Process fragment #2 for packet #1 Should get a need more return value
         // since even though we technically received all the fragments, the last

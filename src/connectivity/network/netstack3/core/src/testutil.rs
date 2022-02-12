@@ -23,7 +23,7 @@ use net_types::ip::{
 use net_types::{SpecifiedAddr, UnicastAddr, Witness};
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::ip::IpProto;
-use rand::{self, CryptoRng, RngCore, SeedableRng};
+use rand::{self, CryptoRng, Rng as _, RngCore, SeedableRng};
 use rand_xorshift::XorShiftRng;
 
 use crate::context::{InstantContext, RngContext, TimerContext};
@@ -147,6 +147,15 @@ pub(crate) fn new_rng(mut seed: u128) -> XorShiftRng {
 pub(crate) fn with_fake_rngs<F: Fn(FakeCryptoRng<XorShiftRng>)>(iterations: u128, f: F) {
     for seed in 0..iterations {
         f(FakeCryptoRng::new_xorshift(seed))
+    }
+}
+
+/// Invokes a function multiple times with different RNG seeds.
+pub(crate) fn run_with_many_seeds<F: FnMut(u128)>(mut f: F) {
+    // Arbitrary seed.
+    let mut rng = new_rng(0x0fe50fae6c37593d71944697f1245847);
+    for _ in 0..64 {
+        f(rng.gen());
     }
 }
 
