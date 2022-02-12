@@ -82,6 +82,10 @@
     "name": "thermal_limiter"
   },
   {
+    "type": "ThermalStateHandler",
+    "name": "thermal_state_handler"
+  },
+  {
     "type": "PlatformMetrics",
     "name": "platform_metrics",
     "config": {
@@ -102,7 +106,8 @@
       ],
       "system_power_handler_node": "sys_shutdown",
       "thermal_load_notify_nodes": [
-        "thermal_limiter"
+        "thermal_limiter",
+        "thermal_state_handler"
       ],
       "platform_metrics_node": "platform_metrics"
     },
