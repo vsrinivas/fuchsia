@@ -172,6 +172,11 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #   assembly_fvm_slice_size (optional; default: 1048576)
 #     [int] The slice size of the FVM.
 #
+#   fvm_truncate_to_length (optional)
+#     [int] The precise size to make the (non-sparse) FVM image. See
+#     documentation of the `--length` parameter of the `fvm` binary host tool
+#     for details.
+#
 # Board: ZBI arguments
 #
 #   zbi_name (optional; default: target_name)
@@ -519,6 +524,7 @@ template("assemble_system") {
                              "zbi_name",
                              "zbi_signing_script",
                              "zbi_signing_args",
+                             "fvm_truncate_to_length",
                            ])
     base_package_name = base_package_name
     generate_fvm = generate_fvm

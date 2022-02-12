@@ -46,6 +46,11 @@ import("//build/zbi/zbi.gni")
 #   embed_fvm_in_zbi (optional)
 #     [bool] Whether the FVM should be embedded into the ZBI as a ramdisk.
 #
+#   fvm_truncate_to_length (optional)
+#     [int] The precise size to make the (non-sparse) FVM image. See
+#     documentation of the `--length` parameter of the `fvm` binary host tool
+#     for details.
+#
 #   fvm_slice_size (required)
 #     [int] The slice size of the FVM.
 #
@@ -210,6 +215,10 @@ template("generated_board_config") {
 
           if (fvm_max_disk_size != false) {
             max_disk_size = fvm_max_disk_size
+          }
+
+          if (defined(invoker.fvm_truncate_to_length)) {
+            truncate_to_length = invoker.fvm_truncate_to_length
           }
 
           # Generated a fastboot-supported FVM if needed.

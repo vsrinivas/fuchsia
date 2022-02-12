@@ -74,7 +74,10 @@ pub fn construct_fvm(
         &default_path,
         fvm_config.slice_size,
         false,
-        FvmType::Standard { resize_image_file_to_fit: false, truncate_to_length: None },
+        FvmType::Standard {
+            resize_image_file_to_fit: false,
+            truncate_to_length: fvm_config.truncate_to_length,
+        },
     );
     for fs in &filesystems {
         fvm_builder.filesystem(fs.clone());
@@ -199,6 +202,7 @@ mod tests {
             slice_size: 8388608,
             reserved_slices: 1,
             max_disk_size: None,
+            truncate_to_length: None,
             fastboot: None,
             filesystems: generate_test_filesystems(),
         };
@@ -220,6 +224,7 @@ mod tests {
             slice_size: 8388608,
             reserved_slices: 1,
             max_disk_size: None,
+            truncate_to_length: None,
             fastboot: Some(FastbootConfig::Emmc {
                 compression: "lz4".to_string(),
                 length: 10485760, // 10 MiB
@@ -246,6 +251,7 @@ mod tests {
             slice_size: 8388608,
             reserved_slices: 1,
             max_disk_size: None,
+            truncate_to_length: None,
             fastboot: Some(FastbootConfig::Nand {
                 compression: None,
                 page_size: 4096,

@@ -404,6 +404,11 @@ pub struct FvmConfig {
     #[serde(default)]
     pub max_disk_size: Option<u64>,
 
+    /// If provided, the build will specify this length (that is, image size)
+    /// when generating the complete (non-sparse) image. See documentation of
+    /// the `--length` parameter of the `fvm` binary host tool for details.
+    pub truncate_to_length: Option<u64>,
+
     /// If provided, a fastboot-supported sparse FVM will be generated.
     #[serde(default)]
     pub fastboot: Option<FastbootConfig>,
