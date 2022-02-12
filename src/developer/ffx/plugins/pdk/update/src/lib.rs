@@ -568,10 +568,7 @@ mod test {
         .unwrap();
         let component_manifest_contents = "my_component.cmx contents";
         let mut v = vec![];
-        let meta_package = MetaPackage::from_name_and_variant(
-            "my-package-name".parse().unwrap(),
-            "my-package-variant".parse().unwrap(),
-        );
+        let meta_package = MetaPackage::from_name("my-package-name".parse().unwrap());
         meta_package.serialize(&mut v).unwrap();
         let file_system = FakeFileSystem {
             content_map: hashmap! {
@@ -638,11 +635,13 @@ mod test {
         let repo = make_writable_empty_repository("artifact_store", root.clone()).await.unwrap();
         let out_filename = tempdir.path().join("artifact_lock.json");
 
-        let meta_far_path =
-            root.join("repository").join("0000000000000000000000000000000000000000000000000000000000000000");
+        let meta_far_path = root
+            .join("repository")
+            .join("0000000000000000000000000000000000000000000000000000000000000000");
         create_meta_far(meta_far_path);
-        let blob_path =
-            root.join("repository").join("15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b");
+        let blob_path = root
+            .join("repository")
+            .join("15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b");
         write_file(blob_path, "".as_bytes());
 
         manager.add(Arc::new(repo));

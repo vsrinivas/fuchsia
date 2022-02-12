@@ -542,11 +542,8 @@ impl PackageBuilder {
         {
             let mut manifest = File::create(indir.path().join("package.manifest"))?;
 
-            MetaPackage::from_name_and_variant(
-                self.name.clone(),
-                "0".parse().context("parse package variant")?,
-            )
-            .serialize(File::create(indir.path().join("meta_package"))?)?;
+            MetaPackage::from_name(self.name.clone())
+                .serialize(File::create(indir.path().join("meta_package"))?)?;
             writeln!(manifest, "meta/package=/in/meta_package")?;
 
             for (i, (name, contents)) in self.contents.iter().enumerate() {
@@ -776,7 +773,7 @@ mod tests {
             let dir = tempfile::tempdir()?;
             fs::create_dir(dir.path().join("meta"))?;
             fs::create_dir(dir.path().join("data"))?;
-            MetaPackage::from_name_and_variant("asdf".parse().unwrap(), "0".parse().unwrap())
+            MetaPackage::from_name("asdf".parse().unwrap())
                 .serialize(File::create(dir.path().join("meta/package"))?)?;
             fs::write(dir.path().join("data/hello"), "world")?;
             dir

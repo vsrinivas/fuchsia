@@ -101,8 +101,7 @@ mod test {
 
         build_manifest
             .write_all(format!("meta/package={}", meta_package_path.display()).as_bytes())?;
-        let meta_package =
-            MetaPackage::from_name_and_variant("my-package".parse().unwrap(), "0".parse().unwrap());
+        let meta_package = MetaPackage::from_name("my-package".parse().unwrap());
         meta_package.serialize(meta_package_file).unwrap();
 
         let cmd = BuildCommand {
@@ -159,8 +158,7 @@ mod test {
             )
             .as_bytes(),
         )?;
-        let meta_package =
-            MetaPackage::from_name_and_variant("my-package".parse().unwrap(), "0".parse().unwrap());
+        let meta_package = MetaPackage::from_name("my-package".parse().unwrap());
         meta_package.serialize(meta_package_file).unwrap();
 
         let cmd = BuildCommand {

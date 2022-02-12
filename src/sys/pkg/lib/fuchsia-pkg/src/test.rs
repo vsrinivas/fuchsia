@@ -115,12 +115,8 @@ prop_compose! {
 
 #[cfg(test)]
 prop_compose! {
-    pub(crate) fn random_meta_package()
-        (name in random_package_name(),
-        variant in random_package_variant())
-         -> MetaPackage
-    {
-        MetaPackage::from_name_and_variant(name, variant)
+    pub(crate) fn random_meta_package()(name in random_package_name()) -> MetaPackage {
+        MetaPackage::from_name(name)
     }
 }
 

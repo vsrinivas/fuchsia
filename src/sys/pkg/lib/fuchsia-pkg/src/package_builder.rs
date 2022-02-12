@@ -204,7 +204,7 @@ impl PackageBuilder {
 
         far_contents.insert(
             META_PACKAGE_PATH.to_string(),
-            create_meta_package_file(gendir.as_ref(), &name, "0")
+            create_meta_package_file(gendir.as_ref(), &name)
                 .context(format!("Writing the {} file", META_PACKAGE_PATH))?,
         );
 
@@ -270,11 +270,7 @@ impl From<&version_history::Version> for ABIRevision {
 /// Construct a meta/package file in `gendir`.
 ///
 /// Returns the path that the file was created at.
-fn create_meta_package_file(
-    gendir: impl AsRef<Path>,
-    name: impl Into<String>,
-    variant: impl Into<String>,
-) -> Result<String> {
+fn create_meta_package_file(gendir: impl AsRef<Path>, name: impl Into<String>) -> Result<String> {
     let package_name = name.into();
     let meta_package_path = gendir.as_ref().join(META_PACKAGE_PATH);
     if let Some(parent_dir) = meta_package_path.parent() {
@@ -282,8 +278,7 @@ fn create_meta_package_file(
     }
 
     let file = std::fs::File::create(&meta_package_path)?;
-    let meta_package =
-        MetaPackage::from_name_and_variant(package_name.try_into()?, variant.into().try_into()?);
+    let meta_package = MetaPackage::from_name(package_name.try_into()?);
     meta_package.serialize(file)?;
     meta_package_path.path_to_string()
 }
@@ -299,7 +294,7 @@ mod tests {
         let gen_dir = TempDir::new().unwrap();
         let name = "some_test_package";
         let meta_package_path = gen_dir.as_ref().join("meta/package");
-        let created_path = create_meta_package_file(&gen_dir, name, "0").unwrap();
+        let created_path = create_meta_package_file(&gen_dir, name).unwrap();
         assert_eq!(created_path, meta_package_path.path_to_string().unwrap());
 
         let raw_contents = std::fs::read(meta_package_path).unwrap();

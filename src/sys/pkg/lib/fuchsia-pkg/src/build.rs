@@ -3,12 +3,9 @@
 // found in the LICENSE file.
 
 use crate::errors::BuildError;
-use crate::{
-    CreationManifest, MetaContents, MetaPackage, MetaPackageError, Package, PackageManifest,
-};
+use crate::{CreationManifest, MetaContents, MetaPackageError, Package, PackageManifest};
 use fuchsia_merkle::{Hash, MerkleTree};
 use std::collections::{btree_map, BTreeMap};
-use std::io::BufReader;
 use std::io::{Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
@@ -51,18 +48,12 @@ pub fn build_with_file_system<'a>(
     published_name: impl AsRef<str>,
     file_system: &'a impl FileSystem<'a>,
 ) -> Result<PackageManifest, BuildError> {
-    let meta_package = match creation_manifest.far_contents().get("meta/package") {
-        Some(source_path) => {
-            let meta_package = file_system.open(source_path)?;
-            MetaPackage::deserialize(BufReader::new(meta_package))?
-        }
-        None => return Err(BuildError::MetaPackage(MetaPackageError::MetaPackageMissing)),
+    if creation_manifest.far_contents().get("meta/package").is_none() {
+        return Err(BuildError::MetaPackage(MetaPackageError::MetaPackageMissing));
     };
 
-    let mut package_builder = Package::builder(
-        published_name.as_ref().parse().map_err(BuildError::PackageName)?,
-        meta_package.variant().to_owned(),
-    );
+    let mut package_builder =
+        Package::builder(published_name.as_ref().parse().map_err(BuildError::PackageName)?);
 
     let external_content_infos =
         get_external_content_infos(creation_manifest.external_contents(), file_system)?;
@@ -170,7 +161,7 @@ fn get_external_content_infos<'a, 'b>(
 #[cfg(test)]
 mod test_build_with_file_system {
     use super::*;
-    use crate::test::*;
+    use crate::{test::*, MetaPackage};
     use assert_matches::assert_matches;
     use maplit::{btreemap, hashmap};
     use proptest::prelude::*;
@@ -198,10 +189,7 @@ mod test_build_with_file_system {
             {
                 if resource_path.to_string() == "meta/package".to_string() {
                     let mut v = vec![];
-                    let meta_package = MetaPackage::from_name_and_variant(
-                        "my-package-name".parse().unwrap(),
-                        "my-package-variant".parse().unwrap(),
-                    );
+                    let meta_package = MetaPackage::from_name("my-package-name".parse().unwrap());
                     meta_package.serialize(&mut v).unwrap();
                     content_map.insert(host_path.to_string(), v);
                 } else {
@@ -246,10 +234,7 @@ mod test_build_with_file_system {
         .unwrap();
         let component_manifest_contents = "my_component.cml contents";
         let mut v = vec![];
-        let meta_package = MetaPackage::from_name_and_variant(
-            "my-package-name".parse().unwrap(),
-            "my-package-variant".parse().unwrap(),
-        );
+        let meta_package = MetaPackage::from_name("my-package-name".parse().unwrap());
         meta_package.serialize(&mut v).unwrap();
         let file_system = FakeFileSystem {
             content_map: hashmap! {
@@ -286,10 +271,7 @@ mod test_build_with_file_system {
         )
         .unwrap();
         let mut v = vec![];
-        let meta_package = MetaPackage::from_name_and_variant(
-            "my-package-name".parse().unwrap(),
-            "my-package-variant".parse().unwrap(),
-        );
+        let meta_package = MetaPackage::from_name("my-package-name".parse().unwrap());
         meta_package.serialize(&mut v).unwrap();
         let file_system = FakeFileSystem {
             content_map: hashmap! {
@@ -418,7 +400,7 @@ mod test_build_with_file_system {
 #[cfg(test)]
 mod test_build {
     use super::*;
-    use crate::test::*;
+    use crate::{test::*, MetaPackage};
     use proptest::prelude::*;
     use rand::{Rng as _, SeedableRng as _};
     use std::fs;
@@ -447,10 +429,7 @@ mod test_build {
                 fs::create_dir_all(new_host_path.parent().unwrap()).unwrap();
                 let mut f = fs::File::create(&new_host_path).unwrap();
                 if resource_path.to_string() == "meta/package".to_string() {
-                    let meta_package = MetaPackage::from_name_and_variant(
-                        "my-package-name".parse().unwrap(),
-                        "my-package-variant".parse().unwrap(),
-                    );
+                    let meta_package = MetaPackage::from_name("my-package-name".parse().unwrap());
                     meta_package.serialize(f).unwrap();
                 } else {
                     let file_size = rng.gen_range(0..6000);

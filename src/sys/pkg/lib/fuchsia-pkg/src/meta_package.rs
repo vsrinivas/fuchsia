@@ -19,9 +19,9 @@ pub struct MetaPackage {
 }
 
 impl MetaPackage {
-    /// Create a `MetaPackage` with `name` and `variant`.
-    pub fn from_name_and_variant(name: PackageName, variant: PackageVariant) -> Self {
-        Self { name, variant }
+    /// Create a `MetaPackage` with `name`.
+    pub fn from_name(name: PackageName) -> Self {
+        Self { name, variant: PackageVariant::zero() }
     }
 
     /// Returns the package's name.
@@ -46,12 +46,12 @@ impl MetaPackage {
     /// # use fuchsia_pkg::MetaPackage;
     /// let json = r#"
     ///     {"name": "package-name",
-    ///      "version": "package-variant"}"#;
+    ///      "version": "0"}"#;
     /// assert_eq!(
     ///     MetaPackage::deserialize(json.as_bytes()).unwrap(),
-    ///     MetaPackage::from_name_and_variant(
+    ///     MetaPackage::from_name(
     ///         "package-name".parse().unwrap(),
-    ///         "package-variant".parse().unwrap()
+    ///         "0".parse().unwrap(),
     ///     )
     /// );
     /// ```
@@ -64,13 +64,11 @@ impl MetaPackage {
     /// # Examples
     /// ```
     /// # use fuchsia_pkg::MetaPackage;
-    /// let meta_package = MetaPackage::from_name_and_variant(
-    ///         "package-name".parse().unwrap(),
-    ///         "package-variant".parse().unwrap());
+    /// let meta_package = MetaPackage::from_name("package-name".parse().unwrap());
     /// let mut v: Vec<u8> = vec![];
     /// meta_package.serialize(&mut v).unwrap();
     /// assert_eq!(std::str::from_utf8(v.as_slice()).unwrap(),
-    ///            r#"{"name":"package-name","version":"package-variant"}"#);
+    ///            r#"{"name":"package-name","version":"0"}"#);
     /// ```
     pub fn serialize(&self, writer: impl io::Write) -> Result<(), MetaPackageError> {
         serde_json::to_writer(
@@ -81,10 +79,10 @@ impl MetaPackage {
     }
 
     fn from_v0(v0: MetaPackageV0Deserialize) -> Result<MetaPackage, MetaPackageError> {
-        Ok(MetaPackage::from_name_and_variant(
-            v0.name.try_into().map_err(MetaPackageError::PackageName)?,
-            v0.variant.try_into().map_err(MetaPackageError::PackageVariant)?,
-        ))
+        Ok(MetaPackage {
+            name: v0.name.try_into().map_err(MetaPackageError::PackageName)?,
+            variant: v0.variant.try_into().map_err(MetaPackageError::PackageVariant)?,
+        })
     }
 }
 
@@ -112,35 +110,28 @@ mod tests {
 
     #[test]
     fn test_accessors() {
-        let meta_package =
-            MetaPackage::from_name_and_variant("foo".parse().unwrap(), "bar".parse().unwrap());
+        let meta_package = MetaPackage::from_name("foo".parse().unwrap());
         assert_eq!(meta_package.name(), &"foo".parse::<PackageName>().unwrap());
-        assert_eq!(meta_package.variant(), &"bar".parse::<PackageVariant>().unwrap());
+        assert_eq!(meta_package.variant(), &"0".parse::<PackageVariant>().unwrap());
     }
 
     #[test]
     fn test_serialize() {
-        let meta_package = MetaPackage::from_name_and_variant(
-            "package-name".parse().unwrap(),
-            "package-variant".parse().unwrap(),
-        );
+        let meta_package = MetaPackage::from_name("package-name".parse().unwrap());
         let mut v: Vec<u8> = Vec::new();
 
         meta_package.serialize(&mut v).unwrap();
 
-        let expected = r#"{"name":"package-name","version":"package-variant"}"#;
+        let expected = r#"{"name":"package-name","version":"0"}"#;
         assert_eq!(v.as_slice(), expected.as_bytes());
     }
 
     #[test]
     fn test_deserialize() {
-        let json_bytes = r#"{"name":"package-name","version":"package-variant"}"#.as_bytes();
+        let json_bytes = r#"{"name":"package-name","version":"0"}"#.as_bytes();
         assert_eq!(
             MetaPackage::deserialize(json_bytes).unwrap(),
-            MetaPackage {
-                name: "package-name".parse().unwrap(),
-                variant: "package-variant".parse().unwrap()
-            }
+            MetaPackage { name: "package-name".parse().unwrap(), variant: "0".parse().unwrap() }
         );
     }
 

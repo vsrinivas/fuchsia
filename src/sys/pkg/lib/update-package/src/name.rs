@@ -34,8 +34,7 @@ pub(crate) async fn verify(proxy: &DirectoryProxy) -> Result<(), VerifyNameError
             .map_err(VerifyNameError::OpenMetaPackage)?;
     let contents = io_util::file::read(&file).await.map_err(VerifyNameError::ReadMetaPackage)?;
 
-    let expected =
-        MetaPackage::from_name_and_variant("update".parse().unwrap(), "0".parse().unwrap());
+    let expected = MetaPackage::from_name("update".parse().unwrap());
 
     let actual =
         MetaPackage::deserialize(&mut &contents[..]).map_err(VerifyNameError::ParseMetaPackage)?;
@@ -49,11 +48,15 @@ pub(crate) async fn verify(proxy: &DirectoryProxy) -> Result<(), VerifyNameError
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::TestUpdatePackage, assert_matches::assert_matches};
+    use {
+        super::*,
+        crate::TestUpdatePackage,
+        assert_matches::assert_matches,
+        fuchsia_pkg::{PackageName, PackageVariant},
+    };
 
-    fn make_meta_package(name: &str, variant: &str) -> Vec<u8> {
-        let meta_package =
-            MetaPackage::from_name_and_variant(name.parse().unwrap(), variant.parse().unwrap());
+    fn make_meta_package(name: &str) -> Vec<u8> {
+        let meta_package = MetaPackage::from_name(name.parse().unwrap());
         let mut bytes = vec![];
         let () = meta_package.serialize(&mut bytes).unwrap();
         bytes
@@ -63,7 +66,7 @@ mod tests {
     async fn allows_expected_name_and_variant() {
         assert_matches!(
             TestUpdatePackage::new()
-                .add_file("meta/package", make_meta_package("update", "0"))
+                .add_file("meta/package", make_meta_package("update"))
                 .await
                 .verify_name()
                 .await,
@@ -75,28 +78,29 @@ mod tests {
     async fn rejects_unexpected_name() {
         assert_matches!(
             TestUpdatePackage::new()
-                .add_file("meta/package", make_meta_package("invalid", "0"))
+                .add_file("meta/package", make_meta_package("invalid"))
                 .await
                 .verify_name()
                 .await,
             Err(VerifyNameError::Invalid(actual))
-                if actual == MetaPackage::from_name_and_variant("invalid".parse().unwrap(), "0".parse().unwrap())
+                if actual == MetaPackage::from_name("invalid".parse().unwrap())
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn rejects_unexpected_variant() {
+        let name: PackageName = "invalid".parse().unwrap();
+        let variant: PackageVariant = "42".parse().unwrap();
         assert_matches!(
             TestUpdatePackage::new()
-                .add_file("meta/package", make_meta_package("update", "42"))
+                .add_file("meta/package", br#"{"name":"invalid","version":"42"}"#)
                 .await
                 .verify_name()
                 .await,
             Err(VerifyNameError::Invalid(actual))
-                if actual == MetaPackage::from_name_and_variant("update".parse().unwrap(), "42".parse().unwrap())
+                if actual.name() == &name && actual.variant() == &variant
         );
     }
-
     #[fuchsia_async::run_singlethreaded(test)]
     async fn rejects_invalid_meta_package() {
         assert_matches!(

@@ -291,8 +291,7 @@ mod tests {
 
     #[test]
     fn test_create_package_manifest_from_package() {
-        let mut package_builder =
-            Package::builder("package-name".parse().unwrap(), "package-variant".parse().unwrap());
+        let mut package_builder = Package::builder("package-name".parse().unwrap());
         package_builder.add_entry(
             String::from("bin/my_prog"),
             Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000")

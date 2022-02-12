@@ -5,7 +5,7 @@
 use crate::{MetaContents, MetaContentsError, MetaPackage};
 use anyhow::Result;
 use fuchsia_merkle::Hash;
-use fuchsia_url::pkg_url::{PackageName, PackageVariant};
+use fuchsia_url::pkg_url::PackageName;
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Seek};
 use std::path::PathBuf;
@@ -33,9 +33,9 @@ impl Package {
         self.blobs.clone()
     }
 
-    /// Create a new `PackageBuilder` from name and variant.
-    pub(crate) fn builder(name: PackageName, variant: PackageVariant) -> Builder {
-        Builder::new(name, variant)
+    /// Create a new `PackageBuilder` from a package name.
+    pub(crate) fn builder(name: PackageName) -> Builder {
+        Builder::new(name)
     }
 
     /// Generate a Package from a meta.far file.
@@ -59,10 +59,10 @@ pub(crate) struct Builder {
 }
 
 impl Builder {
-    pub fn new(name: PackageName, variant: PackageVariant) -> Self {
+    pub fn new(name: PackageName) -> Self {
         Self {
             contents: HashMap::new(),
-            meta_package: MetaPackage::from_name_and_variant(name, variant),
+            meta_package: MetaPackage::from_name(name),
             blobs: BTreeMap::new(),
         }
     }
@@ -120,10 +120,7 @@ mod test_package {
 
     #[test]
     fn test_create_package() {
-        let meta_package = MetaPackage::from_name_and_variant(
-            "package-name".parse().unwrap(),
-            "package-variant".parse().unwrap(),
-        );
+        let meta_package = MetaPackage::from_name("package-name".parse().unwrap());
 
         let map = hashmap! {
         "bin/my_prog".to_string() =>
@@ -193,10 +190,7 @@ mod test_package {
         .unwrap();
         let component_manifest_contents = "my_component.cml contents";
         let mut v = vec![];
-        let meta_package = MetaPackage::from_name_and_variant(
-            "my-package-name".parse().unwrap(),
-            "my-package-variant".parse().unwrap(),
-        );
+        let meta_package = MetaPackage::from_name("my-package-name".parse().unwrap());
         meta_package.serialize(&mut v).unwrap();
         let file_system = FakeFileSystem {
             content_map: hashmap! {
