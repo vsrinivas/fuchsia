@@ -13,6 +13,7 @@ test("device-protocol-pci") {
     "//sdk/lib/fdio",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
+    "//src/devices/pci/testing:pci-protocol-fake",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
