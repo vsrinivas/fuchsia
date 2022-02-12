@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/composition/cpp/fidl.h>
-#include <fuchsia/ui/lifecycle/cpp/fidl.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
 #include <zircon/status.h>
@@ -12,11 +13,10 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <sdk/lib/ui/scenic/cpp/view_creation_tokens.h>
 
-#include "sdk/lib/sys/cpp/testing/test_with_environment_fixture.h"
-#include "sdk/lib/ui/scenic/cpp/view_creation_tokens.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
 #include "src/ui/scenic/integration_tests/utils.h"
 #include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
@@ -49,59 +49,37 @@ using fuchsia::ui::composition::ViewportProperties;
 using fuchsia::ui::views::ViewCreationToken;
 using fuchsia::ui::views::ViewportCreationToken;
 using fuchsia::ui::views::ViewRef;
+using RealmRoot = sys::testing::experimental::RealmRoot;
 
 using fuchsia::math::SizeU;
 using fuchsia::math::Vec;
-
-const std::map<std::string, std::string> LocalServices() {
-  return {{"fuchsia.ui.composition.Allocator",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.composition.Flatland",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.composition.FlatlandDisplay",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-          {"fuchsia.ui.lifecycle.LifecycleController",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.hardware.display.Provider",
-           "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
-          {"fuchsia.ui.composition.Screenshot",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"}};
-}
-
-// Allow these global services.
-const std::vector<std::string> GlobalServices() {
-  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
-}
-
-class ScreenshotIntegrationTest : public gtest::TestWithEnvironmentFixture {
+class ScreenshotIntegrationTest : public gtest::RealLoopFixture {
  public:
   ScreenshotIntegrationTest() {}
 
   void SetUp() override {
-    TestWithEnvironmentFixture::SetUp();
-    environment_ =
-        CreateNewEnclosingEnvironment("screenshot_integration_test_environment", CreateServices());
-    WaitForEnclosingEnvToStart(environment_.get());
+    // Build the realm topology and route the protocols required by this test fixture from the
+    // scenic subrealm.
+    realm_ = ScenicRealmBuilder(
+                 "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic_subrealm.cm")
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Screenshot::Name_)
+                 .Build();
 
-    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
-    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
-    // controller.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    environment_->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
-        scenic_lifecycle_controller_.NewRequest());
-
-    environment_->ConnectToService(flatland_display_.NewRequest());
+    flatland_display_ = realm_->Connect<fuchsia::ui::composition::FlatlandDisplay>();
     flatland_display_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
 
-    environment_->ConnectToService(allocator_.NewRequest());
-    environment_->ConnectToService(sysmem_allocator_.NewRequest());
+    allocator_ = realm_->ConnectSync<fuchsia::ui::composition::Allocator>();
+
+    auto context = sys::ComponentContext::Create();
+    context->svc()->Connect(sysmem_allocator_.NewRequest());
 
     // Set up root view.
-    environment_->ConnectToService(root_session_.NewRequest());
+    root_session_ = realm_->Connect<fuchsia::ui::composition::Flatland>();
     root_session_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
@@ -144,7 +122,7 @@ class ScreenshotIntegrationTest : public gtest::TestWithEnvironmentFixture {
     BlockingPresent(root_session_);
 
     // Set up the child view.
-    environment_->ConnectToService(child_session_.NewRequest());
+    child_session_ = realm_->Connect<fuchsia::ui::composition::Flatland>();
     fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher2;
     auto identity = scenic::NewViewIdentityOnCreation();
     auto child_view_ref = fidl::Clone(identity.view_ref);
@@ -156,38 +134,9 @@ class ScreenshotIntegrationTest : public gtest::TestWithEnvironmentFixture {
     BlockingPresent(child_session_);
 
     // Create Screenshot client.
-    environment_->ConnectToService(screenshot_ptr_.NewRequest());
+    screenshot_ptr_ = realm_->Connect<fuchsia::ui::composition::Screenshot>();
     screenshot_ptr_.set_error_handler(
         [](zx_status_t status) { FAIL() << "Lost connection to screenshot"; });
-  }
-
-  void TearDown() override {
-    // Avoid spurious errors since we are about to kill scenic.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    flatland_display_.set_error_handler(nullptr);
-    root_session_.set_error_handler(nullptr);
-
-    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
-    FX_CHECK(terminate_status == ZX_OK)
-        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
-  }
-
-  // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|.
-  std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
-    auto services = TestWithEnvironmentFixture::CreateServices();
-    for (const auto& [name, url] : LocalServices()) {
-      const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
-    }
-
-    for (const auto& service : GlobalServices()) {
-      const zx_status_t is_ok = services->AllowParentService(service);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
-    }
-
-    return services;
   }
 
   flatland::SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
@@ -282,10 +231,10 @@ class ScreenshotIntegrationTest : public gtest::TestWithEnvironmentFixture {
   fuchsia::ui::composition::FlatlandPtr root_session_;
   fuchsia::ui::composition::FlatlandPtr child_session_;
   fuchsia::ui::views::ViewRef root_view_ref_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   fuchsia::ui::composition::AllocatorSyncPtr allocator_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   fuchsia::ui::composition::ScreenshotPtr screenshot_ptr_;
+  std::unique_ptr<RealmRoot> realm_;
 
   const TransformId kChildRootTransform{.value = 1};
   static constexpr uint32_t kBytesPerPixel = 4;
@@ -297,7 +246,6 @@ class ScreenshotIntegrationTest : public gtest::TestWithEnvironmentFixture {
   static constexpr uint32_t yellow = green | blue;
 
  private:
-  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   fuchsia::ui::composition::FlatlandDisplayPtr flatland_display_;
 };
 

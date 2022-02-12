@@ -3,18 +3,19 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/composition/cpp/fidl.h>
-#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/pointer/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
 #include <zircon/status.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <sdk/lib/ui/scenic/cpp/view_creation_tokens.h>
 
-#include "sdk/lib/ui/scenic/cpp/view_creation_tokens.h"
+#include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
 
 // These tests exercise the integration between Flatland and the InputSystem, including the
 // View-to-View transform logic between the injection point and the receiver.
@@ -27,8 +28,10 @@ namespace integration_tests {
 namespace {
 using fuc_ParentViewportWatcher = fuchsia::ui::composition::ParentViewportWatcher;
 using fuc_ChildViewWatcher = fuchsia::ui::composition::ChildViewWatcher;
+using fuc_Flatland = fuchsia::ui::composition::Flatland;
 using fuc_FlatlandPtr = fuchsia::ui::composition::FlatlandPtr;
 using fuc_ViewBoundProtocols = fuchsia::ui::composition::ViewBoundProtocols;
+using fuc_FlatlandDisplay = fuchsia::ui::composition::FlatlandDisplay;
 using fuc_FlatlandDisplayPtr = fuchsia::ui::composition::FlatlandDisplayPtr;
 using fuc_ViewportProperties = fuchsia::ui::composition::ViewportProperties;
 using fuc_TransformId = fuchsia::ui::composition::TransformId;
@@ -45,36 +48,15 @@ using fupi_EventPhase = fuchsia::ui::pointerinjector::EventPhase;
 using fupi_PointerSample = fuchsia::ui::pointerinjector::PointerSample;
 using fupi_Context = fuchsia::ui::pointerinjector::Context;
 using fupi_Data = fuchsia::ui::pointerinjector::Data;
+using fupi_Registry = fuchsia::ui::pointerinjector::Registry;
 using fupi_RegistryPtr = fuchsia::ui::pointerinjector::RegistryPtr;
 using fupi_DevicePtr = fuchsia::ui::pointerinjector::DevicePtr;
 using fupi_DeviceType = fuchsia::ui::pointerinjector::DeviceType;
 using fupi_Target = fuchsia::ui::pointerinjector::Target;
 using fupi_Viewport = fuchsia::ui::pointerinjector::Viewport;
-using ful_LifecycleControllerSyncPtr = fuchsia::ui::lifecycle::LifecycleControllerSyncPtr;
-using ful_LifecycleController = fuchsia::ui::lifecycle::LifecycleController;
+using RealmRoot = sys::testing::experimental::RealmRoot;
 
-const std::map<std::string, std::string> LocalServices() {
-  return {{"fuchsia.ui.composition.Allocator",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.composition.Flatland",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.composition.FlatlandDisplay",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.pointerinjector.Registry",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-          {"fuchsia.ui.lifecycle.LifecycleController",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.hardware.display.Provider",
-           "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
-}
-
-// Allow these global services.
-const std::vector<std::string> GlobalServices() {
-  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
-}
-
-class FlatlandMouseIntegrationTest : public gtest::TestWithEnvironmentFixture {
+class FlatlandMouseIntegrationTest : public gtest::RealLoopFixture {
  protected:
   static constexpr uint32_t kDeviceId = 1111;
 
@@ -91,31 +73,28 @@ class FlatlandMouseIntegrationTest : public gtest::TestWithEnvironmentFixture {
   // clang-format on
 
   void SetUp() override {
-    TestWithEnvironmentFixture::SetUp();
-    environment_ = CreateNewEnclosingEnvironment("flatland_mouse_integration_test_environment",
-                                                 CreateServices());
-    WaitForEnclosingEnvToStart(environment_.get());
+    // Build the realm topology and route the protocols required by this test fixture from the
+    // scenic subrealm.
+    realm_ = ScenicRealmBuilder(
+                 "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic_subrealm.cm")
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::pointerinjector::Registry::Name_)
+                 .Build();
 
-    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
-    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
-    // controller.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    environment_->ConnectToService<ful_LifecycleController>(
-        scenic_lifecycle_controller_.NewRequest());
-
-    environment_->ConnectToService(flatland_display_.NewRequest());
+    flatland_display_ = realm_->Connect<fuc_FlatlandDisplay>();
     flatland_display_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
 
-    environment_->ConnectToService(pointerinjector_registry_.NewRequest());
+    pointerinjector_registry_ = realm_->Connect<fupi_Registry>();
     pointerinjector_registry_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to pointerinjector Registry: " << zx_status_get_string(status);
     });
 
     // Set up root view.
-    environment_->ConnectToService(root_session_.NewRequest());
+    root_session_ = realm_->Connect<fuc_Flatland>();
     root_session_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
@@ -143,36 +122,6 @@ class FlatlandMouseIntegrationTest : public gtest::TestWithEnvironmentFixture {
 
     // Wait until we get the display size.
     RunLoopUntil([this] { return display_width_ != 0 && display_height_ != 0; });
-  }
-
-  void TearDown() override {
-    // Avoid spurious errors since we are about to kill scenic.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    flatland_display_.set_error_handler(nullptr);
-    root_session_.set_error_handler(nullptr);
-    pointerinjector_registry_.set_error_handler(nullptr);
-
-    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
-    FX_CHECK(terminate_status == ZX_OK)
-        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
-  }
-
-  // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|.
-  std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
-    auto services = TestWithEnvironmentFixture::CreateServices();
-    for (const auto& [name, url] : LocalServices()) {
-      const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
-    }
-
-    for (const auto& service : GlobalServices()) {
-      const zx_status_t is_ok = services->AllowParentService(service);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
-    }
-
-    return services;
   }
 
   void BlockingPresent(fuc_FlatlandPtr& flatland) {
@@ -274,17 +223,15 @@ class FlatlandMouseIntegrationTest : public gtest::TestWithEnvironmentFixture {
 
   fuv_ViewRef root_view_ref_;
 
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
-
   bool injector_channel_closed_ = false;
 
   float display_width_ = 0;
 
   float display_height_ = 0;
 
- private:
-  ful_LifecycleControllerSyncPtr scenic_lifecycle_controller_;
+  std::unique_ptr<RealmRoot> realm_;
 
+ private:
   fuc_FlatlandDisplayPtr flatland_display_;
 
   fupi_RegistryPtr pointerinjector_registry_;
@@ -302,7 +249,7 @@ TEST_F(FlatlandMouseIntegrationTest, ChildReceivesFocus_OnMouseLatch) {
   fup_MouseSourcePtr child_mouse_source;
   fuv_ViewRefFocusedPtr child_focused_ptr;
 
-  environment_->ConnectToService(child_session.NewRequest());
+  child_session = realm_->Connect<fuc_Flatland>();
   child_session.set_error_handler([](zx_status_t status) {
     FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
   });

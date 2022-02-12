@@ -4,9 +4,9 @@
 
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
-#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
 #include <zircon/status.h>
@@ -15,8 +15,9 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <sdk/lib/ui/scenic/cpp/view_creation_tokens.h>
 
-#include "sdk/lib/ui/scenic/cpp/view_creation_tokens.h"
+#include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
 // This test exercises the focus protocols implemented by Scenic (fuchsia.ui.focus.FocusChain,
@@ -44,29 +45,9 @@ using fuchsia::ui::focus::FocusChainListener;
 using fuchsia::ui::views::ViewCreationToken;
 using fuchsia::ui::views::ViewportCreationToken;
 using fuchsia::ui::views::ViewRef;
+using RealmRoot = sys::testing::experimental::RealmRoot;
 
 namespace {
-
-const std::map<std::string, std::string> LocalServices() {
-  return {{"fuchsia.ui.composition.Allocator",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.composition.Flatland",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.composition.FlatlandDisplay",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.focus.FocusChainListenerRegistry",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-          {"fuchsia.ui.lifecycle.LifecycleController",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.hardware.display.Provider",
-           "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
-}
-
-// Allow these global services.
-const std::vector<std::string> GlobalServices() {
-  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
-}
 
 // "Long enough" time to wait before assuming updates won't arrive.
 // Should not be used when actually expecting an update to occur.
@@ -75,36 +56,33 @@ const uint32_t kDefaultLogicalPixelSize = 1;
 
 }  // namespace
 
-class FlatlandFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
-                                     public FocusChainListener {
+class FlatlandFocusIntegrationTest : public gtest::RealLoopFixture, public FocusChainListener {
  protected:
   FlatlandFocusIntegrationTest() : focus_chain_listener_(this) {}
 
   void SetUp() override {
-    TestWithEnvironmentFixture::SetUp();
-    environment_ = CreateNewEnclosingEnvironment("flatland_touch_integration_test_environment",
-                                                 CreateServices());
-    WaitForEnclosingEnvToStart(environment_.get());
-
-    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
-    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
-    // controller.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    environment_->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
-        scenic_lifecycle_controller_.NewRequest());
+    // Build the realm topology and route the protocols required by this test fixture from the
+    // scenic subrealm.
+    realm_ = ScenicRealmBuilder(
+                 "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic_subrealm.cm")
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::focus::FocusChainListenerRegistry::Name_)
+                 .Build();
 
     // Set up focus chain listener and wait for the initial null focus chain.
     fidl::InterfaceHandle<FocusChainListener> listener_handle;
     focus_chain_listener_.Bind(listener_handle.NewRequest());
-    environment_->ConnectToService<fuchsia::ui::focus::FocusChainListenerRegistry>()->Register(
-        std::move(listener_handle));
+    auto focus_chain_listener_registry =
+        realm_->Connect<fuchsia::ui::focus::FocusChainListenerRegistry>();
+    focus_chain_listener_registry->Register(std::move(listener_handle));
     EXPECT_EQ(CountReceivedFocusChains(), 0u);
     RunLoopUntil([this] { return CountReceivedFocusChains() == 1u; });
     EXPECT_FALSE(LastFocusChain()->has_focus_chain());
 
     // Set up the display.
-    environment_->ConnectToService(flatland_display_.NewRequest());
+    flatland_display_ = realm_->Connect<fuchsia::ui::composition::FlatlandDisplay>();
     flatland_display_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
@@ -113,7 +91,7 @@ class FlatlandFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
     flatland_display_->SetContent(std::move(parent_token), child_view_watcher.NewRequest());
 
     // Set up root view.
-    environment_->ConnectToService(root_session_.NewRequest());
+    root_session_ = realm_->Connect<fuchsia::ui::composition::Flatland>();
     root_session_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
@@ -134,37 +112,6 @@ class FlatlandFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
     EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain().front(), root_view_ref_);
 
     observed_focus_chains_.clear();
-  }
-
-  void TearDown() override {
-    // Avoid spurious errors since we are about to kill scenic.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    flatland_display_.set_error_handler(nullptr);
-    focus_chain_listener_.set_error_handler(nullptr);
-    root_focuser_.set_error_handler(nullptr);
-    root_session_.set_error_handler(nullptr);
-
-    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
-    FX_CHECK(terminate_status == ZX_OK)
-        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
-  }
-
-  // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|.
-  std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
-    auto services = TestWithEnvironmentFixture::CreateServices();
-    for (const auto& [name, url] : LocalServices()) {
-      const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
-    }
-
-    for (const auto& service : GlobalServices()) {
-      const zx_status_t is_ok = services->AllowParentService(service);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
-    }
-
-    return services;
   }
 
   void BlockingPresent(fuchsia::ui::composition::FlatlandPtr& flatland) {
@@ -224,14 +171,12 @@ class FlatlandFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
   fuchsia::ui::composition::FlatlandPtr root_session_;
   fuchsia::ui::views::ViewRef root_view_ref_;
   fuchsia::ui::views::FocuserPtr root_focuser_;
-
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+  std::unique_ptr<RealmRoot> realm_;
 
  private:
   fidl::Binding<FocusChainListener> focus_chain_listener_;
   std::vector<FocusChain> observed_focus_chains_;
 
-  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   fuchsia::ui::composition::FlatlandDisplayPtr flatland_display_;
 };
 
@@ -241,7 +186,7 @@ TEST_F(FlatlandFocusIntegrationTest, RequestValidity_RequestUnconnected_ShouldFa
   // Set up the child view.
   auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   fuchsia::ui::composition::FlatlandPtr child_session;
-  environment_->ConnectToService(child_session.NewRequest());
+  child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   auto identity = scenic::NewViewIdentityOnCreation();
   auto child_view_ref = fidl::Clone(identity.view_ref);
@@ -259,7 +204,7 @@ TEST_F(FlatlandFocusIntegrationTest, RequestValidity_RequestConnected_ShouldSucc
   // Set up the child view.
   auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   fuchsia::ui::composition::FlatlandPtr child_session;
-  environment_->ConnectToService(child_session.NewRequest());
+  child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   auto identity = scenic::NewViewIdentityOnCreation();
   auto child_view_ref = fidl::Clone(identity.view_ref);
@@ -286,7 +231,7 @@ TEST_F(FlatlandFocusIntegrationTest, RequestValidity_SelfRequest_ShouldSucceed) 
   AttachToRoot(std::move(parent_token));
 
   fuchsia::ui::composition::FlatlandPtr child_session;
-  environment_->ConnectToService(child_session.NewRequest());
+  child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   fuchsia::ui::views::FocuserPtr child_focuser;
   ViewBoundProtocols protocols;
@@ -318,7 +263,7 @@ TEST_F(FlatlandFocusIntegrationTest, ChildView_CreatedBeforeAttachingToRoot_Shou
   // Set up the child view.
   auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   fuchsia::ui::composition::FlatlandPtr child_session;
-  environment_->ConnectToService(child_session.NewRequest());
+  child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   fuchsia::ui::views::FocuserPtr child_focuser;
   bool channel_alive = true;
@@ -344,7 +289,7 @@ TEST_F(FlatlandFocusIntegrationTest, FocusChain_Updated_OnViewDisconnect) {
   // Set up the child view.
   auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   fuchsia::ui::composition::FlatlandPtr child_session;
-  environment_->ConnectToService(child_session.NewRequest());
+  child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   auto identity = scenic::NewViewIdentityOnCreation();
   auto child_view_ref = fidl::Clone(identity.view_ref);
@@ -382,7 +327,7 @@ TEST_F(FlatlandFocusIntegrationTest, ViewRefFocused_HappyCase) {
   auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   AttachToRoot(std::move(parent_token));
   fuchsia::ui::composition::FlatlandPtr child_session;
-  environment_->ConnectToService(child_session.NewRequest());
+  child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   fuchsia::ui::views::ViewRefFocusedPtr child_focused_ptr;
   ViewBoundProtocols protocols;
@@ -414,7 +359,7 @@ TEST_F(FlatlandFocusIntegrationTest,
   // Set up the child view.
   auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   fuchsia::ui::composition::FlatlandPtr child_session;
-  environment_->ConnectToService(child_session.NewRequest());
+  child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   fuchsia::ui::views::ViewRefFocusedPtr child_focused_ptr;
   bool channel_alive = true;
@@ -443,7 +388,7 @@ TEST_F(FlatlandFocusIntegrationTest,
   // Set up the child view.
   auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   fuchsia::ui::composition::FlatlandPtr child_session;
-  environment_->ConnectToService(child_session.NewRequest());
+  child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   fuchsia::ui::views::ViewRefFocusedPtr child_focused_ptr;
   bool channel_alive = true;

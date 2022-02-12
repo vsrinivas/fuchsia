@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/composition/cpp/fidl.h>
-#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/pointer/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
 #include <zircon/status.h>
@@ -18,8 +18,9 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <sdk/lib/ui/scenic/cpp/view_creation_tokens.h>
 
-#include "sdk/lib/ui/scenic/cpp/view_creation_tokens.h"
+#include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
 #include "src/ui/scenic/integration_tests/utils.h"
 
 #include <glm/glm.hpp>
@@ -69,29 +70,9 @@ using fuchsia::ui::pointer::TouchResponseType;
 using fuchsia::ui::views::ViewCreationToken;
 using fuchsia::ui::views::ViewportCreationToken;
 using fuchsia::ui::views::ViewRef;
+using RealmRoot = sys::testing::experimental::RealmRoot;
 
 namespace {
-
-const std::map<std::string, std::string> LocalServices() {
-  return {{"fuchsia.ui.composition.Allocator",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.composition.Flatland",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.composition.FlatlandDisplay",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.ui.pointerinjector.Registry",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-          {"fuchsia.ui.lifecycle.LifecycleController",
-           "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic.cmx"},
-          {"fuchsia.hardware.display.Provider",
-           "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
-}
-
-// Allow these global services.
-const std::vector<std::string> GlobalServices() {
-  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
-}
 
 glm::mat3 ArrayToMat3(std::array<float, 9> array) {
   // clang-format off
@@ -112,7 +93,7 @@ std::array<float, 2> TransformPointerCoords(std::array<float, 2> pointer,
 
 }  // namespace
 
-class FlatlandTouchIntegrationTest : public gtest::TestWithEnvironmentFixture {
+class FlatlandTouchIntegrationTest : public gtest::RealLoopFixture {
  protected:
   static constexpr uint32_t kDeviceId = 1111;
   static constexpr uint32_t kPointerId = 2222;
@@ -125,30 +106,27 @@ class FlatlandTouchIntegrationTest : public gtest::TestWithEnvironmentFixture {
   // clang-format on
 
   void SetUp() override {
-    TestWithEnvironmentFixture::SetUp();
-    environment_ = CreateNewEnclosingEnvironment("flatland_touch_integration_test_environment",
-                                                 CreateServices());
-    WaitForEnclosingEnvToStart(environment_.get());
+    // Build the realm topology and route the protocols required by this test fixture from the
+    // scenic subrealm.
+    realm_ = ScenicRealmBuilder(
+                 "fuchsia-pkg://fuchsia.com/flatland_integration_tests#meta/scenic_subrealm.cm")
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Flatland::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::FlatlandDisplay::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
+                 .AddScenicSubRealmProtocol(fuchsia::ui::pointerinjector::Registry::Name_)
+                 .Build();
 
-    // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
-    // This ensures the correct ordering of shutdown under CFv1: first scenic, then the fake display
-    // controller.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    environment_->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>(
-        scenic_lifecycle_controller_.NewRequest());
-
-    environment_->ConnectToService(flatland_display_.NewRequest());
+    flatland_display_ = realm_->Connect<fuchsia::ui::composition::FlatlandDisplay>();
     flatland_display_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
-    environment_->ConnectToService(pointerinjector_registry_.NewRequest());
+    pointerinjector_registry_ = realm_->Connect<fuchsia::ui::pointerinjector::Registry>();
     pointerinjector_registry_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to pointerinjector Registry: " << zx_status_get_string(status);
     });
 
     // Set up root view.
-    environment_->ConnectToService(root_session_.NewRequest());
+    root_session_ = realm_->Connect<fuchsia::ui::composition::Flatland>();
     root_session_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
@@ -173,36 +151,6 @@ class FlatlandTouchIntegrationTest : public gtest::TestWithEnvironmentFixture {
 
     // Wait until we get the display size.
     RunLoopUntil([this] { return display_width_ != 0 && display_height_ != 0; });
-  }
-
-  void TearDown() override {
-    // Avoid spurious errors since we are about to kill scenic.
-    //
-    // TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
-    flatland_display_.set_error_handler(nullptr);
-    root_session_.set_error_handler(nullptr);
-    pointerinjector_registry_.set_error_handler(nullptr);
-
-    zx_status_t terminate_status = scenic_lifecycle_controller_->Terminate();
-    FX_CHECK(terminate_status == ZX_OK)
-        << "Failed to terminate Scenic with status: " << zx_status_get_string(terminate_status);
-  }
-
-  // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|.
-  std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
-    auto services = TestWithEnvironmentFixture::CreateServices();
-    for (const auto& [name, url] : LocalServices()) {
-      const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
-    }
-
-    for (const auto& service : GlobalServices()) {
-      const zx_status_t is_ok = services->AllowParentService(service);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
-    }
-
-    return services;
   }
 
   void BlockingPresent(fuchsia::ui::composition::FlatlandPtr& flatland) {
@@ -330,10 +278,9 @@ class FlatlandTouchIntegrationTest : public gtest::TestWithEnvironmentFixture {
 
   fuchsia::ui::composition::FlatlandPtr root_session_;
   fuchsia::ui::views::ViewRef root_view_ref_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+  std::unique_ptr<RealmRoot> realm_;
 
  private:
-  fuchsia::ui::lifecycle::LifecycleControllerSyncPtr scenic_lifecycle_controller_;
   fuchsia::ui::composition::FlatlandDisplayPtr flatland_display_;
   fuchsia::ui::pointerinjector::RegistryPtr pointerinjector_registry_;
   fuchsia::ui::pointerinjector::DevicePtr injector_;
@@ -347,7 +294,7 @@ class FlatlandTouchIntegrationTest : public gtest::TestWithEnvironmentFixture {
 TEST_F(FlatlandTouchIntegrationTest, BasicInputTest) {
   fuchsia::ui::composition::FlatlandPtr child_session;
   fuchsia::ui::pointer::TouchSourcePtr child_touch_source;
-  environment_->ConnectToService(child_session.NewRequest());
+  child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
   child_touch_source.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
   });
@@ -417,7 +364,7 @@ TEST_F(FlatlandTouchIntegrationTest, ChildCreatedUsingCreateView_DoesNotGetInput
   // view to receive input events.
   {
     auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
-    environment_->ConnectToService(parent_session.NewRequest());
+    parent_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
     fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
     ViewBoundProtocols protocols;
     protocols.set_touch_source(parent_touch_source.NewRequest());
@@ -439,7 +386,7 @@ TEST_F(FlatlandTouchIntegrationTest, ChildCreatedUsingCreateView_DoesNotGetInput
   fuchsia::ui::composition::FlatlandPtr child_session;
   {
     auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
-    environment_->ConnectToService(child_session.NewRequest());
+    child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
 
     ConnectChildView(parent_session, std::move(parent_token));
 

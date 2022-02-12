@@ -176,6 +176,7 @@ executable("flatland_touch_integration_test_bin") {
   sources = [ "flatland_touch_integration_test.cc" ]
   deps = [
     ":common_deps",
+    ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk//fidl/fuchsia.ui.pointer",
     "//sdk//fidl/fuchsia.ui.pointerinjector",
@@ -185,7 +186,7 @@ executable("flatland_touch_integration_test_bin") {
 
 fuchsia_test_component("flatland_touch_integration_test") {
   component_name = "flatland_touch_integration_test"
-  manifest = "meta/flatland_touch_integration_test.cmx"
+  manifest = "meta/flatland_touch_integration_test.cml"
   deps = [ ":flatland_touch_integration_test_bin" ]
 }
 
@@ -194,6 +195,7 @@ executable("flatland_focus_integration_test_bin") {
   sources = [ "flatland_focus_integration_test.cc" ]
   deps = [
     ":common_deps",
+    ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.focus",
     "//src/ui/scenic/lib/utils",
@@ -202,7 +204,7 @@ executable("flatland_focus_integration_test_bin") {
 
 fuchsia_test_component("flatland_focus_integration_test") {
   component_name = "flatland_focus_integration_test"
-  manifest = "meta/flatland_focus_integration_test.cmx"
+  manifest = "meta/flatland_focus_integration_test.cml"
   deps = [ ":flatland_focus_integration_test_bin" ]
 }
 
@@ -231,6 +233,7 @@ executable("screenshot_integration_test_bin") {
   sources = [ "screenshot_integration_test.cc" ]
   deps = [
     ":common_deps",
+    ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.ui.composition",
     "//src/ui/scenic/lib/allocation:allocation",
     "//src/ui/scenic/lib/screenshot:screenshot",
@@ -241,7 +244,7 @@ executable("screenshot_integration_test_bin") {
 
 fuchsia_test_component("screenshot_integration_test") {
   component_name = "screenshot_integration_test"
-  manifest = "meta/screenshot_integration_test.cmx"
+  manifest = "meta/screenshot_integration_test.cml"
   deps = [ ":screenshot_integration_test_bin" ]
 }
 
@@ -250,6 +253,7 @@ executable("flatland_mouse_integration_test_bin") {
   sources = [ "flatland_mouse_integration_test.cc" ]
   deps = [
     ":common_deps",
+    ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk//fidl/fuchsia.ui.pointer",
     "//sdk//fidl/fuchsia.ui.pointerinjector",
@@ -258,7 +262,7 @@ executable("flatland_mouse_integration_test_bin") {
 
 fuchsia_test_component("flatland_mouse_integration_test") {
   component_name = "flatland_mouse_integration_test"
-  manifest = "meta/flatland_mouse_integration_test.cmx"
+  manifest = "meta/flatland_mouse_integration_test.cml"
   deps = [ ":flatland_mouse_integration_test_bin" ]
 }
 
@@ -292,7 +296,7 @@ fuchsia_test_package("flatland_integration_tests") {
     # Flatland display compositor currently crashes on aemu, so we skip it for now.
     environments = magma_libvulkan_hardware_envs
   }
-  deps = [ "//src/ui/scenic:component" ]
+  deps = [ ":scenic_subrealm" ]
 }
 
 fuchsia_test_package("observer_integration_tests") {
