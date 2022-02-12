@@ -355,6 +355,20 @@ if (toolchain_environment == "kernel.phys" ||
     ]
   }
 
+  source_set("handoff-entropy") {
+    sources = [ "handoff-entropy.cc" ]
+    public = [ "handoff-entropy.h" ]
+    public_deps = [
+      ":stdio",
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/lib/crypto:crypto-entropy-src",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/zbitl",
+    ]
+    deps = [ "//zircon/system/ulib/explicit-memory" ]
+  }
+
   # Split out so that the definition of arch-specific methods can include
   # handoff-prep.h without introducing a dependency cycle.
   source_set("handoff-prep.h") {

@@ -168,9 +168,26 @@ if (current_toolchain != default_toolchain) {
       ":test-main",
       "//zircon/kernel/lib/arch/test:kernel-tests",
       "//zircon/kernel/lib/crypto:crypto-entropy-test",
+      "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
       "//zircon/kernel/lib/unittest",
       "//zircon/kernel/tests",
+      "//zircon/system/ulib/zbitl",
+    ]
+  }
+
+  common_test("handoff-entropy-test") {
+    sources = [ "handoff-entropy-test.cc" ]
+
+    deps = [
+      ":phys-unittest",
+      ":test-main",
+      "..:handoff-entropy",
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+      "//zircon/kernel/lib/unittest",
+      "//zircon/system/ulib/zbitl",
     ]
   }
 
@@ -391,6 +408,7 @@ if (current_toolchain != default_toolchain) {
     testonly = true
     deps = [
       ":backtrace-test",
+      ":handoff-entropy-test",
       ":hello-world-test",
       ":phys-unittests",
       ":turducken-zbi-test",
@@ -419,6 +437,7 @@ if (current_toolchain != default_toolchain) {
             "zbi-hello-world-test",
             "zbi-memory-test",
             "zbi-phys-unittests",
+            "zbi-handoff-entropy-test",
             "zbi-decompress-test",
           ]) {
     mexec_zbi_test("mexec-$test") {
