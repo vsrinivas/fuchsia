@@ -17,6 +17,7 @@ if (is_host) {
       # interface instead of making this visibility exception.
       "//src/developer/ffx/plugins/scrutiny/verify/route_sources/*",
       "//src/developer/ffx/plugins/scrutiny/verify/routes/*",
+      "//src/developer/ffx/plugins/scrutiny/verify/static_pkgs/*",
     ]
     deps = [
       "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
