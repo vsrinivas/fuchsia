@@ -268,12 +268,13 @@ static void do_msg_wait_many_test(zx_handle_t channel, const Message* msg) {
   send_msg(channel, MSG_PROCEED);
 
   uint32_t num_handles = msg->num_handles;
-  zx_wait_item_t items[num_handles];
+  std::vector<zx_wait_item_t> items(num_handles);
   for (uint32_t i = 0; i < num_handles; ++i) {
     items[i].handle = msg->handles[i];
     items[i].waitfor = ZX_EVENTPAIR_PEER_CLOSED;
   }
-  auto status = zx_object_wait_many(&items[0], num_handles, ZX_TIME_INFINITE);
+  auto status =
+      zx_object_wait_many(items.empty() ? nullptr : &items[0], num_handles, ZX_TIME_INFINITE);
   for (uint32_t i = 0; i < num_handles; ++i) {
     zx_handle_close(msg->handles[i]);
   }
