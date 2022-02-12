@@ -12,6 +12,7 @@ ffx_plugin("ffx_scrutiny_bootfs") {
     "//src/security/scrutiny/config",
     "//src/security/scrutiny/frontend",
     "//src/security/scrutiny/utils",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:serde_json",
   ]
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Error, Result},
+    anyhow::{anyhow, bail, Context, Error, Result},
     ffx_core::ffx_plugin,
     ffx_scrutiny_bootfs_args::ScrutinyBootfsCommand,
     scrutiny_config::{Config, LoggingConfig, PluginConfig, RuntimeConfig},
@@ -24,6 +24,10 @@ If you are making a change in fuchsia.git that causes this, you need to perform 
 
 #[ffx_plugin()]
 pub async fn scrutiny_bootfs(cmd: ScrutinyBootfsCommand) -> Result<(), Error> {
+    if cmd.golden.len() == 0 {
+        bail!("Must specify at least one --golden");
+    }
+
     let config = Config::run_command_with_runtime(
         CommandBuilder::new("tool.zbi.list.bootfs").param("input", cmd.zbi.clone()).build(),
         RuntimeConfig {
