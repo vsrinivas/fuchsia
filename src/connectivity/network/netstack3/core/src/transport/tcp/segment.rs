@@ -6,7 +6,10 @@
 
 use core::{convert::TryFrom as _, num::TryFromIntError, ops::Range};
 
-use super::{seqnum::SeqNum, Control};
+use super::{
+    seqnum::{SeqNum, WindowSize},
+    Control,
+};
 use packet::{Fragment, FragmentedByteSlice};
 
 /// A TCP segment.
@@ -17,7 +20,7 @@ pub(super) struct Segment<P: Payload> {
     /// The acknowledge number of the segment. [`None`] if not present.
     pub(super) ack: Option<SeqNum>,
     /// The advertised window size.
-    pub(super) wnd: u32,
+    pub(super) wnd: WindowSize,
     /// The carried data and its control flag.
     pub(super) contents: Contents<P>,
 }
@@ -66,7 +69,7 @@ impl<P: Payload> Segment<P> {
         seq: SeqNum,
         ack: Option<SeqNum>,
         control: Option<Control>,
-        wnd: u32,
+        wnd: WindowSize,
         data: P,
     ) -> (Self, usize) {
         let has_control_len = control.map(Control::has_sequence_no).unwrap_or(false);
@@ -95,7 +98,7 @@ impl<P: Payload> Segment<P> {
 
 impl Segment<()> {
     /// Creates a segment with no data.
-    fn new(seq: SeqNum, ack: Option<SeqNum>, control: Option<Control>, wnd: u32) -> Self {
+    fn new(seq: SeqNum, ack: Option<SeqNum>, control: Option<Control>, wnd: WindowSize) -> Self {
         // All of the checks on lengths are optimized out:
         // https://godbolt.org/z/KPd537G6Y
         let (seg, truncated) = Segment::with_data(seq, ack, control, wnd, ());
@@ -104,33 +107,33 @@ impl Segment<()> {
     }
 
     /// Creates an ACK segment.
-    pub(super) fn ack(seq: SeqNum, ack: SeqNum, wnd: u32) -> Self {
+    pub(super) fn ack(seq: SeqNum, ack: SeqNum, wnd: WindowSize) -> Self {
         Segment::new(seq, Some(ack), None, wnd)
     }
 
     /// Creates a SYN segment.
-    pub(super) fn syn(seq: SeqNum, wnd: u32) -> Self {
+    pub(super) fn syn(seq: SeqNum, wnd: WindowSize) -> Self {
         Segment::new(seq, None, Some(Control::SYN), wnd)
     }
 
     /// Creates a SYN-ACK segment.
-    pub(super) fn syn_ack(seq: SeqNum, ack: SeqNum, wnd: u32) -> Self {
+    pub(super) fn syn_ack(seq: SeqNum, ack: SeqNum, wnd: WindowSize) -> Self {
         Segment::new(seq, Some(ack), Some(Control::SYN), wnd)
     }
 
     /// Creates a RST segment.
     pub(super) fn rst(seq: SeqNum) -> Self {
-        Segment::new(seq, None, Some(Control::RST), 0)
+        Segment::new(seq, None, Some(Control::RST), WindowSize::ZERO)
     }
 
     /// Creates a RST-ACK segment.
     pub(super) fn rst_ack(seq: SeqNum, ack: SeqNum) -> Self {
-        Segment::new(seq, Some(ack), Some(Control::RST), 0)
+        Segment::new(seq, Some(ack), Some(Control::RST), WindowSize::ZERO)
     }
 
     #[cfg_attr(not(test), allow(dead_code))]
     /// Creates a FIN segment.
-    pub(super) fn fin(seq: SeqNum, ack: SeqNum, wnd: u32) -> Self {
+    pub(super) fn fin(seq: SeqNum, ack: SeqNum, wnd: WindowSize) -> Self {
         Segment::new(seq, Some(ack), Some(Control::FIN), wnd)
     }
 }
@@ -251,8 +254,13 @@ mod test {
     #[test_case(Some(Control::RST), &[][..] => (0, &[][..]); "empty slice with rst")]
     #[test_case(Some(Control::RST), &[1][..] => (1, &[1][..]); "non-empty slice with rst")]
     fn segment_len(control: Option<Control>, data: &[u8]) -> (u32, &[u8]) {
-        let (seg, truncated) =
-            Segment::with_data(SeqNum::new(1), Some(SeqNum::new(1)), control, 0, data);
+        let (seg, truncated) = Segment::with_data(
+            SeqNum::new(1),
+            Some(SeqNum::new(1)),
+            control,
+            WindowSize::ZERO,
+            data,
+        );
         assert_eq!(truncated, 0);
         (seg.contents.len(), seg.contents.data)
     }
@@ -317,7 +325,7 @@ mod test {
     => (MAX_PAYLOAD_AND_CONTROL_LEN - 1, Some(Control::SYN), 1 << 31))]
     fn segment_truncate(len: usize, control: Option<Control>) -> (usize, Option<Control>, usize) {
         let (seg, truncated) =
-            Segment::with_data(SeqNum::new(0), None, control, 0, PayloadLen { len });
+            Segment::with_data(SeqNum::new(0), None, control, WindowSize::ZERO, PayloadLen { len });
         (seg.contents.data.len(), seg.contents.control, truncated)
     }
 }

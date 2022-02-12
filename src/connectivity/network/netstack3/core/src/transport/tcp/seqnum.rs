@@ -126,9 +126,53 @@ impl SeqNum {
     }
 }
 
+/// A witness type for TCP window size.
+///
+/// Per [RFC 7323 Section 2.3]:
+/// > ..., the above constraints imply that two times the maximum window size
+/// > must be less than 2^31, or
+/// >                    max window < 2^30
+///
+/// [RFC 7323 Section 2.3]: https://tools.ietf.org/html/rfc7323#section-2.3
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub(super) struct WindowSize(u32);
+
+impl WindowSize {
+    pub(super) const MAX: WindowSize = WindowSize(1 << 30 - 1);
+    pub(super) const ZERO: WindowSize = WindowSize(0);
+
+    // TODO(https://github.com/rust-lang/rust/issues/67441): put this constant
+    // in the state module once `Option::unwrap` is stable.
+    pub(super) const DEFAULT: WindowSize = WindowSize(65535);
+
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(super) const fn new(wnd: u32) -> Option<Self> {
+        let WindowSize(max) = Self::MAX;
+        if wnd > max {
+            None
+        } else {
+            Some(Self(wnd))
+        }
+    }
+}
+
+impl ops::Add<WindowSize> for SeqNum {
+    type Output = SeqNum;
+
+    fn add(self, WindowSize(wnd): WindowSize) -> Self::Output {
+        self + wnd
+    }
+}
+
+impl From<WindowSize> for u32 {
+    fn from(WindowSize(wnd): WindowSize) -> Self {
+        wnd
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::SeqNum;
+    use super::{SeqNum, WindowSize};
     use crate::transport::tcp::segment::MAX_PAYLOAD_AND_CONTROL_LEN;
     use proptest::{
         arbitrary::any,
@@ -216,6 +260,16 @@ mod tests {
         fn seqnum_wraps_around_at_max_length(a in arb_seqnum()) {
             assert!(a.before(a + MAX_PAYLOAD_AND_CONTROL_LEN));
             assert!(a.after(a + MAX_PAYLOAD_AND_CONTROL_LEN + 1));
+        }
+
+        #[test]
+        fn window_size_less_than_or_eq_to_max(wnd in 0..=WindowSize::MAX.0) {
+            assert_eq!(WindowSize::new(wnd), Some(WindowSize(wnd)));
+        }
+
+        #[test]
+        fn window_size_greater_than_max(wnd in WindowSize::MAX.0+1..=u32::MAX) {
+            assert_eq!(WindowSize::new(wnd), None);
         }
     }
 }

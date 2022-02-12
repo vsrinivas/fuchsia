@@ -6,12 +6,9 @@
 
 use super::{
     segment::{Payload, Segment},
-    seqnum::SeqNum,
+    seqnum::{SeqNum, WindowSize},
     Control, UserError,
 };
-
-/// The default window size to advise.
-const DEFAULT_TCP_INITIAL_WINDOW: u32 = 65535;
 
 /// Per RFC 793: https://tools.ietf.org/html/rfc793#page-22:
 ///
@@ -32,7 +29,7 @@ impl Closed<()> {
     /// sequence number of SYN.
     #[cfg_attr(not(test), allow(dead_code))]
     fn connect(iss: SeqNum) -> (SynSent, Segment<()>) {
-        (SynSent { iss }, Segment::syn(iss, DEFAULT_TCP_INITIAL_WINDOW))
+        (SynSent { iss }, Segment::syn(iss, WindowSize::DEFAULT))
     }
 }
 
@@ -156,7 +153,7 @@ impl SynSent {
                             let irs = seg_seq;
                             let established = Established {
                                 snd: Send { nxt: iss + 1, una: ack, wnd: seg_wnd },
-                                rcv: Recv { nxt: irs + 1, wnd: DEFAULT_TCP_INITIAL_WINDOW },
+                                rcv: Recv { nxt: irs + 1, wnd: WindowSize::DEFAULT },
                             };
                             let ack_seg = Segment::ack(
                                 established.snd.nxt,
@@ -177,7 +174,7 @@ impl SynSent {
                         //   ESTABLISHED state has been reached, return.
                         (
                             Some(Either::A(Either::B(SynRcvd { irs: seg_seq }))),
-                            Some(Segment::syn_ack(iss, seg_seq + 1, DEFAULT_TCP_INITIAL_WINDOW)),
+                            Some(Segment::syn_ack(iss, seg_seq + 1, WindowSize::DEFAULT)),
                         )
                     }
                 }
@@ -209,7 +206,7 @@ struct Send {
     #[cfg_attr(not(test), allow(dead_code))]
     una: SeqNum,
     #[cfg_attr(not(test), allow(dead_code))]
-    wnd: u32,
+    wnd: WindowSize,
 }
 
 /// TCP control block variables that are responsible for receiving.
@@ -217,7 +214,7 @@ struct Send {
 #[cfg_attr(test, derive(PartialEq, Eq))]
 struct Recv {
     nxt: SeqNum,
-    wnd: u32,
+    wnd: WindowSize,
 }
 
 /// Per RFC 793: https://tools.ietf.org/html/rfc793#page-22:
@@ -318,7 +315,7 @@ mod test {
     const ISS_2: SeqNum = SeqNum::new(300);
 
     impl Segment<&[u8]> {
-        fn data(seq: SeqNum, ack: SeqNum, wnd: u32, data: &[u8]) -> Segment<&[u8]> {
+        fn data(seq: SeqNum, ack: SeqNum, wnd: WindowSize, data: &[u8]) -> Segment<&[u8]> {
             let (seg, truncated) = Segment::with_data(seq, Some(ack), None, wnd, data);
             assert_eq!(truncated, 0);
             seg
@@ -327,9 +324,9 @@ mod test {
 
     #[test_case(Segment::rst(ISS_1) => None; "drop RST")]
     #[test_case(Segment::rst_ack(ISS_1, ISS_2) => None; "drop RST|ACK")]
-    #[test_case(Segment::syn(ISS_1, 0) => Some(Segment::rst_ack(SeqNum::new(0), ISS_1 + 1)); "reset SYN")]
-    #[test_case(Segment::syn_ack(ISS_1, ISS_2, 0) => Some(Segment::rst(ISS_2)); "reset SYN|ACK")]
-    #[test_case(Segment::data(ISS_1, ISS_2, 0, &[0, 1, 2][..]) => Some(Segment::rst(ISS_2)); "reset data segment")]
+    #[test_case(Segment::syn(ISS_1, WindowSize::ZERO) => Some(Segment::rst_ack(SeqNum::new(0), ISS_1 + 1)); "reset SYN")]
+    #[test_case(Segment::syn_ack(ISS_1, ISS_2, WindowSize::ZERO) => Some(Segment::rst(ISS_2)); "reset SYN|ACK")]
+    #[test_case(Segment::data(ISS_1, ISS_2, WindowSize::ZERO, &[0, 1, 2][..]) => Some(Segment::rst(ISS_2)); "reset data segment")]
     fn segment_arrives_when_closed(
         incoming: impl Into<Segment<&'static [u8]>>,
     ) -> Option<Segment<()>> {
@@ -339,7 +336,7 @@ mod test {
 
     #[test_case(Segment::rst_ack(ISS_2, ISS_1 - 1) => (None, None); "unacceptable ACK with RST")]
     #[test_case(
-        Segment::ack(ISS_2, ISS_1 - 1, DEFAULT_TCP_INITIAL_WINDOW)
+        Segment::ack(ISS_2, ISS_1 - 1, WindowSize::DEFAULT)
     => (Some(Either::B(Closed {
         reason: UserError::ConnectionReset,
     })), Some(
@@ -359,19 +356,19 @@ mod test {
         Segment::rst(ISS_2)
     => (None, None); "RST without ack")]
     #[test_case(
-        Segment::syn(ISS_2, DEFAULT_TCP_INITIAL_WINDOW)
+        Segment::syn(ISS_2, WindowSize::DEFAULT)
     => (Some(Either::A(Either::B( SynRcvd {
         irs: ISS_2,
-    }))), Some(Segment::syn_ack(ISS_1, ISS_2 + 1, DEFAULT_TCP_INITIAL_WINDOW)
+    }))), Some(Segment::syn_ack(ISS_1, ISS_2 + 1, WindowSize::DEFAULT)
     )); "SYN only")]
     #[test_case(
-        Segment::fin(ISS_2, ISS_1 + 1, DEFAULT_TCP_INITIAL_WINDOW)
+        Segment::fin(ISS_2, ISS_1 + 1, WindowSize::DEFAULT)
     => (None, None); "acceptable ACK with FIN")]
     #[test_case(
-        Segment::ack(ISS_2, ISS_1 + 1, DEFAULT_TCP_INITIAL_WINDOW)
+        Segment::ack(ISS_2, ISS_1 + 1, WindowSize::DEFAULT)
     => (None, None); "acceptable ACK(ISS+1) with nothing")]
     #[test_case(
-        Segment::ack(ISS_2, ISS_1, DEFAULT_TCP_INITIAL_WINDOW)
+        Segment::ack(ISS_2, ISS_1, WindowSize::DEFAULT)
     => (None, None); "acceptable ACK(ISS) without RST")]
     fn segment_arrives_when_syn_sent(
         incoming: Segment<()>,
@@ -384,19 +381,18 @@ mod test {
     #[test]
     fn active_open() {
         let (syn_sent, syn_seg) = Closed::connect(ISS_1);
-        assert_eq!(syn_seg, Segment::syn(ISS_1, DEFAULT_TCP_INITIAL_WINDOW));
+        assert_eq!(syn_seg, Segment::syn(ISS_1, WindowSize::DEFAULT));
         assert_eq!(syn_sent, SynSent { iss: ISS_1 });
         let mut state = State::SynSent(syn_sent);
-        let ack_seg =
-            state.on_segment(Segment::syn_ack(ISS_2, ISS_1 + 1, DEFAULT_TCP_INITIAL_WINDOW));
-        assert_eq!(ack_seg, Some(Segment::ack(ISS_1 + 1, ISS_2 + 1, DEFAULT_TCP_INITIAL_WINDOW)));
+        let ack_seg = state.on_segment(Segment::syn_ack(ISS_2, ISS_1 + 1, WindowSize::DEFAULT));
+        assert_eq!(ack_seg, Some(Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::DEFAULT)));
         assert_matches!(state, State::Established(established) if established == Established {
             snd: Send {
                 nxt: ISS_1 + 1,
                 una: ISS_1 + 1,
-                wnd: DEFAULT_TCP_INITIAL_WINDOW
+                wnd: WindowSize::DEFAULT
             },
-            rcv: Recv { nxt: ISS_2 + 1, wnd: DEFAULT_TCP_INITIAL_WINDOW }
+            rcv: Recv { nxt: ISS_2 + 1, wnd: WindowSize::DEFAULT }
         });
     }
 }
