@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
 import("//build/dev.gni")
+import("//src/developer/ffx/build/ffx_action.gni")
 
 # Validates that all use statements for protocols & directories has a valid
 # expose-offer-use chain and in the case of directories that the correct
@@ -14,7 +14,7 @@ import("//build/dev.gni")
 #       Usual GN meaning.
 #
 template("verify_routes") {
-  compiled_action("${target_name}") {
+  ffx_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -25,8 +25,6 @@ template("verify_routes") {
                            ])
 
     depfile = "$target_out_dir/$target_name.d"
-    tool = "//src/security/verifiers/verify_routes:bin"
-    tool_output_name = "scrutiny_verify_routes"
     stamp_file = "$target_gen_dir/$target_name.verified"
     published_packages = "//build/images:publish"
 
@@ -34,6 +32,13 @@ template("verify_routes") {
     outputs = [ stamp_file ]
 
     args = [
+      "scrutiny",
+      "verify",
+      "routes",
+      "--build-path",
+      rebase_path(root_build_dir, root_build_dir),
+      "--repository-path",
+      rebase_path("$root_build_dir/amber-files/repository", root_build_dir),
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
       "--depfile",

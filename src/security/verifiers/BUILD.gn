@@ -7,8 +7,5 @@ import("//build/host.gni")
 # All verifiers are run as part of the build and so only require host side
 # compilation.
 group("verifiers") {
-  deps = [
-    "//src/security/verifiers/verify_routes($host_toolchain)",
-    "//src/security/verifiers/verify_static_pkgs($host_toolchain)",
-  ]
+  deps = [ "//src/security/verifiers/verify_static_pkgs($host_toolchain)" ]
 }

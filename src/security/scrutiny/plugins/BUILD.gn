@@ -16,6 +16,7 @@ if (is_host) {
       # TODO(fxbug.dev/93569): Shared types should be exposed on a public
       # interface instead of making this visibility exception.
       "//src/developer/ffx/plugins/scrutiny/verify/route_sources/*",
+      "//src/developer/ffx/plugins/scrutiny/verify/routes/*",
     ]
     deps = [
       "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
