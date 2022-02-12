@@ -118,7 +118,7 @@ impl FxfsServer {
         // resurrected), but before we finish, we must wait for all VFS connections to be closed.
         scope.wait().await;
 
-        if !self.closed.load(atomic::Ordering::Relaxed) {
+        if !self.closed.load(atomic::Ordering::SeqCst) {
             self.volume.volume().terminate().await;
             self.fs.close().await.unwrap_or_else(|e| log::error!("Failed to shutdown fxfs: {}", e));
         }
@@ -135,7 +135,9 @@ impl FxfsServer {
                 // leave transactions in a half completed state.  VFS should be fixed so that it
                 // drops connections at some point that isn't midway through processing a request.
                 scope.shutdown();
-                self.closed.store(true, atomic::Ordering::Relaxed);
+                if self.closed.swap(true, atomic::Ordering::SeqCst) {
+                    return Ok(true);
+                }
                 self.volume.volume().terminate().await;
                 log::info!("Volume terminated");
                 self.fs
