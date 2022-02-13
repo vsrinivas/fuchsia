@@ -1547,7 +1547,7 @@
   status: 'Accepted'
   reviewers: ['aaronwood@google.com', 'jsankey@google.com', 'jayzhuang@google.com', 'raggi@google.com', 'fangism@google.com', 'abarth@google.com', 'maruel@google.com']
   submitted: '2021-06-20'
-  reviewed: '2021-070-28'
+  reviewed: '2021-07-28'
 
 - name: 'RFC-0120'
   title: 'Standalone use of the FIDL wire format'
