@@ -18,18 +18,18 @@ namespace {
 constexpr uint16_t kNumQueues = 1;
 constexpr uint16_t kQueueSize = 16;
 
-using component_testing::ChildRef;
-using component_testing::ParentRef;
-using component_testing::Protocol;
-using component_testing::RealmRoot;
-using component_testing::Route;
-using RealmBuilder = component_testing::RealmBuilder;
-
-class VirtioInputTest : public TestWithDeviceV2 {
+class VirtioInputTest : public TestWithDevice {
  protected:
   VirtioInputTest() : event_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize) {}
 
   void SetUp() override {
+    using component_testing::ChildRef;
+    using component_testing::ParentRef;
+    using component_testing::Protocol;
+    using component_testing::RealmBuilder;
+    using component_testing::RealmRoot;
+    using component_testing::Route;
+
     constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cm";
     constexpr auto kComponentName = "virtio_input";
 

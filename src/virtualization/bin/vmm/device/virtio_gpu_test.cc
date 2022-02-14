@@ -23,16 +23,8 @@ static constexpr size_t kPixelSizeInBytes = 4;
 static constexpr uint32_t kResourceId = 0;
 static constexpr uint32_t kScanoutId = 0;
 
-using component_testing::ChildRef;
-using component_testing::ParentRef;
-using component_testing::Protocol;
-using component_testing::RealmRoot;
-using component_testing::Route;
-using RealmBuilder = component_testing::RealmBuilder;
-using component_testing::LocalComponent;
-using component_testing::LocalComponentHandles;
-
-class ScenicFake : public fuchsia::ui::scenic::testing::Scenic_TestBase, public LocalComponent {
+class ScenicFake : public fuchsia::ui::scenic::testing::Scenic_TestBase,
+                   public component_testing::LocalComponent {
  public:
   explicit ScenicFake(async::Loop& loop) : loop_(loop) {}
 
@@ -40,7 +32,7 @@ class ScenicFake : public fuchsia::ui::scenic::testing::Scenic_TestBase, public 
     printf("Not implemented: Scenic::%s\n", name.data());
   }
 
-  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
+  void Start(std::unique_ptr<component_testing::LocalComponentHandles> handles) override {
     // This class contains handles to the component's incoming and outgoing capabilities.
     handles_ = std::move(handles);
 
@@ -52,10 +44,10 @@ class ScenicFake : public fuchsia::ui::scenic::testing::Scenic_TestBase, public 
  private:
   async::Loop& loop_;
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
-  std::unique_ptr<LocalComponentHandles> handles_;
+  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
 };
 
-class VirtioGpuTest : public TestWithDeviceV2 {
+class VirtioGpuTest : public TestWithDevice {
  protected:
   VirtioGpuTest()
       : control_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
@@ -63,6 +55,13 @@ class VirtioGpuTest : public TestWithDeviceV2 {
         scenic_fake_(loop()) {}
 
   void SetUp() override {
+    using component_testing::ChildRef;
+    using component_testing::ParentRef;
+    using component_testing::Protocol;
+    using component_testing::RealmBuilder;
+    using component_testing::RealmRoot;
+    using component_testing::Route;
+
     constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
     constexpr auto kComponentName = "virtio_gpu";
     constexpr auto kFakeScenic = "fake_scenic";

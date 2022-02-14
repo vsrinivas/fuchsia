@@ -35,16 +35,6 @@ static constexpr uint32_t kAllocateFlags = ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WR
 static const size_t kBufferSize = kVirtioMagmaVmarSize / 4;
 static const uint32_t kMockVfdId = 42;
 
-using component_testing::ChildRef;
-using component_testing::Directory;
-using component_testing::LocalComponent;
-using component_testing::LocalComponentHandles;
-using component_testing::ParentRef;
-using component_testing::Protocol;
-using component_testing::RealmBuilder;
-using component_testing::RealmRoot;
-using component_testing::Route;
-
 class WaylandImporterMock : public fuchsia::virtualization::hardware::VirtioWaylandImporter {
  public:
   // |fuchsia::virtualization::hardware::VirtioWaylandImporter|
@@ -75,7 +65,8 @@ class WaylandImporterMock : public fuchsia::virtualization::hardware::VirtioWayl
   std::unique_ptr<VirtioImage> image_;
 };
 
-class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator, public LocalComponent {
+class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator,
+                            public component_testing::LocalComponent {
  public:
   explicit ScenicAllocatorFake(async::Loop& loop) : loop_(loop) {}
   // Must set constraints on the given buffer collection token to allow the constraints
@@ -147,7 +138,7 @@ class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator, public L
     callback(fpromise::ok());
   }
 
-  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
+  void Start(std::unique_ptr<component_testing::LocalComponentHandles> handles) override {
     // This class contains handles to the component's incoming and outgoing capabilities.
     handles_ = std::move(handles);
 
@@ -159,12 +150,12 @@ class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator, public L
  private:
   async::Loop& loop_;
   fidl::BindingSet<fuchsia::ui::composition::Allocator> bindings_;
-  std::unique_ptr<LocalComponentHandles> handles_;
+  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-class VirtioMagmaTest : public TestWithDeviceV2 {
+class VirtioMagmaTest : public TestWithDevice {
  public:
   VirtioMagmaTest()
       : out_queue_(phys_mem_, kDescriptorSize, kQueueSize),
@@ -173,6 +164,14 @@ class VirtioMagmaTest : public TestWithDeviceV2 {
         scenic_allocator_fake_(loop()) {}
 
   void SetUp() override {
+    using component_testing::ChildRef;
+    using component_testing::Directory;
+    using component_testing::ParentRef;
+    using component_testing::Protocol;
+    using component_testing::RealmBuilder;
+    using component_testing::RealmRoot;
+    using component_testing::Route;
+
     uintptr_t vmar_addr;
     zx::vmar vmar;
     constexpr auto kComponentName = "virtio_magma";
@@ -248,6 +247,7 @@ class VirtioMagmaTest : public TestWithDeviceV2 {
 
     // Finish negotiating features.
     magma_->Ready(0, [&] { QuitLoop(); });
+
     RunLoop();
   }
 

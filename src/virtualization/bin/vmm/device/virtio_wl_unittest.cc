@@ -156,7 +156,7 @@ class TestAllocator : public fuchsia::ui::composition::testing::Allocator_TestBa
   fidl::Binding<fuchsia::ui::composition::Allocator> binding_{this};
 };
 
-class VirtioWlTest : public TestWithDeviceV2 {
+class VirtioWlTest : public TestWithDevice {
  public:
   VirtioWlTest()
       : wl_dispatcher_([this](zx::channel channel) { channels_.emplace_back(std::move(channel)); }),
@@ -166,6 +166,13 @@ class VirtioWlTest : public TestWithDeviceV2 {
         scenic_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() override {
+    using component_testing::ChildRef;
+    using component_testing::ParentRef;
+    using component_testing::Protocol;
+    using component_testing::RealmBuilder;
+    using component_testing::RealmRoot;
+    using component_testing::Route;
+
     uintptr_t vmar_addr;
     zx::vmar vmar;
     ASSERT_EQ(
@@ -174,13 +181,6 @@ class VirtioWlTest : public TestWithDeviceV2 {
 
     constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cm";
     constexpr auto kComponentName = "virtio_wl";
-
-    using component_testing::ChildRef;
-    using component_testing::ParentRef;
-    using component_testing::Protocol;
-    using component_testing::RealmBuilder;
-    using component_testing::RealmRoot;
-    using component_testing::Route;
 
     auto realm_builder = RealmBuilder::Create();
     realm_builder.AddChild(kComponentName, kComponentUrl);

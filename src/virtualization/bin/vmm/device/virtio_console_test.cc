@@ -12,20 +12,20 @@
 static constexpr uint16_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 16;
 
-using component_testing::ChildRef;
-using component_testing::ParentRef;
-using component_testing::Protocol;
-using component_testing::RealmBuilder;
-using component_testing::RealmRoot;
-using component_testing::Route;
-
-class VirtioConsoleTest : public TestWithDeviceV2 {
+class VirtioConsoleTest : public TestWithDevice {
  protected:
   VirtioConsoleTest()
       : rx_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
         tx_queue_(phys_mem_, rx_queue_.end(), kQueueSize) {}
 
   void SetUp() override {
+    using component_testing::ChildRef;
+    using component_testing::ParentRef;
+    using component_testing::Protocol;
+    using component_testing::RealmBuilder;
+    using component_testing::RealmRoot;
+    using component_testing::Route;
+
     constexpr auto kComponentUrl =
         "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cm";
     constexpr auto kComponentName = "virtio_console";

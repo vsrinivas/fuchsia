@@ -28,18 +28,18 @@ static constexpr char kVirtioBlockId[] = "block-id";
 static constexpr size_t kNumSectors = 2;
 static constexpr uint8_t kSectorBytes[kNumSectors] = {0xab, 0xcd};
 
-using component_testing::ChildRef;
-using component_testing::ParentRef;
-using component_testing::Protocol;
-using component_testing::RealmRoot;
-using component_testing::Route;
-using RealmBuilder = component_testing::RealmBuilder;
-
-class VirtioBlockTest : public TestWithDeviceV2 {
+class VirtioBlockTest : public TestWithDevice {
  protected:
   VirtioBlockTest() : request_queue_(phys_mem_, kQueueDataSize * kNumQueues, kQueueSize) {}
 
   void SetUp() override {
+    using component_testing::ChildRef;
+    using component_testing::ParentRef;
+    using component_testing::Protocol;
+    using component_testing::RealmBuilder;
+    using component_testing::RealmRoot;
+    using component_testing::Route;
+
     constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
     constexpr auto kComponentName = "virtio_block";
 

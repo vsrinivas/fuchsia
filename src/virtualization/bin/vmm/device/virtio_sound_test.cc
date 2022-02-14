@@ -281,13 +281,15 @@ class FakeAudio : public fuchsia::media::Audio, public component_testing::LocalC
         ZX_OK);
   }
 
+  bool HasStarted() const { return handles_ != nullptr; }
+
   std::vector<std::unique_ptr<FakeAudioRenderer>> renderers_;
   std::vector<std::unique_ptr<FakeAudioCapturer>> capturers_;
-  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
 
  private:
   async::Loop& loop_;
   fidl::BindingSet<fuchsia::media::Audio> binding_set_;
+  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
 };
 
 uint64_t bit(uint64_t n) { return 1ul << n; }
@@ -329,7 +331,7 @@ static constexpr QueueConfig kQueueConfigs[4] = {
 constexpr auto kTimeout = zx::sec(20);
 
 template <bool EnableInput>
-class VirtioSoundTestBase : public TestWithDeviceV2 {
+class VirtioSoundTestBase : public TestWithDevice {
  protected:
   VirtioSoundTestBase() : audio_service_(loop()) {
     zx_gpaddr_t addr = 0;
@@ -414,7 +416,7 @@ class VirtioSoundTestBase : public TestWithDeviceV2 {
     ASSERT_EQ(ZX_OK, sound_->Ready(0));
 
     // Wait until virtio_sound has connected to the mock object
-    RunLoopWithTimeoutOrUntil([&]() { return audio_service_.handles_ != nullptr; }, kTimeout);
+    RunLoopWithTimeoutOrUntil([&]() { return audio_service_.HasStarted(); }, kTimeout);
   }
 
   FakeAudioRenderer* get_audio_renderer(size_t k) {

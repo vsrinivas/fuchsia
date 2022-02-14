@@ -11,18 +11,19 @@
 
 static constexpr uint16_t kQueueSize = 16;
 
-using component_testing::ChildRef;
-using component_testing::ParentRef;
-using component_testing::Protocol;
-using component_testing::RealmBuilder;
-using component_testing::RealmRoot;
-using component_testing::Route;
-
-class VirtioRngTest : public TestWithDeviceV2 {
+class VirtioRngTest : public TestWithDevice {
  protected:
   VirtioRngTest() : queue_(phys_mem_, PAGE_SIZE * 1, kQueueSize) {}
 
   void SetUp() override {
+    using component_testing::ChildRef;
+    using component_testing::Directory;
+    using component_testing::ParentRef;
+    using component_testing::Protocol;
+    using component_testing::RealmBuilder;
+    using component_testing::RealmRoot;
+    using component_testing::Route;
+
     constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_rng#meta/virtio_rng.cm";
     constexpr auto kComponentName = "virtio_rng";
 

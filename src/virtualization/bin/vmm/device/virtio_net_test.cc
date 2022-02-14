@@ -119,7 +119,7 @@ class FakeNetwork : public fuchsia::net::virtualization::Control,
   std::optional<PortId> port_id_;
 };
 
-class VirtioNetTest : public TestWithDeviceV2 {
+class VirtioNetTest : public TestWithDevice {
  protected:
   VirtioNetTest()
       : rx_queue_(phys_mem_, kVmoSize * kNumQueues, kQueueSize),
@@ -127,16 +127,16 @@ class VirtioNetTest : public TestWithDeviceV2 {
         fake_network_(loop()) {}
 
   void SetUp() override {
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cm";
-    constexpr auto kComponentName = "virtio_net";
-    constexpr auto kFakeNetwork = "fake_network";
-
     using component_testing::ChildRef;
     using component_testing::ParentRef;
     using component_testing::Protocol;
     using component_testing::RealmBuilder;
     using component_testing::RealmRoot;
     using component_testing::Route;
+
+    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cm";
+    constexpr auto kComponentName = "virtio_net";
+    constexpr auto kFakeNetwork = "fake_network";
 
     auto realm_builder = RealmBuilder::Create();
     realm_builder.AddChild(kComponentName, kComponentUrl);

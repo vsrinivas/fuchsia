@@ -16,14 +16,7 @@
 static constexpr uint16_t kNumQueues = 3;
 static constexpr uint16_t kQueueSize = 16;
 
-using component_testing::ChildRef;
-using component_testing::ParentRef;
-using component_testing::Protocol;
-using component_testing::RealmRoot;
-using component_testing::Route;
-using RealmBuilder = component_testing::RealmBuilder;
-
-class VirtioBalloonTest : public TestWithDeviceV2 {
+class VirtioBalloonTest : public TestWithDevice {
  protected:
   VirtioBalloonTest()
       : inflate_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
@@ -31,6 +24,13 @@ class VirtioBalloonTest : public TestWithDeviceV2 {
         stats_queue_(phys_mem_, deflate_queue_.end(), 1) {}
 
   void SetUp() override {
+    using component_testing::ChildRef;
+    using component_testing::ParentRef;
+    using component_testing::Protocol;
+    using component_testing::RealmBuilder;
+    using component_testing::RealmRoot;
+    using component_testing::Route;
+
     constexpr auto kComponentUrl =
         "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cm";
     constexpr auto kComponentName = "virtio_balloon";
@@ -82,7 +82,7 @@ class VirtioBalloonTest : public TestWithDeviceV2 {
   VirtioQueueFake inflate_queue_;
   VirtioQueueFake deflate_queue_;
   VirtioQueueFake stats_queue_;
-  using TestWithDeviceV2::WaitOnInterrupt;
+  using TestWithDevice::WaitOnInterrupt;
   std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 

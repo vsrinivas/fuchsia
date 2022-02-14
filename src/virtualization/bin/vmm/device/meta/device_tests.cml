@@ -29,13 +29,6 @@
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Loader",
-            ],
-        },
-        {
             protocol: [ "fuchsia.ui.composition.Allocator" ],
             from: "#wrapped_scenic",
         },
@@ -95,7 +88,6 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sys.Environment",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader",
