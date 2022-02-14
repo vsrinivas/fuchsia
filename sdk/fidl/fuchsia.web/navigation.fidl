@@ -9,10 +9,13 @@ using fuchsia.net.http;
 /// Interface supplied by the embedder for receiving notifications about navigation events in a
 /// [`Frame`].
 protocol NavigationEventListener {
-    /// Called when user-visible navigation state has changed since [`Frame`] creation or the last
-    /// acknowledgement callback, whichever occurred last. `change` will contain all the
-    /// differences in navigation state since the last acknowledgement. Any unchanged properties
-    /// will be left unset in `change`.
+    /// Called immediately after [`Frame.SetNavigationEventListener`] and every time user-visible
+    /// navigation state has changed. In the first call, `change` contains the current navigation
+    /// state (empty before the first navigation request). In every following call, `change` will
+    /// have values set for all fields that have changed at any time since the previous
+    /// notification. This means that some fields may have the same value as was previously
+    /// reported, for example, if they changed to some other value and back again. If a field is
+    /// unset, then its value has not changed at any time since the previous notification.
     ///
     /// Implementer must call the acknowledgement callback to receive new navigation events.
     OnNavigationStateChanged(resource struct {

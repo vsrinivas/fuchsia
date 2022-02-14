@@ -289,7 +289,8 @@ protocol Frame {
         listener client_end:<NavigationEventListener, optional>;
     });
 
-    /// Sets the listener for handling page navigation events.
+    /// Sets the listener for handling page navigation events. The listener will receive the
+    /// current navigation state immediately. After that, it's notified whenever the state changes.
     ///
     /// - `listener`: The observer to use. Unregisters any existing listener if null.
     /// - `flags`: Flags for optional features that should be enabled for the listener.
