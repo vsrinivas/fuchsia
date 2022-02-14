@@ -224,7 +224,9 @@ extern "C" wlan_mlme_handle_t *start_ap_sta_for_test(rust_device_interface_t dev
                                                      mlme_buffer_provider_ops_t buf_provider,
                                                      const uint8_t (*bssid)[6]);
 
-extern "C" void stop_and_delete_ap_sta(wlan_mlme_handle_t *sta);
+extern "C" void stop_ap_sta(wlan_mlme_handle_t *sta);
+
+extern "C" void delete_ap_sta(wlan_mlme_handle_t *sta);
 
 extern "C" void ap_sta_queue_eth_frame_tx(wlan_mlme_handle_t *sta, wlan_span_t frame);
 
@@ -240,7 +242,9 @@ extern "C" wlan_mlme_handle_t *start_client_mlme_for_test(wlan_client_mlme_confi
                                                           rust_device_interface_t device,
                                                           mlme_buffer_provider_ops_t buf_provider);
 
-extern "C" void stop_and_delete_client_mlme(wlan_mlme_handle_t *mlme);
+extern "C" void stop_client_mlme(wlan_mlme_handle_t *mlme);
+
+extern "C" void delete_client_mlme(wlan_mlme_handle_t *mlme);
 
 extern "C" void client_mlme_queue_eth_frame_tx(wlan_mlme_handle_t *mlme, wlan_span_t frame);
 

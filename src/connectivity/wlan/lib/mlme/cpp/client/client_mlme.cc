@@ -42,7 +42,7 @@ wlan_client_mlme_config_t ClientMlmeDefaultConfig() {
 
 ClientMlme::ClientMlme(DeviceInterface* device, wlan_client_mlme_config_t config, bool run_as_test)
     : device_(device),
-      rust_mlme_(nullptr, stop_and_delete_client_mlme),
+      rust_mlme_(nullptr, delete_client_mlme),
       config_(config),
       run_as_test_(run_as_test) {
   debugfn();
@@ -119,12 +119,11 @@ zx_status_t ClientMlme::Init() {
       },
   };
   if (run_as_test_) {
-    rust_mlme_ =
-        RustClientMlme(start_client_mlme_for_test(config_, rust_device, rust_buffer_provider),
-                       stop_and_delete_client_mlme);
+    rust_mlme_ = RustClientMlme(
+        start_client_mlme_for_test(config_, rust_device, rust_buffer_provider), delete_client_mlme);
   } else {
     rust_mlme_ = RustClientMlme(start_client_mlme(config_, rust_device, rust_buffer_provider),
-                                stop_and_delete_client_mlme);
+                                delete_client_mlme);
   }
 
   if (rust_mlme_ == nullptr) {
@@ -140,7 +139,7 @@ void ClientMlme::AdvanceFakeTime(int64_t nanos) {
 void ClientMlme::RunUntilStalled() { client_mlme_run_until_stalled(rust_mlme_.get()); }
 
 zx_status_t ClientMlme::StopMainLoop() {
-  rust_mlme_.reset(nullptr);
+  stop_client_mlme(rust_mlme_.get());
   return ZX_OK;
 }
 

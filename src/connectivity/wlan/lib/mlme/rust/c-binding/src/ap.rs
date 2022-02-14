@@ -34,10 +34,15 @@ pub extern "C" fn start_ap_sta_for_test(
 }
 
 #[no_mangle]
-pub extern "C" fn stop_and_delete_ap_sta(sta: *mut MlmeHandle) {
+pub extern "C" fn stop_ap_sta(sta: &mut MlmeHandle) {
+    sta.stop();
+}
+
+#[no_mangle]
+pub extern "C" fn delete_ap_sta(sta: *mut MlmeHandle) {
     if !sta.is_null() {
         let mlme = unsafe { Box::from_raw(sta) };
-        mlme.stop();
+        mlme.delete();
     }
 }
 

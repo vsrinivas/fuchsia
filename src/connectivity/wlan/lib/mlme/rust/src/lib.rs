@@ -39,11 +39,10 @@ use {
         channel::{mpsc, oneshot},
         select, StreamExt,
     },
-    log::{error, info},
+    log::{error, info, warn},
     parking_lot::Mutex,
     std::sync::Arc,
     std::time::Duration,
-    wlan_span::CSpan,
 };
 
 pub trait MlmeImpl {
@@ -96,29 +95,37 @@ enum MlmeHandleInternal {
 /// event loop thread.
 pub struct MlmeHandle {
     driver_event_sink: mpsc::UnboundedSender<DriverEvent>,
-    internal: MlmeHandleInternal,
+    internal: Option<MlmeHandleInternal>,
 }
 
 impl MlmeHandle {
-    pub fn stop(self) {
+    pub fn stop(&mut self) {
         if let Err(e) = self.driver_event_sink.unbounded_send(DriverEvent::Stop) {
             error!("Cannot signal MLME event loop thread: {}", e);
         }
-        match self.internal {
-            MlmeHandleInternal::Real { join_handle } => {
+        match self.internal.take() {
+            Some(MlmeHandleInternal::Real { join_handle }) => {
                 // This unwrap will only fail if the thread panics.
                 if let Err(e) = join_handle.join() {
                     error!("MLME event loop thread panicked: {:?}", e);
                 }
             }
-            MlmeHandleInternal::Fake { mut executor, mut future } => {
+            Some(MlmeHandleInternal::Fake { mut executor, mut future }) => {
                 // Verify that our main thread would exit now.
                 assert!(executor.run_until_stalled(&mut future.as_mut()).is_ready());
             }
+            None => warn!("Called stop on already stopped MLME"),
         }
     }
 
-    pub fn queue_eth_frame_tx(&mut self, bytes: CSpan<'_>) -> Result<(), Error> {
+    pub fn delete(mut self) {
+        if self.internal.is_some() {
+            warn!("Called delete on MlmeHandle before calling stop.");
+            self.stop()
+        }
+    }
+
+    pub fn queue_eth_frame_tx(&mut self, bytes: Vec<u8>) -> Result<(), Error> {
         self.driver_event_sink
             .unbounded_send(DriverEvent::EthFrameTx { bytes: bytes.into() })
             .map_err(|e| e.into())
@@ -129,22 +136,28 @@ impl MlmeHandle {
 
     pub fn advance_fake_time(&mut self, nanos: i64) {
         match &mut self.internal {
-            MlmeHandleInternal::Real { .. } => panic!("Called advance_fake_time on a real MLME"),
-            MlmeHandleInternal::Fake { executor, future } => {
+            Some(MlmeHandleInternal::Real { .. }) => {
+                panic!("Called advance_fake_time on a real MLME")
+            }
+            Some(MlmeHandleInternal::Fake { executor, future }) => {
                 let time = executor.now();
                 executor.set_fake_time(time + fasync::Duration::from_nanos(nanos));
                 executor.wake_expired_timers();
                 let _ = executor.run_until_stalled(&mut future.as_mut());
             }
+            None => panic!("Called advance_fake_time on stopped MLME"),
         }
     }
 
     pub fn run_until_stalled(&mut self) {
         match &mut self.internal {
-            MlmeHandleInternal::Real { .. } => panic!("Called run_until_stalled on a real MLME"),
-            MlmeHandleInternal::Fake { executor, future } => {
+            Some(MlmeHandleInternal::Real { .. }) => {
+                panic!("Called run_until_stalled on a real MLME")
+            }
+            Some(MlmeHandleInternal::Fake { executor, future }) => {
                 let _ = executor.run_until_stalled(&mut future.as_mut());
             }
+            None => panic!("Called run_until_stalled on stopped MLME"),
         }
     }
 }
@@ -237,7 +250,7 @@ impl<T: 'static + MlmeImpl> Mlme<T> {
         match startup_result.map_err(|e| Error::from(e)) {
             Ok(Ok(())) => Ok(MlmeHandle {
                 driver_event_sink,
-                internal: MlmeHandleInternal::Real { join_handle },
+                internal: Some(MlmeHandleInternal::Real { join_handle }),
             }),
             Err(err) | Ok(Err(err)) => match join_handle.join() {
                 Ok(()) => bail!("Failed to start the MLME event loop: {:?}", err),
@@ -255,7 +268,16 @@ impl<T: 'static + MlmeImpl> Mlme<T> {
         device: DeviceInterface,
         buf_provider: buffer::BufferProvider,
     ) -> MlmeHandle {
-        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
+        let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
+        Self::start_test_with_executor(config, device, buf_provider, executor)
+    }
+
+    pub fn start_test_with_executor(
+        config: T::Config,
+        device: DeviceInterface,
+        buf_provider: buffer::BufferProvider,
+        mut executor: fasync::TestExecutor,
+    ) -> MlmeHandle {
         let (driver_event_sink, driver_event_stream) = mpsc::unbounded();
         let driver_event_sink_clone = driver_event_sink.clone();
         let (startup_sender, mut startup_receiver) = oneshot::channel();
@@ -274,7 +296,10 @@ impl<T: 'static + MlmeImpl> Mlme<T> {
             .expect("Test MLME setup stalled.")
             .expect("Test MLME setup failed.");
 
-        MlmeHandle { driver_event_sink, internal: MlmeHandleInternal::Fake { executor, future } }
+        MlmeHandle {
+            driver_event_sink,
+            internal: Some(MlmeHandleInternal::Fake { executor, future }),
+        }
     }
 
     async fn main_loop_thread(
@@ -482,5 +507,72 @@ mod test_utils {
         let request_stream = fidl_mlme::MlmeRequestStream::from_channel(async_c1);
         let control_handle = request_stream.control_handle();
         (control_handle, c2)
+    }
+
+    pub struct FakeMlme {
+        device: Device,
+    }
+
+    impl MlmeImpl for FakeMlme {
+        type Config = ();
+
+        type TimerEvent = ();
+
+        fn new(
+            _config: Self::Config,
+            device: Device,
+            _buf_provider: buffer::BufferProvider,
+            _scheduler: common::timer::Timer<Self::TimerEvent>,
+        ) -> Self {
+            Self { device }
+        }
+
+        fn handle_mlme_message(&mut self, _msg: fidl_mlme::MlmeRequest) -> Result<(), Error> {
+            unimplemented!()
+        }
+
+        fn handle_mac_frame_rx(&mut self, _bytes: &[u8], _rx_info: banjo_wlan_softmac::WlanRxInfo) {
+            unimplemented!()
+        }
+
+        fn handle_eth_frame_tx(&mut self, _bytes: &[u8]) -> Result<(), Error> {
+            unimplemented!()
+        }
+
+        fn handle_scan_complete(&mut self, _status: zx::Status, _scan_id: u64) {
+            unimplemented!()
+        }
+
+        fn handle_timeout(&mut self, _event_id: common::timer::EventId, _event: Self::TimerEvent) {
+            unimplemented!()
+        }
+
+        fn access_device(&mut self) -> &mut Device {
+            &mut self.device
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, crate::device::test_utils::FakeDevice};
+
+    #[fuchsia::test]
+    fn test_mlme_handle_use_after_stop() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let fake_config = ();
+        let mut fake_device = FakeDevice::new(&mut exec);
+        let fake_buffer_provider = buffer::FakeBufferProvider::new();
+        let mut handle = Mlme::<test_utils::FakeMlme>::start_test_with_executor(
+            fake_config,
+            fake_device.as_raw_device(),
+            fake_buffer_provider,
+            exec,
+        );
+
+        handle.stop();
+        handle
+            .queue_eth_frame_tx(vec![0u8; 10])
+            .expect_err("Shouldn't be able to queue tx after stopping MLME");
     }
 }

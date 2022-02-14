@@ -38,16 +38,21 @@ pub extern "C" fn start_client_mlme_for_test(
 }
 
 #[no_mangle]
-pub extern "C" fn stop_and_delete_client_mlme(mlme: *mut MlmeHandle) {
+pub extern "C" fn stop_client_mlme(mlme: &mut MlmeHandle) {
+    mlme.stop();
+}
+
+#[no_mangle]
+pub extern "C" fn delete_client_mlme(mlme: *mut MlmeHandle) {
     if !mlme.is_null() {
         let mlme = unsafe { Box::from_raw(mlme) };
-        mlme.stop();
+        mlme.delete();
     }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn client_mlme_queue_eth_frame_tx(mlme: &mut MlmeHandle, frame: CSpan<'_>) {
-    let _ = mlme.queue_eth_frame_tx(frame);
+    let _ = mlme.queue_eth_frame_tx(frame.into());
 }
 
 #[no_mangle]

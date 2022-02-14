@@ -575,27 +575,28 @@ macro_rules! arr {
 }
 
 #[cfg(test)]
-mod test_utils {
+pub(crate) mod test_utils {
     use {
         super::*,
         crate::{
             buffer::{BufferProvider, FakeBufferProvider},
             error::Error,
-            test_utils::fake_control_handle,
         },
         banjo_ddk_hw_wlan_ieee80211::*,
         banjo_fuchsia_hardware_wlan_phyinfo::*,
         banjo_fuchsia_wlan_common as banjo_common,
-        banjo_fuchsia_wlan_internal as banjo_wlan_internal, fuchsia_async as fasync,
-        fuchsia_zircon as zircon,
+        banjo_fuchsia_wlan_internal as banjo_wlan_internal,
+        fidl::endpoints::RequestStream,
+        fuchsia_async as fasync,
+        fuchsia_zircon::AsHandleRef,
         std::convert::TryInto,
     };
 
     pub struct CapturedWlanSoftmacPassiveScanArgs {
         pub channels: Vec<u8>,
-        pub min_channel_time: zircon::sys::zx_duration_t,
-        pub max_channel_time: zircon::sys::zx_duration_t,
-        pub min_home_time: zircon::sys::zx_duration_t,
+        pub min_channel_time: zx::sys::zx_duration_t,
+        pub max_channel_time: zx::sys::zx_duration_t,
+        pub min_home_time: zx::sys::zx_duration_t,
     }
 
     impl CapturedWlanSoftmacPassiveScanArgs {
@@ -621,7 +622,8 @@ mod test_utils {
     pub struct FakeDevice {
         pub eth_queue: Vec<Vec<u8>>,
         pub wlan_queue: Vec<(Vec<u8>, u32)>,
-        pub sme_sap: (fidl_mlme::MlmeControlHandle, zx::Channel),
+        pub mlme_proxy_channel: zx::Channel,
+        pub mlme_request_stream_channel: Option<zx::Channel>,
         pub wlan_channel: banjo_common::WlanChannel,
         pub keys: Vec<banjo_wlan_softmac::WlanKeyConfig>,
         pub next_scan_id: u64,
@@ -637,12 +639,14 @@ mod test_utils {
     }
 
     impl FakeDevice {
-        pub fn new(executor: &fasync::TestExecutor) -> Self {
-            let sme_sap = fake_control_handle(&executor);
+        pub fn new(_executor: &fasync::TestExecutor) -> Self {
+            // Create a channel for SME requests, to be surfaced by start().
+            let (mlme_proxy_channel, mlme_request_stream_channel) = zx::Channel::create().unwrap();
             Self {
                 eth_queue: vec![],
                 wlan_queue: vec![],
-                sme_sap,
+                mlme_proxy_channel,
+                mlme_request_stream_channel: Some(mlme_request_stream_channel),
                 wlan_channel: banjo_common::WlanChannel {
                     primary: 0,
                     cbw: banjo_common::ChannelBandwidth::CBW20,
@@ -663,11 +667,17 @@ mod test_utils {
         }
 
         pub extern "C" fn start(
-            _device: *mut c_void,
+            device: *mut c_void,
             _ifc: *const WlanSoftmacIfcProtocol<'_>,
-            _out_sme_channel: *mut zx::sys::zx_handle_t,
+            out_sme_channel: *mut zx::sys::zx_handle_t,
         ) -> i32 {
-            // TODO(fxbug.dev/45464): Implement when AP tests are ported to Rust.
+            let device = unsafe { &mut *(device as *mut Self) };
+            let mlme_request_stream_handle =
+                device.mlme_request_stream_channel.as_ref().unwrap().raw_handle();
+            unsafe {
+                *out_sme_channel = mlme_request_stream_handle;
+            }
+            // TODO(fxbug.dev/45464): Capture _ifc and provide a testing surface.
             zx::sys::ZX_OK
         }
 
@@ -860,10 +870,10 @@ mod test_utils {
             use fidl::encoding::{decode_transaction_header, Decodable, Decoder};
 
             let mut buf = zx::MessageBuf::new();
-            let () =
-                self.sme_sap.1.read(&mut buf).map_err(|status| {
-                    Error::Status(format!("error reading MLME message"), status)
-                })?;
+            let () = self
+                .mlme_proxy_channel
+                .read(&mut buf)
+                .map_err(|status| Error::Status(format!("error reading MLME message"), status))?;
 
             let (header, tail): (_, &[u8]) = decode_transaction_header(buf.bytes())?;
             let mut msg = Decodable::new_empty();
@@ -876,8 +886,8 @@ mod test_utils {
             self.eth_queue.clear();
         }
 
-        pub fn as_device(&mut self) -> Device {
-            let raw_device = DeviceInterface {
+        pub fn as_raw_device(&mut self) -> DeviceInterface {
+            DeviceInterface {
                 device: self as *mut Self as *mut c_void,
                 start: Self::start,
                 deliver_eth_frame: Self::deliver_eth_frame,
@@ -896,8 +906,16 @@ mod test_utils {
                 set_link_status: Self::set_link_status,
                 configure_assoc: Self::configure_assoc,
                 clear_assoc: Self::clear_assoc,
-            };
-            Device { raw_device, minstrel: None, control_handle: self.sme_sap.0.clone() }
+            }
+        }
+
+        /// Note: It is not safe to call this function if the FakeDevice is passed into an MLME.
+        pub fn as_device(&mut self) -> Device {
+            let channel = self.mlme_request_stream_channel.take().unwrap();
+            let async_channel = fidl::AsyncChannel::from_channel(channel).unwrap();
+            let request_stream = fidl_mlme::MlmeRequestStream::from_channel(async_channel);
+            let control_handle = request_stream.control_handle();
+            Device { raw_device: self.as_raw_device(), minstrel: None, control_handle }
         }
 
         pub fn as_device_fail_wlan_tx(&mut self) -> Device {
@@ -1092,7 +1110,7 @@ mod tests {
         let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
 
-        drop(fake_device.sme_sap.1);
+        drop(fake_device.mlme_proxy_channel);
 
         let result = dev.mlme_control_handle().send_authenticate_conf(&mut make_auth_confirm_msg());
         assert!(result.unwrap_err().is_closed());

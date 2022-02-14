@@ -20,10 +20,10 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 #define MLME(m) static_cast<ApMlme*>(m)
 ApMlme::ApMlme(DeviceInterface* device, bool run_as_test)
-    : device_(device), rust_ap_(nullptr, stop_and_delete_ap_sta), run_as_test_(run_as_test) {}
+    : device_(device), rust_ap_(nullptr, delete_ap_sta), run_as_test_(run_as_test) {}
 
 zx_status_t ApMlme::StopMainLoop() {
-  rust_ap_.reset(nullptr);
+  stop_ap_sta(rust_ap_.get());
   return ZX_OK;
 }
 
@@ -103,10 +103,10 @@ zx_status_t ApMlme::Init() {
   auto bssid = device_->GetState()->address();
   if (run_as_test_) {
     rust_ap_ = ApStation(start_ap_sta_for_test(rust_device, rust_buffer_provider, &bssid.byte),
-                         stop_and_delete_ap_sta);
+                         delete_ap_sta);
   } else {
-    rust_ap_ = ApStation(start_ap_sta(rust_device, rust_buffer_provider, &bssid.byte),
-                         stop_and_delete_ap_sta);
+    rust_ap_ =
+        ApStation(start_ap_sta(rust_device, rust_buffer_provider, &bssid.byte), delete_ap_sta);
   }
 
   if (rust_ap_ == nullptr) {
