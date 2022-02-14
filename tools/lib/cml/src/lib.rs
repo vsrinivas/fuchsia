@@ -1515,12 +1515,14 @@ impl Document {
         self.merge_program(other, include_path)?;
         self.merge_facets(other, include_path)?;
 
-        // Config includes are not supported currently
-        if other.config.is_some() {
+        // TODO(https://fxbug.dev/93679): Multiple config schemas aren't merged together
+        if self.config.is_some() && other.config.is_some() {
             return Err(Error::validate(format!(
-                "config found in manifest include, which is not supported: {}",
+                "multiple config schemas found (last import: {}). See https://fxbug.dev/93679 for more information",
                 include_path.display()
             )));
+        } else if let Some(config) = other.config.take() {
+            self.config.replace(config);
         }
 
         Ok(())
@@ -3121,6 +3123,38 @@ mod tests {
         assert_eq!(
             exposes[0].protocol.as_ref().unwrap(),
             &OneOrMany::One("bar".parse::<Name>().unwrap())
+        );
+    }
+
+    #[test]
+    fn test_merge_from_other_config() {
+        let mut some = document(json!({}));
+        let mut other = document(json!({ "config": { "bar": { "type": "bool" } } }));
+
+        some.merge_from(&mut other, &path::Path::new("some/path")).unwrap();
+        let expected = document(json!({ "config": { "bar": { "type": "bool" } } }));
+        assert_eq!(some.config, expected.config);
+    }
+
+    #[test]
+    fn test_merge_from_some_config() {
+        let mut some = document(json!({ "config": { "bar": { "type": "bool" } } }));
+        let mut other = document(json!({}));
+
+        some.merge_from(&mut other, &path::Path::new("some/path")).unwrap();
+        let expected = document(json!({ "config": { "bar": { "type": "bool" } } }));
+        assert_eq!(some.config, expected.config);
+    }
+
+    #[test]
+    fn test_merge_from_config_error() {
+        let mut some = document(json!({ "config": { "foo": { "type": "bool" } } }));
+        let mut other = document(json!({ "config": { "bar": { "type": "bool" } } }));
+
+        assert_matches::assert_matches!(
+            some.merge_from(&mut other, &path::Path::new("some/path")),
+            Err(Error::Validate { schema_name: None, err, .. })
+                if err == "multiple config schemas found (last import: some/path). See https://fxbug.dev/93679 for more information"
         );
     }
 
