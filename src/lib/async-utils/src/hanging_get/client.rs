@@ -14,7 +14,7 @@ use {
 };
 
 /// HangingGetStream is a [`Stream`] that is oriented towards being a client to the
-/// "Hanging Get" design pattern for flow control as in //docs/development/api/fidl.md#Flow-Control
+/// "Hanging Get" design pattern for flow control as in //docs/development/api/fidl.md#flow_control
 #[must_use = "streams do nothing unless polled"]
 #[pin_project]
 pub struct HangingGetStream<P, O, Q = fn(&P) -> QueryResponseFut<O>> {

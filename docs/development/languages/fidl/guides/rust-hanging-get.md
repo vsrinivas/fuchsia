@@ -43,6 +43,6 @@ response, the response will be ignored.  This is important if a FIDL server does
 multiple hanging get waiters at once.
 
 [hanging-get-pattern]: /docs/development/api/fidl.md#hanging-get
-[hanging-get-stream-impl]: https://fuchsia-docs.firebaseapp.com/rust/async_utils/hanging_get/client/type.HangingGetStream.html
+[hanging-get-stream-impl]: https://fuchsia-docs.firebaseapp.com/rust/async_utils/hanging_get/client/struct.HangingGetStream.html
 [rust-abortable]: https://docs.rs/futures/0.3.5/futures/future/struct.Abortable.html
 [fasync-timeout-ext]: https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/trait.TimeoutExt.html
