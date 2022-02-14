@@ -9,8 +9,6 @@
 
 #include "src/bringup/bin/netsvc/inet6.h"
 
-#define TFTP_TIMEOUT_SECS 1
-
 void tftp_recv(async_dispatcher_t* dispatcher, void* data, size_t len, const ip6_addr_t* daddr,
                uint16_t dport, const ip6_addr_t* saddr, uint16_t sport);
 

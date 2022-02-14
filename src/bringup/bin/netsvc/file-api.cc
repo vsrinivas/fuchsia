@@ -36,7 +36,7 @@ FileApi::FileApi(bool is_zedboot, std::unique_ptr<NetCopyInterface> netcp,
   }
 }
 
-ssize_t FileApi::OpenRead(const char* filename) {
+ssize_t FileApi::OpenRead(const char* filename, zx::duration) {
   // Make sure all in-progress paving operations have completed
   if (paver_->InProgress() == true) {
     return TFTP_ERR_SHOULD_WAIT;
@@ -65,7 +65,7 @@ ssize_t FileApi::OpenRead(const char* filename) {
   return TFTP_ERR_NOT_FOUND;
 }
 
-tftp_status FileApi::OpenWrite(const char* filename, size_t size) {
+tftp_status FileApi::OpenWrite(const char* filename, size_t size, zx::duration timeout) {
   // Make sure all in-progress paving operations have completed
   if (paver_->InProgress() == true) {
     return TFTP_ERR_SHOULD_WAIT;
@@ -92,7 +92,7 @@ tftp_status FileApi::OpenWrite(const char* filename, size_t size) {
     return TFTP_NO_ERROR;
   } else if (is_zedboot_ && !strncmp(filename_, NB_IMAGE_PREFIX, NB_IMAGE_PREFIX_LEN())) {
     type_ = NetfileType::kPaver;
-    tftp_status status = paver_->OpenWrite(filename_, size);
+    tftp_status status = paver_->OpenWrite(filename_, size, timeout);
     if (status != TFTP_NO_ERROR) {
       filename_[0] = '\0';
     }

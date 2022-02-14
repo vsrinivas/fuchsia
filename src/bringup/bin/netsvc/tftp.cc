@@ -69,14 +69,15 @@ async::Task timeout_task([](async_dispatcher_t* dispatcher, async::Task* task, z
   }
 });
 
-ssize_t file_open_read(const char* filename, void* cookie) {
+ssize_t file_open_read(const char* filename, uint8_t session_timeout_secs, void* cookie) {
   auto* file_api = reinterpret_cast<netsvc::FileApiInterface*>(cookie);
-  return file_api->OpenRead(filename);
+  return file_api->OpenRead(filename, zx::sec(session_timeout_secs));
 }
 
-tftp_status file_open_write(const char* filename, size_t size, void* cookie) {
+tftp_status file_open_write(const char* filename, size_t size, uint8_t session_timeout_secs,
+                            void* cookie) {
   auto* file_api = reinterpret_cast<netsvc::FileApiInterface*>(cookie);
-  return file_api->OpenWrite(filename, size);
+  return file_api->OpenWrite(filename, size, zx::sec(session_timeout_secs));
 }
 
 tftp_status file_read(void* data, size_t* length, off_t offset, void* cookie) {
@@ -142,7 +143,7 @@ void initialize_connection(async_dispatcher_t* dispatcher, const ip6_addr_t* sad
   // Initialize transport interface
   memcpy(&transport_info.dest_addr, saddr, sizeof(ip6_addr_t));
   transport_info.dest_port = sport;
-  transport_info.timeout_ms = TFTP_TIMEOUT_SECS * 1000;
+  transport_info.timeout_ms = 1000;
   transport_info.dispatcher = dispatcher;
   tftp_transport_interface transport_ifc = {transport_send, NULL, transport_timeout_set};
   tftp_session_set_transport_interface(session, &transport_ifc);

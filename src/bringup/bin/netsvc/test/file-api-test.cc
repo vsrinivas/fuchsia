@@ -22,7 +22,7 @@ class FakePaver : public netsvc::PaverInterface {
   zx_status_t exit_code() override { return exit_code_; }
   void reset_exit_code() override { exit_code_ = ZX_OK; }
 
-  tftp_status OpenWrite(std::string_view filename, size_t size) override {
+  tftp_status OpenWrite(std::string_view filename, size_t size, zx::duration) override {
     in_progress_ = true;
     return TFTP_NO_ERROR;
   }
@@ -125,49 +125,50 @@ class FileApiTest : public zxtest::Test {
 };
 
 TEST_F(FileApiTest, OpenReadNetCopy) {
-  ASSERT_EQ(file_api_.OpenRead("file"), sizeof(kReadData));
+  ASSERT_EQ(file_api_.OpenRead("file", zx::duration::infinite()), sizeof(kReadData));
   file_api_.Close();
 }
 
 TEST_F(FileApiTest, OpenReadFailedPave) {
   fake_paver_.set_exit_code(ZX_ERR_INTERNAL);
-  ASSERT_NE(file_api_.OpenRead("file"), sizeof(kReadData));
+  ASSERT_NE(file_api_.OpenRead("file", zx::duration::infinite()), sizeof(kReadData));
 }
 
 TEST_F(FileApiTest, OpenWriteNetCopy) {
-  ASSERT_EQ(file_api_.OpenWrite("file", 10), TFTP_NO_ERROR);
+  ASSERT_EQ(file_api_.OpenWrite("file", 10, zx::duration::infinite()), TFTP_NO_ERROR);
   file_api_.Close();
 }
 
 TEST_F(FileApiTest, OpenWriteBoardName) {
-  ASSERT_EQ(file_api_.OpenWrite(NB_BOARD_NAME_FILENAME, 10), TFTP_NO_ERROR);
+  ASSERT_EQ(file_api_.OpenWrite(NB_BOARD_NAME_FILENAME, 10, zx::duration::infinite()),
+            TFTP_NO_ERROR);
   file_api_.Close();
 }
 
 TEST_F(FileApiTest, OpenWritePaver) {
-  ASSERT_EQ(file_api_.OpenWrite(NB_IMAGE_PREFIX, 10), TFTP_NO_ERROR);
+  ASSERT_EQ(file_api_.OpenWrite(NB_IMAGE_PREFIX, 10, zx::duration::infinite()), TFTP_NO_ERROR);
   file_api_.Close();
 }
 
 TEST_F(FileApiTest, OpenWriteWhilePaving) {
-  ASSERT_EQ(file_api_.OpenWrite(NB_IMAGE_PREFIX, 10), TFTP_NO_ERROR);
-  ASSERT_NE(file_api_.OpenWrite(NB_IMAGE_PREFIX, 10), TFTP_NO_ERROR);
+  ASSERT_EQ(file_api_.OpenWrite(NB_IMAGE_PREFIX, 10, zx::duration::infinite()), TFTP_NO_ERROR);
+  ASSERT_NE(file_api_.OpenWrite(NB_IMAGE_PREFIX, 10, zx::duration::infinite()), TFTP_NO_ERROR);
   file_api_.Close();
 }
 
 TEST_F(FileApiTest, OpenReadWhilePaving) {
-  ASSERT_EQ(file_api_.OpenWrite(NB_IMAGE_PREFIX, 10), TFTP_NO_ERROR);
-  ASSERT_LT(file_api_.OpenRead("file"), 0);
+  ASSERT_EQ(file_api_.OpenWrite(NB_IMAGE_PREFIX, 10, zx::duration::infinite()), TFTP_NO_ERROR);
+  ASSERT_LT(file_api_.OpenRead("file", zx::duration::infinite()), 0);
   file_api_.Close();
 }
 
 TEST_F(FileApiTest, OpenWriteFailedPave) {
   fake_paver_.set_exit_code(ZX_ERR_INTERNAL);
-  ASSERT_NE(file_api_.OpenWrite("file", 10), TFTP_NO_ERROR);
+  ASSERT_NE(file_api_.OpenWrite("file", 10, zx::duration::infinite()), TFTP_NO_ERROR);
 }
 
 TEST_F(FileApiTest, WriteNetCopy) {
-  ASSERT_EQ(file_api_.OpenWrite("file", 10), TFTP_NO_ERROR);
+  ASSERT_EQ(file_api_.OpenWrite("file", 10, zx::duration::infinite()), TFTP_NO_ERROR);
   size_t len = sizeof(kFakeData);
   ASSERT_EQ(file_api_.Write(kFakeData, &len, 0), TFTP_NO_ERROR);
   ASSERT_EQ(len, sizeof(kFakeData));
@@ -176,7 +177,8 @@ TEST_F(FileApiTest, WriteNetCopy) {
 
 TEST_F(FileApiTest, WriteBoardName) {
   fake_sysinfo_.set_board_name(kFakeData);
-  ASSERT_EQ(file_api_.OpenWrite(NB_BOARD_NAME_FILENAME, 10), TFTP_NO_ERROR);
+  ASSERT_EQ(file_api_.OpenWrite(NB_BOARD_NAME_FILENAME, 10, zx::duration::infinite()),
+            TFTP_NO_ERROR);
 #if __x86_64__
   // We hardcode x64 to return "x64" no matter what sysinfo returns.
   constexpr char kBoardName[] = "x64";
@@ -193,7 +195,8 @@ TEST_F(FileApiTest, WriteBoardName) {
 
 TEST_F(FileApiTest, WriteWrongBoardName) {
   fake_sysinfo_.set_board_name("other");
-  ASSERT_EQ(file_api_.OpenWrite(NB_BOARD_NAME_FILENAME, 10), TFTP_NO_ERROR);
+  ASSERT_EQ(file_api_.OpenWrite(NB_BOARD_NAME_FILENAME, 10, zx::duration::infinite()),
+            TFTP_NO_ERROR);
   size_t len = sizeof(kFakeData);
   ASSERT_NE(file_api_.Write(kFakeData, &len, 0), TFTP_NO_ERROR);
   file_api_.Close();
@@ -203,7 +206,7 @@ TEST_F(FileApiTest, ReadBoardInfo) {
   fake_sysinfo_.set_board_name(kFakeData);
   board_info_t board_info = {};
   size_t len = sizeof(board_info);
-  ASSERT_EQ(file_api_.OpenRead(NB_BOARD_INFO_FILENAME), len);
+  ASSERT_EQ(file_api_.OpenRead(NB_BOARD_INFO_FILENAME, zx::duration::infinite()), len);
   ASSERT_EQ(file_api_.Read(&board_info, &len, 0), TFTP_NO_ERROR);
   ASSERT_EQ(len, sizeof(board_info));
 #if __x86_64__
@@ -217,7 +220,7 @@ TEST_F(FileApiTest, ReadBoardInfo) {
 }
 
 TEST_F(FileApiTest, WritePaver) {
-  ASSERT_EQ(file_api_.OpenWrite(NB_IMAGE_PREFIX, 10), TFTP_NO_ERROR);
+  ASSERT_EQ(file_api_.OpenWrite(NB_IMAGE_PREFIX, 10, zx::duration::infinite()), TFTP_NO_ERROR);
   size_t len = sizeof(kFakeData);
   ASSERT_EQ(file_api_.Write(kFakeData, &len, 0), TFTP_NO_ERROR);
   ASSERT_EQ(len, sizeof(kFakeData));
@@ -225,14 +228,14 @@ TEST_F(FileApiTest, WritePaver) {
 }
 
 TEST_F(FileApiTest, WriteAfterClose) {
-  ASSERT_EQ(file_api_.OpenWrite("file", 10), TFTP_NO_ERROR);
+  ASSERT_EQ(file_api_.OpenWrite("file", 10, zx::duration::infinite()), TFTP_NO_ERROR);
   file_api_.Close();
   size_t len = sizeof(kFakeData);
   ASSERT_NE(file_api_.Write(kFakeData, &len, 0), TFTP_NO_ERROR);
 }
 
 TEST_F(FileApiTest, WriteNoLength) {
-  ASSERT_EQ(file_api_.OpenWrite(NB_IMAGE_PREFIX, 10), TFTP_NO_ERROR);
+  ASSERT_EQ(file_api_.OpenWrite(NB_IMAGE_PREFIX, 10, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_NE(file_api_.Write(kFakeData, nullptr, 0), TFTP_NO_ERROR);
   file_api_.Close();
 }
@@ -243,7 +246,7 @@ TEST_F(FileApiTest, WriteWithoutOpen) {
 }
 
 TEST_F(FileApiTest, AbortNetCopyWrite) {
-  ASSERT_EQ(file_api_.OpenWrite("file", 10), TFTP_NO_ERROR);
+  ASSERT_EQ(file_api_.OpenWrite("file", 10, zx::duration::infinite()), TFTP_NO_ERROR);
   size_t len = sizeof(kFakeData);
   ASSERT_EQ(file_api_.Write(kFakeData, &len, 0), TFTP_NO_ERROR);
   ASSERT_EQ(len, sizeof(kFakeData));

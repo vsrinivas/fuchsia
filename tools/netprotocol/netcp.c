@@ -44,7 +44,8 @@ typedef struct {
 
 static const char* appname;
 
-static ssize_t file_open_read(const char* filename, void* file_cookie) {
+static ssize_t file_open_read(const char* filename, uint8_t session_timeout_secs,
+                              void* file_cookie) {
   int fd = open(filename, O_RDONLY);
   if (fd < 0) {
     return TFTP_ERR_IO;
@@ -60,7 +61,8 @@ static ssize_t file_open_read(const char* filename, void* file_cookie) {
   return st.st_size;
 }
 
-static tftp_status file_open_write(const char* filename, size_t size, void* file_cookie) {
+static tftp_status file_open_write(const char* filename, size_t size, uint8_t session_timeout_secs,
+                                   void* file_cookie) {
   int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
   if (fd < 0) {
     return TFTP_ERR_IO;

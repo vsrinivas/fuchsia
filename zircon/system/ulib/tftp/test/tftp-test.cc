@@ -69,10 +69,10 @@ TEST(TftpSetup, test_tftp_session_options) {
   test_state ts;
   ts.reset(1024, 1024, 1500);
 
-  auto open_read_fn = [](const char* filename, void* cookie) -> ssize_t { return 0; };
-  auto open_write_fn = [](const char* filename, size_t size, void* cookie) -> tftp_status {
-    return 0;
-  };
+  auto open_read_fn = [](const char* filename, uint8_t session_timeout_secs,
+                         void* cookie) -> ssize_t { return 0; };
+  auto open_write_fn = [](const char* filename, size_t size, uint8_t session_timeout_secs,
+                          void* cookie) -> tftp_status { return 0; };
   auto read_fn = [](void* data, size_t* len, off_t offset, void* cookie) -> tftp_status {
     return 0;
   };
@@ -355,12 +355,14 @@ static void test_tftp_receive_request_send_oack(tftp_file_direction dir) {
   test_state ts;
   ts.reset(1024, 1024, 1500);
   tftp_file_open_write_cb open_write_cb = [](const char* filename, size_t size,
+                                             uint8_t session_timeout_secs,
                                              void* cookie) -> tftp_status {
     EXPECT_STREQ(filename, kRemoteFilename, "bad remote filename in open_write callback");
     EXPECT_EQ(size, 1024, "bad file size");
     return 0;
   };
-  tftp_file_open_read_cb open_read_cb = [](const char* filename, void* cookie) -> ssize_t {
+  tftp_file_open_read_cb open_read_cb = [](const char* filename, uint8_t session_timeout_secs,
+                                           void* cookie) -> ssize_t {
     EXPECT_STREQ(filename, kRemoteFilename, "bad remote filename in open_read callback");
     return 0;
   };
@@ -414,9 +416,14 @@ TEST(TftpReceiveRrq, test_tftp_receive_rrq_send_oack) {
   test_tftp_receive_request_send_oack(RECV_FILE);
 }
 
-static ssize_t dummy_open_read(const char* filename, void* cookie) { return 1024; }
+static ssize_t dummy_open_read(const char* filename, uint8_t session_timeout_secs, void* cookie) {
+  return 1024;
+}
 
-static tftp_status dummy_open_write(const char* filename, size_t size, void* cookie) { return 0; }
+static tftp_status dummy_open_write(const char* filename, size_t size, uint8_t session_timeout_secs,
+                                    void* cookie) {
+  return 0;
+}
 
 static void test_tftp_receive_request_options(
     tftp_file_direction dir, const uint16_t* server_block_size, const uint8_t* server_timeout,
@@ -654,7 +661,8 @@ void verify_read_data(const test_state& ts, const tx_test_data& td) {
   EXPECT_BYTES_EQ(td.expected.data, msg->data, td.actual.len, "read data mismatch");
 }
 
-tftp_status mock_open_write(const char* filename, size_t size, void* file_cookie) {
+tftp_status mock_open_write(const char* filename, size_t size, uint8_t session_timeout_secs,
+                            void* file_cookie) {
   return TFTP_NO_ERROR;
 }
 
@@ -885,7 +893,8 @@ TEST(TftpReceiveData, test_tftp_receive_data) {
   test_state ts;
   ts.reset(1024, 1024, 1500);
   tftp_file_interface ifc = {NULL,
-                             [](const char* filename, size_t size, void* cookie) -> tftp_status {
+                             [](const char* filename, size_t size, uint8_t session_timeout_secs,
+                                void* cookie) -> tftp_status {
                                EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
                                EXPECT_EQ(size, 1024, "bad file size");
                                return 0;
@@ -932,7 +941,8 @@ TEST(TftpReceiveData, test_tftp_receive_data_final_block) {
   test_state ts;
   ts.reset(1024, 1024, 1500);
   tftp_file_interface ifc = {NULL,
-                             [](const char* filename, size_t size, void* cookie) -> tftp_status {
+                             [](const char* filename, size_t size, uint8_t session_timeout_secs,
+                                void* cookie) -> tftp_status {
                                EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
                                EXPECT_EQ(size, 1024, "bad file size");
                                return 0;
@@ -996,7 +1006,8 @@ TEST(TftpReceiveData, test_tftp_receive_data_blocksize) {
   test_state ts;
   ts.reset(1024, 2048, 1500);
   tftp_file_interface ifc = {NULL,
-                             [](const char* filename, size_t size, void* cookie) -> tftp_status {
+                             [](const char* filename, size_t size, uint8_t session_timeout_secs,
+                                void* cookie) -> tftp_status {
                                EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
                                EXPECT_EQ(size, 2048, "bad file size");
                                return 0;
@@ -1045,7 +1056,8 @@ TEST(TftpReceiveData, test_tftp_receive_data_windowsize) {
   test_state ts;
   ts.reset(1024, 1025, 1500);
   tftp_file_interface ifc = {NULL,
-                             [](const char* filename, size_t size, void* cookie) -> tftp_status {
+                             [](const char* filename, size_t size, uint8_t session_timeout_secs,
+                                void* cookie) -> tftp_status {
                                EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
                                EXPECT_EQ(size, 1025, "bad file size");
                                return 0;
@@ -1108,7 +1120,8 @@ TEST(TftpReceiveData, test_tftp_receive_data_skipped_block) {
   test_state ts;
   ts.reset(1024, 1024, 1500);
   tftp_file_interface ifc = {NULL,
-                             [](const char* filename, size_t size, void* cookie) -> tftp_status {
+                             [](const char* filename, size_t size, uint8_t session_timeout_secs,
+                                void* cookie) -> tftp_status {
                                EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
                                EXPECT_EQ(size, 1024, "bad file size");
                                return 0;
@@ -1170,7 +1183,8 @@ TEST(TftpReceiveData, test_tftp_receive_data_windowsize_skipped_block) {
   test_state ts;
   ts.reset(1024, 2048, 1500);
   tftp_file_interface ifc = {NULL,
-                             [](const char* filename, size_t size, void* cookie) -> tftp_status {
+                             [](const char* filename, size_t size, uint8_t session_timeout_secs,
+                                void* cookie) -> tftp_status {
                                EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
                                EXPECT_EQ(size, 2048, "bad file size");
                                return 0;
@@ -1259,7 +1273,8 @@ TEST(TftpReceiveData, test_tftp_receive_data_block_wrapping) {
   ts.reset(1024, 2048, 2048);
 
   tftp_file_interface ifc = {NULL, NULL, NULL, NULL, NULL};
-  ifc.open_write = [](const char* filename, size_t size, void* cookie) -> tftp_status {
+  ifc.open_write = [](const char* filename, size_t size, uint8_t session_timeout_secs,
+                      void* cookie) -> tftp_status {
     EXPECT_STREQ(filename, kRemoteFilename, "bad filename");
     EXPECT_EQ(size, kFileSize, "bad file size");
     return 0;
@@ -1692,11 +1707,13 @@ TEST(TftpSendData, test_tftp_send_data_receive_ack_skip_block_wrap) {
   EXPECT_EQ((kAckBlock + 2) & 0xffff, ntohs(msg->block), "incorrect DATA packet block");
 }
 
-static ssize_t open_read_should_wait(const char* filename, void* cookie) {
+static ssize_t open_read_should_wait(const char* filename, uint8_t session_timeout_secs,
+                                     void* cookie) {
   return TFTP_ERR_SHOULD_WAIT;
 }
 
-static tftp_status open_write_should_wait(const char* filename, size_t size, void* cookie) {
+static tftp_status open_write_should_wait(const char* filename, size_t size,
+                                          uint8_t session_timeout_secs, void* cookie) {
   return TFTP_ERR_SHOULD_WAIT;
 }
 

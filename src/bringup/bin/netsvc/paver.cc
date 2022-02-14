@@ -558,7 +558,7 @@ tftp_status Paver::ProcessAsFirmwareImage(std::string_view host_filename) {
   return TFTP_ERR_NOT_FOUND;
 }
 
-tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
+tftp_status Paver::OpenWrite(std::string_view filename, size_t size, zx::duration timeout) {
   // Skip past the NB_IMAGE_PREFIX prefix.
   std::string_view host_filename;
   if (auto without_prefix = WithoutPrefix(filename, NB_IMAGE_PREFIX); without_prefix.has_value()) {
@@ -659,6 +659,9 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size) {
   write_offset_.store(0ul);
   exit_code_.store(0);
   in_progress_.store(true);
+  // Use a fixed multiplier on requested timeout based on empirical tests for
+  // paving stability.
+  timeout_ = timeout * 5;
 
   aborted_ = false;
   sync_completion_reset(&data_ready_);

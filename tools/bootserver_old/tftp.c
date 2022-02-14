@@ -38,7 +38,7 @@ void file_init(xferdata* xd) {
   xd->datalen = 0;
 }
 
-ssize_t file_open_read(const char* filename, void* cookie) {
+ssize_t file_open_read(const char* filename, uint8_t session_timeout_secs, void* cookie) {
   xferdata* xd = cookie;
   if (strcmp(filename, "(cmdline)")) {
     xd->fd = open(filename, O_RDONLY);
@@ -63,7 +63,8 @@ err:
   return TFTP_ERR_IO;
 }
 
-tftp_status file_open_write(const char* filename, size_t len, void* cookie) {
+tftp_status file_open_write(const char* filename, size_t len, uint8_t session_timeout_secs,
+                            void* cookie) {
   xferdata* xd = cookie;
   xd->fd = open(filename, O_WRONLY | O_CREAT);
   if (xd->fd < 0) {

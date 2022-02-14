@@ -72,7 +72,7 @@ void destroy_files(void) {
 
 const char* file_get_filename(file_info_t* file_info) { return file_info->filename; }
 
-ssize_t file_open_read(const char* filename, void* file_cookie) {
+ssize_t file_open_read(const char* filename, uint8_t session_timeout_secs, void* file_cookie) {
   auto* file_info = reinterpret_cast<file_info_t*>(file_cookie);
   file_info->buf = src_file;
   strncpy(file_info->filename, filename, PATH_MAX);
@@ -80,7 +80,8 @@ ssize_t file_open_read(const char* filename, void* file_cookie) {
   return file_info->filesz;
 }
 
-tftp_status file_open_write(const char* filename, size_t size, void* file_cookie) {
+tftp_status file_open_write(const char* filename, size_t size, uint8_t session_timeout_secs,
+                            void* file_cookie) {
   auto* file_info = reinterpret_cast<file_info_t*>(file_cookie);
   file_info->buf = dst_file;
   file_info->filename[PATH_MAX] = '\0';

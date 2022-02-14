@@ -543,7 +543,8 @@ tftp_status tftp_handle_request(tftp_session* session, tftp_file_direction direc
         set_error(session, TFTP_ERR_CODE_UNDEF, resp, resp_len, "internal error");
         return TFTP_ERR_BAD_STATE;
       }
-      switch (session->file_interface.open_write(session->filename, session->file_size, cookie)) {
+      switch (session->file_interface.open_write(session->filename, session->file_size,
+                                                 session->timeout, cookie)) {
         case TFTP_ERR_SHOULD_WAIT:
           // The open_write() callback can return an ERR_SHOULD_WAIT response if it isn't
           // prepared to service another request at the moment and the client should retry
@@ -568,7 +569,7 @@ tftp_status tftp_handle_request(tftp_session* session, tftp_file_direction direc
         return TFTP_ERR_BAD_STATE;
       }
 
-      file_size = session->file_interface.open_read(session->filename, cookie);
+      file_size = session->file_interface.open_read(session->filename, session->timeout, cookie);
       if (file_size == TFTP_ERR_SHOULD_WAIT) {
         // The open_read() callback can return an ERR_SHOULD_WAIT response if it isn't
         // prepared to service another request at the moment and the client should retry
@@ -896,7 +897,8 @@ tftp_status tftp_handle_oack(tftp_session* session, tftp_msg* oack, size_t oack_
     return ret;
   } else {
     if (!session->file_interface.open_write ||
-        session->file_interface.open_write(session->filename, session->file_size, cookie)) {
+        session->file_interface.open_write(session->filename, session->file_size, session->timeout,
+                                           cookie)) {
       xprintf("Could not open file on write request\n");
       set_error(session, TFTP_ERR_CODE_UNDEF, resp, resp_len, "could not open file for writing");
       return TFTP_ERR_BAD_STATE;
@@ -1096,7 +1098,7 @@ static tftp_status transfer_file(tftp_session* session, void* transport_cookie, 
 
   ssize_t file_size = 0;
   if (xfer_direction == SEND_FILE) {
-    file_size = session->file_interface.open_read(local_filename, file_cookie);
+    file_size = session->file_interface.open_read(local_filename, session->timeout, file_cookie);
     if (file_size < 0) {
       REPORT_ERR(opts, "failed during file open callback");
       return file_size;

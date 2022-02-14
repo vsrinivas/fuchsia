@@ -34,7 +34,7 @@ class PaverInterface {
 
   // TODO: Explore returning an object which implements write and when it goes
   // out of scope, closes.
-  virtual tftp_status OpenWrite(std::string_view filename, size_t size) = 0;
+  virtual tftp_status OpenWrite(std::string_view filename, size_t size, zx::duration timeout) = 0;
   virtual tftp_status Write(const void* data, size_t* length, off_t offset) = 0;
   virtual void Close() = 0;
   virtual void Abort() = 0;
@@ -49,7 +49,7 @@ class Paver : public PaverInterface {
   zx_status_t exit_code() final;
   void reset_exit_code() final;
 
-  tftp_status OpenWrite(std::string_view filename, size_t size) final;
+  tftp_status OpenWrite(std::string_view filename, size_t size, zx::duration timeout) final;
   tftp_status Write(const void* data, size_t* length, off_t offset) final;
   void Close() final;
   void Abort() final;
@@ -57,8 +57,6 @@ class Paver : public PaverInterface {
   // Visible for testing.
   explicit Paver(fidl::ClientEnd<fuchsia_io::Directory> svc_root, fbl::unique_fd devfs_root)
       : svc_root_(std::move(svc_root)), devfs_root_(std::move(devfs_root)) {}
-
-  void set_timeout(zx::duration timeout) { timeout_ = timeout; }
 
  private:
   static constexpr uint32_t kBufferRefWorker = 1 << 0;
@@ -133,7 +131,7 @@ class Paver : public PaverInterface {
   std::atomic<bool> aborted_;
 
   // Timeout monitor thread uses before timing out.
-  zx::duration timeout_ = zx::sec(5 * TFTP_TIMEOUT_SECS);
+  zx::duration timeout_;
 };
 
 }  // namespace netsvc

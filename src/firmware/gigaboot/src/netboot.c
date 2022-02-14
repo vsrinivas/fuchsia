@@ -178,7 +178,8 @@ transmit:
   }
 }
 
-static tftp_status buffer_open(const char* filename, size_t size, void* cookie) {
+static tftp_status buffer_open(const char* filename, size_t size, uint8_t session_timeout_secs,
+                               void* cookie) {
   file_info_t* file_info = cookie;
   file_info->netboot_file_data = netboot_get_buffer(filename, size);
   if (file_info->netboot_file_data == NULL) {

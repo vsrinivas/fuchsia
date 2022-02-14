@@ -29,8 +29,8 @@ namespace netsvc {
 class FileApiInterface {
  public:
   // Returns size of file on success.
-  virtual ssize_t OpenRead(const char* filename) = 0;
-  virtual tftp_status OpenWrite(const char* filename, size_t size) = 0;
+  virtual ssize_t OpenRead(const char* filename, zx::duration timeout) = 0;
+  virtual tftp_status OpenWrite(const char* filename, size_t size, zx::duration timeout) = 0;
   virtual tftp_status Read(void* data, size_t* length, off_t offset) = 0;
   virtual tftp_status Write(const void* data, size_t* length, off_t offset) = 0;
   virtual void Close() = 0;
@@ -50,8 +50,8 @@ class FileApi : public FileApiInterface {
                        fidl::ClientEnd<fuchsia_sysinfo::SysInfo>(),
                    PaverInterface* paver = Paver::Get());
 
-  ssize_t OpenRead(const char* filename) final;
-  tftp_status OpenWrite(const char* filename, size_t size) final;
+  ssize_t OpenRead(const char* filename, zx::duration timeout);
+  tftp_status OpenWrite(const char* filename, size_t size, zx::duration timeout) final;
   tftp_status Read(void* data, size_t* length, off_t offset) final;
   tftp_status Write(const void* data, size_t* length, off_t offset) final;
   void Close() final;

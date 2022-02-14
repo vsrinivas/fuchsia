@@ -17,10 +17,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
     return 0;
   }
 
-  auto open_read_fn = [](const char* filename, void* cookie) -> ssize_t { return 0; };
-  auto open_write_fn = [](const char* filename, size_t size, void* cookie) -> tftp_status {
-    return TFTP_NO_ERROR;
-  };
+  auto open_read_fn = [](const char* filename, uint8_t session_timeout_secs,
+                         void* cookie) -> ssize_t { return 0; };
+  auto open_write_fn = [](const char* filename, size_t size, uint8_t session_timeout_secs,
+                          void* cookie) -> tftp_status { return TFTP_NO_ERROR; };
   auto read_fn = [](void* data, size_t* len, off_t offset, void* cookie) -> tftp_status {
     return TFTP_NO_ERROR;
   };

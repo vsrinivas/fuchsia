@@ -123,14 +123,15 @@ typedef struct {
 //
 // This function should return the size of the file on success, or a TFTP_ERR_*
 // error code on failure.
-typedef ssize_t (*tftp_file_open_read_cb)(const char* filename, void* file_cookie);
+typedef ssize_t (*tftp_file_open_read_cb)(const char* filename, uint8_t session_timeout_secs,
+                                          void* file_cookie);
 
 // tftp_file_open_write_cb is called by the library to prepare a file for
 // writing. |file_cookie| will be passed to this function from the argument to
 // tftp_process_msg. |size| indicates the size of the file that will be
 // created (it may be ignored if this information is not needed on opening).
 typedef tftp_status (*tftp_file_open_write_cb)(const char* filename, size_t size,
-                                               void* file_cookie);
+                                               uint8_t session_timeout_secs, void* file_cookie);
 
 // tftp_file_read_cb is called by the library to read |length| bytes, starting
 // at |offset|, into |data|. |file_cookie| will be passed to this function from

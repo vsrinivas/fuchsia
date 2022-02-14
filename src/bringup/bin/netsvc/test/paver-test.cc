@@ -45,22 +45,22 @@ TEST(PaverTest, InitialExitCodeValid) {
 
 TEST_F(PaverTest, OpenWriteInvalidFile) {
   char invalid_file_name[32] = {};
-  ASSERT_NE(paver_.OpenWrite(invalid_file_name, 0), TFTP_NO_ERROR);
+  ASSERT_NE(paver_.OpenWrite(invalid_file_name, 0, zx::duration::infinite()), TFTP_NO_ERROR);
   paver_.Close();
 }
 
 TEST_F(PaverTest, OpenWriteInvalidSize) {
-  ASSERT_NE(paver_.OpenWrite(FirmwareFilename(), 0), TFTP_NO_ERROR);
+  ASSERT_NE(paver_.OpenWrite(FirmwareFilename(), 0, zx::duration::infinite()), TFTP_NO_ERROR);
 }
 
 TEST_F(PaverTest, OpenWriteValidFile) {
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024, zx::duration::infinite()), TFTP_NO_ERROR);
   paver_.Abort();
 }
 
 TEST_F(PaverTest, OpenTwice) {
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024), TFTP_NO_ERROR);
-  ASSERT_NE(paver_.OpenWrite(FirmwareFilename(), 1024), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024, zx::duration::infinite()), TFTP_NO_ERROR);
+  ASSERT_NE(paver_.OpenWrite(FirmwareFilename(), 1024, zx::duration::infinite()), TFTP_NO_ERROR);
   paver_.Abort();
 }
 
@@ -71,7 +71,7 @@ TEST_F(PaverTest, WriteWithoutOpen) {
 
 TEST_F(PaverTest, WriteAfterClose) {
   size_t size = sizeof(kFakeData);
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024, zx::duration::infinite()), TFTP_NO_ERROR);
   paver_.Close();
   // TODO(surajmalhotra): Should we ensure this fails?
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
@@ -80,7 +80,7 @@ TEST_F(PaverTest, WriteAfterClose) {
 }
 
 TEST_F(PaverTest, TimeoutNoWrites) {
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024, zx::duration::infinite()), TFTP_NO_ERROR);
   paver_.Abort();
   Wait();
   ASSERT_NE(paver_.exit_code(), ZX_OK);
@@ -88,7 +88,7 @@ TEST_F(PaverTest, TimeoutNoWrites) {
 
 TEST_F(PaverTest, TimeoutPartialWrite) {
   size_t size = sizeof(kFakeData);
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   paver_.Abort();
@@ -116,7 +116,7 @@ void ValidateLastCommandTrace(const std::vector<paver_test::Command>& actual,
 TEST_F(PaverTest, WriteCompleteSingle) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -130,7 +130,7 @@ TEST_F(PaverTest, WriteCompleteSingle) {
 TEST_F(PaverTest, WriteCompleteManySmallWrites) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(1024);
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 1024, zx::duration::infinite()), TFTP_NO_ERROR);
   for (size_t offset = 0; offset < 1024; offset += sizeof(kFakeData)) {
     size = std::min(sizeof(kFakeData), 1024 - offset);
     ASSERT_EQ(paver_.Write(kFakeData, &size, offset), TFTP_NO_ERROR);
@@ -143,7 +143,7 @@ TEST_F(PaverTest, WriteCompleteManySmallWrites) {
 
 TEST_F(PaverTest, Overwrite) {
   size_t size = sizeof(kFakeData);
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 2), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 2, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_NE(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   paver_.Abort();
   Wait();
@@ -153,7 +153,8 @@ TEST_F(PaverTest, Overwrite) {
 TEST_F(PaverTest, CloseChannelBetweenWrites) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(2 * size);
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 2 * size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), 2 * size, zx::duration::infinite()),
+            TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   loop_.Shutdown();
@@ -168,7 +169,7 @@ TEST_F(PaverTest, WriteFirmwareA) {
   size_t size = sizeof(kFakeData);
   const char* file_name = NB_IMAGE_PREFIX NB_FIRMWAREA_HOST_FILENAME_PREFIX "tpl";
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(file_name, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(file_name, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -182,7 +183,7 @@ TEST_F(PaverTest, WriteFirmwareA) {
 TEST_F(PaverTest, WriteZirconA) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONA_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONA_FILENAME, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -196,7 +197,7 @@ TEST_F(PaverTest, WriteZirconA) {
 TEST_F(PaverTest, WriteVbMetaA) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_VBMETAA_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_VBMETAA_FILENAME, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -219,7 +220,7 @@ TEST_F(PaverTest, WriteFirmwareABWithABRSupported) {
   for (auto file_name : file_names) {
     fake_svc_.fake_paver().set_abr_supported(true);
     fake_svc_.fake_paver().set_expected_payload_size(size);
-    ASSERT_EQ(paver_.OpenWrite(file_name, size), TFTP_NO_ERROR);
+    ASSERT_EQ(paver_.OpenWrite(file_name, size, zx::duration::infinite()), TFTP_NO_ERROR);
     ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
     ASSERT_EQ(size, sizeof(kFakeData));
     Wait();
@@ -242,7 +243,7 @@ TEST_F(PaverTest, WriteFirmwareRWithABRSupported) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_abr_supported(true);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(file_name, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(file_name, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -261,7 +262,7 @@ TEST_F(PaverTest, WriteZirconAWithABRSupported) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_abr_supported(true);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONA_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONA_FILENAME, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -282,7 +283,7 @@ TEST_F(PaverTest, WriteZirconBWithABRSupported) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_abr_supported(true);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONB_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONB_FILENAME, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -303,7 +304,7 @@ TEST_F(PaverTest, WriteZirconRWithABRSupported) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_abr_supported(true);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONR_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONR_FILENAME, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -323,7 +324,7 @@ TEST_F(PaverTest, WriteVbMetaAWithABRSupported) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_abr_supported(true);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_VBMETAA_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_VBMETAA_FILENAME, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -350,7 +351,7 @@ TEST_F(PaverTest, WriteVbMetaBWithABRSupported) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_abr_supported(true);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_VBMETAB_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_VBMETAB_FILENAME, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -377,7 +378,7 @@ TEST_F(PaverTest, WriteVbMetaRWithABRSupported) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_abr_supported(true);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_VBMETAR_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_VBMETAR_FILENAME, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -406,7 +407,7 @@ TEST_F(PaverTest, WriteZirconAWithABRSupportedTwice) {
   };
   std::vector<paver_test::Command> expected_accumulative;
   for (int i = 0; i < 2; i++) {
-    ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONA_FILENAME, size), TFTP_NO_ERROR);
+    ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONA_FILENAME, size, zx::duration::infinite()), TFTP_NO_ERROR);
     ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
     ASSERT_EQ(size, sizeof(kFakeData));
     Wait();
@@ -421,7 +422,7 @@ TEST_F(PaverTest, WriteZirconAWithABRSupportedTwice) {
 TEST_F(PaverTest, WriteSshAuth) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_SSHAUTH_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_SSHAUTH_FILENAME, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -434,7 +435,7 @@ TEST_F(PaverTest, WriteSshAuth) {
 TEST_F(PaverTest, WriteFvm) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -447,7 +448,7 @@ TEST_F(PaverTest, WriteFvm) {
 TEST_F(PaverTest, WriteFvmManySmallWrites) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(1024);
-  ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, 1024), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, 1024, zx::duration::infinite()), TFTP_NO_ERROR);
   for (size_t offset = 0; offset < 1024; offset += sizeof(kFakeData)) {
     size = std::min(sizeof(kFakeData), 1024 - offset);
     ASSERT_EQ(paver_.Write(kFakeData, &size, offset), TFTP_NO_ERROR);
@@ -468,7 +469,8 @@ TEST_F(PaverTest, InitializePartitionTables) {
   strcat(partition_info.block_device_path, ramdisk_get_path(ramdisk_));
 
   size_t size = sizeof(partition_info);
-  ASSERT_EQ(paver_.OpenWrite(NB_INIT_PARTITION_TABLES_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_INIT_PARTITION_TABLES_FILENAME, size, zx::duration::infinite()),
+            TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(&partition_info, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(partition_info));
   Wait();
@@ -486,7 +488,8 @@ TEST_F(PaverTest, WipePartitionTables) {
   strcat(partition_info.block_device_path, ramdisk_get_path(ramdisk_));
 
   size_t size = sizeof(partition_info);
-  ASSERT_EQ(paver_.OpenWrite(NB_WIPE_PARTITION_TABLES_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_WIPE_PARTITION_TABLES_FILENAME, size, zx::duration::infinite()),
+            TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(&partition_info, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(partition_info));
   Wait();
@@ -499,7 +502,7 @@ TEST_F(PaverTest, WipePartitionTables) {
 TEST_F(PaverTest, WriteFirmwareNoType) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -516,7 +519,8 @@ TEST_F(PaverTest, WriteFirmwareSupportedType) {
   fake_svc_.fake_paver().set_expected_payload_size(size);
   fake_svc_.fake_paver().set_supported_firmware_type("foo");
 
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename("foo"), size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename("foo"), size, zx::duration::infinite()),
+            TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -533,7 +537,8 @@ TEST_F(PaverTest, WriteFirmwareUnsupportedType) {
   fake_svc_.fake_paver().set_expected_payload_size(size);
   fake_svc_.fake_paver().set_supported_firmware_type("foo");
 
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename("bar"), size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename("bar"), size, zx::duration::infinite()),
+            TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -551,7 +556,7 @@ TEST_F(PaverTest, WriteFirmwareFailure) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size + 1);
 
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(), size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -569,7 +574,8 @@ TEST_F(PaverTest, WriteFirmwareTypeMaxLength) {
   fake_svc_.fake_paver().set_expected_payload_size(size);
   fake_svc_.fake_paver().set_supported_firmware_type(type);
 
-  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(type), size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(FirmwareFilename(type), size, zx::duration::infinite()),
+            TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -586,7 +592,8 @@ TEST_F(PaverTest, WriteFirmwareTypeTooLong) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size);
 
-  EXPECT_EQ(paver_.OpenWrite(FirmwareFilename(type), size), TFTP_ERR_INVALID_ARGS);
+  EXPECT_EQ(paver_.OpenWrite(FirmwareFilename(type), size, zx::duration::infinite()),
+            TFTP_ERR_INVALID_ARGS);
   EXPECT_NE(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   paver_.Abort();
   Wait();
@@ -598,7 +605,8 @@ TEST_F(PaverTest, WriteFirmwareTypeTooLong) {
 TEST_F(PaverTest, BootloaderUsesWriteFirmware) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_BOOTLOADER_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_BOOTLOADER_FILENAME, size, zx::duration::infinite()),
+            TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
@@ -614,7 +622,7 @@ TEST_F(PaverTest, BootloaderUsesWriteFirmware) {
 TEST_F(PaverTest, DoubleClose) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   paver_.Close();
   paver_.Close();
@@ -625,7 +633,7 @@ TEST_F(PaverTest, DoubleClose) {
 TEST_F(PaverTest, AbortFvm) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_expected_payload_size(size * 2);
-  ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, size * 2), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, size * 2, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   paver_.Abort();
   Wait();

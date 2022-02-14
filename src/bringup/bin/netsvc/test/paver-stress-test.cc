@@ -32,7 +32,8 @@ TEST_F(PaverTest, WriteFvmManyLargeWrites) {
 
   fake_svc_.fake_paver().set_expected_payload_size(payload_size);
   fake_svc_.fake_paver().set_wait_for_start_signal(true);
-  ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, payload_size), TFTP_NO_ERROR);
+  ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, payload_size, zx::duration::infinite()),
+            TFTP_NO_ERROR);
   for (size_t offset = 0; offset < payload_size; offset += kChunkSize) {
     size_t size = std::min(kChunkSize, payload_size - offset);
     ASSERT_EQ(paver_.Write(fake_data.get(), &size, offset), TFTP_NO_ERROR);

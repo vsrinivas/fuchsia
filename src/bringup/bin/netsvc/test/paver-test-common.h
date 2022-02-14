@@ -82,7 +82,6 @@ class PaverTest : public zxtest::Test {
       : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         fake_svc_(loop_.dispatcher()),
         paver_(std::move(fake_svc_.svc_chan()), fake_dev_.devmgr_.devfs_root().duplicate()) {
-    paver_.set_timeout(zx::duration::infinite());
     loop_.StartThread("paver-test-loop");
   }
 
