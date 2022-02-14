@@ -7,6 +7,15 @@
 mod integration;
 pub(crate) mod state;
 
+use alloc::boxed::Box;
+use core::num::NonZeroU8;
+
+use net_types::{
+    ip::{AddrSubnet, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    LinkLocalAddress as _, MulticastAddr, SpecifiedAddr, UnicastAddr, Witness as _,
+};
+use packet::{BufferMut, EmptyBuf, Serializer};
+
 use crate::{
     context::{InstantContext, RngContext, TimerContext, TimerHandler},
     device::DeviceId,
@@ -24,13 +33,6 @@ use crate::{
     },
     Ctx, EventDispatcher, Instant,
 };
-use alloc::boxed::Box;
-use core::num::NonZeroU8;
-use net_types::{
-    ip::{AddrSubnet, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
-    LinkLocalAddress as _, MulticastAddr, SpecifiedAddr, UnicastAddr, Witness as _,
-};
-use packet::{BufferMut, EmptyBuf, Serializer};
 
 /// A timer ID for IPv4 devices.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
@@ -521,13 +523,13 @@ pub(crate) fn set_ipv6_configuration<C: IpDeviceContext<Ipv6>>(
 mod tests {
     use alloc::vec::Vec;
 
-    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt as _};
     use net_types::{
         ip::{Ip as _, Ipv6},
         Witness,
     };
 
     use super::*;
+    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt as _};
 
     /// Test that `get_ipv6_addr_subnet` only returns non-local IPv6 addresses.
     #[test]

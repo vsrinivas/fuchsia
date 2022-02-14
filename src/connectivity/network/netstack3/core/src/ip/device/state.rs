@@ -5,8 +5,8 @@
 //! State for an IP device.
 
 use alloc::vec::Vec;
-use core::time::Duration;
-use core::{fmt::Debug, num::NonZeroU8};
+use core::{fmt::Debug, num::NonZeroU8, time::Duration};
+
 use net_types::{
     ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6Scope},
     ScopeableAddress as _, SpecifiedAddr, UnicastAddr, Witness,
@@ -424,7 +424,6 @@ impl<Instant> Ipv6AddressEntry<Instant> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::{error::ExistsError, testutil::DummyInstant};
 
     #[test]

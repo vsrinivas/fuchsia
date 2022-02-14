@@ -2641,35 +2641,37 @@ mod tests {
     use rand::rngs::mock::StepRng;
 
     use net_declare::net::subnet_v6;
-    use net_types::ethernet::Mac;
-    use net_types::ip::AddrSubnet;
+    use net_types::{ethernet::Mac, ip::AddrSubnet};
     use packet::{Buf, ParseBuffer};
-    use packet_formats::icmp::ndp::{
-        options::PrefixInformation, OptionSequenceBuilder, RouterAdvertisement, RouterSolicitation,
-    };
-    use packet_formats::icmp::{IcmpEchoRequest, Icmpv6Packet};
-    use packet_formats::ip::IpProto;
-    use packet_formats::testutil::{
-        parse_ethernet_frame, parse_icmp_packet_in_ip_packet_in_ethernet_frame,
+    use packet_formats::{
+        icmp::{
+            ndp::{
+                options::PrefixInformation, OptionSequenceBuilder, RouterAdvertisement,
+                RouterSolicitation,
+            },
+            IcmpEchoRequest, Icmpv6Packet,
+        },
+        ip::IpProto,
+        testutil::{parse_ethernet_frame, parse_icmp_packet_in_ip_packet_in_ethernet_frame},
     };
 
-    use crate::device::{
-        add_ip_addr_subnet, del_ip_addr,
-        ethernet::{EthernetLinkDevice, EthernetTimerId},
-        set_routing_enabled, DeviceId, DeviceIdInner, DeviceLayerTimerId, DeviceLayerTimerIdInner,
-        EthernetDeviceId,
-    };
-    use crate::testutil::{
-        self, get_counter_val, run_for, set_logger_for_test, trigger_next_timer,
-        DummyEventDispatcher, DummyEventDispatcherBuilder, DummyInstant, DummyNetwork, StepResult,
-        TestIpExt, DUMMY_CONFIG_V6,
-    };
     use crate::{
         assert_empty,
         context::InstantContext as _,
+        device::{
+            add_ip_addr_subnet, del_ip_addr,
+            ethernet::{EthernetLinkDevice, EthernetTimerId},
+            set_routing_enabled, DeviceId, DeviceIdInner, DeviceLayerTimerId,
+            DeviceLayerTimerIdInner, EthernetDeviceId,
+        },
         ip::device::{
             get_assigned_ipv6_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
             is_ipv6_routing_enabled, state::Ipv6AddressEntry,
+        },
+        testutil::{
+            self, get_counter_val, run_for, set_logger_for_test, trigger_next_timer,
+            DummyEventDispatcher, DummyEventDispatcherBuilder, DummyInstant, DummyNetwork,
+            StepResult, TestIpExt, DUMMY_CONFIG_V6,
         },
         Ctx, Instant, StackStateBuilder, TimerId, TimerIdInner,
     };

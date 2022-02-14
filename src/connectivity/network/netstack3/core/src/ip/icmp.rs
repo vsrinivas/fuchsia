@@ -5,45 +5,49 @@
 //! The Internet Control Message Protocol (ICMP).
 
 use alloc::vec::Vec;
-use core::fmt::Debug;
-
-use core::convert::TryInto as _;
+use core::{convert::TryInto as _, fmt::Debug};
 
 use log::{debug, error, trace};
-use net_types::ip::{
-    Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr,
+use net_types::{
+    ip::{Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr},
+    MulticastAddress, SpecifiedAddr, UnicastAddr, Witness,
 };
-use net_types::{MulticastAddress, SpecifiedAddr, UnicastAddr, Witness};
 use packet::{BufferMut, ParseBuffer, Serializer, TruncateDirection, TruncatingSerializer};
-use packet_formats::icmp::{
-    peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpMessage, IcmpMessageType,
-    IcmpPacket, IcmpPacketBuilder, IcmpPacketRaw, IcmpParseArgs, IcmpTimeExceeded, IcmpUnusedCode,
-    Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4ParameterProblem, Icmpv4ParameterProblemCode,
-    Icmpv4RedirectCode, Icmpv4TimeExceededCode, Icmpv6DestUnreachableCode, Icmpv6Packet,
-    Icmpv6PacketTooBig, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode,
-    MessageBody, OriginalPacket,
+use packet_formats::{
+    icmp::{
+        peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpMessage, IcmpMessageType,
+        IcmpPacket, IcmpPacketBuilder, IcmpPacketRaw, IcmpParseArgs, IcmpTimeExceeded,
+        IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4ParameterProblem,
+        Icmpv4ParameterProblemCode, Icmpv4RedirectCode, Icmpv4TimeExceededCode,
+        Icmpv6DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblem,
+        Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode, MessageBody, OriginalPacket,
+    },
+    ip::{Ipv4Proto, Ipv6Proto},
+    ipv4::{Ipv4FragmentType, Ipv4Header},
+    ipv6::{ExtHdrParseError, Ipv6Header},
 };
-use packet_formats::ip::{Ipv4Proto, Ipv6Proto};
-use packet_formats::ipv4::{Ipv4FragmentType, Ipv4Header};
-use packet_formats::ipv6::{ExtHdrParseError, Ipv6Header};
 use thiserror::Error;
 use zerocopy::ByteSlice;
 
-use crate::context::{CounterContext, InstantContext, StateContext};
-use crate::data_structures::{token_bucket::TokenBucket, IdMapCollectionKey};
-use crate::device::ndp::NdpPacketHandler;
-use crate::device::FrameDestination;
-use crate::ip::forwarding::ForwardingTable;
-use crate::ip::socket::{
-    BufferIpSocketHandler, IpSock, IpSockCreationError, IpSockSendError, IpSockUpdate, IpSocket,
-    IpSocketHandler, UnroutableBehavior,
+use crate::{
+    context::{CounterContext, InstantContext, StateContext},
+    data_structures::{token_bucket::TokenBucket, IdMapCollectionKey},
+    device::ndp::NdpPacketHandler,
+    device::FrameDestination,
+    ip::{
+        forwarding::ForwardingTable,
+        gmp::mld::MldPacketHandler,
+        path_mtu::PmtuHandler,
+        socket::{
+            BufferIpSocketHandler, IpSock, IpSockCreationError, IpSockSendError, IpSockUpdate,
+            IpSocket, IpSocketHandler, UnroutableBehavior,
+        },
+        BufferIpTransportContext, IpDeviceIdContext, IpExt, IpTransportContext,
+        TransportReceiveError,
+    },
+    socket::{ConnSocketEntry, ConnSocketMap, Socket},
+    BufferDispatcher, Ctx, EventDispatcher,
 };
-use crate::ip::{
-    gmp::mld::MldPacketHandler, path_mtu::PmtuHandler, BufferIpTransportContext, IpDeviceIdContext,
-    IpExt, IpTransportContext, TransportReceiveError,
-};
-use crate::socket::{ConnSocketEntry, ConnSocketMap, Socket};
-use crate::{BufferDispatcher, Ctx, EventDispatcher};
 
 /// The default number of ICMP error messages to send per second.
 ///
@@ -2101,36 +2105,38 @@ fn new_icmp_connection_inner<I: IcmpIpExt + IpExt, S: IpSocket<I>>(
 #[cfg(test)]
 mod tests {
     use alloc::{format, vec};
-    use core::convert::TryInto;
-    use core::fmt::Debug;
-    use core::num::NonZeroU16;
-    use core::time::Duration;
+    use core::{convert::TryInto, fmt::Debug, num::NonZeroU16, time::Duration};
 
     use net_types::ip::{Ip, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::{Buf, Serializer};
-    use packet_formats::icmp::{
-        mld::MldPacket, ndp::NdpPacket, IcmpEchoReply, IcmpEchoRequest, IcmpMessage, IcmpPacket,
-        IcmpUnusedCode, Icmpv4TimestampRequest, MessageBody,
+    use packet_formats::{
+        icmp::{
+            mld::MldPacket, ndp::NdpPacket, IcmpEchoReply, IcmpEchoRequest, IcmpMessage,
+            IcmpPacket, IcmpUnusedCode, Icmpv4TimestampRequest, MessageBody,
+        },
+        ip::{IpPacketBuilder, IpProto},
+        testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
+        udp::UdpPacketBuilder,
     };
-    use packet_formats::ip::{IpPacketBuilder, IpProto};
-    use packet_formats::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame;
-    use packet_formats::udp::UdpPacketBuilder;
     use specialize_ip_macro::ip_test;
 
     use super::*;
-    use crate::context::testutil::{DummyCtx, DummyInstant};
-    use crate::device::{set_routing_enabled, DeviceId, FrameDestination, IpFrameMeta};
-    use crate::ip::device::state::IpDeviceStateIpExt;
-    use crate::ip::gmp::mld::MldPacketHandler;
-    use crate::ip::path_mtu::testutil::DummyPmtuState;
-    use crate::ip::socket::testutil::DummyIpSocketCtx;
-    use crate::ip::{receive_ipv4_packet, receive_ipv6_packet, DummyDeviceId};
-    use crate::testutil::{
-        get_counter_val, DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4,
-        DUMMY_CONFIG_V6,
+    use crate::{
+        assert_empty,
+        context::testutil::{DummyCtx, DummyInstant},
+        device::{set_routing_enabled, DeviceId, FrameDestination, IpFrameMeta},
+        ip::{
+            device::state::IpDeviceStateIpExt, gmp::mld::MldPacketHandler,
+            path_mtu::testutil::DummyPmtuState, receive_ipv4_packet, receive_ipv6_packet,
+            socket::testutil::DummyIpSocketCtx, DummyDeviceId,
+        },
+        testutil::{
+            get_counter_val, DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4,
+            DUMMY_CONFIG_V6,
+        },
+        transport::udp::UdpStateBuilder,
+        StackStateBuilder,
     };
-    use crate::transport::udp::UdpStateBuilder;
-    use crate::{assert_empty, StackStateBuilder};
 
     trait TestIpExt: crate::testutil::TestIpExt + crate::testutil::TestutilIpExt {
         fn new_icmp_connection<D: EventDispatcher>(

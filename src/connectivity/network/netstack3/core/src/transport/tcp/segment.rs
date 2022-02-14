@@ -6,11 +6,12 @@
 
 use core::{convert::TryFrom as _, num::TryFromIntError, ops::Range};
 
+use packet::{Fragment, FragmentedByteSlice};
+
 use super::{
     seqnum::{SeqNum, WindowSize},
     Control,
 };
-use packet::{Fragment, FragmentedByteSlice};
 
 /// A TCP segment.
 #[derive(Debug, PartialEq, Eq)]
@@ -241,9 +242,10 @@ impl From<Segment<()>> for Segment<&'static [u8]> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use packet::AsFragmentedByteSlice as _;
     use test_case::test_case;
+
+    use super::*;
 
     #[test_case(None, &[][..] => (0, &[][..]); "empty")]
     #[test_case(None, &[1][..] => (1, &[1][..]); "no control")]

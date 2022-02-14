@@ -8,8 +8,7 @@ mod port_alloc;
 
 use core::convert::TryInto;
 
-use mundane::hash::Digest as _;
-use mundane::hmac::HmacSha256;
+use mundane::{hash::Digest as _, hmac::HmacSha256};
 use net_types::ip::{Ipv6Addr, Subnet};
 
 pub(crate) use port_alloc::*;

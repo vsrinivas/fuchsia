@@ -5,18 +5,24 @@
 //! The User Datagram Protocol (UDP).
 
 use alloc::collections::HashSet;
-use core::mem;
-use core::num::{NonZeroU16, NonZeroUsize};
-use core::ops::RangeInclusive;
+use core::{
+    mem,
+    num::{NonZeroU16, NonZeroUsize},
+    ops::RangeInclusive,
+};
 
 use log::trace;
-use net_types::ip::{Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use net_types::{SpecifiedAddr, Witness};
+use net_types::{
+    ip::{Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    SpecifiedAddr, Witness,
+};
 use nonzero_ext::nonzero;
 use packet::{BufferMut, ParsablePacket, ParseBuffer, Serializer};
-use packet_formats::error::ParseError;
-use packet_formats::ip::IpProto;
-use packet_formats::udp::{UdpPacket, UdpPacketBuilder, UdpPacketRaw, UdpParseArgs};
+use packet_formats::{
+    error::ParseError,
+    ip::IpProto,
+    udp::{UdpPacket, UdpPacketBuilder, UdpPacketRaw, UdpParseArgs},
+};
 use specialize_ip_macro::specialize_ip;
 use thiserror::Error;
 
@@ -1157,16 +1163,16 @@ pub enum UdpSockCreationError {
 
 #[cfg(test)]
 mod tests {
-    use alloc::borrow::ToOwned;
-    use alloc::vec;
-    use alloc::vec::Vec;
+    use alloc::{borrow::ToOwned, vec, vec::Vec};
 
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr};
     use packet::{Buf, InnerPacketBuilder, ParsablePacket, Serializer};
-    use packet_formats::icmp::{Icmpv4DestUnreachableCode, Icmpv6DestUnreachableCode};
-    use packet_formats::ip::{IpExtByteSlice, IpPacket, IpPacketBuilder};
-    use packet_formats::ipv4::{Ipv4Header, Ipv4PacketRaw};
-    use packet_formats::ipv6::{Ipv6Header, Ipv6PacketRaw};
+    use packet_formats::{
+        icmp::{Icmpv4DestUnreachableCode, Icmpv6DestUnreachableCode},
+        ip::{IpExtByteSlice, IpPacket, IpPacketBuilder},
+        ipv4::{Ipv4Header, Ipv4PacketRaw},
+        ipv6::{Ipv6Header, Ipv6PacketRaw},
+    };
     use rand_xorshift::XorShiftRng;
     use specialize_ip_macro::ip_test;
 

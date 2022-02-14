@@ -5,8 +5,7 @@
 //! General-purpose socket utilities common to device layer and IP layer
 //! sockets.
 
-use alloc::collections::HashMap;
-use alloc::vec::Vec;
+use alloc::{collections::HashMap, vec::Vec};
 use core::hash::Hash;
 
 use crate::data_structures::IdMap;

@@ -624,12 +624,14 @@ impl<'a, K: EntryKey, T> Entry<'a, K, T> {
 
 #[cfg(test)]
 mod tests {
-    use alloc::vec;
-    use alloc::vec::Vec;
+    use alloc::{collections::HashMap, vec, vec::Vec};
 
-    use super::IdMapEntry::{self, Allocated, Free};
-    use super::{Entry, IdMap};
-    use super::{FreeList, FreeListLink};
+    use rand::seq::SliceRandom as _;
+
+    use super::{
+        IdMapEntry::{Allocated, Free},
+        *,
+    };
     use crate::assert_empty;
 
     // Smart constructors
@@ -998,7 +1000,6 @@ mod tests {
     #[test]
     fn test_freelist_order() {
         let mut rng = crate::testutil::new_rng(1234981);
-        use rand::seq::SliceRandom;
         const NELEMS: usize = 1_000;
         for _ in 0..1_000 {
             let mut map = IdMap::new();
@@ -1070,8 +1071,6 @@ mod tests {
         Remove { key: K },
         Push { value: V },
     }
-
-    use fakealloc::collections::HashMap;
 
     impl<V> Operation<usize, V>
     where

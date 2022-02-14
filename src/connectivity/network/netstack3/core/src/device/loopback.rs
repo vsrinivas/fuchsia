@@ -4,14 +4,16 @@
 
 //! The loopback device.
 
+use alloc::vec::Vec;
+use core::convert::Infallible as Never;
+
+use net_types::{ip::IpAddress, SpecifiedAddr};
+use packet::{Buf, BufferMut, SerializeError, Serializer};
+
 use crate::{
     device::{DeviceIdInner, FrameDestination},
     BufferDispatcher, Ctx, EventDispatcher,
 };
-use alloc::vec::Vec;
-use core::convert::Infallible as Never;
-use net_types::{ip::IpAddress, SpecifiedAddr};
-use packet::{Buf, BufferMut, SerializeError, Serializer};
 
 pub(super) struct LoopbackDeviceState {
     mtu: u32,
@@ -55,6 +57,10 @@ pub(super) fn get_mtu<D: EventDispatcher>(ctx: &Ctx<D>) -> u32 {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec::Vec;
+
+    use net_types::ip::{AddrSubnet, Ipv4, Ipv6};
+
     use crate::{
         context::InstantContext,
         device::DeviceId,
@@ -66,9 +72,6 @@ mod tests {
         },
         Ctx, EventDispatcher,
     };
-    use alloc::vec::Vec;
-    use net_types::ip::AddrSubnet;
-    use net_types::ip::{Ipv4, Ipv6};
 
     #[test]
     fn test_loopback_methods() {

@@ -4,10 +4,8 @@
 
 #![warn(dead_code, unused_imports, unused_macros)]
 
-use core::time::Duration;
-use std::convert::TryInto as _;
+use core::{convert::TryInto as _, time::Duration};
 
-use crate::{testutil::DummyEventDispatcher, Ctx, DeviceId, TimerId};
 use arbitrary::{Arbitrary, Unstructured};
 use fuzz_util::Fuzzed;
 use net_declare::net_mac;
@@ -24,13 +22,14 @@ use packet_formats::{
     ipv6::Ipv6PacketBuilder, tcp::TcpSegmentBuilder, udp::UdpPacketBuilder,
 };
 
+use crate::{testutil::DummyEventDispatcher, Ctx, DeviceId, TimerId};
+
 mod print_on_panic {
+    use core::fmt::{self, Display, Formatter};
+    use std::sync::Mutex;
+
     use lazy_static::lazy_static;
     use log::{Log, Metadata, Record};
-    use std::{
-        fmt::{self, Display, Formatter},
-        sync::Mutex,
-    };
 
     lazy_static! {
         pub static ref PRINT_ON_PANIC: PrintOnPanicLog = PrintOnPanicLog::new();
@@ -50,7 +49,7 @@ mod print_on_panic {
 
             std::panic::set_hook(Box::new(move |panic_info| {
                 let Self(mutex): &PrintOnPanicLog = &PRINT_ON_PANIC;
-                let dispatched = std::mem::take(&mut *mutex.lock().unwrap());
+                let dispatched = core::mem::take(&mut *mutex.lock().unwrap());
                 for o in dispatched.into_iter() {
                     println!("{}", o);
                 }
@@ -178,7 +177,7 @@ impl FrameType {
 }
 
 impl EthernetFrameType {
-    fn arbitrary_buf<O: NestedPacketBuilder + std::fmt::Debug>(
+    fn arbitrary_buf<O: NestedPacketBuilder + core::fmt::Debug>(
         &self,
         outer: O,
         u: &mut Unstructured<'_>,
@@ -200,7 +199,7 @@ impl IpFrameType {
         'a,
         A: IpAddress,
         IPB: IpPacketBuilder<A::Version>,
-        O: NestedPacketBuilder + std::fmt::Debug,
+        O: NestedPacketBuilder + core::fmt::Debug,
     >(
         &self,
         outer: O,
@@ -248,8 +247,8 @@ pub(crate) struct FuzzInput {
     actions: Vec<FuzzAction>,
 }
 
-impl std::fmt::Display for FuzzAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for FuzzAction {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             FuzzAction::ReceiveFrame(ArbitraryFrame { frame_type, buf, description }) => write!(
                 f,
@@ -265,7 +264,7 @@ impl std::fmt::Display for FuzzAction {
     }
 }
 
-fn arbitrary_packet<B: NestedPacketBuilder + std::fmt::Debug>(
+fn arbitrary_packet<B: NestedPacketBuilder + core::fmt::Debug>(
     builder: B,
     u: &mut Unstructured<'_>,
 ) -> arbitrary::Result<(Buf<Vec<u8>>, String)> {
@@ -274,8 +273,8 @@ fn arbitrary_packet<B: NestedPacketBuilder + std::fmt::Debug>(
         None => return Err(arbitrary::Error::IncorrectFormat),
     };
 
-    let body_len = std::cmp::min(
-        std::cmp::max(u.arbitrary_len::<u8>()?, constraints.min_body_len()),
+    let body_len = core::cmp::min(
+        core::cmp::max(u.arbitrary_len::<u8>()?, constraints.min_body_len()),
         constraints.max_body_len(),
     );
 

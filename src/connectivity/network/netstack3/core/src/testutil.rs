@@ -4,34 +4,43 @@
 
 //! Testing-related utilities.
 
-use alloc::borrow::ToOwned;
-use alloc::collections::{BinaryHeap, HashMap};
-use alloc::string::{String, ToString};
-use alloc::vec;
-use alloc::vec::Vec;
-use core::fmt::{self, Debug, Formatter};
-use core::hash::Hash;
-use core::ops;
-use core::time::Duration;
+use alloc::{
+    borrow::ToOwned,
+    collections::{BinaryHeap, HashMap},
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
+use core::{
+    fmt::{self, Debug, Formatter},
+    hash::Hash,
+    ops,
+    time::Duration,
+};
 
 use assert_matches::assert_matches;
 use log::{debug, trace};
-use net_types::ethernet::Mac;
-use net_types::ip::{
-    AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither,
+use net_types::{
+    ethernet::Mac,
+    ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither},
+    SpecifiedAddr, UnicastAddr, Witness,
 };
-use net_types::{SpecifiedAddr, UnicastAddr, Witness};
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::ip::IpProto;
 use rand::{self, CryptoRng, Rng as _, RngCore, SeedableRng};
 use rand_xorshift::XorShiftRng;
 
-use crate::context::{InstantContext, RngContext, TimerContext};
-use crate::device::{DeviceId, DeviceLayerEventDispatcher};
-use crate::ip::icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt};
-use crate::ip::socket::IpSockCreationError;
-use crate::transport::udp::{BufferUdpContext, UdpContext};
-use crate::{handle_timer, Ctx, EventDispatcher, Instant, StackStateBuilder, TimerId};
+use crate::{
+    context::{InstantContext, RngContext, TimerContext},
+    device::{DeviceId, DeviceLayerEventDispatcher},
+    handle_timer,
+    ip::{
+        icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
+        socket::IpSockCreationError,
+    },
+    transport::udp::{BufferUdpContext, UdpContext},
+    Ctx, EventDispatcher, Instant, StackStateBuilder, TimerId,
+};
 
 /// Utilities to allow running benchmarks as tests.
 ///
@@ -1254,13 +1263,14 @@ where
 #[cfg(test)]
 mod tests {
     use packet::{Buf, Serializer};
-    use packet_formats::icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode};
-    use packet_formats::ip::Ipv4Proto;
+    use packet_formats::{
+        icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode},
+        ip::Ipv4Proto,
+    };
     use specialize_ip_macro::{ip_test, specialize_ip_address};
 
     use super::*;
-    use crate::ip::socket::BufferIpSocketHandler;
-    use crate::{assert_empty, TimerIdInner};
+    use crate::{assert_empty, ip::socket::BufferIpSocketHandler, TimerIdInner};
 
     #[test]
     fn test_dummy_network_transmits_packets() {

@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use core::convert::TryFrom;
-use core::time::Duration;
+use core::{convert::TryFrom, time::Duration};
 
 use crate::context::InstantContext;
 
@@ -178,8 +177,10 @@ impl<I: crate::Instant> TokenBucket<I> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::context::testutil::{DummyInstant, DummyInstantCtx};
-    use crate::testutil::benchmarks::{black_box, Bencher};
+    use crate::{
+        context::testutil::{DummyInstant, DummyInstantCtx},
+        testutil::benchmarks::{black_box, Bencher},
+    };
 
     impl<I: crate::Instant> TokenBucket<I> {
         /// Call `try_take` `n` times, and assert that it succeeds every time.

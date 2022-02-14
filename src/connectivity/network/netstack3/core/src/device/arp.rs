@@ -4,22 +4,20 @@
 
 //! The Address Resolution Protocol (ARP).
 
-use alloc::collections::hash_map::Entry;
-use alloc::collections::HashMap;
-use core::convert::Infallible as Never;
-use core::hash::Hash;
-use core::marker::PhantomData;
-use core::time::Duration;
+use alloc::collections::hash_map::{Entry, HashMap};
+use core::{convert::Infallible as Never, hash::Hash, marker::PhantomData, time::Duration};
 
 use log::{debug, error};
 use net_types::{UnicastAddr, UnicastAddress, Witness as _};
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder};
 use packet_formats::arp::{ArpOp, ArpPacket, ArpPacketBuilder, HType, PType};
 
-use crate::context::{
-    CounterContext, FrameContext, FrameHandler, StateContext, TimerContext, TimerHandler,
+use crate::{
+    context::{
+        CounterContext, FrameContext, FrameHandler, StateContext, TimerContext, TimerHandler,
+    },
+    device::link::LinkDevice,
 };
-use crate::device::link::LinkDevice;
 
 // NOTE(joshlf): This may seem a bit odd. Why not just say that `ArpDevice` is a
 // sub-trait of `L: LinkDevice` where `L::Address: HType`? Unfortunately, rustc
@@ -720,12 +718,10 @@ impl<P: Hash + Eq, H> Default for ArpTable<P, H> {
 
 #[cfg(test)]
 mod tests {
-    use alloc::vec;
-    use alloc::vec::Vec;
+    use alloc::{vec, vec::Vec};
     use core::iter;
 
-    use net_types::ethernet::Mac;
-    use net_types::ip::Ipv4Addr;
+    use net_types::{ethernet::Mac, ip::Ipv4Addr};
     use packet::{ParseBuffer, Serializer};
     use packet_formats::arp::{peek_arp_types, ArpHardwareType, ArpNetworkType, ArpPacketBuilder};
     use test_case::test_case;

@@ -30,19 +30,23 @@
 //! + 40 byte IPv6 header). If a link supports an MTU greater than the maximum
 //! size of a non-jumbogram packet, the packet should not be fragmented.
 
-use alloc::collections::hash_map::{Entry, HashMap};
-use alloc::collections::{BTreeSet, BinaryHeap};
-use alloc::vec::Vec;
-use core::cmp::Ordering;
-use core::convert::TryFrom;
-use core::time::Duration;
+use alloc::{
+    collections::{
+        hash_map::{Entry, HashMap},
+        BTreeSet, BinaryHeap,
+    },
+    vec::Vec,
+};
+use core::{cmp::Ordering, convert::TryFrom, time::Duration};
 
 use assert_matches::assert_matches;
 use net_types::ip::{Ip, IpAddress};
 use packet::BufferViewMut;
-use packet_formats::ip::{IpExtByteSlice, IpPacket};
-use packet_formats::ipv4::{Ipv4Header, Ipv4Packet};
-use packet_formats::ipv6::{ext_hdrs::Ipv6ExtensionHeaderData, Ipv6Packet};
+use packet_formats::{
+    ip::{IpExtByteSlice, IpPacket},
+    ipv4::{Ipv4Header, Ipv4Packet},
+    ipv6::{ext_hdrs::Ipv6ExtensionHeaderData, Ipv6Packet},
+};
 use specialize_ip_macro::specialize_ip;
 use zerocopy::{ByteSlice, ByteSliceMut};
 
@@ -694,12 +698,16 @@ impl PartialOrd for PacketBodyFragment {
 mod tests {
     use alloc::vec;
 
-    use net_types::ip::{IpAddress, Ipv4, Ipv6};
-    use net_types::Witness;
+    use net_types::{
+        ip::{IpAddress, Ipv4, Ipv6},
+        Witness,
+    };
     use packet::{Buf, ParseBuffer, Serializer};
-    use packet_formats::ip::{IpProto, Ipv6ExtHdrType};
-    use packet_formats::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
-    use packet_formats::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
+    use packet_formats::{
+        ip::{IpProto, Ipv6ExtHdrType},
+        ipv4::{Ipv4Packet, Ipv4PacketBuilder},
+        ipv6::{Ipv6Packet, Ipv6PacketBuilder},
+    };
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;

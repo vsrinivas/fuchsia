@@ -172,8 +172,6 @@ impl From<WindowSize> for u32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{SeqNum, WindowSize};
-    use crate::transport::tcp::segment::MAX_PAYLOAD_AND_CONTROL_LEN;
     use proptest::{
         arbitrary::any,
         proptest,
@@ -181,6 +179,9 @@ mod tests {
         test_runner::Config,
     };
     use proptest_support::failed_seeds;
+
+    use super::{SeqNum, WindowSize};
+    use crate::transport::tcp::segment::MAX_PAYLOAD_AND_CONTROL_LEN;
 
     fn arb_seqnum() -> impl Strategy<Value = SeqNum> {
         any::<u32>().prop_map(SeqNum::from)

@@ -4,6 +4,12 @@
 
 //! The integrations for protocols built on top of an IP device.
 
+use net_types::{
+    ip::{AddrSubnet, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    LinkLocalUnicastAddr,
+};
+use packet::{EmptyBuf, Serializer};
+
 use crate::{
     context::{FrameContext, InstantContext},
     ip::{
@@ -15,11 +21,6 @@ use crate::{
         },
     },
 };
-use net_types::{
-    ip::{AddrSubnet, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
-    LinkLocalUnicastAddr,
-};
-use packet::{EmptyBuf, Serializer};
 
 impl<C: BufferIpDeviceContext<Ipv4, EmptyBuf>> IgmpContext for C {
     fn get_ip_addr_subnet(&self, device: C::DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {

@@ -12,28 +12,36 @@ use core::time::Duration;
 
 use net_types::{ip::Ipv4, Witness as _};
 use packet::{Buf, BufferMut, InnerPacketBuilder, Serializer};
-use packet_formats::ethernet::{
-    testutil::{
-        ETHERNET_DST_MAC_BYTE_OFFSET, ETHERNET_HDR_LEN_NO_TAG, ETHERNET_MIN_BODY_LEN_NO_TAG,
-        ETHERNET_SRC_MAC_BYTE_OFFSET,
+use packet_formats::{
+    ethernet::{
+        testutil::{
+            ETHERNET_DST_MAC_BYTE_OFFSET, ETHERNET_HDR_LEN_NO_TAG, ETHERNET_MIN_BODY_LEN_NO_TAG,
+            ETHERNET_SRC_MAC_BYTE_OFFSET,
+        },
+        EtherType, EthernetFrameBuilder,
     },
-    EtherType, EthernetFrameBuilder,
-};
-use packet_formats::ip::IpProto;
-use packet_formats::ipv4::{
-    testutil::{IPV4_CHECKSUM_OFFSET, IPV4_MIN_HDR_LEN, IPV4_TTL_OFFSET},
-    Ipv4PacketBuilder,
+    ip::IpProto,
+    ipv4::{
+        testutil::{IPV4_CHECKSUM_OFFSET, IPV4_MIN_HDR_LEN, IPV4_TTL_OFFSET},
+        Ipv4PacketBuilder,
+    },
 };
 use rand_xorshift::XorShiftRng;
 
-use crate::context::{InstantContext, RngContext, TimerContext};
-use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
-use crate::ip::icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt};
-use crate::ip::socket::IpSockCreationError;
-use crate::testutil::benchmarks::{black_box, Bencher};
-use crate::testutil::{DummyEventDispatcherBuilder, DummyInstant, FakeCryptoRng, DUMMY_CONFIG_V4};
-use crate::transport::udp::{BufferUdpContext, UdpContext};
-use crate::{StackStateBuilder, TimerId};
+use crate::{
+    context::{InstantContext, RngContext, TimerContext},
+    device::{receive_frame, DeviceId, DeviceLayerEventDispatcher},
+    ip::{
+        icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
+        socket::IpSockCreationError,
+    },
+    testutil::{
+        benchmarks::{black_box, Bencher},
+        DummyEventDispatcherBuilder, DummyInstant, FakeCryptoRng, DUMMY_CONFIG_V4,
+    },
+    transport::udp::{BufferUdpContext, UdpContext},
+    {StackStateBuilder, TimerId},
+};
 
 // NOTE: Extra tests that are too expensive to run during benchmarks can be
 // added by gating them on the `debug_assertions` configuration option. This

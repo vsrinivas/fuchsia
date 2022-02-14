@@ -1098,8 +1098,10 @@ pub(super) mod ipv6_source_address_selection {
 pub(crate) mod testutil {
     use alloc::vec::Vec;
 
-    use net_types::ip::{AddrSubnet, IpAddress, Subnet};
-    use net_types::Witness;
+    use net_types::{
+        ip::{AddrSubnet, IpAddress, Subnet},
+        Witness,
+    };
 
     use super::*;
     use crate::{

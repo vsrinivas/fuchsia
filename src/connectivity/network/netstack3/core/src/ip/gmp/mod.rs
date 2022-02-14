@@ -39,8 +39,11 @@ pub(crate) mod mld;
 
 use alloc::vec::{self, Vec};
 use core::{convert::TryFrom, fmt::Debug, time::Duration};
-use net_types::ip::{Ip, IpAddress};
-use net_types::{MulticastAddr, SpecifiedAddress as _};
+
+use net_types::{
+    ip::{Ip, IpAddress},
+    MulticastAddr, SpecifiedAddress as _,
+};
 use rand::Rng;
 
 use crate::{
@@ -880,12 +883,15 @@ where
 
 #[cfg(test)]
 mod test {
-    use assert_matches::assert_matches;
     use core::convert::Infallible as Never;
 
+    use assert_matches::assert_matches;
+
     use super::*;
-    use crate::ip::gmp::{Action, GmpAction, MemberState};
-    use crate::testutil::{new_rng, DummyInstant};
+    use crate::{
+        ip::gmp::{Action, GmpAction, MemberState},
+        testutil::{new_rng, DummyInstant},
+    };
 
     const DEFAULT_UNSOLICITED_REPORT_INTERVAL: Duration = Duration::from_secs(10);
 

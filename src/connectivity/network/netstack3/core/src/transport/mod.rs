@@ -60,9 +60,7 @@ pub(crate) mod udp;
 
 use net_types::ip::{Ipv4, Ipv6};
 
-use crate::device::DeviceId;
-use crate::transport::udp::UdpStateBuilder;
-use crate::{Ctx, EventDispatcher};
+use crate::{device::DeviceId, transport::udp::UdpStateBuilder, Ctx, EventDispatcher};
 
 /// A builder for transport layer state.
 #[derive(Default, Clone)]

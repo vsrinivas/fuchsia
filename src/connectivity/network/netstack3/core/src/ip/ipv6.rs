@@ -6,15 +6,19 @@
 
 use core::iter::Iterator;
 
-use packet_formats::ipv6::ext_hdrs::{
-    DestinationOptionData, ExtensionHeaderOption, FragmentData, HopByHopOptionData,
-    Ipv6ExtensionHeaderData, RoutingData,
+use packet_formats::ipv6::{
+    ext_hdrs::{
+        DestinationOptionData, ExtensionHeaderOption, FragmentData, HopByHopOptionData,
+        Ipv6ExtensionHeaderData, RoutingData,
+    },
+    Ipv6Packet,
 };
-use packet_formats::ipv6::Ipv6Packet;
 use zerocopy::ByteSlice;
 
-use crate::device::{DeviceId, FrameDestination};
-use crate::{Ctx, EventDispatcher};
+use crate::{
+    device::{DeviceId, FrameDestination},
+    Ctx, EventDispatcher,
+};
 
 /// What to do with an IPv6 packet after parsing an extension header.
 #[derive(Debug, PartialEq, Eq)]
@@ -200,13 +204,16 @@ fn handle_destination_options_ext_hdr<
 mod tests {
     use alloc::vec;
 
+    use packet::{
+        serialize::{Buf, Serializer},
+        ParseBuffer,
+    };
+    use packet_formats::{
+        ip::IpProto,
+        ipv6::{Ipv6Packet, Ipv6PacketBuilder},
+    };
+
     use super::*;
-
-    use packet::serialize::{Buf, Serializer};
-    use packet::ParseBuffer;
-    use packet_formats::ip::IpProto;
-    use packet_formats::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
-
     use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V6};
 
     #[test]

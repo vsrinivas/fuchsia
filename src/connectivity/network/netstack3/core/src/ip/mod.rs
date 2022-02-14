@@ -22,23 +22,29 @@ mod types;
 pub use self::types::*;
 
 use alloc::vec::Vec;
-use core::fmt::{self, Debug, Display, Formatter};
-use core::num::NonZeroU8;
-use core::slice::Iter;
+use core::{
+    fmt::{self, Debug, Display, Formatter},
+    num::NonZeroU8,
+    slice::Iter,
+};
 
 use log::{debug, trace};
-use net_types::ip::{
-    AddrSubnet, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr,
-    Subnet,
+use net_types::{
+    ip::{
+        AddrSubnet, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
+        Ipv6SourceAddr, Subnet,
+    },
+    MulticastAddr, SpecifiedAddr, Witness,
 };
-use net_types::{MulticastAddr, SpecifiedAddr, Witness};
 use nonzero_ext::nonzero;
 use packet::{Buf, BufferMut, ParseMetadata, Serializer};
-use packet_formats::error::IpParseError;
-use packet_formats::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
-use packet_formats::ip::{IpPacket, IpProto, Ipv4Proto, Ipv6Proto};
-use packet_formats::ipv4::{Ipv4FragmentType, Ipv4Packet, Ipv4PacketBuilder};
-use packet_formats::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
+use packet_formats::{
+    error::IpParseError,
+    icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem},
+    ip::{IpPacket, IpProto, Ipv4Proto, Ipv6Proto},
+    ipv4::{Ipv4FragmentType, Ipv4Packet, Ipv4PacketBuilder},
+    ipv6::{Ipv6Packet, Ipv6PacketBuilder},
+};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::{
@@ -2025,31 +2031,34 @@ mod tests {
     use super::*;
 
     use alloc::vec;
-    use core::convert::TryFrom;
-    use core::num::NonZeroU16;
+    use core::{convert::TryFrom, num::NonZeroU16};
 
-    use net_types::ip::{Ipv4Addr, Ipv6Addr};
-    use net_types::UnicastAddr;
+    use net_types::{
+        ip::{Ipv4Addr, Ipv6Addr},
+        UnicastAddr,
+    };
     use packet::{Buf, ParseBuffer};
-    use packet_formats::ethernet::{
-        EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt,
+    use packet_formats::{
+        ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt},
+        icmp::{
+            IcmpDestUnreachable, IcmpEchoRequest, IcmpPacketBuilder, IcmpParseArgs, IcmpUnusedCode,
+            Icmpv4DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig,
+            Icmpv6ParameterProblemCode, MessageBody,
+        },
+        ip::{IpExtByteSlice, IpPacketBuilder, Ipv6ExtHdrType},
+        ipv4::Ipv4PacketBuilder,
+        ipv6::{ext_hdrs::ExtensionHeaderOptionAction, Ipv6PacketBuilder},
+        testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
     };
-    use packet_formats::icmp::{
-        IcmpDestUnreachable, IcmpEchoRequest, IcmpPacketBuilder, IcmpParseArgs, IcmpUnusedCode,
-        Icmpv4DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblemCode,
-        MessageBody,
-    };
-    use packet_formats::ip::{IpExtByteSlice, IpPacketBuilder, Ipv6ExtHdrType};
-    use packet_formats::ipv4::Ipv4PacketBuilder;
-    use packet_formats::ipv6::ext_hdrs::ExtensionHeaderOptionAction;
-    use packet_formats::ipv6::Ipv6PacketBuilder;
-    use packet_formats::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame;
     use rand::Rng;
     use specialize_ip_macro::ip_test;
 
-    use crate::device::{receive_frame, set_routing_enabled, FrameDestination};
-    use crate::testutil::*;
-    use crate::{assert_empty, DeviceId, Mac, StackStateBuilder};
+    use crate::{
+        assert_empty,
+        device::{receive_frame, set_routing_enabled, FrameDestination},
+        testutil::*,
+        DeviceId, Mac, StackStateBuilder,
+    };
 
     // Some helper functions
 

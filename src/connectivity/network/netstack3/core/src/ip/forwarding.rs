@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use alloc::collections::HashSet;
-use core::fmt::Debug;
-use core::slice::Iter;
+use core::{fmt::Debug, slice::Iter};
 
-use net_types::ip::{Ip, IpAddress, Subnet};
-use net_types::SpecifiedAddr;
+use net_types::{
+    ip::{Ip, IpAddress, Subnet},
+    SpecifiedAddr,
+};
 
 use crate::ip::*;
 
@@ -417,9 +418,7 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use super::*;
-
-    use crate::assert_empty;
-    use crate::device::DeviceId;
+    use crate::{assert_empty, device::DeviceId};
 
     impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         /// Print the active and installed forwarding table.

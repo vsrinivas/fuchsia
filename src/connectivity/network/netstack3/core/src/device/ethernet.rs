@@ -4,30 +4,28 @@
 
 //! The Ethernet protocol.
 
-use alloc::collections::HashMap;
-use alloc::collections::VecDeque;
-use alloc::vec::Vec;
-use core::fmt::Debug;
-use core::mem;
-use core::num::NonZeroU8;
+use alloc::{collections::HashMap, collections::VecDeque, vec::Vec};
+use core::{fmt::Debug, mem, num::NonZeroU8};
 
 use assert_matches::assert_matches;
 use log::{debug, trace};
-use net_types::ethernet::Mac;
-use net_types::ip::{
-    AddrSubnet, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
-    UnicastOrMulticastIpv6Addr,
-};
 use net_types::{
+    ethernet::Mac,
+    ip::{
+        AddrSubnet, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
+        UnicastOrMulticastIpv6Addr,
+    },
     BroadcastAddress, MulticastAddr, MulticastAddress, SpecifiedAddr, UnicastAddr, UnicastAddress,
     Witness,
 };
 use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
-use packet_formats::arp::{peek_arp_types, ArpHardwareType, ArpNetworkType};
-use packet_formats::ethernet::{
-    EtherType, EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt,
+use packet_formats::{
+    arp::{peek_arp_types, ArpHardwareType, ArpNetworkType},
+    ethernet::{
+        EtherType, EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt,
+    },
+    icmp::ndp::{options::NdpOptionBuilder, NeighborSolicitation},
 };
-use packet_formats::icmp::ndp::{options::NdpOptionBuilder, NeighborSolicitation};
 use specialize_ip_macro::specialize_ip_address;
 
 use crate::{
@@ -1112,11 +1110,13 @@ mod tests {
 
     use assert_matches::assert_matches;
     use packet::Buf;
-    use packet_formats::icmp::{IcmpDestUnreachable, IcmpIpExt};
-    use packet_formats::ip::{IpExt, IpPacketBuilder, IpProto};
-    use packet_formats::testdata::{dns_request_v4, dns_request_v6};
-    use packet_formats::testutil::{
-        parse_icmp_packet_in_ip_packet_in_ethernet_frame, parse_ip_packet_in_ethernet_frame,
+    use packet_formats::{
+        icmp::{IcmpDestUnreachable, IcmpIpExt},
+        ip::{IpExt, IpPacketBuilder, IpProto},
+        testdata::{dns_request_v4, dns_request_v6},
+        testutil::{
+            parse_icmp_packet_in_ip_packet_in_ethernet_frame, parse_ip_packet_in_ethernet_frame,
+        },
     };
     use rand::Rng;
     use rand_xorshift::XorShiftRng;

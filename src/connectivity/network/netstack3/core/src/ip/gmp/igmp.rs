@@ -7,21 +7,27 @@
 //! IGMPv2 is a communications protocol used by hosts and adjacent routers on
 //! IPv4 networks to establish multicast group memberships.
 
-use core::fmt::{Debug, Display};
-use core::time::Duration;
+use core::{
+    fmt::{Debug, Display},
+    time::Duration,
+};
 
 use log::{debug, error, trace};
-use net_types::ip::{AddrSubnet, Ipv4, Ipv4Addr};
-use net_types::{MulticastAddr, SpecifiedAddr, Witness};
-use packet::{BufferMut, EmptyBuf, InnerPacketBuilder, Serializer};
-use packet_formats::igmp::{
-    messages::{IgmpLeaveGroup, IgmpMembershipReportV1, IgmpMembershipReportV2, IgmpPacket},
-    IgmpMessage, IgmpPacketBuilder, MessageType,
+use net_types::{
+    ip::{AddrSubnet, Ipv4, Ipv4Addr},
+    MulticastAddr, SpecifiedAddr, Witness,
 };
-use packet_formats::ip::Ipv4Proto;
-use packet_formats::ipv4::{
-    options::{Ipv4Option, Ipv4OptionData},
-    Ipv4OptionsTooLongError, Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions,
+use packet::{BufferMut, EmptyBuf, InnerPacketBuilder, Serializer};
+use packet_formats::{
+    igmp::{
+        messages::{IgmpLeaveGroup, IgmpMembershipReportV1, IgmpMembershipReportV2, IgmpPacket},
+        IgmpMessage, IgmpPacketBuilder, MessageType,
+    },
+    ip::Ipv4Proto,
+    ipv4::{
+        options::{Ipv4Option, Ipv4OptionData},
+        Ipv4OptionsTooLongError, Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions,
+    },
 };
 use thiserror::Error;
 use zerocopy::ByteSlice;
@@ -480,15 +486,15 @@ fn run_action<C: IgmpContext>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use alloc::vec::Vec;
     use core::convert::TryInto;
 
-    use alloc::vec::Vec;
     use net_types::ip::AddrSubnet;
     use packet::serialize::{Buf, InnerPacketBuilder, Serializer};
     use packet_formats::igmp::messages::IgmpMembershipQueryV2;
     use rand_xorshift::XorShiftRng;
 
+    use super::*;
     use crate::{
         assert_empty,
         context::{

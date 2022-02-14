@@ -12,16 +12,20 @@ pub(crate) mod ndp;
 mod state;
 
 use alloc::{boxed::Box, vec::Vec};
-use core::fmt::{self, Debug, Display, Formatter};
-use core::marker::PhantomData;
+use core::{
+    fmt::{self, Debug, Display, Formatter},
+    marker::PhantomData,
+};
 
 use log::{debug, trace};
-use net_types::ethernet::Mac;
-use net_types::ip::{
-    AddrSubnet, AddrSubnetEither, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
-    Ipv6SourceAddr,
+use net_types::{
+    ethernet::Mac,
+    ip::{
+        AddrSubnet, AddrSubnetEither, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6,
+        Ipv6Addr, Ipv6SourceAddr,
+    },
+    MulticastAddr, SpecifiedAddr, UnicastAddr,
 };
-use net_types::{MulticastAddr, SpecifiedAddr, UnicastAddr};
 use packet::{Buf, BufferMut, EmptyBuf, Serializer};
 use packet_formats::icmp::ndp::NdpPacket;
 use zerocopy::ByteSlice;

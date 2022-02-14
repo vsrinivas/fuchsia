@@ -11,24 +11,28 @@
 use core::time::Duration;
 
 use log::{debug, error, trace};
-use net_types::ip::{Ip, Ipv6, Ipv6Addr, Ipv6ReservedScope, Ipv6Scope, Ipv6SourceAddr};
-use net_types::{LinkLocalUnicastAddr, MulticastAddr, ScopeableAddress, SpecifiedAddr, Witness};
-use packet::serialize::Serializer;
-use packet::{EmptyBuf, InnerPacketBuilder};
-use packet_formats::icmp::mld::{
-    IcmpMldv1MessageType, Mldv1Body, Mldv1MessageBuilder, MulticastListenerDone,
-    MulticastListenerReport,
+use net_types::{
+    ip::{Ip, Ipv6, Ipv6Addr, Ipv6ReservedScope, Ipv6Scope, Ipv6SourceAddr},
+    LinkLocalUnicastAddr, MulticastAddr, ScopeableAddress, SpecifiedAddr, Witness,
 };
-use packet_formats::icmp::{mld::MldPacket, IcmpPacketBuilder, IcmpUnusedCode};
-use packet_formats::ip::Ipv6Proto;
-use packet_formats::ipv6::ext_hdrs::{
-    ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData,
+use packet::{serialize::Serializer, EmptyBuf, InnerPacketBuilder};
+use packet_formats::{
+    icmp::{
+        mld::{
+            IcmpMldv1MessageType, MldPacket, Mldv1Body, Mldv1MessageBuilder, MulticastListenerDone,
+            MulticastListenerReport,
+        },
+        IcmpPacketBuilder, IcmpUnusedCode,
+    },
+    ip::Ipv6Proto,
+    ipv6::{
+        ext_hdrs::{ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData},
+        Ipv6PacketBuilder, Ipv6PacketBuilderWithHbhOptions,
+    },
 };
-use packet_formats::ipv6::{Ipv6PacketBuilder, Ipv6PacketBuilderWithHbhOptions};
 use thiserror::Error;
 use zerocopy::ByteSlice;
 
-use crate::Instant;
 use crate::{
     context::{FrameContext, InstantContext, RngContext, TimerContext, TimerHandler},
     ip::{
@@ -39,6 +43,7 @@ use crate::{
         },
         IpDeviceIdContext,
     },
+    Instant,
 };
 
 /// Metadata for sending an MLD packet in an IP packet.
@@ -423,13 +428,12 @@ fn send_mld_packet<C: MldContext, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec::Vec;
     use core::convert::TryInto;
 
-    use alloc::vec::Vec;
     use net_types::ethernet::Mac;
     use packet::ParseBuffer;
-    use packet_formats::icmp::mld::MulticastListenerQuery;
-    use packet_formats::icmp::{IcmpParseArgs, Icmpv6Packet};
+    use packet_formats::icmp::{mld::MulticastListenerQuery, IcmpParseArgs, Icmpv6Packet};
     use rand_xorshift::XorShiftRng;
 
     use super::*;

@@ -52,44 +52,52 @@ mod transport;
 
 use log::trace;
 
-pub use crate::data_structures::{Entry, IdMap, IdMapCollection, IdMapCollectionKey};
-pub use crate::device::ndp::NdpConfiguration;
-pub use crate::device::{
-    initialize_device, receive_frame, remove_device, set_ipv4_configuration,
-    set_ipv6_configuration, DeviceId, DeviceLayerEventDispatcher,
+pub use crate::{
+    data_structures::{Entry, IdMap, IdMapCollection, IdMapCollectionKey},
+    device::{
+        initialize_device, ndp::NdpConfiguration, receive_frame, remove_device,
+        set_ipv4_configuration, set_ipv6_configuration, DeviceId, DeviceLayerEventDispatcher,
+    },
+    error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError},
+    ip::{
+        device::state::{IpDeviceConfiguration, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration},
+        icmp,
+        socket::{IpSockCreationError, IpSockSendError, IpSockUnroutableError},
+        EntryDest, EntryDestEither, EntryEither, IpExt, Ipv4StateBuilder, Ipv6StateBuilder,
+        TransportIpContext,
+    },
+    transport::{
+        udp::{
+            connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
+            remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferUdpContext,
+            BufferUdpStateContext, UdpConnId, UdpConnInfo, UdpContext, UdpListenerId,
+            UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError,
+            UdpStateContext,
+        },
+        TransportStateBuilder,
+    },
 };
-pub use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
-pub use crate::ip::socket::{IpSockCreationError, IpSockSendError, IpSockUnroutableError};
-pub use crate::ip::{
-    device::state::{IpDeviceConfiguration, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration},
-    icmp, EntryDest, EntryDestEither, EntryEither, IpExt, Ipv4StateBuilder, Ipv6StateBuilder,
-    TransportIpContext,
-};
-pub use crate::transport::udp::{
-    connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
-    remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferUdpContext,
-    BufferUdpStateContext, UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo,
-    UdpSendError, UdpSendListenerError, UdpSockCreationError, UdpStateContext,
-};
-pub use crate::transport::TransportStateBuilder;
 
 use alloc::vec::Vec;
-use core::fmt::Debug;
-use core::time;
+use core::{fmt::Debug, time};
 
-use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, SubnetEither};
-use net_types::{SpecifiedAddr, UnicastAddr};
+use net_types::{
+    ethernet::Mac,
+    ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, SubnetEither},
+    SpecifiedAddr, UnicastAddr,
+};
 use packet::{Buf, BufferMut, EmptyBuf};
 
-use crate::context::{InstantContext, RngContext, TimerContext};
-use crate::device::{DeviceLayerState, DeviceLayerTimerId, DeviceStateBuilder};
-use crate::ip::icmp::{BufferIcmpContext, IcmpContext};
-use crate::ip::{
-    device::{Ipv4DeviceTimerId, Ipv6DeviceTimerId},
-    IpLayerTimerId, Ipv4State, Ipv6State,
+use crate::{
+    context::{InstantContext, RngContext, TimerContext},
+    device::{DeviceLayerState, DeviceLayerTimerId, DeviceStateBuilder},
+    ip::{
+        device::{Ipv4DeviceTimerId, Ipv6DeviceTimerId},
+        icmp::{BufferIcmpContext, IcmpContext},
+        IpLayerTimerId, Ipv4State, Ipv6State,
+    },
+    transport::{TransportLayerState, TransportLayerTimerId},
 };
-use crate::transport::{TransportLayerState, TransportLayerTimerId};
 
 /// Map an expression over either version of one or more addresses.
 ///
@@ -548,8 +556,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use net_types::ip::{Ip, Ipv4, Ipv6};
-    use net_types::Witness;
+    use net_types::{
+        ip::{Ip, Ipv4, Ipv6},
+        Witness,
+    };
 
     use super::*;
     use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt};

@@ -8,10 +8,12 @@
 //! ephemeral port allocations in transport protocols.
 
 use alloc::vec::Vec;
-use core::hash::Hash;
-use core::marker::PhantomData;
-use core::num::{NonZeroU16, NonZeroUsize};
-use core::ops::RangeInclusive;
+use core::{
+    hash::Hash,
+    marker::PhantomData,
+    num::{NonZeroU16, NonZeroUsize},
+    ops::RangeInclusive,
+};
 
 use mundane::{hash::Digest, hmac::HmacSha256};
 use net_types::{ip::IpAddress, SpecifiedAddr};

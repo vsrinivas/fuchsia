@@ -307,9 +307,10 @@ impl From<Established> for State {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use assert_matches::assert_matches;
     use test_case::test_case;
+
+    use super::*;
 
     const ISS_1: SeqNum = SeqNum::new(100);
     const ISS_2: SeqNum = SeqNum::new(300);

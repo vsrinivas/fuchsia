@@ -4,8 +4,10 @@
 
 use core::fmt::Debug;
 
-use net_types::ip::{IpAddr, IpAddress, Ipv4Addr, Ipv6Addr, Subnet, SubnetEither};
-use net_types::SpecifiedAddr;
+use net_types::{
+    ip::{IpAddr, IpAddress, Ipv4Addr, Ipv6Addr, Subnet, SubnetEither},
+    SpecifiedAddr,
+};
 
 /// The destination for forwarding a packet.
 ///
