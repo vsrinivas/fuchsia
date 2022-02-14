@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp.core_shard.cml",
+        "//src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp-lazy.core_shard.cml",
         "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway/meta/bt-hfp-audio-gateway.core_shard.cml",
     ],
     offer: [

@@ -1,0 +1,16 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp-common.core_shard.cml" ],
+    children: [
+        {
+            // TODO(fxbug.dev/79964): Merge this with core_shard when we can reliably
+            // mark a2dp as eager.
+            name: "bt-a2dp",
+            url: "fuchsia-pkg://fuchsia.com/bt-a2dp#meta/bt-a2dp.cm",
+            startup: "eager",
+            environment: "#full-resolver-env",
+        },
+    ],
+}

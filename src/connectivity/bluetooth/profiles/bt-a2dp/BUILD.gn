@@ -115,9 +115,24 @@ fuchsia_package("bt-a2dp") {
   ]
 }
 
-# The core realm shard to be used by product integrators.
+# The core realm shards to be used by product integrators.
+# The "lazy_core_shard" should be used when it is desired for A2DP to be started
+# via the fuchsia.bluetooth.a2dp.AudioMode API.
+core_shard("lazy_core_shard") {
+  shard_file = "meta/bt-a2dp-lazy.core_shard.cml"
+}
+
+# TODO(fxbug.dev/79964): eliminate this when the core_shard above can eagerly start
+# A2DP when it is available at startup.
+# "eager_core_shard" should be used when the A2DP profile should be available from
+# startup.
+core_shard("eager_core_shard") {
+  shard_file = "meta/bt-a2dp-eager.core_shard.cml"
+}
+
+# TODO(fxbug.dev/79964): remove when products have migrated off this name
 core_shard("bt-a2dp-core-shard") {
-  shard_file = "meta/bt-a2dp.core_shard.cml"
+  shard_file = "meta/bt-a2dp-lazy.core_shard.cml"
 }
 
 fuchsia_unittest_package("bt-a2dp-tests") {
