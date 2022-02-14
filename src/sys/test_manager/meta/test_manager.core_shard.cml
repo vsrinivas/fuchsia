@@ -203,6 +203,13 @@
             to: "#test_manager",
             subdir: "class/input-report",
         },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-tee",
+            to: "#test_manager",
+            subdir: "class/tee",
+        },
 
         // Tests of the media system want to test against the real hardware
         // TODO(fxbug.dev/83512): Remove when specialized test realms are ready.

@@ -4,7 +4,6 @@
 
 #include <fuchsia/tee/cpp/fidl.h>
 #include <lib/fit/defer.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/zx/handle.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
@@ -41,7 +40,7 @@ uint32_t GetHandleCount(zx::unowned_handle h) {
 
 }  // namespace
 
-class OpteeSmokeTest : public gtest::TestWithEnvironmentFixture {
+class OpteeSmokeTest : public ::testing::Test {
  protected:
   void SetUp() override {
     TEEC_Result result = TEEC_InitializeContext(nullptr, &context_);

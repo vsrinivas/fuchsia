@@ -1,0 +1,38 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This shard includes the contents of tee_manager's manifest, except the Application protocols,
+// which are board-specific.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/tee_manager",
+    },
+    capabilities: [
+        { protocol: "fuchsia.tee.DeviceInfo" },
+    ],
+    use: [
+        {
+            directory: "dev-tee",
+            rights: [ "r*" ],
+            path: "/dev/class/tee",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.tee.DeviceInfo",
+            from: "self",
+        },
+    ],
+}

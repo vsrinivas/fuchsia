@@ -734,4 +734,41 @@
             ],
         },
     },
+    {
+        capability_type: "directory",
+        results: {
+            errors: [
+                {
+                    using_node: "/core/tee_manager",
+                    capability: "config-data",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    expose_from_child_expose_not_found: {
+                                        child_moniker: {
+                                            name: "fshost",
+                                            collection: null,
+                                            rep: "fshost",
+                                        },
+                                        moniker: {
+                                            path: [
+                                                {
+                                                    name: "bootstrap",
+                                                    collection: null,
+                                                    rep: "bootstrap",
+                                                },
+                                            ],
+                                        },
+                                        capability_id: "config-data",
+                                    },
+                                },
+                            },
+                        },
+                        message: "An `expose from #fshost` declaration was found at `/bootstrap` for `config-data`, but no matching `expose` declaration was found in the child",
+                    },
+                },
+            ],
+        },
+    },
 ]

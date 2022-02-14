@@ -412,6 +412,14 @@
             rights: [ "rw*" ],
         },
 
+        // optee_test requires access to /dev/class/tee.
+        {
+            directory: "dev-tee",
+            from: "parent",
+            to: [ "#system-tests" ],
+            rights: [ "rw*" ],
+        },
+
         // Tests of the media system want to test against the real hardware
         // TODO(fxbug.dev/83512): Remove when specialized test realms are ready.
         {
