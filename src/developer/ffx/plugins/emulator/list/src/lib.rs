@@ -8,7 +8,7 @@ use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_engines::{get_all_instances, serialization::read_from_disk};
 use ffx_emulator_list_args::ListCommand;
 
-#[ffx_plugin()]
+#[ffx_plugin("emu.experimental")]
 pub async fn list(_cmd: ListCommand) -> Result<()> {
     let ffx_config = FfxConfigWrapper::new();
     let instance_list = get_all_instances(&ffx_config).await?;

@@ -12,7 +12,7 @@ use fidl_fuchsia_developer_bridge::TargetCollectionProxy;
 
 mod pbm;
 
-#[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
+#[ffx_plugin("emu.experimental", TargetCollectionProxy = "daemon::protocol")]
 pub async fn start(cmd: StartCommand, proxy: TargetCollectionProxy) -> Result<()> {
     let config = FfxConfigWrapper::new();
     let emulator_configuration =

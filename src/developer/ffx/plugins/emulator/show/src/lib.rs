@@ -29,7 +29,7 @@ async fn show_internal(ffx_config: &FfxConfigWrapper, name: &str) -> Result<()> 
     }
 }
 
-#[ffx_plugin()]
+#[ffx_plugin("emu.experimental")]
 pub async fn show(cmd: ShowCommand) -> Result<()> {
     let ffx_config = FfxConfigWrapper::new();
     let name = cmd.name;
