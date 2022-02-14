@@ -6,9 +6,12 @@
 
 #include <fuchsia/hardware/ethertap/cpp/fidl.h>
 #include <fuchsia/netemul/devmgr/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/fdio/cpp/caller.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include "src/connectivity/network/testing/netemul/lib/network/ethernet_client.h"
+#include "src/connectivity/network/testing/netemul/lib/network/realm_setup.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/testing/predicates/status.h"
 
@@ -23,15 +26,26 @@ namespace testing {
 #define WAIT_FOR_ETH_ONLINE(ethnu) \
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return eth(ethnu)->online(); }, zx::sec(5)))
 
-using gtest::TestWithEnvironmentFixture;
-class EthertapClientTest : public TestWithEnvironmentFixture {
+class EthertapClientTest : public gtest::RealLoopFixture {
  public:
-  EthertapClientTest() { services_ = sys::ServiceDirectory::CreateFromNamespace(); }
+  void SetUp() override {
+    services_ = sys::ServiceDirectory::CreateFromNamespace();
 
-  fidl::InterfaceHandle<fuchsia::netemul::devmgr::IsolatedDevmgr> GetDevmgr() {
+    zx::status result = StartDriverTestRealm();
+    ASSERT_OK(result.status_value()) << "driver test realm failed to start";
+    devfs_root_.reset(std::move(result.value()));
+  }
+
+  zx::status<fidl::InterfaceHandle<fuchsia::netemul::devmgr::IsolatedDevmgr>> GetDevmgr() {
     fidl::InterfaceHandle<fuchsia::netemul::devmgr::IsolatedDevmgr> devmgr;
-    services_->Connect(devmgr.NewRequest());
-    return devmgr;
+    fidl::WireResult result =
+        fidl::WireCall(devfs_root_.directory())
+            ->Clone(fuchsia_io::wire::kCloneFlagSameRights,
+                    fidl::ServerEnd<fuchsia_io::Node>(devmgr.NewRequest().TakeChannel()));
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    return zx::ok(std::move(devmgr));
   }
 
   // pushes an interface into local vectors
@@ -39,7 +53,9 @@ class EthertapClientTest : public TestWithEnvironmentFixture {
     EthertapConfig config(fxl::StringPrintf("etap-%lu", taps_.size()));
     config.tap_cfg.mtu = TEST_MTU_SIZE;
     config.tap_cfg.options = fuchsia::hardware::ethertap::OPT_TRACE;
-    config.devfs_root = GetDevmgr().TakeChannel();
+    zx::status status = GetDevmgr();
+    ASSERT_OK(status.status_value()) << "failed to connect request to /dev";
+    config.devfs_root = status.value().TakeChannel();
 
     ASSERT_TRUE(config.IsMacLocallyAdministered());
 
@@ -52,9 +68,11 @@ class EthertapClientTest : public TestWithEnvironmentFixture {
     config.tap_cfg.mac.Clone(&mac);
     std::unique_ptr<EthertapClient> tap;
     ASSERT_OK(EthertapClient::Create(std::move(config), &tap));
-    auto eth =
-        EthernetClientFactory(EthernetClientFactory::kDevfsEthernetRoot, GetDevmgr().TakeChannel())
-            .RetrieveWithMAC(mac);
+    status = GetDevmgr();
+    ASSERT_OK(status.status_value()) << "failed to connect request to /dev";
+    auto eth = EthernetClientFactory(EthernetClientFactory::kDevfsEthernetRoot,
+                                     status.value().TakeChannel())
+                   .RetrieveWithMAC(mac);
     ASSERT_TRUE(eth);
     bool ok = false;
 
@@ -77,6 +95,7 @@ class EthertapClientTest : public TestWithEnvironmentFixture {
 
  private:
   std::shared_ptr<sys::ServiceDirectory> services_;
+  fdio_cpp::FdioCaller devfs_root_;
   std::vector<std::unique_ptr<EthertapClient>> taps_;
   std::vector<std::unique_ptr<EthernetClient>> eths_;
 };

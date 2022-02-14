@@ -59,7 +59,6 @@ rustc_binary("bin") {
 group("netemul-driver-test-realm") {
   testonly = true
   public_deps = [
-    "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/connectivity/ethernet/drivers/ethernet",
     "//src/connectivity/ethernet/drivers/ethertap",
     "//src/devices/misc/drivers/test-parent",

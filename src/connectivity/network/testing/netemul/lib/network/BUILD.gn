@@ -44,16 +44,21 @@ source_set("network_service") {
     "network_context.cc",
     "network_manager.cc",
     "network_manager.h",
+    "realm_setup.cc",
+    "realm_setup.h",
   ]
 
   deps = [
     ":ethertap",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
+    "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//src/lib/fxl",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   public_deps = [
@@ -94,12 +99,14 @@ executable("network_test_bin") {
     ":ethertap",
     ":netdump",
     ":network_service",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//sdk/lib/sys/cpp",
     "//src/connectivity/lib/network-device/cpp",
     "//src/connectivity/network/testing/netemul/lib/fidl:devmgr",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/lib/testing/predicates",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
   ]
 

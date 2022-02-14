@@ -4,7 +4,9 @@
 
 #include <fuchsia/netemul/devmgr/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/fdio/cpp/caller.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/clock.h>
 
 #include <unordered_set>
@@ -15,6 +17,7 @@
 #include "src/connectivity/network/testing/netemul/lib/network/netdump.h"
 #include "src/connectivity/network/testing/netemul/lib/network/netdump_parser.h"
 #include "src/connectivity/network/testing/netemul/lib/network/network_context.h"
+#include "src/connectivity/network/testing/netemul/lib/network/realm_setup.h"
 #include "src/lib/testing/predicates/status.h"
 
 namespace {
@@ -35,10 +38,7 @@ namespace testing {
 
 static const EthernetConfig TestEthBuffConfig = {.nbufs = 10, .buff_size = 512};
 
-using gtest::TestWithEnvironmentFixture;
-using sys::testing::EnclosingEnvironment;
-using sys::testing::EnvironmentServices;
-class NetworkServiceTest : public TestWithEnvironmentFixture {
+class NetworkServiceTest : public gtest::RealLoopFixture {
  public:
   using FNetworkManager = NetworkManager::FNetworkManager;
   using FEndpointManager = EndpointManager::FEndpointManager;
@@ -54,37 +54,36 @@ class NetworkServiceTest : public TestWithEnvironmentFixture {
 
  protected:
   void SetUp() override {
-    fuchsia::sys::EnvironmentPtr parent_env;
-    real_services()->Connect(parent_env.NewRequest());
+    real_services_ = sys::ServiceDirectory::CreateFromNamespace();
 
     svc_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_OK(svc_loop_->StartThread("testloop"));
     svc_ = std::make_unique<NetworkContext>(svc_loop_->dispatcher());
+
+    zx::status result = StartDriverTestRealm();
+    ASSERT_OK(result.status_value()) << "driver test realm failed to start";
+    devfs_root_.reset(std::move(result.value()));
     svc_->SetDevfsHandler([this](zx::channel req) {
-      real_services()->Connect(
-          fidl::InterfaceRequest<fuchsia::netemul::devmgr::IsolatedDevmgr>(std::move(req)));
+      ASSERT_OK(fidl::WireCall(devfs_root_.directory())
+                    ->Clone(fuchsia_io::wire::kCloneFlagSameRights,
+                            fidl::ServerEnd<fuchsia_io::Node>(std::move(req)))
+                    .status())
+          << "failed to connect request to /dev";
     });
     svc_->SetNetworkTunHandler([this](fidl::InterfaceRequest<fuchsia::net::tun::Control> req) {
-      real_services()->Connect(std::move(req));
+      real_services_->Connect(std::move(req));
     });
-
-    auto services = EnvironmentServices::Create(parent_env, svc_loop_->dispatcher());
-
-    services->AddService(svc_->GetHandler());
-    test_env_ = CreateNewEnclosingEnvironment("env", std::move(services));
-
-    WaitForEnclosingEnvToStart(test_env_.get());
   }
 
   void GetNetworkManager(fidl::InterfaceRequest<FNetworkManager> nm) {
     fidl::InterfacePtr<FNetworkContext> netc;
-    test_env_->ConnectToService(netc.NewRequest());
+    svc_->GetHandler()(netc.NewRequest());
     netc->GetNetworkManager(std::move(nm));
   }
 
   void GetEndpointManager(fidl::InterfaceRequest<FEndpointManager> epm) {
     fidl::InterfacePtr<FNetworkContext> netc;
-    test_env_->ConnectToService(netc.NewRequest());
+    svc_->GetHandler()(netc.NewRequest());
     netc->GetEndpointManager(std::move(epm));
   }
 
@@ -107,7 +106,7 @@ class NetworkServiceTest : public TestWithEnvironmentFixture {
   void StartServices() { GetServices(net_manager_.NewRequest(), endp_manager_.NewRequest()); }
 
   void GetNetworkContext(fidl::InterfaceRequest<NetworkContext::FNetworkContext> req) {
-    test_env_->ConnectToService(std::move(req));
+    svc_->GetHandler()(std::move(req));
   }
 
   void CreateNetwork(const char* name, fidl::SynchronousInterfacePtr<FNetwork>* netout,
@@ -227,7 +226,8 @@ class NetworkServiceTest : public TestWithEnvironmentFixture {
     svc_loop_->JoinThreads();
   }
 
-  std::unique_ptr<EnclosingEnvironment> test_env_;
+  std::shared_ptr<sys::ServiceDirectory> real_services_;
+  fdio_cpp::FdioCaller devfs_root_;
   std::unique_ptr<async::Loop> svc_loop_;
   std::unique_ptr<NetworkContext> svc_;
   fidl::SynchronousInterfacePtr<FNetworkManager> net_manager_;

@@ -6,12 +6,13 @@ import("//build/components.gni")
 
 fuchsia_component("network-test") {
   testonly = true
-  manifest = "meta/network_test.cmx"
+  manifest = "meta/network-test.cml"
 
   deps = [
     "network:network_test_bin",
-    "//src/connectivity/network/testing/netemul/runner:netemul-devmgr",
-    "//src/connectivity/network/tun/network-tun:component",
+    "//sdk/lib/driver_test_realm:driver_test_realm_component",
+    "//src/connectivity/network/testing/netemul-v2/service:netemul-driver-test-realm",
+    "//src/connectivity/network/tun/network-tun:component-v2",
   ]
 }
 
