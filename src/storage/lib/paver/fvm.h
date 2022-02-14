@@ -58,6 +58,9 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
 // loaded or not (but not in the process of being loaded).
 zx_status_t FvmUnbind(const fbl::unique_fd& devfs_root, const char* device);
 
+// Exposed for unit testing only.
+zx_status_t WipeAllFvmPartitionsWithGuid(const fbl::unique_fd& fvm_fd, const uint8_t type_guid[]);
+
 }  // namespace paver
 
 #endif  // SRC_STORAGE_LIB_PAVER_FVM_H_

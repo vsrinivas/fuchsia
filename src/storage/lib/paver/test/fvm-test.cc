@@ -60,7 +60,7 @@ class FvmTest : public zxtest::Test {
 
   const fbl::unique_fd& devfs_root() { return devmgr_.devfs_root(); }
 
- private:
+ protected:
   IsolatedDevmgr devmgr_;
   std::unique_ptr<BlockDevice> device_;
 };
@@ -156,6 +156,68 @@ TEST_F(FvmTest, AllocateEmptyPartitions) {
                              "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/data-p-2/block",
                              O_RDONLY));
   ASSERT_TRUE(data.is_valid());
+}
+
+TEST_F(FvmTest, WipeWithMultipleFvm) {
+  ASSERT_NO_FAILURES(CreateRamdisk());
+  fbl::unique_fd fvm_part = FvmPartitionFormat(
+      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
+  ASSERT_TRUE(fvm_part.is_valid());
+
+  ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part));
+
+  {
+    fbl::unique_fd blob(openat(devfs_root().get(),
+                               "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/blobfs-p-1/block",
+                               O_RDONLY));
+    ASSERT_TRUE(blob.is_valid());
+
+    fbl::unique_fd data(openat(devfs_root().get(),
+                               "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/data-p-2/block",
+                               O_RDONLY));
+    ASSERT_TRUE(data.is_valid());
+  }
+
+  // Save the old device.
+  std::unique_ptr<BlockDevice> first_device = std::move(device_);
+  ASSERT_NO_FAILURES(CreateRamdisk());
+
+  fbl::unique_fd fvm_part2 = FvmPartitionFormat(
+      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
+  ASSERT_TRUE(fvm_part2.is_valid());
+
+  ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part2));
+
+  {
+    fbl::unique_fd blob(openat(devfs_root().get(),
+                               "sys/platform/00:00:2d/ramctl/ramdisk-1/block/fvm/blobfs-p-1/block",
+                               O_RDONLY));
+    ASSERT_TRUE(blob.is_valid());
+
+    fbl::unique_fd data(openat(devfs_root().get(),
+                               "sys/platform/00:00:2d/ramctl/ramdisk-1/block/fvm/data-p-2/block",
+                               O_RDONLY));
+    ASSERT_TRUE(data.is_valid());
+  }
+
+  std::array<uint8_t, fvm::kGuidSize> blobfs_guid = GUID_BLOB_VALUE;
+  ASSERT_OK(paver::WipeAllFvmPartitionsWithGuid(fvm_part2, blobfs_guid.data()));
+
+  // Check we can still open the first ramdisk's blobfs:
+  {
+    fbl::unique_fd blob(openat(devfs_root().get(),
+                               "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/blobfs-p-1/block",
+                               O_RDONLY));
+    ASSERT_TRUE(blob.is_valid());
+  }
+
+  // But not the second's.
+  {
+    fbl::unique_fd blob(openat(devfs_root().get(),
+                               "sys/platform/00:00:2d/ramctl/ramdisk-1/block/fvm/blobfs-p-1/block",
+                               O_RDONLY));
+    ASSERT_TRUE(blob.is_valid());
+  }
 }
 
 TEST_F(FvmTest, Unbind) {

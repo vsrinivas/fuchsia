@@ -429,47 +429,6 @@ void RecommendWipe(const char* problem) {
   Warn(problem, "Please run 'install-disk-image wipe' to wipe your partitions");
 }
 
-// Deletes all partitions within the FVM with a type GUID matching |type_guid|
-// until there are none left.
-zx_status_t WipeAllFvmPartitionsWithGUID(const fbl::unique_fd& fvm_fd, const uint8_t type_guid[]) {
-  fbl::unique_fd old_part;
-  fs_management::PartitionMatcher matcher{
-      .type_guid = type_guid,
-  };
-  for (;;) {
-    auto old_part_or = fs_management::OpenPartition(&matcher, ZX_MSEC(500), nullptr);
-    if (old_part_or.is_error())
-      break;
-    old_part = *std::move(old_part_or);
-    bool is_vpartition;
-    if (FvmIsVirtualPartition(old_part, &is_vpartition) != ZX_OK) {
-      ERROR("Couldn't confirm old vpartition type\n");
-      return ZX_ERR_IO;
-    }
-    if (FvmPartitionIsChild(fvm_fd, old_part) != ZX_OK) {
-      RecommendWipe("Streaming a partition type which also exists outside the target FVM");
-      return ZX_ERR_BAD_STATE;
-    }
-    if (!is_vpartition) {
-      RecommendWipe("Streaming a partition type which also exists in a GPT");
-      return ZX_ERR_BAD_STATE;
-    }
-
-    // We're paving a partition that already exists within the FVM: let's
-    // destroy it before we pave anew.
-
-    fdio_cpp::UnownedFdioCaller partition_connection(old_part.get());
-    auto result = fidl::WireCall<volume::Volume>(partition_connection.channel())->Destroy();
-    zx_status_t status = result.ok() ? result.value().status : result.status();
-    if (status != ZX_OK) {
-      ERROR("Couldn't destroy partition: %s\n", zx_status_get_string(status));
-      return status;
-    }
-  }
-
-  return ZX_OK;
-}
-
 // Calculate the amount of space necessary for the incoming partitions,
 // validating the header along the way. Additionally, deletes any old partitions
 // which match the type GUID of the provided partition.
@@ -493,7 +452,7 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
       return ZX_ERR_IO;
     }
 
-    zx_status_t status = WipeAllFvmPartitionsWithGUID(fvm_fd, parts[p].pd->type);
+    zx_status_t status = WipeAllFvmPartitionsWithGuid(fvm_fd, parts[p].pd->type);
     if (status != ZX_OK) {
       ERROR("Failure wiping old partitions matching this GUID\n");
       return status;
@@ -629,6 +588,56 @@ struct FvmPartition {
 };
 
 }  // namespace
+
+// Deletes all partitions within the FVM with a type GUID matching |type_guid|
+// until there are none left.
+zx_status_t WipeAllFvmPartitionsWithGuid(const fbl::unique_fd& fvm_fd, const uint8_t type_guid[]) {
+  char fvm_topo_path[PATH_MAX] = {0};
+  fbl::unique_fd old_part;
+  zx_status_t status;
+  if ((status = GetTopoPathFromFd(fvm_fd, fvm_topo_path, sizeof(fvm_topo_path))) != ZX_OK) {
+    ERROR("Couldn't get topological path of FVM!\n");
+    return status;
+  }
+
+  fs_management::PartitionMatcher matcher{
+      .type_guid = type_guid,
+      .parent_device = fvm_topo_path,
+  };
+  for (;;) {
+    std::string name;
+    auto old_part_or = fs_management::OpenPartition(&matcher, ZX_MSEC(500), &name);
+    if (old_part_or.is_error())
+      break;
+    old_part = *std::move(old_part_or);
+    bool is_vpartition;
+    if (FvmIsVirtualPartition(old_part, &is_vpartition) != ZX_OK) {
+      ERROR("Couldn't confirm old vpartition type\n");
+      return ZX_ERR_IO;
+    }
+    if (FvmPartitionIsChild(fvm_fd, old_part) != ZX_OK) {
+      RecommendWipe("Streaming a partition type which also exists outside the target FVM");
+      return ZX_ERR_BAD_STATE;
+    }
+    if (!is_vpartition) {
+      RecommendWipe("Streaming a partition type which also exists in a GPT");
+      return ZX_ERR_BAD_STATE;
+    }
+
+    // We're paving a partition that already exists within the FVM: let's
+    // destroy it before we pave anew.
+
+    fdio_cpp::UnownedFdioCaller partition_connection(old_part.get());
+    auto result = fidl::WireCall<volume::Volume>(partition_connection.channel())->Destroy();
+    zx_status_t status = result.ok() ? result.value().status : result.status();
+    if (status != ZX_OK) {
+      ERROR("Couldn't destroy partition: %s\n", zx_status_get_string(status));
+      return status;
+    }
+  }
+
+  return ZX_OK;
+}
 
 zx::status<> AllocateEmptyPartitions(const fbl::unique_fd& devfs_root,
                                      const fbl::unique_fd& fvm_fd) {
