@@ -322,7 +322,8 @@ TEST_F(DriverOutputTest, MixAtExpectedInterval) {
   RunLoopUntilIdle();
 }
 
-TEST_F(DriverOutputTest, WriteSilenceToRingWhenMuted) {
+// See discussion on fxrev.dev/641221.
+TEST_F(DriverOutputTest, DISABLED_WriteSilenceToRingWhenMuted) {
   // Setup our driver to advertise support for a single format.
   fuchsia::hardware::audio::PcmFormat supportedSampleFormat = {};
   supportedSampleFormat.sample_format = fuchsia::hardware::audio::SampleFormat::PCM_SIGNED;

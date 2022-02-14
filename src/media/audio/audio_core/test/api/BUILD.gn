@@ -65,6 +65,11 @@ resource("audio-core-config-with-sleeper-filter") {
       [ "data/audio-core-config-with-sleeper-filter/audio_core_config.json" ]
 }
 
+resource("audio-core-config-with-sw-gain") {
+  sources = [ "testdata/audio_core_config_with_sw_gain.json" ]
+  outputs = [ "data/audio-core-config-with-sw-gain/audio_core_config.json" ]
+}
+
 resource("audio-core-config-with-ultrasound") {
   sources = [ "testdata/ultrasound_audio_core_config.json" ]
   outputs = [ "data/ultrasound/audio_core_config.json" ]
@@ -96,6 +101,7 @@ audio_core_api_test_component("audio-capturer-test") {
 audio_core_api_test_component("audio-capturer-pipeline-test") {
   source = "audio_capturer_pipeline_test.cc"
   executable_deps = [ "//sdk/lib/media/audio/cpp" ]
+  component_deps = [ ":audio-core-config-with-sw-gain" ]
 }
 
 audio_core_api_test_component("audio-clock-pipeline-test") {

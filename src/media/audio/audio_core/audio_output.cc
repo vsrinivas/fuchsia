@@ -174,20 +174,12 @@ AudioOutput::InitializeSourceLink(const AudioObject& source,
     usage = {StreamUsage::WithRenderUsage(RenderUsage::MEDIA)};
   }
 
-  float gain_db = Gain::kUnityGainDb;
-  if (device_settings()) {
-    auto [flags, cur_gain_state] = device_settings()->SnapshotGainState();
-    gain_db = cur_gain_state.muted
-                  ? fuchsia::media::audio::MUTED_GAIN_DB
-                  : std::clamp(cur_gain_state.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb);
-  }
-
   // In rendering, we expect the source clock to originate from a client.
   // For now, "loop out" (direct device-to-device) routing is unsupported.
   FX_CHECK(source_stream->reference_clock().is_client_clock() ||
            source_stream->reference_clock() == reference_clock());
 
-  auto mixer = pipeline_->AddInput(std::move(source_stream), *usage, gain_db);
+  auto mixer = pipeline_->AddInput(std::move(source_stream), *usage);
   return fpromise::ok(std::make_pair(std::move(mixer), &mix_domain()));
 }
 

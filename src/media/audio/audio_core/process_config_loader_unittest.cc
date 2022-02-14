@@ -369,8 +369,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOutputGains) {
           "render:system_agent",
           "capture:loopback"
         ],
-        "driver_gain_db": -6.0,
-        "software_gain_db": -8.0
+        "driver_gain_db": -6.0
       }
     ]
   })JSON";
@@ -388,9 +387,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOutputGains) {
                                                         0x05, 0x3b}};
   auto& config = result.value().device_config();
   EXPECT_FLOAT_EQ(config.output_device_profile(expected_id).driver_gain_db(), -6.0f);
-  EXPECT_FLOAT_EQ(config.output_device_profile(expected_id).software_gain_db(), -8.0f);
   EXPECT_FLOAT_EQ(config.output_device_profile(unknown_id).driver_gain_db(), 0.0f);
-  EXPECT_FLOAT_EQ(config.output_device_profile(unknown_id).software_gain_db(), 0.0f);
 }
 
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputGains) {

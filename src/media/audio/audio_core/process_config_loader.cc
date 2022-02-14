@@ -380,12 +380,8 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
     driver_gain_db = driver_gain_db_it->value.GetDouble();
   }
 
-  float software_gain_db = 0.0;
-  auto software_gain_db_it = value.FindMember(kJsonKeySoftwareGainDb);
-  if (software_gain_db_it != value.MemberEnd()) {
-    FX_CHECK(software_gain_db_it->value.IsNumber());
-    software_gain_db = software_gain_db_it->value.GetDouble();
-  }
+  // software_gain_db is not supported due to implementation challenges.
+  // See discussion on fxrev.dev/641221.
 
   StreamUsageSet supported_stream_types;
   auto supported_stream_types_it = value.FindMember(kJsonKeySupportedOutputStreamTypes);
@@ -433,11 +429,11 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
     }
   }
 
-  return fpromise::ok(
-      std::make_pair(device_id, DeviceConfig::OutputDeviceProfile(
-                                    eligible_for_loopback, std::move(supported_stream_types),
-                                    volume_curve, independent_volume_control,
-                                    std::move(pipeline_config), driver_gain_db, software_gain_db)));
+  return fpromise::ok(std::make_pair(
+      device_id, DeviceConfig::OutputDeviceProfile(
+                     eligible_for_loopback, std::move(supported_stream_types), volume_curve,
+                     independent_volume_control, std::move(pipeline_config), driver_gain_db,
+                     /*software_gain_db=*/0)));
 }
 
 ThermalConfig::Entry ParseThermalPolicyEntryFromJsonObject(const rapidjson::Value& value) {

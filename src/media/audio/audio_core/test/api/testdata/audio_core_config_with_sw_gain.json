@@ -1,0 +1,19 @@
+{
+    "volume_curve": [
+        {"level": 0.0, "db": "MUTED"},
+        {"level": 1.0, "db": 0.0}
+    ],
+    "input_devices": [
+        {
+            "device_id": "ff000000000000000000000000000000",
+            "supported_stream_types": [
+                "capture:background",
+                "capture:communications",
+                "capture:foreground",
+                "capture:system_agent"
+            ],
+            "rate": 48000,
+            "software_gain_db": 20
+        }
+    ]
+}

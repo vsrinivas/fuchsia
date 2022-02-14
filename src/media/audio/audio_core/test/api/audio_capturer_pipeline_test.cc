@@ -142,6 +142,49 @@ TEST_F(AudioCapturerPipelineTest, CaptureWithPts) {
                       AudioBufferSlice<ASF::SIGNED_16>(), opts);
 }
 
+class AudioCapturerPipelineSWGainTest : public AudioCapturerPipelineTest {
+ protected:
+  static void SetUpTestSuite() {
+    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
+        .audio_core_config_data_path = "/pkg/data/audio-core-config-with-sw-gain",
+    });
+  }
+};
+
+TEST_F(AudioCapturerPipelineSWGainTest, CaptureWithSWGain) {
+  // Fill the input ring buffer with 1s. The actual value doesn't matter as long as it is
+  // non-silent but small enough to be scaled up by 20dB without clamping.
+  constexpr int16_t input_sample = 1;
+  auto input_buffer = GenerateConstantAudio(format_, kFrameRate, input_sample);
+  input_->WriteRingBufferAt(0, AudioBufferSlice(&input_buffer));
+
+  // Since the config applies a SW gain of 20.0, the input is scaled by DbToScale(20)*1 = 10.
+  bool found_nonsilent_frame = false;
+  capturer_->fidl().events().OnPacketProduced = [this,
+                                                 &found_nonsilent_frame](StreamPacket p) mutable {
+    EXPECT_EQ(p.payload_buffer_id, 0u);
+    auto data = capturer_->SnapshotPacket(p);
+    capturer_->fidl()->ReleasePacket(p);
+
+    if (found_nonsilent_frame) {
+      return;
+    }
+    for (auto sample : data.samples()) {
+      if (sample != 0) {
+        EXPECT_EQ(sample, 10);
+        found_nonsilent_frame = true;
+        return;
+      }
+    }
+  };
+  capturer_->fidl()->StartAsyncCapture(kPacketFrames);
+
+  // Wait until a non-silent frame is detected.
+  RunLoopWithTimeoutOrUntil([&found_nonsilent_frame]() { return found_nonsilent_frame; },
+                            zx::sec(5));
+  EXPECT_TRUE(found_nonsilent_frame);
+}
+
 class AudioLoopbackPipelineTest : public HermeticAudioTest {
  protected:
   static constexpr zx::duration kPacketLength = zx::msec(10);

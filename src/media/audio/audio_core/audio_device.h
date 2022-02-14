@@ -288,6 +288,9 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
   // Update the presentation delay for this device (defaults to zero).
   void SetPresentationDelay(zx::duration delay) { presentation_delay_ = delay; }
 
+  // AudioObject override.
+  void OnLinkAdded() override;
+
   ExecutionDomain& mix_domain() const { return *mix_domain_; }
   ThreadingModel& threading_model() { return threading_model_; }
   std::shared_ptr<AudioClockFactory> clock_factory() { return clock_factory_; }
@@ -343,6 +346,7 @@ class AudioDevice : public AudioObject, public std::enable_shared_from_this<Audi
 
   LinkMatrix& link_matrix_;
   zx::duration presentation_delay_;
+  std::optional<fuchsia::media::AudioGainInfo> sw_gain_info_;
 };
 
 }  // namespace media::audio

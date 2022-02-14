@@ -12,5 +12,31 @@
     {"level": 0.8, "db":  -8.5},
     {"level": 0.9, "db":  -5.0},
     {"level": 1.0, "db":   0.0}
+  ],
+  "input_devices": [
+    {
+      "device_id": [
+        "03000000000000000000000000000000",
+        "03030303030303030303030303030303"
+      ],
+      "supported_stream_types": [
+        "capture:background",
+        "capture:foreground",
+        "capture:system_agent",
+        "capture:communications"
+      ],
+      "rate": 48000,
+      "software_gain_db": 20.0
+    },
+    {
+      "device_id": "*",
+      "supported_stream_types": [
+        "capture:background",
+        "capture:foreground",
+        "capture:system_agent",
+        "capture:communications"
+      ],
+      "rate": 48000
+    }
   ]
 }

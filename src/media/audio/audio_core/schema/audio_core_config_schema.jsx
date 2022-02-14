@@ -147,10 +147,6 @@
         // If the key is not specified, a default gain value of 0.0 will be used.
         "driver_gain_db": "number",
 
-        // Gain value (in decibels) applied to the software mix.
-        // If the key is not specified, a software gain value of 0.0 will be used.
-        "software_gain_db": "number",
-
         // The mix pipeline to construct for this device.
         "pipeline": { "$ref" : "#/definitions/mix_group" }
       },
