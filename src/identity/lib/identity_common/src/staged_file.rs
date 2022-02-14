@@ -118,8 +118,12 @@ impl<'a> StagedFile<'a> {
         // next startup.
         zx::Status::ok((&self.file_proxy).sync().await?)
             .map_err(|s| StagedFileError::FlushError(s))?;
-        zx::Status::ok((&self.file_proxy).close().await?)
-            .map_err(|s| StagedFileError::CloseError(s))?;
+        let () = self
+            .file_proxy
+            .close()
+            .await?
+            .map_err(zx::Status::from_raw)
+            .map_err(StagedFileError::CloseError)?;
 
         io_util::directory::rename(self.dir_proxy, &self.temp_filename, target_filename)
             .await

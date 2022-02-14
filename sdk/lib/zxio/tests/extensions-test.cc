@@ -22,7 +22,8 @@ class TestServerBase : public fidl::WireServer<fuchsia_io::Node> {
   virtual ~TestServerBase() = default;
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void CloseDeprecated(CloseDeprecatedRequestView request,
+                       CloseDeprecatedCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Reply(ZX_OK);
     // After the reply, we should close the connection.
@@ -30,7 +31,7 @@ class TestServerBase : public fidl::WireServer<fuchsia_io::Node> {
   }
 
   // Exercised by |zxio_close|.
-  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.ReplySuccess();
     // After the reply, we should close the connection.
@@ -134,10 +135,11 @@ TEST_F(ExtensionNode, CloseError) {
 
   class TestServer : public TestServerBase {
    public:
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+    void CloseDeprecated(CloseDeprecatedRequestView request,
+                         CloseDeprecatedCompleter::Sync& completer) override {
       completer.Reply(ZX_ERR_IO);
     }
-    void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
       completer.ReplyError(ZX_ERR_IO);
     }
   };

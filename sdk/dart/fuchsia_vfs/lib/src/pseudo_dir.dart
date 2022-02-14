@@ -362,21 +362,19 @@ class _DirConnection extends Directory {
   }
 
   @override
-  Future<int> close() async {
-    if (_isClosed) {
-      return ZX.OK;
-    }
-    scheduleMicrotask(() {
-      _dir._onClose(this);
-    });
-    _isClosed = true;
-
+  Future<int> closeDeprecated() async {
+    await close();
     return ZX.OK;
   }
 
   @override
-  Future<void> close2() async {
-    await close();
+  Future<void> close() async {
+    if (!_isClosed) {
+      _isClosed = true;
+      scheduleMicrotask(() {
+        _dir._onClose(this);
+      });
+    }
   }
 
   void closeBinding() {

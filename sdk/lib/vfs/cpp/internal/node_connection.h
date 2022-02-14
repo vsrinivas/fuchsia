@@ -28,8 +28,8 @@ class NodeConnection final : public Connection, public fuchsia::io::Node {
 
   // |fuchsia::io::Node| Implementation:
   void Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) override;
+  void CloseDeprecated(CloseDeprecatedCallback callback) override;
   void Close(CloseCallback callback) override;
-  void Close2(Close2Callback callback) override;
   void Describe(DescribeCallback callback) override;
   void Describe2(fuchsia::io::ConnectionInfoQuery query, Describe2Callback callback) override;
   void Sync(SyncCallback callback) override;

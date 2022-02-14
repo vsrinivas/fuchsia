@@ -1029,10 +1029,10 @@ mod tests {
 
         async fn expect_close(mut self) {
             match self.stream.next().await {
-                Some(Ok(FileRequest::Close { responder })) => {
+                Some(Ok(FileRequest::CloseDeprecated { responder })) => {
                     responder.send(Status::OK.into_raw()).unwrap();
                 }
-                Some(Ok(FileRequest::Close2 { responder })) => {
+                Some(Ok(FileRequest::Close { responder })) => {
                     responder.send(&mut Ok(())).unwrap();
                 }
                 r => panic!("Unexpected request: {:?}", r),

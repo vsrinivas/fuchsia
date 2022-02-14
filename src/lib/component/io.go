@@ -91,12 +91,12 @@ func (s *Service) Clone(ctx fidl.Context, flags uint32, req fidlio.NodeWithCtxIn
 	return s.addConnection(ctx, flags, 0, req)
 }
 
-func (*Service) Close(fidl.Context) (int32, error) {
+func (*Service) CloseDeprecated(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (*Service) Close2(fidl.Context) (fidlio.Node2Close2Result, error) {
-	return fidlio.Node2Close2ResultWithResponse(fidlio.Node2Close2Response{}), nil
+func (*Service) Close(fidl.Context) (fidlio.Node2CloseResult, error) {
+	return fidlio.Node2CloseResultWithResponse(fidlio.Node2CloseResponse{}), nil
 }
 
 func (*Service) Describe(fidl.Context) (fidlio.NodeInfo, error) {
@@ -219,12 +219,12 @@ func (dirState *directoryState) Clone(ctx fidl.Context, flags uint32, req fidlio
 	return dirState.addConnection(ctx, flags, 0, req)
 }
 
-func (*directoryState) Close(fidl.Context) (int32, error) {
+func (*directoryState) CloseDeprecated(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (*directoryState) Close2(fidl.Context) (fidlio.Node2Close2Result, error) {
-	return fidlio.Node2Close2ResultWithResponse(fidlio.Node2Close2Response{}), nil
+func (*directoryState) Close(fidl.Context) (fidlio.Node2CloseResult, error) {
+	return fidlio.Node2CloseResultWithResponse(fidlio.Node2CloseResponse{}), nil
 }
 
 func (*directoryState) Describe(fidl.Context) (fidlio.NodeInfo, error) {
@@ -470,12 +470,12 @@ func (fState *fileState) Clone(ctx fidl.Context, flags uint32, req fidlio.NodeWi
 	return fState.addConnection(ctx, flags, 0, req)
 }
 
-func (*fileState) Close(fidl.Context) (int32, error) {
+func (*fileState) CloseDeprecated(fidl.Context) (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (fState *fileState) Close2(fidl.Context) (fidlio.Node2Close2Result, error) {
-	return fidlio.Node2Close2ResultWithResponse(fidlio.Node2Close2Response{}), nil
+func (fState *fileState) Close(fidl.Context) (fidlio.Node2CloseResult, error) {
+	return fidlio.Node2CloseResultWithResponse(fidlio.Node2CloseResponse{}), nil
 }
 
 func (fState *fileState) Describe(fidl.Context) (fidlio.NodeInfo, error) {

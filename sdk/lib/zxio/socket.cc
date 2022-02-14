@@ -38,8 +38,8 @@ class BaseSocket {
     if ((status = result.status()) != ZX_OK) {
       return status;
     }
-    if ((status = result->s) != ZX_OK) {
-      return status;
+    if (result->result.is_err()) {
+      return result->result.err();
     }
     if ((status = client_.client_end().channel().wait_one(
              ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr)) != ZX_OK) {

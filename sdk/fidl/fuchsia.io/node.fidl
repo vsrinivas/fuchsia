@@ -198,7 +198,8 @@ protocol Node1 {
     ///
     /// This method does not require any rights.
     @selector("fuchsia.io1/Node.Close")
-    Close() -> (struct {
+    @deprecated("replaced by Node2.Close")
+    CloseDeprecated() -> (struct {
         s zx.status;
     });
 

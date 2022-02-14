@@ -19,13 +19,13 @@ void Connection::Clone(Node* vn, uint32_t flags, zx::channel request,
   vn->Clone(flags, flags_, std::move(request), dispatcher);
 }
 
-void Connection::Close(Node* vn, fuchsia::io::Node::CloseCallback callback) {
+void Connection::CloseDeprecated(Node* vn, fuchsia::io::Node::CloseDeprecatedCallback callback) {
   callback(vn->PreClose(this));
   vn->Close(this);
   // |this| is destroyed at this point.
 }
 
-void Connection::Close2(Node* vn, fuchsia::io::Node::Close2Callback callback) {
+void Connection::Close(Node* vn, fuchsia::io::Node::CloseCallback callback) {
   zx_status_t status = vn->PreClose(this);
   if (status == ZX_OK) {
     callback(fpromise::ok());

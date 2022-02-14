@@ -87,11 +87,12 @@ void NullPtyDeviceImpl::Clone(CloneRequestView request, CloneCompleter::Sync& co
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
+void NullPtyDeviceImpl::CloseDeprecated(CloseDeprecatedRequestView request,
+                                        CloseDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Close2(Close2RequestView request, Close2Completer::Sync& completer) {
+void NullPtyDeviceImpl::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

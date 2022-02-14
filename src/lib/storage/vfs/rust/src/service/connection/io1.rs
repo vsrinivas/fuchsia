@@ -137,11 +137,11 @@ impl Connection {
             FileRequest::Clone { flags, object, control_handle: _ } => {
                 self.handle_clone(flags, object);
             }
-            FileRequest::Close { responder } => {
+            FileRequest::CloseDeprecated { responder } => {
                 responder.send(ZX_OK)?;
                 return Ok(ConnectionState::Closed);
             }
-            FileRequest::Close2 { responder } => {
+            FileRequest::Close { responder } => {
                 responder.send(&mut Ok(()))?;
                 return Ok(ConnectionState::Closed);
             }

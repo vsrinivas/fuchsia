@@ -130,11 +130,11 @@ pub fn handle_package_directory_stream(
                         )
                         .expect("could send Rewind Response");
                 }
-                DirectoryRequest::Close { responder } => {
+                DirectoryRequest::CloseDeprecated { responder } => {
                     // Don't do anything with this for now.
                     responder.send(Status::OK.into_raw()).expect("send Close response")
                 }
-                DirectoryRequest::Close2 { responder } => {
+                DirectoryRequest::Close { responder } => {
                     // Don't do anything with this for now.
                     responder.send(&mut Ok(())).expect("send Close response")
                 }

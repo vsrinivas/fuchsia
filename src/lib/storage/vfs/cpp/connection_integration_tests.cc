@@ -442,7 +442,7 @@ TEST_F(ConnectionClosingTest, ClosingNodeLeadsToClosingServerEndChannel) {
   ASSERT_OK(loop().StartThread());
   auto result = fidl::WireCall(root->client)->Close();
   ASSERT_OK(result.status());
-  ASSERT_OK(result->s);
+  ASSERT_TRUE(result->result.is_response(), "%s", zx_status_get_string(result->result.err()));
 
   observed = ZX_SIGNAL_NONE;
   ASSERT_OK(

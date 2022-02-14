@@ -326,7 +326,7 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<int> close() async {
+  Future<int> closeDeprecated() async {
     if (_isClosed) {
       return ZX.OK;
     }
@@ -343,8 +343,8 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<void> close2() async {
-    var status = await close();
+  Future<void> close() async {
+    var status = await closeDeprecated();
     if (status != ZX.OK) {
       throw fidl.MethodException(status);
     }

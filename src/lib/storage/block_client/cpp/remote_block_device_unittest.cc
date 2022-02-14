@@ -96,8 +96,9 @@ class MockBlockDevice {
       self_->Bind(self_->dispatcher_, request->object.TakeChannel());
     }
 
+    void CloseDeprecated(CloseDeprecatedRequestView request,
+                         CloseDeprecatedCompleter::Sync& completer) override {}
     void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {}
-    void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {}
     void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {}
     void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {}
     void Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) override {}

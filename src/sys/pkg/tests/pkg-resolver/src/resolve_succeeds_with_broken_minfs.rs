@@ -345,13 +345,14 @@ impl FailingWriteFileStreamHandler {
                         let mut result = self.backing_file.read2(count).await.unwrap();
                         responder.send(&mut result).unwrap();
                     }
-                    FileRequest::Close { responder } => {
-                        let backing_file_close_response = self.backing_file.close().await.unwrap();
+                    FileRequest::CloseDeprecated { responder } => {
+                        let backing_file_close_response =
+                            self.backing_file.close_deprecated().await.unwrap();
                         responder.send(backing_file_close_response).unwrap();
                     }
-                    FileRequest::Close2 { responder } => {
+                    FileRequest::Close { responder } => {
                         let mut backing_file_close_response =
-                            self.backing_file.close2().await.unwrap();
+                            self.backing_file.close().await.unwrap();
                         responder.send(&mut backing_file_close_response).unwrap();
                     }
                     other => {
@@ -432,12 +433,12 @@ impl OpenRequestHandler for RenameFailOrTempFs {
                         let (status, mut attrs) = tempdir_proxy.get_attr().await.unwrap();
                         responder.send(status, &mut attrs).unwrap();
                     }
-                    DirectoryRequest::Close { responder } => {
-                        let status = tempdir_proxy.close().await.unwrap();
+                    DirectoryRequest::CloseDeprecated { responder } => {
+                        let status = tempdir_proxy.close_deprecated().await.unwrap();
                         responder.send(status).unwrap();
                     }
-                    DirectoryRequest::Close2 { responder } => {
-                        let mut result = tempdir_proxy.close2().await.unwrap();
+                    DirectoryRequest::Close { responder } => {
+                        let mut result = tempdir_proxy.close().await.unwrap();
                         responder.send(&mut result).unwrap();
                     }
                     DirectoryRequest::GetToken { responder } => {

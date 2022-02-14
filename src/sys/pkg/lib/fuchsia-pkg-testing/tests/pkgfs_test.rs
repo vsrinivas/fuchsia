@@ -1604,7 +1604,7 @@ async fn test_multiple_opens_on_meta_file() {
             .await
             .unwrap();
 
-    file_a.close().await.unwrap();
+    file_a.close().await.unwrap().map_err(Status::from_raw).unwrap();
     let (status, buffer) = file_a_2
         .get_buffer(fidl_fuchsia_io::VMO_FLAG_READ | fidl_fuchsia_io::VMO_FLAG_PRIVATE)
         .await
@@ -1612,7 +1612,7 @@ async fn test_multiple_opens_on_meta_file() {
     Status::ok(status).unwrap();
     let buffer = buffer.unwrap();
     assert_ne!(buffer.size, 0);
-    file_a_2.close().await.unwrap();
+    file_a_2.close().await.unwrap().map_err(Status::from_raw).unwrap();
 
     pkgfs.stop().await.expect("shutting down pkgfs");
 }
@@ -1655,10 +1655,10 @@ async fn test_opening_file_within_directory_and_closing_directory() {
             .unwrap();
     let file_a =
         io_util::directory::open_file(&subdir, "a", io_util::OPEN_RIGHT_READABLE).await.unwrap();
-    subdir.close().await.unwrap();
+    subdir.close().await.unwrap().map_err(Status::from_raw).unwrap();
     let a_contents = io_util::file::read_to_string(&file_a).await.unwrap();
     assert_eq!(a_contents, "Hello world!\n");
-    file_a.close().await.unwrap();
+    file_a.close().await.unwrap().map_err(Status::from_raw).unwrap();
 
     pkgfs.stop().await.expect("shutting down pkgfs");
 }

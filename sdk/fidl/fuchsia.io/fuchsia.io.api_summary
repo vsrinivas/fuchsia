@@ -64,8 +64,8 @@ strict bits fuchsia.io/DeviceSignal2 uint32
 protocol/member fuchsia.io/Directory.AddInotifyFilter(string:4095 path,fuchsia.io/InotifyWatchMask filter,uint32 watch_descriptor,zx/handle:SOCKET socket) -> ()
 protocol/member fuchsia.io/Directory.AdvisoryLock(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)
 protocol/member fuchsia.io/Directory.Clone(uint32 flags,server_end:fuchsia.io/Node object)
-protocol/member fuchsia.io/Directory.Close() -> (int32 s)
-protocol/member fuchsia.io/Directory.Close2() -> (fuchsia.io/Node2_Close2_Result result)
+protocol/member fuchsia.io/Directory.Close() -> (fuchsia.io/Node2_Close_Result result)
+protocol/member fuchsia.io/Directory.CloseDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Directory.Describe() -> (fuchsia.io/NodeInfo info)
 protocol/member fuchsia.io/Directory.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Directory.Enumerate(fuchsia.io/DirectoryEnumerateOptions options,server_end:fuchsia.io/DirectoryIterator iterator)
@@ -95,8 +95,8 @@ protocol/member fuchsia.io/Directory.UpdateAttributes(fuchsia.io/NodeAttributes2
 protocol/member fuchsia.io/Directory.Watch(uint32 mask,uint32 options,zx/handle:CHANNEL watcher) -> (int32 s)
 protocol fuchsia.io/Directory
 protocol/member fuchsia.io/Directory1.Clone(uint32 flags,server_end:fuchsia.io/Node object)
-protocol/member fuchsia.io/Directory1.Close() -> (int32 s)
-protocol/member fuchsia.io/Directory1.Close2() -> (fuchsia.io/Node2_Close2_Result result)
+protocol/member fuchsia.io/Directory1.Close() -> (fuchsia.io/Node2_Close_Result result)
+protocol/member fuchsia.io/Directory1.CloseDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Directory1.Describe() -> (fuchsia.io/NodeInfo info)
 protocol/member fuchsia.io/Directory1.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Directory1.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
@@ -122,7 +122,7 @@ protocol/member fuchsia.io/Directory1.Watch(uint32 mask,uint32 options,zx/handle
 protocol fuchsia.io/Directory1
 protocol/member fuchsia.io/Directory2.AddInotifyFilter(string:4095 path,fuchsia.io/InotifyWatchMask filter,uint32 watch_descriptor,zx/handle:SOCKET socket) -> ()
 protocol/member fuchsia.io/Directory2.AdvisoryLock(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)
-protocol/member fuchsia.io/Directory2.Close2() -> (fuchsia.io/Node2_Close2_Result result)
+protocol/member fuchsia.io/Directory2.Close() -> (fuchsia.io/Node2_Close_Result result)
 protocol/member fuchsia.io/Directory2.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Directory2.Enumerate(fuchsia.io/DirectoryEnumerateOptions options,server_end:fuchsia.io/DirectoryIterator iterator)
 protocol/member fuchsia.io/Directory2.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
@@ -167,8 +167,8 @@ protocol/member fuchsia.io/DirectoryWatcher.OnEvent(vector<uint8>:8192 events)
 protocol fuchsia.io/DirectoryWatcher
 protocol/member fuchsia.io/File.AdvisoryLock(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)
 protocol/member fuchsia.io/File.Clone(uint32 flags,server_end:fuchsia.io/Node object)
-protocol/member fuchsia.io/File.Close() -> (int32 s)
-protocol/member fuchsia.io/File.Close2() -> (fuchsia.io/Node2_Close2_Result result)
+protocol/member fuchsia.io/File.Close() -> (fuchsia.io/Node2_Close_Result result)
+protocol/member fuchsia.io/File.CloseDeprecated() -> (int32 s)
 protocol/member fuchsia.io/File.Describe() -> (fuchsia.io/NodeInfo info)
 protocol/member fuchsia.io/File.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/File.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
@@ -203,8 +203,8 @@ protocol/member fuchsia.io/File.WriteAt(vector<uint8>:8192 data,uint64 offset) -
 protocol/member fuchsia.io/File.WriteAt2(vector<uint8>:8192 data,uint64 offset) -> (fuchsia.io/File2_WriteAt2_Result result)
 protocol fuchsia.io/File
 protocol/member fuchsia.io/File1.Clone(uint32 flags,server_end:fuchsia.io/Node object)
-protocol/member fuchsia.io/File1.Close() -> (int32 s)
-protocol/member fuchsia.io/File1.Close2() -> (fuchsia.io/Node2_Close2_Result result)
+protocol/member fuchsia.io/File1.Close() -> (fuchsia.io/Node2_Close_Result result)
+protocol/member fuchsia.io/File1.CloseDeprecated() -> (int32 s)
 protocol/member fuchsia.io/File1.Describe() -> (fuchsia.io/NodeInfo info)
 protocol/member fuchsia.io/File1.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/File1.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
@@ -232,7 +232,7 @@ protocol/member fuchsia.io/File1.Write(vector<uint8>:8192 data) -> (int32 s,uint
 protocol/member fuchsia.io/File1.WriteAt(vector<uint8>:8192 data,uint64 offset) -> (int32 s,uint64 actual)
 protocol fuchsia.io/File1
 protocol/member fuchsia.io/File2.AdvisoryLock(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)
-protocol/member fuchsia.io/File2.Close2() -> (fuchsia.io/Node2_Close2_Result result)
+protocol/member fuchsia.io/File2.Close() -> (fuchsia.io/Node2_Close_Result result)
 protocol/member fuchsia.io/File2.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/File2.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
 protocol/member fuchsia.io/File2.GetBackingMemory(fuchsia.io/VmoFlags flags) -> (fuchsia.io/File2_GetBackingMemory_Result result)
@@ -355,8 +355,8 @@ resource table fuchsia.io/MemoryInfo
 const fuchsia.io/NODE_ATTRIBUTE_FLAG_CREATION_TIME uint32 1
 const fuchsia.io/NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME uint32 2
 protocol/member fuchsia.io/Node.Clone(uint32 flags,server_end:fuchsia.io/Node object)
-protocol/member fuchsia.io/Node.Close() -> (int32 s)
-protocol/member fuchsia.io/Node.Close2() -> (fuchsia.io/Node2_Close2_Result result)
+protocol/member fuchsia.io/Node.Close() -> (fuchsia.io/Node2_Close_Result result)
+protocol/member fuchsia.io/Node.CloseDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Node.Describe() -> (fuchsia.io/NodeInfo info)
 protocol/member fuchsia.io/Node.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Node.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
@@ -375,8 +375,8 @@ protocol/member fuchsia.io/Node.Sync2() -> (fuchsia.io/Node2_Sync2_Result result
 protocol/member fuchsia.io/Node.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
 protocol fuchsia.io/Node
 protocol/member fuchsia.io/Node1.Clone(uint32 flags,server_end:fuchsia.io/Node object)
-protocol/member fuchsia.io/Node1.Close() -> (int32 s)
-protocol/member fuchsia.io/Node1.Close2() -> (fuchsia.io/Node2_Close2_Result result)
+protocol/member fuchsia.io/Node1.Close() -> (fuchsia.io/Node2_Close_Result result)
+protocol/member fuchsia.io/Node1.CloseDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Node1.Describe() -> (fuchsia.io/NodeInfo info)
 protocol/member fuchsia.io/Node1.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Node1.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
@@ -394,7 +394,7 @@ protocol/member fuchsia.io/Node1.Sync() -> (int32 s)
 protocol/member fuchsia.io/Node1.Sync2() -> (fuchsia.io/Node2_Sync2_Result result)
 protocol/member fuchsia.io/Node1.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
 protocol fuchsia.io/Node1
-protocol/member fuchsia.io/Node2.Close2() -> (fuchsia.io/Node2_Close2_Result result)
+protocol/member fuchsia.io/Node2.Close() -> (fuchsia.io/Node2_Close_Result result)
 protocol/member fuchsia.io/Node2.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Node2.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
 protocol/member fuchsia.io/Node2.GetToken2() -> (fuchsia.io/Node2_GetToken2_Result result)
@@ -403,10 +403,10 @@ protocol/member fuchsia.io/Node2.Reopen(fuchsia.io/ConnectionOptions options,zx/
 protocol/member fuchsia.io/Node2.Sync2() -> (fuchsia.io/Node2_Sync2_Result result)
 protocol/member fuchsia.io/Node2.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
 protocol fuchsia.io/Node2
-struct fuchsia.io/Node2_Close2_Response
-union/member fuchsia.io/Node2_Close2_Result.err int32
-union/member fuchsia.io/Node2_Close2_Result.response fuchsia.io/Node2_Close2_Response
-strict union fuchsia.io/Node2_Close2_Result
+struct fuchsia.io/Node2_Close_Response
+union/member fuchsia.io/Node2_Close_Result.err int32
+union/member fuchsia.io/Node2_Close_Result.response fuchsia.io/Node2_Close_Response
+strict union fuchsia.io/Node2_Close_Result
 struct/member fuchsia.io/Node2_GetAttributes_Response.attributes fuchsia.io/NodeAttributes2
 struct fuchsia.io/Node2_GetAttributes_Response
 union/member fuchsia.io/Node2_GetAttributes_Result.err int32

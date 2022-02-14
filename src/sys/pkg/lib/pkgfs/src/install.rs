@@ -286,10 +286,10 @@ impl MockBlob {
 
         match self.stream.next().await {
             None => {}
-            Some(Ok(FileRequest::Close { responder })) => {
+            Some(Ok(FileRequest::CloseDeprecated { responder })) => {
                 let _ = responder.send(Status::OK.into_raw());
             }
-            Some(Ok(FileRequest::Close2 { responder })) => {
+            Some(Ok(FileRequest::Close { responder })) => {
                 let _ = responder.send(&mut Ok(()));
             }
             Some(other) => panic!("unexpected request: {:?}", other),
@@ -320,10 +320,10 @@ impl MockBlob {
             }
 
             match self.stream.next().await {
-                Some(Ok(FileRequest::Close { responder })) => {
+                Some(Ok(FileRequest::CloseDeprecated { responder })) => {
                     responder.send(Status::OK.into_raw()).unwrap();
                 }
-                Some(Ok(FileRequest::Close2 { responder })) => {
+                Some(Ok(FileRequest::Close { responder })) => {
                     responder.send(&mut Ok(())).unwrap();
                 }
                 other => panic!("unexpected request: {:?}", other),

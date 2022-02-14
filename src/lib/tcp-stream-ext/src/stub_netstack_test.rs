@@ -24,12 +24,14 @@ fn with_tcp_stream(f: impl FnOnce(std::net::TcpStream) -> ()) {
         fasync::LocalExecutor::new().expect("new executor").run_singlethreaded(
             server.into_stream().expect("endpoint into stream").for_each(move |request| {
                 futures::future::ready(match request.expect("stream socket request stream") {
-                    fidl_fuchsia_posix_socket::StreamSocketRequest::Close { responder } => {
+                    fidl_fuchsia_posix_socket::StreamSocketRequest::CloseDeprecated {
+                        responder,
+                    } => {
                         let () = responder.control_handle().shutdown();
                         let () =
                             responder.send(zx::Status::OK.into_raw()).expect("send Close response");
                     }
-                    fidl_fuchsia_posix_socket::StreamSocketRequest::Close2 { responder } => {
+                    fidl_fuchsia_posix_socket::StreamSocketRequest::Close { responder } => {
                         let () = responder.control_handle().shutdown();
                         let () = responder.send(&mut Ok(())).expect("send Close response");
                     }

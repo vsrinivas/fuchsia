@@ -43,7 +43,8 @@ void FileConnection::Clone(CloneRequestView request, CloneCompleter::Sync& compl
   Connection::NodeClone(request->flags, std::move(request->object));
 }
 
-void FileConnection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
+void FileConnection::CloseDeprecated(CloseDeprecatedRequestView request,
+                                     CloseDeprecatedCompleter::Sync& completer) {
   auto result = Connection::NodeClose();
   if (result.is_error()) {
     completer.Reply(result.error());
@@ -52,7 +53,7 @@ void FileConnection::Close(CloseRequestView request, CloseCompleter::Sync& compl
   }
 }
 
-void FileConnection::Close2(Close2RequestView request, Close2Completer::Sync& completer) {
+void FileConnection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   auto result = Connection::NodeClose();
   if (result.is_error()) {
     completer.ReplyError(result.error());

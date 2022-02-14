@@ -92,7 +92,13 @@ impl TestFixture {
         let state = std::mem::take(&mut self.state).unwrap();
         // Close the root node and ensure that there's no remaining references to |vol|, which would
         // indicate a reference cycle or other leak.
-        Status::ok(state.root.close().await.expect("FIDL call failed")).expect("close root failed");
+        state
+            .root
+            .close()
+            .await
+            .expect("FIDL call failed")
+            .map_err(Status::from_raw)
+            .expect("close root failed");
         let (filesystem, volume) = state.into();
 
         // Wait for all tasks to finish running.  If we don't do this, it's possible that we haven't
@@ -156,11 +162,11 @@ impl Drop for TestFixture {
 
 pub async fn close_file_checked(file: FileProxy) {
     Status::ok(file.sync().await.expect("FIDL call failed")).expect("sync failed");
-    Status::ok(file.close().await.expect("FIDL call failed")).expect("close failed");
+    file.close().await.expect("FIDL call failed").map_err(Status::from_raw).expect("close failed");
 }
 
 pub async fn close_dir_checked(dir: DirectoryProxy) {
-    Status::ok(dir.close().await.expect("FIDL call failed")).expect("close failed");
+    dir.close().await.expect("FIDL call failed").map_err(Status::from_raw).expect("close failed");
 }
 
 // Utility function to open a new node connection under |dir|.

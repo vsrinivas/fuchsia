@@ -129,7 +129,7 @@ async fn create_blob(blobfs: &DirectoryProxy, merkle: &str, contents: &[u8]) -> 
     .await?;
     Status::ok(blob.truncate(contents.len() as u64).await?)?;
     write_blob(&blob, contents).await?;
-    Status::ok(blob.close().await?)?;
+    blob.close().await?.map_err(Status::from_raw)?;
 
     let (blob, _) = open_blob(&blobfs, merkle, fidl_fuchsia_io::OPEN_RIGHT_READABLE).await?;
     verify_blob(&blob, contents).await?;
@@ -164,7 +164,7 @@ async fn wait_for_blob_to_be_creatable(blobfs: &DirectoryProxy, merkle: &str) {
                 // is in the state (creatable + not openable for read). If we just drop
                 // the FileProxy instead of closing, the blob will be openable for read until
                 // blobfs asynchronously cleans up.
-                Status::ok(blob.close().await.unwrap()).unwrap();
+                blob.close().await.unwrap().map_err(Status::from_raw).unwrap();
                 return;
             }
         }
@@ -243,7 +243,7 @@ async fn open_partial_write_close_create() -> Result<(), Error> {
     .await?;
     Status::ok(blob.truncate(BLOB_CONTENTS.len() as u64).await?)?;
     write_blob(&blob, &BLOB_CONTENTS[0..1]).await?;
-    Status::ok(blob.close().await?)?;
+    blob.close().await?.map_err(Status::from_raw)?;
 
     create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await?;
 
@@ -416,7 +416,7 @@ impl BlobfsRamdisk {
             open_blob(&proxy, &blob.merkle.to_string(), fidl_fuchsia_io::OPEN_RIGHT_READABLE)
                 .await?;
         verify_blob(&file, blob.contents).await?;
-        Status::ok(file.close().await.unwrap()).unwrap();
+        file.close().await.unwrap().map_err(Status::from_raw).unwrap();
         Ok(())
     }
 }

@@ -1811,16 +1811,16 @@ func (s *datagramSocket) close() {
 	s.cancel()
 }
 
-func (s *datagramSocket) Close(fidl.Context) (int32, error) {
+func (s *datagramSocket) CloseDeprecated(fidl.Context) (int32, error) {
 	_ = syslog.DebugTf("Close", "%p", s.endpointWithEvent)
 	s.close()
 	return int32(zx.ErrOk), nil
 }
 
-func (s *datagramSocket) Close2(fidl.Context) (fidlio.Node2Close2Result, error) {
+func (s *datagramSocket) Close(fidl.Context) (fidlio.Node2CloseResult, error) {
 	_ = syslog.DebugTf("Close", "%p", s.endpointWithEvent)
 	s.close()
-	return fidlio.Node2Close2ResultWithResponse(fidlio.Node2Close2Response{}), nil
+	return fidlio.Node2CloseResultWithResponse(fidlio.Node2CloseResponse{}), nil
 }
 
 func (s *datagramSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
@@ -2070,16 +2070,16 @@ func (s *streamSocketImpl) close() {
 	}
 }
 
-func (s *streamSocketImpl) Close(fidl.Context) (int32, error) {
+func (s *streamSocketImpl) CloseDeprecated(fidl.Context) (int32, error) {
 	_ = syslog.DebugTf("Close", "%p", s.endpointWithSocket)
 	s.close()
 	return int32(zx.ErrOk), nil
 }
 
-func (s *streamSocketImpl) Close2(fidl.Context) (fidlio.Node2Close2Result, error) {
+func (s *streamSocketImpl) Close(fidl.Context) (fidlio.Node2CloseResult, error) {
 	_ = syslog.DebugTf("Close", "%p", s.endpointWithSocket)
 	s.close()
-	return fidlio.Node2Close2ResultWithResponse(fidlio.Node2Close2Response{}), nil
+	return fidlio.Node2CloseResultWithResponse(fidlio.Node2CloseResponse{}), nil
 }
 
 func (s *streamSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {

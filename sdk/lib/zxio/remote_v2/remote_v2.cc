@@ -86,7 +86,7 @@ fio::wire::NodeAttributes2 ToIo2NodeAttributes(fidl::AnyArena& allocator,
 zx_status_t zxio_remote_v2_close(zxio_t* io) {
   RemoteV2 rio(io);
   zx_status_t status = [&]() {
-    auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node2>(rio.control()))->Close2();
+    auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node2>(rio.control()))->Close();
     // TODO(yifeit): The |Node.Close| method is one-way. In order to catch
     // any server-side error during close, we should wait for an epitaph.
     if (result.status() != ZX_OK) {

@@ -688,8 +688,7 @@ mod tests {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
         let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
-        let status = proxy.close().await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        let () = proxy.close().await.unwrap().map_err(Status::from_raw).unwrap();
         let events = events.0.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Close]);
     }

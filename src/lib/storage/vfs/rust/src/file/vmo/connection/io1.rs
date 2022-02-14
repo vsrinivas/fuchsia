@@ -377,13 +377,13 @@ impl VmoFileConnection {
             FileRequest::Clone { flags, object, control_handle: _ } => {
                 self.handle_clone(self.flags, flags, object);
             }
-            FileRequest::Close { responder } => {
+            FileRequest::CloseDeprecated { responder } => {
                 // We are going to close the connection anyways, so there is no way to handle this
                 // error.  TODO We may want to send it in an epitaph.
                 let _ = self.handle_close(|status| responder.send(status.into_raw())).await;
                 return Ok(ConnectionState::Closed);
             }
-            FileRequest::Close2 { responder } => {
+            FileRequest::Close { responder } => {
                 // We are going to close the connection anyways, so there is no way to handle this
                 // error.
                 let _ = self

@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <zircon/errors.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 
 #include <algorithm>
 #include <string>
@@ -182,9 +183,14 @@ class PseudoFileTest : public gtest::RealLoopFixture {
   }
 
   void CloseFile(fuchsia::io::FileSyncPtr& file, zx_status_t expected_status = ZX_OK) {
-    zx_status_t status = 1;
-    file->Close(&status);
-    EXPECT_EQ(expected_status, status);
+    fuchsia::io::Node2_Close_Result result;
+    file->Close(&result);
+    if (expected_status == ZX_OK) {
+      ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    } else {
+      ASSERT_TRUE(result.is_err());
+      EXPECT_EQ(expected_status, result.err());
+    }
   }
 
   void AssertFileWrapperState(FileWrapper& file_wrapper, const std::string& expected_str) {

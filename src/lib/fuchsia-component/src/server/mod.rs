@@ -1197,11 +1197,11 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     None => {}
                 }
             }
-            DirectoryRequest::Close { responder } => {
+            DirectoryRequest::CloseDeprecated { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
                 return Ok((None, ConnectionState::Closed));
             }
-            DirectoryRequest::Close2 { responder } => {
+            DirectoryRequest::Close { responder } => {
                 responder.send(&mut Ok(()))?;
                 return Ok((None, ConnectionState::Closed));
             }
@@ -1414,11 +1414,11 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     None => {}
                 }
             }
-            FileRequest::Close { responder } => {
+            FileRequest::CloseDeprecated { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
                 return Ok(ConnectionState::Closed);
             }
-            FileRequest::Close2 { responder } => {
+            FileRequest::Close { responder } => {
                 responder.send(&mut Ok(()))?;
                 return Ok(ConnectionState::Closed);
             }
@@ -1510,11 +1510,11 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     None => {}
                 }
             }
-            NodeRequest::Close { responder } => {
+            NodeRequest::CloseDeprecated { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
                 return Ok(ConnectionState::Closed);
             }
-            NodeRequest::Close2 { responder } => {
+            NodeRequest::Close { responder } => {
                 responder.send(&mut Ok(()))?;
                 return Ok(ConnectionState::Closed);
             }

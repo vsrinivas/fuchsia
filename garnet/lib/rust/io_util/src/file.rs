@@ -127,7 +127,7 @@ pub fn open_in_namespace(path: &str, flags: u32) -> Result<FileProxy, OpenError>
 
 /// Gracefully closes the file proxy from the remote end.
 pub async fn close(file: FileProxy) -> Result<(), CloseError> {
-    let result = file.close2().await.map_err(CloseError::SendCloseRequest)?;
+    let result = file.close().await.map_err(CloseError::SendCloseRequest)?;
     result.map_err(|s| CloseError::CloseError(zx_status::Status::from_raw(s)))
 }
 

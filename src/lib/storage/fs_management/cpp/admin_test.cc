@@ -189,7 +189,8 @@ class OutgoingDirectoryMinfs : public OutgoingDirectoryFixture {
 
     auto resp2 = file_client->Close();
     ASSERT_TRUE(resp2.ok()) << resp2.status_string();
-    ASSERT_EQ(resp2.value().s, ZX_OK) << zx_status_get_string(resp2.value().s);
+    ASSERT_TRUE(resp2.value().result.is_response())
+        << zx_status_get_string(resp2.value().result.err());
   }
 };
 
@@ -230,7 +231,8 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyDataRoot) {
 
   auto close_resp = file_client->Close();
   ASSERT_TRUE(close_resp.ok()) << close_resp.status_string();
-  ASSERT_EQ(close_resp.value().s, ZX_OK) << zx_status_get_string(close_resp.value().s);
+  ASSERT_TRUE(close_resp.value().result.is_response())
+      << zx_status_get_string(close_resp.value().result.err());
 }
 
 TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {

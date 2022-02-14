@@ -465,11 +465,11 @@ impl BlockServer {
             // TODO(fxbug.dev/89873)
             VolumeAndNodeRequest::Reopen { options: _, object_request: _, control_handle: _ } => {}
             // TODO(fxbug.dev/89873)
-            VolumeAndNodeRequest::Close { responder } => {
+            VolumeAndNodeRequest::CloseDeprecated { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
             }
             // TODO(fxbug.dev/89873)
-            VolumeAndNodeRequest::Close2 { responder } => {
+            VolumeAndNodeRequest::Close { responder } => {
                 responder.send(&mut Ok(()))?;
             }
             // TODO(fxbug.dev/89873)
@@ -631,7 +631,10 @@ mod tests {
                 .await;
                 let status = file.truncate(2 * 1024 * 1024).await.expect("truncate failed");
                 zx::Status::ok(status).expect("file truncate failed");
-                assert_eq!(file.close().await.expect("FIDL call failed"), 0);
+                assert_eq!(
+                    file.close().await.expect("FIDL call failed").map_err(zx::Status::from_raw),
+                    Ok(())
+                );
 
                 root.open(
                     OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
@@ -927,7 +930,10 @@ mod tests {
                 .await;
                 let status = file.truncate(file_size).await.expect("truncate failed");
                 zx::Status::ok(status).expect("file truncate failed");
-                assert_eq!(file.close().await.expect("FIDL call failed"), 0);
+                assert_eq!(
+                    file.close().await.expect("FIDL call failed").map_err(zx::Status::from_raw),
+                    Ok(())
+                );
 
                 root.open(
                     OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
@@ -1001,7 +1007,10 @@ mod tests {
                 .await;
                 let status = file.truncate(5 * 1024 * 1024).await.expect("truncate failed");
                 zx::Status::ok(status).expect("file truncate failed");
-                assert_eq!(file.close().await.expect("FIDL call failed"), 0);
+                assert_eq!(
+                    file.close().await.expect("FIDL call failed").map_err(zx::Status::from_raw),
+                    Ok(())
+                );
 
                 root.open(
                     OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,

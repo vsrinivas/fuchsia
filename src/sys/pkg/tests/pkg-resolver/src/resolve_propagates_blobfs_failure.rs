@@ -197,10 +197,10 @@ async fn handle_file_req_fail_truncate(call_count: Arc<AtomicU64>, req: FileRequ
             call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             responder.send(Status::NO_MEMORY.into_raw()).expect("send truncate response");
         }
-        FileRequest::Close { responder } => {
+        FileRequest::CloseDeprecated { responder } => {
             let _ = responder.send(Status::OK.into_raw());
         }
-        FileRequest::Close2 { responder } => {
+        FileRequest::Close { responder } => {
             let _ = responder.send(&mut Ok(()));
         }
         req => panic!("should only receive truncate requests: {:?}", req),
@@ -212,10 +212,10 @@ async fn handle_file_req_fail_write(call_count: Arc<AtomicU64>, req: FileRequest
         FileRequest::Truncate { length: _length, responder } => {
             responder.send(Status::OK.into_raw()).expect("send truncate response");
         }
-        FileRequest::Close { responder } => {
+        FileRequest::CloseDeprecated { responder } => {
             let _ = responder.send(Status::OK.into_raw());
         }
-        FileRequest::Close2 { responder } => {
+        FileRequest::Close { responder } => {
             let _ = responder.send(&mut Ok(()));
         }
         FileRequest::Write { data: _data, responder } => {

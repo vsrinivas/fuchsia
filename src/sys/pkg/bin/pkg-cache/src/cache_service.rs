@@ -900,22 +900,22 @@ async fn serve_write_blob(
 
                 // Close is allowed in any state, but the blob is only written if we were expecting
                 // a close.
-                (FileRequest::Close { responder }, State::ExpectClose) => {
+                (FileRequest::CloseDeprecated { responder }, State::ExpectClose) => {
                     close().await;
                     let _ = responder.send(Status::OK.into_raw());
                     return Ok(());
                 }
-                (FileRequest::Close2 { responder }, State::ExpectClose) => {
+                (FileRequest::Close { responder }, State::ExpectClose) => {
                     close().await;
                     let _ = responder.send(&mut Ok(()));
                     return Ok(());
                 }
-                (FileRequest::Close { responder }, _) => {
+                (FileRequest::CloseDeprecated { responder }, _) => {
                     close().await;
                     let _ = responder.send(Status::OK.into_raw());
                     return Err(ServeWriteBlobError::UnexpectedClose);
                 }
-                (FileRequest::Close2 { responder }, _) => {
+                (FileRequest::Close { responder }, _) => {
                     close().await;
                     let _ = responder.send(&mut Ok(()));
                     return Err(ServeWriteBlobError::UnexpectedClose);
@@ -2475,7 +2475,7 @@ mod serve_write_blob_tests {
                 if blobfs_response != Status::OK {
                     serve_fidl_request!(stream, {
                         FileRequest::Close { responder } => {
-                            responder.send(Status::OK.into_raw()).unwrap();
+                            responder.send(&mut Ok(())).unwrap();
                         },
                     });
                 }
@@ -2515,7 +2515,7 @@ mod serve_write_blob_tests {
                 if blobfs_response != Status::OK {
                     serve_fidl_request!(stream, {
                         FileRequest::Close { responder } => {
-                            responder.send(Status::OK.into_raw()).unwrap();
+                            responder.send(&mut Ok(())).unwrap();
                         },
                     });
                 }
@@ -2538,7 +2538,7 @@ mod serve_write_blob_tests {
         drop(proxy);
         serve_fidl_stream!(stream, {
             FileRequest::Close { responder } => {
-                responder.send(Status::OK.into_raw()).unwrap();
+                responder.send(&mut Ok(())).unwrap();
             },
         })
         .await;
@@ -2549,7 +2549,7 @@ mod serve_write_blob_tests {
         let ((), ()) = future::join(
             serve_fidl_stream!(stream, {
                 FileRequest::Close { responder } => {
-                    responder.send(Status::OK.into_raw()).unwrap();
+                    responder.send(&mut Ok(())).unwrap();
                 },
             }),
             async move {
@@ -2700,7 +2700,7 @@ mod serve_write_blob_tests {
         let () = executor.run_singlethreaded(async {
             serve_fidl_request!(blobfs_blob_stream, {
                 FileRequest::Close { responder } => {
-                    responder.send(Status::OK.into_raw()).unwrap();
+                    responder.send(&mut Ok(())).unwrap();
                 },
             })
         });
@@ -2710,7 +2710,7 @@ mod serve_write_blob_tests {
             executor.run_until_stalled(&mut task),
             Poll::Ready(Err(ServeWriteBlobError::UnexpectedClose))
         );
-        assert_matches!(executor.run_until_stalled(&mut close_fut), Poll::Ready(Ok(0)));
+        assert_matches!(executor.run_until_stalled(&mut close_fut), Poll::Ready(Ok(Ok(()))));
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Arbitrary)]

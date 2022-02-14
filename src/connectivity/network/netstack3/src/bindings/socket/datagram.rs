@@ -1041,12 +1041,12 @@ where
                             let cloned_worker = self.clone().await;
                             self.clone_spawn(flags, object, cloned_worker);
                         }
-                        fposix_socket::DatagramSocketRequest::Close { responder } => {
+                        fposix_socket::DatagramSocketRequest::CloseDeprecated { responder } => {
                             let () = self.make_handler().await.close();
                             responder_send!(responder, zx::Status::OK.into_raw());
                             return Ok(());
                         }
-                        fposix_socket::DatagramSocketRequest::Close2 { responder } => {
+                        fposix_socket::DatagramSocketRequest::Close { responder } => {
                             let () = self.make_handler().await.close();
                             responder_send!(responder, &mut Ok(()));
                             return Ok(());
@@ -1880,7 +1880,6 @@ where
 mod tests {
     use super::*;
 
-    use anyhow::Context as _;
     use fidl::{
         endpoints::{Proxy, ServerEnd},
         AsyncChannel,
@@ -2517,9 +2516,9 @@ mod tests {
         let () = bob_socket
             .close()
             .await
-            .context("FIDL error")
-            .and_then(|s| zx::Status::ok(s).context("close failed"))
-            .expect("failed to close Bob's socket");
+            .expect("FIDL error")
+            .map_err(zx::Status::from_raw)
+            .expect("close failed");
 
         assert_eq!(
             bob_cloned
@@ -2538,9 +2537,9 @@ mod tests {
         let () = alice_cloned
             .close()
             .await
-            .context("FIDL error")
-            .and_then(|s| zx::Status::ok(s).context("close failed"))
-            .expect("failed to close");
+            .expect("FIDL error")
+            .map_err(zx::Status::from_raw)
+            .expect("close failed");
         assert_eq!(
             fasync::OnSignals::new(&alice_events, ZXSIO_SIGNAL_INCOMING).await,
             Ok(ZXSIO_SIGNAL_INCOMING | ZXSIO_SIGNAL_OUTGOING)
@@ -2574,15 +2573,15 @@ mod tests {
         let () = alice_socket
             .close()
             .await
-            .context("FIDL error")
-            .and_then(|s| zx::Status::ok(s).context("close failed"))
-            .expect("failed to close");
+            .expect("FIDL error")
+            .map_err(zx::Status::from_raw)
+            .expect("close failed");
         let () = bob_cloned
             .close()
             .await
-            .context("FIDL error")
-            .and_then(|s| zx::Status::ok(s).context("close failed"))
-            .expect("failed to close");
+            .expect("FIDL error")
+            .map_err(zx::Status::from_raw)
+            .expect("close failed");
 
         // But the sockets should have gone here.
         for i in 0..2 {
@@ -2623,9 +2622,9 @@ mod tests {
         let () = socket
             .close()
             .await
-            .context("FIDL error")
-            .and_then(|s| zx::Status::ok(s).context("close failed"))
-            .expect("failed to close the socket");
+            .expect("FIDL error")
+            .map_err(zx::Status::from_raw)
+            .expect("close failed");
         let _: fidl::Error = socket
             .close()
             .await
@@ -2645,9 +2644,9 @@ mod tests {
         let () = cloned
             .close()
             .await
-            .context("FIDL error")
-            .and_then(|s| zx::Status::ok(s).context("close failed"))
-            .expect("failed to close the socket");
+            .expect("FIDL error")
+            .map_err(zx::Status::from_raw)
+            .expect("close failed");
         // Now it should become empty
         test_stack
             .with_ctx(|ctx| {
@@ -2681,9 +2680,9 @@ mod tests {
         let () = cloned
             .close()
             .await
-            .context("FIDL error")
-            .and_then(|s| zx::Status::ok(s).context("close failed"))
-            .expect("failed to close");
+            .expect("FIDL error")
+            .map_err(zx::Status::from_raw)
+            .expect("close failed");
         // No socket should be there now.
         test_stack
             .with_ctx(|ctx| {
@@ -2739,9 +2738,9 @@ mod tests {
         let () = socket
             .close()
             .await
-            .context("FIDL error")
-            .and_then(|s| zx::Status::ok(s).context("close failed"))
-            .expect("failed to close");
+            .expect("FIDL error")
+            .map_err(zx::Status::from_raw)
+            .expect("close failed");
 
         // make sure we don't leak anything.
         test_stack

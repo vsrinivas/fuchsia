@@ -154,7 +154,7 @@ func (d *directoryWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithC
 	return nil
 }
 
-func (d *directoryWrapper) Close(fidl.Context) (int32, error) {
+func (d *directoryWrapper) CloseDeprecated(fidl.Context) (int32, error) {
 	err := d.dir.Close()
 
 	d.cancel()
@@ -163,16 +163,16 @@ func (d *directoryWrapper) Close(fidl.Context) (int32, error) {
 	return int32(errorToZx(err)), nil
 }
 
-func (d *directoryWrapper) Close2(fidl.Context) (io.Node2Close2Result, error) {
+func (d *directoryWrapper) Close(fidl.Context) (io.Node2CloseResult, error) {
 	status := int32(errorToZx(d.dir.Close()))
 
 	d.cancel()
 	d.clearCookie()
 
 	if status == 0 {
-		return io.Node2Close2ResultWithResponse(io.Node2Close2Response{}), nil
+		return io.Node2CloseResultWithResponse(io.Node2CloseResponse{}), nil
 	} else {
-		return io.Node2Close2ResultWithErr(status), nil
+		return io.Node2CloseResultWithErr(status), nil
 	}
 }
 
@@ -459,7 +459,7 @@ func (f *fileWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithCtxInt
 	return nil
 }
 
-func (f *fileWrapper) Close(fidl.Context) (int32, error) {
+func (f *fileWrapper) CloseDeprecated(fidl.Context) (int32, error) {
 	err := f.file.Close()
 
 	f.cancel()
@@ -467,15 +467,15 @@ func (f *fileWrapper) Close(fidl.Context) (int32, error) {
 	return int32(errorToZx(err)), nil
 }
 
-func (f *fileWrapper) Close2(fidl.Context) (io.Node2Close2Result, error) {
+func (f *fileWrapper) Close(fidl.Context) (io.Node2CloseResult, error) {
 	status := int32(errorToZx(f.file.Close()))
 
 	f.cancel()
 
 	if status == 0 {
-		return io.Node2Close2ResultWithResponse(io.Node2Close2Response{}), nil
+		return io.Node2CloseResultWithResponse(io.Node2CloseResponse{}), nil
 	} else {
-		return io.Node2Close2ResultWithErr(status), nil
+		return io.Node2CloseResultWithErr(status), nil
 	}
 }
 

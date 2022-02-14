@@ -155,9 +155,9 @@ mod test {
 
             // Closing file should succeed
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Close { responder })) = request {
+            if let Ok(Some(FileRequest::CloseDeprecated { responder })) = request {
                 responder.send(0).unwrap();
-            } else if let Ok(Some(FileRequest::Close2 { responder })) = request {
+            } else if let Ok(Some(FileRequest::Close { responder })) = request {
                 responder.send(&mut Ok(())).unwrap();
             } else {
                 panic!("did not get close request: {:?}", request)
@@ -188,7 +188,7 @@ mod test {
             // Closing file should succeed
             let request = file.try_next().await;
             if let Ok(Some(FileRequest::Close { responder })) = request {
-                responder.send(0).unwrap();
+                responder.send(&mut Ok(())).unwrap();
             } else {
                 panic!("did not get close request: {:?}", request)
             }

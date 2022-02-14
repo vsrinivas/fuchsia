@@ -25,14 +25,15 @@ class TestFileServerBase : public fidl::testing::WireTestBase<fuchsia_io::File> 
   }
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void CloseDeprecated(CloseDeprecatedRequestView request,
+                       CloseDeprecatedCompleter::Sync& completer) override {
     completer.Reply(ZX_OK);
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
   }
 
   // Exercised by |zxio_close|.
-  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     completer.ReplySuccess();
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);

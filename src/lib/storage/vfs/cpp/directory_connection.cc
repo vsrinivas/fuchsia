@@ -101,7 +101,8 @@ void DirectoryConnection::Clone(CloneRequestView request, CloneCompleter::Sync& 
   Connection::NodeClone(request->flags, std::move(request->object));
 }
 
-void DirectoryConnection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
+void DirectoryConnection::CloseDeprecated(CloseDeprecatedRequestView request,
+                                          CloseDeprecatedCompleter::Sync& completer) {
   auto result = Connection::NodeClose();
   if (result.is_error()) {
     completer.Reply(result.error());
@@ -110,7 +111,7 @@ void DirectoryConnection::Close(CloseRequestView request, CloseCompleter::Sync& 
   }
 }
 
-void DirectoryConnection::Close2(Close2RequestView request, Close2Completer::Sync& completer) {
+void DirectoryConnection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   auto result = Connection::NodeClose();
   if (result.is_error()) {
     completer.ReplyError(result.error());

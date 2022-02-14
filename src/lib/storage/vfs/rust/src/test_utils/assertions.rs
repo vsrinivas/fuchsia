@@ -306,9 +306,12 @@ macro_rules! assert_close {
     ($proxy:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let status = $proxy.close().await.expect("close failed");
-
-        assert_eq!(Status::from_raw(status), Status::OK);
+        let () = $proxy
+            .close()
+            .await
+            .expect("close failed")
+            .map_err(Status::from_raw)
+            .expect("close error");
     }};
 }
 

@@ -34,11 +34,12 @@ class DatagramSocketServer final
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+  void CloseDeprecated(CloseDeprecatedRequestView request,
+                       CloseDeprecatedCompleter::Sync& completer) final {
     completer.Reply(ZX_OK);
     completer.Close(ZX_OK);
   }
-  void Close2(Close2RequestView request, Close2Completer::Sync& completer) final {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
     completer.ReplySuccess();
     completer.Close(ZX_OK);
   }
@@ -129,11 +130,12 @@ class StreamSocketServer final
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void CloseDeprecated(CloseDeprecatedRequestView request,
+                       CloseDeprecatedCompleter::Sync& completer) override {
     completer.Reply(ZX_OK);
     completer.Close(ZX_OK);
   }
-  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     completer.ReplySuccess();
     completer.Close(ZX_OK);
   }
@@ -230,11 +232,12 @@ class RawSocketServer final : public fidl::testing::WireTestBase<fuchsia_posix_s
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+  void CloseDeprecated(CloseDeprecatedRequestView request,
+                       CloseDeprecatedCompleter::Sync& completer) final {
     completer.Reply(ZX_OK);
     completer.Close(ZX_OK);
   }
-  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     completer.ReplySuccess();
     completer.Close(ZX_OK);
   }
@@ -328,11 +331,12 @@ class PacketSocketServer final
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+  void CloseDeprecated(CloseDeprecatedRequestView request,
+                       CloseDeprecatedCompleter::Sync& completer) final {
     completer.Reply(ZX_OK);
     completer.Close(ZX_OK);
   }
-  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     completer.ReplySuccess();
     completer.Close(ZX_OK);
   }

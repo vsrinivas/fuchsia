@@ -300,11 +300,11 @@ func TestEndpoint_Close(t *testing.T) {
 	}
 	defer func() {
 		func() {
-			status, err := s.Close(context.Background())
+			result, err := s.Close(context.Background())
 			if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrPeerClosed {
 				return
 			}
-			t.Errorf("s.Close() = (%s, %v)", zx.Status(status), err)
+			t.Errorf("s.Close() = (%#v, %v)", result, err)
 		}()
 		if err := s.Channel.Close(); err != nil {
 			t.Errorf("s.Channel.Close() = %s", err)
@@ -335,10 +335,10 @@ func TestEndpoint_Close(t *testing.T) {
 	}
 
 	// Close the original referent.
-	if status, err := s.Close(context.Background()); err != nil {
+	if result, err := s.Close(context.Background()); err != nil {
 		t.Fatalf("s.Close() = %s", err)
-	} else if status := zx.Status(status); status != zx.ErrOk {
-		t.Fatalf("s.Close() = %s", status)
+	} else if result.Which() != io.Node2CloseResultResponse {
+		t.Fatalf("s.Close() = %s", zx.Status(result.Err))
 	}
 
 	// There's still a referent.

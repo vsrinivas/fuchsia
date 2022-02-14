@@ -923,7 +923,12 @@ mod tests {
         dir.clone().open(scope.clone(), OPEN_RIGHT_READABLE, 0, Path::dot(), server_end);
         let scope_clone = scope.clone();
 
-        Status::ok(proxy.close().await.expect("Send request OK")).expect("First close OK");
+        proxy
+            .close()
+            .await
+            .expect("Send request OK")
+            .map_err(Status::from_raw)
+            .expect("First close OK");
         let (proxy, server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().unwrap();
         dir.clone().open(
@@ -933,7 +938,12 @@ mod tests {
             Path::validate_and_split("test").unwrap(),
             server_end,
         );
-        Status::ok(proxy.close().await.expect("Send request OK")).expect("Second close OK");
+        proxy
+            .close()
+            .await
+            .expect("Send request OK")
+            .map_err(Status::from_raw)
+            .expect("Second close OK");
         dir.close().expect("Close OK");
     }
 }

@@ -88,7 +88,7 @@ protocol Node2 {
     ///
     /// This method does not require any rights.
     @selector("fuchsia.io/Node.Close")
-    Close2() -> (struct {}) error zx.status;
+    Close() -> (struct {}) error zx.status;
 
     /// Returns extra connection information and auxiliary handles.
     ///

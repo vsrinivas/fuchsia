@@ -380,11 +380,13 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
     };
 
     let (open, read) = join!(open, read);
-    let close_result = file.close().await.context("file close to respond");
+    let close_result = file.close().await;
     let result = open.and(read)?;
     // Only check close_result if everything that came before it looks good.
-    Status::ok(close_result?)
-        .map_err(|status| format_err!("unable to close {:?}: {:?}", path, status))?;
+    let close_result = close_result.context("file close to respond")?;
+    close_result.map_err(|status| {
+        format_err!("unable to close {:?}: {:?}", path, zx::Status::from_raw(status))
+    })?;
     Ok(result)
 }
 

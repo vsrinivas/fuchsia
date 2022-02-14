@@ -376,7 +376,10 @@ pub mod test {
         )
         .expect(&format!("create file {}", path.display()));
         file.write(data).await.expect(&format!("write file {}", path.display()));
-        file.close().await.expect(&format!("close file {}", path.display()));
+        file.close()
+            .await
+            .expect(&format!("close file {}", path.display()))
+            .expect(&format!("close file {}", path.display()));
     }
 
     #[fuchsia::test]

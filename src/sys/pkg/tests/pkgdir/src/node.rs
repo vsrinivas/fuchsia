@@ -252,8 +252,7 @@ async fn close_per_package_source(source: PackageSource) {
         let node =
             io_util::directory::open_node(root_dir, path, OPEN_RIGHT_READABLE, mode).await.unwrap();
 
-        let status = node.close().await.unwrap();
-        let () = zx::Status::ok(status).unwrap();
+        let () = node.close().await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
         assert_matches::assert_matches!(
             node.close().await,

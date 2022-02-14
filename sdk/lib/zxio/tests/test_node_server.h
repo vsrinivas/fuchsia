@@ -19,14 +19,15 @@ class CloseOnlyNodeServer : public fidl::testing::WireTestBase<fuchsia_io::Node>
   }
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+  void CloseDeprecated(CloseDeprecatedRequestView request,
+                       CloseDeprecatedCompleter::Sync& completer) final {
     completer.Reply(ZX_OK);
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
   }
 
   // Exercised by |zxio_close|.
-  void Close2(Close2RequestView request, Close2Completer::Sync& completer) final {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
     completer.ReplySuccess();
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);

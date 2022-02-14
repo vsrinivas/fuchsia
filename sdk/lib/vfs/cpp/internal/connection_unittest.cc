@@ -91,9 +91,10 @@ TEST(ConenctionTest, ConnectionPassedErrorInClose) {
   loop.StartThread("vfs test thread");
   fuchsia::io::NodeSyncPtr ptr;
   ASSERT_EQ(ZX_OK, node.Serve(0, ptr.NewRequest().TakeChannel(), loop.dispatcher()));
-  zx_status_t status = -1;
-  ASSERT_EQ(ZX_OK, ptr->Close(&status));
-  ASSERT_EQ(ZX_ERR_UNAVAILABLE, status);
+  fuchsia::io::Node2_Close_Result result;
+  ASSERT_EQ(ZX_OK, ptr->Close(&result));
+  ASSERT_TRUE(result.is_err());
+  ASSERT_EQ(ZX_ERR_UNAVAILABLE, result.err());
 }
 
 }  // namespace

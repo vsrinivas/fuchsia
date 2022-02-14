@@ -66,10 +66,9 @@ class Incoming {
   }
 
   /// Terminates connection and return Zircon status.
-  Future<int> close() async {
-    final status = await _dirProxy.close();
+  Future<void> close() async {
+    await _dirProxy.close();
     _dirProxy.ctrl.close();
-    return status;
   }
 
   /// Connects to the incoming service specified by [serviceProxy].

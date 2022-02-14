@@ -521,10 +521,10 @@ async fn serve_failing_blobfs(
             DirectoryRequest::Clone { object, flags, .. } => {
                 launch_cloned_blobfs(object, flags, open_flags)
             }
-            DirectoryRequest::Close { responder } => {
+            DirectoryRequest::CloseDeprecated { responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing close")?
             }
-            DirectoryRequest::Close2 { responder } => {
+            DirectoryRequest::Close { responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing close")?
             }
             DirectoryRequest::Describe { responder } => {

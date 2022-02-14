@@ -88,7 +88,8 @@ TEST(NetStreamTest, RaceClose) {
       if (zx_status_t status = response.status(); status != ZX_OK) {
         EXPECT_STATUS(status, ZX_ERR_PEER_CLOSED);
       } else {
-        EXPECT_OK(response.Unwrap()->s);
+        EXPECT_TRUE(response.Unwrap()->result.is_response())
+            << zx_status_get_string(response->result.err());
       }
     });
   }
@@ -217,7 +218,8 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
 
   auto close_response = client->Close();
   EXPECT_OK(close_response.status());
-  EXPECT_OK(close_response.Unwrap()->s);
+  EXPECT_TRUE(close_response.Unwrap()->result.is_response())
+      << zx_status_get_string(close_response->result.err());
 
   // We still have `clone`, nothing should be closed yet.
   ASSERT_STATUS(TypeParam::handle(node_info).wait_one(TypeParam::peer_closed(),
@@ -361,7 +363,8 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
   for (auto& client : clients) {
     auto response = client->Close();
     EXPECT_OK(response.status());
-    EXPECT_OK(response.Unwrap()->s);
+    EXPECT_TRUE(response.Unwrap()->result.is_response())
+        << zx_status_get_string(response->result.err());
   }
 
   ASSERT_EQ(close(connfd.release()), 0) << strerror(errno);

@@ -38,8 +38,7 @@ void main() {
     // our buffer should contain old string
     expect(file.buffer, oldStr);
 
-    var closeResponse = await proxy.close();
-    expect(closeResponse, ZX.OK);
+    await proxy.close();
 
     // our buffer should contain new string
     expect(file.buffer, newStr);

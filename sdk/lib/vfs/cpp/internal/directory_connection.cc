@@ -32,12 +32,12 @@ void DirectoryConnection::Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::
   Connection::Clone(vn_, flags, object.TakeChannel(), binding_.dispatcher());
 }
 
-void DirectoryConnection::Close(CloseCallback callback) {
-  Connection::Close(vn_, std::move(callback));
+void DirectoryConnection::CloseDeprecated(CloseDeprecatedCallback callback) {
+  Connection::CloseDeprecated(vn_, std::move(callback));
 }
 
-void DirectoryConnection::Close2(Close2Callback callback) {
-  Connection::Close2(vn_, std::move(callback));
+void DirectoryConnection::Close(CloseCallback callback) {
+  Connection::Close(vn_, std::move(callback));
 }
 
 void DirectoryConnection::Describe(DescribeCallback callback) {

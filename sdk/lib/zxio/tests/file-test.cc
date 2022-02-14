@@ -32,15 +32,16 @@ class CloseCountingFileServer : public zxio_tests::TestFileServerBase {
   virtual ~CloseCountingFileServer() = default;
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+  void CloseDeprecated(CloseDeprecatedRequestView request,
+                       CloseDeprecatedCompleter::Sync& completer) final {
     num_close_.fetch_add(1);
-    zxio_tests::TestFileServerBase::Close(request, completer);
+    zxio_tests::TestFileServerBase::CloseDeprecated(request, completer);
   }
 
   // Exercised by |zxio_close|.
-  void Close2(Close2RequestView request, Close2Completer::Sync& completer) final {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
     num_close_.fetch_add(1);
-    zxio_tests::TestFileServerBase::Close2(request, completer);
+    zxio_tests::TestFileServerBase::Close(request, completer);
   }
 
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {

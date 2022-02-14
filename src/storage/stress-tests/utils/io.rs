@@ -292,7 +292,7 @@ impl File {
     // Gracefully close the file by informing the filesystem
     pub async fn close(self) -> Result<(), Status> {
         match self.proxy.close().await {
-            Ok(raw_status_code) => Status::ok(raw_status_code),
+            Ok(result) => result.map_err(Status::from_raw),
             Err(e) => {
                 if e.is_closed() {
                     Err(Status::PEER_CLOSED)

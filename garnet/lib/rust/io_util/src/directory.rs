@@ -203,7 +203,7 @@ pub fn clone_onto_no_describe(
 
 /// Gracefully closes the directory proxy from the remote end.
 pub async fn close(dir: DirectoryProxy) -> Result<(), CloseError> {
-    let result = dir.close2().await.map_err(CloseError::SendCloseRequest)?;
+    let result = dir.close().await.map_err(CloseError::SendCloseRequest)?;
     result.map_err(|s| CloseError::CloseError(zx_status::Status::from_raw(s)))
 }
 

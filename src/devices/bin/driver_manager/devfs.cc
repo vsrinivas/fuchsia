@@ -96,8 +96,9 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   void DetachFromDevnode();
 
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;
+  void CloseDeprecated(CloseDeprecatedRequestView request,
+                       CloseDeprecatedCompleter::Sync& completer) override;
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
-  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override;
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override;
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
@@ -752,12 +753,13 @@ void DcIostate::Describe(DescribeRequestView request, DescribeCompleter::Sync& c
   completer.Reply(std::move(node_info));
 }
 
-void DcIostate::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
+void DcIostate::CloseDeprecated(CloseDeprecatedRequestView request,
+                                CloseDeprecatedCompleter::Sync& completer) {
   completer.Reply(ZX_OK);
   completer.Close(ZX_OK);
 }
 
-void DcIostate::Close2(Close2RequestView request, Close2Completer::Sync& completer) {
+void DcIostate::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   completer.ReplySuccess();
   completer.Close(ZX_OK);
 }

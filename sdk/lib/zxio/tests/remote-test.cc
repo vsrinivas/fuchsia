@@ -28,7 +28,8 @@ class TestServerBase : public fidl::WireServer<fio::Node> {
   virtual ~TestServerBase() = default;
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void CloseDeprecated(CloseDeprecatedRequestView request,
+                       CloseDeprecatedCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Reply(ZX_OK);
     // After the reply, we should close the connection.
@@ -36,7 +37,7 @@ class TestServerBase : public fidl::WireServer<fio::Node> {
   }
 
   // Exercised by |zxio_close|.
-  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.ReplySuccess();
     // After the reply, we should close the connection.

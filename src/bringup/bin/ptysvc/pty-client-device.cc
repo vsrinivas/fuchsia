@@ -105,11 +105,12 @@ void PtyClientDevice::Clone(CloneRequestView request, CloneCompleter::Sync& comp
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
+void PtyClientDevice::CloseDeprecated(CloseDeprecatedRequestView request,
+                                      CloseDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::Close2(Close2RequestView request, Close2Completer::Sync& completer) {
+void PtyClientDevice::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

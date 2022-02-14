@@ -387,7 +387,7 @@ mod tests {
                 let (s, _) = file_proxy.write(b"write_only").await?;
                 assert_eq!(zx_status::Status::OK, zx_status::Status::from_raw(s));
             }
-            assert!(file_proxy.close2().await?.is_ok());
+            assert_eq!(file_proxy.close().await?, Ok(()));
         }
         Ok(())
     }

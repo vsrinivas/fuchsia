@@ -178,8 +178,8 @@ where
                 fuchsia_trace::duration!("storage", "Directory::Clone");
                 self.handle_clone(flags, 0, object);
             }
-            DirectoryRequest::Close { responder } => {
-                fuchsia_trace::duration!("storage", "Directory::Close");
+            DirectoryRequest::CloseDeprecated { responder } => {
+                fuchsia_trace::duration!("storage", "Directory::CloseDeprecated");
                 let status = match self.directory.close() {
                     Ok(()) => Status::OK,
                     Err(e) => e,
@@ -187,8 +187,8 @@ where
                 responder.send(status.into_raw())?;
                 return Ok(ConnectionState::Closed);
             }
-            DirectoryRequest::Close2 { responder } => {
-                fuchsia_trace::duration!("storage", "Directory::Close2");
+            DirectoryRequest::Close { responder } => {
+                fuchsia_trace::duration!("storage", "Directory::Close");
                 responder.send(&mut self.directory.close().map_err(|status| status.into_raw()))?;
                 return Ok(ConnectionState::Closed);
             }

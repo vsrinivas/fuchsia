@@ -71,8 +71,7 @@ async fn write_blob(contents: &[u8], file: FileProxy) -> Result<(), zx::Status> 
         _ => zx::Status::INTERNAL,
     })?;
 
-    let s = file.close().await.unwrap();
-    assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
+    let () = file.close().await.unwrap().map_err(zx::Status::from_raw).unwrap();
     Ok(())
 }
 

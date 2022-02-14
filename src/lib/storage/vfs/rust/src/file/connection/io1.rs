@@ -221,16 +221,16 @@ impl<T: 'static + File> FileConnection<T> {
                 fuchsia_trace::duration!("storage", "File::Clone");
                 self.handle_clone(self.flags, flags, object);
             }
-            FileRequest::Close { responder } => {
-                fuchsia_trace::duration!("storage", "File::Close");
+            FileRequest::CloseDeprecated { responder } => {
+                fuchsia_trace::duration!("storage", "File::CloseDeprecated");
                 let status = self.file.close().await.err().unwrap_or(zx::Status::OK);
                 // We are going to close the connection anyways, so there is no way to handle this
                 // error.  TODO We may want to send it in an epitaph.
                 let _ = responder.send(status.into_raw());
                 return Ok(ConnectionState::Closed);
             }
-            FileRequest::Close2 { responder } => {
-                fuchsia_trace::duration!("storage", "File::Close2");
+            FileRequest::Close { responder } => {
+                fuchsia_trace::duration!("storage", "File::Close");
                 responder.send(&mut self.file.close().await.map_err(|status| status.into_raw()))?;
                 return Ok(ConnectionState::Closed);
             }
@@ -848,8 +848,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_close_succeeds() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
-        let status = env.proxy.close().await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let () = env.proxy.close().await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
@@ -861,8 +860,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_close_fails() {
         let env = init_mock_file(Box::new(only_allow_init), OPEN_RIGHT_READABLE);
-        let status = env.proxy.close().await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::IO);
+        let status = env.proxy.close().await.unwrap().map_err(zx::Status::from_raw);
+        assert_eq!(status, Err(zx::Status::IO));
 
         let events = env.file.operations.lock().unwrap();
         assert_eq!(

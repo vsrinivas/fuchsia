@@ -998,7 +998,10 @@ mod tests {
                         "foo",
                     )
                     .await;
-                    assert_eq!(file.close().await.expect("FIDL call failed"), 0);
+                    assert_eq!(
+                        file.close().await.expect("FIDL call failed").map_err(Status::from_raw),
+                        Ok(())
+                    );
                     root.unlink("foo", UnlinkOptions::EMPTY)
                         .await
                         .expect("FIDL call failed")
