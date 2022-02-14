@@ -115,7 +115,7 @@ To create a component:
 First you'll implement the behavior of the Echo protocol. In Rust, this is expressed
 as code that can handle the protocol's associated request stream type, which in this case is an
 `EchoRequestStream`. This type is a stream of Echo requests, i.e. it implements
-`futures::Stream<Item = Rersult<EchoRequest, fidl::Error>>`.
+`futures::Stream<Item = Result<EchoRequest, fidl::Error>>`.
 
 You'll implement `run_echo_server()` to handle the request stream,
 which is an async function that handles incoming service requests.
@@ -280,7 +280,7 @@ function call:
 
 * The component manager must also know *where* this service is going to be available.
   Since this is an outgoing service (i.e. a service that is offered to other components),
-  the service must at a path inside `/svc` directory. `add_fidl_service` obtains this
+  the service must add a path inside `/svc` directory. `add_fidl_service` obtains this
   path implicitly by taking the [`SERVICE_NAME`](https://fuchsia-docs.firebaseapp.com/rust/fidl/endpoints/trait.DiscoverableService.html)
   associated with the closure input argument.
   In this case, the closure argument (`IncomingService::Echo`) has an input argument of type
