@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -10,7 +9,12 @@
 #include <lib/zx/channel.h>
 #include <zircon/processargs.h>
 
-// Implementation of the HLCPP fuchsia.process.lifecycle FIDL protocol
+// [START imports]
+#include <fuchsia/process/lifecycle/cpp/fidl.h>
+// [END imports]
+
+// [START lifecycle_handler]
+// Implementation of the fuchsia.process.lifecycle FIDL protocol
 class LifecycleManager : public fuchsia::process::lifecycle::Lifecycle {
  public:
   explicit LifecycleManager(async::Loop* loop) : loop_(loop) {
@@ -37,6 +41,7 @@ class LifecycleManager : public fuchsia::process::lifecycle::Lifecycle {
   async::Loop* loop_;
   fidl::BindingSet<fuchsia::process::lifecycle::Lifecycle> bindings_;
 };
+// [END lifecycle_handler]
 
 int main(int argc, const char** argv) {
   // Create the main async event loop.

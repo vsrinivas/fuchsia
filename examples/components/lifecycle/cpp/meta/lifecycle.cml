@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// lifecycle_cpp component manifest.
 // For information on manifest format and features,
 // see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
+
+// [START example_snippet]
 {
     include: [
         "inspect/client.shard.cml",
@@ -19,7 +20,7 @@
         // The binary to run for this component.
         binary: "bin/lifecycle_example_cpp",
 
-        // Subscribe to lifecycle events
+        // Subscribe to component lifecycle events
         lifecycle: { stop_event: "notify" },
     },
 
@@ -33,3 +34,5 @@
         },
     ],
 }
+
+// [END example_snippet]

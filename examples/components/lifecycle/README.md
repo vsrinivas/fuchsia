@@ -18,17 +18,17 @@ $ fx build
 Use `ffx component run` to launch this component into a restricted realm
 for development purposes:
 
--  **C++**
+-   **C++**
 
-```bash
-ffx component run fuchsia-pkg://fuchsia.com/lifecycle-example#meta/lifecycle_cpp.cm
-```
+    ```bash
+    ffx component run fuchsia-pkg://fuchsia.com/lifecycle-example#meta/lifecycle_cpp.cm
+    ```
 
--  **Rust**
+-   **Rust**
 
-```bash
-$ ffx component run fuchsia-pkg://fuchsia.com/lifecycle-example#meta/lifecycle_rust.cm
-```
+    ```bash
+    $ ffx component run fuchsia-pkg://fuchsia.com/lifecycle-example#meta/lifecycle_rust.cm
+    ```
 
 When the above command is run, you can see the following output with `fx log`:
 
@@ -39,28 +39,28 @@ When the above command is run, you can see the following output with `fx log`:
 
 To stop the component, use `ffx component stop`:
 
--  **C++**
+-   **C++**
 
-```bash
-ffx component stop /core/ffx-laboratory:lifecycle_cpp
-```
+    ```bash
+    ffx component stop /core/ffx-laboratory:lifecycle_cpp
+    ```
 
--  **Rust**
+-   **Rust**
 
-```bash
-$ ffx component stop /core/ffx-laboratory:lifecycle_rust
-```
+    ```bash
+    $ ffx component stop /core/ffx-laboratory:lifecycle_rust
+    ```
 
 When the above command is run, you can see the following output with `fx log`:
 
--  **C++**
+-   **C++**
 
-```bash
-[lifecycle] INFO: Received request to stop, adios!
-```
+    ```bash
+    [lifecycle] INFO: Received request to stop, adios!
+    ```
 
--  **Rust**
+-   **Rust**
 
-```bash
-[lifecycle] INFO: Received request to stop, bye bye!
-```
+    ```bash
+    [lifecycle] INFO: Received request to stop, bye bye!
+    ```

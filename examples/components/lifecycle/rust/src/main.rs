@@ -4,7 +4,6 @@
 
 use {
     fidl::{handle::AsyncChannel, prelude::*},
-    fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
     fuchsia_async::{self as fasync},
     fuchsia_runtime::{self as fruntime, HandleInfo, HandleType},
     fuchsia_zircon::{self as zx},
@@ -13,11 +12,14 @@ use {
     tracing::{error, info},
 };
 
-/// Example which takes the Lifecycle handle passed by the Runner. The program
-/// waits for a request on the channel to stop, then closes the channel and
-/// exits normally (vs abnormally).
+// [START imports]
+use fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream};
+// [END imports]
+
+// [START lifecycle_handler]
 #[fuchsia::component]
 async fn main() {
+    // Take the lifecycle handle provided by the runner
     match fruntime::take_startup_handle(HandleInfo::new(HandleType::Lifecycle, 0)) {
         Some(lifecycle_handle) => {
             info!("Lifecycle channel received.");
@@ -51,3 +53,4 @@ async fn main() {
         }
     }
 }
+// [END lifecycle_handler]

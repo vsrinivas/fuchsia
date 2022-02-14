@@ -191,24 +191,21 @@ ELF runner in Components v2.
     * {Rust}
 
       ```rust
-      use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
-      let lifecycle_channel = take_startup_handle(HandleInfo::new(HandleType::Lifecycle, 0));
-      // Serve the Lifecycle protocol on `lifecycle_channel`
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/lifecycle/rust/src/main.rs" region_tag="imports" adjust_indentation="auto" %}
+      // ...
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/lifecycle/rust/src/main.rs" region_tag="lifecycle_handler" adjust_indentation="auto" %}
       ```
-
-      A more complete sample is available in the [examples][rust-lifecycle].
 
     * {C++}
 
       ```cpp
-      #include <lib/zx/channel.h>
-      #include <zircon/processargs.h>
-      zx::channel lifecyecle_channel = zx_take_startup_handle(PA_LIFECYCLE);
-      // Serve the Lifecycle protocol on `lifecycle_channel`
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/lifecycle/cpp/main.cc" region_tag="imports" adjust_indentation="auto" %}
+      // ...
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/lifecycle/cpp/main.cc" region_tag="lifecycle_handler" adjust_indentation="auto" %}
       ```
 
-      You can refer to [fshost code][fshost-lifecycle] for a sample
-      implementation.
+Note: For a complete lifecycle example, see
+[`//examples/components/lifecycle`][lifecycle-example].
 
 More information about the Lifecycle protocol is available in the
 [ELF runner documentation][elf-runner-docs].
@@ -226,7 +223,6 @@ specific features your components may support:
 [eager-lifecycle]: /docs/concepts/components/v2/lifecycle.md#eager
 [eager-manifest]: https://fuchsia.dev/reference/cml#children
 [elf-runner-docs]: /docs/concepts/components/v2/elf_runner.md#lifecycle
-[fshost-lifecycle]: /src/storage/fshost/main.cc
 [glossary.environment]: /docs/glossary/README.md#environment
 [migrate-add-core]: /docs/development/components/v2/migration/components.md#add-core-direct
 [migrate-add-shard]: /docs/development/components/v2/migration/components.md#add-core-shard
@@ -234,6 +230,6 @@ specific features your components may support:
 [migrate-components-add]: /docs/development/components/v2/migration/components.md#add-component-to-topology
 [migrate-components-v1]: /docs/development/components/v2/migration/components.md#route-to-v1
 [migrate-features-directory]: /docs/development/components/v2/migration/features.md#directory-features
-[rust-lifecycle]: /examples/components/lifecycle
+[lifecycle-example]: /examples/components/lifecycle
 [src-security-policy]: /src/security/policy/component_manager_policy.json5
 [sysmgr-critical-components]: /docs/concepts/components/v1/sysmgr.md#critical_components
