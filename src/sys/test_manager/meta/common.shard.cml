@@ -116,7 +116,6 @@
             storage_id: "static_instance_id_or_moniker",
         },
         { protocol: "fuchsia.test.manager.Query" },
-        { protocol: "fuchsia.test.internal.Info" },
         { protocol: "fuchsia.test.manager.RunBuilder" },
     ],
     use: [
@@ -445,10 +444,6 @@
     expose: [
         {
             protocol: "fuchsia.test.manager.Query",
-            from: "self",
-        },
-        {
-            protocol: "fuchsia.test.internal.Info",
             from: "self",
         },
         {

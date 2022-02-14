@@ -10,22 +10,16 @@ source_set("lib") {
 
   sources = [
     "abstract_data_processor.h",
-    "cache.h",
     "common.h",
     "data_processor.cc",
     "data_processor.h",
     "data_processor_fidl.cc",
     "data_processor_fidl.h",
-    "debug_data.cc",
-    "debug_data.h",
-    "event_stream.cc",
-    "event_stream.h",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.debugdata",
     "//sdk/fidl/fuchsia.sys2",
-    "//sdk/fidl/fuchsia.test.internal",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
@@ -96,21 +90,6 @@ fuchsia_unittest_package("debug-data-rust-unittests") {
   manifest = "meta/debug_data_rust_unittests.cml"
 }
 
-executable("bin") {
-  testonly = true
-  output_name = "debug_data"
-  sources = [ "main.cc" ]
-
-  deps = [
-    ":lib",
-    "//sdk/fidl/fuchsia.sys2",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
 executable("debug_data_processor_bin") {
   testonly = true
   output_name = "debug_data_processor"
@@ -127,12 +106,6 @@ executable("debug_data_processor_bin") {
   ]
 }
 
-fuchsia_component("debug_data") {
-  testonly = true
-  deps = [ ":bin" ]
-  manifest = "meta/debug_data.cml"
-}
-
 fuchsia_component("debug_data_processor") {
   testonly = true
   deps = [ ":debug_data_processor_bin" ]
@@ -144,11 +117,8 @@ executable("test_bin") {
   output_name = "debug_data_unittests"
 
   sources = [
-    "cache_unittests.cc",
     "data_processor_fidl_unittests.cc",
     "data_processor_unittests.cc",
-    "debug_data_unittests.cc",
-    "event_stream_unittests.cc",
     "test_data_processor.h",
   ]
 

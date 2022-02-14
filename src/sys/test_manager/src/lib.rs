@@ -52,13 +52,12 @@ use {
     lazy_static::lazy_static,
     maplit::hashset,
     moniker::RelativeMonikerBase,
-    regex::Regex,
     std::{
         collections::{HashMap, HashSet},
         convert::{TryFrom, TryInto},
         sync::{
             atomic::{AtomicU32, AtomicU64, Ordering},
-            Arc, Mutex, Weak,
+            Arc, Weak,
         },
     },
     tracing::{debug, error, info, warn},
@@ -101,97 +100,6 @@ lazy_static! {
     .iter()
     .copied()
     .collect();
-}
-
-struct TestMapValue {
-    test_url: String,
-    can_be_deleted: bool,
-    last_accessed: fasync::Time,
-}
-
-/// Cache mapping test realm name to test url.
-/// This cache will run cleanup on constant intervals and delete entries which have been marked as
-/// stale and not accessed for `cleanup_interval` duration.
-/// We don't delete entries as soon as they are marked as stale because dependent
-/// service might still be processing requests.
-pub struct TestMap {
-    /// Key: test realm name
-    test_map: Mutex<HashMap<String, TestMapValue>>,
-
-    /// Interval after which cleanup is fired.
-    cleanup_interval: zx::Duration,
-}
-
-impl TestMap {
-    /// Create new instance of this object, wrap it in Arc and return.
-    /// 'cleanup_interval': Intervals after which cleanup should fire.
-    pub fn new(cleanup_interval: zx::Duration) -> Arc<Self> {
-        let s = Arc::new(Self { test_map: Mutex::new(HashMap::new()), cleanup_interval });
-        let weak = Arc::downgrade(&s);
-        let d = s.cleanup_interval.clone();
-        fasync::Task::spawn(async move {
-            let mut interval = fasync::Interval::new(d);
-            while let Some(_) = interval.next().await {
-                if let Some(s) = weak.upgrade() {
-                    s.run_cleanup();
-                } else {
-                    break;
-                }
-            }
-        })
-        .detach();
-        s
-    }
-
-    fn run_cleanup(&self) {
-        let mut test_map = self.test_map.lock().unwrap();
-        test_map.retain(|_, v| {
-            !(v.can_be_deleted && (v.last_accessed < fasync::Time::now() - self.cleanup_interval))
-        });
-    }
-
-    /// Insert into the cache. If key was already present will return old value.
-    pub fn insert(&self, test_name: String, test_url: String) -> Option<String> {
-        let mut test_map = self.test_map.lock().unwrap();
-        test_map
-            .insert(
-                test_name,
-                TestMapValue {
-                    test_url,
-                    can_be_deleted: false,
-                    last_accessed: fasync::Time::now(),
-                },
-            )
-            .map(|v| v.test_url)
-    }
-
-    /// Get `test_url` if present in the map.
-    pub fn get(&self, k: &str) -> Option<String> {
-        let mut test_map = self.test_map.lock().unwrap();
-        match test_map.get_mut(k) {
-            Some(v) => {
-                v.last_accessed = fasync::Time::now();
-                return Some(v.test_url.clone());
-            }
-            None => {
-                return None;
-            }
-        }
-    }
-
-    /// Delete cache entry without marking it as stale and waiting for cleanup.
-    pub fn delete(&self, k: &str) {
-        let mut test_map = self.test_map.lock().unwrap();
-        test_map.remove(k);
-    }
-
-    /// Mark cache entry as stale which would be deleted in future if not accessed.
-    pub fn mark_as_stale(&self, k: &str) {
-        let mut test_map = self.test_map.lock().unwrap();
-        if let Some(v) = test_map.get_mut(k) {
-            v.can_be_deleted = true;
-        }
-    }
 }
 
 struct Suite {
@@ -291,7 +199,6 @@ impl TestRunBuilder {
         mut controller: RunControllerRequestStream,
         debug_controller: ftest_internal::DebugDataSetControllerProxy,
         debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
-        test_map: Arc<TestMap>,
         inspect_node: self_diagnostics::RunInspectNode,
     ) {
         let (stop_sender, mut stop_recv) = oneshot::channel::<()>();
@@ -323,14 +230,7 @@ impl TestRunBuilder {
                 }
                 let instance_name = format!("{:?}-{:?}", run_id, suite_idx);
                 let suite_inspect = inspect_node_ref.new_suite(&instance_name, &suite.test_url);
-                run_single_suite(
-                    suite,
-                    &debug_controller,
-                    &instance_name,
-                    test_map.clone(),
-                    suite_inspect,
-                )
-                .await;
+                run_single_suite(suite, &debug_controller, &instance_name, suite_inspect).await;
             }
             debug_controller
                 .finish()
@@ -1009,7 +909,6 @@ async fn run_single_suite(
     suite: Suite,
     debug_controller: &ftest_internal::DebugDataSetControllerProxy,
     instance_name: &str,
-    test_map: Arc<TestMap>,
     inspect_node: self_diagnostics::SuiteInspectNode,
 ) {
     let (mut sender, recv) = mpsc::channel(1024);
@@ -1039,7 +938,6 @@ async fn run_single_suite(
             &test_url,
             facets,
             Some(instance_name),
-            test_map,
             resolver,
             above_root_capabilities_for_test,
         )
@@ -1048,7 +946,7 @@ async fn run_single_suite(
             Ok(instance) => {
                 inspect_node.set_execution_state(self_diagnostics::ExecutionState::RunTests);
                 let instance_ref = maybe_instance.insert(instance);
-                instance_ref.run_tests(options, sender, stop_recv).await;
+                instance_ref.run_tests(&test_url, options, sender, stop_recv).await;
                 inspect_node.set_execution_state(self_diagnostics::ExecutionState::TestsDone);
             }
             Err(e) => {
@@ -1099,7 +997,6 @@ async fn run_single_suite(
 /// Start test manager and serve it over `stream`.
 pub async fn run_test_manager(
     mut stream: ftest_manager::RunBuilderRequestStream,
-    test_map: Arc<TestMap>,
     resolver: Arc<ComponentResolverProxy>,
     debug_data_controller: Arc<ftest_internal::DebugDataControllerProxy>,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
@@ -1150,9 +1047,7 @@ pub async fn run_test_manager(
                 debug_data_controller.new_set(iterator_server, set_controller_server).unwrap();
                 let run_inspect = inspect_root
                     .new_run(&format!("run_{:?}", zx::Time::get_monotonic().into_nanos()));
-                builder
-                    .run(controller, debug_set_controller, debug_iterator, test_map, run_inspect)
-                    .await;
+                builder.run(controller, debug_set_controller, debug_iterator, run_inspect).await;
                 // clients should reconnect to run new tests.
                 break;
             }
@@ -1164,7 +1059,6 @@ pub async fn run_test_manager(
 /// Start test manager and serve it over `stream`.
 pub async fn run_test_manager_query_server(
     mut stream: ftest_manager::QueryRequestStream,
-    test_map: Arc<TestMap>,
     resolver: Arc<ComponentResolverProxy>,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 ) -> Result<(), TestManagerError> {
@@ -1184,7 +1078,6 @@ pub async fn run_test_manager_query_server(
                         &test_url,
                         facets,
                         None,
-                        test_map.clone(),
                         resolver.clone(),
                         above_root_capabilities_for_test.clone(),
                     )
@@ -1264,39 +1157,6 @@ pub async fn run_test_manager_query_server(
     Ok(())
 }
 
-/// Start test manager info server and serve it over `stream`.
-pub async fn run_test_manager_info_server(
-    mut stream: ftest_internal::InfoRequestStream,
-    test_map: Arc<TestMap>,
-) -> Result<(), TestManagerError> {
-    // This ensures all monikers are relative to test_manager and supports capturing the top-level
-    // name of the test realm.
-    let collection_names = TEST_TYPE_REALM_MAP.values().map(|v| *v).collect::<Vec<_>>();
-    let re = Regex::new(&format!(r"^\./(?:{}):(.*?)(/.*)*?$", collection_names.join("|"))).unwrap();
-    while let Some(event) = stream.try_next().await.map_err(TestManagerError::Stream)? {
-        match event {
-            ftest_internal::InfoRequest::GetTestUrl { moniker, responder } => {
-                if !re.is_match(&moniker) {
-                    responder
-                        .send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))
-                        .map_err(TestManagerError::Response)?;
-                    continue;
-                }
-
-                let cap = re.captures(&moniker).unwrap();
-                if let Some(s) = test_map.get(&cap[1]) {
-                    responder.send(&mut Ok(s)).map_err(TestManagerError::Response)?;
-                } else {
-                    responder
-                        .send(&mut Err(zx::sys::ZX_ERR_NOT_FOUND))
-                        .map_err(TestManagerError::Response)?;
-                }
-            }
-        }
-    }
-    Ok(())
-}
-
 /// A |RunningSuite| represents a launched test component.
 struct RunningSuite {
     instance: RealmInstance,
@@ -1307,23 +1167,9 @@ struct RunningSuite {
     custom_artifact_tokens: Vec<zx::EventPair>,
     /// Keep archive accessor which tests might use through weak references.
     archive_accessor: Arc<ArchiveAccessorProxy>,
-    /// Reference to an entry in the TestMap that marks it stale when the RunningSuite
-    /// drops out of scope.
-    test_map_entry: ScopedTestMapEntry,
 
     /// The test collection in which this suite is running.
     test_collection: &'static str,
-}
-
-/// A struct that exists purely to mark the instance in a test map stale when it
-/// goes out of scope. Drop isn't implemented directly on RunningSuite as the destroy
-/// method makes it impossible to implement.
-struct ScopedTestMapEntry(Arc<TestMap>, String);
-
-impl Drop for ScopedTestMapEntry {
-    fn drop(&mut self) {
-        self.0.mark_as_stale(&self.1);
-    }
 }
 
 impl RunningSuite {
@@ -1332,7 +1178,6 @@ impl RunningSuite {
         test_url: &str,
         facets: facet::SuiteFacets,
         instance_name: Option<&str>,
-        test_map: Arc<TestMap>,
         resolver: Arc<ComponentResolverProxy>,
         above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
     ) -> Result<Self, LaunchTestError> {
@@ -1363,9 +1208,6 @@ impl RunningSuite {
             Some(name) => builder.build_with_name(name).await,
         }
         .map_err(LaunchTestError::CreateTestRealm)?;
-        let test_name = instance.root.child_name().to_string();
-        test_map.insert(test_name.clone(), test_url.to_string());
-        let test_map_clone = test_map.clone();
         let connect_to_instance_services = async move {
             instance
                 .root
@@ -1374,10 +1216,6 @@ impl RunningSuite {
                 )
                 .map_err(LaunchTestError::ConnectToArchiveAccessor)?;
             Ok(RunningSuite {
-                test_map_entry: ScopedTestMapEntry(
-                    test_map,
-                    instance.root.child_name().to_string(),
-                ),
                 custom_artifact_tokens: vec![],
                 logs_iterator_task: None,
                 instance,
@@ -1386,20 +1224,16 @@ impl RunningSuite {
             })
         };
 
-        let running_test_result = connect_to_instance_services.await;
-        if running_test_result.is_err() {
-            test_map_clone.delete(&test_name);
-        }
-        running_test_result
+        connect_to_instance_services.await
     }
 
     async fn run_tests(
         &mut self,
+        test_url: &str,
         options: ftest_manager::RunOptions,
         mut sender: mpsc::Sender<Result<FidlSuiteEvent, LaunchError>>,
         mut stop_recv: oneshot::Receiver<()>,
     ) {
-        let test_url = self.test_map_entry.1.to_string();
         debug!("running test suite {}", test_url);
 
         let (log_iterator, syslog) = match options.log_iterator {
@@ -2262,113 +2096,9 @@ async fn gen_enclosing_env(handles: LocalComponentHandles) -> Result<(), Error> 
 #[cfg(test)]
 mod tests {
     use {
-        super::*, assert_matches::assert_matches, fasync::pin_mut,
-        fidl::endpoints::create_proxy_and_stream, ftest_internal::InfoMarker, maplit::hashset,
-        std::ops::Add, zx::DurationNum,
+        super::*, assert_matches::assert_matches, fidl::endpoints::create_proxy_and_stream,
+        maplit::hashset,
     };
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_info_server() {
-        let (proxy, stream) = create_proxy_and_stream::<InfoMarker>().unwrap();
-        let test_map = TestMap::new(10.seconds());
-        let test_map_clone = test_map.clone();
-        fasync::Task::local(async move {
-            run_test_manager_info_server(stream, test_map_clone).await.unwrap()
-        })
-        .detach();
-        test_map.insert("my_test".into(), "my_test_url".into());
-        assert_eq!(
-            proxy.get_test_url("./tests:not_available_realm/test_wrapper").await.unwrap(),
-            Err(zx::sys::ZX_ERR_NOT_FOUND)
-        );
-        assert_eq!(
-            proxy.get_test_url("./tests:my_test/test_wrapper").await.unwrap(),
-            Ok("my_test_url".into())
-        );
-        assert_eq!(
-            proxy.get_test_url("./tests:my_test/test_wrapper/my_component").await.unwrap(),
-            Ok("my_test_url".into())
-        );
-        assert_eq!(
-            proxy.get_test_url("./system-tests:my_test/test_wrapper/my_component").await.unwrap(),
-            Ok("my_test_url".into())
-        );
-        assert_eq!(
-            proxy.get_test_url("./tests/my_test/test_wrapper/my_component").await.unwrap(),
-            Err(zx::sys::ZX_ERR_NOT_SUPPORTED)
-        );
-        assert_eq!(
-            proxy.get_test_url("/tests:my_test/test_wrapper/my_component").await.unwrap(),
-            Err(zx::sys::ZX_ERR_NOT_SUPPORTED)
-        );
-        assert_eq!(
-            proxy
-                .get_test_url("./some-other-collection:my_test/test_wrapper/my_component")
-                .await
-                .unwrap(),
-            Err(zx::sys::ZX_ERR_NOT_SUPPORTED)
-        );
-    }
-
-    async fn dummy_fn() {}
-
-    #[test]
-    fn test_map_works() {
-        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
-        let test_map = TestMap::new(zx::Duration::from_seconds(10));
-
-        test_map.insert("my_test".into(), "my_test_url".into());
-        assert_eq!(test_map.get("my_test"), Some("my_test_url".into()));
-        assert_eq!(test_map.get("my_non_existent_test"), None);
-
-        // entry should not be deleted until it is marked as stale.
-        executor.set_fake_time(executor.now().add(12.seconds()));
-        executor.wake_next_timer();
-        let fut = dummy_fn();
-        pin_mut!(fut);
-        let _poll = executor.run_until_stalled(&mut fut);
-        assert_eq!(test_map.get("my_test"), Some("my_test_url".into()));
-
-        // only entry which was marked as stale should be deleted.
-        test_map.insert("other_test".into(), "other_test_url".into());
-        test_map.mark_as_stale("my_test");
-        executor.set_fake_time(executor.now().add(12.seconds()));
-        executor.wake_next_timer();
-        let fut = dummy_fn();
-        pin_mut!(fut);
-        let _poll = executor.run_until_stalled(&mut fut);
-        assert_eq!(test_map.get("my_test"), None);
-        assert_eq!(test_map.get("other_test"), Some("other_test_url".into()));
-
-        // entry should stay in cache for 10 seconds after marking it as stale.
-        executor.set_fake_time(executor.now().add(5.seconds()));
-        test_map.mark_as_stale("other_test");
-        executor.set_fake_time(executor.now().add(5.seconds()));
-        executor.wake_next_timer();
-        let fut = dummy_fn();
-        pin_mut!(fut);
-        let _poll = executor.run_until_stalled(&mut fut);
-        assert_eq!(test_map.get("other_test"), Some("other_test_url".into()));
-
-        // It has been marked as stale for 10 sec now, so can be deleted.
-        executor.set_fake_time(executor.now().add(11.seconds()));
-        executor.wake_next_timer();
-        let fut = dummy_fn();
-        pin_mut!(fut);
-        let _poll = executor.run_until_stalled(&mut fut);
-        assert_eq!(test_map.get("other_test"), None);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_map_delete() {
-        let test_map = TestMap::new(zx::Duration::from_seconds(10));
-        test_map.insert("my_test".into(), "my_test_url".into());
-        assert_eq!(test_map.get("my_test"), Some("my_test_url".into()));
-        test_map.insert("other_test".into(), "other_test_url".into());
-        test_map.delete("my_test");
-        assert_eq!(test_map.get("my_test"), None);
-        assert_eq!(test_map.get("other_test"), Some("other_test_url".into()));
-    }
 
     #[test]
     fn case_matcher_tests() {

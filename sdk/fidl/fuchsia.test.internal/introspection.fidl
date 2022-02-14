@@ -8,24 +8,6 @@ using fuchsia.component;
 using fuchsia.test.manager;
 using zx;
 
-/// Introspection API to get information about a test.
-@discoverable
-protocol Info {
-    /// Returns the URL of the test running in the realm designated by the 
-    /// `moniker`. The moniker should be relative to test manager.
-    /// The implementor may cache the URL of the test for some minutes
-    /// following the end of execution, but there are no guarantees.
-    /// On error returns:
-    /// `ZX_ERR_NOT_FOUND`: moniker matches no test realm.
-    /// `ZX_ERR_NOT_SUPPORTED`: Moniker is not relative to test_manager and
-    /// doesn't pertain to a test realm.
-    GetTestUrl(struct {
-        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
-    }) -> (struct {
-        url fuchsia.url.Url;
-    }) error zx.status;
-};
-
 /// `DebugDataController` is an internal fidl protocol exposed by the debug_data component.
 /// It allows defining sets of test realms for which debug data is collected. Test Manager uses
 /// this protocol to define isolated sets of debug data per test run, although in the future, it

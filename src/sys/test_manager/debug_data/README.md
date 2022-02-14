@@ -12,11 +12,8 @@ pulled off device.
 The debug_data components are delivered in the same package as `test_manager`,
 and should be considered an implementation detail of `test_manager`.
 
-Currently, there are three debug_data components:
- * *C++ debug_data* - the currently used component. As it lacks
- synchronization mechanisms that indicate when processing is complete, it
- is deprecated and will soon be removed.
- * *Rust debug_data* - the component that will replace the C++
+Currently, there are two debug_data components:
+ * *debug_data* - the component that will replace the C++
  debug_data component. It implements the
  [`fuchsia.test.internal.DebugDataController`][internal-fidl] protocol,
  which allows the caller to specify which realms to collect debug data for,
@@ -29,14 +26,11 @@ Currently, there are three debug_data components:
 
 ## Design
 
-As the *C++ debug_data* component will soon be removed, this section focuses on
-the design of the *Rust debug_data* component.
-
-The *Rust debug_data* component exposes the
+The *debug_data* component exposes the
 [`fuchsia.test.internal.DebugDataController`][internal-fidl] protocol, which
 adds the concept of a Set. A Set is a group of test realms for which
 to collect debug data. Sets provide isolation. For example, when two test runs
-are ocurring at the same time, collecting debug data in two separate sets
+are occurring at the same time, collecting debug data in two separate sets
 ensures that each run will see isolated results.
 
 `test_manager` creates a new Set for each test run, and reports the realms that
@@ -59,16 +53,13 @@ $ fx test debug-data-rust-unittests debug_data_unittests
 
 ## Source layout
 
-The entrypoint for each component is as follows:
- * *C++ debug_data* component - `main.cc`
- * *Rust debug_data* component - `src/main.rs`
+The entry point for each component is as follows:
+ * *debug_data* component - `src/main.rs`
  * *C++ debug_data_processor* component - `processor_main.cc`
 
 ## Future Work
 
- * Remove the *C++ debug_data* component
  * Move the *debug_data_processor* component to a new directory
- * Complete implementation of the *Rust debug_data* component
  * Either modularize how debug data is processed and merged, or remove
  merging altogether. This would support "pluggable" processing for different
  types of debug data.
