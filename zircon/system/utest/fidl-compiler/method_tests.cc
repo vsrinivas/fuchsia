@@ -16,6 +16,8 @@
 namespace {
 
 TEST(MethodTests, GoodValidComposeMethod) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 protocol HasComposeMethod1 {
@@ -25,7 +27,8 @@ protocol HasComposeMethod1 {
 protocol HasComposeMethod2 {
     compose() -> ();
 };
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_COMPILED(library);
 
   auto protocol1 = library.LookupProtocol("HasComposeMethod1");
@@ -42,6 +45,8 @@ protocol HasComposeMethod2 {
 }
 
 TEST(MethodTests, GoodValidStrictComposeMethod) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 protocol HasComposeMethod1 {
@@ -51,7 +56,8 @@ protocol HasComposeMethod1 {
 protocol HasComposeMethod2 {
     strict compose() -> ();
 };
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_COMPILED(library);
 
   auto protocol1 = library.LookupProtocol("HasComposeMethod1");
@@ -68,6 +74,8 @@ protocol HasComposeMethod2 {
 }
 
 TEST(MethodTests, GoodValidFlexibleComposeMethod) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 protocol HasComposeMethod1 {
@@ -77,7 +85,8 @@ protocol HasComposeMethod1 {
 protocol HasComposeMethod2 {
     flexible compose() -> ();
 };
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_COMPILED(library);
 
   auto protocol1 = library.LookupProtocol("HasComposeMethod1");
@@ -94,6 +103,8 @@ protocol HasComposeMethod2 {
 }
 
 TEST(MethodTests, GoodValidStrictMethod) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 protocol HasStrictMethod1 {
@@ -119,7 +130,8 @@ protocol HasStrictMethod5 {
 protocol HasStrictMethod6 {
     flexible strict() -> ();
 };
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_COMPILED(library);
 
   auto protocol1 = library.LookupProtocol("HasStrictMethod1");
@@ -160,6 +172,8 @@ protocol HasStrictMethod6 {
 }
 
 TEST(MethodTests, GoodValidFlexibleMethod) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 protocol HasFlexibleMethod1 {
@@ -185,7 +199,8 @@ protocol HasFlexibleMethod5 {
 protocol HasFlexibleMethod6 {
     flexible flexible() -> ();
 };
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_COMPILED(library);
 
   auto protocol1 = library.LookupProtocol("HasFlexibleMethod1");
@@ -226,6 +241,8 @@ protocol HasFlexibleMethod6 {
 }
 
 TEST(MethodTests, GoodValidNormalMethod) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 protocol HasNormalMethod1 {
@@ -235,7 +252,8 @@ protocol HasNormalMethod1 {
 protocol HasNormalMethod2 {
     MyMethod() -> ();
 };
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_COMPILED(library);
 
   auto protocol1 = library.LookupProtocol("HasNormalMethod1");
@@ -252,6 +270,8 @@ protocol HasNormalMethod2 {
 }
 
 TEST(MethodTests, GoodValidStrictNormalMethod) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 protocol HasNormalMethod1 {
@@ -261,7 +281,8 @@ protocol HasNormalMethod1 {
 protocol HasNormalMethod2 {
     strict MyMethod() -> ();
 };
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_COMPILED(library);
 
   auto protocol1 = library.LookupProtocol("HasNormalMethod1");
@@ -278,6 +299,8 @@ protocol HasNormalMethod2 {
 }
 
 TEST(MethodTests, GoodValidFlexibleNormalMethod) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 protocol HasNormalMethod1 {
@@ -287,7 +310,8 @@ protocol HasNormalMethod1 {
 protocol HasNormalMethod2 {
     flexible MyMethod() -> ();
 };
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_COMPILED(library);
 
   auto protocol1 = library.LookupProtocol("HasNormalMethod1");
@@ -304,12 +328,15 @@ protocol HasNormalMethod2 {
 }
 
 TEST(MethodTests, GoodValidEvent) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 protocol HasEvent {
     -> MyEvent();
 };
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_COMPILED(library);
 
   auto protocol = library.LookupProtocol("HasEvent");
@@ -320,12 +347,15 @@ protocol HasEvent {
 }
 
 TEST(MethodTests, GoodValidStrictEvent) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 protocol HasEvent {
     strict -> MyMethod();
 };
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_COMPILED(library);
 
   auto protocol = library.LookupProtocol("HasEvent");
@@ -336,10 +366,201 @@ protocol HasEvent {
 }
 
 TEST(MethodTests, GoodValidFlexibleEvent) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(library example;
 
 protocol HasEvent {
     flexible -> MyMethod();
+};
+)FIDL",
+                      experiment_flags);
+  ASSERT_COMPILED(library);
+
+  auto protocol = library.LookupProtocol("HasEvent");
+  ASSERT_NOT_NULL(protocol);
+  ASSERT_EQ(protocol->methods.size(), 1);
+  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(protocol->all_methods.size(), 1);
+}
+
+TEST(MethodTests, BadInvalidOpennessModifierOnMethod) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol BadMethod {
+    open Method();
+};
+
+)FIDL",
+                      experiment_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, GoodValidComposeMethodWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasMethod {
+    compose();
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto protocol = library.LookupProtocol("HasMethod");
+  ASSERT_NOT_NULL(protocol);
+  ASSERT_EQ(protocol->methods.size(), 1);
+  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(protocol->all_methods.size(), 1);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, BadStrictComposeMethodWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasMethod {
+    strict compose();
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, BadFlexibleComposeMethodWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasMethod {
+    flexible compose();
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, GoodValidStrictMethodWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasMethod {
+    strict();
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto protocol = library.LookupProtocol("HasMethod");
+  ASSERT_NOT_NULL(protocol);
+  ASSERT_EQ(protocol->methods.size(), 1);
+  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(protocol->all_methods.size(), 1);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, BadStrictStrictMethodWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasMethod {
+    strict strict();
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, BadFlexibleStrictMethodWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasMethod {
+    flexible strict();
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, GoodValidFlexibleMethodWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasMethod {
+    flexible();
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto protocol = library.LookupProtocol("HasMethod");
+  ASSERT_NOT_NULL(protocol);
+  ASSERT_EQ(protocol->methods.size(), 1);
+  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(protocol->all_methods.size(), 1);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, BadStrictFlexibleMethodWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasMethod {
+    strict flexible();
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, BadFlexibleFlexibleMethodWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasMethod {
+    flexible flexible();
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, GoodValidNormalMethodWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasMethod {
+    MyMethod();
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto protocol = library.LookupProtocol("HasMethod");
+  ASSERT_NOT_NULL(protocol);
+  ASSERT_EQ(protocol->methods.size(), 1);
+  EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(protocol->all_methods.size(), 1);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, BadStrictNormalMethodWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasMethod {
+    strict MyMethod();
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, BadFlexibleNormalMethodWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasMethod {
+    flexible MyMethod();
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, GoodValidEventWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasEvent {
+    -> OnSomething();
 };
 )FIDL");
   ASSERT_COMPILED(library);
@@ -351,14 +572,24 @@ protocol HasEvent {
   EXPECT_EQ(protocol->all_methods.size(), 1);
 }
 
-TEST(MethodTests, BadInvalidOpennessModifierOnMethod) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol BadMethod {
-    open Method();
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, BadStrictEventWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasEvent {
+    strict -> OnSomething();
 };
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
 
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(MethodTests, BadFlexibleEventWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(library example;
+protocol HasEvent {
+    flexible -> OnSomething();
+};
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
 }

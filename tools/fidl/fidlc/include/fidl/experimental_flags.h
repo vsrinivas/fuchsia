@@ -15,6 +15,7 @@ class ExperimentalFlags {
   using FlagSet = uint32_t;
   enum class Flag : FlagSet {
     kNewSyntaxOnly = 0b1000,
+    kUnknownInteractions = 0b10000,
   };
 
   ExperimentalFlags() : flags_(0) {}

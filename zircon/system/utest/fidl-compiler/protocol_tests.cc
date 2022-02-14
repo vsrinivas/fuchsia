@@ -17,6 +17,80 @@
 namespace {
 
 TEST(ProtocolTests, GoodValidEmptyProtocol) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(library example;
+
+protocol Empty {};
+)FIDL",
+                      experiment_flags);
+  ASSERT_COMPILED(library);
+
+  auto protocol = library.LookupProtocol("Empty");
+  ASSERT_NOT_NULL(protocol);
+
+  EXPECT_EQ(protocol->methods.size(), 0);
+  EXPECT_EQ(protocol->openness, fidl::types::Openness::kAjar);
+  EXPECT_EQ(protocol->all_methods.size(), 0);
+}
+
+TEST(ProtocolTests, GoodValidEmptyOpenProtocol) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Empty {};
+)FIDL",
+                      experiment_flags);
+  ASSERT_COMPILED(library);
+
+  auto protocol = library.LookupProtocol("Empty");
+  ASSERT_NOT_NULL(protocol);
+
+  EXPECT_EQ(protocol->methods.size(), 0);
+  EXPECT_EQ(protocol->openness, fidl::types::Openness::kOpen);
+  EXPECT_EQ(protocol->all_methods.size(), 0);
+}
+
+TEST(ProtocolTests, GoodValidEmptyAjarProtocol) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(library example;
+
+ajar protocol Empty {};
+)FIDL",
+                      experiment_flags);
+  ASSERT_COMPILED(library);
+
+  auto protocol = library.LookupProtocol("Empty");
+  ASSERT_NOT_NULL(protocol);
+
+  EXPECT_EQ(protocol->methods.size(), 0);
+  EXPECT_EQ(protocol->openness, fidl::types::Openness::kAjar);
+  EXPECT_EQ(protocol->all_methods.size(), 0);
+}
+
+TEST(ProtocolTests, GoodValidEmptyClosedProtocol) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(library example;
+
+closed protocol Empty {};
+)FIDL",
+                      experiment_flags);
+  ASSERT_COMPILED(library);
+
+  auto protocol = library.LookupProtocol("Empty");
+  ASSERT_NOT_NULL(protocol);
+
+  EXPECT_EQ(protocol->methods.size(), 0);
+  EXPECT_EQ(protocol->openness, fidl::types::Openness::kClosed);
+  EXPECT_EQ(protocol->all_methods.size(), 0);
+}
+
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(ProtocolTests, GoodValidEmptyProtocolWithoutUnknownInteractions) {
   TestLibrary library(R"FIDL(library example;
 
 protocol Empty {};
@@ -31,98 +105,104 @@ protocol Empty {};
   EXPECT_EQ(protocol->all_methods.size(), 0);
 }
 
-TEST(ProtocolTests, GoodValidEmptyOpenProtocol) {
-  TestLibrary library(R"FIDL(library example;
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(ProtocolTests, BadOpenProtocolWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(
+library example;
 
 open protocol Empty {};
+
 )FIDL");
-  ASSERT_COMPILED(library);
-
-  auto protocol = library.LookupProtocol("Empty");
-  ASSERT_NOT_NULL(protocol);
-
-  EXPECT_EQ(protocol->methods.size(), 0);
-  EXPECT_EQ(protocol->openness, fidl::types::Openness::kOpen);
-  EXPECT_EQ(protocol->all_methods.size(), 0);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
-TEST(ProtocolTests, GoodValidEmptyAjarProtocol) {
-  TestLibrary library(R"FIDL(library example;
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(ProtocolTests, BadAjarProtocolWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(
+library example;
 
 ajar protocol Empty {};
+
 )FIDL");
-  ASSERT_COMPILED(library);
-
-  auto protocol = library.LookupProtocol("Empty");
-  ASSERT_NOT_NULL(protocol);
-
-  EXPECT_EQ(protocol->methods.size(), 0);
-  EXPECT_EQ(protocol->openness, fidl::types::Openness::kAjar);
-  EXPECT_EQ(protocol->all_methods.size(), 0);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
-TEST(ProtocolTests, GoodValidEmptyClosedProtocol) {
-  TestLibrary library(R"FIDL(library example;
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(ProtocolTests, BadClosedProtocolWithoutUnknownInteractions) {
+  TestLibrary library(R"FIDL(
+library example;
 
 closed protocol Empty {};
+
 )FIDL");
-  ASSERT_COMPILED(library);
-
-  auto protocol = library.LookupProtocol("Empty");
-  ASSERT_NOT_NULL(protocol);
-
-  EXPECT_EQ(protocol->methods.size(), 0);
-  EXPECT_EQ(protocol->openness, fidl::types::Openness::kClosed);
-  EXPECT_EQ(protocol->all_methods.size(), 0);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
 TEST(ProtocolTests, BadEmptyStrictProtocol) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
 strict protocol Empty {};
 
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
 TEST(ProtocolTests, BadEmptyFlexibleProtocol) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
 flexible protocol Empty {};
 
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 
 TEST(ProtocolTests, BadOpenMissingProtocolToken) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
 open Empty {};
 
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
 }
 
 TEST(ProtocolTests, BadAjarMissingProtocolToken) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
 ajar Empty {};
 
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
 }
 
 TEST(ProtocolTests, BadClosedMissingProtocolToken) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   TestLibrary library(R"FIDL(
 library example;
 
 closed Empty {};
 
-)FIDL");
+)FIDL",
+                      experiment_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedIdentifier);
 }
 
@@ -184,7 +264,9 @@ protocol D {
   EXPECT_EQ(protocol_d->all_methods.size(), 4);
 }
 
-TEST(ProtocolTests, BadModifierStrictOnCompose) {
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(ProtocolTests, BadModifierStrictOnComposeWithoutUnkownInteractions) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -198,7 +280,9 @@ protocol B {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
 }
 
-TEST(ProtocolTests, BadModifierFlexibleOnCompose) {
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(ProtocolTests, BadModifierFlexibleOnComposeWithoutUnkownInteractions) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -212,7 +296,9 @@ protocol B {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
 }
 
-TEST(ProtocolTests, BadModifierStrictOnInvalidMember) {
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(ProtocolTests, BadModifierStrictOnInvalidMemberWithoutUnkownInteractions) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -221,10 +307,12 @@ protocol Example {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
 }
 
-TEST(ProtocolTests, BadModifierFlexibleOnInvalidMember) {
+// TODO(fxb/88366): remove checks for behavior with unknown interactions turned
+// off when unknown interactions are always-on.
+TEST(ProtocolTests, BadModifierFlexibleOnInvalidMemberWithoutUnkownInteractions) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -233,6 +321,70 @@ protocol Example {
 };
 
 )FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+TEST(ProtocolTests, BadModifierStrictOnCompose) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol A {};
+
+protocol B {
+  strict compose A;
+};
+
+)FIDL",
+                      experiment_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+TEST(ProtocolTests, BadModifierFlexibleOnCompose) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol A {};
+
+protocol B {
+  flexible compose A;
+};
+
+)FIDL",
+                      experiment_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+}
+
+TEST(ProtocolTests, BadModifierStrictOnInvalidMember) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Example {
+  strict;
+};
+
+)FIDL",
+                      experiment_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
+}
+
+TEST(ProtocolTests, BadModifierFlexibleOnInvalidMember) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Example {
+  flexible;
+};
+
+)FIDL",
+                      experiment_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
 }
 

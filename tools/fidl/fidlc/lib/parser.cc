@@ -738,8 +738,9 @@ void Parser::ParseProtocolMember(
         // an Identifier source element.
         method_name = std::make_unique<raw::Identifier>(
             raw::SourceElement(compose_token.value(), compose_token.value()));
-      } else if (Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kStrict) ||
-                 Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kFlexible)) {
+      } else if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUnknownInteractions) &&
+                 (Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kStrict) ||
+                  Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kFlexible))) {
         // There are two possibilities here: we are looking at a method or event with strictness
         // modifier like `strict MyMethod(...);` or we are looking at a method
         // that has unfortunately been named `flexible/strict(...);`. In either case we only expect
@@ -816,9 +817,10 @@ std::unique_ptr<raw::ProtocolDeclaration> Parser::ParseProtocolDeclaration(
   std::vector<std::unique_ptr<raw::ProtocolCompose>> composed_protocols;
   std::vector<std::unique_ptr<raw::ProtocolMethod>> methods;
 
-  if (Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kOpen) ||
-      Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kAjar) ||
-      Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kClosed)) {
+  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUnknownInteractions) &&
+      (Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kOpen) ||
+       Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kAjar) ||
+       Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kClosed))) {
     auto modifier_subkind = Peek().subkind();
     auto modifier = ParseIdentifier();
     if (!Ok())
@@ -1645,6 +1647,11 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       case CASE_IDENTIFIER(Token::Subkind::kAjar):
       case CASE_IDENTIFIER(Token::Subkind::kClosed):
       case CASE_IDENTIFIER(Token::Subkind::kOpen):
+        if (!experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUnknownInteractions)) {
+          Fail(ErrExpectedDeclaration, last_token_.data());
+          return More;
+        }
+        [[fallthrough]];
       case CASE_IDENTIFIER(Token::Subkind::kProtocol): {
         done_with_library_imports = true;
         add(&protocol_declaration_list,
