@@ -971,6 +971,7 @@
             protocol: [
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
                 "fuchsia.power.profile.Watcher",
+                "fuchsia.thermal.ClientStateConnector",
                 "fuchsia.thermal.Controller",
             ],
             from: "#power_manager",

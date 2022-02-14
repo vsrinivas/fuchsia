@@ -138,6 +138,7 @@
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sys2.CrashIntrospect",
                 "fuchsia.sysinfo.SysInfo",
+                "fuchsia.thermal.ClientStateConnector",
                 "fuchsia.thermal.Controller",
                 "fuchsia.time.Maintenance",
                 "fuchsia.tpm.cr50.Cr50",

@@ -131,6 +131,7 @@
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
+                "fuchsia.thermal.ClientStateConnector",
                 "fuchsia.thermal.Controller",
                 "fuchsia.tpm.cr50.Cr50",
                 "fuchsia.tpm.cr50.PinWeaver",
