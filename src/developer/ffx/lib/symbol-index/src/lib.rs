@@ -24,27 +24,22 @@ pub async fn ensure_symbol_index_registered() -> Result<()> {
 
     let mut symbol_index_path_str: Option<String> = None;
     let mut default_symbol_server: Option<&'static str> = None;
+    let mut build_id_dir_str: Option<String> = None;
     if sdk.get_version() == &ffx_config::sdk::SdkVersion::InTree {
         let symbol_index_path = sdk.get_path_prefix().join(".symbol-index.json");
         if !symbol_index_path.exists() {
             bail!("Required {:?} doesn't exist", symbol_index_path);
         }
-        symbol_index_path_str = Some(
-            symbol_index_path
-                .into_os_string()
-                .into_string()
-                .map_err(|s| anyhow!("Cannot convert OsString {:?} into String", s))?,
-        );
+        symbol_index_path_str = Some(pathbuf_to_string(symbol_index_path)?);
     } else {
         let symbol_index_path = sdk.get_path_prefix().join("data/config/symbol-index/config.json");
         if symbol_index_path.exists() {
             // It's allowed that SDK do not provide a symbol-index config.
-            symbol_index_path_str = Some(
-                symbol_index_path
-                    .into_os_string()
-                    .into_string()
-                    .map_err(|s| anyhow!("Cannot convert OsString {:?} into String", s))?,
-            );
+            symbol_index_path_str = Some(pathbuf_to_string(symbol_index_path)?);
+        }
+        let build_id_dir = sdk.get_path_prefix().join(".build-id");
+        if build_id_dir.exists() {
+            build_id_dir_str = Some(pathbuf_to_string(build_id_dir)?)
         }
         // The default symbol server is only needed for SDK users.
         default_symbol_server = Some("gs://fuchsia-artifacts/debug");
@@ -62,6 +57,12 @@ pub async fn ensure_symbol_index_registered() -> Result<()> {
     if let Some(server) = default_symbol_server {
         if !index.gcs_flat.iter().any(|gcs_flat| gcs_flat.url == server) {
             index.gcs_flat.push(GcsFlat { url: server.to_owned(), require_authentication: false });
+            needs_save = true;
+        }
+    }
+    if let Some(path) = build_id_dir_str {
+        if !index.build_id_dirs.iter().any(|dir| dir.path == path) {
+            index.build_id_dirs.push(BuildIdDir { path, build_dir: None });
             needs_save = true;
         }
     }
@@ -226,6 +227,13 @@ fn glob(path: String) -> Vec<String> {
     } else {
         vec![path]
     }
+}
+
+fn pathbuf_to_string(pathbuf: PathBuf) -> Result<String> {
+    pathbuf
+        .into_os_string()
+        .into_string()
+        .map_err(|s| anyhow!("Cannot convert OsString {:?} into String", s))
 }
 
 #[cfg(test)]
