@@ -202,8 +202,7 @@ pub fn alert(category: &'static CStr, name: &'static CStr) {
         let context =
             sys::trace_acquire_context_for_category(category.as_ptr(), category_ref.as_mut_ptr());
         if context != ptr::null() {
-            let helper = EventHelper::new(context, name);
-            sys::trace_context_send_alert(context, &helper.name_ref);
+            sys::trace_context_send_alert(context, name.as_ptr());
             sys::trace_release_context(context);
         }
     }
@@ -1088,7 +1087,7 @@ mod sys {
 
         pub fn trace_context_send_alert(
             context: *const trace_context_t,
-            name_ref: *const trace_string_ref_t,
+            name: *const libc::c_char,
         );
 
         pub fn trace_context_write_counter_event_record(

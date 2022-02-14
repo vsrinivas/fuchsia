@@ -61,6 +61,8 @@ void fixture_start_engine(void);
 void fixture_stop_engine(void);
 void fixture_terminate_engine(void);
 void fixture_wait_engine_stopped(void);
+bool fixture_wait_alert_notification(void);
+bool fixture_compare_last_alert_name(const char* expected_alert_name);
 
 void fixture_shutdown(void);
 
