@@ -40,6 +40,8 @@ class Fixture : private trace::TraceHandler {
     ZX_DEBUG_ASSERT(status == ZX_OK);
     status = zx::event::create(0u, &buffer_full_);
     ZX_DEBUG_ASSERT(status == ZX_OK);
+    status = zx::event::create(0u, &alert_received_);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
     ResetEngineState();
   }
 
@@ -126,6 +128,13 @@ class Fixture : private trace::TraceHandler {
     return status == ZX_OK;
   }
 
+  bool WaitAlertNotification() {
+    auto status =
+        alert_received_.wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(zx::msec(1000)), nullptr);
+    alert_received_.signal(ZX_EVENT_SIGNALED, 0u);
+    return status == ZX_OK;
+  }
+
   async::Loop& loop() { return loop_; }
 
   zx_status_t disposition() const { return disposition_; }
@@ -138,6 +147,10 @@ class Fixture : private trace::TraceHandler {
 
   bool observed_buffer_full_durable_data_end() const {
     return observed_buffer_full_durable_data_end_;
+  }
+
+  const char* last_alert_name_received() const {
+    return last_alert_name_received_.c_str();
   }
 
   void ResetBufferFullNotification() {
@@ -174,6 +187,11 @@ class Fixture : private trace::TraceHandler {
     buffer_full_.signal(0u, ZX_EVENT_SIGNALED);
   }
 
+  void SendAlert(const char* alert_name) override {
+    last_alert_name_received_ = alert_name;
+    alert_received_.signal(0u, ZX_EVENT_SIGNALED);
+  }
+
   attach_to_thread_t attach_to_thread_;
   async::Loop loop_;
   trace_buffering_mode_t buffering_mode_;
@@ -181,6 +199,8 @@ class Fixture : private trace::TraceHandler {
   zx_status_t disposition_;
   zx::event trace_stopped_;
   zx::event buffer_full_;
+  zx::event alert_received_;
+  std::string last_alert_name_received_;
   bool observed_stopped_callback_;
   bool observed_notify_buffer_full_callback_;
   uint32_t observed_buffer_full_wrapped_count_;
@@ -226,6 +246,16 @@ void fixture_terminate_engine() {
 void fixture_wait_engine_stopped(void) {
   ZX_DEBUG_ASSERT(g_fixture);
   g_fixture->WaitEngineStopped();
+}
+
+bool fixture_wait_alert_notification(void) {
+  ZX_DEBUG_ASSERT(g_fixture);
+  return g_fixture->WaitAlertNotification();
+}
+
+bool fixture_compare_last_alert_name(const char* expected_alert_name) {
+  ZX_DEBUG_ASSERT(g_fixture);
+  return (strcmp(g_fixture->last_alert_name_received(), expected_alert_name) == 0);
 }
 
 void fixture_shutdown() {

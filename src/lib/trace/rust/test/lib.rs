@@ -90,3 +90,9 @@ pub extern "C" fn rs_test_async_event_with_scope() {
     let _guard = trace::async_enter!(1u64, "+enabled", "name", "x" => 5, "y" => 10);
     trace::instant!("+enabled", "name", trace::Scope::Process, "arg" => 10);
 }
+
+
+#[no_mangle]
+pub extern "C" fn rs_test_alert() {
+    trace::alert!("+enabled", "alert_name");
+}

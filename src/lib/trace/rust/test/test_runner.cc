@@ -204,3 +204,14 @@ TEST(TEST_SUITE, test_async_event) {
       ", {arg: int32(10)})\n"
       "Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", AsyncEnd(id: 1), {})\n");
 }
+
+TEST(TEST_SUITE, test_alert) {
+  BEGIN_TRACE_TEST;
+
+  fixture_initialize_and_start_tracing();
+
+  rs_test_alert();
+
+  ASSERT_TRUE(fixture_wait_alert_notification());
+  ASSERT_TRUE(fixture_compare_last_alert_name("alert_name"));
+}
