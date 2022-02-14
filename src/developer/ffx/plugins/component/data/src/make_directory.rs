@@ -3,21 +3,19 @@
 // found in the LICENSE file.
 
 use {
+    crate::RemotePath,
     anyhow::Result,
     component_hub::io::Directory,
     errors::{ffx_bail, ffx_error},
-    ffx_component_data::RemotePath,
-    ffx_component_data_make_directory_args::MakeDirectoryCommand,
-    ffx_core::ffx_plugin,
+    ffx_component_data_args::MakeDirectoryArgs,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::StorageAdminProxy,
 };
 
-#[ffx_plugin(StorageAdminProxy = "core:expose:fuchsia.sys2.StorageAdmin")]
 pub async fn make_directory(
     storage_admin: StorageAdminProxy,
-    args: MakeDirectoryCommand,
+    args: MakeDirectoryArgs,
 ) -> Result<()> {
     make_directory_cmd(storage_admin, args.path).await
 }
@@ -56,6 +54,7 @@ async fn make_directory_cmd(storage_admin: StorageAdminProxy, path: String) -> R
 mod test {
     use {
         super::*,
+        crate::setup_oneshot_fake_storage_admin,
         fidl::endpoints::{RequestStream, ServerEnd},
         fidl::handle::AsyncChannel,
         fidl_fuchsia_io::*,

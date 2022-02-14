@@ -32,7 +32,7 @@ group("tests") {
   deps = [
     ":ffx_component_tests",
     "create:ffx_component_create_tests",
-    "data:tests",
+    "data:ffx_component_data_tests",
     "destroy:ffx_component_destroy_tests",
     "graph:ffx_component_graph_tests",
     "knock:ffx_knock_tests",

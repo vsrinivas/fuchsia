@@ -3,14 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result, component_hub::io::Directory, errors::ffx_error,
-    ffx_component_data::RemotePath, ffx_component_data_list_args::ListCommand,
-    ffx_core::ffx_plugin, fidl::endpoints::create_proxy, fidl_fuchsia_io as fio,
+    crate::RemotePath, anyhow::Result, component_hub::io::Directory, errors::ffx_error,
+    ffx_component_data_args::ListArgs, fidl::endpoints::create_proxy, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::StorageAdminProxy,
 };
 
-#[ffx_plugin(StorageAdminProxy = "core:expose:fuchsia.sys2.StorageAdmin")]
-pub async fn list(storage_admin: StorageAdminProxy, args: ListCommand) -> Result<()> {
+pub async fn list(storage_admin: StorageAdminProxy, args: ListArgs) -> Result<()> {
     list_cmd(storage_admin, args.path, &mut std::io::stdout()).await
 }
 
@@ -50,6 +48,7 @@ async fn list_cmd<W: std::io::Write>(
 mod test {
     use {
         super::*,
+        crate::setup_oneshot_fake_storage_admin,
         fidl::endpoints::{RequestStream, ServerEnd},
         fidl::handle::AsyncChannel,
         fidl_fuchsia_io::*,

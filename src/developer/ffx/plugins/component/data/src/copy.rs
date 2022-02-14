@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use {
+    crate::{RemotePath, REMOTE_PATH_HELP},
     anyhow::Result,
     component_hub::io::Directory,
     errors::{ffx_bail, ffx_error},
-    ffx_component_data::{RemotePath, REMOTE_PATH_HELP},
-    ffx_component_data_copy_args::CopyCommand,
-    ffx_core::ffx_plugin,
+    ffx_component_data_args::CopyArgs,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::StorageAdminProxy,
@@ -16,8 +15,7 @@ use {
     std::path::PathBuf,
 };
 
-#[ffx_plugin(StorageAdminProxy = "core:expose:fuchsia.sys2.StorageAdmin")]
-pub async fn copy(storage_admin: StorageAdminProxy, args: CopyCommand) -> Result<()> {
+pub async fn copy(storage_admin: StorageAdminProxy, args: CopyArgs) -> Result<()> {
     copy_cmd(storage_admin, args.source_path, args.destination_path).await
 }
 
@@ -76,6 +74,7 @@ async fn copy_cmd(
 mod test {
     use {
         super::*,
+        crate::setup_oneshot_fake_storage_admin,
         fidl::endpoints::{RequestStream, ServerEnd},
         fidl::handle::AsyncChannel,
         fidl_fuchsia_io::*,

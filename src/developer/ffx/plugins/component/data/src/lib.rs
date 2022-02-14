@@ -5,8 +5,25 @@
 use {
     anyhow::Result,
     errors::ffx_bail,
+    ffx_component_data_args::{DataCommand, SubcommandEnum},
+    ffx_core::ffx_plugin,
+    fidl_fuchsia_sys2::StorageAdminProxy,
     std::path::{Component, PathBuf},
 };
+mod copy;
+mod list;
+mod make_directory;
+
+#[ffx_plugin(StorageAdminProxy = "core:expose:fuchsia.sys2.StorageAdmin")]
+pub async fn data(storage_admin: StorageAdminProxy, cmd: DataCommand) -> Result<()> {
+    match cmd.subcommand {
+        SubcommandEnum::Copy(args) => copy::copy(storage_admin, args).await,
+        SubcommandEnum::List(args) => list::list(storage_admin, args).await,
+        SubcommandEnum::MakeDirectory(args) => {
+            make_directory::make_directory(storage_admin, args).await
+        }
+    }
+}
 
 pub const REMOTE_PATH_HELP: &'static str = "Remote paths have the following format:\n\n\
 [component instance ID]::[path relative to storage]\n\n\
