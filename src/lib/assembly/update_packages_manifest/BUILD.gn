@@ -23,9 +23,9 @@ if (is_host) {
       "src/update_packages_manifest.rs",
     ]
   }
-}
 
-group("tests") {
-  testonly = true
-  deps = [ ":update_packages_manifest_test($host_toolchain)" ]
+  group("host_tests") {
+    testonly = true
+    deps = [ ":update_packages_manifest_test" ]
+  }
 }

@@ -143,12 +143,12 @@ if (is_host) {
       expected_vbmeta_path,
     ]
   }
-}
 
-group("tests") {
-  testonly = true
-  deps = [
-    ":integration_test($host_toolchain)",
-    ":vbmeta_test($host_toolchain)",
-  ]
+  group("host_tests") {
+    testonly = true
+    deps = [
+      ":integration_test",
+      ":vbmeta_test",
+    ]
+  }
 }

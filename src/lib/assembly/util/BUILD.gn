@@ -28,9 +28,9 @@ if (is_host) {
       "src/path_to_string.rs",
     ]
   }
-}
 
-group("tests") {
-  testonly = true
-  deps = [ ":util_test($host_toolchain)" ]
+  group("host_tests") {
+    testonly = true
+    deps = [ ":util_test" ]
+  }
 }

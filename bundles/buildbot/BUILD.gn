@@ -101,11 +101,14 @@ group("workstation") {
 #
 # * Either doesn't transitively depend on any known e2e test libraries;
 # * Or are unit tests for known e2e test libraries.
+# TODO(https://fxbug.dev/93763) use an underscore to match source code layout guidelines
 group("host-tests_no_e2e") {
   testonly = true
   assert_no_deps = e2e_test_libs
+  deps = [ "//src/lib/assembly:host_tests($host_toolchain)" ]
 }
 
+# TODO(https://fxbug.dev/93763) use an underscore to match source code layout guidelines
 group("host-tests") {
   testonly = true
   deps = [ ":host-tests_no_e2e" ]

@@ -2,23 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
-  testonly = true
-  deps = [
-    "base_package:tests",
-    "blobfs:tests",
-    "config_data:tests",
-    "fvm:tests",
-    "images_config:tests",
-    "images_manifest:tests",
-    "minfs:tests",
-    "partitions_config:tests",
-    "test_util:tests",
-    "tool:tests",
-    "update_package:tests",
-    "update_packages_manifest:tests",
-    "util:tests",
-    "vbmeta:tests",
-    "zbi:tests",
-  ]
+if (is_host) {
+  group("host_tests") {
+    testonly = true
+    deps = [
+      "base_package:host_tests",
+      "blobfs:host_tests",
+      "config_data:host_tests",
+      "fvm:host_tests",
+      "images_config:host_tests",
+      "images_manifest:host_tests",
+      "minfs:host_tests",
+      "partitions_config:host_tests",
+      "test_util:host_tests",
+      "tool:host_tests",
+      "update_package:host_tests",
+      "update_packages_manifest:host_tests",
+      "util:host_tests",
+      "vbmeta:host_tests",
+      "zbi:host_tests",
+    ]
+  }
 }

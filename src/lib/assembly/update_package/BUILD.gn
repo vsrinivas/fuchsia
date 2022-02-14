@@ -34,9 +34,9 @@ if (is_host) {
       "//src/sys/pkg/lib/fuchsia-hash",
     ]
   }
-}
 
-group("tests") {
-  testonly = true
-  deps = [ ":update_package_test($host_toolchain)" ]
+  group("host_tests") {
+    testonly = true
+    deps = [ ":update_package_test" ]
+  }
 }

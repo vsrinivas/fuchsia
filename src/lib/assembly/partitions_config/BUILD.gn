@@ -21,9 +21,9 @@ if (is_host) {
       "src/partitions_config.rs",
     ]
   }
-}
 
-group("tests") {
-  testonly = true
-  deps = [ ":partitions_config_test($host_toolchain)" ]
+  group("host_tests") {
+    testonly = true
+    deps = [ ":partitions_config_test" ]
+  }
 }

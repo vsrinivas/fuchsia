@@ -62,7 +62,6 @@ group("tests") {
 
   deps = [
     "analytics:tests",
-    "assembly:tests",
     "async-utils:tests",
     "async-watchdog:tests",
     "backoff:tests",

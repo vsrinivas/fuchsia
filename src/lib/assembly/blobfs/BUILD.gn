@@ -35,9 +35,9 @@ if (is_host) {
       "//third_party/rust_crates:tempfile",
     ]
   }
-}
 
-group("tests") {
-  testonly = true
-  deps = [ ":blobfs_test($host_toolchain)" ]
+  group("host_tests") {
+    testonly = true
+    deps = [ ":blobfs_test" ]
+  }
 }

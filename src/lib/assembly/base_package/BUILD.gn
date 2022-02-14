@@ -27,9 +27,9 @@ if (is_host) {
       "//third_party/rust_crates:serde_json",
     ]
   }
-}
 
-group("tests") {
-  testonly = true
-  deps = [ ":base_package_test($host_toolchain)" ]
+  group("host_tests") {
+    testonly = true
+    deps = [ ":base_package_test" ]
+  }
 }

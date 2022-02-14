@@ -25,9 +25,9 @@ if (is_host) {
 
     test_deps = [ "//third_party/rust_crates:serde_json" ]
   }
-}
 
-group("tests") {
-  testonly = true
-  deps = [ ":minfs_test($host_toolchain)" ]
+  group("host_tests") {
+    testonly = true
+    deps = [ ":minfs_test" ]
+  }
 }
