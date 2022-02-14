@@ -17,20 +17,27 @@ const String _catapultConverterPath = 'runtime_deps/catapult_converter';
 const String _trace2jsonPath = 'runtime_deps/trace2json';
 
 Future<void> _killProcesses(PerfTestHelper helper) async {
+  print('Killing processes for flatland_benchmarks_test');
+  await helper.sl4fDriver.ssh.run('killall "basemgr*"');
+  await helper.sl4fDriver.ssh.run('killall "a11y-manager*"');
+  await helper.sl4fDriver.ssh.run('killall "present_view*"');
   await helper.sl4fDriver.ssh.run('killall "root_presenter*"');
   await helper.sl4fDriver.ssh.run('killall "scenic*"');
   await helper.sl4fDriver.ssh.run('killall "tiles*"');
-  await helper.sl4fDriver.ssh.run('killall "basemgr*"');
   await helper.sl4fDriver.ssh.run('killall "flutter*"');
-  await helper.sl4fDriver.ssh.run('killall "present_view*"');
   await helper.sl4fDriver.ssh.run('killall "flatland-view-provider*"');
+  print('Finished killing processes for flatland_benchmarks_test');
 }
 
 void _addTest(String testName, String appUrl) {
   test(testName, () async {
     final helper = await PerfTestHelper.make();
 
+    await helper.sl4fDriver.ssh.run(
+        'log flatland_benchmarks_test "Killing processes for flatland_benchmarks_test, before test"');
     await _killProcesses(helper);
+    await helper.sl4fDriver.ssh.run(
+        'log flatland_benchmarks_test "Finished killing processes for flatland_benchmarks_test, before test"');
 
     final tiles = Tiles(helper.sl4fDriver);
     await tiles.startFlatland();
@@ -81,7 +88,11 @@ void _addTest(String testName, String appUrl) {
     // Clean up by killing the processes.  The reason for this is that we want
     // to prevent these processes from interfering with later performance
     // tests.
+    await helper.sl4fDriver.ssh.run(
+        'log flatland_benchmarks_test "Killing processes for flatland_benchmarks_test, after test"');
     await _killProcesses(helper);
+    await helper.sl4fDriver.ssh.run(
+        'log flatland_benchmarks_test "Finished killing processes for flatland_benchmarks_test, after test"');
   });
 }
 
