@@ -129,6 +129,9 @@ async fn run<DS: DataStore>(server: Server<DS>) -> Result<(), Error> {
             // Sending here should never fail; we just created the stream above.
             let () = socket_sink.try_send(socket_collection)?;
         }
+        Err(e @ fuchsia_zircon::Status::INVALID_ARGS) => {
+            log::info!("server not configured for serving leases: {:?}", e)
+        }
         Err(e) => log::warn!("could not enable server on startup: {:?}", e),
     }
 
