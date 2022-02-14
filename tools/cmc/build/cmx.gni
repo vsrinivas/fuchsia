@@ -170,14 +170,27 @@ template("cmx_format") {
 #     [path] Name for the output.
 #     If not specified, the target name is used.
 #
-#   cmx_patches (optional)
-#     [path] JSON file with patches to pass to `cmc merge`[0]. Values are naively merged into the
-#     target JSON file, failing on any collisions, functioning similar to a hidden include[1].
-#     [0] https://fuchsia.dev/reference/tools/sdk/cmc?hl=en#merge
-#     [1] https://fuchsia.dev/fuchsia-src/concepts/components/v1/component_manifests?hl=en#include
+#   check_includes (optional)
+#     [boolean] Whether to check against expect_includes() in deps.
+#     Default: true
 template("cmx") {
   if (!defined(invoker.deps)) {
     invoker.deps = []
+  }
+
+  if (!defined(invoker.check_includes) || invoker.check_includes) {
+    check_includes_target = "${target_name}_check_includes"
+    cmc_check_includes(check_includes_target) {
+      forward_variables_from(invoker,
+                             [
+                               "check_includes",
+                               "deps",
+                               "manifest",
+                               "testonly",
+                             ])
+      visibility = [ ":*" ]
+    }
+    invoker.deps += [ ":" + check_includes_target ]
   }
 
   cmx_include("${target_name}_include.cmx") {
@@ -205,13 +218,28 @@ template("cmx") {
   }
   invoker.deps += [ ":${target_name}_validate" ]
 
+  patches_name = "${target_name}_patches"
+  cmx_patches = "${target_out_dir}/${target_name}_cmx_patches"
+  generated_file(patches_name) {
+    data_keys = [ "cmx_patches_data" ]
+    walk_keys = [ "cmx_patches_walk" ]
+    outputs = [ cmx_patches ]
+    output_conversion = "json"
+    visibility = [ ":*" ]
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+  }
+
   needs_debugdata = is_coverage
 
   cmc_merge("${target_name}_merge") {
-    sources = [ included ]
-    if (defined(invoker.cmx_patches)) {
-      sources += [ invoker.cmx_patches ]
-    }
+    sources = [
+      cmx_patches,
+      included,
+    ]
     if (needs_debugdata) {
       sources += [ "//build/config/sanitizers/debugdata.cmx" ]
     }
@@ -220,6 +248,7 @@ template("cmx") {
                              "deps",
                              "testonly",
                            ])
+    deps += [ ":${patches_name}" ]
     visibility = [ ":*" ]
   }
   invoker.deps += [ ":${target_name}_merge" ]
