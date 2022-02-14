@@ -411,6 +411,15 @@ std::vector<fuchsia::virtualization::BlockSpec> Guest::GetBlockDevices(size_t st
       .client = std::move(stateful),
   });
 
+  // Drop access to /dev, in order to prevent any further access.
+  fdio_ns_t* ns;
+  zx_status_t status = fdio_ns_get_installed(&ns);
+  FX_CHECK(status == ZX_OK) << "Failed to get installed namespace";
+  if (fdio_ns_is_bound(ns, "/dev")) {
+    status = fdio_ns_unbind(ns, "/dev");
+    FX_CHECK(status == ZX_OK) << "Failed to unbind '/dev' from the installed namespace";
+  }
+
   // Add the extras partition if it exists.
   auto extras = GetPartition(kExtrasImage);
   if (extras.is_ok()) {
