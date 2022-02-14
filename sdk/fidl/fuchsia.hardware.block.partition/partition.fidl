@@ -4,6 +4,7 @@
 library fuchsia.hardware.block.partition;
 using zx;
 using fuchsia.hardware.block as block;
+using fuchsia.device;
 
 const GUID_LENGTH uint32 = 16;
 const NAME_LENGTH uint32 = 128;
@@ -41,4 +42,11 @@ protocol Partition {
         status zx.status;
         name string:<NAME_LENGTH, optional>;
     });
+};
+
+/// Protocol for types which need to implement both Partition and
+/// fuchsia.device.Controller.
+protocol PartitionAndDevice {
+    compose Partition;
+    compose fuchsia.device.Controller;
 };

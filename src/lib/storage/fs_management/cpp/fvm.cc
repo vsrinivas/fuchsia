@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
@@ -19,6 +20,7 @@
 #include <lib/fdio/vfs.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fit/defer.h>
+#include <lib/stdcompat/string_view.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/assert.h>
@@ -229,7 +231,8 @@ zx_status_t DestroyPartitionImpl(fbl::unique_fd&& fd) {
 }  // namespace
 
 bool PartitionMatches(zx::unowned_channel& partition_channel, const PartitionMatcher& matcher) {
-  ZX_ASSERT(matcher.type_guid || matcher.instance_guid || matcher.num_labels > 0);
+  ZX_ASSERT(matcher.type_guid || matcher.instance_guid || matcher.num_labels > 0 ||
+            !matcher.parent_device.empty());
   if (matcher.num_labels > 0) {
     ZX_ASSERT(matcher.labels);
   }
@@ -268,6 +271,20 @@ bool PartitionMatches(zx::unowned_channel& partition_channel, const PartitionMat
       }
     }
     if (!matches_label) {
+      return false;
+    }
+  }
+  if (!matcher.parent_device.empty()) {
+    auto resp = fidl::WireCall<fuchsia_device::Controller>(
+                    fidl::UnownedClientEnd<fuchsia_device::Controller>(partition_channel))
+                    ->GetTopologicalPath();
+    if (!resp.ok() || resp->result.is_err()) {
+      return false;
+    }
+
+    std::string_view path(resp->result.response().path.data(), resp->result.response().path.size());
+
+    if (!cpp20::starts_with(path, matcher.parent_device)) {
       return false;
     }
   }

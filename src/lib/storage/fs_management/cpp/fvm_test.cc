@@ -30,12 +30,16 @@ constexpr uint8_t kInvalidGUID2[] = {0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0
 constexpr char kValidLabel[] = "test";
 constexpr char kInvalidLabel1[] = "TheWrongLabel";
 constexpr char kInvalidLabel2[] = "StillTheWrongLabel";
+constexpr char kDefaultPath[] = "/fake/block/device/1/partition/001";
+constexpr char kParent[] = "/fake/block/device/1";
+constexpr char kNotParent[] = "/fake/block/device/2";
 
 class FakePartition
-    : public fidl::testing::WireTestBase<fuchsia_hardware_block_partition::Partition> {
+    : public fidl::testing::WireTestBase<fuchsia_hardware_block_partition::PartitionAndDevice> {
  public:
-  FakePartition(const uint8_t* type_guid, const uint8_t* instance_guid, const char* label)
-      : type_guid_(type_guid), instance_guid_(instance_guid), label_(label) {}
+  FakePartition(const uint8_t* type_guid, const uint8_t* instance_guid, const char* label,
+                const char* path)
+      : type_guid_(type_guid), instance_guid_(instance_guid), label_(label), path_(path) {}
 
   void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) override {
     printf("'%s' was called unexpectedly", name.c_str());
@@ -65,9 +69,14 @@ class FakePartition
     completer.Reply(ZX_OK, std::move(label_object));
   }
 
-  zx::status<fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>> GetClient(
+  void GetTopologicalPath(GetTopologicalPathRequestView _request,
+                          GetTopologicalPathCompleter::Sync& completer) override {
+    completer.ReplySuccess(fidl::StringView::FromExternal(path_));
+  }
+
+  zx::status<fidl::ClientEnd<fuchsia_hardware_block_partition::PartitionAndDevice>> GetClient(
       async_dispatcher_t* dispatcher) {
-    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_block_partition::Partition>();
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_block_partition::PartitionAndDevice>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
@@ -80,12 +89,13 @@ class FakePartition
   const uint8_t* type_guid_;
   const uint8_t* instance_guid_;
   const char* label_;
+  const char* path_;
 };
 
 class PartitionMatchesTest : public testing::Test {
  public:
   PartitionMatchesTest()
-      : partition_(kValidTypeGUID, kValidInstanceGUID, kValidLabel),
+      : partition_(kValidTypeGUID, kValidInstanceGUID, kValidLabel, kDefaultPath),
         loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   void SetUp() override {
     ASSERT_EQ(loop_.StartThread("test-fidl-loop"), ZX_OK);
@@ -97,7 +107,7 @@ class PartitionMatchesTest : public testing::Test {
  protected:
   FakePartition partition_;
   async::Loop loop_;
-  fidl::ClientEnd<fuchsia_hardware_block_partition::Partition> client_;
+  fidl::ClientEnd<fuchsia_hardware_block_partition::PartitionAndDevice> client_;
 };
 
 TEST_F(PartitionMatchesTest, TestTypeMatch) {
@@ -116,6 +126,15 @@ TEST_F(PartitionMatchesTest, TestTypeAndInstanceMatch) {
   PartitionMatcher matcher = {.type_guid = kValidTypeGUID, .instance_guid = kValidInstanceGUID};
   zx::unowned_channel channel = client_.borrow().channel();
   ASSERT_TRUE(PartitionMatches(channel, matcher));
+}
+
+TEST_F(PartitionMatchesTest, TestParentMatch) {
+  PartitionMatcher matcher = {.parent_device = kParent};
+  zx::unowned_channel channel = client_.borrow().channel();
+  ASSERT_TRUE(PartitionMatches(channel, matcher));
+
+  matcher = {.parent_device = kNotParent};
+  ASSERT_FALSE(PartitionMatches(channel, matcher));
 }
 
 TEST_F(PartitionMatchesTest, TestSingleLabelMatch) {

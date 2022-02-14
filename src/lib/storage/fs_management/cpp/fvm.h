@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <zircon/device/block.h>
 
+#include <string_view>
+
 #include <fbl/unique_fd.h>
 
 namespace fs_management {
@@ -49,10 +51,12 @@ zx::status<fuchsia_hardware_block_volume_VolumeManagerInfo> FvmQuery(int fvm_fd)
 // A set of optional matchers for |open_partition| and friends.
 // At least one must be specified.
 struct PartitionMatcher {
-  const uint8_t* type_guid;
-  const uint8_t* instance_guid;
-  const char* const* labels;
-  size_t num_labels;
+  const uint8_t* type_guid = nullptr;
+  const uint8_t* instance_guid = nullptr;
+  const char* const* labels = nullptr;
+  size_t num_labels = 0;
+  // partition must be a child of this device.
+  std::string_view parent_device;
 };
 
 // Waits for a partition with a GUID pair to appear, and opens it.

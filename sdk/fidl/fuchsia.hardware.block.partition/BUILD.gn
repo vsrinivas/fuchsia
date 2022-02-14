@@ -6,5 +6,8 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.block.partition") {
   sources = [ "partition.fidl" ]
-  public_deps = [ "//sdk/fidl/fuchsia.hardware.block" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.device",
+    "//sdk/fidl/fuchsia.hardware.block",
+  ]
 }
