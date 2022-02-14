@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_HANDOFF_H_
 
 #include <lib/arch/ticks.h>
+#include <lib/crypto/entropy_pool.h>
 #include <lib/uart/all.h>
 #include <stddef.h>
 #include <zircon/assert.h>
@@ -85,6 +86,9 @@ struct PhysHandoff {
 
   // Physical address of the data ZBI.
   uint64_t zbi = 0;
+
+  // Entropy gleaned from ZBI Items such as 'ZBI_TYPE_SECURE_ENTROPY' and/or command line.
+  ktl::optional<crypto::EntropyPool> entropy_pool;
 
   // ZBI container of items to be propagated in mexec.
   // TODO(fxbug.dev/84107): later this will be propagated

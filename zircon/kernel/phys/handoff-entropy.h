@@ -20,7 +20,8 @@
 #include <ktl/span.h>
 #include <phys/stdio.h>
 
-// Wraps the handoff process of both zbi and cmdline entropy items.
+// Thin wrapper for the handoff process of entropy related items and options.
+// This involves policies regarding entropy consumption and boot requirements.
 class EntropyHandoff {
  public:
   using Zbi = zbitl::View<ktl::span<ktl::byte>>;

@@ -60,9 +60,8 @@ func TestMissingCmdlineEntropyPanics(t *testing.T) {
 	i := distro.Create(device)
 	i.Start()
 
-	// See that it panicked.
-	i.WaitForLogMessage("ZIRCON KERNEL PANIC")
-	i.WaitForLogMessage("Failed to seed PRNG from required entropy source: cmdline")
+	// See that assertion triggered.
+	i.WaitForLogMessage("ZBI_TYPE_SECURE_ENTROPY zbi item or 'kernel.mixin-entropy' command line option did not provide enough entropy.")
 }
 
 // See that the kernel doesn't boot if the cmdline entropy is incomplete.
@@ -82,9 +81,8 @@ func TestIncompleteCmdlineEntropyPanics(t *testing.T) {
 	i := distro.Create(device)
 	i.Start()
 
-	// See that it panicked.
-	i.WaitForLogMessage("ZIRCON KERNEL PANIC")
-	i.WaitForLogMessage("Failed to seed PRNG from required entropy source: cmdline")
+	// See that assertion triggered.
+	i.WaitForLogMessage("ZBI_TYPE_SECURE_ENTROPY zbi item or 'kernel.mixin-entropy' command line option did not provide enough entropy.")
 }
 
 // See that the kernel boots if enough cmdline entropy is provided.

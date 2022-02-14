@@ -22,9 +22,10 @@
 #include <phys/handoff.h>
 #include <phys/symbolize.h>
 
+#include "handoff-entropy.h"
 #include "handoff-prep.h"
 
-void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
+void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
   // TODO(fxbug.dev/84107): The data ZBI is still inspected by the kernel
   // proper until migrations are complete, so this communicates the physical
   // address during handoff.  This member should be removed as soon as the
@@ -58,9 +59,11 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
     }
   };
   ktl::visit(append_uart_item, gBootOptions->serial);
+  EntropyHandoff entropy;
 
   zbitl::View view(zbi);
-  for (auto [header, payload] : view) {
+  for (auto it = view.begin(); it != view.end(); ++it) {
+    auto [header, payload] = *it;
     switch (header->type) {
       case ZBI_TYPE_HW_REBOOT_REASON:
         ZX_ASSERT(payload.size() >= sizeof(zbi_hw_reboot_reason_t));
@@ -142,12 +145,31 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
         break;
       }
 
+      case ZBI_TYPE_SECURE_ENTROPY:
+        entropy.AddEntropy(it->payload);
+        ZX_ASSERT(it.view().EditHeader(it, {.type = ZBI_TYPE_DISCARD}).is_ok());
+        ZX_ASSERT(it->header->type == ZBI_TYPE_DISCARD);
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+        // Verify that the payload contents have been zeroed.
+        for (auto b : it->payload) {
+          ZX_DEBUG_ASSERT(static_cast<char>(b) == 0);
+        }
+#endif
+        break;
+
       // Default assumption is that the type is architecture-specific.
       default:
         ArchSummarizeMiscZbiItem(*header, payload);
         break;
     }
   }
+
+  // Clears the contents of 'entropy_mixin' when consumed for security reasons.
+  entropy.AddEntropy(*const_cast<BootOptions*>(gBootOptions));
+
+  // Depending on certain boot options, failure to meet entropy requirements may cause
+  // the program to abort after this point.
+  handoff_->entropy_pool = std::move(entropy).Take(*gBootOptions);
 
   // At this point we should have full confidence that the ZBI is properly
   // formatted.

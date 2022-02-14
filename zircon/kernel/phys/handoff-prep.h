@@ -68,7 +68,9 @@ class HandoffPrep {
 
   // Summarizes the provided data ZBI's miscellaneous simple items for the
   // kernel, filling in corresponding handoff()->item fields.
-  void SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi);
+  // Certain fields, may be cleaned after consumption for security considerations,
+  // such as 'ZBI_TYPE_SECURE_ENTROPY'.
+  void SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi);
 
   // Add physboot's own instrumentation data to the handoff.  After this, the
   // live instrumented physboot code is updating the handoff data directly up

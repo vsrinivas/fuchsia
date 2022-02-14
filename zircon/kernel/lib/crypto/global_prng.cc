@@ -42,62 +42,6 @@ namespace {
 
 Prng* g_prng_instance = nullptr;
 
-unsigned int IntegrateZbiEntropy() {
-  zbitl::View zbi(ZbiInPhysmap());
-  unsigned int found = 0;
-  for (auto it = zbi.begin(); it != zbi.end(); ++it) {
-    if ((*it).header->type == ZBI_TYPE_SECURE_ENTROPY) {
-      auto data = (*it).payload;
-      if (data.size() < Prng::kMinEntropy) {
-        printf("ZBI_TYPE_SECURE_ENTROPY item at offset %#x too small: %zu < %zu\n",
-               it.item_offset(), data.size(), static_cast<size_t>(Prng::kMinEntropy));
-      } else {
-        g_prng_instance->AddEntropy(data.data(), data.size());
-        mandatory_memset(data.data(), 0, data.size());
-        LTRACEF("Collected %zu bytes of entropy from a ZBI Item\n", data.size());
-        auto result = zbi.EditHeader(it, {.type = ZBI_TYPE_DISCARD});
-        ZX_ASSERT(result.is_ok());
-        ++found;
-      }
-    }
-  }
-  zbi.ignore_error();
-  return found;
-}
-
-// Returns true if the kernel cmdline provided at least PRNG::kMinEntropy bytes
-// of entropy, and false otherwise.
-//
-// TODO(security): Remove this in favor of virtio-rng once it is available and
-// we decide we don't need it for getting entropy from elsewhere.
-bool IntegrateCmdlineEntropy() {
-  ktl::string_view entropy{gBootOptions->entropy_mixin};
-  if (entropy.empty()) {
-    return false;
-  }
-
-  // Keep only the first |hex_len| characters of |entropy|.
-  constexpr size_t kMaxEntropyArgumentLen = 128;
-  const size_t hex_len = ktl::min(entropy.size(), kMaxEntropyArgumentLen);
-  entropy = entropy.substr(0, hex_len);
-  DEBUG_ASSERT_MSG(entropy.size() == hex_len, "size=%zu hex_len=%zu", entropy.size(), hex_len);
-
-  for (char c : entropy) {
-    if (!isxdigit(c)) {
-      panic("Invalid entropy string %.*s: '%c' is not an ASCII hex digit\n",
-            static_cast<int>(entropy.size()), entropy.data(), c);
-    }
-  }
-
-  uint8_t digest[SHA256_DIGEST_LENGTH];
-  SHA256(reinterpret_cast<const uint8_t*>(entropy.data()), entropy.size(), digest);
-  g_prng_instance->AddEntropy(digest, sizeof(digest));
-
-  const size_t entropy_added = ktl::min(entropy.size() / 2, sizeof(digest));
-  LTRACEF("Collected %zu bytes of entropy from the kernel cmdline.\n", entropy_added);
-  return (entropy_added >= Prng::kMinEntropy);
-}
-
 // Returns true on success, false on failure.
 bool SeedFrom(entropy::Collector* collector) {
   uint8_t buf[Prng::kMinEntropy] = {0};
@@ -143,9 +87,22 @@ void EarlyBootSeed(uint level) {
   // place.  Some aspects of KASLR will help with this, but we may
   // additionally want to remap where this is later.
   alignas(alignof(Prng)) static uint8_t prng_space[sizeof(Prng)];
-  g_prng_instance = new (&prng_space) Prng(nullptr, 0, Prng::NonThreadSafeTag());
 
-  unsigned int successful = 0;  // number of successful entropy sources
+  // number of successful entropy sources
+  unsigned int successful = 0;
+
+  g_prng_instance = new (&prng_space) Prng(nullptr, 0, crypto::Prng::NonThreadSafeTag{});
+
+  // All validation from zbi item and commandline item is performed on phys, so
+  // this instance of entropy pool, is guaranteed to meet the minimum requirements
+  // for the current boot options, or we would have panic'd already.
+  ZX_ASSERT(!gBootOptions->cprng_seed_require_cmdline || gPhysHandoff->entropy_pool.has_value());
+  if (gPhysHandoff->entropy_pool) {
+    // |pool|'s destructor will wipe the stack.
+    auto pool = std::move(gPhysHandoff->entropy_pool.value());
+    g_prng_instance->AddEntropy(pool.contents().data(), pool.contents().size());
+    successful++;
+  }
   entropy::Collector* collector = nullptr;
   if (!gBootOptions->cprng_disable_hw_rng &&
       entropy::HwRngCollector::GetInstance(&collector) == ZX_OK && SeedFrom(collector)) {
@@ -158,15 +115,6 @@ void EarlyBootSeed(uint level) {
     successful++;
   } else if (gBootOptions->cprng_seed_require_jitterentropy) {
     panic("Failed to seed PRNG from required entropy source: jitterentropy\n");
-  }
-
-  unsigned int zbi_items = IntegrateZbiEntropy();
-  successful += zbi_items;
-
-  if (IntegrateCmdlineEntropy()) {
-    successful++;
-  } else if (zbi_items == 0 && gBootOptions->cprng_seed_require_cmdline) {
-    panic("Failed to seed PRNG from required entropy source: cmdline\n");
   }
 
   if (successful == 0) {

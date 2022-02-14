@@ -390,6 +390,7 @@ if (toolchain_environment == "kernel.phys" ||
     deps = [
       ":allocation",
       ":handoff",
+      ":handoff-entropy",
       ":symbolize",
       "//src/lib/llvm-profdata",
       "//zircon/kernel/arch/$zircon_cpu/phys:arch-handoff-prep",
@@ -450,18 +451,23 @@ zbi_executable("physboot") {
   defines = [ "KERNEL_LINK_ADDRESS=${kernel_base}" ]
 }
 
-source_set("handoff") {
-  public = [
-    "//zircon/kernel/arch/${zircon_cpu}/phys/include/phys/arch/arch-handoff.h",
-    "include/phys/handoff-ptr.h",
-    "include/phys/handoff.h",
-  ]
-  public_deps = [
-    # handoff.h has #include <lib/arch/ticks.h>.
-    "//zircon/kernel/lib/arch",
+if (is_kernel) {
+  source_set("handoff") {
+    public = [
+      "//zircon/kernel/arch/${zircon_cpu}/phys/include/phys/arch/arch-handoff.h",
+      "include/phys/handoff-ptr.h",
+      "include/phys/handoff.h",
+    ]
+    public_deps = [
+      # handoff.h has #include <lib/arch/ticks.h>.
+      "//zircon/kernel/lib/arch",
 
-    # handoff.h has #include <lib/uart/all.h>.
-    "//zircon/system/ulib/uart",
-  ]
-  public_configs = [ ":includes" ]
+      # handoff.h has #include <lib/uart/all.h>.
+      "//zircon/system/ulib/uart",
+
+      # handoff.h has #include <lib/crypto/entropy_pool.h>
+      "//zircon/kernel/lib/crypto:crypto-entropy-src",
+    ]
+    public_configs = [ ":includes" ]
+  }
 }
