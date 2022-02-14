@@ -191,9 +191,9 @@ impl JsonString {
     }
 }
 
-impl Into<FormattedContent> for JsonString {
-    fn into(self) -> FormattedContent {
-        FormattedContent::Json(fidl_fuchsia_mem::Buffer { vmo: self.vmo, size: self.size })
+impl From<JsonString> for FormattedContent {
+    fn from(string: JsonString) -> FormattedContent {
+        FormattedContent::Json(fidl_fuchsia_mem::Buffer { vmo: string.vmo, size: string.size })
     }
 }
 
@@ -230,7 +230,7 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
         let mut writer = VmoWriter::new(*this.max_packet_size);
-        writer.write(&[b'['])?;
+        writer.write_all(&[b'['])?;
 
         if let Some(item) = this.overflow.take() {
             let batch_writer = BufWriter::new(writer.clone());
@@ -255,7 +255,7 @@ where
             let is_first = writer_tail == 1;
             let (last_tail, previous_size) = (writer_tail, writer.capacity());
             if !is_first {
-                writer.write(",\n".as_bytes())?;
+                writer.write_all(",\n".as_bytes())?;
             }
             let batch_writer = BufWriter::new(writer.clone());
             serde_json::to_writer(batch_writer, &item)?;
@@ -283,7 +283,7 @@ where
             }
         }
 
-        writer.write(&[b']'])?;
+        writer.write_all(&[b']'])?;
         let writer_tail = writer.tail();
         if writer_tail > *this.max_packet_size {
             error!(
@@ -299,12 +299,10 @@ where
             // safe to unwrap, the vmo is guaranteed to be present.
             let (vmo, size) = writer.finalize().unwrap();
             Poll::Ready(Some(Ok(JsonString { vmo, size })))
+        } else if items_is_pending {
+            Poll::Pending
         } else {
-            if items_is_pending {
-                Poll::Pending
-            } else {
-                Poll::Ready(None)
-            }
+            Poll::Ready(None)
         }
     }
 }

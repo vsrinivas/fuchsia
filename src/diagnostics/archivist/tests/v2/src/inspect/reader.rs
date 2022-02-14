@@ -10,7 +10,6 @@ use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
 use fuchsia_component_test::new::RealmInstance;
 use fuchsia_component_test::new::{Capability, ChildOptions, Ref, Route};
 use lazy_static::lazy_static;
-use serde_json;
 
 const MONIKER_KEY: &str = "moniker";
 const METADATA_KEY: &str = "metadata";
@@ -369,14 +368,13 @@ fn process_results_for_comparison(results: serde_json::Value) -> serde_json::Val
     let mut string_result_array = results
         .as_array()
         .expect("result json is an array of objs.")
-        .into_iter()
+        .iter()
         .filter_map(|val| {
             let mut val = val.clone();
             // Filter out the results coming from the archivist, and zero out timestamps
             // that we cant golden test.
-            val.as_object_mut().map_or(
-                None,
-                |obj: &mut serde_json::Map<String, serde_json::Value>| match obj.get(MONIKER_KEY) {
+            val.as_object_mut().and_then(|obj: &mut serde_json::Map<String, serde_json::Value>| {
+                match obj.get(MONIKER_KEY) {
                     Some(serde_json::Value::String(moniker_str)) => {
                         if moniker_str != TEST_ARCHIVIST_MONIKER {
                             let metadata_obj =
@@ -391,8 +389,8 @@ fn process_results_for_comparison(results: serde_json::Value) -> serde_json::Val
                         }
                     }
                     _ => None,
-                },
-            )
+                }
+            })
         })
         .collect::<Vec<String>>();
 

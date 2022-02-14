@@ -4,6 +4,8 @@
 
 // This actor has actions to write/read logs to/from Archivist.
 
+#![warn(clippy::all)]
+
 use {
     anyhow::{Context, Result},
     diagnostics_reader::{ArchiveReader, Data, Logs, Subscription},
@@ -44,7 +46,7 @@ async fn main() -> Result<()> {
     .await
 }
 
-fn reader<'a>(data: &'a mut WorkerData, _: SmallRng) -> BoxFuture<'a, Result<()>> {
+fn reader(data: &mut WorkerData, _: SmallRng) -> BoxFuture<'_, Result<()>> {
     async move {
         let log: Data<Logs> =
             data.subscription.next().await.context("No next log")?.context("Error getting log")?;
@@ -57,7 +59,7 @@ fn reader<'a>(data: &'a mut WorkerData, _: SmallRng) -> BoxFuture<'a, Result<()>
     .boxed()
 }
 
-fn simple_writer<'a>(_: &'a mut WorkerData, _: SmallRng) -> BoxFuture<'a, Result<()>> {
+fn simple_writer(_: &mut WorkerData, _: SmallRng) -> BoxFuture<'_, Result<()>> {
     async move {
         info!("This is a test log message");
         Ok(())
@@ -65,7 +67,7 @@ fn simple_writer<'a>(_: &'a mut WorkerData, _: SmallRng) -> BoxFuture<'a, Result
     .boxed()
 }
 
-fn length_writer<'a>(_: &'a mut WorkerData, mut rng: SmallRng) -> BoxFuture<'a, Result<()>> {
+fn length_writer(_: &mut WorkerData, mut rng: SmallRng) -> BoxFuture<'_, Result<()>> {
     async move {
         let random_string_len = rng.gen_range(1..1000);
         let mut random_string = String::new();

@@ -120,21 +120,21 @@ impl<T> InnerArcList<T> {
     }
 
     fn pop_front(&mut self) -> Option<Arc<T>> {
-        self.items.pop_front().and_then(|item| {
+        self.items.pop_front().map(|item| {
             self.entries_popped += 1;
-            Some(item.value)
+            item.value
         })
     }
 
     fn peek_front(&self) -> Option<ArcListItem<T>> {
-        self.items.front().map(|item| item.clone())
+        self.items.front().cloned()
     }
 
     fn first_starting_at(&self, id: u64) -> Option<ArcListItem<T>> {
         self.items.front().and_then(|front_item| {
             if front_item.id < id {
                 let index = id - front_item.id;
-                self.items.get(index as usize).map(|item| item.clone())
+                self.items.get(index as usize).cloned()
             } else {
                 Some(front_item.clone())
             }
@@ -287,7 +287,7 @@ impl<T> Stream for Cursor<T> {
                 // we haven't missed anything, proceed normally
                 trace!("{:?} yielding item {}.", self.id, to_return.id);
                 self.last_id_seen = Some(to_return.id);
-                LazyItem::Next(to_return.value.clone())
+                LazyItem::Next(to_return.value)
             };
 
             Poll::Ready(Some(item))

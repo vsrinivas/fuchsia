@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::{endpoints::RequestStream, AsyncChannel};
+use fidl::endpoints::RequestStream;
 use fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream};
 use fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream};
 use fuchsia_async as fasync;
@@ -35,10 +35,8 @@ pub fn serve_v2() -> (fasync::Task<()>, mpsc::Receiver<()>) {
     let lifecycle_handle_info = HandleInfo::new(HandleType::Lifecycle, 0);
     let lifecycle_handle = take_startup_handle(lifecycle_handle_info)
         .expect("must have been provided a lifecycle channel in procargs");
-    let async_chan = AsyncChannel::from(
-        fasync::Channel::from_channel(lifecycle_handle.into())
-            .expect("Async channel conversion failed."),
-    );
+    let async_chan = fasync::Channel::from_channel(lifecycle_handle.into())
+        .expect("Async channel conversion failed.");
     let mut req_stream = LifecycleRequestStream::from_channel(async_chan);
 
     let task = fasync::Task::spawn(async move {

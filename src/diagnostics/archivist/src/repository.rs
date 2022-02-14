@@ -281,8 +281,7 @@ impl DataRepoState {
         identity: ComponentIdentity,
         event_timestamp: zx::Time,
     ) -> Result<(), Error> {
-        let lifecycle_artifact_container =
-            LifecycleArtifactsContainer { event_timestamp: event_timestamp };
+        let lifecycle_artifact_container = LifecycleArtifactsContainer { event_timestamp };
 
         let unique_key: Vec<_> = identity.unique_key().into();
         let diag_repo_entry_opt = self.data_directories.get_mut(&unique_key);
@@ -291,7 +290,7 @@ impl DataRepoState {
                 let diag_repo_entry_values: &mut [ComponentDiagnostics] =
                     diag_repo_entry.get_values_mut();
 
-                match &mut diag_repo_entry_values[..] {
+                match &mut *diag_repo_entry_values {
                     [] => {
                         // An entry with no values implies that the somehow we observed the
                         // creation of a component lower in the topology before observing this
@@ -385,13 +384,13 @@ impl DataRepoState {
         selectors: Vec<LogInterestSelector>,
     ) {
         let previous_selectors =
-            self.interest_registrations.insert(connection_id, selectors).unwrap_or(vec![]);
+            self.interest_registrations.insert(connection_id, selectors).unwrap_or_default();
         // unwrap safe, we just inserted.
         let new_selectors = self.interest_registrations.get(&connection_id).unwrap();
         for (_, dir) in self.data_directories.iter() {
             if let Some(dir) = dir {
                 if let Some(logs) = &dir.logs {
-                    logs.update_interest(&new_selectors, &previous_selectors);
+                    logs.update_interest(new_selectors, &previous_selectors);
                 }
             }
         }
@@ -438,7 +437,7 @@ impl DataRepoState {
                 let diag_repo_entry_values: &mut [ComponentDiagnostics] =
                     diag_repo_entry.get_values_mut();
 
-                match &mut diag_repo_entry_values[..] {
+                match &mut *diag_repo_entry_values {
                     [] => {
                         // An entry with no values implies that the somehow we observed the
                         // creation of a component lower in the topology before observing this
@@ -598,9 +597,11 @@ impl DataRepoState {
     }
 }
 
+type LiveIteratorsMap = HashMap<usize, (StreamMode, MultiplexerHandle<Arc<LogsData>>)>;
+
 /// Ensures that BatchIterators get access to logs from newly started components.
 pub struct MultiplexerBroker {
-    live_iterators: Arc<Mutex<HashMap<usize, (StreamMode, MultiplexerHandle<Arc<LogsData>>)>>>,
+    live_iterators: Arc<Mutex<LiveIteratorsMap>>,
     cleanup_sender: mpsc::UnboundedSender<usize>,
     _live_iterators_cleanup_task: fasync::Task<()>,
 }

@@ -33,7 +33,7 @@ impl StoredMessage {
     }
 
     pub fn structured(buf: &[u8], stats: Arc<LogStreamStats>) -> Result<Self, StreamError> {
-        let (timestamp, severity) = diagnostics_message::parse_basic_structured_info(&buf)?;
+        let (timestamp, severity) = diagnostics_message::parse_basic_structured_info(buf)?;
         // TODO(fxbug.dev/66656): remove copy. `buf.into()` calls into
         // https://doc.rust-lang.org/std/boxed/struct.Box.html#method.from-1 which allocates on the
         // heap and copies.
@@ -50,7 +50,7 @@ impl StoredMessage {
             Err(_) => {
                 format!(
                     "INVALID UTF-8 SEE https://fxbug.dev/88259, message may be corrupted: {}",
-                    String::from_utf8_lossy(&record.data[0..data_len]).to_string()
+                    String::from_utf8_lossy(&record.data[0..data_len])
                 )
             }
             Ok(utf8) => {
@@ -138,10 +138,10 @@ impl StoredMessage {
                 Ok(diagnostics_message::from_logger(source.into(), msg.clone()))
             }
             MessageBytes::Structured { bytes, .. } => {
-                diagnostics_message::from_structured(source.into(), &bytes).map_err(|er| er.into())
+                diagnostics_message::from_structured(source.into(), bytes).map_err(|er| er.into())
             }
             MessageBytes::DebugLog { msg, .. } => {
-                debuglog::convert_debuglog_to_log_message(&msg).ok_or(StreamError::DebugLogMessage)
+                debuglog::convert_debuglog_to_log_message(msg).ok_or(StreamError::DebugLogMessage)
             }
         }
     }

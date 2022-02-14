@@ -107,8 +107,8 @@ pub async fn populate_data_map(inspect_proxy: &DirectoryProxy) -> DataMap {
         };
 
         // Obtain the vmo backing any VmoFiles.
-        match file_proxy.describe().err_into::<anyhow::Error>().await {
-            Ok(nodeinfo) => match nodeinfo {
+        if let Ok(node_info) = file_proxy.describe().err_into::<anyhow::Error>().await {
+            match node_info {
                 NodeInfo::Vmofile(vmofile) => {
                     data_map.insert(entry.name.into_boxed_str(), InspectData::Vmo(vmofile.vmo));
                 }
@@ -117,14 +117,13 @@ pub async fn populate_data_map(inspect_proxy: &DirectoryProxy) -> DataMap {
                         data_map.insert(entry.name.into_boxed_str(), InspectData::File(contents));
                     }
                 }
-                ty @ _ => {
+                ty => {
                     error!(
                         file = %entry.name, ?ty,
                         "found an inspect file of unexpected type",
                     );
                 }
-            },
-            Err(_) => {}
+            }
         }
     }
 

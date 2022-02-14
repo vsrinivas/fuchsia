@@ -20,12 +20,14 @@ pub struct UnattributedLogSinkSource {
     receiver: mpsc::Receiver<flogger::LogSinkRequestStream>,
 }
 
-impl UnattributedLogSinkSource {
-    pub fn new() -> Self {
+impl Default for UnattributedLogSinkSource {
+    fn default() -> Self {
         let (sender, receiver) = mpsc::channel(10);
-        Self { dispatcher: Dispatcher::default(), sender, receiver }
+        Self { sender, receiver, dispatcher: Dispatcher::default() }
     }
+}
 
+impl UnattributedLogSinkSource {
     pub fn publisher(&self) -> mpsc::Sender<flogger::LogSinkRequestStream> {
         self.sender.clone()
     }
@@ -72,7 +74,7 @@ mod tests {
         let events =
             BTreeSet::from([AnyEventType::Singleton(SingletonEventType::LogSinkRequested)]);
         let (mut event_stream, dispatcher) = Dispatcher::new_for_test(events);
-        let mut source = UnattributedLogSinkSource::new();
+        let mut source = UnattributedLogSinkSource::default();
         source.set_dispatcher(dispatcher);
         let mut publisher = source.publisher();
         let _task = fasync::Task::spawn(async move {

@@ -54,7 +54,7 @@ impl MonikerRewriter {
         for s in selectors.iter_mut() {
             for pair in &self.monikers {
                 // Not expecting an error here, but if we get one, don't make any changes.
-                if selectors::match_component_moniker_against_selector(&[pair.legacy_str], &s)
+                if selectors::match_component_moniker_against_selector(&[pair.legacy_str], s)
                     .unwrap_or(false)
                 {
                     if let Ok(selector) =
@@ -66,10 +66,10 @@ impl MonikerRewriter {
                 }
             }
         }
-        let rewriter = if monikers_rewritten.len() > 0 {
-            Some(OutputRewriter { monikers: monikers_rewritten })
-        } else {
+        let rewriter = if monikers_rewritten.is_empty() {
             None
+        } else {
+            Some(OutputRewriter { monikers: monikers_rewritten })
         };
         (Some(selectors), rewriter)
     }
@@ -87,7 +87,7 @@ impl OutputRewriter {
                 return pair.legacy_str.to_string();
             }
         }
-        return moniker;
+        moniker
     }
 }
 

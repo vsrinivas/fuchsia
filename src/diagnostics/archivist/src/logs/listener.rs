@@ -66,11 +66,8 @@ impl Listener {
         debug!("Backfilling from cursor until pending.");
         let mut backlog = vec![];
         futures::future::poll_fn(|cx| {
-            loop {
-                match logs.poll_next_unpin(cx) {
-                    Poll::Ready(Some(next)) => backlog.push(next),
-                    _ => break,
-                }
+            while let Poll::Ready(Some(next)) = logs.poll_next_unpin(cx) {
+                backlog.push(next);
             }
 
             Poll::Ready(())
@@ -153,7 +150,7 @@ impl Listener {
     }
 
     /// Send a batch of pre-filtered log messages to this listener.
-    async fn send_filtered_logs(&mut self, log_messages: &mut Vec<LogMessage>) {
+    async fn send_filtered_logs(&mut self, log_messages: &mut [LogMessage]) {
         trace!("Flushing batch.");
         self.check_result({
             let mut log_messages = log_messages.iter_mut();

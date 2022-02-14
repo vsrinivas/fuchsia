@@ -206,7 +206,7 @@ async fn test_logs_lifecycle() {
             .unwrap();
 
         utils::wait_for_component_stopped_event(
-            &instance.root.child_name(),
+            instance.root.child_name(),
             LOG_AND_EXIT_COMPONENT,
             ExitStatusMatcher::Clean,
             &mut event_stream,

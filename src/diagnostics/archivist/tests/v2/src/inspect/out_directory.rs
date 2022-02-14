@@ -25,10 +25,10 @@ async fn out_can_be_read() {
         instance.root.child_name()
     );
     let hub_out_path = Path::new(&hub_out_path_str);
-    verify_out(&hub_out_path).await.expect("verify - first");
+    verify_out(hub_out_path).await.expect("verify - first");
 
     // Verify again to ensure we can continue to read.
-    verify_out(&hub_out_path).await.expect("verify - second");
+    verify_out(hub_out_path).await.expect("verify - second");
 }
 
 async fn verify_out(hub_out_path: &Path) -> Result<(), Error> {

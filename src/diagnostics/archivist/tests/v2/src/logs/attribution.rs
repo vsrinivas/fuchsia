@@ -95,7 +95,7 @@ async fn log_unattributed_stream() {
         packet.data[0] = 0;
         packet.add_data(1, "repeated log".as_bytes());
         for _ in 0..5 {
-            message_client.write(&mut packet.as_bytes()).unwrap();
+            message_client.write(packet.as_bytes()).unwrap();
         }
     }
 

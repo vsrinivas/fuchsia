@@ -84,7 +84,7 @@ impl<K: DebugLog> DebugLogBridge<K> {
         }
     }
 
-    pub async fn existing_logs<'a>(&'a mut self) -> Result<Vec<StoredMessage>, zx::Status> {
+    pub async fn existing_logs(&mut self) -> Result<Vec<StoredMessage>, zx::Status> {
         unfold(self, move |klogger| async move {
             match klogger.read_log().await {
                 Err(zx::Status::SHOULD_WAIT) => None,
@@ -125,7 +125,7 @@ pub fn convert_debuglog_to_log_message(record: &zx::sys::zx_log_record_t) -> Opt
         Err(_) => {
             format!(
                 "INVALID UTF-8 SEE https://fxbug.dev/88259, message may be corrupted: {}",
-                String::from_utf8_lossy(&record.data[0..data_len]).to_string()
+                String::from_utf8_lossy(&record.data[0..data_len])
             )
         }
         Ok(utf8) => {

@@ -31,15 +31,15 @@ impl std::fmt::Display for Moniker {
     }
 }
 
-impl Into<Moniker> for Vec<&str> {
-    fn into(self) -> Moniker {
-        Moniker(self.into_iter().map(|s| s.to_string()).collect())
+impl From<Vec<&str>> for Moniker {
+    fn from(other: Vec<&str>) -> Moniker {
+        Moniker(other.into_iter().map(|s| s.to_string()).collect())
     }
 }
 
-impl Into<Moniker> for Vec<String> {
-    fn into(self) -> Moniker {
-        Moniker(self)
+impl From<Vec<String>> for Moniker {
+    fn from(other: Vec<String>) -> Moniker {
+        Moniker(other)
     }
 }
 
@@ -53,21 +53,21 @@ impl<'a> Deref for UniqueKey {
     }
 }
 
-impl Into<UniqueKey> for Vec<String> {
-    fn into(self) -> UniqueKey {
-        UniqueKey(self)
+impl From<Vec<String>> for UniqueKey {
+    fn from(other: Vec<String>) -> UniqueKey {
+        UniqueKey(other)
     }
 }
 
-impl Into<UniqueKey> for Vec<&str> {
-    fn into(self) -> UniqueKey {
-        UniqueKey(self.into_iter().map(|s| s.to_string()).collect())
+impl From<Vec<&str>> for UniqueKey {
+    fn from(other: Vec<&str>) -> UniqueKey {
+        UniqueKey(other.into_iter().map(|s| s.to_string()).collect())
     }
 }
 
-impl Into<Vec<String>> for UniqueKey {
-    fn into(self) -> Vec<String> {
-        self.0
+impl From<UniqueKey> for Vec<String> {
+    fn from(other: UniqueKey) -> Vec<String> {
+        other.0
     }
 }
 
@@ -111,9 +111,9 @@ impl AsRef<str> for SingletonEventType {
     }
 }
 
-impl Into<AnyEventType> for EventType {
-    fn into(self) -> AnyEventType {
-        AnyEventType::General(self)
+impl From<EventType> for AnyEventType {
+    fn from(event: EventType) -> AnyEventType {
+        AnyEventType::General(event)
     }
 }
 
@@ -126,9 +126,9 @@ impl AsRef<str> for EventType {
     }
 }
 
-impl Into<AnyEventType> for SingletonEventType {
-    fn into(self) -> AnyEventType {
-        AnyEventType::Singleton(self)
+impl From<SingletonEventType> for AnyEventType {
+    fn from(event: SingletonEventType) -> AnyEventType {
+        AnyEventType::Singleton(event)
     }
 }
 
@@ -294,8 +294,8 @@ impl ComponentIdentifier {
             .ok_or_else(|| MonikerError::InvalidMonikerPrefix(moniker.to_string()))?;
 
         let mut segments = vec![];
-        for raw_segment in without_root.split("/") {
-            let mut parts = raw_segment.split(":");
+        for raw_segment in without_root.split('/') {
+            let mut parts = raw_segment.split(':');
             let segment = match (parts.next(), parts.next()) {
                 // we have a component name and a collection
                 (Some(c), Some(n)) => {
@@ -416,11 +416,11 @@ impl TryFrom<fsys::Event> for Event {
                         let name =
                             capability_requested.name.ok_or(EventError::MissingField("name"))?;
 
-                        if &name != flogger::LogSinkMarker::NAME {
-                            Err(EventError::IncorrectName {
+                        if name != flogger::LogSinkMarker::NAME {
+                            return Err(EventError::IncorrectName {
                                 received: name,
                                 expected: flogger::LogSinkMarker::NAME,
-                            })?;
+                            });
                         }
                         let capability = capability_requested
                             .capability

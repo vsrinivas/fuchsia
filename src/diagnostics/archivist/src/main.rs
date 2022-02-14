@@ -4,6 +4,7 @@
 
 //! The Archivist collects and stores diagnostic data from components.
 
+#![warn(clippy::all)]
 #![warn(missing_docs)]
 
 use {
@@ -13,7 +14,7 @@ use {
     fdio::service_connect,
     fuchsia_async::{LocalExecutor, SendExecutor},
     fuchsia_component::server::MissingStartupHandle,
-    fuchsia_syslog, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     std::path::PathBuf,
     tracing::{debug, error, info, warn},
 };

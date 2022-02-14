@@ -29,7 +29,7 @@ use {
     selectors::{self, FastError},
     serde::Serialize,
     std::collections::HashMap,
-    std::convert::{TryFrom, TryInto},
+    std::convert::TryFrom,
     std::sync::{Arc, Mutex},
     tracing::warn,
 };
@@ -52,7 +52,7 @@ fn validate_and_parse_selectors(
     let mut errors = vec![];
 
     if selector_args.is_empty() {
-        Err(AccessorError::EmptySelectors)?;
+        return Err(AccessorError::EmptySelectors);
     }
 
     for selector_arg in selector_args {
@@ -128,7 +128,7 @@ impl ArchiveAccessor {
         }
         let mode = params.stream_mode.ok_or(AccessorError::MissingMode)?;
 
-        let performance_config: PerformanceConfig = (&params).try_into()?;
+        let performance_config: PerformanceConfig = PerformanceConfig::try_from(&params)?;
 
         match params.data_type.ok_or(AccessorError::MissingDataType)? {
             DataType::Inspect => {
@@ -145,7 +145,7 @@ impl ArchiveAccessor {
                         Some(validate_and_parse_selectors(selectors)?)
                     }
                     ClientSelectorConfiguration::SelectAll(_) => None,
-                    _ => Err(AccessorError::InvalidSelectors("unrecognized selectors"))?,
+                    _ => return Err(AccessorError::InvalidSelectors("unrecognized selectors")),
                 };
 
                 let (selectors, output_rewriter) = match (selectors, rewriter) {
@@ -194,9 +194,9 @@ impl ArchiveAccessor {
                 let selectors =
                     params.client_selector_configuration.ok_or(AccessorError::MissingSelectors)?;
                 if !matches!(selectors, ClientSelectorConfiguration::SelectAll(_)) {
-                    Err(AccessorError::InvalidSelectors(
+                    return Err(AccessorError::InvalidSelectors(
                         "lifecycle only supports SelectAll at the moment",
-                    ))?;
+                    ));
                 }
 
                 let events = LifecycleServer::new(pipeline);
@@ -210,7 +210,7 @@ impl ArchiveAccessor {
                         Some(validate_and_parse_log_selectors(selectors)?)
                     }
                     Some(ClientSelectorConfiguration::SelectAll(_)) => None,
-                    _ => Err(AccessorError::InvalidSelectors("unrecognized selectors"))?,
+                    _ => return Err(AccessorError::InvalidSelectors("unrecognized selectors")),
                 };
                 let logs = pipeline.read().logs(mode, selectors);
                 BatchIterator::new_serving_arrays(logs, requests, mode, stats)?.run().await
@@ -307,14 +307,12 @@ fn maybe_update_budget(
             *remaining_budget += bytes;
             true
         }
+    } else if bytes > byte_limit {
+        budget_map.insert(moniker.to_string().into_boxed_str(), 0);
+        false
     } else {
-        if bytes > byte_limit {
-            budget_map.insert(moniker.to_string().into_boxed_str(), 0);
-            false
-        } else {
-            budget_map.insert(moniker.to_string().into_boxed_str(), bytes);
-            true
-        }
+        budget_map.insert(moniker.to_string().into_boxed_str(), bytes);
+        true
     }
 }
 
@@ -419,7 +417,7 @@ impl BatchIterator {
             self.stats.add_request();
             let start_time = zx::Time::get_monotonic();
             // if we get None back, treat that as a terminal batch with an empty vec
-            let batch = self.data.next().await.unwrap_or(vec![]);
+            let batch = self.data.next().await.unwrap_or_default();
             // turn errors into epitaphs -- we drop intermediate items if there was an error midway
             let batch = batch.into_iter().collect::<Result<Vec<_>, _>>()?;
 
@@ -493,7 +491,7 @@ impl TryFrom<&StreamParameters> for PerformanceConfig {
                 performance_configuration:
                     Some(PerformanceConfiguration { max_aggregate_content_size_bytes, .. }),
                 ..
-            } => max_aggregate_content_size_bytes.clone(),
+            } => *max_aggregate_content_size_bytes,
             _ => None,
         };
 

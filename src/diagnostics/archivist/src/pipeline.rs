@@ -24,12 +24,7 @@ use {
     futures::{channel::mpsc, prelude::*},
     parking_lot::RwLock,
     selectors,
-    std::{
-        collections::HashMap,
-        convert::TryInto,
-        path::{Path, PathBuf},
-        sync::Arc,
-    },
+    std::{collections::HashMap, convert::TryInto, path::Path, sync::Arc},
 };
 
 struct PipelineParameters {
@@ -82,7 +77,7 @@ impl Pipeline {
     /// config/data/feedback to inspect exfiltration.
     pub fn feedback(
         data_repo: DataRepo,
-        pipelines_path: &PathBuf,
+        pipelines_path: &Path,
         parent_node: &inspect::Node,
     ) -> Self {
         let parameters = PipelineParameters {
@@ -100,7 +95,7 @@ impl Pipeline {
     /// under config/data/legacy_metrics to inspect exfiltration.
     pub fn legacy_metrics(
         data_repo: DataRepo,
-        pipelines_path: &PathBuf,
+        pipelines_path: &Path,
         parent_node: &inspect::Node,
     ) -> Self {
         let parameters = PipelineParameters {
@@ -119,7 +114,7 @@ impl Pipeline {
     /// production services.
     pub fn all_access(
         data_repo: DataRepo,
-        pipelines_path: &PathBuf,
+        pipelines_path: &Path,
         parent_node: &inspect::Node,
     ) -> Self {
         let parameters = PipelineParameters {
@@ -152,7 +147,7 @@ impl Pipeline {
     fn new(
         parameters: PipelineParameters,
         data_repo: DataRepo,
-        pipelines_path: &PathBuf,
+        pipelines_path: &Path,
         parent_node: &inspect::Node,
     ) -> Self {
         let mut _pipeline_node = None;
@@ -232,7 +227,7 @@ impl Pipeline {
         // the inspect source's relative moniker. Otherwise, ignore.
         if let Some(selectors) = &self.static_selectors {
             let matched_selectors =
-                selectors::match_component_moniker_against_selectors(&relative_moniker, &selectors)
+                selectors::match_component_moniker_against_selectors(relative_moniker, selectors)
                     .map_err(Error::MatchComponentMoniker)?;
 
             match &matched_selectors[..] {

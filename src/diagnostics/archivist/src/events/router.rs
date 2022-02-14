@@ -131,11 +131,11 @@ impl EventRouter {
 
                         // Consumers which weak reference could be upgraded will be stored here.
                         let mut active_consumers = vec![];
-                        for consumer in weak_consumers.into_iter().filter_map(|c| c.upgrade()) {
+                        for consumer in weak_consumers.iter_mut().filter_map(|c| c.upgrade()) {
                             active_consumers.push(Arc::downgrade(&consumer));
                             let e = event_with_singleton_data
                                 .take()
-                                .unwrap_or(event_without_singleton_data.clone());
+                                .unwrap_or_else(|| event_without_singleton_data.clone());
                             consumer.handle(e).await;
                         }
 
@@ -152,12 +152,12 @@ impl EventRouter {
 
     fn validate_routing(&mut self) -> Result<(), RouterError> {
         for consumed_event in self.consumers.keys() {
-            if self.producers_registered.get(&consumed_event).is_none() {
+            if self.producers_registered.get(consumed_event).is_none() {
                 return Err(RouterError::MissingProducer(consumed_event.clone()));
             }
         }
         for produced_event in &self.producers_registered {
-            if self.consumers.get(&produced_event).is_none() {
+            if self.consumers.get(produced_event).is_none() {
                 return Err(RouterError::MissingConsumer(produced_event.clone()));
             }
         }
@@ -403,7 +403,7 @@ impl EventStreamLogger {
             | EventPayload::ComponentStopped(ComponentStoppedPayload { component })
             | EventPayload::DiagnosticsReady(DiagnosticsReadyPayload { component, .. })
             | EventPayload::LogSinkRequested(LogSinkRequestedPayload { component, .. }) => {
-                self.log_inspect(&ty.as_ref(), &component);
+                self.log_inspect(ty.as_ref(), component);
             }
         }
     }

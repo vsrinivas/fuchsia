@@ -96,7 +96,7 @@ async fn launch_and_wait_for_exit(
     let _ = client::connect_to_protocol_at_dir_root::<BinderMarker>(&exposed_dir).unwrap();
 
     utils::wait_for_component_stopped_event(
-        &instance.root.child_name(),
+        instance.root.child_name(),
         &child_ref.name,
         ExitStatusMatcher::Clean,
         event_stream,

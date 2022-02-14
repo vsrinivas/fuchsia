@@ -693,10 +693,10 @@ pub struct InspectHierarchyMatcher {
     pub node_property_selectors: Vec<String>,
 }
 
-impl<T: Borrow<Selector>> TryFrom<&Vec<T>> for InspectHierarchyMatcher {
+impl<T: Borrow<Selector>> TryFrom<Vec<T>> for InspectHierarchyMatcher {
     type Error = Error;
 
-    fn try_from(selectors: &Vec<T>) -> Result<Self, Self::Error> {
+    fn try_from(selectors: Vec<T>) -> Result<Self, Self::Error> {
         selectors[..].try_into()
     }
 }
@@ -779,7 +779,7 @@ pub fn select_from_hierarchy<Key>(
 where
     Key: AsRef<str> + Clone,
 {
-    let single_selector_hierarchy_matcher = (&vec![Arc::new(selector)]).try_into()?;
+    let single_selector_hierarchy_matcher = vec![Arc::new(selector)].try_into()?;
 
     // TODO(fxbug.dev/47015): Extraction doesn't require a full tree filter. Instead, the hierarchy
     // should be traversed like a state machine, and all matching nodes should search for
@@ -1415,8 +1415,7 @@ mod tests {
             })
             .collect::<Vec<Arc<Selector>>>();
 
-        let hierarchy_matcher: InspectHierarchyMatcher =
-            (&parsed_test_selectors).try_into().unwrap();
+        let hierarchy_matcher: InspectHierarchyMatcher = parsed_test_selectors.try_into().unwrap();
 
         let mut filtered_hierarchy = filter_hierarchy(hierarchy, &hierarchy_matcher)
             .expect("filtered hierarchy should succeed.")

@@ -9,6 +9,7 @@ use std::{collections::HashSet, convert::TryFrom};
 
 /// Controls whether messages are seen by a given `Listener`. Created from
 /// `fidl_fuchsia_logger::LogFilterOptions`.
+#[derive(Default)]
 pub(super) struct MessageFilter {
     /// Only send messages of greater or equal severity to this value.
     min_severity: Option<LegacySeverity>,
@@ -21,12 +22,6 @@ pub(super) struct MessageFilter {
 
     /// Only send messages whose tags match one or more of those provided.
     tags: HashSet<String>,
-}
-
-impl Default for MessageFilter {
-    fn default() -> Self {
-        Self { min_severity: None, pid: None, tid: None, tags: HashSet::new() }
-    }
 }
 
 impl MessageFilter {
@@ -87,7 +82,7 @@ impl MessageFilter {
             .unwrap_or(false);
         let reject_tags = if self.tags.is_empty() {
             false
-        } else if log_message.tags().map(|t| t.len() == 0).unwrap_or(true) {
+        } else if log_message.tags().map(|t| t.is_empty()).unwrap_or(true) {
             !self.tags.contains(log_message.component_name())
         } else {
             !log_message

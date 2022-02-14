@@ -13,7 +13,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-static DISABLE_FILTER_FILE_NAME: &'static str = "DISABLE_FILTERING.txt";
+static DISABLE_FILTER_FILE_NAME: &str = "DISABLE_FILTERING.txt";
 
 fn default_pipelines_path() -> PathBuf {
     DEFAULT_PIPELINES_PATH.into()
@@ -99,7 +99,7 @@ impl PipelineConfig {
             Ok(mut readdir) => {
                 while let Some(Ok(entry)) = readdir.next() {
                     let path = entry.path();
-                    if path.extension() == Some(&suffix) {
+                    if path.extension() == Some(suffix) {
                         match parse_selector_file::<FastError>(&path) {
                             Ok(selectors) => {
                                 let mut validated_selectors = vec![];
@@ -118,11 +118,11 @@ impl PipelineConfig {
                                 errors.push(format!(
                                     "Failed to parse {}: {}",
                                     path.to_string_lossy(),
-                                    e.to_string()
+                                    e
                                 ));
                             }
                         }
-                    } else if path.file_name() == Some(&disable_filter_file_name) {
+                    } else if path.file_name() == Some(disable_filter_file_name) {
                         disable_filtering = true;
                     }
                 }
@@ -156,7 +156,7 @@ impl PipelineConfig {
         node.record(files);
         node.record_uint("selector_count", selector_sum as u64);
 
-        if self.errors.len() != 0 {
+        if !self.errors.is_empty() {
             let errors = node.create_child("errors");
             for (i, error) in self.errors.iter().enumerate() {
                 let error_node = errors.create_child(format!("{}", i));
@@ -169,7 +169,7 @@ impl PipelineConfig {
 
     /// Returns true if this pipeline config had errors.
     pub fn has_error(&self) -> bool {
-        self.errors.len() > 0
+        !self.errors.is_empty()
     }
 }
 
@@ -197,10 +197,10 @@ pub fn parse_service_config(path: impl AsRef<Path>) -> Result<ServiceConfig, Err
 fn validate_static_selector(static_selector: &Selector) -> Result<(), String> {
     match static_selector.component_selector.as_ref() {
         Some(selector) if contains_recursive_glob(selector) => {
-            Err(format!("Recursive glob not allowed in static selector configs"))
+            Err("Recursive glob not allowed in static selector configs".to_string())
         }
         Some(_) => Ok(()),
-        None => Err(format!("A selector does not contain a component selector")),
+        None => Err("A selector does not contain a component selector".to_string()),
     }
 }
 

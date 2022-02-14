@@ -73,6 +73,7 @@ enum TestState {
     NoRequest,
 }
 
+type InterestSender = oneshot::Sender<Result<FidlInterest, InterestChangeError>>;
 struct ContainerState {
     /// Whether we think the component is currently running.
     is_live: bool,
@@ -90,10 +91,7 @@ struct ContainerState {
     control_handles: Vec<LogSinkControlHandle>,
 
     /// Hanging gets
-    hanging_gets: BTreeMap<
-        usize,
-        Arc<Mutex<Option<oneshot::Sender<Result<FidlInterest, InterestChangeError>>>>>,
-    >,
+    hanging_gets: BTreeMap<usize, Arc<Mutex<Option<InterestSender>>>>,
 }
 
 impl LogsArtifactsContainer {
@@ -145,7 +143,7 @@ impl LogsArtifactsContainer {
             self.buffer
                 .cursor(mode)
                 .scan(
-                    (earliest_timestamp, 0 as u64),
+                    (earliest_timestamp, 0u64),
                     move |(last_timestamp, dropped_messages), item| {
                         futures::future::ready(match item {
                             LazyItem::Next(m) => {
@@ -171,7 +169,7 @@ impl LogsArtifactsContainer {
                                             )
                                             .build(),
                                         );
-                                        Some(Some(Arc::new(data.into())))
+                                        Some(Some(Arc::new(data)))
                                     }
                                 }
                             }
@@ -182,7 +180,7 @@ impl LogsArtifactsContainer {
                         })
                     },
                 )
-                .filter_map(|value| future::ready(value)),
+                .filter_map(future::ready),
         )
     }
 
@@ -217,7 +215,7 @@ impl LogsArtifactsContainer {
         {
             let control = stream.control_handle();
             let mut state = self.state.lock();
-            control.send_on_register_interest(state.min_interest().clone().into()).ok();
+            control.send_on_register_interest(state.min_interest()).ok();
             state.control_handles.push(control);
         }
 
@@ -263,7 +261,7 @@ impl LogsArtifactsContainer {
                     }
                     if needs_interest_broadcast {
                         // Send interest if not yet received
-                        let _ = responder.send(&mut Ok(min_interest.clone().into()));
+                        let _ = responder.send(&mut Ok(min_interest.clone()));
                         let mut previous_interest = previous_interest_sent.lock();
                         *previous_interest = Some(min_interest.clone());
                     } else {
@@ -289,7 +287,7 @@ impl LogsArtifactsContainer {
         previous_interest_sent: Arc<Mutex<Option<FidlInterest>>>,
         interest_listener: &mut Option<Task<()>>,
         responder: LogSinkWaitForInterestChangeResponder,
-        sender: Arc<Mutex<Option<oneshot::Sender<Result<FidlInterest, InterestChangeError>>>>>,
+        sender: Arc<Mutex<Option<InterestSender>>>,
     ) {
         let (tx, rx) = oneshot::channel();
         {
@@ -326,7 +324,7 @@ impl LogsArtifactsContainer {
             if let Ok(value) = res {
                 match value {
                     Ok(value) => {
-                        let _ = responder.send(&mut Ok(value.clone().into()));
+                        let _ = responder.send(&mut Ok(value.clone()));
                         let mut write_lock = prev_interest_clone.lock();
                         *write_lock = Some(value);
                     }
@@ -533,7 +531,7 @@ impl ContainerState {
             self.control_handles.retain(|handle| {
                 handle.send_on_register_interest(new_min_interest.clone()).is_ok()
             });
-            for (_, value) in &mut self.hanging_gets {
+            for value in self.hanging_gets.values_mut() {
                 let locked = value.lock().take();
                 if let Some(value) = locked {
                     let _ = value.send(Ok(new_min_interest.clone()));
@@ -601,7 +599,7 @@ impl Ord for Interest {
 
 impl PartialOrd for Interest {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(&other))
+        Some(self.cmp(other))
     }
 }
 

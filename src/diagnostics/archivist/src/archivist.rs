@@ -199,7 +199,7 @@ impl Archivist {
         let data_repo_2 = self.data_repo().clone();
         let listen_sender = self.listen_sender.clone();
 
-        let mut unattributed_log_sink_source = UnattributedLogSinkSource::new();
+        let mut unattributed_log_sink_source = UnattributedLogSinkSource::default();
         let unattributed_sender = unattributed_log_sink_source.publisher();
         self.event_router.add_producer(ProducerConfig {
             producer: &mut unattributed_log_sink_source,
@@ -413,7 +413,7 @@ fn maybe_remove_component(
     diagnostics_repo: &DataRepo,
     diagnostics_pipelines: &[Arc<RwLock<Pipeline>>],
 ) {
-    if !diagnostics_repo.is_live(&identity) {
+    if !diagnostics_repo.is_live(identity) {
         debug!(%identity, "Removing component from repository.");
         diagnostics_repo.write().data_directories.remove(&*identity.unique_key());
 

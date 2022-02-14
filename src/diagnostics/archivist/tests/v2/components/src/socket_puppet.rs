@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+
 use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_archivist_tests::{
     SocketPuppetControllerMarker, SocketPuppetMarker, SocketPuppetRequest,

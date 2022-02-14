@@ -44,27 +44,27 @@ pub struct NodeHierarchyData {
     hierarchy: Option<DiagnosticsHierarchy>,
 }
 
-impl Into<NodeHierarchyData> for SnapshotData {
-    fn into(self: SnapshotData) -> NodeHierarchyData {
-        match self.snapshot {
+impl From<SnapshotData> for NodeHierarchyData {
+    fn from(data: SnapshotData) -> NodeHierarchyData {
+        match data.snapshot {
             Some(snapshot) => match convert_snapshot_to_node_hierarchy(snapshot) {
                 Ok(node_hierarchy) => NodeHierarchyData {
-                    filename: self.filename,
-                    timestamp: self.timestamp,
-                    errors: self.errors,
+                    filename: data.filename,
+                    timestamp: data.timestamp,
+                    errors: data.errors,
                     hierarchy: Some(node_hierarchy),
                 },
                 Err(e) => NodeHierarchyData {
-                    filename: self.filename,
-                    timestamp: self.timestamp,
+                    filename: data.filename,
+                    timestamp: data.timestamp,
                     errors: vec![schema::Error { message: format!("{:?}", e) }],
                     hierarchy: None,
                 },
             },
             None => NodeHierarchyData {
-                filename: self.filename,
-                timestamp: self.timestamp,
-                errors: self.errors,
+                filename: data.filename,
+                timestamp: data.timestamp,
+                errors: data.errors,
                 hierarchy: None,
             },
         }
@@ -114,7 +114,7 @@ impl ReaderServer {
                 unpopulated.populate(batch_timeout, global_stats)
             })
             .flatten()
-            .map(|populated| future::ready(populated))
+            .map(future::ready)
             // buffer a small number in memory in case later components time out
             .buffer_unordered(constants::MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER)
             // filter each component's inspect
@@ -279,7 +279,7 @@ impl ReaderServer {
                 if matching_selectors.is_empty() {
                     None
                 } else {
-                    match (&matching_selectors).try_into() {
+                    match matching_selectors.try_into() {
                         Ok(hierarchy_matcher) => Some(hierarchy_matcher),
                         Err(e) => {
                             error!(?e, "Failed to create hierarchy matcher");
@@ -292,9 +292,7 @@ impl ReaderServer {
             // If there were configured matchers and none of them matched
             // this component, then we should return early since there is no data to
             // extract.
-            if client_selectors.is_none() {
-                return None;
-            }
+            client_selectors.as_ref()?;
         }
 
         let identity = pumped_inspect_data.identity.clone();
@@ -305,7 +303,7 @@ impl ReaderServer {
             client_selectors,
         );
         Some(Data::for_inspect(
-            sanitized_moniker.clone(),
+            sanitized_moniker,
             hierarchy_data.hierarchy,
             hierarchy_data.timestamp.into_nanos(),
             identity.url.clone(),

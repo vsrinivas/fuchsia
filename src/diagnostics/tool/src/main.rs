@@ -199,7 +199,7 @@ fn filter_json_schema_by_selectors(
                 return None;
             }
 
-            let inspect_matcher: InspectHierarchyMatcher = (&matched_selectors).try_into().unwrap();
+            let inspect_matcher: InspectHierarchyMatcher = matched_selectors.try_into().unwrap();
 
             match diagnostics_hierarchy::filter_hierarchy(hierarchy, &inspect_matcher) {
                 Ok(Some(filtered)) => {

@@ -47,7 +47,7 @@ async fn logs_from_crashing_component() {
     .unwrap();
 
     utils::wait_for_component_stopped(
-        &instance.root.child_name(),
+        instance.root.child_name(),
         "log_and_crash",
         ExitStatusMatcher::AnyCrash,
     )

@@ -102,7 +102,7 @@ impl<I> Multiplexer<I> {
         match &component_selectors {
             None => true,
             Some(selectors) => {
-                selectors::match_moniker_against_component_selectors(&moniker, &selectors)
+                selectors::match_moniker_against_component_selectors(moniker, selectors)
                     .map(|matched_selectors| !matched_selectors.is_empty())
                     .unwrap_or(false)
             }
@@ -217,7 +217,7 @@ impl<I> Drop for SubStream<I> {
 /// values, deferring to `I`'s `Ord` impl for those SubStreams with cached values.
 fn compare_sub_streams<I: Ord>(a: &SubStream<I>, b: &SubStream<I>) -> Ordering {
     match (&a.cached, &b.cached) {
-        (Some(a), Some(b)) => a.cmp(&b),
+        (Some(a), Some(b)) => a.cmp(b),
         (None, Some(_)) => Ordering::Greater,
         (Some(_), None) => Ordering::Less,
         (None, None) => Ordering::Equal,
