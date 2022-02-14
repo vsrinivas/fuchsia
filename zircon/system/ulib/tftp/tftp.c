@@ -946,8 +946,7 @@ tftp_status tftp_process_msg(tftp_session* session, void* incoming, size_t inlen
   }
 }
 
-tftp_status tftp_prepare_data(tftp_session* session, void* outgoing, size_t* outlen,
-                              uint32_t* timeout_ms, void* cookie) {
+tftp_status tftp_prepare_data(tftp_session* session, void* outgoing, size_t* outlen, void* cookie) {
   tftp_data_msg* resp_data = outgoing;
 
   if ((session->block_number + session->window_index) * session->block_size > session->file_size) {
@@ -971,7 +970,7 @@ void tftp_session_set_opcode_prefix_use(tftp_session* session, bool enable) {
 }
 
 tftp_status tftp_timeout(tftp_session* session, void* msg_buf, size_t* msg_len, size_t buf_sz,
-                         uint32_t* timeout_ms, void* file_cookie) {
+                         void* file_cookie) {
   xprintf("Timeout\n");
   session->metrics.timeouts++;
   if (++session->consecutive_timeouts > session->max_timeouts) {
@@ -990,7 +989,7 @@ tftp_status tftp_timeout(tftp_session* session, void* msg_buf, size_t* msg_len, 
   if (session->direction == SEND_FILE) {
     // Reset back to the last-acknowledged block
     session->window_index = 0;
-    return tftp_prepare_data(session, msg_buf, msg_len, timeout_ms, file_cookie);
+    return tftp_prepare_data(session, msg_buf, msg_len, file_cookie);
   } else {
     // ACK up to the last block read
     tftp_prepare_ack(session, msg_buf, msg_len);
@@ -1031,7 +1030,7 @@ static tftp_status tftp_msg_loop(tftp_session* session, void* transport_cookie, 
     if (n == TFTP_ERR_TIMED_OUT) {
       if (pending) {
         out_sz = opts->out_buf_sz;
-        ret = tftp_prepare_data(session, opts->outgoing, &out_sz, &timeout_ms, file_cookie);
+        ret = tftp_prepare_data(session, opts->outgoing, &out_sz, file_cookie);
         if (out_sz) {
           send_status = session->transport_interface.send(opts->outgoing, out_sz, transport_cookie);
           if (send_status != TFTP_NO_ERROR) {
@@ -1044,8 +1043,7 @@ static tftp_status tftp_msg_loop(tftp_session* session, void* transport_cookie, 
           return ret;
         }
       } else if (session->state != NONE) {
-        ret = tftp_timeout(session, opts->outgoing, &out_sz, opts->out_buf_sz, &timeout_ms,
-                           file_cookie);
+        ret = tftp_timeout(session, opts->outgoing, &out_sz, opts->out_buf_sz, file_cookie);
         if (ret == TFTP_ERR_TIMED_OUT) {
           REPORT_ERR(opts, "too many consecutive timeouts, aborting");
           return ret;

@@ -50,8 +50,7 @@ async::Task timeout_task([](async_dispatcher_t* dispatcher, async::Task* task, z
   ZX_ASSERT_MSG(status == ZX_OK, "bad status in timeout task %s", zx_status_get_string(status));
 
   tftp_status result =
-      tftp_timeout(session, tftp_out_scratch, &last_msg_size, sizeof(tftp_out_scratch),
-                   &transport_info.timeout_ms, g_file_api);
+      tftp_timeout(session, tftp_out_scratch, &last_msg_size, sizeof(tftp_out_scratch), g_file_api);
   if (result == TFTP_ERR_TIMED_OUT) {
     printf("netsvc: excessive timeouts, dropping tftp connection\n");
     g_file_api->Abort();
@@ -171,8 +170,7 @@ void tftp_send_next() {
     return;
   }
   last_msg_size = sizeof(tftp_out_scratch);
-  tftp_prepare_data(session, tftp_out_scratch, &last_msg_size, &transport_info.timeout_ms,
-                    g_file_api);
+  tftp_prepare_data(session, tftp_out_scratch, &last_msg_size, g_file_api);
   if (last_msg_size) {
     transport_send(tftp_out_scratch, last_msg_size, &transport_info);
   }

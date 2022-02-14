@@ -731,7 +731,7 @@ static void test_tftp_receive_wrq_oack(const size_t file_size, const uint16_t* b
       td.expected.data[second_block_size - 1] = 'F';
     }
 
-    status = tftp_prepare_data(ts.session, ts.out, &ts.outlen, &ts.timeout, &td);
+    status = tftp_prepare_data(ts.session, ts.out, &ts.outlen, &td);
     EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + block_size, "bad outlen");
     ASSERT_NO_FATAL_FAILURE(verify_read_data(ts, td), "bad test data");
     has_pending = (block_size + second_block_size < file_size) && (window_size > 2);
@@ -1491,7 +1491,7 @@ TEST(TftpSendData, test_tftp_send_data_receive_ack_window_size) {
   td.expected.block++;
   td.expected.offset += DEFAULT_BLOCKSIZE;
   td.expected.data[0]++;
-  status = tftp_prepare_data(ts.session, ts.out, &ts.outlen, &ts.timeout, &td);
+  status = tftp_prepare_data(ts.session, ts.out, &ts.outlen, &td);
   ASSERT_EQ(TFTP_NO_ERROR, status, "receive error");
   // Window index doesn't roll until we receive an ACK
   ASSERT_EQ(0, ts.session->block_number, "tftp session block number mismatch");
@@ -1572,7 +1572,7 @@ TEST(TftpSendData, test_tftp_send_data_receive_ack_block_wrapping) {
     return TFTP_NO_ERROR;
   };
   tftp_session_set_file_interface(ts.session, &ifc);
-  status = tftp_prepare_data(ts.session, data_buf, &data_buf_len, &ts.timeout, NULL);
+  status = tftp_prepare_data(ts.session, data_buf, &data_buf_len, NULL);
   ASSERT_EQ(TFTP_NO_ERROR, status, "failed to generate DATA packet");
   EXPECT_EQ(2, reads_performed, "failed to call read function");
   EXPECT_EQ(sizeof(data_buf), data_buf_len, "improperly formatted DATA packet");
@@ -1641,7 +1641,7 @@ TEST(TftpSendData, test_tftp_send_data_receive_ack_skip_block_wrap) {
     return TFTP_NO_ERROR;
   };
   tftp_session_set_file_interface(ts.session, &ifc);
-  status = tftp_prepare_data(ts.session, data_buf, &data_buf_len, &ts.timeout, NULL);
+  status = tftp_prepare_data(ts.session, data_buf, &data_buf_len, NULL);
   ASSERT_EQ(TFTP_NO_ERROR, status, "failed to generate DATA packet");
   EXPECT_EQ(2, reads_performed, "failed to call read function");
   EXPECT_EQ(sizeof(data_buf), data_buf_len, "improperly formatted DATA packet");

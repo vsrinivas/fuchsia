@@ -239,21 +239,19 @@ bool tftp_session_has_pending(tftp_session* session);
 // Prepare a DATA packet to send to the remote host. This is only required when
 // tftp_session_has_pending(session) returns true, as tftp_process_msg() will
 // prepare the first DATA message in each window.
-tftp_status tftp_prepare_data(tftp_session* session, void* outgoing, size_t* outlen,
-                              uint32_t* timeout_ms, void* cookie);
+tftp_status tftp_prepare_data(tftp_session* session, void* outgoing, size_t* outlen, void* cookie);
 
 // If no response from the peer is received before the most recent timeout_ms
 // value, this function should be called to take the next appropriate action
 // (e.g., retransmit or cancel). |msg_buf| must point to the last message sent,
 // which is |msg_len| bytes long. |buf_sz| represents the total size of
 // |msg_buf|, which may be used to assemble the next packet to send.
-// |timeout_ms| is set to the next timeout value the user of the library should
-// use when waiting for a response. |file_cookie| will be passed to the tftp
-// callback functions. On return, TFTP_ERR_TIMED out is returned if the maximum
-// number of timeouts has been exceeded. If a message should be sent out,
-// |msg_len| will be set to the size of the message.
+// |file_cookie| will be passed to the tftp callback functions. On return,
+// TFTP_ERR_TIMED out is returned if the maximum number of timeouts has been
+// exceeded. If a message should be sent out, |msg_len| will be set to the size
+// of the message.
 tftp_status tftp_timeout(tftp_session* session, void* msg_buf, size_t* msg_len, size_t buf_sz,
-                         uint32_t* timeout_ms, void* file_cookie);
+                         void* file_cookie);
 
 // Request to send the file |local_filename| across an existing session to
 // |remote_filename| on the target. |options| are required for the input and
