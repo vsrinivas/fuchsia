@@ -104,6 +104,9 @@ class Integration : public testing::Test {
 
   void InitializeRoutes(RealmBuilder& builder) {
     builder.AddChild(kCodecFactoryName, "#meta/codec_factory.cm");
+    builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.logger.LogSink"}},
+                           .source = ParentRef(),
+                           .targets = {ChildRef{kCodecFactoryName}}});
     builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.mediacodec.CodecFactory"}},
                            .source = ChildRef{kCodecFactoryName},
                            .targets = {ParentRef()}});
