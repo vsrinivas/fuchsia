@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/dart/dart.gni")
-import("//build/python/python.gni")
 import("//build/python/python_binary.gni")
 import("//build/sdk/sdk_atom.gni")
 

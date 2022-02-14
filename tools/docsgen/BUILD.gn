@@ -5,7 +5,6 @@
 import("//build/compiled_action.gni")
 import("//build/config/build_api_module.gni")
 import("//build/dart/dart_packages.gni")
-import("//build/python/python.gni")
 import("//build/python/python_binary.gni")
 import("//build/python/python_host_test.gni")
 

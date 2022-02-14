@@ -7,7 +7,6 @@ import("//build/dart/dart.gni")
 import("//build/dart/dart_package_config.gni")
 import("//build/dart/toolchain.gni")
 import("//build/json/validate_json.gni")
-import("//build/python/python.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/toolchain/concurrent_jobs.gni")
 
