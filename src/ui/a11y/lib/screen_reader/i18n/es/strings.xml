@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-  <string name="role_header">Título</string>
+  <string name="role_header">Encabezado</string>
   <string name="role_button">Botón</string>
   <string name="role_checkbox">Casilla</string>
   <string name="role_combobox">Cuadro combinado</string>
@@ -38,12 +38,12 @@
   <string name="element_disabled">Inhabilitado</string>
   <string name="element_expanded">Desplegado</string>
   <string name="element_collapsed">Contraído</string>
-  <string name="heading_level_1">Título 1</string>
-  <string name="heading_level_2">Título 2</string>
-  <string name="heading_level_3">Título 3</string>
-  <string name="heading_level_4">Título 4</string>
-  <string name="heading_level_5">Título 5</string>
-  <string name="heading_level_6">Título 6</string>
+  <string name="heading_level_1">Encabezado 1</string>
+  <string name="heading_level_2">Encabezado 2</string>
+  <string name="heading_level_3">Encabezado 3</string>
+  <string name="heading_level_4">Encabezado 4</string>
+  <string name="heading_level_5">Encabezado 5</string>
+  <string name="heading_level_6">Encabezado 6</string>
   <string name="role_list_item">Elemento de lista</string>
   <string name="role_ordered_list">Lista ordenada</string>
   <string name="role_list">Lista</string>
@@ -51,7 +51,7 @@
   <string name="normal_navigation_granularity">Navegación normal</string>
   <string name="default_navigation_granularity">Predeterminado</string>
   <string name="adjust_value_granularity">Ajuste de valores</string>
-  <string name="heading_granularity">Título</string>
+  <string name="heading_granularity">Encabezado</string>
   <string name="form_control_granularity">Control de formularios</string>
   <string name="link_granularity">Enlace</string>
   <string name="line_granularity">Línea</string>
