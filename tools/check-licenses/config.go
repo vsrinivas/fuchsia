@@ -46,6 +46,7 @@ type Config struct {
 	OutputLicenseFile    bool     `json:"outputLicenseFile"`
 	OutputFilePrefix     string   `json:"outputFilePrefix"`
 	OutputFileExtensions []string `json:"outputFileExtensions"`
+	SummaryFile          string   `json:"summaryFile"`
 
 	LogLevel    string `json:"logLevel"`
 	MaxReadSize int    `json:"maxReadSize"`
@@ -144,6 +145,9 @@ func (c *Config) Merge(other *Config) {
 		c.OutputFilePrefix = other.OutputFilePrefix
 	}
 	c.OutputFileExtensions = append(c.OutputFileExtensions, other.OutputFileExtensions...)
+	if c.SummaryFile == "" {
+		c.SummaryFile = other.SummaryFile
+	}
 
 	if c.MaxReadSize == 0 {
 		c.MaxReadSize = other.MaxReadSize

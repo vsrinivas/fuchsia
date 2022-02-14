@@ -245,5 +245,6 @@
   "outputFilePrefix": "NOTICE",
   "outputFileExtensions": [
       "html.gz"
-  ]
+  ],
+  "summaryFile": "NOTICE.summary.csv"
 }

@@ -14,9 +14,9 @@ import (
 type Match struct {
 	Copyrights            map[string]bool
 	Text                  string
-	Projects              []string
-	Files                 []string
-	LicenseAppliesToFiles []string
+	Projects              map[string]bool
+	Files                 map[string]bool
+	LicenseAppliesToFiles map[string]bool
 	Used                  bool
 
 	sync.RWMutex
@@ -42,8 +42,8 @@ func NewMatch(data [][]byte, file string, pattern *regexp.Regexp) *Match {
 	m := &Match{
 		Copyrights:            map[string]bool{string(regexMap["copyright"]): true},
 		Text:                  string(regexMap["text"]),
-		Files:                 []string{file},
-		LicenseAppliesToFiles: []string{},
+		Files:                 map[string]bool{file: true},
+		LicenseAppliesToFiles: map[string]bool{},
 		Used:                  false,
 	}
 	return m
@@ -52,12 +52,18 @@ func NewMatch(data [][]byte, file string, pattern *regexp.Regexp) *Match {
 // If we find multiple instances of the same license text during our search, deduplicate the match objects by merging them together.
 func (m *Match) merge(other *Match) {
 	m.Lock()
-	for c := range other.Copyrights {
-		m.Copyrights[c] = true
+	for k, v := range other.Copyrights {
+		m.Copyrights[k] = v
 	}
-	m.Projects = append(m.Projects, other.Projects...)
-	m.Files = append(m.Files, other.Files...)
-	m.LicenseAppliesToFiles = append(m.LicenseAppliesToFiles, other.LicenseAppliesToFiles...)
+	for k, v := range other.Projects {
+		m.Projects[k] = v
+	}
+	for k, v := range other.Files {
+		m.Files[k] = v
+	}
+	for k, v := range other.LicenseAppliesToFiles {
+		m.LicenseAppliesToFiles[k] = v
+	}
 	m.Used = m.Used || other.Used
 	m.Unlock()
 }

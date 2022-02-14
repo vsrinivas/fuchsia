@@ -78,6 +78,57 @@ func saveToOutputFile(path string, licenses *Licenses, config *Config) error {
 	return ioutil.WriteFile(path, output, 0666)
 }
 
+// This struct is used to outuput the summary file
+type LicenseSummary struct {
+	Name       string
+	Categories []string
+}
+
+// outputSummary writes license summary to a file
+func outputSummary(path string, file_tree *FileTree) error {
+	// Construct a map of license name to its category so we can dedup
+	licCat := map[string]map[string]bool{}
+
+	for tree := range file_tree.getFileTreeIterator() {
+		for name, licenses := range tree.SingleLicenseFiles {
+			if _, ok := licCat[name]; !ok {
+				licCat[name] = map[string]bool{}
+			}
+
+			for _, lic := range licenses {
+				licCat[name][lic.Category] = true
+			}
+		}
+	}
+
+	// Converted to a sorted slice
+	sortedSummaries := make([]*LicenseSummary, len(licCat))
+	i := 0
+	for name, categories := range licCat {
+		sortedCategories := make([]string, len(categories))
+		j := 0
+		for cat := range categories {
+			sortedCategories[j] = cat
+			j++
+		}
+		sort.Strings(sortedCategories)
+		sortedSummaries[i] = &LicenseSummary{
+			Name:       name,
+			Categories: sortedCategories,
+		}
+		i++
+	}
+
+	sort.Slice(sortedSummaries, func(i, j int) bool { return sortedSummaries[i].Name < sortedSummaries[j].Name })
+
+	output, err := createSummaryOutput(sortedSummaries)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(path, output, 0666)
+}
+
 // The following structs are used to serialize data to JSON.
 type Output struct {
 	Unused UnusedLicenses `json:"unused"`
@@ -170,6 +221,24 @@ func createHtmlOutput(usedLicenses []*License, unusedLicenses []*License, config
 	return buf.Bytes(), nil
 }
 
+func createSummaryOutput(summaries []*LicenseSummary) ([]byte, error) {
+	data := struct {
+		Summaries []*LicenseSummary
+	}{}
+	data.Summaries = summaries
+
+	buf := bytes.Buffer{}
+	tmpl := template.Must(template.New("name").Funcs(template.FuncMap{
+		"getCategories": func(summary *LicenseSummary) string {
+			return "\"" + strings.Join(summary.Categories, "\n") + "\""
+		},
+	}).Parse(templates.TemplateSummary))
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
 // compressGZ returns the compressed buffer with gzip format.
 func compressGZ(d []byte) ([]byte, error) {
 	buf := bytes.Buffer{}
@@ -217,8 +286,14 @@ func getFilesFromMatch(m *Match) string {
 	result := ""
 	if len(m.Files) > 0 {
 		result += "Files:\n"
-		sort.Strings(m.Files)
-		for _, s := range m.Files {
+		files := make([]string, len(m.Files))
+		i := 0
+		for k := range m.Files {
+			files[i] = k
+			i++
+		}
+		sort.Strings(files)
+		for _, s := range files {
 			result += " -> " + s + "\n"
 		}
 	}
@@ -229,8 +304,14 @@ func getProjectsFromMatch(m *Match) string {
 	result := ""
 	if len(m.Projects) > 0 {
 		result += "Projects:\n"
-		sort.Strings(m.Projects)
-		for _, s := range m.Projects {
+		projects := make([]string, len(m.Projects))
+		i := 0
+		for k := range m.Projects {
+			projects[i] = k
+			i++
+		}
+		sort.Strings(projects)
+		for _, s := range projects {
 			result += " -> " + s + "\n"
 		}
 	}
@@ -238,12 +319,20 @@ func getProjectsFromMatch(m *Match) string {
 }
 
 func getFiles(l *License, author string) []string {
-	var files []string
-	for _, file := range l.matches[author].Files {
-		files = append(files, file)
+	if m, ok := l.matches[author]; ok {
+		if len(m.Files) > 0 {
+			files := make([]string, len(m.Files))
+			i := 0
+			for k := range m.Files {
+				files[i] = k
+				i++
+			}
+			sort.Strings(files)
+			return files
+		}
 	}
-	sort.Strings(files)
-	return files
+
+	return []string{}
 }
 
 func getEscapedText(l *License, author string) string {

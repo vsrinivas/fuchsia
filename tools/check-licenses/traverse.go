@@ -189,6 +189,13 @@ func Run(ctx context.Context, config *Config) error {
 			}
 		}
 	}
+
+	if config.SummaryFile != "" {
+		if err := outputSummary(filepath.Join(config.OutDir, config.SummaryFile), file_tree); err != nil {
+			return err
+		}
+	}
+
 	log.Print(metrics.string())
 	return nil
 }
@@ -253,7 +260,7 @@ func processFile(file *File, metrics *Metrics, licenses *Licenses, unlicensedFil
 				for _, matches := range file_tree.LicenseMatches {
 					for _, match := range matches {
 						match.Lock()
-						match.LicenseAppliesToFiles = append(match.LicenseAppliesToFiles, path)
+						match.LicenseAppliesToFiles[path] = true
 						match.Used = true
 						match.Unlock()
 					}
