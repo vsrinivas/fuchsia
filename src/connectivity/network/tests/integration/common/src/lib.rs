@@ -192,7 +192,8 @@ pub async fn get_inspect_data(
     let realm_moniker = selectors::sanitize_string_for_selectors(
         &realm.get_moniker().await.context("calling get moniker")?,
     );
-    let mut data = diagnostics_reader::ArchiveReader::new()
+    let mut archive_reader = diagnostics_reader::ArchiveReader::new();
+    let _archive_reader_ref = archive_reader
         .add_selector(
             diagnostics_reader::ComponentSelector::new(vec![
                 NETEMUL_SANDBOX_MONIKER.into(),
@@ -203,46 +204,58 @@ pub async fn get_inspect_data(
         )
         // Enable `retry_if_empty` to prevent races in test realm bringup where
         // we may end up reaching `ArchiveReader` before it has observed
-        // Netstack starting.
+        // the component starting.
         //
-        // Eventually there will be support for lifecycle streams, with which
-        // it will be possible to wait on the event of Archivist obtaining a
-        // handle to Netstack diagnostics, and then request the snapshot of
+        // Eventually there will be support for lifecycle streams, with which it
+        // will be possible to wait on the event of Archivist obtaining a handle
+        // to the component's diagnostics, and then request the snapshot of
         // inspect data once that event is received.
-        .retry_if_empty(true)
-        .snapshot::<diagnostics_reader::Inspect>()
-        .await
-        .context("failed to get inspect data")?
-        .into_iter()
-        .filter_map(
-            |diagnostics_data::InspectData {
-                 data_source: _,
-                 metadata,
-                 moniker: _,
-                 payload,
-                 version: _,
-             }| {
-                if metadata.filename.starts_with(file_prefix) {
-                    Some(payload.ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "empty inspect payload, metadata errors: {:?}",
-                            metadata.errors
-                        )
-                    }))
-                } else {
-                    None
-                }
-            },
-        );
-    let datum = data.next().unwrap_or_else(|| Err(anyhow::anyhow!("failed to find inspect data")));
-    let data: Vec<_> = data.collect();
-    assert!(
-        data.is_empty(),
-        "expected a single inspect entry; got {:?} and also {:?}",
-        datum,
-        data
-    );
-    datum
+        .retry_if_empty(true);
+
+    // Loop to wait for the component to begin publishing inspect data after it
+    // starts.
+    loop {
+        let mut data = archive_reader
+            .snapshot::<diagnostics_reader::Inspect>()
+            .await
+            .context("snapshot did not return any inspect data")?
+            .into_iter()
+            .filter_map(
+                |diagnostics_data::InspectData {
+                     data_source: _,
+                     metadata,
+                     moniker: _,
+                     payload,
+                     version: _,
+                 }| {
+                    if metadata.filename.starts_with(file_prefix) {
+                        Some(payload.ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "empty inspect payload, metadata errors: {:?}",
+                                metadata.errors
+                            )
+                        }))
+                    } else {
+                        None
+                    }
+                },
+            );
+        match data.next() {
+            Some(datum) => {
+                let data: Vec<_> = data.collect();
+                assert!(
+                    data.is_empty(),
+                    "expected a single inspect entry; got {:?} and also {:?}",
+                    datum,
+                    data
+                );
+                return datum;
+            }
+            None => {
+                fasync::Timer::new(zx::Duration::from_millis(100).after_now()).await;
+            }
+        }
+    }
 }
 
 /// Send Router Advertisement NDP message with router lifetime.
