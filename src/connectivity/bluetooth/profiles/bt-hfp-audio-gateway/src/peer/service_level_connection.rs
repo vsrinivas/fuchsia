@@ -577,7 +577,7 @@ impl ServiceLevelConnection {
         command: Command,
     ) -> ProcedureRequest {
         // Progress the procedure with the message.
-        let node = self.inspect.node();
+        let node = self.inspect.procedures_node();
         let procedure = self.procedures.entry(procedure_id).or_insert_with(|| {
             let mut p = procedure_id.initialize();
             let _ = p.iattach(node, &inspect::unique_name("procedure_"));

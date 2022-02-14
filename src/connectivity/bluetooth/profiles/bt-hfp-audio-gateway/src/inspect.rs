@@ -184,10 +184,6 @@ pub struct ServiceLevelConnectionInspect {
 }
 
 impl ServiceLevelConnectionInspect {
-    pub fn node(&self) -> &inspect::Node {
-        &self.inspect_node
-    }
-
     pub fn procedures_node(&self) -> &inspect::Node {
         &self.procedures.inspect_node
     }
