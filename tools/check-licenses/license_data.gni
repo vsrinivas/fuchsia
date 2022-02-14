@@ -62,6 +62,7 @@ template("license_data") {
     outputs = [
       "$out_dir/NOTICE.html.gz",
       "$out_dir/NOTICE.txt.gz",
+      "$out_dir/NOTICE.summary.csv",
     ]
 
     args = [

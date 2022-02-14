@@ -41,6 +41,7 @@ var (
 	baseDir           = flag.String("base_dir", "", "Root location to begin directory traversal.")
 	outDir            = flag.String("out_dir", "", "Directory to write outputs to.")
 	outputLicenseFile = flag.Bool("output_license_file", true, "If true, outputs a license file with all the licenses for the project.")
+	summaryFile       = flag.String("summary_file", "", "If set, outputs a CSV summary of all licenses for the project.")
 	target            = flag.String("target", "", "Analyze the dependency tree of a specific GN build target.")
 	buildDir          = flag.String("build_dir", os.Getenv("FUCHSIA_BUILD_DIR"), "Location of GN build directory.")
 	gnPath            = flag.String("gn_path", "", "Path to GN executable. Required when target is specified.")
@@ -157,6 +158,9 @@ func mainImpl() error {
 	config.ExitOnDirRestrictedLicense = *exitOnDirRestrictedLicense
 
 	config.OutputLicenseFile = *outputLicenseFile
+	if *summaryFile != "" {
+		config.SummaryFile = *summaryFile
+	}
 
 	if *licensePatternDir != "" {
 		if info, err := os.Stat(*licensePatternDir); os.IsNotExist(err) && info.IsDir() {
