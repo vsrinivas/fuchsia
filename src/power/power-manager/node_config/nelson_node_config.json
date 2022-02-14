@@ -76,6 +76,10 @@
     "name": "thermal_limiter"
   },
   {
+    "type": "ThermalStateHandler",
+    "name": "thermal_state_handler"
+  },
+  {
     "type": "ThermalLoadDriver",
     "name": "thermal_load_driver",
     "config": {
@@ -106,7 +110,8 @@
     "dependencies": {
       "system_shutdown_node": "sys_shutdown",
       "thermal_load_notify_nodes": [
-        "thermal_limiter"
+        "thermal_limiter",
+        "thermal_state_handler"
       ],
       "temperature_handler_node_names": [
         "soc_pll_thermal",
