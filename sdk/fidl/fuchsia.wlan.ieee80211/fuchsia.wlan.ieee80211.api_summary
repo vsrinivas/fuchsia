@@ -1,3 +1,7 @@
+const fuchsia.wlan.ieee80211/CCMP_128_MIC_LEN uint32 8
+const fuchsia.wlan.ieee80211/CCMP_256_MIC_LEN uint32 16
+const fuchsia.wlan.ieee80211/CCMP_HDR_LEN uint32 8
+const fuchsia.wlan.ieee80211/CCMP_PN_LEN uint32 6
 struct/member fuchsia.wlan.ieee80211/CSsid.data array<uint8,32>
 struct/member fuchsia.wlan.ieee80211/CSsid.len uint8
 struct fuchsia.wlan.ieee80211/CSsid
@@ -194,4 +198,7 @@ enum/member fuchsia.wlan.ieee80211/StatusCode.UNSUPPORTED_RSNE_VERSION 44
 enum/member fuchsia.wlan.ieee80211/StatusCode.U_APSD_COEXISTANCE_NOT_SUPPORTED 73
 enum/member fuchsia.wlan.ieee80211/StatusCode.U_APSD_COEX_MODE_NOT_SUPPORTED 74
 strict enum fuchsia.wlan.ieee80211/StatusCode uint16
+const fuchsia.wlan.ieee80211/TIDS_MAX uint32 16
+const fuchsia.wlan.ieee80211/WLAN_IE_BODY_MAX_LEN uint32 255
+const fuchsia.wlan.ieee80211/WLAN_MSDU_MAX_LEN uint32 2304
 library fuchsia.wlan.ieee80211

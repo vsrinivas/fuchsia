@@ -120,7 +120,7 @@ static const uint8_t* iwl_mvm_find_max_pn(struct ieee80211_key_conf* key,
   for (i = 1; i < queues; i++) {
     const uint8_t* tmp = ptk_pn->q[i].pn[tid];
 
-    if (memcmp(ret, tmp, IEEE80211_CCMP_PN_LEN) <= 0) {
+    if (memcmp(ret, tmp, fuchsia_wlan_ieee80211_CCMP_PN_LEN) <= 0) {
       ret = tmp;
     }
   }
@@ -1216,7 +1216,7 @@ static void iwl_mvm_set_aes_rx_seq(struct iwl_mvm* mvm, struct aes_sc* scs,
                                    struct ieee80211_sta* sta, struct ieee80211_key_conf* key) {
   int tid;
 
-  BUILD_BUG_ON(IWL_NUM_RSC != IEEE80211_TIDS_MAX);
+  BUILD_BUG_ON(IWL_NUM_RSC != fuchsia_wlan_ieee80211_TIDS_MAX);
 
   if (sta && iwl_mvm_has_new_rx_api(mvm)) {
     struct iwl_mvm_sta* mvmsta;
@@ -1236,7 +1236,7 @@ static void iwl_mvm_set_aes_rx_seq(struct iwl_mvm* mvm, struct aes_sc* scs,
       iwl_mvm_aes_sc_to_seq(&scs[tid], &seq);
       ieee80211_set_key_rx_seq(key, tid, &seq);
       for (i = 1; i < mvm->trans->num_rx_queues; i++) {
-        memcpy(ptk_pn->q[i].pn[tid], seq.ccmp.pn, IEEE80211_CCMP_PN_LEN);
+        memcpy(ptk_pn->q[i].pn[tid], seq.ccmp.pn, fuchsia_wlan_ieee80211_CCMP_PN_LEN);
       }
     }
   } else {
@@ -1252,7 +1252,7 @@ static void iwl_mvm_set_aes_rx_seq(struct iwl_mvm* mvm, struct aes_sc* scs,
 static void iwl_mvm_set_tkip_rx_seq(struct tkip_sc* scs, struct ieee80211_key_conf* key) {
   int tid;
 
-  BUILD_BUG_ON(IWL_NUM_RSC != IEEE80211_TIDS_MAX);
+  BUILD_BUG_ON(IWL_NUM_RSC != fuchsia_wlan_ieee80211_TIDS_MAX);
 
   for (tid = 0; tid < IWL_NUM_RSC; tid++) {
     struct ieee80211_key_seq seq = {};

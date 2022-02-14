@@ -2678,7 +2678,7 @@ void iwl_mvm_sta_pm_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
         case IWL_MVM_PM_EVENT_ASLEEP:
             break;
         case IWL_MVM_PM_EVENT_UAPSD:
-            ieee80211_sta_uapsd_trigger(sta, IEEE80211_TIDS_MAX);
+            ieee80211_sta_uapsd_trigger(sta, fuchsia_wlan_ieee80211_TIDS_MAX);
             break;
         case IWL_MVM_PM_EVENT_PS_POLL:
             ieee80211_sta_pspoll(sta);
@@ -3207,7 +3207,7 @@ zx_status_t iwl_mvm_mac_add_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
       for (q = 0; q < mvm->trans->num_rx_queues; q++) {
         /* The packet number in packet byte order is little-endian */
         uint64_t pn_le = cpu_to_le64(key->rx_seq);
-        memcpy(ptk_pn->q[q].pn[tid], &pn_le, IEEE80211_CCMP_PN_LEN);
+        memcpy(ptk_pn->q[q].pn[tid], &pn_le, fuchsia_wlan_ieee80211_CCMP_PN_LEN);
       }
     }
 

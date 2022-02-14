@@ -215,7 +215,7 @@ static int iwl_pcie_gen2_build_amsdu(struct iwl_trans* trans, struct sk_buff* sk
     struct tso_t tso;
 
     /* if the packet is protected, then it must be CCMP or GCMP */
-    iv_len = ieee80211_has_protected(hdr->frame_control) ? IEEE80211_CCMP_HDR_LEN : 0;
+    iv_len = ieee80211_has_protected(hdr->frame_control) ? fuchsia_wlan_ieee80211_CCMP_HDR_LEN : 0;
 
     trace_iwlwifi_dev_tx(trans->dev, skb, tfd, sizeof(*tfd), &dev_cmd->hdr, start_len, 0);
 

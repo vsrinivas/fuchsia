@@ -55,3 +55,27 @@ const MAX_VHT_MPDU_BYTE_LEN_2 uint16 = 11454;
 /// IEEE Std 802.11-2016, 9.3.3.2
 @namespaced
 const MAX_MGMT_FRAME_MAC_HEADER_BYTE_LEN uint8 = 28;
+
+/// IEEE Std 802.11-2016, Table 9-19
+@namespaced
+const WLAN_MSDU_MAX_LEN uint32 = 2304;
+
+/// IEEE Std 802.11-2016, 9.4.2.25.1
+/// IEEE mentions that an element body maximum length is 255 octets in the RSN element
+/// section, but not in a dedicated section.
+@namespaced
+const WLAN_IE_BODY_MAX_LEN uint32 = 255;
+
+/// IEEE Std 802.11-2016, 9.2.4.5
+@namespaced
+const TIDS_MAX uint32 = 16;
+
+/// IEEE Std 802.11-2016 12.5.3.2
+@namespaced
+const CCMP_HDR_LEN uint32 = 8;
+@namespaced
+const CCMP_PN_LEN uint32 = 6;
+@namespaced
+const CCMP_128_MIC_LEN uint32 = 8;
+@namespaced
+const CCMP_256_MIC_LEN uint32 = 16;

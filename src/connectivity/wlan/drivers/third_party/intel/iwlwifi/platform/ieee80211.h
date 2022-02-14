@@ -207,7 +207,7 @@ struct ieee80211_tx_rate {
 struct ieee80211_txq;
 struct ieee80211_sta {
   void* drv_priv;
-  struct ieee80211_txq* txq[IEEE80211_TIDS_MAX + 1];
+  struct ieee80211_txq* txq[fuchsia_wlan_ieee80211_TIDS_MAX + 1];
 };
 
 struct ieee80211_txq {

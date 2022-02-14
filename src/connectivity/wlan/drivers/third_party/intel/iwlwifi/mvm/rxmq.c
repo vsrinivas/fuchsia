@@ -47,7 +47,7 @@ static inline zx_status_t iwl_mvm_check_pn(struct iwl_mvm* mvm, struct ieee80211
   struct iwl_mvm_key_pn* ptk_pn;
   int res;
   uint8_t tid, keyidx;
-  uint8_t pn[IEEE80211_CCMP_PN_LEN];
+  uint8_t pn[fuchsia_wlan_ieee80211_CCMP_PN_LEN];
 
   /* do PN checking */
 
@@ -102,7 +102,7 @@ static inline zx_status_t iwl_mvm_check_pn(struct iwl_mvm* mvm, struct ieee80211
   pn[4] = stats->extiv[6];
   pn[5] = stats->extiv[7];
 
-  res = memcmp(pn, ptk_pn->q[queue].pn[tid], IEEE80211_CCMP_PN_LEN);
+  res = memcmp(pn, ptk_pn->q[queue].pn[tid], fuchsia_wlan_ieee80211_CCMP_PN_LEN);
   if (res < 0) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -110,7 +110,7 @@ static inline zx_status_t iwl_mvm_check_pn(struct iwl_mvm* mvm, struct ieee80211
     return ZX_ERR_INVALID_ARGS;
   }
 
-  memcpy(ptk_pn->q[queue].pn[tid], pn, IEEE80211_CCMP_PN_LEN);
+  memcpy(ptk_pn->q[queue].pn[tid], pn, fuchsia_wlan_ieee80211_CCMP_PN_LEN);
 
   stats->flag |= RX_FLAG_PN_VALIDATED;
 
@@ -262,7 +262,7 @@ static zx_status_t iwl_mvm_rx_crypto(struct iwl_mvm* mvm, struct ieee80211_frame
     case IWL_RX_MPDU_STATUS_SEC_CCM:
     case IWL_RX_MPDU_STATUS_SEC_GCM:
 #if 0   // NEEDS_PORTING
-        BUILD_BUG_ON(IEEE80211_CCMP_PN_LEN != IEEE80211_GCMP_PN_LEN);
+        BUILD_BUG_ON(fuchsia_wlan_ieee80211_CCMP_PN_LEN != IEEE80211_GCMP_PN_LEN);
 #endif  // NEEDS_PORTING
 
       /* alg is CCM: check MIC only */
@@ -278,7 +278,7 @@ static zx_status_t iwl_mvm_rx_crypto(struct iwl_mvm* mvm, struct ieee80211_frame
       // Fuchsia needs the extiv copied, since it will remove the crypt header from the packet.
       memcpy(stats->extiv, (char*)hdr + ieee80211_get_header_len(hdr), 8);
 
-      *crypt_len = IEEE80211_CCMP_HDR_LEN;
+      *crypt_len = fuchsia_wlan_ieee80211_CCMP_HDR_LEN;
       return ZX_OK;
 
 #if 0   // NEEDS_PORTING

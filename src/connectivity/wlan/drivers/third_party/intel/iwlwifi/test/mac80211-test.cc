@@ -50,7 +50,7 @@ class ClientInterfaceHelper {
     mvmvif_.phy_ctxt = &mvm_->phy_ctxts[phy_ctxt_id];
 
     // Assign the AP sta info.
-    ASSERT_EQ(IEEE80211_TIDS_MAX + 1, std::size(ap_sta_.txq));
+    ASSERT_EQ(fuchsia_wlan_ieee80211_TIDS_MAX + 1, std::size(ap_sta_.txq));
     for (size_t i = 0; i < std::size(ap_sta_.txq); i++) {
       ap_sta_.txq[i] = &txqs_[i];
     }
@@ -79,7 +79,7 @@ class ClientInterfaceHelper {
   struct iwl_mvm_vif mvmvif_;
   int mvmvif_idx_;
   struct iwl_mvm_sta ap_sta_;
-  struct iwl_mvm_txq txqs_[IEEE80211_TIDS_MAX + 1];
+  struct iwl_mvm_txq txqs_[fuchsia_wlan_ieee80211_TIDS_MAX + 1];
 };
 
 class Mac80211Test : public SingleApTest {

@@ -232,7 +232,7 @@ struct brcmf_if {
   uint8_t mac_addr[ETH_ALEN];
   uint8_t netif_stop;
   bss_description_t bss;
-  uint8_t ies[WLAN_MSDU_MAX_LEN];
+  uint8_t ies[fuchsia::wlan::ieee80211::WLAN_MSDU_MAX_LEN];
   // spinlock_t netif_stop_lock;
   std::atomic<int> pend_8021x_cnt;
   sync_completion_t pend_8021x_wait;

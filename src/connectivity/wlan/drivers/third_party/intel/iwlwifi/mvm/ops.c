@@ -1330,7 +1330,7 @@ static void iwl_mvm_queue_state_change(struct iwl_op_mode* op_mode, int hw_queue
     int tid = i;
 
     if (tid == IWL_MAX_TID_COUNT) {
-      tid = IEEE80211_TIDS_MAX;
+      tid = fuchsia_wlan_ieee80211_TIDS_MAX;
     }
 
     mvmtxq = mvmsta->txq[tid];

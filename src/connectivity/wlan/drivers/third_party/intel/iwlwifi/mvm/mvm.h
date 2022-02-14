@@ -826,7 +826,7 @@ static inline struct iwl_mvm_txq* iwl_mvm_txq_from_mac80211(struct ieee80211_txq
 
 static inline struct iwl_mvm_txq* iwl_mvm_txq_from_tid(struct ieee80211_sta* sta, uint8_t tid) {
   if (tid == IWL_MAX_TID_COUNT) {
-    tid = IEEE80211_TIDS_MAX;
+    tid = fuchsia_wlan_ieee80211_TIDS_MAX;
   }
 
   return (struct iwl_mvm_txq*)(sta->txq[tid]->drv_priv);

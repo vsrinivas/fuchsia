@@ -472,7 +472,7 @@ static int ath10k_htt_rx_crypto_param_len(struct ath10k* ar, enum htt_rx_mpdu_en
     case HTT_RX_MPDU_ENCRYPT_TKIP_WPA:
       return IEEE80211_TKIP_IV_LEN;
     case HTT_RX_MPDU_ENCRYPT_AES_CCM_WPA2:
-      return IEEE80211_CCMP_HDR_LEN;
+      return fuchsia_wlan_ieee80211_CCMP_HDR_LEN;
     case HTT_RX_MPDU_ENCRYPT_WEP128:
     case HTT_RX_MPDU_ENCRYPT_WAPI:
       break;
@@ -495,7 +495,7 @@ static int ath10k_htt_rx_crypto_tail_len(struct ath10k* ar, enum htt_rx_mpdu_enc
     case HTT_RX_MPDU_ENCRYPT_TKIP_WPA:
       return IEEE80211_TKIP_ICV_LEN;
     case HTT_RX_MPDU_ENCRYPT_AES_CCM_WPA2:
-      return IEEE80211_CCMP_128_MIC_LEN;
+      return fuchsia_wlan_ieee80211_CCMP_128_MIC_LEN;
     case HTT_RX_MPDU_ENCRYPT_WEP128:
     case HTT_RX_MPDU_ENCRYPT_WAPI:
       break;

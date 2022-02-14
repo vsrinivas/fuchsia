@@ -48,14 +48,6 @@ type WlanFullmacScanReq = struct {
     max_channel_time uint32;
 };
 
-/// IEEE Std 802.11-2016, Table 9-19
-const WLAN_MSDU_MAX_LEN uint32 = 2304;
-
-/// IEEE Std 802.11-2016, 9.4.2.25.1
-/// IEEE mentions that an element body maximum length is 255 octets in the RSN element
-/// section, but not in a dedicated section.
-const WLAN_IE_BODY_MAX_LEN uint32 = 255;
-
 /// Max length for vendor IEs to be added to the association request. This is currently
 /// used for WPA.
 const WLAN_VIE_MAX_LEN uint32 = 510;
@@ -72,7 +64,7 @@ type WlanFullmacConnectReq = struct {
     sae_password vector<uint8>:MAX;
 
     /// Additional parameters specific to the association exchange.
-    rsne vector<uint8>:WLAN_IE_BODY_MAX_LEN;
+    rsne vector<uint8>:ieee80211.WLAN_IE_BODY_MAX_LEN;
     vendor_ie vector<uint8>:WLAN_VIE_MAX_LEN;
 };
 
@@ -123,7 +115,7 @@ type WlanFullmacDeauthReq = struct {
 type WlanFullmacAssocReq = struct {
     peer_sta_address ieee80211.MacAddr;
     rsne_len uint64;
-    rsne array<uint8, WLAN_IE_BODY_MAX_LEN>;
+    rsne array<uint8, ieee80211.WLAN_IE_BODY_MAX_LEN>;
     vendor_ie_len uint64;
     vendor_ie array<uint8, WLAN_VIE_MAX_LEN>;
 };
@@ -133,7 +125,7 @@ type WlanFullmacAssocInd = struct {
     listen_interval uint16;
     ssid ieee80211.CSsid;
     rsne_len uint64;
-    rsne array<uint8, WLAN_IE_BODY_MAX_LEN>;
+    rsne array<uint8, ieee80211.WLAN_IE_BODY_MAX_LEN>;
     vendor_ie_len uint64;
     vendor_ie array<uint8, WLAN_VIE_MAX_LEN>;
 };
@@ -155,7 +147,7 @@ type WlanFullmacStartReq = struct {
     dtim_period uint32;
     channel uint8;
     rsne_len uint64;
-    rsne array<uint8, WLAN_IE_BODY_MAX_LEN>;
+    rsne array<uint8, ieee80211.WLAN_IE_BODY_MAX_LEN>;
     vendor_ie_len uint64;
     vendor_ie array<uint8, WLAN_VIE_MAX_LEN>;
 };

@@ -324,7 +324,7 @@ struct iwl_mvm_key_pn {
   struct rcu_head rcu_head;
   struct {
     /* Stored in packet byte order (little-endian) */
-    uint8_t pn[IWL_MAX_TID_COUNT][IEEE80211_CCMP_PN_LEN];
+    uint8_t pn[IWL_MAX_TID_COUNT][fuchsia_wlan_ieee80211_CCMP_PN_LEN];
   } ____cacheline_aligned_in_smp q[];
 };
 
@@ -428,10 +428,10 @@ struct iwl_mvm_sta {
 
   // The TxQ used by this STA.
   //
-  // Note that the last entry, which the index is IEEE80211_TIDS_MAX, is reserved for
+  // Note that the last entry, which the index is fuchsia_wlan_ieee80211_TIDS_MAX, is reserved for
   // tid=IWL_MAX_TID_COUNT (used for management frames).
   //
-  struct iwl_mvm_txq* txq[IEEE80211_TIDS_MAX + 1];
+  struct iwl_mvm_txq* txq[fuchsia_wlan_ieee80211_TIDS_MAX + 1];
   uint8_t reserved_queue;
 
   /* Temporary, until the new TLC will control the Tx protection */

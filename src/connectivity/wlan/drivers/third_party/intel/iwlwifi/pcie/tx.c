@@ -197,7 +197,7 @@ static void iwl_pcie_txq_update_byte_cnt_tbl(struct iwl_trans* trans, struct iwl
     // TODO(37594): encryption
     switch (sec_ctl & TX_CMD_SEC_MSK) {
     case TX_CMD_SEC_CCM:
-        len += IEEE80211_CCMP_128_MIC_LEN;
+        len += fuchsia_wlan_ieee80211_CCMP_128_MIC_LEN;
         break;
     case TX_CMD_SEC_TKIP:
         len += IEEE80211_TKIP_ICV_LEN;
@@ -2069,8 +2069,8 @@ static int iwl_fill_data_tbs_amsdu(struct iwl_trans* trans, struct sk_buff* skb,
     struct tso_t tso;
 
     /* if the packet is protected, then it must be CCMP or GCMP */
-    BUILD_BUG_ON(IEEE80211_CCMP_HDR_LEN != IEEE80211_GCMP_HDR_LEN);
-    iv_len = ieee80211_has_protected(hdr->frame_control) ? IEEE80211_CCMP_HDR_LEN : 0;
+    BUILD_BUG_ON(fuchsia_wlan_ieee80211_CCMP_HDR_LEN != IEEE80211_GCMP_HDR_LEN);
+    iv_len = ieee80211_has_protected(hdr->frame_control) ? fuchsia_wlan_ieee80211_CCMP_HDR_LEN : 0;
 
     trace_iwlwifi_dev_tx(trans->dev, skb, iwl_pcie_get_tfd(trans, txq, txq->write_ptr),
                          trans_pcie->tfd_size, &dev_cmd->hdr, IWL_FIRST_TB_SIZE + tb1_len, 0);

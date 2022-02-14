@@ -1382,7 +1382,7 @@ void iwl_mvm_add_new_dqa_stream_wk(struct work_struct* wk) {
 
     txq = container_of((void*)mvmtxq, struct ieee80211_txq, drv_priv);
     tid = txq->tid;
-    if (tid == IEEE80211_TIDS_MAX) {
+    if (tid == fuchsia_wlan_ieee80211_TIDS_MAX) {
       tid = IWL_MAX_TID_COUNT;
     }
 

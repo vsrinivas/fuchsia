@@ -85,9 +85,10 @@ void ConvertWlanChan(wlan_channel_t* wlan_fullmac_channel,
 
 void CopyCountry(const ::std::vector<uint8_t>& in_country, uint8_t* out_country,
                  size_t* out_country_len) {
-  if (in_country.size() > WLAN_IE_BODY_MAX_LEN) {
-    lwarn("Country length truncated from %lu to %d\n", in_country.size(), WLAN_IE_BODY_MAX_LEN);
-    *out_country_len = WLAN_IE_BODY_MAX_LEN;
+  if (in_country.size() > wlan_ieee80211::WLAN_IE_BODY_MAX_LEN) {
+    lwarn("Country length truncated from %lu to %d\n", in_country.size(),
+          wlan_ieee80211::WLAN_IE_BODY_MAX_LEN);
+    *out_country_len = wlan_ieee80211::WLAN_IE_BODY_MAX_LEN;
   } else {
     *out_country_len = in_country.size();
   }
@@ -95,9 +96,10 @@ void CopyCountry(const ::std::vector<uint8_t>& in_country, uint8_t* out_country,
 }
 
 void CopyRSNE(const ::std::vector<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len) {
-  if (in_rsne.size() > WLAN_IE_BODY_MAX_LEN) {
-    lwarn("RSNE length truncated from %lu to %d\n", in_rsne.size(), WLAN_IE_BODY_MAX_LEN);
-    *out_rsne_len = WLAN_IE_BODY_MAX_LEN;
+  if (in_rsne.size() > wlan_ieee80211::WLAN_IE_BODY_MAX_LEN) {
+    lwarn("RSNE length truncated from %lu to %d\n", in_rsne.size(),
+          wlan_ieee80211::WLAN_IE_BODY_MAX_LEN);
+    *out_rsne_len = wlan_ieee80211::WLAN_IE_BODY_MAX_LEN;
   } else {
     *out_rsne_len = in_rsne.size();
   }

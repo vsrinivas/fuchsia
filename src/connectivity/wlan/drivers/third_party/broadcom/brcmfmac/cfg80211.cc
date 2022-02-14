@@ -3460,8 +3460,8 @@ void brcmf_if_join_req(net_device* ndev, const wlan_fullmac_join_req_t* req) {
 #endif /* !defined(NDEBUG) */
 
     memcpy(&ifp->bss, &sme_bss, sizeof(ifp->bss));
-    if (ifp->bss.ies_count > WLAN_MSDU_MAX_LEN) {
-      ifp->bss.ies_count = WLAN_MSDU_MAX_LEN;
+    if (ifp->bss.ies_count > fuchsia::wlan::ieee80211::WLAN_MSDU_MAX_LEN) {
+      ifp->bss.ies_count = fuchsia::wlan::ieee80211::WLAN_MSDU_MAX_LEN;
     }
     // BSS IES pointer points to data we don't own, so we have to copy the IES over.
     memcpy(&ifp->ies, ifp->bss.ies_list, ifp->bss.ies_count);
@@ -5453,7 +5453,7 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
   }
 
   const struct brcmf_tlv* rsn_ie = brcmf_parse_tlvs(data, e->datalen, WLAN_IE_TYPE_RSNE);
-  if (rsn_ie && rsn_ie->len > WLAN_IE_BODY_MAX_LEN) {
+  if (rsn_ie && rsn_ie->len > fuchsia::wlan::ieee80211::WLAN_IE_BODY_MAX_LEN) {
     BRCMF_ERR("Received ASSOC_IND with invalid RSN IE");
     return ZX_ERR_INVALID_ARGS;
   }

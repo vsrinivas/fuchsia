@@ -123,7 +123,7 @@ static zx_status_t iwl_mvm_set_mac80211_rx_flag(struct iwl_mvm* mvm,
         return ZX_ERR_IO;
       }
 
-      *crypt_len = IEEE80211_CCMP_HDR_LEN;
+      *crypt_len = fuchsia_wlan_ieee80211_CCMP_HDR_LEN;
       return ZX_OK;
 
     default:
