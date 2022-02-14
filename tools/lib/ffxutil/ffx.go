@@ -48,7 +48,7 @@ func NewFFXInstance(ffxPath string, dir string, env []string, target, sshKey str
 	if ffxPath == "" {
 		return nil, nil
 	}
-	config := NewIsolatedFFXConfig(outputDir)
+	config := newIsolatedFFXConfig(outputDir)
 	config.Set("target", map[string]string{"default": target})
 	sshKey, err := filepath.Abs(sshKey)
 	if err != nil {
@@ -65,7 +65,7 @@ func NewFFXInstance(ffxPath string, dir string, env []string, target, sshKey str
 		config.Close()
 		return nil, err
 	}
-	env = append(env, config.env...)
+	env = append(env, config.Env()...)
 	ffx := FFXInstanceWithConfig(ffxPath, dir, env, target, configPath)
 	if ffx != nil {
 		ffx.Config = config
@@ -80,7 +80,7 @@ func FFXInstanceWithConfig(ffxPath, dir string, env []string, target, configPath
 	return &FFXInstance{
 		ffxPath:    ffxPath,
 		ConfigPath: configPath,
-		runner:     &subprocess.Runner{Dir: dir, Env: env},
+		runner:     &subprocess.Runner{Dir: dir, Env: append(os.Environ(), env...)},
 		stdout:     os.Stdout,
 		stderr:     os.Stderr,
 		target:     target,

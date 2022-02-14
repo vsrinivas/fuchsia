@@ -58,7 +58,8 @@ type target struct {
 	ipv6         *net.IPAddr
 	serialServer *serial.Server
 
-	ffx *FFXInstance
+	ffx    *FFXInstance
+	ffxEnv []string
 }
 
 // newTarget creates a new generic Fuchsia target.
@@ -76,9 +77,10 @@ func newTarget(ctx context.Context, nodename, serialSocket string, sshKeys []str
 	return t, nil
 }
 
-// SetFFX attaches an FFXInstance to the target.
-func (t *target) SetFFX(ffx *FFXInstance) {
+// SetFFX attaches an FFXInstance and environment to the target.
+func (t *target) SetFFX(ffx *FFXInstance, env []string) {
 	t.ffx = ffx
+	t.ffxEnv = env
 }
 
 // UseFFX returns true if there is an FFXInstance associated with this target.
@@ -100,6 +102,11 @@ func (t *target) FFXConfigPath() string {
 		return t.ffx.ConfigPath
 	}
 	return ""
+}
+
+// FFXEnv returns the environment to run ffx with.
+func (t *target) FFXEnv() []string {
+	return t.ffxEnv
 }
 
 // StartSerialServer spawns a new serial server fo the given target.

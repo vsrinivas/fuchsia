@@ -19,8 +19,8 @@ type FFXConfig struct {
 	env    []string
 }
 
-// NewIsolatedFFXConfig creates a config that provides an isolated environment to run ffx in.
-func NewIsolatedFFXConfig(dir string) *FFXConfig {
+// newIsolatedFFXConfig creates a config that provides an isolated environment to run ffx in.
+func newIsolatedFFXConfig(dir string) *FFXConfig {
 	socketPath := filepath.Join(dir, "ffx_socket")
 	// TODO(fxbug.dev/64499): Stop setting environment variables once bug is fixed.
 	// The env vars to set come from //src/developer/ffx/plugins/self-test/src/test/mod.rs.

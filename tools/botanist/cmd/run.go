@@ -83,14 +83,17 @@ type target interface {
 	// Wait waits for the target to finish running.
 	Wait(context.Context) error
 
-	// SetFFX attaches an ffx instance to the target.
-	SetFFX(*targets.FFXInstance)
+	// SetFFX attaches an ffx instance and env to the target.
+	SetFFX(*targets.FFXInstance, []string)
 
 	// UseFFX returns whether to enable using ffx.
 	UseFFX() bool
 
 	// FFXConfigPath returns the path to the ffx config.
 	FFXConfigPath() string
+
+	// FFXEnv returns the env vars that the ffx instance should run with.
+	FFXEnv() []string
 }
 
 // RunCommand is a Command implementation for booting a device and running a
@@ -256,7 +259,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		// config and daemon, but run commands against its own specified target.
 		if ffx != nil {
 			ffxForTarget := ffxutil.FFXInstanceWithConfig(r.ffxPath, "", ffx.Config.Env(), t.Nodename(), ffx.ConfigPath)
-			t.SetFFX(&targets.FFXInstance{ffxForTarget, r.ffxExperimental})
+			t.SetFFX(&targets.FFXInstance{ffxForTarget, r.ffxExperimental}, ffx.Config.Env())
 		}
 	}
 
@@ -484,6 +487,9 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target, args []stri
 	environ := os.Environ()
 	for k, v := range subprocessEnv {
 		environ = append(environ, fmt.Sprintf("%s=%s", k, v))
+	}
+	if t.UseFFX() {
+		environ = append(environ, t.FFXEnv()...)
 	}
 	runner := subprocess.Runner{
 		Env: environ,

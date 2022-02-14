@@ -15,7 +15,7 @@ import (
 
 func TestFFXConfig(t *testing.T) {
 	tmpDir := t.TempDir()
-	config := NewIsolatedFFXConfig(tmpDir)
+	config := newIsolatedFFXConfig(tmpDir)
 
 	expectedSocket := filepath.Join(tmpDir, "ffx_socket")
 	if config.socket != expectedSocket {
