@@ -10,6 +10,8 @@
             "--allow-log-tag",
             "device",
             "--allow-log-tag",
+            "mdns",
+            "--allow-log-tag",
             "netcfg",
             "--allow-log-tag",
             "netstack",
