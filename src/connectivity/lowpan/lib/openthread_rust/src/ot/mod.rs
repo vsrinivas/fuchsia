@@ -64,6 +64,9 @@
 use openthread_sys::*;
 use std::ffi::CStr;
 
+mod cli;
+pub use cli::*;
+
 mod error;
 pub use error::*;
 
@@ -127,6 +130,7 @@ pub use trel::*;
 /// Trait implemented by all OpenThread instances.
 pub trait InstanceInterface:
     Ip6
+    + Cli
     + Reset
     + Dataset
     + Link

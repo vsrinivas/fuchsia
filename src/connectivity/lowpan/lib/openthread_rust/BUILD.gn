@@ -35,6 +35,7 @@ rustc_library("openthread") {
   sources = [
     "src/lib.rs",
     "src/ot/border_router.rs",
+    "src/ot/cli.rs",
     "src/ot/dataset.rs",
     "src/ot/dnssd.rs",
     "src/ot/error.rs",

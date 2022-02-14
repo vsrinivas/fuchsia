@@ -12,6 +12,7 @@ pub(crate) struct InstanceBacking {
     pub waker: Cell<Waker>,
     pub platform: RefCell<std::boxed::Box<dyn Platform>>,
     pub state_change_fn: Cell<Option<std::boxed::Box<dyn FnMut(ot::ChangedFlags)>>>,
+    pub cli_output_fn: Cell<Option<std::boxed::Box<dyn FnMut(&CStr)>>>,
     pub ip6_receive_fn: Cell<Option<std::boxed::Box<dyn FnMut(OtMessageBox<'_>)>>>,
     pub ip6_address_fn: Cell<Option<std::boxed::Box<dyn FnMut(Ip6AddressInfo<'_>, bool)>>>,
     pub active_scan_fn: Cell<Option<std::boxed::Box<dyn FnMut(Option<&ActiveScanResult>)>>>,
@@ -28,6 +29,7 @@ impl InstanceBacking {
         Self {
             waker: Cell::new(futures::task::noop_waker()),
             platform: RefCell::new(Box::new(platform) as std::boxed::Box<dyn Platform>),
+            cli_output_fn: Cell::new(None),
             ip6_receive_fn: Cell::new(None),
             ip6_address_fn: Cell::new(None),
             state_change_fn: Cell::new(None),
