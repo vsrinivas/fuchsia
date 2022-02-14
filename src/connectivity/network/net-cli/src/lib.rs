@@ -370,57 +370,54 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                 let id = interface.find_nicid(connector).await?;
                 let control = get_control(connector, id).await?;
                 let addr = fnet_ext::IpAddress::from_str(&addr)?;
-                let address_state_provider = {
-                    let mut addr = match addr.into() {
-                        fnet::IpAddress::Ipv4(addr) => {
-                            fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
-                                addr,
-                                prefix_len: prefix,
-                            })
-                        }
-                        fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
-                    };
-                    let (address_state_provider, server_end) = fidl::endpoints::create_proxy::<
-                        finterfaces_admin::AddressStateProviderMarker,
-                    >()
-                    .context("create proxy")?;
-                    let () = control
-                        .add_address(
-                            &mut addr,
-                            finterfaces_admin::AddressParameters::EMPTY,
-                            server_end,
-                        )
-                        .context("call add address")?;
-                    let state_stream = finterfaces_ext::admin::assignment_state_stream(
-                        address_state_provider.clone(),
-                    );
-
-                    let address_assignment_result: Result<
-                        _,
-                        finterfaces_ext::admin::AddressStateProviderError,
-                    > = state_stream
-                        .try_filter_map(|state| {
-                            futures::future::ok(match state {
-                                finterfaces_admin::AddressAssignmentState::Tentative => None,
-                                finterfaces_admin::AddressAssignmentState::Assigned => Some(()),
-                                finterfaces_admin::AddressAssignmentState::Unavailable => Some(()),
-                            })
+                let mut interface_addr = match addr.into() {
+                    fnet::IpAddress::Ipv4(addr) => {
+                        fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
+                            addr,
+                            prefix_len: prefix,
                         })
-                        .try_next()
-                        .await;
+                    }
+                    fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
+                };
+                let (address_state_provider, server_end) = fidl::endpoints::create_proxy::<
+                    finterfaces_admin::AddressStateProviderMarker,
+                >()
+                .context("create proxy")?;
+                // TODO(https://fxbug.dev/93439): Call `detach` at the end
+                // (after `add_forwarding_entry` below). This will ensure that
+                // the address is only added if all intermediate operations
+                // succeed. In the meantime, `detach` is called before the
+                // `assignment_state_stream` is operated on to ensure that it is
+                // not racy.
+                let () = address_state_provider.detach().context("detach address lifetime")?;
+                let () = control
+                    .add_address(
+                        &mut interface_addr,
+                        finterfaces_admin::AddressParameters::EMPTY,
+                        server_end,
+                    )
+                    .context("call add address")?;
+                let state_stream =
+                    finterfaces_ext::admin::assignment_state_stream(address_state_provider);
 
-                    let () = address_assignment_result
-                        .context("error after adding address")?
-                        .ok_or_else(|| {
-                            anyhow::anyhow!(
-                                "Address assignment state stream unexpectedly ended \
+                state_stream
+                    .try_filter_map(|state| {
+                        futures::future::ok(match state {
+                            finterfaces_admin::AddressAssignmentState::Tentative => None,
+                            finterfaces_admin::AddressAssignmentState::Assigned => Some(()),
+                            finterfaces_admin::AddressAssignmentState::Unavailable => Some(()),
+                        })
+                    })
+                    .try_next()
+                    .await
+                    .context("error after adding address")?
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "Address assignment state stream unexpectedly ended \
                                  before reaching Assigned or Unavailable state. \
                                  This is probably a bug."
-                            )
-                        })?;
-
-                    address_state_provider
-                };
+                        )
+                    })?;
 
                 if !no_subnet_route {
                     let stack: fstack::StackProxy =
@@ -439,10 +436,6 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                     )?;
                     info!("Added forwarding entry {:?}", forwarding_entry);
                 }
-
-                // Wait to detach until the whole operation is complete so that the address is
-                // removed if any part of it fails or is interrupted.
-                let () = address_state_provider.detach().context("detach address lifetime")?;
 
                 info!("Address {}/{} added to interface {}", addr, prefix, id);
             }
@@ -1612,6 +1605,12 @@ mod tests {
                     .expect("address state provider request stream not error")
             }
 
+            let _address_state_provider_control_handle =
+                next_request(&mut address_state_provider_request_stream)
+                    .await
+                    .into_detach()
+                    .expect("detach request");
+
             for _ in 0..3 {
                 let () = next_request(&mut address_state_provider_request_stream)
                     .await
@@ -1631,11 +1630,6 @@ mod tests {
                     finterfaces_admin::AddressAssignmentState::Unavailable
                 })
                 .expect("send address assignment state succeeds");
-            let _address_state_provider_control_handle =
-                next_request(&mut address_state_provider_request_stream)
-                    .await
-                    .into_detach()
-                    .expect("detach request");
         };
 
         let stack_fut = async {
