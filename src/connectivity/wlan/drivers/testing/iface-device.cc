@@ -29,7 +29,11 @@ static wlan_softmac_protocol_ops_t wlan_softmac_test_protocol_ops = {
     .start = [](void* ctx, const wlan_softmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel)
         -> zx_status_t { return DEV(ctx)->Start(ifc, out_mlme_channel); },
     .stop = [](void* ctx) { DEV(ctx)->Stop(); },
-    .queue_tx = [](void* ctx, const wlan_tx_packet_t* pkt) -> zx_status_t { return ZX_OK; },
+    .queue_tx = [](void* ctx, const wlan_tx_packet_t* pkt,
+                   bool* out_enqueue_pending) -> zx_status_t {
+      *out_enqueue_pending = false;
+      return ZX_OK;
+    },
     .set_channel = [](void* ctx, const wlan_channel_t* channel) -> zx_status_t {
       return DEV(ctx)->SetChannel(channel);
     },

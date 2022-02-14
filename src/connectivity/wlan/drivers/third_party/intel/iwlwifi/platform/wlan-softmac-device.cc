@@ -43,7 +43,11 @@ void WlanSoftmacDevice::WlanSoftmacStop() {
   mac_stop(mvmvif_);
 }
 
-zx_status_t WlanSoftmacDevice::WlanSoftmacQueueTx(const wlan_tx_packet_t* packet) {
+zx_status_t WlanSoftmacDevice::WlanSoftmacQueueTx(const wlan_tx_packet_t* packet,
+                                                  bool* out_enqueue_pending) {
+  // Delayed transmission is never used right now.
+  *out_enqueue_pending = false;
+
   if (ap_mvm_sta_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }

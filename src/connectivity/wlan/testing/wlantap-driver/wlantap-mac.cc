@@ -80,9 +80,11 @@ struct WlantapMacImpl : WlantapMac {
     self.listener_->WlantapMacStop(self.id_);
   }
 
-  static zx_status_t WlanSoftmacQueueTx(void* ctx, const wlan_tx_packet_t* packet) {
+  static zx_status_t WlanSoftmacQueueTx(void* ctx, const wlan_tx_packet_t* packet,
+                                        bool* out_enqueue_pending) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     self.listener_->WlantapMacQueueTx(self.id_, packet);
+    *out_enqueue_pending = false;
     return ZX_OK;
   }
 

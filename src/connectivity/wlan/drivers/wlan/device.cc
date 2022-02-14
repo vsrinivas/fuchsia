@@ -301,10 +301,11 @@ zx_status_t Device::QueueTx(std::unique_ptr<Packet> packet, wlan_tx_info_t tx_in
   ZX_DEBUG_ASSERT(packet->len() <= std::numeric_limits<uint16_t>::max());
   packet->CopyCtrlFrom(tx_info);
   wlan_tx_packet_t tx_pkt = packet->AsWlanTxPacket();
-  auto status = wlan_softmac_proxy_.QueueTx(&tx_pkt);
-  // TODO(tkilbourn): remove this once we implement WlanSoftmacCompleteTx and allow
-  // wlan-softmac drivers to complete transmits asynchronously.
-  ZX_DEBUG_ASSERT(status != ZX_ERR_SHOULD_WAIT);
+  bool enqueue_pending = false;
+  auto status = wlan_softmac_proxy_.QueueTx(&tx_pkt, &enqueue_pending);
+  // TODO(fxbug.dev/85924): Remove this once we implement WlanSoftmacCompleteTx
+  // and allow wlan-softmac drivers to complete transmits asynchronously.
+  ZX_DEBUG_ASSERT(!enqueue_pending);
 
   return status;
 }

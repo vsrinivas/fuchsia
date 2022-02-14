@@ -3198,8 +3198,10 @@ static bool verify_started(struct ath10k* ar) {
   return result;
 }
 
-static zx_status_t ath10k_pci_queue_tx(void* ctx, const wlan_tx_packet_t* pkt) {
+static zx_status_t ath10k_pci_queue_tx(void* ctx, const wlan_tx_packet_t* pkt,
+                                       bool* out_enqueue_pending) {
   struct ath10k* ar = ctx;
+  *out_enqueue_pending = false;
   return ath10k_mac_op_tx(ar, pkt);
 }
 

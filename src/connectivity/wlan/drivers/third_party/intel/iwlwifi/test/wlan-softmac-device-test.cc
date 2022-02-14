@@ -904,7 +904,10 @@ TEST_F(MacInterfaceTest, TxPktTooLong) {
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
   wlan_pkt->wlan_pkt()->mac_frame_size = WLAN_MSDU_MAX_LEN + 1;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt()));
+  bool enqueue_pending = false;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt(), &enqueue_pending));
+  ASSERT_EQ(enqueue_pending, false);
   unbindTx();
 }
 
@@ -919,7 +922,10 @@ TEST_F(MacInterfaceTest, TxPktNotSupportedRole) {
   bindTx(tx_wrapper);
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt()));
+  bool enqueue_pending = false;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt(), &enqueue_pending));
+  ASSERT_EQ(enqueue_pending, false);
   unbindTx();
 }
 
@@ -933,7 +939,9 @@ TEST_F(MacInterfaceTest, TxPkt) {
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
   mock_tx_.ExpectCall(ZX_OK, wlan_pkt->len(), WIDE_ID(0, TX_CMD), IWL_MVM_DQA_MIN_MGMT_QUEUE);
-  ASSERT_EQ(ZX_OK, device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt()));
+  bool enqueue_pending = false;
+  ASSERT_EQ(ZX_OK, device_->WlanSoftmacQueueTx(wlan_pkt->wlan_pkt(), &enqueue_pending));
+  ASSERT_EQ(enqueue_pending, false);
   unbindTx();
 }
 

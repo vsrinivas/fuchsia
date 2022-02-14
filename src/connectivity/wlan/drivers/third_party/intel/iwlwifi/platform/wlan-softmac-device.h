@@ -39,7 +39,7 @@ class WlanSoftmacDevice
   zx_status_t WlanSoftmacStart(const wlan_softmac_ifc_protocol_t* ifc,
                                zx::channel* out_mlme_channel);
   void WlanSoftmacStop();
-  zx_status_t WlanSoftmacQueueTx(const wlan_tx_packet_t* packet);
+  zx_status_t WlanSoftmacQueueTx(const wlan_tx_packet_t* packet, bool* out_enqueue_pending);
   zx_status_t WlanSoftmacSetChannel(const wlan_channel_t* channel);
   zx_status_t WlanSoftmacConfigureBss(const bss_config_t* config);
   zx_status_t WlanSoftmacEnableBeaconing(const wlan_bcn_config_t* bcn_cfg);

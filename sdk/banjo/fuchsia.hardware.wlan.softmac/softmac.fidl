@@ -334,22 +334,19 @@ protocol WlanSoftmac {
     /// Safe to call if the softmac is already stopped.
     Stop() -> ();
 
-    /// Queue the data for transmit. Return status indicates queue state:
-    ///   ZX_ERR_SHOULD_WAIT: Packet is being enqueued.
-    ///   ZX_OK: Packet has been enqueued.
-    ///   Other: Packet could not be enqueued.
+    /// Queue a packet for transmission. May return before a packet has actually been transmitted.
+    /// The driver may choose to take ownership of the given WlanTxPacket by setting enqueue_pending
+    /// to true, in which case the packet must be returned later via CompleteTx.
     ///
-    /// In the SHOULD_WAIT case the driver takes ownership of the wlan_tx_packet_t and must call
-    /// complete_tx() to return it once the enqueue is complete. complete_tx() may be used to return
-    /// the packet before transmission itself completes, and MUST NOT be called from within the
-    /// queue_tx() implementation.
-    ///
-    /// queue_tx() may be called at any time after start() is called including from multiple threads
-    /// simultaneously.
+    /// Note: CompleteTx may be used to return the WlanTxPacket before transmission completes, but
+    /// MUST NOT be called from within the QueueTx implementation.
     QueueTx(struct {
         packet WlanTxPacket;
     }) -> (struct {
+        /// status only indicates that the packet was successfully queued, not successfully
+        /// transmitted. enqueue_pending should only be true if status is ZX_OK.
         status zx.status;
+        enqueue_pending bool;
     });
 
     // Set the radio channel
