@@ -11,6 +11,7 @@ if (is_host) {
       "clippy.go",
       "clippy_test.go",
       "staticanalysis.go",
+      "staticanalysis_test.go",
     ]
 
     deps = [

@@ -50,16 +50,31 @@ func runAnalyzers(ctx context.Context, analyzers []staticanalysis.Analyzer, file
 	// instead of null.
 	allFindings := []*staticanalysis.Finding{}
 
+	var errs []error
+
 	for _, analyzer := range analyzers {
 		for _, f := range files {
 			findings, err := analyzer.Analyze(ctx, f)
 			if err != nil {
-				return nil, err
+				logger.Errorf(ctx, err.Error())
+				errs = append(errs, err)
+				// It's possible for an analyzer to produce findings *and* an
+				// error in which case we still want to emit the findings (but
+				// produce a non-zero retcode).
+			}
+			for _, finding := range findings {
+				if err := finding.Normalize(); err != nil {
+					logger.Errorf(ctx, err.Error())
+					errs = append(errs, err)
+				}
 			}
 			allFindings = append(allFindings, findings...)
 		}
 	}
 
+	if len(errs) > 0 {
+		return allFindings, errs[0]
+	}
 	return allFindings, nil
 }
 
@@ -111,30 +126,32 @@ func mainImpl(ctx context.Context) error {
 		return err
 	}
 
-	findings, err := runAnalyzers(ctx, analyzers, files)
-	if err != nil {
-		return err
+	findings, finalErr := runAnalyzers(ctx, analyzers, files)
+	// Attempt to report findings even if some analyzers failed, since others
+	// might have passed.
+	if err := writeFindings(ctx, findings, flags.outputJSON); err != nil {
+		if finalErr == nil {
+			finalErr = err
+		}
 	}
+	return finalErr
+}
 
-	b, err := json.MarshalIndent(findings, "", "  ")
-	if err != nil {
-		return err
-	}
-
+func writeFindings(ctx context.Context, findings []*staticanalysis.Finding, outputJSON string) error {
 	output := streams.Stdout(ctx)
-	if flags.outputJSON != "" {
-		f, err := os.Create(flags.outputJSON)
+	if outputJSON != "" {
+		f, err := os.Create(outputJSON)
 		if err != nil {
 			return err
 		}
 		defer f.Close()
 		output = f
 	}
-
-	if _, err := output.Write(b); err != nil {
+	enc := json.NewEncoder(output)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(findings); err != nil {
 		return fmt.Errorf("failed to write findings: %w", err)
 	}
-
 	return nil
 }
 

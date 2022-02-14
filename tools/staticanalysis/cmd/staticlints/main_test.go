@@ -25,6 +25,7 @@ func (c fakeAnalyzer) Analyze(_ context.Context, path string) ([]*staticanalysis
 			Path:      path,
 			StartLine: 1,
 			StartChar: 2,
+			EndChar:   2,
 		},
 	}, nil
 }
@@ -41,14 +42,18 @@ func TestRunAnalyzers(t *testing.T) {
 			Category:  "FakeTool/name_error",
 			Path:      "src/foo.py",
 			StartLine: 1,
+			EndLine:   1,
 			StartChar: 2,
+			EndChar:   3,
 		},
 		{
 			Message:   "variable not defined",
 			Category:  "FakeTool/name_error",
 			Path:      "src/bar.py",
 			StartLine: 1,
+			EndLine:   1,
 			StartChar: 2,
+			EndChar:   3,
 		},
 	}
 
