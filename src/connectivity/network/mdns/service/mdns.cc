@@ -24,6 +24,7 @@
 #include "src/connectivity/network/mdns/service/mdns_addresses.h"
 #include "src/connectivity/network/mdns/service/mdns_names.h"
 #include "src/connectivity/network/mdns/service/resource_renewer.h"
+#include "src/connectivity/network/mdns/service/service_instance_resolver.h"
 
 namespace mdns {
 
@@ -137,6 +138,17 @@ void Mdns::ResolveHostName(const std::string& host_name, zx::time timeout,
   FX_DCHECK(state_ == State::kActive);
 
   AddAgent(std::make_shared<HostNameResolver>(this, host_name, timeout, std::move(callback)));
+}
+
+void Mdns::ResolveServiceInstance(const std::string& service, const std::string& instance,
+                                  zx::time timeout, ResolveServiceInstance2Callback callback) {
+  FX_DCHECK(!service.empty());
+  FX_DCHECK(!instance.empty());
+  FX_DCHECK(callback);
+  FX_DCHECK(state_ == State::kActive);
+
+  AddAgent(std::make_shared<ServiceInstanceResolver>(this, service, instance, timeout,
+                                                     std::move(callback)));
 }
 
 void Mdns::SubscribeToService(const std::string& service_name, Subscriber* subscriber) {

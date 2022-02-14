@@ -41,7 +41,12 @@ class MdnsImpl : public fuchsia::net::mdns::PublicationResponder,
 
   void EnsurePublisher();
 
+  void EnsureServiceInstanceResolver();
+
   void Quit();
+
+  void ResolveServiceInstance(const std::string& service, const std::string& instance,
+                              uint32_t timeout_seconds);
 
   // fuchsia::net::mdns::PublicationResponder implementation.
   void OnPublication(fuchsia::net::mdns::PublicationCause publication_cause,
@@ -68,6 +73,7 @@ class MdnsImpl : public fuchsia::net::mdns::PublicationResponder,
   fidl::Binding<fuchsia::net::mdns::PublicationResponder> responder_binding_;
   fidl::Binding<fuchsia::net::mdns::ServiceSubscriber> subscriber_binding_;
   fsl::FDWaiter fd_waiter_;
+  fuchsia::net::mdns::ServiceInstanceResolverPtr service_instance_resolver_;
 
   uint16_t publication_port_;
   std::vector<std::string> publication_text_;

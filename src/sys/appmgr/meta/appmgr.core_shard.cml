@@ -250,6 +250,7 @@
             protocol: [
                 "fuchsia.net.mdns.Publisher",
                 "fuchsia.net.mdns.Resolver",
+                "fuchsia.net.mdns.ServiceInstanceResolver",
                 "fuchsia.net.mdns.Subscriber",
             ],
             from: "#mdns",

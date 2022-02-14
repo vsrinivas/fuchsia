@@ -86,6 +86,8 @@ source_set("source_set") {
     "reply_address.h",
     "resource_renewer.cc",
     "resource_renewer.h",
+    "service_instance_resolver.cc",
+    "service_instance_resolver.h",
   ]
 
   public_deps = [

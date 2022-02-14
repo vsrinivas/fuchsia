@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_MDNS_H_
 
 #include <fuchsia/net/interfaces/cpp/fidl.h>
+#include <fuchsia/net/mdns/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/zx/clock.h>
@@ -183,6 +184,8 @@ class Mdns : public MdnsAgent::Host {
       fit::function<void(const std::string& host_name, const inet::IpAddress& v4_address,
                          const inet::IpAddress& v6_address)>;
 
+  using ResolveServiceInstance2Callback = fit::function<void(fuchsia::net::mdns::ServiceInstance2)>;
+
   // |transceiver| must live as long as this |Mdns| object.
   Mdns(Transceiver& transceiver);
 
@@ -209,6 +212,11 @@ class Mdns : public MdnsAgent::Host {
   // |Start|'s ready callback is called.
   void ResolveHostName(const std::string& host_name, zx::time timeout,
                        ResolveHostNameCallback callback);
+
+  // Resolves |service+instance| to a node, i.e sends an SRV query and gets
+  // a valid response if the service instance exists/is active.
+  void ResolveServiceInstance(const std::string& service, const std::string& instance,
+                              zx::time timeout, ResolveServiceInstance2Callback callback);
 
   // Subscribes to the specified service. The subscription is cancelled when
   // the subscriber is deleted or its |Unsubscribe| method is called.

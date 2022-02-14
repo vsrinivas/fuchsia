@@ -98,6 +98,7 @@ MdnsServiceImpl::MdnsServiceImpl(sys::ComponentContext* component_context)
       resolver_bindings_(this, "Resolver"),
       subscriber_bindings_(this, "Subscriber"),
       publisher_bindings_(this, "Publisher"),
+      service_instance_resolver_bindings_(this, "ServiceInstanceResolver"),
       mdns_(transceiver_) {
   component_context_->outgoing()->AddPublicService<fuchsia::net::mdns::Resolver>(
       fit::bind_member<&BindingSet<fuchsia::net::mdns::Resolver>::OnBindRequest>(
@@ -108,6 +109,9 @@ MdnsServiceImpl::MdnsServiceImpl(sys::ComponentContext* component_context)
   component_context_->outgoing()->AddPublicService<fuchsia::net::mdns::Publisher>(
       fit::bind_member<&BindingSet<fuchsia::net::mdns::Publisher>::OnBindRequest>(
           &publisher_bindings_));
+  component_context_->outgoing()->AddPublicService<fuchsia::net::mdns::ServiceInstanceResolver>(
+      fit::bind_member<&BindingSet<fuchsia::net::mdns::ServiceInstanceResolver>::OnBindRequest>(
+          &service_instance_resolver_bindings_));
   Start();
 }
 
@@ -156,6 +160,7 @@ void MdnsServiceImpl::OnReady() {
   resolver_bindings_.OnReady();
   subscriber_bindings_.OnReady();
   publisher_bindings_.OnReady();
+  service_instance_resolver_bindings_.OnReady();
 }
 
 bool MdnsServiceImpl::PublishServiceInstance(std::string service_name, std::string instance_name,
@@ -336,6 +341,38 @@ void MdnsServiceImpl::PublishServiceInstance2(
   publishers_by_instance_full_name_.emplace(instance_full_name, std::move(publisher));
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// MdnsServiceImpl::ServiceInstanceResolver implementation
+
+void MdnsServiceImpl::ResolveServiceInstance2(std::string service, std::string instance,
+                                              int64_t timeout,
+                                              ResolveServiceInstance2Callback callback) {
+  if (!MdnsNames::IsValidServiceName(service)) {
+    FX_LOGS(ERROR) << "ResolveServiceInstance2 called with invalid service name " << service;
+    fuchsia::net::mdns::ServiceInstanceResolver_ResolveServiceInstance2_Result result;
+    result.set_err(fuchsia::net::mdns::Error::INVALID_SERVICE_NAME);
+    callback(std::move(result));
+    return;
+  }
+
+  if (!MdnsNames::IsValidInstanceName(instance)) {
+    FX_LOGS(ERROR) << "ResolveServiceInstance2 called with invalid instance name " << instance;
+    fuchsia::net::mdns::ServiceInstanceResolver_ResolveServiceInstance2_Result result;
+    result.set_err(fuchsia::net::mdns::Error::INVALID_INSTANCE_NAME);
+    callback(std::move(result));
+    return;
+  }
+
+  mdns_.ResolveServiceInstance(
+      service, instance, zx::clock::get_monotonic() + zx::nsec(timeout),
+      [callback = std::move(callback)](fuchsia::net::mdns::ServiceInstance2 instance) {
+        fuchsia::net::mdns::ServiceInstanceResolver_ResolveServiceInstance2_Result result;
+        result.set_response(
+            fuchsia::net::mdns::ServiceInstanceResolver_ResolveServiceInstance2_Response(
+                std::move(instance)));
+        callback(std::move(result));
+      });
+}
 ////////////////////////////////////////////////////////////////////////////////
 // MdnsServiceImpl::Subscriber implementation
 

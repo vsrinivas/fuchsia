@@ -22,7 +22,8 @@ namespace mdns {
 
 class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
                         public fuchsia::net::mdns::Subscriber,
-                        public fuchsia::net::mdns::Publisher {
+                        public fuchsia::net::mdns::Publisher,
+                        public fuchsia::net::mdns::ServiceInstanceResolver {
  public:
   MdnsServiceImpl(sys::ComponentContext* component_context);
 
@@ -52,6 +53,10 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
       std::string service, std::string instance, bool perform_probe,
       fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder2> responder_handle,
       PublishServiceInstance2Callback callback) override;
+
+  // fuchsia::net:mdns::ServiceInstanceResolver implementation.
+  void ResolveServiceInstance2(std::string service, std::string instance, int64_t timeout,
+                               ResolveServiceInstance2Callback callback) override;
 
   class Subscriber : public Mdns::Subscriber {
    public:
@@ -252,6 +257,7 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
   BindingSet<fuchsia::net::mdns::Resolver> resolver_bindings_;
   BindingSet<fuchsia::net::mdns::Subscriber> subscriber_bindings_;
   BindingSet<fuchsia::net::mdns::Publisher> publisher_bindings_;
+  BindingSet<fuchsia::net::mdns::ServiceInstanceResolver> service_instance_resolver_bindings_;
   Mdns mdns_;
   MdnsTransceiver transceiver_;
   size_t next_subscriber_id_ = 0;

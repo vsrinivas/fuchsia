@@ -4,12 +4,15 @@
 
 #include "src/connectivity/network/mdns/util/mdns_impl.h"
 
+#include <arpa/inet.h>
 #include <fuchsia/net/mdns/cpp/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 #include <poll.h>
+#include <sys/socket.h>
+#include <zircon/status.h>
 
 #include <iostream>
 #include <unordered_set>
@@ -41,6 +44,10 @@ MdnsImpl::MdnsImpl(sys::ComponentContext* component_context, MdnsParams* params,
     case MdnsParams::CommandVerb::kRespond:
       Respond(params->service_name(), params->instance_name(), params->port(), params->announce(),
               params->text());
+      break;
+    case MdnsParams::CommandVerb::kResolveService:
+      ResolveServiceInstance(params->service_name(), params->instance_name(),
+                             params->timeout_seconds());
       break;
   }
 }
@@ -79,6 +86,48 @@ void MdnsImpl::Resolve(const std::string& host_name, uint32_t timeout_seconds) {
           std::cout << "not found\n";
         }
 
+        Quit();
+      });
+}
+
+void MdnsImpl::ResolveServiceInstance(const std::string& service, const std::string& instance,
+                                      uint32_t timeout_seconds) {
+  std::cout << "resolving service: " << service << "instance: " << instance
+            << "with timeout in secs: " << timeout_seconds << "\n";
+  EnsureServiceInstanceResolver();
+  service_instance_resolver_->ResolveServiceInstance2(
+      service, instance, zx::sec(timeout_seconds).get(),
+      [this](fuchsia::net::mdns::ServiceInstanceResolver_ResolveServiceInstance2_Result result) {
+        fuchsia::net::mdns::ServiceInstance2 instance = std::move(result.response().instance);
+        std::cout << "resolved: "
+                  << "\n";
+        if (instance.has_service())
+          std::cout << "service: " << instance.service() << "\n";
+        if (instance.has_instance())
+          std::cout << "instance: " << instance.instance() << "\n";
+        if (instance.has_target())
+          std::cout << "target: " << instance.target() << "\n";
+        if (instance.has_ipv4_endpoint()) {
+          std::cout << "port: " << instance.ipv4_endpoint().port << "\n";
+          char addr_str[16] = {'\0'};
+          std::cout << "ipv4: "
+                    << inet_ntop(AF_INET, instance.ipv4_endpoint().address.addr.data(), addr_str,
+                                 sizeof(addr_str))
+                    << "\n";
+        }
+        if (instance.has_ipv6_endpoint()) {
+          std::cout << "port: " << instance.ipv6_endpoint().port << "\n";
+          char addr_str[INET6_ADDRSTRLEN] = {'\0'};
+          std::cout << "ipv6: "
+                    << inet_ntop(AF_INET6, instance.ipv6_endpoint().address.addr.data(), addr_str,
+                                 sizeof(addr_str))
+                    << "\n";
+        }
+        if (instance.has_text()) {
+          for (auto& s : instance.text()) {
+            std::cout << "txt: " << s << "\n";
+          }
+        }
         Quit();
       });
 }
@@ -164,6 +213,20 @@ void MdnsImpl::EnsureResolver() {
 
   resolver_.set_error_handler([this](zx_status_t status) {
     std::cout << "fuchsia::net::mdns::Resolver channel disconnected unexpectedly\n";
+    Quit();
+  });
+}
+
+void MdnsImpl::EnsureServiceInstanceResolver() {
+  if (service_instance_resolver_) {
+    return;
+  }
+
+  service_instance_resolver_ =
+      component_context_->svc()->Connect<fuchsia::net::mdns::ServiceInstanceResolver>();
+  service_instance_resolver_.set_error_handler([this](zx_status_t status) {
+    std::cout << "fuchsia::net::mdns::ServiceInstanceResolver channel disconnected: "
+              << zx_status_get_string(status);
     Quit();
   });
 }

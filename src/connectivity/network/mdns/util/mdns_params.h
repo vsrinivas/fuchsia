@@ -17,6 +17,7 @@ class MdnsParams {
     kResolve,
     kSubscribe,
     kRespond,
+    kResolveService,
   };
 
   MdnsParams(const fxl::CommandLine& command_line);

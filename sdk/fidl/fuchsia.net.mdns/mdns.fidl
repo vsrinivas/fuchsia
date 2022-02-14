@@ -135,6 +135,24 @@ protocol Publisher {
     }) -> (struct {}) error Error;
 };
 
+/// Discoverable protocol for resolving service instances.
+@discoverable
+protocol ServiceInstanceResolver {
+    /// Resolves a specific service instance by sending an SRV query and returns
+    /// the endpoints, target and text records.
+    ///
+    /// A successful resolution will return target and at least one endpoint.
+    /// Unsuccessful resolution occurs when either the service instance doesn't respond or
+    /// there is no endpoint (IP & port).
+    ResolveServiceInstance2(struct {
+        service service_name;
+        instance instance_name;
+        timeout zx.duration;
+    }) -> (struct {
+        instance ServiceInstance2;
+    }) error Error;
+};
+
 /// Specifies network media on which a service instance should be published.
 type Media = strict bits : uint32 {
     /// Specifies wired interfaces.
