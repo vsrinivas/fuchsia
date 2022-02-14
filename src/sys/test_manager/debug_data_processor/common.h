@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_SYS_TEST_MANAGER_DEBUG_DATA_COMMON_H_
-#define SRC_SYS_TEST_MANAGER_DEBUG_DATA_COMMON_H_
+#ifndef SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_COMMON_H_
+#define SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_COMMON_H_
 
 #include <lib/zx/vmo.h>
 
@@ -14,4 +14,4 @@ struct DataSinkDump {
   zx::vmo vmo;
 };
 
-#endif  // SRC_SYS_TEST_MANAGER_DEBUG_DATA_COMMON_H_
+#endif  // SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_COMMON_H_

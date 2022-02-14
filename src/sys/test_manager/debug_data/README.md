@@ -1,6 +1,6 @@
 # debug_data
 
-Reviewed on: 2022-01-11
+Reviewed on: 2022-02-14
 
 The debug_data components collect debug data output by test components
 via the [`fuchsia.debugdata.DebugData`][debug-fidl] protocols. This protocol
@@ -19,10 +19,10 @@ Currently, there are two debug_data components:
  which allows the caller to specify which realms to collect debug data for,
  and provides a synchronization signal that indicates when processing is
  complete.
- * *C++ debug_data_processor* - a small component invoked by the Rust
- debug_data component that actually processes the debug data. It exists
- because the debug data processing libraries are not directly accessible from
- Rust.
+ * [*C++ debug_data_processor*][debug-data-processor] - a small component
+ invoked by the Rust debug_data component that actually processes the debug
+ data. It exists because the debug data processing libraries are not directly
+ accessible from Rust.
 
 ## Design
 
@@ -45,25 +45,22 @@ no further debug data).
 
 ## Testing
 
-Unit tests for all the debug_data components can be run with
+Unit tests can be run with
 
 ```
-$ fx test debug-data-rust-unittests debug_data_unittests
+$ fx test debug-data-rust-unittests
 ```
 
 ## Source layout
 
-The entry point for each component is as follows:
- * *debug_data* component - `src/main.rs`
- * *C++ debug_data_processor* component - `processor_main.cc`
+The entry point for *debug_data* is in `src/main.rs`.
 
 ## Future Work
 
- * Move the *debug_data_processor* component to a new directory
  * Either modularize how debug data is processed and merged, or remove
  merging altogether. This would support "pluggable" processing for different
  types of debug data.
 
 [debug-fidl]: /sdk/fidl/fuchsia.debugdata
 [internal-fidl]: /sdk/fidl/fuchsia.test.internal
-
+[debug-data-processor]: /src/sys/test_manager/debug_data_processor

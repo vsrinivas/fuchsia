@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_SYS_TEST_MANAGER_DEBUG_DATA_DATA_PROCESSOR_H_
-#define SRC_SYS_TEST_MANAGER_DEBUG_DATA_DATA_PROCESSOR_H_
+#ifndef SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_DATA_PROCESSOR_H_
+#define SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_DATA_PROCESSOR_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
@@ -122,4 +122,4 @@ class DataProcessor : public AbstractDataProcessor {
   std::shared_ptr<async::Wait> processor_wait_;
 };
 
-#endif  // SRC_SYS_TEST_MANAGER_DEBUG_DATA_DATA_PROCESSOR_H_
+#endif  // SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_DATA_PROCESSOR_H_

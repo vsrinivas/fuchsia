@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_SYS_TEST_MANAGER_DEBUG_DATA_DATA_PROCESSOR_FIDL_H_
-#define SRC_SYS_TEST_MANAGER_DEBUG_DATA_DATA_PROCESSOR_FIDL_H_
+#ifndef SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_DATA_PROCESSOR_FIDL_H_
+#define SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_DATA_PROCESSOR_FIDL_H_
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/test/debug/cpp/fidl.h>
@@ -47,4 +47,4 @@ class DataProcessorFidl : public ftest_debug::DebugDataProcessor {
   async_dispatcher_t* dispatcher_;
 };
 
-#endif  // SRC_SYS_TEST_MANAGER_DEBUG_DATA_DATA_PROCESSOR_FIDL_H_
+#endif  // SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_DATA_PROCESSOR_FIDL_H_

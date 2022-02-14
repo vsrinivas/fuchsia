@@ -1,0 +1,89 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+source_set("lib") {
+  testonly = true
+
+  sources = [
+    "abstract_data_processor.h",
+    "common.h",
+    "data_processor.cc",
+    "data_processor.h",
+    "data_processor_fidl.cc",
+    "data_processor_fidl.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.debugdata",
+    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+    "//src/lib/json_parser",
+    "//src/sys/test_manager/fidl/fuchsia.test.debug",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/debugdata",
+  ]
+}
+
+executable("debug_data_processor_bin") {
+  testonly = true
+  output_name = "debug_data_processor"
+  sources = [ "processor_main.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/sys/test_manager/fidl/fuchsia.test.debug",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("debug_data_processor") {
+  testonly = true
+  deps = [ ":debug_data_processor_bin" ]
+  manifest = "meta/debug_data_processor.cml"
+}
+
+executable("test_bin") {
+  testonly = true
+  output_name = "debug_data_processor_unittests"
+
+  sources = [
+    "data_processor_fidl_unittests.cc",
+    "data_processor_unittests.cc",
+    "test_data_processor.h",
+  ]
+
+  deps = [
+    ":lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("debug_data_processor_unittests_component") {
+  testonly = true
+  component_name = "debug_data_processor_unittests"
+  deps = [ ":test_bin" ]
+  manifest = "meta/debug_data_processor_unittests.cml"
+}
+
+fuchsia_test_package("debug_data_processor_unittests") {
+  test_components = [ ":debug_data_processor_unittests_component" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":debug_data_processor_unittests" ]
+}

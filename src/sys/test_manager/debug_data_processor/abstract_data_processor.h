@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_SYS_TEST_MANAGER_DEBUG_DATA_ABSTRACT_DATA_PROCESSOR_H_
-#define SRC_SYS_TEST_MANAGER_DEBUG_DATA_ABSTRACT_DATA_PROCESSOR_H_
+#ifndef SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_ABSTRACT_DATA_PROCESSOR_H_
+#define SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_ABSTRACT_DATA_PROCESSOR_H_
 
 #include <lib/zx/event.h>
 
@@ -22,4 +22,4 @@ class AbstractDataProcessor {
   virtual zx::unowned_event GetIdleEvent() = 0;
 };
 
-#endif  // SRC_SYS_TEST_MANAGER_DEBUG_DATA_ABSTRACT_DATA_PROCESSOR_H_
+#endif  // SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_ABSTRACT_DATA_PROCESSOR_H_

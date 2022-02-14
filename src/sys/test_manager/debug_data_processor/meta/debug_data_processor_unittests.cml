@@ -5,6 +5,6 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/debug_data_unittests",
+        binary: "bin/debug_data_processor_unittests",
     },
 }

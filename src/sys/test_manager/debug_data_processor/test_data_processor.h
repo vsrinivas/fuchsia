@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_SYS_TEST_MANAGER_DEBUG_DATA_TEST_DATA_PROCESSOR_H_
-#define SRC_SYS_TEST_MANAGER_DEBUG_DATA_TEST_DATA_PROCESSOR_H_
+#ifndef SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_TEST_DATA_PROCESSOR_H_
+#define SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_TEST_DATA_PROCESSOR_H_
 
 #include <lib/zx/event.h>
 
@@ -43,4 +43,4 @@ class TestDataProcessor : public AbstractDataProcessor {
   zx::event idle_signal_event_;
 };
 
-#endif  // SRC_SYS_TEST_MANAGER_DEBUG_DATA_TEST_DATA_PROCESSOR_H_
+#endif  // SRC_SYS_TEST_MANAGER_DEBUG_DATA_PROCESSOR_TEST_DATA_PROCESSOR_H_
