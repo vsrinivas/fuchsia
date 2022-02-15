@@ -115,6 +115,19 @@ std::string GetUsage() {
     hosted under the path `fuchsia.component.Binder.<child>`. Therefore, it is expected
     that a corresponding `use from child` clause is present in basemgr's manifest
     and that the child component exposes `fuchsia.component.Binder`.
+    Normally, the use clause will be structured like so:
+
+    ```
+    use: [
+      {
+        protocol: "fuchsia.component.Binder",
+        from: "#foo", // Where `foo` is the child name
+        path: "/svc/fuchsia.component.Binder.foo",
+      },
+      ...
+    ]
+    ```
+
     If the child fails to start or crashes, basemgr will attempt to restart it
     3 times. If this fails, then basemgr will restart the system.
 
