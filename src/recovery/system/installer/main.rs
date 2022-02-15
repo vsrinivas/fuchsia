@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::anyhow;
-use anyhow::Error;
+use anyhow::{anyhow, Context, Error};
 use argh::FromArgs;
 use carnelian::{
     app::Config,
@@ -24,13 +23,20 @@ use fuchsia_zircon::Event;
 use rive_rs::{self as rive};
 use std::path::PathBuf;
 
+use fuchsia_zircon as zx;
+use std::io::{self, Write};
+
 mod menu;
 use menu::{Key, MenuButtonType, MenuEvent, MenuState, MenuStateMachine};
 
 pub mod installer;
-use installer::{find_install_source, get_block_devices, get_bootloader_type};
+use installer::{
+    find_install_source, get_block_devices, get_bootloader_type, paver_connect,
+    set_active_configuration, BootloaderType,
+};
 
 pub mod partition;
+use partition::Partition;
 
 const INSTALLER_HEADLINE: &'static str = "Fuchsia Workstation Installer";
 
@@ -51,7 +57,9 @@ enum InstallerMessages {
     MenuEnter,
     Error(String),
     GotInstallSource(String),
+    GotBootloaderType(BootloaderType),
     GotInstallDestinations(Vec<String>),
+    ProgressUpdate(String),
 }
 
 /// Installer
@@ -62,15 +70,22 @@ struct Args {
     #[argh(option)]
     rotation: Option<DisplayRotation>,
 }
-
+#[derive(Clone, Debug, PartialEq)]
 struct InstallationPaths {
     install_source: String,
+    install_target: String,
+    bootloader_type: Option<BootloaderType>,
     install_destinations: Vec<String>,
 }
 
 impl InstallationPaths {
     pub fn new() -> InstallationPaths {
-        InstallationPaths { install_source: String::new(), install_destinations: Vec::new() }
+        InstallationPaths {
+            install_source: String::new(),
+            install_target: String::new(),
+            bootloader_type: None,
+            install_destinations: Vec::new(),
+        }
     }
 }
 
@@ -221,10 +236,26 @@ impl InstallerViewAssistant {
                 // Get disks if usb install selected
                 match self.menu_state_machine.get_selected_button_type() {
                     MenuButtonType::USBInstall => {
-                        // get installation targets
+                        // Get installation targets
                         fasync::Task::local(setup_installation_paths(
                             self.app_sender.clone(),
                             self.view_key,
+                        ))
+                        .detach();
+                    }
+                    MenuButtonType::Disk => {
+                        // Disk was selected as installation target
+                        self.installation_paths.install_target =
+                            self.menu_state_machine.get_selected_button_text();
+                        self.menu_state_machine.handle_event(MenuEvent::Enter);
+                    }
+                    MenuButtonType::Yes => {
+                        // User agrees to wipe disk and isntall
+                        self.menu_state_machine.handle_event(MenuEvent::Enter);
+                        fasync::Task::local(fuchsia_install(
+                            self.app_sender.clone(),
+                            self.view_key,
+                            self.installation_paths.clone(),
                         ))
                         .detach();
                     }
@@ -239,11 +270,17 @@ impl InstallerViewAssistant {
             InstallerMessages::GotInstallSource(install_source_path) => {
                 self.installation_paths.install_source = install_source_path.clone();
             }
+            InstallerMessages::GotBootloaderType(bootloader_type) => {
+                self.installation_paths.bootloader_type = Some(bootloader_type.clone());
+            }
             InstallerMessages::GotInstallDestinations(destinations) => {
                 self.installation_paths.install_destinations = destinations.to_vec();
                 // Send disks to menu
                 self.menu_state_machine
                     .handle_event(MenuEvent::GotBlockDevices(destinations.to_vec()));
+            }
+            InstallerMessages::ProgressUpdate(string) => {
+                self.menu_state_machine.handle_event(MenuEvent::ProgressUpdate(string.clone()));
             }
         }
 
@@ -418,7 +455,18 @@ fn menu_builder(
                 text_size,
             );
         }
-        MenuState::Progress => {}
+        MenuState::Progress => {
+            text_size = target_size.width.min(target_size.height) / 33.0;
+            let error_facet = TextFacet::with_options(
+                face.clone(),
+                &menu_state_machine.get_error_msg(),
+                text_size,
+                text_options,
+            );
+            let err_msg_y = subheading_location.y + (subheading_size * 2.0);
+            let err_msg_location = point2(subheading_x, err_msg_y);
+            builder.facet_at_location(error_facet, err_msg_location);
+        }
         MenuState::Error => {
             // Render body
             let error_facet = TextFacet::with_options(
@@ -486,6 +534,12 @@ async fn get_installation_paths(app_sender: AppSender, view_key: ViewKey) -> Res
     let block_devices = get_block_devices().await?;
     let bootloader_type = get_bootloader_type().await?;
 
+    // Send got bootloader message
+    app_sender.clone().queue_message(
+        MessageTarget::View(view_key),
+        make_message(InstallerMessages::GotBootloaderType(bootloader_type)),
+    );
+
     // Find the location of the installer
     let install_source =
         find_install_source(block_devices.iter().map(|(part, _)| part).collect(), bootloader_type)
@@ -533,6 +587,135 @@ async fn setup_installation_paths(app_sender: AppSender, view_key: ViewKey) {
             println!("ERROR getting install target: {}", e);
         }
     };
+}
+
+async fn fuchsia_install(
+    app_sender: AppSender,
+    view_key: ViewKey,
+    installation_paths: InstallationPaths,
+) {
+    let block_device_path = installation_paths.install_target.clone();
+
+    // Check that block device path is OK
+    if !block_device_path.starts_with("/dev/") {
+        app_sender.clone().queue_message(
+            MessageTarget::View(view_key),
+            make_message(InstallerMessages::Error(String::from("Invalid block device path!"))),
+        );
+    } else {
+        // Execute install
+        match do_install(app_sender.clone(), view_key, installation_paths).await {
+            Ok(_) => {
+                print!("INSTALL SUCCESS");
+                app_sender.clone().queue_message(
+                    MessageTarget::View(view_key),
+                    make_message(InstallerMessages::ProgressUpdate(String::from(
+                        "Success! Please restart your computer",
+                    ))),
+                );
+            }
+            Err(e) => {
+                print!("ERROR INSTALLING: {}", e);
+                app_sender.clone().queue_message(
+                    MessageTarget::View(view_key),
+                    make_message(InstallerMessages::Error(String::from(format!(
+                        "Error {}, please restart",
+                        e
+                    )))),
+                );
+            }
+        }
+    }
+}
+
+async fn do_install(
+    app_sender: AppSender,
+    view_key: ViewKey,
+    installation_paths: InstallationPaths,
+) -> Result<(), Error> {
+    let block_device_path = installation_paths.install_target;
+    let install_source = installation_paths.install_source;
+    let bootloader_type = installation_paths.bootloader_type.unwrap();
+
+    let (paver, data_sink) =
+        paver_connect(&block_device_path).context("Could not contact paver")?;
+
+    println!("Wiping old partition tables...");
+    app_sender.clone().queue_message(
+        MessageTarget::View(view_key),
+        make_message(InstallerMessages::ProgressUpdate(String::from(
+            "Wiping old partition tables...",
+        ))),
+    );
+    data_sink.wipe_partition_tables().await?;
+    println!("Initializing Fuchsia partition tables...");
+    app_sender.clone().queue_message(
+        MessageTarget::View(view_key),
+        make_message(InstallerMessages::ProgressUpdate(String::from(
+            "Initializing Fuchsia partition tables...",
+        ))),
+    );
+    data_sink.initialize_partition_tables().await?;
+    println!("Success.");
+
+    app_sender.clone().queue_message(
+        MessageTarget::View(view_key),
+        make_message(InstallerMessages::ProgressUpdate(String::from("Getting source partitions"))),
+    );
+    let to_install = Partition::get_partitions(&install_source, bootloader_type)
+        .await
+        .context("Getting source partitions")?;
+
+    for part in to_install {
+        app_sender.clone().queue_message(
+            MessageTarget::View(view_key),
+            make_message(InstallerMessages::ProgressUpdate(String::from(format!(
+                "paving: {:?}",
+                part
+            )))),
+        );
+
+        print!("{:?}... ", part);
+        io::stdout().flush()?;
+        if part.pave(&data_sink).await.is_err() {
+            println!("Failed");
+        } else {
+            println!("OK");
+            if part.is_ab() {
+                print!("{:?} [-B]... ", part);
+                io::stdout().flush()?;
+                if part.pave_b(&data_sink).await.is_err() {
+                    println!("Failed");
+                } else {
+                    println!("OK");
+                }
+            }
+        }
+    }
+
+    app_sender.clone().queue_message(
+        MessageTarget::View(view_key),
+        make_message(InstallerMessages::ProgressUpdate(String::from("Flushing Partitions"))),
+    );
+    zx::Status::ok(data_sink.flush().await.context("Sending flush")?)
+        .context("Flushing partitions")?;
+
+    app_sender.clone().queue_message(
+        MessageTarget::View(view_key),
+        make_message(InstallerMessages::ProgressUpdate(String::from(
+            "Setting active configuration for the new system",
+        ))),
+    );
+    set_active_configuration(&paver)
+        .await
+        .context("Setting active configuration for the new system")?;
+
+    app_sender.clone().queue_message(
+        MessageTarget::View(view_key),
+        make_message(InstallerMessages::ProgressUpdate(String::from("Configureation complete!!"))),
+    );
+
+    Ok(())
 }
 
 fn main() -> Result<(), Error> {
