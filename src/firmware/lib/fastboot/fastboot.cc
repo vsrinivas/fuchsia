@@ -103,7 +103,7 @@ FlashPartitionInfo GetPartitionInfo(std::string_view partition_label) {
 
 }  // namespace
 
-const std::vector<Fastboot::CommandEntry> Fastboot::GetCommandTable() {
+const std::vector<Fastboot::CommandEntry>& Fastboot::GetCommandTable() {
   // Using a static pointer and allocate with `new` so that the static instance
   // never gets deleted.
   static const std::vector<CommandEntry>* kCommandTable = new std::vector<CommandEntry>({
@@ -118,6 +118,10 @@ const std::vector<Fastboot::CommandEntry> Fastboot::GetCommandTable() {
       {
           .name = "flash",
           .cmd = &Fastboot::Flash,
+      },
+      {
+          .name = "set_active",
+          .cmd = &Fastboot::SetActive,
       },
   });
   return *kCommandTable;
@@ -350,6 +354,53 @@ zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
   }
 
   return zx::ok();
+}
+
+zx::status<> Fastboot::SetActive(const std::string& command, Transport* transport) {
+  std::vector<std::string_view> args =
+      fxl::SplitString(command, ":", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+  if (args.size() < 2) {
+    return SendResponse(ResponseType::kFail, "Not enough arguments", transport);
+  }
+
+  auto paver_client_res = ConnectToPaver();
+  if (!paver_client_res.is_ok()) {
+    return SendResponse(ResponseType::kFail, "Failed to connect to paver", transport,
+                        zx::error(paver_client_res.status_value()));
+  }
+
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_paver::BootManager>();
+  if (endpoints.is_error()) {
+    return SendResponse(ResponseType::kFail, "Failed to create zx channel", transport,
+                        zx::error(endpoints.status_value()));
+  }
+
+  fidl::WireResult res = paver_client_res.value()->FindBootManager(std::move(endpoints->server));
+  if (!res.ok()) {
+    return SendResponse(ResponseType::kFail, "Failed to find boot manager", transport,
+                        zx::error(endpoints.status_value()));
+  }
+
+  fidl::WireSyncClient<fuchsia_paver::BootManager> boot_manager =
+      fidl::BindSyncClient(std::move(endpoints->client));
+
+  fuchsia_paver::wire::Configuration config = fuchsia_paver::wire::Configuration::kB;
+  if (args[1] == "a") {
+    config = fuchsia_paver::wire::Configuration::kA;
+  } else if (args[1] != "b") {
+    return SendResponse(ResponseType::kFail, "Invalid slot", transport);
+  }
+
+  auto result = boot_manager->SetConfigurationActive(config);
+  zx_status_t status = result.ok() ? result->status : result.status();
+  if (status != ZX_OK) {
+    return SendResponse(
+        ResponseType::kFail,
+        "Failed to set configuration active: " + std::string(zx_status_get_string(status)),
+        transport, zx::error(status));
+  }
+
+  return SendResponse(ResponseType::kOkay, "", transport);
 }
 
 }  // namespace fastboot

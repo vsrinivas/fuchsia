@@ -85,6 +85,7 @@ class __EXPORT Fastboot {
   zx::status<std::string> GetVarMaxDownloadSize(const std::vector<std::string_view> &, Transport *);
   zx::status<> Download(const std::string &command, Transport *transport);
   zx::status<> Flash(const std::string &command, Transport *transport);
+  zx::status<> SetActive(const std::string &command, Transport *transport);
 
   void ClearDownload();
   zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> ConnectToPaver();
@@ -105,7 +106,7 @@ class __EXPORT Fastboot {
                                           const std::vector<std::string_view> &, Transport *)>;
 
   // A static table of command name to method mapping.
-  static const std::vector<CommandEntry> GetCommandTable();
+  static const std::vector<CommandEntry> &GetCommandTable();
 
   // A static table of fastboot variable name to method mapping.
   static const VariableHashTable &GetVariableTable();

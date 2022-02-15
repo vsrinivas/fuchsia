@@ -342,6 +342,20 @@ class FastbootFlashTest : public FastbootDownloadTest {
     ASSERT_EQ(fake_paver.last_asset(), asset);
   }
 
+  void TestSetActive(const std::string slot) {
+    Fastboot fastboot(0x40000, std::move(svc_chan()));
+    paver().set_abr_supported(true);
+
+    TestTransport transport;
+    const std::string command = "set_active:" + slot;
+    transport.AddInPacket(command);
+    zx::status<> ret = fastboot.ProcessPacket(&transport);
+    ASSERT_TRUE(ret.is_ok());
+
+    std::vector<std::string> expected_packets = {"OKAY"};
+    ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+  }
+
   async::Loop loop_;
   fs::SynchronousVfs vfs_;
   paver_test::FakePaver fake_paver_;
@@ -442,8 +456,7 @@ TEST_F(FastbootFlashTest, FlashBooloaderUnsupportedFirmwareType) {
   Fastboot fastboot(0x40000, std::move(svc_chan()));
 
   // Insert an unsupported firmware failure
-  paver_test::FakePaver& fake_paver = paver();
-  fake_paver.set_supported_firmware_type("unsupported");
+  paver().set_supported_firmware_type("unsupported");
 
   std::vector<uint8_t> download_content(256, 1);
   ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
@@ -493,9 +506,8 @@ TEST_F(FastbootFlashTest, FlashAssetFail) {
   Fastboot fastboot(0x40000, std::move(svc_chan()));
   std::vector<uint8_t> download_content(256, 1);
   ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
-  paver_test::FakePaver& fake_paver = paver();
   // Trigger an internal error by using an incorrect size
-  fake_paver.set_expected_payload_size(128);
+  paver().set_expected_payload_size(128);
 
   std::string command = "flash:zircon_a";
   TestTransport transport;
@@ -503,6 +515,29 @@ TEST_F(FastbootFlashTest, FlashAssetFail) {
   zx::status<> ret = fastboot.ProcessPacket(&transport);
   ASSERT_FALSE(ret.is_ok());
   ASSERT_EQ(transport.GetOutPackets().back().compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, SetActiveSlotA) {
+  TestSetActive("a");
+  ASSERT_TRUE(paver().abr_data().slot_a.active);
+}
+
+TEST_F(FastbootFlashTest, SetActiveSlotB) {
+  TestSetActive("b");
+  ASSERT_TRUE(paver().abr_data().slot_b.active);
+}
+
+TEST_F(FastbootFlashTest, SetActiveInvalidSlot) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::string command = "set_active:r";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  const std::vector<std::string>& sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
 }
 
 }  // namespace
