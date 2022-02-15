@@ -64,6 +64,9 @@
 class VmAddressRegion;
 class VmMapping;
 class VmEnumerator;
+enum class VmAddressRegionEnumeratorType : bool;
+template <VmAddressRegionEnumeratorType>
+class VmAddressRegionEnumerator;
 
 class LazyPageRequest;
 
@@ -137,6 +140,8 @@ class VmAddressRegionOrMapping
  protected:
   // friend VmAddressRegion so it can access DestroyLocked
   friend VmAddressRegion;
+  template <VmAddressRegionEnumeratorType>
+  friend class VmAddressRegionEnumerator;
 
   // destructor, should only be invoked from RefPtr
   virtual ~VmAddressRegionOrMapping();
@@ -578,11 +583,14 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   explicit VmAddressRegion(VmAspace& kernel_aspace);
   // Count the allocated pages, caller must be holding the aspace lock
   size_t AllocatedPagesLocked() const TA_REQ(lock()) override;
+
   // Used to implement VmAspace::EnumerateChildren.
   // |aspace_->lock()| must be held.
   bool EnumerateChildrenLocked(VmEnumerator* ve) TA_REQ(lock());
 
   friend class VmMapping;
+  template <VmAddressRegionEnumeratorType>
+  friend class VmAddressRegionEnumerator;
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmAddressRegion);

@@ -20,6 +20,7 @@
 #include <ktl/limits.h>
 #include <vm/fault.h>
 #include <vm/vm.h>
+#include <vm/vm_address_region_enumerator.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 
@@ -478,57 +479,25 @@ bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t 
                                                       ON_VMAR on_vmar, ON_MAPPING on_mapping) {
   canary_.Assert();
 
-  constexpr uint kStartDepth = 1;
-  uint depth = kStartDepth;
-  for (auto itr = subregions_.IncludeOrHigher(min_addr); itr.IsValid() && itr->base() < max_addr;) {
-    DEBUG_ASSERT(itr->IsAliveLocked());
-    auto curr = itr++;
-    VmAddressRegion* up = curr->parent_;
-
+  VmAddressRegionEnumerator<VmAddressRegionEnumeratorType::UnpausableVmarOrMapping> enumerator(
+      *this, min_addr, max_addr);
+  AssertHeld(enumerator.lock_ref());
+  while (auto result = enumerator.next()) {
+    VmAddressRegionOrMapping* curr = result->region_or_mapping;
     if (curr->is_mapping()) {
       VmMapping* mapping = curr->as_vm_mapping().get();
 
       DEBUG_ASSERT(mapping != nullptr);
       AssertHeld(mapping->lock_ref());
-      // If the mapping is entirely before |min_addr| or entirely after |max_addr| do not run
-      // on_mapping. This can happen when a vmar contains min_addr but has mappings entirely
-      // below it, for example.
-      if ((mapping->base() < min_addr && mapping->base() + mapping->size() <= min_addr) ||
-          mapping->base() > max_addr) {
-        continue;
-      }
-      if (!on_mapping(mapping, this, depth)) {
+      if (!on_mapping(mapping, this, result->depth)) {
         return false;
       }
     } else {
       VmAddressRegion* vmar = curr->as_vm_address_region().get();
       DEBUG_ASSERT(vmar != nullptr);
       AssertHeld(vmar->lock_ref());
-      if (!on_vmar(vmar, depth)) {
+      if (!on_vmar(vmar, result->depth)) {
         return false;
-      }
-      if (!vmar->subregions_.IsEmpty()) {
-        // If the sub-VMAR is not empty, iterate through its children.
-        itr = vmar->subregions_.begin();
-        depth++;
-        continue;
-      }
-    }
-    if (depth > kStartDepth && !itr.IsValid()) {
-      AssertHeld(up->lock_ref());
-      // If we are at a depth greater than the minimum, and have reached
-      // the end of a sub-VMAR range, we ascend and continue iteration.
-      do {
-        itr = up->subregions_.UpperBound(curr->base());
-        if (itr.IsValid()) {
-          break;
-        }
-        up = up->parent_;
-      } while (depth-- != kStartDepth);
-      if (!itr.IsValid()) {
-        // If we have reached the end after ascending all the way up,
-        // break out of the loop.
-        break;
       }
     }
   }

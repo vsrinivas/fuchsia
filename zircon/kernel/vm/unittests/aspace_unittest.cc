@@ -6,6 +6,9 @@
 
 #include <lib/fit/defer.h>
 
+#include <ktl/initializer_list.h>
+#include <vm/vm_address_region_enumerator.h>
+
 #include "test_helper.h"
 
 namespace vm_unittest {
@@ -1272,6 +1275,277 @@ static bool region_list_is_range_available_test() {
   END_TEST;
 }
 
+// Helper class for writing tests against the pausable VmAddressRegionEnumerator
+class EnumeratorTestHelper {
+ public:
+  EnumeratorTestHelper() = default;
+  ~EnumeratorTestHelper() { Destroy(); }
+  zx_status_t Init(fbl::RefPtr<VmAspace> aspace) TA_EXCL(lock()) {
+    Destroy();
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, GB, &vmo_);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    status = aspace->RootVmar()->CreateSubVmar(
+        0, GB, 0, VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_FLAG_CAN_MAP_READ, "test vmar", &test_vmar_);
+    if (status != ZX_OK) {
+      return status;
+    }
+    return ZX_OK;
+  }
+
+  struct ChildRegion {
+    bool mapping;
+    size_t page_offset_begin;
+    size_t page_offset_end;
+  };
+  zx_status_t AddRegions(ktl::initializer_list<ChildRegion>&& regions) TA_EXCL(lock()) {
+    for (auto& region : regions) {
+      ASSERT(region.page_offset_end > region.page_offset_begin);
+      const size_t offset = region.page_offset_begin * PAGE_SIZE;
+      const vaddr_t vaddr = test_vmar_->base() + offset;
+      // See if there's a child VMAR that we should be making this in instead of our test root.
+      fbl::RefPtr<VmAddressRegion> vmar;
+      auto child_region = test_vmar_->FindRegion(vaddr);
+      if (child_region) {
+        // Set our target vmar to the child region. If it's actually a mapping then this is fine,
+        // we'll end up trying to create in the test_vmar which will then fail.
+        vmar = child_region->as_vm_address_region();
+      }
+      // If no child then use the root test_vmar
+      if (!vmar) {
+        vmar = test_vmar_;
+      }
+      // Create either a mapping or vmar as requested.
+      const size_t size = (region.page_offset_end - region.page_offset_begin) * PAGE_SIZE;
+      zx_status_t status;
+      if (region.mapping) {
+        fbl::RefPtr<VmMapping> new_mapping;
+        status = vmar->CreateVmMapping(offset, size, 0, VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_SPECIFIC,
+                                       vmo_, 0, ARCH_MMU_FLAG_PERM_READ, "mapping", &new_mapping);
+      } else {
+        fbl::RefPtr<VmAddressRegion> new_vmar;
+        status = vmar->CreateSubVmar(
+            offset, size, 0,
+            VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_SPECIFIC | VMAR_FLAG_CAN_MAP_SPECIFIC, "vmar",
+            &new_vmar);
+      }
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+    return ZX_OK;
+  }
+  using RegionEnumerator =
+      VmAddressRegionEnumerator<VmAddressRegionEnumeratorType::PausableMapping>;
+  RegionEnumerator Enumerator(size_t page_offset_begin, size_t page_offset_end) TA_REQ(lock()) {
+    const vaddr_t min_addr = test_vmar_->base() + page_offset_begin * PAGE_SIZE;
+    const vaddr_t max_addr = test_vmar_->base() + page_offset_end * PAGE_SIZE;
+    return VmAddressRegionEnumerator<VmAddressRegionEnumeratorType::PausableMapping>(
+        *test_vmar_, min_addr, max_addr);
+  }
+
+  void Resume(RegionEnumerator& enumerator) TA_REQ(lock()) {
+    AssertHeld(enumerator.lock_ref());
+    enumerator.resume();
+  }
+
+  bool ExpectRegions(RegionEnumerator& enumerator, ktl::initializer_list<ChildRegion>&& regions)
+      TA_REQ(lock()) {
+    AssertHeld(enumerator.lock_ref());
+    for (auto& region : regions) {
+      ASSERT(region.page_offset_end > region.page_offset_begin);
+      if (!region.mapping) {
+        continue;
+      }
+      auto next = enumerator.next();
+      if (!next.has_value()) {
+        return false;
+      }
+      if (next->region_or_mapping->base() !=
+          test_vmar_->base() + region.page_offset_begin * PAGE_SIZE) {
+        return false;
+      }
+      if (next->region_or_mapping->size() !=
+          (region.page_offset_end - region.page_offset_begin) * PAGE_SIZE) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  zx_status_t Unmap(size_t page_offset_begin, size_t page_offset_end) TA_EXCL(lock()) {
+    ASSERT(page_offset_end > page_offset_begin);
+    const vaddr_t vaddr = test_vmar_->base() + page_offset_begin * PAGE_SIZE;
+    const size_t size = (page_offset_end - page_offset_begin) * PAGE_SIZE;
+    return test_vmar_->Unmap(vaddr, size);
+  }
+
+  Lock<Mutex>* lock() const TA_RET_CAP(test_vmar_->lock()) { return test_vmar_->lock(); }
+
+ private:
+  void Destroy() {
+    if (test_vmar_) {
+      test_vmar_->Destroy();
+      test_vmar_.reset();
+    }
+    vmo_.reset();
+  }
+  fbl::RefPtr<VmObjectPaged> vmo_;
+  fbl::RefPtr<VmAddressRegion> test_vmar_;
+};
+
+static bool address_region_enumerator_mapping_test() {
+  BEGIN_TEST;
+
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test aspace");
+
+  // Smoke test of a single region.
+  {
+    EnumeratorTestHelper test;
+    ASSERT_OK(test.Init(aspace));
+    EXPECT_OK(test.AddRegions({{true, 0, 1}}));
+    Guard<Mutex> guard{test.lock()};
+    auto enumerator = test.Enumerator(0, 1);
+    AssertHeld(enumerator.lock_ref());
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 0, 1}}));
+    ASSERT_FALSE(enumerator.next().has_value());
+  }
+  // Unmap while iterating a subvmar and resume in the parent.
+  {
+    EnumeratorTestHelper test;
+    ASSERT_OK(test.Init(aspace));
+    EXPECT_OK(
+        test.AddRegions({{false, 0, 7}, {true, 1, 2}, {true, 3, 4}, {true, 5, 6}, {true, 7, 8}}));
+    Guard<Mutex> guard{test.lock()};
+    auto enumerator = test.Enumerator(0, 10);
+    AssertHeld(enumerator.lock_ref());
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 1, 2}}));
+    enumerator.pause();
+    // Unmap the entire subvmar we created
+    guard.CallUnlocked([&test] { test.Unmap(0, 7); });
+    test.Resume(enumerator);
+    // Last mapping should still be there.
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 7, 8}}));
+    ASSERT_FALSE(enumerator.next().has_value());
+  }
+  // Pause immediately without enumerating when the start is a subvmar.
+  {
+    EnumeratorTestHelper test;
+    ASSERT_OK(test.Init(aspace));
+    EXPECT_OK(test.AddRegions({{false, 0, 2}, {true, 1, 2}}));
+    Guard<Mutex> guard{test.lock()};
+    auto enumerator = test.Enumerator(0, 2);
+    AssertHeld(enumerator.lock_ref());
+    enumerator.pause();
+    test.Resume(enumerator);
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 1, 2}}));
+    ASSERT_FALSE(enumerator.next().has_value());
+  }
+  // Add future mapping.
+  {
+    EnumeratorTestHelper test;
+    ASSERT_OK(test.Init(aspace));
+    EXPECT_OK(test.AddRegions({{true, 0, 1}, {true, 1, 2}}));
+    Guard<Mutex> guard{test.lock()};
+    auto enumerator = test.Enumerator(0, 3);
+    AssertHeld(enumerator.lock_ref());
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 0, 1}}));
+    enumerator.pause();
+    guard.CallUnlocked([&test] { test.AddRegions({{true, 2, 3}}); });
+    test.Resume(enumerator);
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 1, 2}, {true, 2, 3}}));
+    ASSERT_FALSE(enumerator.next().has_value());
+  }
+  // Replace the next mapping.
+  {
+    EnumeratorTestHelper test;
+    ASSERT_OK(test.Init(aspace));
+    EXPECT_OK(test.AddRegions({{true, 0, 1}, {true, 1, 2}}));
+    Guard<Mutex> guard{test.lock()};
+    auto enumerator = test.Enumerator(0, 3);
+    AssertHeld(enumerator.lock_ref());
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 0, 1}}));
+    enumerator.pause();
+    guard.CallUnlocked([&test] {
+      test.Unmap(1, 2);
+      test.AddRegions({{true, 1, 3}});
+    });
+    test.Resume(enumerator);
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 1, 3}}));
+    ASSERT_FALSE(enumerator.next().has_value());
+  }
+  // Add earlier regions.
+  {
+    EnumeratorTestHelper test;
+    ASSERT_OK(test.Init(aspace));
+    EXPECT_OK(test.AddRegions({{true, 2, 3}, {true, 3, 4}}));
+    Guard<Mutex> guard{test.lock()};
+    auto enumerator = test.Enumerator(0, 4);
+    AssertHeld(enumerator.lock_ref());
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 2, 3}}));
+    enumerator.pause();
+    guard.CallUnlocked([&test] { test.AddRegions({{true, 0, 1}, {true, 1, 32}}); });
+    test.Resume(enumerator);
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 3, 4}}));
+    ASSERT_FALSE(enumerator.next().has_value());
+  }
+  // Replace current.
+  {
+    EnumeratorTestHelper test;
+    ASSERT_OK(test.Init(aspace));
+    EXPECT_OK(test.AddRegions({{true, 1, 2}, {true, 2, 3}}));
+    Guard<Mutex> guard{test.lock()};
+    auto enumerator = test.Enumerator(0, 3);
+    AssertHeld(enumerator.lock_ref());
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 1, 2}}));
+    enumerator.pause();
+    guard.CallUnlocked([&test] {
+      test.Unmap(1, 2);
+      test.AddRegions({{true, 0, 2}});
+    });
+    test.Resume(enumerator);
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 2, 3}}));
+    ASSERT_FALSE(enumerator.next().has_value());
+  }
+  // Replace current and next with a single mapping.
+  {
+    EnumeratorTestHelper test;
+    ASSERT_OK(test.Init(aspace));
+    EXPECT_OK(test.AddRegions({{true, 1, 2}, {true, 2, 3}}));
+    Guard<Mutex> guard{test.lock()};
+    auto enumerator = test.Enumerator(0, 3);
+    AssertHeld(enumerator.lock_ref());
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 1, 2}}));
+    enumerator.pause();
+    guard.CallUnlocked([&test] {
+      test.Unmap(1, 3);
+      test.AddRegions({{true, 0, 3}});
+    });
+    test.Resume(enumerator);
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 0, 3}}));
+    ASSERT_FALSE(enumerator.next().has_value());
+  }
+  // Start enumerating part way into a mapping.
+  {
+    EnumeratorTestHelper test;
+    ASSERT_OK(test.Init(aspace));
+    EXPECT_OK(test.AddRegions({{false, 0, 6}, {true, 0, 2}, {true, 2, 4}, {true, 6, 7}}));
+    Guard<Mutex> guard{test.lock()};
+    auto enumerator = test.Enumerator(3, 7);
+    AssertHeld(enumerator.lock_ref());
+    enumerator.pause();
+    test.Resume(enumerator);
+    ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 2, 4}, {true, 6, 7}}));
+    ASSERT_FALSE(enumerator.next().has_value());
+  }
+
+  EXPECT_OK(aspace->Destroy());
+
+  END_TEST;
+}
+
 // Doesn't do anything, just prints all aspaces.
 // Should be run after all other tests so that people can manually comb
 // through the output for leaked test aspaces.
@@ -1313,6 +1587,7 @@ VM_UNITTEST(region_list_find_region_test)
 VM_UNITTEST(region_list_include_or_higher_test)
 VM_UNITTEST(region_list_upper_bound_test)
 VM_UNITTEST(region_list_is_range_available_test)
+VM_UNITTEST(address_region_enumerator_mapping_test)
 VM_UNITTEST(dump_all_aspaces)  // Run last
 UNITTEST_END_TESTCASE(aspace_tests, "aspace", "VmAspace / ArchVmAspace / VMAR tests")
 
