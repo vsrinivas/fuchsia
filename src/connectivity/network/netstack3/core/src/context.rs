@@ -602,10 +602,10 @@ pub(crate) mod testutil {
     /// `InstantAndData` implements `Ord` and `Eq` to be used in a `BinaryHeap`
     /// and ordered by `DummyInstant`.
     #[derive(Clone, Debug)]
-    struct InstantAndData<D>(DummyInstant, D);
+    pub(crate) struct InstantAndData<D>(pub(crate) DummyInstant, pub(crate) D);
 
     impl<D> InstantAndData<D> {
-        fn new(time: DummyInstant, data: D) -> Self {
+        pub(crate) fn new(time: DummyInstant, data: D) -> Self {
             Self(time, data)
         }
     }

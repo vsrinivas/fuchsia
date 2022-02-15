@@ -11,12 +11,7 @@ use alloc::{
     vec,
     vec::Vec,
 };
-use core::{
-    fmt::{self, Debug, Formatter},
-    hash::Hash,
-    ops,
-    time::Duration,
-};
+use core::{fmt::Debug, hash::Hash, time::Duration};
 
 use assert_matches::assert_matches;
 use log::{debug, trace};
@@ -31,15 +26,17 @@ use rand::{self, CryptoRng, Rng as _, RngCore, SeedableRng};
 use rand_xorshift::XorShiftRng;
 
 use crate::{
-    context::{InstantContext, RngContext, TimerContext},
+    context::{
+        testutil::{DummyInstant, InstantAndData},
+        InstantContext, RngContext, TimerContext,
+    },
     device::{DeviceId, DeviceLayerEventDispatcher},
-    handle_timer,
     ip::{
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
         socket::IpSockCreationError,
     },
     transport::udp::{BufferUdpContext, UdpContext},
-    Ctx, EventDispatcher, Instant, StackStateBuilder, TimerId,
+    {handle_timer, Ctx, EventDispatcher, Instant, StackStateBuilder, TimerId},
 };
 
 /// Utilities to allow running benchmarks as tests.
@@ -612,90 +609,6 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
     match ip.into() {
         IpAddr::V4(ip) => builder.add_arp_table_entry(device, ip, mac),
         IpAddr::V6(ip) => builder.add_ndp_table_entry(device, UnicastAddr::new(ip).unwrap(), mac),
-    }
-}
-
-/// A dummy implementation of `Instant` for use in testing.
-#[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
-pub(crate) struct DummyInstant {
-    // A DummyInstant is just an offset from some arbitrary epoch.
-    offset: Duration,
-}
-
-impl Instant for DummyInstant {
-    fn duration_since(&self, earlier: DummyInstant) -> Duration {
-        self.offset.checked_sub(earlier.offset).unwrap()
-    }
-
-    fn checked_add(&self, duration: Duration) -> Option<DummyInstant> {
-        self.offset.checked_add(duration).map(|offset| DummyInstant { offset })
-    }
-
-    fn checked_sub(&self, duration: Duration) -> Option<DummyInstant> {
-        self.offset.checked_sub(duration).map(|offset| DummyInstant { offset })
-    }
-}
-
-impl ops::Add<Duration> for DummyInstant {
-    type Output = DummyInstant;
-
-    fn add(self, other: Duration) -> DummyInstant {
-        DummyInstant { offset: self.offset + other }
-    }
-}
-
-impl ops::Sub<DummyInstant> for DummyInstant {
-    type Output = Duration;
-
-    fn sub(self, other: DummyInstant) -> Duration {
-        self.offset - other.offset
-    }
-}
-
-impl ops::Sub<Duration> for DummyInstant {
-    type Output = DummyInstant;
-
-    fn sub(self, other: Duration) -> DummyInstant {
-        DummyInstant { offset: self.offset - other }
-    }
-}
-
-impl Debug for DummyInstant {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.offset)
-    }
-}
-
-/// Represents arbitrary data of type `D` attached to a `DummyInstant`.
-///
-/// `InstantAndData` implements `Ord` and `Eq` to be used in a `BinaryHeap` and
-/// ordered by `DummyInstant`.
-#[derive(Debug)]
-struct InstantAndData<D>(DummyInstant, D);
-
-impl<D> InstantAndData<D> {
-    fn new(time: DummyInstant, data: D) -> Self {
-        Self(time, data)
-    }
-}
-
-impl<D> Eq for InstantAndData<D> {}
-
-impl<D> PartialEq for InstantAndData<D> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl<D> Ord for InstantAndData<D> {
-    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        other.0.cmp(&self.0)
-    }
-}
-
-impl<D> PartialOrd for InstantAndData<D> {
-    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        Some(self.cmp(other))
     }
 }
 

@@ -1238,7 +1238,7 @@ mod tests {
         addr: SpecifiedAddr<A>,
     ) -> bool
     where
-        A::Version: DeviceTestIpExt<crate::testutil::DummyInstant>,
+        A::Version: DeviceTestIpExt<DummyInstant>,
     {
         <A::Version as DeviceTestIpExt<_>>::get_ip_device_state(ctx, device)
             .iter_addrs()
@@ -1251,7 +1251,7 @@ mod tests {
         addr: MulticastAddr<A>,
     ) -> bool
     where
-        A::Version: DeviceTestIpExt<crate::testutil::DummyInstant>,
+        A::Version: DeviceTestIpExt<DummyInstant>,
     {
         <A::Version as DeviceTestIpExt<_>>::get_ip_device_state(ctx, device)
             .multicast_groups
@@ -1629,9 +1629,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_add_remove_ip_addresses<
-        I: Ip + TestIpExt + DeviceTestIpExt<crate::testutil::DummyInstant>,
-    >() {
+    fn test_add_remove_ip_addresses<I: Ip + TestIpExt + DeviceTestIpExt<DummyInstant>>() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
@@ -1721,9 +1719,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_multiple_ip_addresses<
-        I: Ip + TestIpExt + DeviceTestIpExt<crate::testutil::DummyInstant>,
-    >() {
+    fn test_multiple_ip_addresses<I: Ip + TestIpExt + DeviceTestIpExt<DummyInstant>>() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
@@ -1793,7 +1789,7 @@ mod tests {
     /// `join_ip_multicast`.
     #[ip_test]
     fn test_ip_join_leave_multicast_addr_ref_count<
-        I: Ip + TestIpExt + DeviceTestIpExt<crate::testutil::DummyInstant>,
+        I: Ip + TestIpExt + DeviceTestIpExt<DummyInstant>,
     >() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
@@ -1838,9 +1834,7 @@ mod tests {
     /// is a panic condition.
     #[ip_test]
     #[should_panic(expected = "attempted to leave IP multicast group we were not a member of:")]
-    fn test_ip_leave_unjoined_multicast<
-        I: Ip + TestIpExt + DeviceTestIpExt<crate::testutil::DummyInstant>,
-    >() {
+    fn test_ip_leave_unjoined_multicast<I: Ip + TestIpExt + DeviceTestIpExt<DummyInstant>>() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());

@@ -889,8 +889,9 @@ mod test {
 
     use super::*;
     use crate::{
+        context::testutil::DummyInstant,
         ip::gmp::{Action, GmpAction, MemberState},
-        testutil::{new_rng, DummyInstant},
+        testutil::new_rng,
     };
 
     const DEFAULT_UNSOLICITED_REPORT_INTERVAL: Duration = Duration::from_secs(10);

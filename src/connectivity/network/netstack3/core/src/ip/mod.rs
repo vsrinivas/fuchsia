@@ -2054,10 +2054,10 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use crate::{
-        assert_empty,
+        context::testutil::DummyInstant,
         device::{receive_frame, set_routing_enabled, FrameDestination},
         testutil::*,
-        DeviceId, Mac, StackStateBuilder,
+        {assert_empty, DeviceId, Mac, StackStateBuilder},
     };
 
     // Some helper functions
@@ -3131,7 +3131,7 @@ mod tests {
         I: Ip
             + TestIpExt
             + packet_formats::ip::IpExt
-            + crate::device::testutil::DeviceTestIpExt<crate::testutil::DummyInstant>,
+            + crate::device::testutil::DeviceTestIpExt<DummyInstant>,
     >() {
         #[specialize_ip_address]
         fn get_multicast_addr<A: IpAddress>() -> A {

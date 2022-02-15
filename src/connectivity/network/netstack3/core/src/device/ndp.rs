@@ -2657,7 +2657,7 @@ mod tests {
 
     use crate::{
         assert_empty,
-        context::InstantContext as _,
+        context::{testutil::DummyInstant, InstantContext as _},
         device::{
             add_ip_addr_subnet, del_ip_addr,
             ethernet::{EthernetLinkDevice, EthernetTimerId},
@@ -2670,8 +2670,8 @@ mod tests {
         },
         testutil::{
             self, get_counter_val, run_for, set_logger_for_test, trigger_next_timer,
-            DummyEventDispatcher, DummyEventDispatcherBuilder, DummyInstant, DummyNetwork,
-            StepResult, TestIpExt, DUMMY_CONFIG_V6,
+            DummyEventDispatcher, DummyEventDispatcherBuilder, DummyNetwork, StepResult, TestIpExt,
+            DUMMY_CONFIG_V6,
         },
         Ctx, Instant, StackStateBuilder, TimerId, TimerIdInner,
     };

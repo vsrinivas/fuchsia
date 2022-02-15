@@ -424,7 +424,8 @@ impl<Instant> Ipv6AddressEntry<Instant> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{error::ExistsError, testutil::DummyInstant};
+
+    use crate::{context::testutil::DummyInstant, error::ExistsError};
 
     #[test]
     fn test_add_addr_ipv4() {

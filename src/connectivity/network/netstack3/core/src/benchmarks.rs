@@ -29,7 +29,7 @@ use packet_formats::{
 use rand_xorshift::XorShiftRng;
 
 use crate::{
-    context::{InstantContext, RngContext, TimerContext},
+    context::{testutil::DummyInstant, InstantContext, RngContext, TimerContext},
     device::{receive_frame, DeviceId, DeviceLayerEventDispatcher},
     ip::{
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
@@ -37,7 +37,7 @@ use crate::{
     },
     testutil::{
         benchmarks::{black_box, Bencher},
-        DummyEventDispatcherBuilder, DummyInstant, FakeCryptoRng, DUMMY_CONFIG_V4,
+        DummyEventDispatcherBuilder, FakeCryptoRng, DUMMY_CONFIG_V4,
     },
     transport::udp::{BufferUdpContext, UdpContext},
     {StackStateBuilder, TimerId},
