@@ -69,8 +69,7 @@ class TestFilesystem {
 
   fidl::ClientEnd<fuchsia_io::Directory> GetSvcDirectory() const;
 
-  zx::status<uint64_t> GetFsInfoTotalBytes() const;
-  zx::status<uint64_t> GetFsInfoUsedBytes() const;
+  zx::status<fuchsia_io::wire::FilesystemInfo> GetFsInfo() const;
 
  private:
   // Creates a mount point for the instance, mounts it and returns a TestFilesystem.

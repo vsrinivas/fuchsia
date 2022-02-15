@@ -170,8 +170,10 @@ mod test {
             let (_root_dir, remote) =
                 fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
 
+            let event = zx::Event::create().expect("create event pair");
+
             // Try sending two requests simultaneously to trigger a race.
-            let _info = query.get_info().await.expect("get_info OK");
+            let _: bool = query.is_node_in_filesystem(event).await.expect("is_node_in_filesystem");
             admin.get_root(remote).expect("get_root OK");
 
             // Drop the connection to the ServiceFs so that the test can complete.

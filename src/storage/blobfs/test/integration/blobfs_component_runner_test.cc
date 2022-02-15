@@ -102,14 +102,17 @@ TEST_F(BlobfsComponentRunnerTest, ServeAndConfigureStartsBlobfs) {
   fidl::WireSharedClient<fuchsia_fs::Query> query_client(std::move(*query_client_end),
                                                          loop_.dispatcher());
 
+  zx::event event;
+  ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
+
   std::atomic<bool> query_complete = false;
-  query_client->GetInfo([query_complete = &query_complete](
-                            fidl::WireUnownedResult<fuchsia_fs::Query::GetInfo>& info) {
-    EXPECT_EQ(info.status(), ZX_OK);
-    EXPECT_TRUE(info->result.is_response()) << zx_status_get_string(info->result.err());
-    EXPECT_EQ(info->result.response().info.fs_type, VFS_TYPE_BLOBFS);
-    *query_complete = true;
-  });
+  query_client->IsNodeInFilesystem(
+      std::move(event), [query_complete = &query_complete](
+                            fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
+        EXPECT_EQ(info.status(), ZX_OK);
+        EXPECT_FALSE(info->is_in_filesystem);
+        *query_complete = true;
+      });
   ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
   ASSERT_TRUE(query_complete);
 
@@ -141,14 +144,17 @@ TEST_F(BlobfsComponentRunnerTest, ServeAndConfigureStartsBlobfsWithoutDriverMana
   fidl::WireSharedClient<fuchsia_fs::Query> query_client(std::move(*query_client_end),
                                                          loop_.dispatcher());
 
+  zx::event event;
+  ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
+
   std::atomic<bool> query_complete = false;
-  query_client->GetInfo([query_complete = &query_complete](
-                            fidl::WireUnownedResult<fuchsia_fs::Query::GetInfo>& info) {
-    EXPECT_EQ(info.status(), ZX_OK);
-    EXPECT_TRUE(info->result.is_response()) << zx_status_get_string(info->result.err());
-    EXPECT_EQ(info->result.response().info.fs_type, VFS_TYPE_BLOBFS);
-    *query_complete = true;
-  });
+  query_client->IsNodeInFilesystem(
+      std::move(event), [query_complete = &query_complete](
+                            fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
+        EXPECT_EQ(info.status(), ZX_OK);
+        EXPECT_FALSE(info->is_in_filesystem);
+        *query_complete = true;
+      });
   ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
   ASSERT_TRUE(query_complete);
 
@@ -181,14 +187,17 @@ TEST_F(BlobfsComponentRunnerTest, RequestsBeforeStartupAreQueuedAndServicedAfter
   fidl::WireSharedClient<fuchsia_fs::Query> query_client(std::move(*query_client_end),
                                                          loop_.dispatcher());
 
+  zx::event event;
+  ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
+
   std::atomic<bool> query_complete = false;
-  query_client->GetInfo([query_complete = &query_complete](
-                            fidl::WireUnownedResult<fuchsia_fs::Query::GetInfo>& info) {
-    EXPECT_EQ(info.status(), ZX_OK);
-    EXPECT_TRUE(info->result.is_response()) << zx_status_get_string(info->result.err());
-    EXPECT_EQ(info->result.response().info.fs_type, VFS_TYPE_BLOBFS);
-    *query_complete = true;
-  });
+  query_client->IsNodeInFilesystem(
+      std::move(event), [query_complete = &query_complete](
+                            fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
+        EXPECT_EQ(info.status(), ZX_OK);
+        EXPECT_FALSE(info->is_in_filesystem);
+        *query_complete = true;
+      });
   ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
   ASSERT_FALSE(query_complete);
 

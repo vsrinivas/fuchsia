@@ -6,7 +6,7 @@ use {
     crate::{
         object_store::{
             crypt::Crypt,
-            filesystem::{Filesystem, Info, OpenFxFilesystem},
+            filesystem::{Info, OpenFxFilesystem},
             volume::root_volume,
         },
         server::volume::FxVolumeAndRoot,
@@ -73,7 +73,7 @@ pub struct FxfsServer {
 
     /// Unique identifier for this filesystem instance (not preserved across reboots) based on
     /// the kernel object ID to guarantee uniqueness within the system.
-    unique_id: zx::Event,
+    _unique_id: zx::Event,
 }
 
 impl FxfsServer {
@@ -93,7 +93,7 @@ impl FxfsServer {
             unique_id.get_koid()?.raw_koid(),
         )
         .await?;
-        Ok(Self { fs, volume, closed: AtomicBool::new(false), unique_id })
+        Ok(Self { fs, volume, closed: AtomicBool::new(false), _unique_id: unique_id })
     }
 
     pub async fn run(self, outgoing_chan: zx::Channel) -> Result<(), Error> {
@@ -168,17 +168,7 @@ impl FxfsServer {
     }
 
     async fn handle_query(&self, _scope: &ExecutionScope, req: QueryRequest) -> Result<(), Error> {
-        match req {
-            QueryRequest::GetInfo { responder, .. } => {
-                // TODO(fxbug.dev/93770): Support all fields (free_shared_pool_bytes is missing).
-                let info = self.fs.get_info();
-                let object_count = self.volume.volume().store().object_count();
-                let fs_id = self.unique_id.get_koid()?.raw_koid();
-                responder.send(&mut Ok(info.to_filesystem_info(object_count, fs_id)))?;
-            }
-            _ => panic!("Unimplemented"),
-        }
-        Ok(())
+        unimplemented!("req={:?}", req)
     }
 
     async fn handle_request(&self, stream: Services, scope: &ExecutionScope) -> Result<(), Error> {

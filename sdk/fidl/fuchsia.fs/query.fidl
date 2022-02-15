@@ -3,21 +3,12 @@
 // found in the LICENSE file.
 library fuchsia.fs;
 
-using fuchsia.io;
 using zx;
 
 /// `Query` exposes objective filesystem information independent of specific
 /// files and directories.
 @discoverable
 protocol Query {
-    /// Queries the filesystem.
-    ///
-    /// - `info` see [`fuchsia.io/FilesystemInfo`] for details on the fields.
-    ///
-    GetInfo() -> (resource struct {
-        info fuchsia.io.FilesystemInfo;
-    }) error zx.status;
-
     /// Checks if a node is associated with this filesystem, given some token
     /// representing a connection to that node.
     IsNodeInFilesystem(resource struct {

@@ -22,7 +22,6 @@ class QueryService final : public fidl::WireServer<fuchsia_fs::Query>, public Se
   explicit QueryService(FuchsiaVfs* vfs);
 
   // Query implementation.
-  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) final;
   void IsNodeInFilesystem(IsNodeInFilesystemRequestView request,
                           IsNodeInFilesystemCompleter::Sync& completer) final;
 

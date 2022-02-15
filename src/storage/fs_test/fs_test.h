@@ -132,7 +132,6 @@ class Filesystem {
     bool supports_fsck_after_every_transaction = false;
     bool has_directory_size_limit = false;
     bool is_journaled = true;
-    bool supports_fs_query = true;
     bool supports_watch_event_deleted = true;
     bool supports_inspect = false;
   };

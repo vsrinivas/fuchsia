@@ -612,30 +612,19 @@ fidl::ClientEnd<fuchsia_io::Directory> TestFilesystem::GetSvcDirectory() const {
   return fidl::ClientEnd<fuchsia_io::Directory>(std::move(client));
 }
 
-zx::status<uint64_t> TestFilesystem::GetFsInfoTotalBytes() const {
-  auto svc = GetSvcDirectory();
-  auto client_end = service::ConnectAt<fuchsia_fs::Query>(svc);
-  if (client_end.is_error())
-    return client_end.take_error();
-  auto result = fidl::WireCall(*client_end)->GetInfo();
-  if (!result.ok())
-    return zx::error(result.status());  // Transport error.
-  if (result->result.is_err())
-    return zx::error(result->result.err());  // Domain specific error.
-  return zx::ok(result->result.response().info.total_bytes);
-}
-
-zx::status<uint64_t> TestFilesystem::GetFsInfoUsedBytes() const {
-  auto svc = GetSvcDirectory();
-  auto client_end = service::ConnectAt<fuchsia_fs::Query>(svc);
-  if (client_end.is_error())
-    return client_end.take_error();
-  auto result = fidl::WireCall(*client_end)->GetInfo();
-  if (!result.ok())
-    return zx::error(result.status());  // Transport error.
-  if (result->result.is_err())
-    return zx::error(result->result.err());  // Domain specific error.
-  return zx::ok(result->result.response().info.used_bytes);
+zx::status<fuchsia_io::wire::FilesystemInfo> TestFilesystem::GetFsInfo() const {
+  fbl::unique_fd root_fd = fbl::unique_fd(open(mount_path().c_str(), O_RDONLY | O_DIRECTORY));
+  fdio_cpp::UnownedFdioCaller root_connection(root_fd);
+  const auto& result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(
+                                          zx::unowned_channel(root_connection.borrow_channel())))
+                           ->QueryFilesystem();
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  if (result.value().s != ZX_OK) {
+    return zx::error(result.value().s);
+  }
+  return zx::ok(*result.value().info);
 }
 
 }  // namespace fs_test

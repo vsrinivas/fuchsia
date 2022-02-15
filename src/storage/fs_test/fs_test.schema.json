@@ -114,11 +114,6 @@
             "description": "If set, the sectors_per_cluster value to use when formatting a FAT filesystem",
             "type": "integer"
         },
-        "supports_fs_query": {
-            "default": true,
-            "description": "True if the filesystem supports fuchsia.fs/Query",
-            "type": "boolean"
-        },
         "supports_fsck_after_every_transaction": {
             "default": false,
             "description": "True if the filesystem supports the fsck_after_every_transaction mount option",

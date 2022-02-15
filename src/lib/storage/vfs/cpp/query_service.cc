@@ -18,15 +18,6 @@ QueryService::QueryService(FuchsiaVfs* vfs)
           }),
       vfs_(vfs) {}
 
-void QueryService::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
-  zx::status<FilesystemInfo> info_or = vfs_->GetFilesystemInfo();
-  if (info_or.is_ok()) {
-    completer.ReplySuccess(info_or->ToFidl());
-  } else {
-    completer.ReplyError(info_or.error_value());
-  }
-}
-
 void QueryService::IsNodeInFilesystem(IsNodeInFilesystemRequestView request,
                                       IsNodeInFilesystemCompleter::Sync& completer) {
   bool result = false;

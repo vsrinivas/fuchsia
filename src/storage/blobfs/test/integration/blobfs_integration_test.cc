@@ -455,13 +455,16 @@ TEST(SmallDiskTest, FvmDiskTooSmall) {
 }
 
 void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expected_bytes) {
-  auto svc = fs.GetSvcDirectory();
-  auto client_end = service::ConnectAt<fuchsia_fs::Query>(svc);
-  ASSERT_TRUE(client_end.is_ok());
-  const auto& query_result = fidl::WireCall(client_end->borrow())->GetInfo();
-  ASSERT_TRUE(query_result.ok());
-
-  const fuchsia_io::wire::FilesystemInfo& info = query_result.value().result.response().info;
+  fbl::unique_fd root_fd;
+  ASSERT_TRUE(root_fd = fbl::unique_fd(open(fs.mount_path().c_str(), O_RDONLY | O_DIRECTORY)))
+      << strerror(errno);
+  fdio_cpp::UnownedFdioCaller root_connection(root_fd);
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(
+                                   zx::unowned_channel(root_connection.borrow_channel())))
+                    ->QueryFilesystem();
+  ASSERT_TRUE(result.ok()) << result.FormatDescription();
+  ASSERT_EQ(result.value().s, ZX_OK) << zx_status_get_string(result.value().s);
+  const auto& info = *result.value().info;
 
   constexpr std::string_view kFsName = "blobfs";
   const char* name = reinterpret_cast<const char*>(info.name.data());

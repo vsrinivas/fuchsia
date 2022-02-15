@@ -6,9 +6,9 @@ use {
     anyhow::Error,
     fatfs::FsOptions,
     fidl_fuchsia_fs::{AdminRequest, QueryRequest},
-    fidl_fuchsia_io::{FilesystemInfo, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_syslog::{fx_log_err, fx_log_warn},
-    fuchsia_zircon::{AsHandleRef, Status},
+    fuchsia_zircon::Status,
     std::pin::Pin,
     std::sync::Arc,
     vfs::{
@@ -95,30 +95,6 @@ impl FatFs {
         Ok(self.root.clone())
     }
 
-    fn get_info(&self) -> Result<FilesystemInfo, Status> {
-        let fs_lock = self.inner.lock().unwrap();
-
-        let cluster_size = fs_lock.cluster_size() as u64;
-        let total_clusters = fs_lock.total_clusters()? as u64;
-        let free_clusters = fs_lock.free_clusters()? as u64;
-        let block_size = fs_lock.sector_size()? as u32;
-
-        Ok(FilesystemInfo {
-            total_bytes: cluster_size * total_clusters,
-            used_bytes: cluster_size * (total_clusters - free_clusters),
-            // TODO(fxbug.dev/86984) Define a value for "unknown" or "undefined".
-            total_nodes: 0,
-            used_nodes: 0,
-            free_shared_pool_bytes: 0, // Volume manager is not supported.
-            fs_id: self.inner.fs_id().get_koid()?.raw_koid(),
-            block_size,
-            max_filename_size: MAX_FILENAME_LEN,
-            fs_type: VFS_TYPE_FATFS,
-            padding: 0,
-            name: FATFS_INFO_NAME,
-        })
-    }
-
     pub fn handle_query(&self, scope: &ExecutionScope, req: QueryRequest) -> Result<(), Error> {
         match req {
             QueryRequest::IsNodeInFilesystem { token, responder } => {
@@ -127,9 +103,6 @@ impl FatFs {
                     _ => false,
                 };
                 responder.send(result)?;
-            }
-            QueryRequest::GetInfo { responder } => {
-                responder.send(&mut self.get_info().map_err(|e| e.into_raw()))?;
             }
         };
         Ok(())
@@ -370,54 +343,5 @@ mod tests {
         root.close().expect("Close OK");
 
         structure.verify(proxy).await.expect("Verify succeeds");
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_get_info_empty_disk() {
-        let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
-        let fatfs = disk.into_fatfs();
-
-        let mut result = fatfs.get_info().expect("get_info succeeds");
-        result.fs_id = 0; // Skip comparing this ID since it's not predictable.
-
-        assert_eq!(
-            result,
-            FilesystemInfo {
-                // An empty FAT disk formatted by fatfs uses 46 sectors for filesystem data:
-                // * 32 reserved sectors (for the BPB, etc.)
-                // * 7 sectors for each of the two FATs.
-                total_bytes: TEST_DISK_SIZE - (46 * 512),
-                used_bytes: 0,
-                total_nodes: 0,
-                used_nodes: 0,
-                free_shared_pool_bytes: 0,
-                fs_id: 0,
-                block_size: 512,
-                max_filename_size: MAX_FILENAME_LEN,
-                fs_type: VFS_TYPE_FATFS,
-                padding: 0,
-                name: FATFS_INFO_NAME,
-            }
-        );
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_get_info_not_empty_disk() {
-        let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
-        let contents = TestDiskContents::dir().add_child("file", "some text".into());
-        contents.create(&disk.root_dir());
-        let cluster_size = disk.cluster_size();
-        let fatfs = disk.into_fatfs();
-
-        let result = fatfs.get_info().expect("get_info succeeds");
-        assert_eq!(result.used_bytes, cluster_size as u64);
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_get_info_fs_id() {
-        let fatfs = TestFatDisk::empty_disk(TEST_DISK_SIZE).into_fatfs();
-        let result = fatfs.get_info().expect("get_info succeeds");
-        let result2 = fatfs.get_info().expect("get_info succeeds");
-        assert_eq!(result.fs_id, result2.fs_id);
     }
 }

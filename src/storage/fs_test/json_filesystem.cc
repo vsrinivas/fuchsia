@@ -40,7 +40,6 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
           .has_directory_size_limit =
               ConfigGetOrDefault<bool>(config, "has_directory_size_limit", false),
           .is_journaled = ConfigGetOrDefault<bool>(config, "is_journaled", true),
-          .supports_fs_query = ConfigGetOrDefault<bool>(config, "supports_fs_query", true),
           .supports_watch_event_deleted =
               ConfigGetOrDefault<bool>(config, "supports_watch_event_deleted", true),
           .supports_inspect = ConfigGetOrDefault<bool>(config, "supports_inspect", false),
