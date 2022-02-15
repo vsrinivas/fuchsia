@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::validate::{self, Action, Number, NumberType, ROOT_ID};
+use super::validate::{self, Action, Value, ValueType, ROOT_ID};
 
 pub enum Step {
     Actions(Vec<validate::Action>),
@@ -167,7 +167,7 @@ macro_rules! create_array_property {
             id: $id,
             name: $name.into(),
             slots: $slots,
-            number_type: $type,
+            value_type: $type,
         })
     };
 }
@@ -205,8 +205,8 @@ macro_rules! create_linear_histogram {
             parent: $parent,
             id: $id,
             name: $name.into(),
-            floor: Number::$type($floor),
-            step_size: Number::$type($step_size),
+            floor: Value::$type($floor),
+            step_size: Value::$type($step_size),
             buckets: $buckets,
         })
     };
@@ -221,9 +221,9 @@ macro_rules! create_exponential_histogram {
             parent: $parent,
             id: $id,
             name: $name.into(),
-            floor: Number::$type($floor),
-            initial_step: Number::$type($initial_step),
-            step_multiplier: Number::$type($step_multiplier),
+            floor: Value::$type($floor),
+            initial_step: Value::$type($initial_step),
+            step_multiplier: Value::$type($step_multiplier),
             buckets: $buckets,
         })
     };
@@ -327,11 +327,11 @@ fn basic_int() -> Trial {
     Trial {
         name: "Basic Int".into(),
         steps: vec![Step::Actions(vec![
-            create_numeric_property!(parent: ROOT_ID, id: 5, name: "int", value: Number::IntT(10)),
-            set_number!(id: 5, value: Number::IntT(std::i64::MAX)),
-            subtract_number!(id: 5, value: Number::IntT(3)),
-            set_number!(id: 5, value: Number::IntT(std::i64::MIN)),
-            add_number!(id: 5, value: Number::IntT(2)),
+            create_numeric_property!(parent: ROOT_ID, id: 5, name: "int", value: Value::IntT(10)),
+            set_number!(id: 5, value: Value::IntT(std::i64::MAX)),
+            subtract_number!(id: 5, value: Value::IntT(3)),
+            set_number!(id: 5, value: Value::IntT(std::i64::MIN)),
+            add_number!(id: 5, value: Value::IntT(2)),
             delete_property!(id: 5),
         ])],
     }
@@ -341,11 +341,11 @@ fn basic_uint() -> Trial {
     Trial {
         name: "Basic Uint".into(),
         steps: vec![Step::Actions(vec![
-            create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Number::UintT(1)),
-            set_number!(id: 5, value: Number::UintT(std::u64::MAX)),
-            subtract_number!(id: 5, value: Number::UintT(3)),
-            set_number!(id: 5, value: Number::UintT(0)),
-            add_number!(id: 5, value: Number::UintT(2)),
+            create_numeric_property!(parent: ROOT_ID, id: 5, name: "uint", value: Value::UintT(1)),
+            set_number!(id: 5, value: Value::UintT(std::u64::MAX)),
+            subtract_number!(id: 5, value: Value::UintT(3)),
+            set_number!(id: 5, value: Value::UintT(0)),
+            add_number!(id: 5, value: Value::UintT(2)),
             delete_property!(id: 5),
         ])],
     }
@@ -356,11 +356,11 @@ fn basic_double() -> Trial {
         name: "Basic Double".into(),
         steps: vec![Step::Actions(vec![
             create_numeric_property!(parent: ROOT_ID, id: 5, name: "double",
-                                     value: Number::DoubleT(1.0)),
-            set_number!(id: 5, value: Number::DoubleT(std::f64::MAX)),
-            subtract_number!(id: 5, value: Number::DoubleT(std::f64::MAX/10_f64)),
-            set_number!(id: 5, value: Number::DoubleT(std::f64::MIN)),
-            add_number!(id: 5, value: Number::DoubleT(std::f64::MAX / 10_f64)),
+                                     value: Value::DoubleT(1.0)),
+            set_number!(id: 5, value: Value::DoubleT(std::f64::MAX)),
+            subtract_number!(id: 5, value: Value::DoubleT(std::f64::MAX/10_f64)),
+            set_number!(id: 5, value: Value::DoubleT(std::f64::MIN)),
+            add_number!(id: 5, value: Value::DoubleT(std::f64::MAX / 10_f64)),
             delete_property!(id: 5),
         ])],
     }
@@ -371,8 +371,8 @@ fn repeated_names() -> Trial {
 
     for i in 100..120 {
         actions.push(create_node!(parent: 1, id: i, name: format!("{}", i)));
-        actions.push(create_numeric_property!(parent: i, id: i + 1000, name: "count", value: Number::UintT(i as u64 * 2)));
-        actions.push(create_numeric_property!(parent: i, id: i + 2000, name: "time_spent", value: Number::UintT(i as u64 * 1000 + 10)));
+        actions.push(create_numeric_property!(parent: i, id: i + 1000, name: "count", value: Value::UintT(i as u64 * 2)));
+        actions.push(create_numeric_property!(parent: i, id: i + 2000, name: "time_spent", value: Value::UintT(i as u64 * 1000 + 10)));
     }
 
     Trial {
@@ -391,11 +391,11 @@ fn array_indexes_to_test() -> Vec<u64> {
 
 fn basic_int_array() -> Trial {
     let mut actions = vec![create_array_property!(parent: ROOT_ID, id: 5, name: "int", slots: 5,
-                                       type: NumberType::Int)];
+                                       type: ValueType::Int)];
     for index in array_indexes_to_test().iter() {
-        actions.push(array_add!(id: 5, index: *index, value: Number::IntT(7)));
-        actions.push(array_subtract!(id: 5, index: *index, value: Number::IntT(3)));
-        actions.push(array_set!(id: 5, index: *index, value: Number::IntT(19)));
+        actions.push(array_add!(id: 5, index: *index, value: Value::IntT(7)));
+        actions.push(array_subtract!(id: 5, index: *index, value: Value::IntT(3)));
+        actions.push(array_set!(id: 5, index: *index, value: Value::IntT(19)));
     }
     actions.push(delete_property!(id: 5));
     Trial { name: "Int Array Ops".into(), steps: vec![Step::Actions(actions)] }
@@ -403,11 +403,11 @@ fn basic_int_array() -> Trial {
 
 fn basic_uint_array() -> Trial {
     let mut actions = vec![create_array_property!(parent: ROOT_ID, id: 6, name: "uint", slots: 5,
-                                       type: NumberType::Uint)];
+                                       type: ValueType::Uint)];
     for index in array_indexes_to_test().iter() {
-        actions.push(array_add!(id: 6, index: *index, value: Number::UintT(11)));
-        actions.push(array_subtract!(id: 6, index: *index, value: Number::UintT(3)));
-        actions.push(array_set!(id: 6, index: *index, value: Number::UintT(19)));
+        actions.push(array_add!(id: 6, index: *index, value: Value::UintT(11)));
+        actions.push(array_subtract!(id: 6, index: *index, value: Value::UintT(3)));
+        actions.push(array_set!(id: 6, index: *index, value: Value::UintT(19)));
     }
     actions.push(delete_property!(id: 6));
     Trial { name: "Unt Array Ops".into(), steps: vec![Step::Actions(actions)] }
@@ -415,11 +415,11 @@ fn basic_uint_array() -> Trial {
 
 fn basic_double_array() -> Trial {
     let mut actions = vec![create_array_property!(parent: ROOT_ID, id: 4, name: "float", slots: 5,
-                                       type: NumberType::Double)];
+                                       type: ValueType::Double)];
     for index in array_indexes_to_test().iter() {
-        actions.push(array_add!(id: 4, index: *index, value: Number::DoubleT(2.0)));
-        actions.push(array_subtract!(id: 4, index: *index, value: Number::DoubleT(3.5)));
-        actions.push(array_set!(id: 4, index: *index, value: Number::DoubleT(19.0)));
+        actions.push(array_add!(id: 4, index: *index, value: Value::DoubleT(2.0)));
+        actions.push(array_subtract!(id: 4, index: *index, value: Value::DoubleT(3.5)));
+        actions.push(array_set!(id: 4, index: *index, value: Value::DoubleT(19.0)));
     }
     actions.push(delete_property!(id: 4));
     Trial { name: "Int Array Ops".into(), steps: vec![Step::Actions(actions)] }
@@ -427,10 +427,10 @@ fn basic_double_array() -> Trial {
 
 fn int_histogram_ops_trial() -> Trial {
     fn push_ops(actions: &mut Vec<validate::Action>, value: i64) {
-        actions.push(insert!(id: 4, value: Number::IntT(value)));
-        actions.push(insert_multiple!(id: 4, value: Number::IntT(value), count: 3));
-        actions.push(insert!(id: 5, value: Number::IntT(value)));
-        actions.push(insert_multiple!(id: 5, value: Number::IntT(value), count: 3));
+        actions.push(insert!(id: 4, value: Value::IntT(value)));
+        actions.push(insert_multiple!(id: 4, value: Value::IntT(value), count: 3));
+        actions.push(insert!(id: 5, value: Value::IntT(value)));
+        actions.push(insert_multiple!(id: 5, value: Value::IntT(value), count: 3));
     }
     let mut actions = vec![
         create_linear_histogram!(parent: ROOT_ID, id: 4, name: "Lhist", floor: -5,
@@ -452,10 +452,10 @@ fn int_histogram_ops_trial() -> Trial {
 
 fn uint_histogram_ops_trial() -> Trial {
     fn push_ops(actions: &mut Vec<validate::Action>, value: u64) {
-        actions.push(insert!(id: 4, value: Number::UintT(value)));
-        actions.push(insert_multiple!(id: 4, value: Number::UintT(value), count: 3));
-        actions.push(insert!(id: 5, value: Number::UintT(value)));
-        actions.push(insert_multiple!(id: 5, value: Number::UintT(value), count: 3));
+        actions.push(insert!(id: 4, value: Value::UintT(value)));
+        actions.push(insert_multiple!(id: 4, value: Value::UintT(value), count: 3));
+        actions.push(insert!(id: 5, value: Value::UintT(value)));
+        actions.push(insert_multiple!(id: 5, value: Value::UintT(value), count: 3));
     }
     let mut actions = vec![
         create_linear_histogram!(parent: ROOT_ID, id: 4, name: "Lhist", floor: 5,
@@ -477,10 +477,10 @@ fn uint_histogram_ops_trial() -> Trial {
 
 fn double_histogram_ops_trial() -> Trial {
     fn push_ops(actions: &mut Vec<validate::Action>, value: f64) {
-        actions.push(insert!(id: 4, value: Number::DoubleT(value)));
-        actions.push(insert_multiple!(id: 4, value: Number::DoubleT(value), count: 3));
-        actions.push(insert!(id: 5, value: Number::DoubleT(value)));
-        actions.push(insert_multiple!(id: 5, value: Number::DoubleT(value), count: 3));
+        actions.push(insert!(id: 4, value: Value::DoubleT(value)));
+        actions.push(insert_multiple!(id: 4, value: Value::DoubleT(value), count: 3));
+        actions.push(insert!(id: 5, value: Value::DoubleT(value)));
+        actions.push(insert_multiple!(id: 5, value: Value::DoubleT(value), count: 3));
     }
     let mut actions = vec![
         // Create exponential first in this test, so that if histograms aren't supported, both
@@ -515,13 +515,13 @@ fn deletions_trial() -> Trial {
         create_node!(parent: 2, id: 3, name: "child")
     }
     fn p1() -> Action {
-        create_numeric_property!(parent: 1, id: 4, name: "root_int", value: Number::IntT(1))
+        create_numeric_property!(parent: 1, id: 4, name: "root_int", value: Value::IntT(1))
     }
     fn p2() -> Action {
-        create_numeric_property!(parent: 2, id: 5, name: "parent_int", value: Number::IntT(2))
+        create_numeric_property!(parent: 2, id: 5, name: "parent_int", value: Value::IntT(2))
     }
     fn p3() -> Action {
-        create_numeric_property!(parent: 3, id: 6, name: "child_int", value: Number::IntT(3))
+        create_numeric_property!(parent: 3, id: 6, name: "child_int", value: Value::IntT(3))
     }
     fn create() -> Vec<Action> {
         vec![n1(), n2(), n3(), p1(), p2(), p3()]

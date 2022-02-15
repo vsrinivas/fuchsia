@@ -27,7 +27,7 @@ fx set core.x64 --with //src/diagnostics/validator/inspect:tests --with //sdk/da
 ## Running
 
 ```
-fx build && fx run-test inspect_validator_test_dart
+fx build && fx run-test inspect-validator-test-dart
 ```
 
 ## Testing

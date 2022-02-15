@@ -247,7 +247,7 @@ pub(crate) mod tests {
         fuchsia_zircon::HandleBased,
         futures::prelude::*,
         std::collections::HashMap,
-        tracing::*,
+        tracing::info,
     };
 
     #[fuchsia::test]
@@ -327,7 +327,7 @@ pub(crate) mod tests {
                                 parent,
                                 id,
                                 name,
-                                value: Number::IntT(value),
+                                value: Value::IntT(value),
                             }) => {
                                 inspector_maybe.as_ref().map(|i| {
                                     let parent_node = if parent == 0 {
@@ -340,7 +340,7 @@ pub(crate) mod tests {
                                 responder.send(TestResult::Ok)?;
                             }
                             Action::CreateNumericProperty(CreateNumericProperty {
-                                value: Number::UintT(_),
+                                value: Value::UintT(_),
                                 ..
                             }) => {
                                 responder.send(TestResult::Unimplemented)?;

@@ -28,9 +28,9 @@ using test::inspect::validate::Action;
 using test::inspect::validate::InitializationParams;
 using test::inspect::validate::LazyAction;
 using test::inspect::validate::LinkDisposition;
-using test::inspect::validate::NumberType;
 using test::inspect::validate::ROOT_ID;
 using test::inspect::validate::TestResult;
+using test::inspect::validate::ValueType;
 
 using Value =
     cpp17::variant<cpp17::monostate, inspect::Node, inspect::IntProperty, inspect::UintProperty,
@@ -340,14 +340,14 @@ class Actor {
       return TestResult::FAILED;
     }
 
-    switch (action.number_type) {
-      case NumberType::INT:
+    switch (action.value_type) {
+      case ValueType::INT:
         value_map_.emplace(action.id, parent->CreateIntArray(action.name, action.slots));
         break;
-      case NumberType::UINT:
+      case ValueType::UINT:
         value_map_.emplace(action.id, parent->CreateUintArray(action.name, action.slots));
         break;
-      case NumberType::DOUBLE:
+      case ValueType::DOUBLE:
         value_map_.emplace(action.id, parent->CreateDoubleArray(action.name, action.slots));
         break;
       default:

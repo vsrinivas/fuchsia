@@ -711,7 +711,7 @@ mod tests {
     use {
         super::*,
         crate::*,
-        fidl_test_inspect_validate::Number,
+        fidl_test_inspect_validate::Value,
         fuchsia_inspect::reader::snapshot::BackingBuffer,
         inspect_format::{constants, Block, BlockHeader, BlockType, Payload as BlockPayload},
     };
@@ -980,9 +980,9 @@ mod tests {
         let mut child1_action = create_node!(parent:0, id:1, name:"child1");
         let mut child2_action = create_node!(parent:0, id:2, name:"child2");
         let mut property1_action =
-            create_numeric_property!(parent:0, id:1, name:"prop1", value: Number::IntT(1));
+            create_numeric_property!(parent:0, id:1, name:"prop1", value: Value::IntT(1));
         let mut property2_action =
-            create_numeric_property!(parent:0, id:2, name:"prop2", value: Number::IntT(2));
+            create_numeric_property!(parent:0, id:2, name:"prop2", value: Value::IntT(2));
         puppet1.apply(&mut child1_action).await?;
         puppet1.apply(&mut child2_action).await?;
         let mut puppet2 = puppet::tests::local_incomplete_puppet().await?;
@@ -1005,7 +1005,7 @@ mod tests {
         assert_ne!(puppet1.read_data().await?.to_string(), puppet2.read_data().await?.to_string());
         // ... and property position
         let mut subproperty2_action =
-            create_numeric_property!(parent:1, id:2, name:"prop2", value: Number::IntT(1));
+            create_numeric_property!(parent:1, id:2, name:"prop2", value: Value::IntT(1));
         puppet1.apply(&mut child1_action).await?;
         puppet2.apply(&mut child1_action).await?;
         puppet1.apply(&mut property2_action).await?;

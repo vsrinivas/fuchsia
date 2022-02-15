@@ -56,13 +56,13 @@ type DeleteNode = struct {
     id uint32;
 };
 
-type NumberType = strict enum : uint8 {
+type ValueType = strict enum : uint8 {
     INT = 1;
     UINT = 2;
     DOUBLE = 3;
 };
 
-type Number = flexible union {
+type Value = flexible union {
     1: int_t int64;
     2: uint_t uint64;
     3: double_t float64;
@@ -73,7 +73,7 @@ type CreateNumericProperty = struct {
     parent uint32;
     id uint32;
     name string;
-    value Number;
+    value Value;
 };
 
 /// Tells the puppet to create a property with the given byte array value.
@@ -107,17 +107,17 @@ type DeleteProperty = struct {
 
 type AddNumber = struct {
     id uint32;
-    value Number;
+    value Value;
 };
 
 type SubtractNumber = struct {
     id uint32;
-    value Number;
+    value Value;
 };
 
 type SetNumber = struct {
     id uint32;
-    value Number;
+    value Value;
 };
 
 type SetBytes = struct {
@@ -140,33 +140,33 @@ type CreateArrayProperty = struct {
     id uint32;
     name string;
     slots uint64;
-    number_type NumberType;
+    value_type ValueType;
 };
 
 type ArraySet = struct {
     id uint32;
     index uint64;
-    value Number;
+    value Value;
 };
 
 type ArrayAdd = struct {
     id uint32;
     index uint64;
-    value Number;
+    value Value;
 };
 
 type ArraySubtract = struct {
     id uint32;
     index uint64;
-    value Number;
+    value Value;
 };
 
 type CreateLinearHistogram = struct {
     parent uint32;
     id uint32;
     name string;
-    floor Number;
-    step_size Number;
+    floor Value;
+    step_size Value;
     buckets uint64;
 };
 
@@ -174,20 +174,20 @@ type CreateExponentialHistogram = struct {
     parent uint32;
     id uint32;
     name string;
-    floor Number;
-    initial_step Number;
-    step_multiplier Number;
+    floor Value;
+    initial_step Value;
+    step_multiplier Value;
     buckets uint64;
 };
 
 type Insert = struct {
     id uint32;
-    value Number;
+    value Value;
 };
 
 type InsertMultiple = struct {
     id uint32;
-    value Number;
+    value Value;
     count uint64;
 };
 

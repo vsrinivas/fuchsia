@@ -70,13 +70,13 @@ class _ValidateImpl extends fidl_validate.Validate {
         break;
       case fidl_validate.ActionTag.createNumericProperty:
         switch (action.createNumericProperty.value.$tag) {
-          case fidl_validate.NumberTag.intT:
+          case fidl_validate.ValueTag.intT:
             final property = lookupNode(action.createNumericProperty.parent)
                 .intProperty(action.createNumericProperty.name)
               ..setValue(action.createNumericProperty.value.intT);
             _properties[action.createNumericProperty.id] = property;
             break;
-          case fidl_validate.NumberTag.doubleT:
+          case fidl_validate.ValueTag.doubleT:
             final property = lookupNode(action.createNumericProperty.parent)
                 .doubleProperty(action.createNumericProperty.name)
               ..setValue(action.createNumericProperty.value.doubleT);
@@ -113,11 +113,11 @@ class _ValidateImpl extends fidl_validate.Validate {
         break;
       case fidl_validate.ActionTag.addNumber:
         switch (action.addNumber.value.$tag) {
-          case fidl_validate.NumberTag.intT:
+          case fidl_validate.ValueTag.intT:
             IntProperty p = _properties[action.addNumber.id];
             p.add(action.addNumber.value.intT);
             break;
-          case fidl_validate.NumberTag.doubleT:
+          case fidl_validate.ValueTag.doubleT:
             DoubleProperty p = _properties[action.addNumber.id];
             p.add(action.addNumber.value.doubleT);
             break;
@@ -127,11 +127,11 @@ class _ValidateImpl extends fidl_validate.Validate {
         break;
       case fidl_validate.ActionTag.subtractNumber:
         switch (action.subtractNumber.value.$tag) {
-          case fidl_validate.NumberTag.intT:
+          case fidl_validate.ValueTag.intT:
             IntProperty p = _properties[action.subtractNumber.id];
             p.subtract(action.subtractNumber.value.intT);
             break;
-          case fidl_validate.NumberTag.doubleT:
+          case fidl_validate.ValueTag.doubleT:
             DoubleProperty p = _properties[action.subtractNumber.id];
             p.subtract(action.subtractNumber.value.doubleT);
             break;
@@ -141,11 +141,11 @@ class _ValidateImpl extends fidl_validate.Validate {
         break;
       case fidl_validate.ActionTag.setNumber:
         switch (action.setNumber.value.$tag) {
-          case fidl_validate.NumberTag.intT:
+          case fidl_validate.ValueTag.intT:
             IntProperty p = _properties[action.setNumber.id];
             p.setValue(action.setNumber.value.intT);
             break;
-          case fidl_validate.NumberTag.doubleT:
+          case fidl_validate.ValueTag.doubleT:
             DoubleProperty p = _properties[action.setNumber.id];
             p.setValue(action.setNumber.value.doubleT);
             break;

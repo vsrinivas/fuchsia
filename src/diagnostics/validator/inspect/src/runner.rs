@@ -339,18 +339,18 @@ mod tests {
         let mut int_maker = trial_with_action(
             "foo",
             create_numeric_property!(
-            parent: ROOT_ID, id: 1, name: "int", value: Number::IntT(0)),
+            parent: ROOT_ID, id: 1, name: "int", value: Value::IntT(0)),
         );
         let mut uint_maker = trial_with_action(
             "foo",
             create_numeric_property!(
-            parent: ROOT_ID, id: 2, name: "uint", value: Number::UintT(0)),
+            parent: ROOT_ID, id: 2, name: "uint", value: Value::UintT(0)),
         );
         let mut uint_create_delete = Trial {
             name: "foo".to_string(),
             steps: vec![
                 Step::Actions(vec![
-                    create_numeric_property!(parent: ROOT_ID, id: 2, name: "uint", value: Number::UintT(0)),
+                    create_numeric_property!(parent: ROOT_ID, id: 2, name: "uint", value: Value::UintT(0)),
                 ]),
                 Step::Actions(vec![delete_property!(id: 2)]),
             ],

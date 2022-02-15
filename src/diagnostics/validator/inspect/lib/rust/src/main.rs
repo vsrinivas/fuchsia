@@ -25,7 +25,7 @@ use {
     inspect_runtime::service,
     std::collections::HashMap,
     std::sync::Arc,
-    tracing::*,
+    tracing::{error, info, warn},
     vfs::{
         directory::{
             entry::DirectoryEntry,
@@ -140,13 +140,13 @@ impl Actor {
                 self.properties.insert(
                     id,
                     match value {
-                        Number::IntT(n) => {
+                        Value::IntT(n) => {
                             Property::Int(self.find_parent(parent)?.create_int(name, n))
                         }
-                        Number::UintT(n) => {
+                        Value::UintT(n) => {
                             Property::Uint(self.find_parent(parent)?.create_uint(name, n))
                         }
-                        Number::DoubleT(n) => {
+                        Value::DoubleT(n) => {
                             Property::Double(self.find_parent(parent)?.create_double(name, n))
                         }
                         unknown => return Err(format_err!("Unknown number type {:?}", unknown)),
@@ -174,9 +174,9 @@ impl Actor {
             }
             Action::SetNumber(SetNumber { id, value }) => {
                 match (self.find_property(id)?, value) {
-                    (Property::Int(p), Number::IntT(v)) => p.set(v),
-                    (Property::Uint(p), Number::UintT(v)) => p.set(v),
-                    (Property::Double(p), Number::DoubleT(v)) => p.set(v),
+                    (Property::Int(p), Value::IntT(v)) => p.set(v),
+                    (Property::Uint(p), Value::UintT(v)) => p.set(v),
+                    (Property::Double(p), Value::DoubleT(v)) => p.set(v),
                     unexpected => {
                         return Err(format_err!("Illegal types {:?} for SetNumber", unexpected))
                     }
@@ -184,9 +184,9 @@ impl Actor {
             }
             Action::AddNumber(AddNumber { id, value }) => {
                 match (self.find_property(id)?, value) {
-                    (Property::Int(p), Number::IntT(v)) => p.add(v),
-                    (Property::Uint(p), Number::UintT(v)) => p.add(v),
-                    (Property::Double(p), Number::DoubleT(v)) => p.add(v),
+                    (Property::Int(p), Value::IntT(v)) => p.add(v),
+                    (Property::Uint(p), Value::UintT(v)) => p.add(v),
+                    (Property::Double(p), Value::DoubleT(v)) => p.add(v),
                     unexpected => {
                         return Err(format_err!("Illegal types {:?} for AddNumber", unexpected))
                     }
@@ -194,9 +194,9 @@ impl Actor {
             }
             Action::SubtractNumber(SubtractNumber { id, value }) => {
                 match (self.find_property(id)?, value) {
-                    (Property::Int(p), Number::IntT(v)) => p.subtract(v),
-                    (Property::Uint(p), Number::UintT(v)) => p.subtract(v),
-                    (Property::Double(p), Number::DoubleT(v)) => p.subtract(v),
+                    (Property::Int(p), Value::IntT(v)) => p.subtract(v),
+                    (Property::Uint(p), Value::UintT(v)) => p.subtract(v),
+                    (Property::Double(p), Value::DoubleT(v)) => p.subtract(v),
                     unexpected => {
                         return Err(format_err!(
                             "Illegal types {:?} for SubtractNumber",
@@ -228,18 +228,18 @@ impl Actor {
                 id,
                 name,
                 slots,
-                number_type,
+                value_type,
             }) => {
                 self.properties.insert(
                     id,
-                    match number_type {
-                        NumberType::Int => Property::IntArray(
+                    match value_type {
+                        ValueType::Int => Property::IntArray(
                             self.find_parent(parent)?.create_int_array(name, slots as usize),
                         ),
-                        NumberType::Uint => Property::UintArray(
+                        ValueType::Uint => Property::UintArray(
                             self.find_parent(parent)?.create_uint_array(name, slots as usize),
                         ),
-                        NumberType::Double => Property::DoubleArray(
+                        ValueType::Double => Property::DoubleArray(
                             self.find_parent(parent)?.create_double_array(name, slots as usize),
                         ),
                     },
@@ -247,9 +247,9 @@ impl Actor {
             }
             Action::ArraySet(ArraySet { id, index, value }) => {
                 match (self.find_property(id)?, value) {
-                    (Property::IntArray(p), Number::IntT(v)) => p.set(index as usize, v),
-                    (Property::UintArray(p), Number::UintT(v)) => p.set(index as usize, v),
-                    (Property::DoubleArray(p), Number::DoubleT(v)) => p.set(index as usize, v),
+                    (Property::IntArray(p), Value::IntT(v)) => p.set(index as usize, v),
+                    (Property::UintArray(p), Value::UintT(v)) => p.set(index as usize, v),
+                    (Property::DoubleArray(p), Value::DoubleT(v)) => p.set(index as usize, v),
                     unexpected => {
                         return Err(format_err!("Illegal types {:?} for ArraySet", unexpected))
                     }
@@ -257,9 +257,9 @@ impl Actor {
             }
             Action::ArrayAdd(ArrayAdd { id, index, value }) => {
                 match (self.find_property(id)?, value) {
-                    (Property::IntArray(p), Number::IntT(v)) => p.add(index as usize, v),
-                    (Property::UintArray(p), Number::UintT(v)) => p.add(index as usize, v),
-                    (Property::DoubleArray(p), Number::DoubleT(v)) => p.add(index as usize, v),
+                    (Property::IntArray(p), Value::IntT(v)) => p.add(index as usize, v),
+                    (Property::UintArray(p), Value::UintT(v)) => p.add(index as usize, v),
+                    (Property::DoubleArray(p), Value::DoubleT(v)) => p.add(index as usize, v),
                     unexpected => {
                         return Err(format_err!("Illegal types {:?} for ArrayAdd", unexpected))
                     }
@@ -267,9 +267,9 @@ impl Actor {
             }
             Action::ArraySubtract(ArraySubtract { id, index, value }) => {
                 match (self.find_property(id)?, value) {
-                    (Property::IntArray(p), Number::IntT(v)) => p.subtract(index as usize, v),
-                    (Property::UintArray(p), Number::UintT(v)) => p.subtract(index as usize, v),
-                    (Property::DoubleArray(p), Number::DoubleT(v)) => p.subtract(index as usize, v),
+                    (Property::IntArray(p), Value::IntT(v)) => p.subtract(index as usize, v),
+                    (Property::UintArray(p), Value::UintT(v)) => p.subtract(index as usize, v),
+                    (Property::DoubleArray(p), Value::DoubleT(v)) => p.subtract(index as usize, v),
                     unexpected => {
                         return Err(format_err!("Illegal types {:?} for ArraySubtract", unexpected))
                     }
@@ -287,7 +287,7 @@ impl Actor {
                 self.properties.insert(
                     id,
                     match (floor, step_size) {
-                        (Number::IntT(floor), Number::IntT(step_size)) => {
+                        (Value::IntT(floor), Value::IntT(step_size)) => {
                             Property::IntLinearHistogram(
                                 self.find_parent(parent)?.create_int_linear_histogram(
                                     name,
@@ -295,7 +295,7 @@ impl Actor {
                                 ),
                             )
                         }
-                        (Number::UintT(floor), Number::UintT(step_size)) => {
+                        (Value::UintT(floor), Value::UintT(step_size)) => {
                             Property::UintLinearHistogram(
                                 self.find_parent(parent)?.create_uint_linear_histogram(
                                     name,
@@ -303,7 +303,7 @@ impl Actor {
                                 ),
                             )
                         }
-                        (Number::DoubleT(floor), Number::DoubleT(step_size)) => {
+                        (Value::DoubleT(floor), Value::DoubleT(step_size)) => {
                             Property::DoubleLinearHistogram(
                                 self.find_parent(parent)?.create_double_linear_histogram(
                                     name,
@@ -334,9 +334,9 @@ impl Actor {
                     id,
                     match (floor, initial_step, step_multiplier) {
                         (
-                            Number::IntT(floor),
-                            Number::IntT(initial_step),
-                            Number::IntT(step_multiplier),
+                            Value::IntT(floor),
+                            Value::IntT(initial_step),
+                            Value::IntT(step_multiplier),
                         ) => Property::IntExponentialHistogram(
                             self.find_parent(parent)?.create_int_exponential_histogram(
                                 name,
@@ -349,9 +349,9 @@ impl Actor {
                             ),
                         ),
                         (
-                            Number::UintT(floor),
-                            Number::UintT(initial_step),
-                            Number::UintT(step_multiplier),
+                            Value::UintT(floor),
+                            Value::UintT(initial_step),
+                            Value::UintT(step_multiplier),
                         ) => Property::UintExponentialHistogram(
                             self.find_parent(parent)?.create_uint_exponential_histogram(
                                 name,
@@ -364,9 +364,9 @@ impl Actor {
                             ),
                         ),
                         (
-                            Number::DoubleT(floor),
-                            Number::DoubleT(initial_step),
-                            Number::DoubleT(step_multiplier),
+                            Value::DoubleT(floor),
+                            Value::DoubleT(initial_step),
+                            Value::DoubleT(step_multiplier),
                         ) => Property::DoubleExponentialHistogram(
                             self.find_parent(parent)?.create_double_exponential_histogram(
                                 name,
@@ -389,12 +389,12 @@ impl Actor {
             }
             Action::Insert(Insert { id, value }) => {
                 match (self.find_property(id)?, value) {
-                    (Property::IntLinearHistogram(p), Number::IntT(v)) => p.insert(v),
-                    (Property::UintLinearHistogram(p), Number::UintT(v)) => p.insert(v),
-                    (Property::DoubleLinearHistogram(p), Number::DoubleT(v)) => p.insert(v),
-                    (Property::IntExponentialHistogram(p), Number::IntT(v)) => p.insert(v),
-                    (Property::UintExponentialHistogram(p), Number::UintT(v)) => p.insert(v),
-                    (Property::DoubleExponentialHistogram(p), Number::DoubleT(v)) => p.insert(v),
+                    (Property::IntLinearHistogram(p), Value::IntT(v)) => p.insert(v),
+                    (Property::UintLinearHistogram(p), Value::UintT(v)) => p.insert(v),
+                    (Property::DoubleLinearHistogram(p), Value::DoubleT(v)) => p.insert(v),
+                    (Property::IntExponentialHistogram(p), Value::IntT(v)) => p.insert(v),
+                    (Property::UintExponentialHistogram(p), Value::UintT(v)) => p.insert(v),
+                    (Property::DoubleExponentialHistogram(p), Value::DoubleT(v)) => p.insert(v),
                     unexpected => {
                         return Err(format_err!("Illegal types {:?} for Insert", unexpected))
                     }
@@ -402,22 +402,22 @@ impl Actor {
             }
             Action::InsertMultiple(InsertMultiple { id, value, count }) => {
                 match (self.find_property(id)?, value) {
-                    (Property::IntLinearHistogram(p), Number::IntT(v)) => {
+                    (Property::IntLinearHistogram(p), Value::IntT(v)) => {
                         p.insert_multiple(v, count as usize)
                     }
-                    (Property::UintLinearHistogram(p), Number::UintT(v)) => {
+                    (Property::UintLinearHistogram(p), Value::UintT(v)) => {
                         p.insert_multiple(v, count as usize)
                     }
-                    (Property::DoubleLinearHistogram(p), Number::DoubleT(v)) => {
+                    (Property::DoubleLinearHistogram(p), Value::DoubleT(v)) => {
                         p.insert_multiple(v, count as usize)
                     }
-                    (Property::IntExponentialHistogram(p), Number::IntT(v)) => {
+                    (Property::IntExponentialHistogram(p), Value::IntT(v)) => {
                         p.insert_multiple(v, count as usize)
                     }
-                    (Property::UintExponentialHistogram(p), Number::UintT(v)) => {
+                    (Property::UintExponentialHistogram(p), Value::UintT(v)) => {
                         p.insert_multiple(v, count as usize)
                     }
-                    (Property::DoubleExponentialHistogram(p), Number::DoubleT(v)) => {
+                    (Property::DoubleExponentialHistogram(p), Value::DoubleT(v)) => {
                         p.insert_multiple(v, count as usize)
                     }
                     unexpected => {
@@ -461,7 +461,7 @@ impl Actor {
         Ok(())
     }
 
-    fn find_parent<'a>(&'a self, id: u32) -> Result<&'a Node, Error> {
+    fn find_parent(&self, id: u32) -> Result<&'_ Node, Error> {
         if id == ROOT_ID {
             Ok(self.inspector.root())
         } else {

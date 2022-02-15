@@ -22,24 +22,24 @@ pub trait Summary {
     fn summary(&self) -> String;
 }
 
-impl Summary for Number {
+impl Summary for Value {
     fn summary(&self) -> String {
         match self {
-            Number::IntT(_) => "Int",
-            Number::UintT(_) => "Uint",
-            Number::DoubleT(_) => "Double",
+            Self::IntT(_) => "Int",
+            Self::UintT(_) => "Uint",
+            Self::DoubleT(_) => "Double",
             _ => "Unknown",
         }
         .to_string()
     }
 }
 
-impl Summary for NumberType {
+impl Summary for ValueType {
     fn summary(&self) -> String {
         match self {
-            NumberType::Int => "Int",
-            NumberType::Uint => "Uint",
-            NumberType::Double => "Double",
+            ValueType::Int => "Int",
+            ValueType::Uint => "Uint",
+            ValueType::Double => "Double",
         }
         .to_string()
     }
@@ -65,8 +65,8 @@ impl Summary for Action {
                 format!("Subtract({})", value.summary())
             }
             Action::SetNumber(SetNumber { value, .. }) => format!("Set({})", value.summary()),
-            Action::CreateArrayProperty(CreateArrayProperty { number_type, .. }) => {
-                format!("CreateArrayProperty({})", number_type.summary())
+            Action::CreateArrayProperty(CreateArrayProperty { value_type, .. }) => {
+                format!("CreateArrayProperty({})", value_type.summary())
             }
             Action::ArraySet(ArraySet { value, .. }) => format!("ArraySet({})", value.summary()),
             Action::ArrayAdd(ArrayAdd { value, .. }) => format!("ArrayAdd({})", value.summary()),
@@ -256,17 +256,17 @@ mod tests {
         assert!(results.to_json().contains("foo: DeleteNode"));
         results.unimplemented(
             "foo",
-            &create_numeric_property!(parent:42, id:42, name: "bar", value: Number::IntT(42)),
+            &create_numeric_property!(parent:42, id:42, name: "bar", value: Value::IntT(42)),
         );
         assert!(results.to_json().contains("foo: CreateProperty(Int)"));
         results.unimplemented(
             "foo",
-            &create_numeric_property!(parent:42, id:42, name: "bar", value: Number::UintT(42)),
+            &create_numeric_property!(parent:42, id:42, name: "bar", value: Value::UintT(42)),
         );
         assert!(results.to_json().contains("foo: CreateProperty(Uint)"));
         results.unimplemented(
             "foo",
-            &create_numeric_property!(parent:42, id:42, name: "bar", value: Number::DoubleT(42.0)),
+            &create_numeric_property!(parent:42, id:42, name: "bar", value: Value::DoubleT(42.0)),
         );
         assert!(results.to_json().contains("foo: CreateProperty(Double)"));
         results.unimplemented(
@@ -283,34 +283,34 @@ mod tests {
         assert!(results.to_json().contains("foo: Set(String)"));
         results.unimplemented("foo", &set_bytes!(id:42, value: vec![42]));
         assert!(results.to_json().contains("foo: Set(Bytes)"));
-        results.unimplemented("foo", &set_number!(id:42, value: Number::IntT(42)));
+        results.unimplemented("foo", &set_number!(id:42, value: Value::IntT(42)));
         assert!(results.to_json().contains("foo: Set(Int)"));
-        results.unimplemented("foo", &set_number!(id:42, value: Number::UintT(42)));
+        results.unimplemented("foo", &set_number!(id:42, value: Value::UintT(42)));
         assert!(results.to_json().contains("foo: Set(Uint)"));
-        results.unimplemented("foo", &set_number!(id:42, value: Number::DoubleT(42.0)));
+        results.unimplemented("foo", &set_number!(id:42, value: Value::DoubleT(42.0)));
         assert!(results.to_json().contains("foo: Set(Double)"));
-        results.unimplemented("foo", &add_number!(id:42, value: Number::IntT(42)));
+        results.unimplemented("foo", &add_number!(id:42, value: Value::IntT(42)));
         assert!(results.to_json().contains("foo: Add(Int)"));
-        results.unimplemented("foo", &add_number!(id:42, value: Number::UintT(42)));
+        results.unimplemented("foo", &add_number!(id:42, value: Value::UintT(42)));
         assert!(results.to_json().contains("foo: Add(Uint)"));
-        results.unimplemented("foo", &add_number!(id:42, value: Number::DoubleT(42.0)));
+        results.unimplemented("foo", &add_number!(id:42, value: Value::DoubleT(42.0)));
         assert!(results.to_json().contains("foo: Add(Double)"));
-        results.unimplemented("foo", &subtract_number!(id:42, value: Number::IntT(42)));
+        results.unimplemented("foo", &subtract_number!(id:42, value: Value::IntT(42)));
         assert!(results.to_json().contains("foo: Subtract(Int)"));
-        results.unimplemented("foo", &subtract_number!(id:42, value: Number::UintT(42)));
+        results.unimplemented("foo", &subtract_number!(id:42, value: Value::UintT(42)));
         assert!(results.to_json().contains("foo: Subtract(Uint)"));
-        results.unimplemented("foo", &subtract_number!(id:42, value: Number::DoubleT(42.0)));
+        results.unimplemented("foo", &subtract_number!(id:42, value: Value::DoubleT(42.0)));
         assert!(results.to_json().contains("foo: Subtract(Double)"));
         results.unimplemented("foo", &delete_property!(id:42));
         assert!(results.to_json().contains("foo: DeleteProperty"));
 
-        results.unimplemented("foo", &create_array_property!(parent: 42, id:42, name: "foo", slots: 42, type: NumberType::Uint));
+        results.unimplemented("foo", &create_array_property!(parent: 42, id:42, name: "foo", slots: 42, type: ValueType::Uint));
         assert!(results.to_json().contains("foo: CreateArrayProperty(Uint)"));
-        results.unimplemented("foo", &array_set!(id:42, index: 42, value: Number::UintT(42)));
+        results.unimplemented("foo", &array_set!(id:42, index: 42, value: Value::UintT(42)));
         assert!(results.to_json().contains("foo: ArraySet(Uint)"));
-        results.unimplemented("foo", &array_add!(id:42, index: 42, value: Number::UintT(42)));
+        results.unimplemented("foo", &array_add!(id:42, index: 42, value: Value::UintT(42)));
         assert!(results.to_json().contains("foo: ArrayAdd(Uint)"));
-        results.unimplemented("foo", &array_subtract!(id:42, index:42, value:Number::UintT(42)));
+        results.unimplemented("foo", &array_subtract!(id:42, index:42, value:Value::UintT(42)));
         assert!(results.to_json().contains("foo: ArraySubtract(Uint)"));
 
         results.unimplemented(
@@ -322,9 +322,9 @@ mod tests {
         results.unimplemented("foo", &create_exponential_histogram!(parent: 42, id:42, name: "foo", floor: 42, initial_step: 42,
                                 step_multiplier: 42, buckets: 42, type: UintT));
         assert!(results.to_json().contains("foo: CreateExponentialHistogram(Uint)"));
-        results.unimplemented("foo", &insert!(id:42, value:Number::UintT(42)));
+        results.unimplemented("foo", &insert!(id:42, value:Value::UintT(42)));
         assert!(results.to_json().contains("foo: Insert(Uint)"));
-        results.unimplemented("foo", &insert_multiple!(id:42, value:Number::UintT(42), count: 42));
+        results.unimplemented("foo", &insert_multiple!(id:42, value:Value::UintT(42), count: 42));
         assert!(results.to_json().contains("foo: InsertMultiple(Uint)"));
 
         assert!(!results.to_json().contains("42"));
