@@ -177,12 +177,12 @@ impl MutableConnection {
                 };
                 responder.send(status.into_raw())?;
             }
-            DirectoryRequest::Sync { responder } => {
+            DirectoryRequest::SyncDeprecated { responder } => {
                 responder.send(
                     self.base.directory.sync().await.err().unwrap_or(Status::OK).into_raw(),
                 )?;
             }
-            DirectoryRequest::Sync2 { responder } => {
+            DirectoryRequest::Sync { responder } => {
                 responder.send(&mut self.base.directory.sync().await.map_err(Status::into_raw))?;
             }
             _ => {
@@ -677,8 +677,7 @@ mod tests {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
         let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
-        let status = proxy.sync().await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        let () = proxy.sync().await.unwrap().map_err(Status::from_raw).unwrap();
         let events = events.0.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Sync]);
     }

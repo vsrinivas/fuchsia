@@ -163,7 +163,7 @@ impl Drop for TestFixture {
 }
 
 pub async fn close_file_checked(file: FileProxy) {
-    Status::ok(file.sync().await.expect("FIDL call failed")).expect("sync failed");
+    file.sync().await.expect("FIDL call failed").map_err(Status::from_raw).expect("sync failed");
     file.close().await.expect("FIDL call failed").map_err(Status::from_raw).expect("close failed");
 }
 

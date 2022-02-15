@@ -116,8 +116,12 @@ impl<'a> StagedFile<'a> {
         // Do the usual atomic commit via sync, close, and rename-to-target.
         // Stale files left by a crash should be cleaned up by calling cleanup_stale_files on the
         // next startup.
-        zx::Status::ok((&self.file_proxy).sync().await?)
-            .map_err(|s| StagedFileError::FlushError(s))?;
+        let () = self
+            .file_proxy
+            .sync()
+            .await?
+            .map_err(zx::Status::from_raw)
+            .map_err(StagedFileError::FlushError)?;
         let () = self
             .file_proxy
             .close()

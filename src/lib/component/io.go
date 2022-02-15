@@ -105,12 +105,12 @@ func (*Service) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	return nodeInfo, nil
 }
 
-func (*Service) Sync(fidl.Context) (int32, error) {
+func (*Service) SyncDeprecated(fidl.Context) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (*Service) Sync2(fidl.Context) (fidlio.Node2Sync2Result, error) {
-	return fidlio.Node2Sync2ResultWithErr(int32(zx.ErrNotSupported)), nil
+func (*Service) Sync(fidl.Context) (fidlio.Node2SyncResult, error) {
+	return fidlio.Node2SyncResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (*Service) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {
@@ -233,12 +233,12 @@ func (*directoryState) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	return nodeInfo, nil
 }
 
-func (*directoryState) Sync(fidl.Context) (int32, error) {
+func (*directoryState) SyncDeprecated(fidl.Context) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (*directoryState) Sync2(fidl.Context) (fidlio.Node2Sync2Result, error) {
-	return fidlio.Node2Sync2ResultWithErr(int32(zx.ErrNotSupported)), nil
+func (*directoryState) Sync(fidl.Context) (fidlio.Node2SyncResult, error) {
+	return fidlio.Node2SyncResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (*directoryState) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {
@@ -496,12 +496,12 @@ func (fState *fileState) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	return nodeInfo, nil
 }
 
-func (*fileState) Sync(fidl.Context) (int32, error) {
+func (*fileState) SyncDeprecated(fidl.Context) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (*fileState) Sync2(fidl.Context) (fidlio.Node2Sync2Result, error) {
-	return fidlio.Node2Sync2ResultWithErr(int32(zx.ErrNotSupported)), nil
+func (*fileState) Sync(fidl.Context) (fidlio.Node2SyncResult, error) {
+	return fidlio.Node2SyncResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (fState *fileState) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {

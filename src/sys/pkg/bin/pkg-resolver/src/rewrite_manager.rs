@@ -103,14 +103,22 @@ impl RewriteManager {
             io_util::file::write(&file, &serde_json::to_vec(&config).context("encoding config")?)
                 .await
                 .context("writing encoded config into temp file")?;
-            let status = file.sync().await.context("sending sync request")?;
-            Status::ok(status).with_context(|| format!("syncing file: {}", temp_filename))?;
+            let () = file
+                .sync()
+                .await
+                .context("sending sync request")?
+                .map_err(Status::from_raw)
+                .with_context(|| format!("syncing file: {}", temp_filename))?;
             io_util::file::close(file).await.context("closing temp file")?;
             io_util::directory::rename(&data_proxy, &temp_filename, &dynamic_rules_path)
                 .await
                 .context("renaming temp file to replace config")?;
-            let status = data_proxy.sync().await.context("sending post-rename sync request")?;
-            Status::ok(status).with_context(|| format!("syncing directory: {}", temp_filename))?;
+            let () = data_proxy
+                .sync()
+                .await
+                .context("sending post-rename sync request")?
+                .map_err(Status::from_raw)
+                .with_context(|| format!("syncing directory: {}", temp_filename))?;
             Ok::<(), anyhow::Error>(())
         }
         .await;

@@ -142,11 +142,12 @@ void PtyServerDevice::GetBackingMemory(GetBackingMemoryRequestView request,
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
+void PtyServerDevice::SyncDeprecated(SyncDeprecatedRequestView request,
+                                     SyncDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) {
+void PtyServerDevice::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

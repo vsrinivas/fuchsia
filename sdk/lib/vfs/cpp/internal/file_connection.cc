@@ -46,9 +46,11 @@ void FileConnection::Describe2(fuchsia::io::ConnectionInfoQuery query, Describe2
   Connection::Describe2(vn_, std::move(query), std::move(callback));
 }
 
-void FileConnection::Sync(SyncCallback callback) { Connection::Sync(vn_, std::move(callback)); }
+void FileConnection::SyncDeprecated(SyncDeprecatedCallback callback) {
+  Connection::SyncDeprecated(vn_, std::move(callback));
+}
 
-void FileConnection::Sync2(Sync2Callback callback) { Connection::Sync2(vn_, std::move(callback)); }
+void FileConnection::Sync(SyncCallback callback) { Connection::Sync(vn_, std::move(callback)); }
 
 void FileConnection::GetAttr(GetAttrCallback callback) {
   Connection::GetAttr(vn_, std::move(callback));

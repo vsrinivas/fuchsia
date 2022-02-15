@@ -94,8 +94,8 @@ class Connection {
   void Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback);
   void Describe2(Node* vn, fuchsia::io::ConnectionInfoQuery query,
                  fuchsia::io::Node::Describe2Callback callback);
+  void SyncDeprecated(Node* vn, fuchsia::io::Node::SyncDeprecatedCallback callback);
   void Sync(Node* vn, fuchsia::io::Node::SyncCallback callback);
-  void Sync2(Node* vn, fuchsia::io::Node::Sync2Callback callback);
   void GetAttr(Node* vn, fuchsia::io::Node::GetAttrCallback callback);
   void SetAttr(Node* vn, uint32_t flags, fuchsia::io::NodeAttributes attributes,
                fuchsia::io::Node::SetAttrCallback callback);

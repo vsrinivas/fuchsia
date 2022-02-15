@@ -37,8 +37,14 @@ class FileBlockDispatcher : public BlockDispatcher {
   void Sync(Callback callback) override {
     TRACE_DURATION("machina", "FileBlockDispatcher::Sync");
     queue_.Dispatch([this, callback = std::move(callback)](RequestQueue::Request request) mutable {
-      file_->Sync([request = std::move(request), callback = std::move(callback)](
-                      zx_status_t status) mutable { callback(status); });
+      file_->Sync([request = std::move(request),
+                   callback = std::move(callback)](fuchsia::io::Node2_Sync_Result result) mutable {
+        if (result.is_err()) {
+          callback(result.err());
+        } else {
+          callback(ZX_OK);
+        }
+      });
     });
   }
 
@@ -119,7 +125,13 @@ class VmoBlockDispatcher : public BlockDispatcher {
 
   void Sync(Callback callback) override {
     TRACE_DURATION("machina", "VmoBlockDispatcher::Sync");
-    file_->Sync(std::move(callback));
+    file_->Sync([callback = std::move(callback)](fuchsia::io::Node2_Sync_Result result) mutable {
+      if (result.is_err()) {
+        callback(result.err());
+      } else {
+        callback(ZX_OK);
+      }
+    });
   }
 
   void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {

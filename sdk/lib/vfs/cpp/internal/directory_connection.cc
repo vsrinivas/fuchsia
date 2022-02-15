@@ -49,12 +49,12 @@ void DirectoryConnection::Describe2(fuchsia::io::ConnectionInfoQuery query,
   Connection::Describe2(vn_, std::move(query), std::move(callback));
 }
 
-void DirectoryConnection::Sync(SyncCallback callback) {
-  Connection::Sync(vn_, std::move(callback));
+void DirectoryConnection::SyncDeprecated(SyncDeprecatedCallback callback) {
+  Connection::SyncDeprecated(vn_, std::move(callback));
 }
 
-void DirectoryConnection::Sync2(Sync2Callback callback) {
-  Connection::Sync2(vn_, std::move(callback));
+void DirectoryConnection::Sync(SyncCallback callback) {
+  Connection::Sync(vn_, std::move(callback));
 }
 
 void DirectoryConnection::GetAttr(GetAttrCallback callback) {

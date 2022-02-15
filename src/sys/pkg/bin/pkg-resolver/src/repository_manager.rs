@@ -265,16 +265,24 @@ impl RepositoryManager {
                 .await
                 .with_context(|| format!("writing file: {}", path))?;
 
-            let status = proxy.sync().await.context("sending sync request")?;
-            Status::ok(status).with_context(|| format!("syncing file: {}", path))?;
+            let () = proxy
+                .sync()
+                .await
+                .context("sending sync request")?
+                .map_err(Status::from_raw)
+                .with_context(|| format!("syncing file: {}", path))?;
             io_util::file::close(proxy).await.with_context(|| format!("closing file: {}", path))?;
 
             io_util::directory::rename(&data_proxy, &path, dynamic_configs_path)
                 .await
                 .with_context(|| format!("rename {:?} to {:?}", path, dynamic_configs_path))?;
 
-            let status = data_proxy.sync().await.context("sending sync request")?;
-            Status::ok(status).context("syncing /data")
+            data_proxy
+                .sync()
+                .await
+                .context("sending sync request")?
+                .map_err(Status::from_raw)
+                .context("syncing /data")
         }
         .await;
 

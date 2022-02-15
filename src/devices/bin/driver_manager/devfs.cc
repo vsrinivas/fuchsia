@@ -100,10 +100,11 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
                        CloseDeprecatedCompleter::Sync& completer) override;
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override;
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
+  void SyncDeprecated(SyncDeprecatedRequestView request,
+                      SyncDeprecatedCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
-  void Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) override {
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override;

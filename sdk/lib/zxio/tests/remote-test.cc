@@ -54,11 +54,12 @@ class TestServerBase : public fidl::WireServer<fio::Node> {
         fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
   }
 
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
+  void SyncDeprecated(SyncDeprecatedRequestView request,
+                      SyncDeprecatedCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) override {
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

@@ -214,5 +214,5 @@ protocol Node2 {
     /// This method does not require any rights.
     @transitional
     @selector("fuchsia.io/Node.Sync")
-    Sync2() -> (struct {}) error zx.status;
+    Sync() -> (struct {}) error zx.status;
 };

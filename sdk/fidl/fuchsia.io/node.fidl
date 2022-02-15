@@ -227,7 +227,8 @@ protocol Node1 {
     ///
     /// This method does not require any rights.
     @selector("fuchsia.io1/Node.Sync")
-    Sync() -> (struct {
+    @deprecated("replaced by Node2.Sync")
+    SyncDeprecated() -> (struct {
         s zx.status;
     });
 

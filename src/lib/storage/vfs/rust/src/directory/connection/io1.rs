@@ -282,10 +282,10 @@ where
             DirectoryRequest::SetAttr { responder, .. } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryRequest::Sync { responder } => {
+            DirectoryRequest::SyncDeprecated { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryRequest::Sync2 { responder } => {
+            DirectoryRequest::Sync { responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.

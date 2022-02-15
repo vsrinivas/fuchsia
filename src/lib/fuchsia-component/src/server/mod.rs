@@ -1285,8 +1285,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
             }
             DirectoryRequest::SetAttr { responder, .. } => unsupported!(responder)?,
-            DirectoryRequest::Sync { responder } => unsupported!(responder)?,
-            DirectoryRequest::Sync2 { responder } => unsupported2!(responder)?,
+            DirectoryRequest::SyncDeprecated { responder } => unsupported!(responder)?,
+            DirectoryRequest::Sync { responder } => unsupported2!(responder)?,
             DirectoryRequest::Unlink { responder, .. } => {
                 responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?
             }
@@ -1426,8 +1426,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let mut info = self.describe_node(connection.position)?;
                 responder.send(&mut info)?;
             }
-            FileRequest::Sync { responder } => unsupported!(responder)?,
-            FileRequest::Sync2 { responder } => unsupported2!(responder)?,
+            FileRequest::SyncDeprecated { responder } => unsupported!(responder)?,
+            FileRequest::Sync { responder } => unsupported2!(responder)?,
             FileRequest::GetAttr { responder } => {
                 let mut attrs = self.node_attrs(connection.position);
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
@@ -1522,8 +1522,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let mut info = self.describe_node(connection.position)?;
                 responder.send(&mut info)?;
             }
-            NodeRequest::Sync { responder } => unsupported!(responder)?,
-            NodeRequest::Sync2 { responder } => unsupported2!(responder)?,
+            NodeRequest::SyncDeprecated { responder } => unsupported!(responder)?,
+            NodeRequest::Sync { responder } => unsupported2!(responder)?,
             NodeRequest::GetAttr { responder } => {
                 let mut attrs = self.node_attrs(connection.position);
                 responder.send(zx::sys::ZX_OK, &mut attrs)?

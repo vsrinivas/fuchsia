@@ -142,13 +142,14 @@ void DirectoryConnection::Describe2(Describe2RequestView request,
   completer.Reply(std::move(converter.info));
 }
 
-void DirectoryConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
+void DirectoryConnection::SyncDeprecated(SyncDeprecatedRequestView request,
+                                         SyncDeprecatedCompleter::Sync& completer) {
   Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
     completer.Reply(sync_status);
   });
 }
 
-void DirectoryConnection::Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) {
+void DirectoryConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
   Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
     if (sync_status != ZX_OK) {
       completer.ReplyError(sync_status);

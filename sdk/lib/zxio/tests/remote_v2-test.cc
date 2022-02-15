@@ -55,7 +55,7 @@ class TestServerBase : public fidl::WireServer<fio::Node2> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) override {
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

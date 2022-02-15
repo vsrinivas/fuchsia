@@ -507,12 +507,22 @@ TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
 
 // This functor accepts a |fidl::WireUnownedResult<FidlMethod>&| and checks that
 // the call completed with an application error |s| of |ZX_ERR_NOT_SUPPORTED|.
-class UnsupportedErrorMatcher {
+class UnsupportedEpitaphMatcher {
  public:
   template <typename FidlMethod>
   void operator()(fidl::WireUnownedResult<FidlMethod>& result) {
     ASSERT_OK(result.status());
     ASSERT_EQ(result->s, ZX_ERR_NOT_SUPPORTED);
+  }
+};
+
+class UnsupportedErrorMatcher {
+ public:
+  template <typename FidlMethod>
+  void operator()(fidl::WireUnownedResult<FidlMethod>& result) {
+    ASSERT_OK(result.status());
+    ASSERT_TRUE(result->result.is_err());
+    ASSERT_STATUS(result->result.err(), ZX_ERR_NOT_SUPPORTED);
   }
 };
 
@@ -524,7 +534,7 @@ TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
   {
     zx::channel s, c;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &s, &c));
-    client->Link("", std::move(s), "", UnsupportedErrorMatcher());
+    client->Link("", std::move(s), "", UnsupportedEpitaphMatcher());
   }
   {
     zx::event e;
@@ -537,10 +547,10 @@ TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
                      ASSERT_EQ(ret->result.err(), ZX_ERR_NOT_SUPPORTED);
                    });
   }
-  client->GetToken(UnsupportedErrorMatcher());
+  client->GetToken(UnsupportedEpitaphMatcher());
   {
     fuchsia_io::wire::NodeAttributes attrs = {};
-    client->SetAttr(0, attrs, UnsupportedErrorMatcher());
+    client->SetAttr(0, attrs, UnsupportedEpitaphMatcher());
   }
   client->Sync(UnsupportedErrorMatcher());
 

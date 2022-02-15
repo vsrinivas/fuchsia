@@ -233,7 +233,7 @@ TEST_F(CreateWithOnOpenTest, Device) {
 
 class SyncNodeServer : public zxio_tests::DescribeNodeServer {
  public:
-  void Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) final {
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final {
     completer.ReplySuccess();
   }
 };

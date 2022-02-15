@@ -354,16 +354,16 @@ func (ep *endpoint) decRef() bool {
 	return doClose
 }
 
-func (ep *endpoint) Sync(fidl.Context) (int32, error) {
+func (ep *endpoint) SyncDeprecated(fidl.Context) (int32, error) {
 	_ = syslog.DebugTf("Sync", "%p", ep)
 
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
-func (ep *endpoint) Sync2(fidl.Context) (fidlio.Node2Sync2Result, error) {
-	_ = syslog.DebugTf("Sync2", "%p", ep)
+func (ep *endpoint) Sync(fidl.Context) (fidlio.Node2SyncResult, error) {
+	_ = syslog.DebugTf("Sync", "%p", ep)
 
-	return fidlio.Node2Sync2ResultWithErr(int32(zx.ErrNotSupported)), nil
+	return fidlio.Node2SyncResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (ep *endpoint) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {

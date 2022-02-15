@@ -156,10 +156,10 @@ impl Connection {
                 };
                 responder.send(info)?;
             }
-            FileRequest::Sync { responder } => {
+            FileRequest::SyncDeprecated { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::Sync2 { responder } => {
+            FileRequest::Sync { responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             FileRequest::GetAttr { responder } => {

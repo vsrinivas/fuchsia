@@ -558,11 +558,11 @@ async fn assert_sync(package_root: &DirectoryProxy, path: &str, mode: u32) {
 }
 
 async fn verify_sync(node: NodeProxy) -> Result<(), Error> {
-    let status = node.sync().await.context("failed to call sync")?;
-    let status = zx::Status::from_raw(status);
-    if status == zx::Status::NOT_SUPPORTED {
+    let result = node.sync().await.context("failed to call sync")?;
+    let result = result.map_err(zx::Status::from_raw);
+    if result == Err(zx::Status::NOT_SUPPORTED) {
         Ok(())
     } else {
-        Err(anyhow!("wrong status returned: {:?}", status))
+        Err(anyhow!("wrong status returned: {:?}", result))
     }
 }

@@ -145,11 +145,12 @@ void NullPtyDeviceImpl::GetBuffer(GetBufferRequestView request,
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
+void NullPtyDeviceImpl::SyncDeprecated(SyncDeprecatedRequestView request,
+                                       SyncDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) {
+void NullPtyDeviceImpl::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

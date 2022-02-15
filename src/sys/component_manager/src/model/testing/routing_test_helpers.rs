@@ -664,7 +664,12 @@ impl RoutingTest {
             .expect("failed to open component's outgoing directory");
 
         // Ensure we can successfully talk to the directory.
-        dir_proxy.sync().await.expect("could not communicate with directory");
+        dir_proxy
+            .sync()
+            .await
+            .expect("could not communicate with directory")
+            .map_err(zx::Status::from_raw)
+            .expect("failed to sync directory");
     }
 
     pub fn resolved_url(component_name: &str) -> String {

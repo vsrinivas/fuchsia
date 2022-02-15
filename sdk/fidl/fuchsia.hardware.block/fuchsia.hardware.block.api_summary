@@ -27,8 +27,8 @@ protocol/member fuchsia.hardware.block/BlockAndNode.RebindDevice() -> (int32 sta
 protocol/member fuchsia.hardware.block/BlockAndNode.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.hardware.block/BlockAndNode.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
 protocol/member fuchsia.hardware.block/BlockAndNode.SetFlags(uint32 flags) -> (int32 s)
-protocol/member fuchsia.hardware.block/BlockAndNode.Sync() -> (int32 s)
-protocol/member fuchsia.hardware.block/BlockAndNode.Sync2() -> (fuchsia.io/Node2_Sync2_Result result)
+protocol/member fuchsia.hardware.block/BlockAndNode.Sync() -> (fuchsia.io/Node2_Sync_Result result)
+protocol/member fuchsia.hardware.block/BlockAndNode.SyncDeprecated() -> (int32 s)
 protocol/member fuchsia.hardware.block/BlockAndNode.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
 protocol fuchsia.hardware.block/BlockAndNode
 struct/member fuchsia.hardware.block/BlockInfo.block_count uint64

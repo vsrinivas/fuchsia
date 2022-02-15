@@ -1051,10 +1051,10 @@ where
                             responder_send!(responder, &mut Ok(()));
                             return Ok(());
                         }
-                        fposix_socket::DatagramSocketRequest::Sync { responder } => {
+                        fposix_socket::DatagramSocketRequest::SyncDeprecated { responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }
-                        fposix_socket::DatagramSocketRequest::Sync2 { responder } => {
+                        fposix_socket::DatagramSocketRequest::Sync { responder } => {
                             responder_send!(
                                 responder,
                                 &mut Err(zx::Status::NOT_SUPPORTED.into_raw())

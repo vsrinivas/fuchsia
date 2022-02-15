@@ -83,11 +83,11 @@ impl Client {
 
     /// Performs a sync
     pub async fn sync(&self) -> Result<(), SyncError> {
-        match self.proxy.sync().await.map(Status::from_raw) {
-            Ok(Status::OK) => Ok(()),
-            Ok(status) => Err(SyncError::SyncError(status)),
-            Err(err) => Err(SyncError::Fidl(err)),
-        }
+        self.proxy
+            .sync()
+            .await
+            .map_err(SyncError::Fidl)?
+            .map_err(|s| SyncError::SyncError(Status::from_raw(s)))
     }
 }
 
@@ -125,7 +125,7 @@ mod tests {
         fasync::Task::spawn(async move {
             match stream.try_next().await.unwrap().unwrap() {
                 DirectoryRequest::Sync { responder } => {
-                    responder.send(Status::OK.into_raw()).unwrap();
+                    responder.send(&mut Ok(())).unwrap();
                 }
                 other => panic!("unexpected request: {:?}", other),
             }

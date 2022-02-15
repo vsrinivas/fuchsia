@@ -75,12 +75,12 @@ class ErrorNodeForSendingEvent extends Node {
   }
 
   @override
-  Future<int> sync() async {
+  Future<int> syncDeprecated() async {
     return ZX.ERR_NOT_SUPPORTED;
   }
 
   @override
-  Future<void> sync2() async {
+  Future<void> sync() async {
     throw MethodException(ZX.ERR_NOT_SUPPORTED);
   }
 

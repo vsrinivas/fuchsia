@@ -46,9 +46,11 @@ void NodeConnection::Describe2(fuchsia::io::ConnectionInfoQuery query, Describe2
   Connection::Describe2(vn_, std::move(query), std::move(callback));
 }
 
-void NodeConnection::Sync(SyncCallback callback) { Connection::Sync(vn_, std::move(callback)); }
+void NodeConnection::SyncDeprecated(SyncDeprecatedCallback callback) {
+  Connection::SyncDeprecated(vn_, std::move(callback));
+}
 
-void NodeConnection::Sync2(Sync2Callback callback) { Connection::Sync2(vn_, std::move(callback)); }
+void NodeConnection::Sync(SyncCallback callback) { Connection::Sync(vn_, std::move(callback)); }
 
 void NodeConnection::GetAttr(GetAttrCallback callback) {
   Connection::GetAttr(vn_, std::move(callback));

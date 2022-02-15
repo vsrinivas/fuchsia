@@ -486,11 +486,11 @@ impl BlockServer {
                 responder.send(info)?;
             }
             // TODO(fxbug.dev/89873)
-            VolumeAndNodeRequest::Sync { responder } => {
+            VolumeAndNodeRequest::SyncDeprecated { responder } => {
                 responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED)?;
             }
             // TODO(fxbug.dev/89873)
-            VolumeAndNodeRequest::Sync2 { responder } => {
+            VolumeAndNodeRequest::Sync { responder } => {
                 responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?;
             }
             VolumeAndNodeRequest::GetAttr { responder } => {

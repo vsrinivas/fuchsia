@@ -183,7 +183,7 @@ void zxio_remote_v2_wait_end(zxio_t* io, zx_signals_t zx_signals,
 
 zx_status_t zxio_remote_sync(zxio_t* io) {
   RemoteV2 rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node2>(rio.control()))->Sync2();
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node2>(rio.control()))->Sync();
   if (result.status() != ZX_OK) {
     return result.status();
   }

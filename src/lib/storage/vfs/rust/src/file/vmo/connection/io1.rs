@@ -401,11 +401,11 @@ impl VmoFileConnection {
                     responder.control_handle().shutdown_with_epitaph(status);
                 }
             },
-            FileRequest::Sync { responder } => {
+            FileRequest::SyncDeprecated { responder } => {
                 // VMOs are always in sync.
                 responder.send(ZX_OK)?;
             }
-            FileRequest::Sync2 { responder } => {
+            FileRequest::Sync { responder } => {
                 // VMOs are always in sync.
                 responder.send(&mut Ok(()))?;
             }

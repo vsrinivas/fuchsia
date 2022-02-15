@@ -531,7 +531,7 @@ async fn serve_failing_blobfs(
                 responder.send(&mut NodeInfo::Directory(DirectoryObject)).context("describing")?
             }
             DirectoryRequest::Sync { responder } => {
-                responder.send(zx::Status::IO.into_raw()).context("failing sync")?
+                responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing sync")?
             }
             DirectoryRequest::AdvisoryLock { responder, .. } => {
                 responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?

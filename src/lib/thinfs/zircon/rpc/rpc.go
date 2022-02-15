@@ -186,16 +186,16 @@ func (d *directoryWrapper) Describe(fidl.Context) (io.NodeInfo, error) {
 	return info, nil
 }
 
-func (d *directoryWrapper) Sync(fidl.Context) (int32, error) {
+func (d *directoryWrapper) SyncDeprecated(fidl.Context) (int32, error) {
 	return int32(errorToZx(d.dir.Sync())), nil
 }
 
-func (d *directoryWrapper) Sync2(fidl.Context) (io.Node2Sync2Result, error) {
+func (d *directoryWrapper) Sync(fidl.Context) (io.Node2SyncResult, error) {
 	status := int32(errorToZx(d.dir.Sync()))
 	if status == 0 {
-		return io.Node2Sync2ResultWithResponse(io.Node2Sync2Response{}), nil
+		return io.Node2SyncResultWithResponse(io.Node2SyncResponse{}), nil
 	} else {
-		return io.Node2Sync2ResultWithErr(status), nil
+		return io.Node2SyncResultWithErr(status), nil
 	}
 }
 
@@ -491,16 +491,16 @@ func (f *fileWrapper) Describe(fidl.Context) (io.NodeInfo, error) {
 	return info, nil
 }
 
-func (f *fileWrapper) Sync(fidl.Context) (int32, error) {
+func (f *fileWrapper) SyncDeprecated(fidl.Context) (int32, error) {
 	return int32(errorToZx(f.file.Sync())), nil
 }
 
-func (f *fileWrapper) Sync2(fidl.Context) (io.Node2Sync2Result, error) {
+func (f *fileWrapper) Sync(fidl.Context) (io.Node2SyncResult, error) {
 	status := int32(errorToZx(f.file.Sync()))
 	if status == 0 {
-		return io.Node2Sync2ResultWithResponse(io.Node2Sync2Response{}), nil
+		return io.Node2SyncResultWithResponse(io.Node2SyncResponse{}), nil
 	} else {
-		return io.Node2Sync2ResultWithErr(status), nil
+		return io.Node2SyncResultWithErr(status), nil
 	}
 }
 

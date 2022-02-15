@@ -81,13 +81,14 @@ void FileConnection::Describe2(Describe2RequestView request, Describe2Completer:
   completer.Reply(std::move(converter.info));
 }
 
-void FileConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
+void FileConnection::SyncDeprecated(SyncDeprecatedRequestView request,
+                                    SyncDeprecatedCompleter::Sync& completer) {
   Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
     completer.Reply(sync_status);
   });
 }
 
-void FileConnection::Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) {
+void FileConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
   Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
     if (sync_status != ZX_OK) {
       completer.ReplyError(sync_status);

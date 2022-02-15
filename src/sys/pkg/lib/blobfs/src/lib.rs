@@ -297,8 +297,7 @@ impl Client {
 
     /// Call fuchsia.io/Node.Sync on the blobfs directory.
     pub async fn sync(&self) -> Result<(), BlobfsError> {
-        let status = self.proxy.sync().await?;
-        zx::Status::ok(status).map_err(BlobfsError::Sync)
+        self.proxy.sync().await?.map_err(zx::Status::from_raw).map_err(BlobfsError::Sync)
     }
 }
 
@@ -704,7 +703,7 @@ mod tests {
             match stream.try_next().await.unwrap().unwrap() {
                 DirectoryRequest::Sync { responder } => {
                     counter_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                    responder.send(0).unwrap();
+                    responder.send(&mut Ok(())).unwrap();
                 }
                 other => panic!("unexpected request: {:?}", other),
             }

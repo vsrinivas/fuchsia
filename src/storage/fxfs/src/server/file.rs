@@ -639,8 +639,12 @@ mod tests {
         // We haven't synced yet, but the pending writes should have blocks reserved still.
         assert_eq!(attrs.storage_size, fixture.fs().block_size() as u64);
 
-        let status = file.sync().await.expect("FIDL call failed");
-        Status::ok(status).expect("sync failed");
+        let () = file
+            .sync()
+            .await
+            .expect("FIDL call failed")
+            .map_err(Status::from_raw)
+            .expect("sync failed");
 
         let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
         Status::ok(status).expect("get_attr failed");

@@ -61,12 +61,12 @@ zx_status_t Connection::Bind(zx::channel request, async_dispatcher_t* dispatcher
   return status;
 }
 
-void Connection::Sync(Node* vn, fuchsia::io::Node::SyncCallback callback) {
+void Connection::SyncDeprecated(Node* vn, fuchsia::io::Node::SyncDeprecatedCallback callback) {
   // TODO: Check flags.
   callback(vn->Sync());
 }
 
-void Connection::Sync2(Node* vn, fuchsia::io::Node::Sync2Callback callback) {
+void Connection::Sync(Node* vn, fuchsia::io::Node::SyncCallback callback) {
   // TODO: Check flags.
   zx_status_t status = vn->Sync();
   if (status == ZX_OK) {

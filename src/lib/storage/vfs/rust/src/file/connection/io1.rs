@@ -238,13 +238,13 @@ impl<T: 'static + File> FileConnection<T> {
                 fuchsia_trace::duration!("storage", "File::Describe");
                 responder.send(&mut self.file.describe(self.flags)?)?;
             }
-            FileRequest::Sync { responder } => {
-                fuchsia_trace::duration!("storage", "File::Sync");
+            FileRequest::SyncDeprecated { responder } => {
+                fuchsia_trace::duration!("storage", "File::SyncDeprecated");
                 let status = self.file.sync().await.err().unwrap_or(zx::Status::OK);
                 responder.send(status.into_raw())?;
             }
-            FileRequest::Sync2 { responder } => {
-                fuchsia_trace::duration!("storage", "File::Sync2");
+            FileRequest::Sync { responder } => {
+                fuchsia_trace::duration!("storage", "File::Sync");
                 responder.send(&mut self.file.sync().await.map_err(|status| status.into_raw()))?;
             }
             FileRequest::GetAttr { responder } => {
@@ -798,7 +798,8 @@ mod tests {
             Box::new(always_succeed_callback),
             OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE,
         );
-        env.proxy.sync().await.unwrap(); // Do a dummy sync() to make sure that the open has finished.
+        // Do a no-op sync() to make sure that the open has finished.
+        let () = env.proxy.sync().await.unwrap().map_err(zx::Status::from_raw).unwrap();
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
             *events,
@@ -1178,8 +1179,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_sync() {
         let env = init_mock_file(Box::new(always_succeed_callback), 0);
-        let status = env.proxy.sync().await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let () = env.proxy.sync().await.unwrap().map_err(zx::Status::from_raw).unwrap();
         let events = env.file.operations.lock().unwrap();
         assert_eq!(*events, vec![FileOperation::Init { flags: 0 }, FileOperation::Sync,]);
     }

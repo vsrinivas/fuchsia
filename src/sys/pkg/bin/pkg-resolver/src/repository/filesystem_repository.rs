@@ -100,9 +100,14 @@ where
 
         write_all(&temp_proxy, reader).await.map_err(make_opaque_error)?;
 
-        let status =
-            temp_proxy.sync().await.context("sending sync request").map_err(make_opaque_error)?;
-        zx::Status::ok(status).context("syncing file").map_err(make_opaque_error)?;
+        let () = temp_proxy
+            .sync()
+            .await
+            .context("sending sync request")
+            .map_err(make_opaque_error)?
+            .map_err(zx::Status::from_raw)
+            .context("syncing file")
+            .map_err(make_opaque_error)?;
         io_util::file::close(temp_proxy)
             .await
             .context("closing file")
