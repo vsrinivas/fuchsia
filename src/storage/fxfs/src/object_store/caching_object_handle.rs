@@ -88,10 +88,19 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
                 self.handle.attribute_id,
             )])
             .await;
+        let extends_file = if let Some(offset) = &offset {
+            if *offset + buf.len() as u64 > self.cache.content_size() {
+                true
+            } else {
+                false
+            }
+        } else {
+            true
+        };
 
         if self.cache.dirty_bytes() >= FLUSH_BATCH_SIZE {
             self.flush_impl(/* take_lock: */ false).await?;
-        } else {
+        } else if extends_file {
             self.flush_metadata().await?;
         }
 
