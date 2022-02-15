@@ -418,7 +418,9 @@ async fn merge_saved_networks_and_scan_data<'a>(
                         recent_failures: saved_config
                             .perf_stats
                             .failure_list
-                            .get_recent(zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW),
+                            .get_recent_for_network(
+                                zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW,
+                            ),
                         recent_disconnects: saved_config
                             .perf_stats
                             .disconnect_list
@@ -966,7 +968,7 @@ mod tests {
             .expect("failed to get config")
             .perf_stats
             .failure_list
-            .get_recent(zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW)
+            .get_recent_for_network(zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW)
             .get(0)
             .expect("failed to get recent failure")
             .time;

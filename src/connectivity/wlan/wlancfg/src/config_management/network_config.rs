@@ -14,9 +14,9 @@ use {
     },
 };
 
-/// The maximum number of denied connection reasons we will store for one network at a time.
+/// The maximum number of denied connection reasons we will store per BSS at a time.
 /// For now this number is chosen arbitrarily.
-const NUM_DENY_REASONS: usize = 20;
+const NUM_DENY_REASONS_PER_BSS: usize = 10;
 /// The max number of quick disconnects we will store for one network at a time. For now this
 /// number is chosen arbitrarily.
 const NUM_DISCONNECTS: usize = 20;
@@ -64,8 +64,9 @@ impl HiddenProbabilityStats {
 /// and maintain connection with a network and if it is weakening. Used in choosing best network.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PerformanceStats {
-    /// List of recent connection failures, used to determine whether we should try connecting
-    /// to a network again. Capacity of list is at least NUM_DENY_REASONS.
+    /// Maps Bssids to VecDeques containing recent connection failures, used to determine whether we
+    /// should try connecting to a network again. Capacity of each VecDeque limited to
+    /// NUM_DENY_REASONS_PER_BSS.
     pub failure_list: ConnectFailureList,
     /// List of recent disconnects where the connect duration was short.
     pub disconnect_list: DisconnectList,
@@ -100,30 +101,52 @@ pub struct ConnectFailure {
     /// The BSSID that we failed to connect to
     pub bssid: client_types::Bssid,
 }
-
-/// Ring buffer that holds network denials. It starts empty and replaces oldest when full.
 #[derive(Clone, Debug, PartialEq)]
-pub struct ConnectFailureList(VecDeque<ConnectFailure>);
+pub struct ConnectFailureList(HashMap<client_types::Bssid, VecDeque<ConnectFailure>>);
 
 impl ConnectFailureList {
-    /// The max stored number of deny reasons is at least NUM_DENY_REASONS, decided by VecDeque
     pub fn new() -> Self {
-        Self(VecDeque::with_capacity(NUM_DENY_REASONS))
+        Self(HashMap::new())
     }
 
-    /// Record network denial information in the network config, dropping the oldest information
-    /// if the list of denial reasons is already full before adding.
+    /// Add a FailureReason from a recent connection failure
     pub fn add(&mut self, bssid: client_types::Bssid, reason: FailureReason) {
-        if self.0.len() == self.0.capacity() {
-            let _ = self.0.pop_front();
+        let failure = ConnectFailure { time: zx::Time::get_monotonic(), reason, bssid };
+        if let Some(deq) = self.0.get_mut(&bssid) {
+            if deq.len() == deq.capacity() {
+                let _ = deq.pop_front();
+            }
+            deq.push_back(failure);
+        } else {
+            let mut deq = VecDeque::with_capacity(NUM_DENY_REASONS_PER_BSS);
+            deq.push_back(failure);
+            let _ = self.0.insert(bssid, deq);
         }
-        self.0.push_back(ConnectFailure { time: zx::Time::get_monotonic(), reason, bssid });
     }
 
-    /// Returns a list of the denials that happened at or after the given monotonic time, from
+    /// Get all ConnectFailures that occurred at or before earliest time for a specific BSS, from
     /// oldest to newest.
-    pub fn get_recent(&self, earliest_time: zx::Time) -> Vec<ConnectFailure> {
-        self.0.iter().skip_while(|denial| denial.time < earliest_time).cloned().collect()
+    pub fn get_recent_for_bss(
+        &self,
+        bssid: client_types::Bssid,
+        earliest_time: zx::Time,
+    ) -> Vec<ConnectFailure> {
+        if let Some(deq) = self.0.get(&bssid) {
+            let i = deq.partition_point(|data| data.time < earliest_time);
+            return deq.iter().skip(i).cloned().collect();
+        }
+        vec![]
+    }
+
+    /// Get all ConnectFailures that occurred at or before earliest_time for network, from oldest to
+    /// newest.
+    pub fn get_recent_for_network(&self, earliest_time: zx::Time) -> Vec<ConnectFailure> {
+        let mut recents: Vec<ConnectFailure> = vec![];
+        for bssid in self.0.keys() {
+            recents.append(&mut self.get_recent_for_bss(*bssid, earliest_time));
+        }
+        recents.sort_by(|a, b| a.time.cmp(&b.time));
+        recents
     }
 }
 
@@ -839,17 +862,17 @@ mod tests {
 
         // Get time before adding so we can get back everything we added.
         let curr_time = zx::Time::get_monotonic();
-        assert!(failure_list.get_recent(curr_time).is_empty());
+        assert!(failure_list.get_recent_for_network(curr_time).is_empty());
         let bssid = client_types::Bssid([1; 6]);
         failure_list.add(bssid.clone(), FailureReason::GeneralFailure);
 
-        let result_list = failure_list.get_recent(curr_time);
+        let result_list = failure_list.get_recent_for_network(curr_time);
         assert_eq!(1, result_list.len());
         assert_eq!(FailureReason::GeneralFailure, result_list[0].reason);
         assert_eq!(bssid, result_list[0].bssid);
         // Should not get any results if we request denials older than the specified time.
         let later_time = zx::Time::get_monotonic();
-        assert!(failure_list.get_recent(later_time).is_empty());
+        assert!(failure_list.get_recent_for_network(later_time).is_empty());
     }
 
     #[fuchsia::test]
@@ -857,16 +880,17 @@ mod tests {
         let mut failure_list = ConnectFailureList::new();
 
         let curr_time = zx::Time::get_monotonic();
-        assert!(failure_list.get_recent(curr_time).is_empty());
-        let failure_list_capacity = failure_list.0.capacity();
-        assert!(failure_list_capacity >= NUM_DENY_REASONS);
+        assert!(failure_list.get_recent_for_network(curr_time).is_empty());
         let bssid = client_types::Bssid([0; 6]);
+        failure_list.add(bssid, FailureReason::GeneralFailure);
+        let failure_list_capacity = failure_list.0[&bssid].capacity();
+        assert!(failure_list_capacity >= NUM_DENY_REASONS_PER_BSS);
         for _i in 0..failure_list_capacity + 2 {
             failure_list.add(bssid, FailureReason::GeneralFailure);
         }
         // Since we do not know time of each entry in the list, check the other values and length
-        assert_eq!(failure_list_capacity, failure_list.get_recent(curr_time).len());
-        for failure in failure_list.get_recent(curr_time) {
+        assert_eq!(failure_list_capacity, failure_list.get_recent_for_network(curr_time).len());
+        for failure in failure_list.get_recent_for_network(curr_time) {
             assert_eq!(FailureReason::GeneralFailure, failure.reason);
             assert_eq!(bssid, failure.bssid)
         }
@@ -880,11 +904,13 @@ mod tests {
         let curr_time = zx::Time::get_monotonic();
         // Inject a failure into the list that is older than the specified time.
         let old_time = curr_time - zx::Duration::from_seconds(1);
-        failure_list.0.push_back(ConnectFailure {
+        let mut deq = VecDeque::with_capacity(NUM_DENY_REASONS_PER_BSS);
+        deq.push_back(ConnectFailure {
             reason: FailureReason::GeneralFailure,
             time: old_time,
             bssid: bssid.clone(),
         });
+        let _ = failure_list.0.insert(bssid.clone(), deq);
 
         // Choose half capacity to get so that we know the previous one is still in list
         let half_capacity = failure_list.0.capacity() / 2;
@@ -893,15 +919,15 @@ mod tests {
         }
 
         // Since we do not know time of each entry in the list, check the other values and length
-        assert_eq!(half_capacity, failure_list.get_recent(curr_time).len());
-        for denial in failure_list.get_recent(curr_time) {
+        assert_eq!(half_capacity, failure_list.get_recent_for_network(curr_time).len());
+        for denial in failure_list.get_recent_for_network(curr_time) {
             assert_eq!(FailureReason::GeneralFailure, denial.reason);
         }
 
         // Add one more and check list again
         failure_list.add(bssid.clone(), FailureReason::GeneralFailure);
-        assert_eq!(half_capacity + 1, failure_list.get_recent(curr_time).len());
-        for failure in failure_list.get_recent(curr_time) {
+        assert_eq!(half_capacity + 1, failure_list.get_recent_for_network(curr_time).len());
+        for failure in failure_list.get_recent_for_network(curr_time) {
             assert_eq!(FailureReason::GeneralFailure, failure.reason);
             assert_eq!(bssid, failure.bssid);
         }
