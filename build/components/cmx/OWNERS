@@ -1,5 +1,7 @@
-include /src/sys/component_manager/OWNERS
-# For the time being, anyone can add allowlist entries.
-per-file BUILD.gn = *
+geb@google.com
+jmatt@google.com
+shayba@google.com
+thatguy@google.com
+ypomortsev@google.com
 
 # COMPONENT: ComponentFramework>Tools
