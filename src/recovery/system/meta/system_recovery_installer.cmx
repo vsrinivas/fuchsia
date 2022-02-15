@@ -23,6 +23,7 @@
             "root-ssl-certificates"
         ],
         "services": [
+            "fuchsia.fshost.BlockWatcher",
             "fuchsia.paver.Paver",
             "fuchsia.process.Launcher",
             "fuchsia.recovery.FactoryReset",

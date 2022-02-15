@@ -6,6 +6,7 @@ use {
     crate::installer::BootloaderType,
     anyhow::{anyhow, Context, Error},
     fidl::endpoints::Proxy,
+    fidl_fuchsia_fshost::{BlockWatcherMarker, BlockWatcherProxy},
     fidl_fuchsia_hardware_block_partition::PartitionProxy,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_paver::{Asset, Configuration, DynamicDataSinkProxy, PayloadStreamMarker},
@@ -15,6 +16,31 @@ use {
     regex,
     std::{fmt, fs, io::Read, path::Path},
 };
+
+struct BlockWatcherPauser {
+    proxy: Option<BlockWatcherProxy>,
+}
+
+impl BlockWatcherPauser {
+    pub async fn new() -> Result<Self, Error> {
+        let connection = fuchsia_component::client::connect_to_protocol::<BlockWatcherMarker>()
+            .context("Connecting to block watcher")?;
+        zx::Status::ok(connection.pause().await.context("Sending pause")?)
+            .context("Pausing block watcher")?;
+        Ok(BlockWatcherPauser { proxy: Some(connection) })
+    }
+
+    pub async fn resume(mut self) -> Result<(), Error> {
+        zx::Status::ok(self.proxy.take().unwrap().resume().await.context("Sending resume")?)
+            .context("Resuming block watcher")
+    }
+}
+
+impl Drop for BlockWatcherPauser {
+    fn drop(&mut self) {
+        assert!(self.proxy.is_none())
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub enum PartitionPaveType {
@@ -195,6 +221,7 @@ impl Partition {
                 data_sink.write_bootloader(&mut fidl_buf).await?;
             }
             PartitionPaveType::Volume => {
+                let pauser = BlockWatcherPauser::new().await.context("Pausing block watcher")?;
                 // Set up a PayloadStream to serve the data sink.
                 let file =
                     Box::new(fs::File::open(Path::new(&self.src)).context("Opening partition")?);
@@ -214,6 +241,7 @@ impl Partition {
                 .detach();
                 // Tell the data sink to use our PayloadStream.
                 data_sink.write_volumes(client_end).await?;
+                pauser.resume().await.context("Resuming block watcher")?;
             }
         };
         Ok(())
