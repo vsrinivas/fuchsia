@@ -140,7 +140,7 @@ fn main() {
                     },
                     EventSubscription {
                         event_name: Some("diagnostics_ready".to_string()),
-                        mode: Some(EventMode::Sync),
+                        mode: Some(EventMode::Async),
                         ..EventSubscription::EMPTY
                     },
                 ]),

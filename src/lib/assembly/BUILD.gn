@@ -14,11 +14,13 @@ if (is_host) {
       "images_manifest:host_tests",
       "minfs:host_tests",
       "partitions_config:host_tests",
+      "structured_config:host_tests",
       "test_util:host_tests",
       "tool:host_tests",
       "update_package:host_tests",
       "update_packages_manifest:host_tests",
       "util:host_tests",
+      "validate_product:host_tests",
       "vbmeta:host_tests",
       "zbi:host_tests",
     ]

@@ -1,0 +1,85 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/host.gni")
+import("//build/rust/rustc_library.gni")
+
+if (is_host) {
+  rustc_library("structured_config") {
+    name = "assembly_structured_config"
+    sources = [ "src/lib.rs" ]
+    deps = [
+      "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
+      "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+      "//src/lib/fidl/rust/fidl",
+      "//src/sys/lib/cm_fidl_validator",
+      "//src/sys/lib/cm_rust",
+      "//src/sys/lib/config_encoder",
+      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+      "//third_party/rust_crates:thiserror",
+    ]
+  }
+}
+
+fuchsia_component("pass_with_config") {
+  manifest = "meta/test_with_config.cml"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_structured_config_values("pass_with_config_values") {
+  cm_target = ":pass_with_config"
+  values = "meta/test_with_config_values.json5"
+}
+
+fuchsia_component("fail_missing_config") {
+  manifest = "meta/test_with_config.cml"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("pass_without_config") {
+  manifest = "meta/test_without_config.cml"
+}
+
+# this package should only be depended upon by the test below, including it in a system image
+# should cause product validation to fail
+fuchsia_package("validate_structured_config_packaging") {
+  deps = [
+    ":fail_missing_config",
+    ":pass_with_config",
+    ":pass_with_config_values",
+    ":pass_without_config",
+  ]
+}
+
+if (is_host) {
+  package_out_dir = get_label_info(
+          ":validate_structured_config_packaging($default_toolchain)",
+          "target_out_dir")
+  test_meta_far_path =
+      "$package_out_dir/validate_structured_config_packaging/meta.far"
+
+  rustc_test("structured_config_test") {
+    sources = [ "src/test.rs" ]
+    source_root = "src/test.rs"
+    deps = [
+      ":structured_config",
+      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+    ]
+    non_rust_deps =
+        [ ":validate_structured_config_packaging($default_toolchain)" ]
+    configs += [ ":test_assets" ]
+    inputs = [ test_meta_far_path ]
+  }
+
+  config("test_assets") {
+    # the `include_bytes!()` macro expects paths relative to the source root
+    rustenv = [ "TEST_META_FAR=" + rebase_path(test_meta_far_path, "./src/") ]
+  }
+
+  group("host_tests") {
+    testonly = true
+    deps = [ ":structured_config_test" ]
+  }
+}

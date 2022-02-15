@@ -30,6 +30,14 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     }
 
     let image_assembly = builder.build(&outdir).context("Building Image Assembly config")?;
+    // TODO pass a reference to a whole assembly once that type is extracted to a library
+    assembly_validate_product::validate_product(
+        image_assembly
+            .system
+            .iter()
+            .chain(image_assembly.base.iter())
+            .chain(image_assembly.cache.iter()),
+    )?;
     let image_assembly_path = outdir.join("image_assembly.json");
     let image_assembly_file = std::fs::File::create(&image_assembly_path).context(format!(
         "Failed to create image assembly config file: {}",

@@ -50,6 +50,7 @@ ffx_plugin("ffx_assembly") {
     "//src/lib/assembly/update_package",
     "//src/lib/assembly/update_packages_manifest",
     "//src/lib/assembly/util",
+    "//src/lib/assembly/validate_product",
     "//src/lib/assembly/vbmeta",
     "//src/lib/assembly/zbi",
     "//src/lib/zerocopy",

@@ -99,7 +99,7 @@
                 },
                 {
                     event: "diagnostics_ready",
-                    mode: "sync",
+                    mode: "async",
                 },
             ],
         },
