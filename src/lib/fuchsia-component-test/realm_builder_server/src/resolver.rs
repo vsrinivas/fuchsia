@@ -218,7 +218,7 @@ impl Registry {
 fn encode(mut component_decl: fcdecl::Component) -> Result<fmem::Data, Error> {
     Ok(fmem::Data::Bytes(
         fidl::encoding::encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut component_decl,
         )
         .context("failed to encode ComponentDecl")?,
