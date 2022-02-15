@@ -57,14 +57,24 @@ pub struct OtDriver<OT, NI> {
 
     /// Network Interface. Provides the interface to netstack.
     net_if: NI,
+
+    /// Output receiver for OpenThread CLI
+    cli_output_receiver: futures::lock::Mutex<futures::channel::mpsc::UnboundedReceiver<String>>,
 }
 
-impl<OT, NI> OtDriver<OT, NI> {
+impl<OT: ot::Cli, NI> OtDriver<OT, NI> {
     pub fn new(ot_instance: OT, net_if: NI) -> Self {
+        let (cli_output_sender, cli_output_receiver) = futures::channel::mpsc::unbounded();
+
+        ot_instance.cli_init(move |c_str| {
+            cli_output_sender.unbounded_send(c_str.to_string_lossy().into_owned()).unwrap();
+        });
+
         OtDriver {
             driver_state: parking_lot::Mutex::new(DriverState::new(ot_instance)),
             driver_state_change: AsyncCondition::new(),
             net_if,
+            cli_output_receiver: futures::lock::Mutex::new(cli_output_receiver),
         }
     }
 

@@ -13,6 +13,7 @@ use fuchsia_zircon::Duration;
 use lowpan_driver_common::AsyncConditionWait;
 use lowpan_driver_common::Driver as LowpanDriver;
 use lowpan_driver_common::ZxResult;
+use std::ffi::CString;
 
 /// Helpers for API-related tasks.
 impl<OT: Send, NI> OtDriver<OT, NI> {
@@ -493,8 +494,32 @@ where
         Err(ZxStatus::NOT_SUPPORTED)
     }
 
-    async fn send_mfg_command(&self, _command: &str) -> ZxResult<String> {
-        return Err(ZxStatus::NOT_SUPPORTED);
+    async fn send_mfg_command(&self, command: &str) -> ZxResult<String> {
+        // TODO(rquattle): For now we are sending manufacturing commands to the normal
+        //                 OpenThread CLI interface to unblock testing efforts.
+        //                 Long term we need to have this API connect to the manufacturing
+        //                 commands and have the normal CLI commands plumbed via a different
+        //                 route.
+        const WAIT_FOR_RESPONSE_TIMEOUT: Duration = Duration::from_millis(500);
+
+        // Locking this receiver also prevents multiple outstanding CLI commands from racing.
+        let mut receiver = self.cli_output_receiver.lock().await;
+
+        // Execute the command.
+        self.driver_state.lock().ot_instance.cli_input_line(&CString::new(command).unwrap());
+
+        // Collect the response, waiting up to WAIT_FOR_RESPONSE_TIMEOUT after the last bit.
+        let mut output = String::new();
+        while let Some(Some(next)) = receiver
+            .next()
+            .map(Option::Some)
+            .on_timeout(fasync::Time::after(WAIT_FOR_RESPONSE_TIMEOUT), || None)
+            .await
+        {
+            output.extend(next.chars());
+        }
+
+        Ok(output)
     }
 
     async fn replace_mac_address_filter_settings(
