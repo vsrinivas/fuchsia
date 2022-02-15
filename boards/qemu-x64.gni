@@ -4,8 +4,26 @@
 
 import("common/x64-common.gni")
 
+_imports = {  # Import into hidden scope, to avoid importing into args.gn.
+  import("//boards/emulation/virtio_drivers.gni")
+}
+
 board_name = "qemu-x64"
 
 add_qemu_to_build_archives = true
 
 board_package_labels += [ "//src/factory/factory_store_providers/config/qemu" ]
+
+# Additional drivers to support running as a virtualization guest.
+_bootfs_deps =
+    _imports.virtio_drivers + [
+      "//src/graphics/display/drivers/simple:simple.bochs",
+      "//src/graphics/display/drivers/simple:simple.gga",
+      "//src/graphics/display/drivers/simple:simple.intel",
+      "//src/graphics/display/drivers/simple:simple.vmware",
+      "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec",
+    ]
+
+board_bootfs_labels += _bootfs_deps
+board_recovery_bootfs_labels += _bootfs_deps
+board_zedboot_bootfs_labels += _bootfs_deps

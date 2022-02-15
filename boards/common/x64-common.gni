@@ -6,62 +6,43 @@
 
 import("//build/board.gni")
 
-_imports = {  # Import into hidden scope, to avoid importing into args.gn.
-  import("//boards/emulation/virtio_drivers.gni")
-}
-
 target_cpu = "x64"
 
 # Drivers and tools to include on bootfs.
-_bootfs_deps =
-    [
-      # Drivers
-      "//src/connectivity/ethernet/drivers/realtek-8111",
-      "//src/devices/block/drivers/ahci",
-      "//src/devices/block/drivers/mbr",
-      "//src/devices/block/drivers/nvme",
-      "//src/devices/block/drivers/pci-sdhci",
-      "//src/devices/block/drivers/sdhci",
-      "//src/devices/board/drivers/x86:platform-bus-x86",
-      "//src/devices/bus/drivers/pci:bus-pci",
-      "//src/devices/i2c/drivers/intel-i2c",
-      "//src/devices/rtc/drivers/intel-rtc",
-      "//src/devices/serial/drivers/uart16550",
-      "//src/devices/spi/drivers/intel-gspi",
-      "//src/devices/tpm/drivers/tpm",
-      "//src/devices/usb/drivers/xhci",
-      "//src/graphics/display/drivers/intel-i915",
-      "//src/graphics/display/drivers/simple:simple.amd-kaveri",
-      "//src/graphics/display/drivers/simple:simple.nv",
-      "//src/media/audio/drivers/codecs/alc5514",
-      "//src/media/audio/drivers/codecs/alc5663",
-      "//src/media/audio/drivers/codecs/max98927",
-      "//src/media/audio/drivers/codecs/max98373",
-      "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
-      "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",
-      "//src/media/audio/drivers/intel-hda/controller:intel-hda",
-      "//src/ui/input/drivers/i2c-hid",
-      "//src/ui/input/drivers/pc-ps2",
-      "//zircon/third_party/dev/ethernet/e1000",
+_bootfs_deps = [
+  # Drivers
+  "//src/devices/block/drivers/ahci",
+  "//src/devices/block/drivers/mbr",
+  "//src/devices/block/drivers/nvme",
+  "//src/devices/block/drivers/pci-sdhci",
+  "//src/devices/block/drivers/sdhci",
+  "//src/devices/board/drivers/x86:platform-bus-x86",
+  "//src/devices/bus/drivers/pci:bus-pci",
+  "//src/devices/i2c/drivers/intel-i2c",
+  "//src/devices/rtc/drivers/intel-rtc",
+  "//src/devices/spi/drivers/intel-gspi",
+  "//src/devices/tpm/drivers/tpm",
+  "//src/devices/usb/drivers/xhci",
+  "//src/graphics/display/drivers/intel-i915",
+  "//src/media/audio/drivers/codecs/alc5514",
+  "//src/media/audio/drivers/codecs/alc5663",
+  "//src/media/audio/drivers/codecs/max98373",
+  "//src/media/audio/drivers/codecs/max98927",
+  "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
+  "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",
+  "//src/media/audio/drivers/intel-hda/controller:intel-hda",
+  "//src/ui/input/drivers/i2c-hid",
+  "//src/ui/input/drivers/pc-ps2",
 
-      # Additional drivers to support running as a virtualization guest.
-    ] + _imports.virtio_drivers +
-    [
-      "//src/graphics/display/drivers/simple:simple.bochs",
-      "//src/graphics/display/drivers/simple:simple.gga",
-      "//src/graphics/display/drivers/simple:simple.intel",
-      "//src/graphics/display/drivers/simple:simple.vmware",
-      "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec",
+  # Tools
+  "//src/devices/bin/acpidump",
+  "//src/devices/pci/bin:bootfs",
+  "//src/media/audio/bin/ihda",
 
-      # Tools
-      "//src/devices/bin/acpidump",
-      "//src/devices/pci/bin:bootfs",
-      "//src/media/audio/bin/ihda",
-
-      # Configs
-      "//src/power/power-manager:base_config",
-      "//src/security/policy/zxcrypt:null",
-    ]
+  # Configs
+  "//src/power/power-manager:base_config",
+  "//src/security/policy/zxcrypt:null",
+]
 board_bootfs_labels += _bootfs_deps
 board_recovery_bootfs_labels += _bootfs_deps
 board_zedboot_bootfs_labels += _bootfs_deps

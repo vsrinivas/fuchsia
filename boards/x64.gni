@@ -4,11 +4,35 @@
 
 import("common/x64-common.gni")
 
+_imports = {  # Import into hidden scope, to avoid importing into args.gn.
+  import("//boards/emulation/virtio_drivers.gni")
+}
+
 board_name = "x64"
 board_description = "A generic x64 device"
 
-# Use legacy serial for bootfs.
-_bootfs_deps = [ "//boards/kernel_cmdline:serial-legacy" ]
+_bootfs_deps = [
+  # Drivers
+  "//src/connectivity/ethernet/drivers/realtek-8111",
+  "//src/devices/serial/drivers/uart16550",
+  "//src/graphics/display/drivers/simple:simple.amd-kaveri",
+  "//src/graphics/display/drivers/simple:simple.nv",
+  "//zircon/third_party/dev/ethernet/e1000",
+
+  # Use legacy serial for bootfs.
+  "//boards/kernel_cmdline:serial-legacy",
+]
+
+# Additional drivers to support running as a virtualization guest.
+_bootfs_deps +=
+    _imports.virtio_drivers + [
+      "//src/graphics/display/drivers/simple:simple.bochs",
+      "//src/graphics/display/drivers/simple:simple.gga",
+      "//src/graphics/display/drivers/simple:simple.intel",
+      "//src/graphics/display/drivers/simple:simple.vmware",
+      "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec",
+    ]
+
 board_bootfs_labels += _bootfs_deps
 board_recovery_bootfs_labels += _bootfs_deps
 board_zedboot_bootfs_labels += _bootfs_deps
