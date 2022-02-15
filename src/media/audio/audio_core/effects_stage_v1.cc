@@ -216,9 +216,15 @@ std::optional<ReadableStream::Buffer> EffectsStageV1::ReadLock(ReadLockContext& 
     stream_info.volume = volume_curve_.DbToVolume(source_buffer->total_applied_gain_db());
     effects_processor_->SetStreamInfo(stream_info);
 
+    StageMetricsTimer timer("EffectsStageV1::Process");
+    timer.Start();
+
     float* buf_out = nullptr;
     auto payload = static_cast<float*>(source_buffer->payload());
     effects_processor_->Process(source_buffer->length(), payload, &buf_out);
+
+    timer.Stop();
+    ctx.AddStageMetrics(timer.Metrics());
 
     // Since we just sent some frames through the effects, we need to reset our ringout counter if
     // we had one.
@@ -244,11 +250,19 @@ std::optional<ReadableStream::Buffer> EffectsStageV1::ReadLock(ReadLockContext& 
       ringout_frames_sent_ = ringout_.total_frames;
       return std::nullopt;
     }
+
+    StageMetricsTimer timer("EffectsStageV1::Process");
+    timer.Start();
+
     // We have no buffer. If we are still within the ringout period we need to feed some silence
     // into the effects.
     std::fill(ringout_.buffer.begin(), ringout_.buffer.end(), 0.0);
     float* buf_out = nullptr;
     effects_processor_->Process(ringout_.buffer_frames, ringout_.buffer.data(), &buf_out);
+
+    timer.Stop();
+    ctx.AddStageMetrics(timer.Metrics());
+
     // Ringout frames are by definition continuous with the previous buffer.
     const bool is_continuous = true;
     // TODO(fxbug.dev/50669): Should we clamp length to |frame_count|?

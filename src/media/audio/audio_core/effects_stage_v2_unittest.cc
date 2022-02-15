@@ -700,17 +700,19 @@ class ReturnMetricsProcessor : public BaseProcessor {
 };
 
 TEST_F(EffectsStageV2Test, Metrics) {
-  std::vector<fuchsia_audio_effects::wire::ProcessMetrics> expected_metrics(2);
+  std::vector<fuchsia_audio_effects::wire::ProcessMetrics> expected_metrics(3);
   expected_metrics[0].Allocate(arena());
-  expected_metrics[0].set_name(arena(), "stage1");
-  expected_metrics[0].set_wall_time(arena(), 100);
-  expected_metrics[0].set_cpu_time(arena(), 101);
-  expected_metrics[0].set_queue_time(arena(), 102);
+  expected_metrics[0].set_name(arena(), "EffectsStageV2::Process");
   expected_metrics[1].Allocate(arena());
-  expected_metrics[1].set_name(arena(), "stage2");
-  expected_metrics[1].set_wall_time(arena(), 200);
-  expected_metrics[1].set_cpu_time(arena(), 201);
-  expected_metrics[1].set_queue_time(arena(), 201);
+  expected_metrics[1].set_name(arena(), "stage1");
+  expected_metrics[1].set_wall_time(arena(), 100);
+  expected_metrics[1].set_cpu_time(arena(), 101);
+  expected_metrics[1].set_queue_time(arena(), 102);
+  expected_metrics[2].Allocate(arena());
+  expected_metrics[2].set_name(arena(), "stage2");
+  expected_metrics[2].set_wall_time(arena(), 200);
+  expected_metrics[2].set_cpu_time(arena(), 201);
+  expected_metrics[2].set_queue_time(arena(), 201);
 
   constexpr auto kInputPacketBytes = kPacketFrames * sizeof(float);
   constexpr auto kOutputPacketBytes = kPacketFrames * sizeof(float);
@@ -742,6 +744,9 @@ TEST_F(EffectsStageV2Test, Metrics) {
     SCOPED_TRACE(fxl::StringPrintf("metrics[%lu]", k));
     auto& metrics = ctx.per_stage_metrics()[k];
     EXPECT_EQ(static_cast<std::string_view>(metrics.name), expected_metrics[k].name().get());
+    if (k == 0) {
+      continue;
+    }
     EXPECT_EQ(metrics.wall_time.to_nsecs(), expected_metrics[k].wall_time());
     EXPECT_EQ(metrics.cpu_time.to_nsecs(), expected_metrics[k].cpu_time());
     EXPECT_EQ(metrics.queue_time.to_nsecs(), expected_metrics[k].queue_time());

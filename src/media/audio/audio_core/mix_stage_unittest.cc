@@ -857,6 +857,7 @@ TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
   mix_stage_->cur_mix_job_.buf = &mix_stage_->output_buffer_[0];
   mix_stage_->cur_mix_job_.buf_frames = mix_stage_->output_buffer_frames_;
   mix_stage_->cur_mix_job_.dest_ref_clock_to_frac_dest_frame = TimelineFunction();
+  mix_stage_->cur_mix_job_.read_lock_ctx = &rlctx;
   mixer->source_info().frames_produced = 0;
   mixer->source_info().dest_frames_to_frac_source_frames =
       TimelineFunction(3582737759, 0, 8192000, 999);

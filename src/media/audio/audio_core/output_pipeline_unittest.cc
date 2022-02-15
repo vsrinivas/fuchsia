@@ -943,10 +943,12 @@ TEST_F(OutputPipelineTest, PipelineWithEffectsV2) {
     CheckBuffer(buf->payload(), 2.0, 96);
 
     // Check metrics: must have called the effect twice.
-    ASSERT_EQ(rlctx.per_stage_metrics().size(), 1u);
-    EXPECT_EQ(std::string_view(rlctx.per_stage_metrics()[0].name), "stage");
-    EXPECT_EQ(rlctx.per_stage_metrics()[0].wall_time.get(), 20);
-    EXPECT_EQ(rlctx.per_stage_metrics()[0].cpu_time.get(), 200);
+    ASSERT_EQ(rlctx.per_stage_metrics().size(), 3u);
+    EXPECT_EQ(std::string_view(rlctx.per_stage_metrics()[0].name), "Mixer::Mix");
+    EXPECT_EQ(std::string_view(rlctx.per_stage_metrics()[1].name), "EffectsStageV2::Process");
+    EXPECT_EQ(std::string_view(rlctx.per_stage_metrics()[2].name), "stage");
+    EXPECT_EQ(rlctx.per_stage_metrics()[2].wall_time.get(), 20);
+    EXPECT_EQ(rlctx.per_stage_metrics()[2].cpu_time.get(), 200);
   }
 
   // Advance time to our safe_read_frame past the above ReadLock.
