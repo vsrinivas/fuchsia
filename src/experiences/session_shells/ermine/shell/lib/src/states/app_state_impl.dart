@@ -310,6 +310,13 @@ class AppStateImpl with Disposable implements AppState {
     if (!dialogsVisible) {
       hideOverlay();
     }
+    // If top view is a screensaver, dismiss it.
+    // TODO(fxb/80131): Use cancel action associated with Esc keyboard shortcut
+    // to dismiss the screensaver, since mouse and keyboard input is not
+    // available to the shell when a child view is fullscreen.
+    if (views.isNotEmpty && topView.url == kScreenSaverUrl) {
+      _onIdle(idle: false);
+    }
   }
 
   @override
@@ -508,10 +515,6 @@ class AppStateImpl with Disposable implements AppState {
       // Make this view the top view.
       views.add(view);
       topView = view;
-
-      // If the child view is the screen saver, make it non-focusable in order
-      // for keyboard input to get routed to the shell and dismiss it.
-      viewState.focusable = viewState.url != kScreenSaverUrl;
 
       // If any, remove previously cached launch errors for the app.
       if (viewState.url != null) {
