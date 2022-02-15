@@ -4,6 +4,7 @@
 use {anyhow::Error, argh::FromArgs, fuchsia_async as fasync};
 
 mod balloon;
+mod launch;
 mod services;
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -132,6 +133,10 @@ async fn main() -> Result<(), Error> {
     let options: GuestOptions = argh::from_env();
 
     match options.nested {
+        SubCommands::One(launch_args) => {
+            let guest = launch::GuestLaunch::new(launch_args.package, launch_args.vmm_args).await?;
+            guest.run().await?;
+        }
         SubCommands::Two(balloon_args) => {
             let balloon_controller =
                 balloon::connect_to_balloon_controller(balloon_args.env_id, balloon_args.cid)
