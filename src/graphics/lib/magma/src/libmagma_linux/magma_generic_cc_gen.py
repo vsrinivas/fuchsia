@@ -115,7 +115,11 @@ def generate_copy_in(inputs):
     ret = ''
     for argument in inputs:
         name = argument['name']
-        ret += '    request.' + name + ' = (__typeof(request.' + name + '))' + name + ';\n'
+        type = argument['type']
+        if type.find('*') != -1:
+            ret += '    request.' + name + ' = (uintptr_t)' + name + ';\n'
+        else:
+            ret += '    request.' + name + ' = ' + name + ';\n'
     return ret
 
 
