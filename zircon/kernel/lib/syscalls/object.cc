@@ -69,6 +69,16 @@ class SimpleJobEnumerator final : public JobEnumerator {
     if (jobs_) {
       return true;
     }
+    // Hide any processes that are both still in the INITIAL state, and have a handle count of 0.
+    // Such processes have not yet had their zx_process_create call complete yet, and making it
+    // visible and allowing handles to be constructed via object_get_child, could spuriously destroy
+    // it. Once a process either has a handle, or has left the initial state, handles can freely be
+    // constructed since any additional on_zero_handles invocations will be idempotent.
+    // TODO(fxb/93331): Consider whether long term needing to allow multiple on_zero_handles
+    // transitions is the correct strategy.
+    if (proc->state() == ProcessDispatcher::State::INITIAL && Handle::Count(*proc) == 0) {
+      return true;
+    }
     return RecordKoid(proc->get_koid());
   }
 
@@ -1345,6 +1355,12 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
     return ZX_ERR_ACCESS_DENIED;
   }
 
+  // TODO(fxb/93331): Constructing the handles below may cause the handle count to go from 0->1,
+  // resulting in multiple on_zero_handles invocations. Presently this is benign, except for one
+  // scenario with processes in the initial state. Such processes are filtered out by the
+  // SimpleJobEnumerator and should not be able to be learned about. Further protection against
+  // guessing is not performed here since the worst case scenario is a misbehaving privileged
+  // process guessing a koid and destroying a process that was in construction.
   auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
   if (process) {
     auto thread = process->LookupThreadById(koid);
@@ -1359,8 +1375,9 @@ zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t 
     if (child)
       return out->make(ktl::move(child), rights);
     auto proc = job->LookupProcessById(koid);
-    if (proc)
+    if (proc) {
       return out->make(ktl::move(proc), rights);
+    }
     return ZX_ERR_NOT_FOUND;
   }
 

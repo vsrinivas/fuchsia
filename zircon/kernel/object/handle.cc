@@ -229,6 +229,8 @@ uint32_t Handle::Count(const fbl::RefPtr<const Dispatcher>& dispatcher) {
   return dispatcher->current_handle_count();
 }
 
+uint32_t Handle::Count(const Dispatcher& dispatcher) { return dispatcher.current_handle_count(); }
+
 size_t Handle::diagnostics::OutstandingHandles() {
   return gHandleTableArena.arena_.DiagnosticCount();
 }
