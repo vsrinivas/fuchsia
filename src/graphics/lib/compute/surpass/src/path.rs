@@ -15,7 +15,7 @@
 // [1]: https://raphlinus.github.io/graphics/curves/2019/12/23/flatten-quadbez.html
 // [2]: http://www.caffeineowl.com/graphics/2d/vectorial/bezierintro.html
 
-use std::{cell::RefCell, f32, ops::Sub, rc::Rc};
+use std::{cell::RefCell, f32, rc::Rc};
 
 use rayon::prelude::*;
 
@@ -147,48 +147,6 @@ impl From<PointCommand> for u32 {
                 0xFF80_0000 | (i as u32 & 0x3F_FFFF) | ((new_contour as u32) << 22)
             }
         }
-    }
-}
-
-#[allow(clippy::many_single_char_names)]
-fn approx_atan2(y: f32, x: f32) -> f32 {
-    let x_abs = x.abs();
-    let y_abs = y.abs();
-
-    let a = x_abs.min(y_abs) / x_abs.max(y_abs);
-    let s = a * a;
-    let mut r = s.mul_add(-0.046_496_473, 0.159_314_22).mul_add(s, -0.327_622_77).mul_add(s * a, a);
-
-    if y_abs > x_abs {
-        r = f32::consts::FRAC_PI_2 - r;
-    }
-
-    if x < 0.0 {
-        r = f32::consts::PI - r;
-    }
-
-    if y < 0.0 {
-        r = -r;
-    }
-
-    r
-}
-
-impl Point<f32> {
-    pub fn len(self) -> f32 {
-        (self.x * self.x + self.y * self.y).sqrt()
-    }
-
-    pub fn angle(self) -> Option<f32> {
-        (self.len() >= f32::EPSILON).then(|| approx_atan2(self.y, self.x))
-    }
-}
-
-impl Sub for Point<f32> {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Self { x: self.x - rhs.x, y: self.y - rhs.y }
     }
 }
 

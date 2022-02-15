@@ -21,6 +21,7 @@ rustc_library("surpass") {
   configs += [ ":surpass-performance" ]
 
   sources = [
+    "src/affine_transform.rs",
     "src/extend.rs",
     "src/layer.rs",
     "src/layout/mod.rs",
