@@ -164,27 +164,6 @@ zx_status_t RunBinary(const fbl::Vector<const char*>& argv,
   return ZX_OK;
 }
 
-// Unmounts the filesystem using fuchsia.fs.
-void Unmount(const fidl::ClientEnd<fuchsia_io::Directory>& export_root) {
-  auto admin_or = fidl::CreateEndpoints<fuchsia_fs::Admin>();
-  if (admin_or.is_error()) {
-    FX_LOGS(ERROR) << "Unable to create fs.Admin endpoints";
-    return;
-  }
-  if (zx_status_t status = fdio_service_connect_at(
-          export_root.channel().get(), fidl::DiscoverableProtocolDefaultPath<fuchsia_fs::Admin>,
-          std::move(admin_or->server).channel().release());
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to connect to fs.Admin";
-    return;
-  }
-
-  // Ignore errors; there's nothing we can do.
-  auto resp = fidl::WireCall(admin_or->client)->Shutdown();
-  if (resp.status() != ZX_OK)
-    FX_LOGS(ERROR) << "Unmount failed: " << resp.status();
-}
-
 // Tries to mount Minfs and reads all data found on the minfs partition.  Errors are ignored.
 Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
   fbl::Vector<const char*> argv = {kMinfsPath, "mount", nullptr};
@@ -1140,7 +1119,10 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     return status;
   }
 
-  Unmount(export_root_or->client);
+  if (auto status = fs_management::Shutdown(export_root_or->client); status.is_error()) {
+    // Ignore errors; there's nothing we can do.
+    FX_LOGS(WARNING) << "Unmount failed: " << status.status_string();
+  }
 
   content_format_ = fs_management::kDiskFormatUnknown;
 
