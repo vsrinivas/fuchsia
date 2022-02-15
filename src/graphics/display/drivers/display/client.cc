@@ -1101,7 +1101,8 @@ void Client::ApplyConfig() {
   TRACE_DURATION("gfx", "Display::Client::ApplyConfig");
 
   bool config_missing_image = false;
-  layer_t* layers[layers_.size()];
+  // Clients can apply zero-layer configs. Ensure that the VLA is at least 1 element long.
+  layer_t* layers[layers_.size()+1];
   int layer_idx = 0;
 
   // Layers may have pending images, and it is possible that a layer still
