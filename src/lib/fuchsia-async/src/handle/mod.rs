@@ -31,7 +31,7 @@ macro_rules! invoke_for_handle_types {
         $x! {Channel, "Channel", CHANNEL, 4, Everywhere}
         $x! {Event, "Event", EVENT, 5, FuchsiaOnly}
         $x! {Port, "Port", PORT, 6,  FuchsiaOnly}
-        $x! {Interrupt, "Interrupt", INTERRRUPT, 7, FuchsiaOnly}
+        $x! {Interrupt, "Interrupt", INTERRUPT, 7, FuchsiaOnly}
         $x! {PciDevice, "PCI Device", PCI_DEVICE, 8, Stub}
         $x! {DebugLog, "Debug Log", LOG, 9, FuchsiaOnly}
         $x! {Socket, "Socket", SOCKET, 10, Everywhere}

@@ -39,7 +39,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-// Registers saved on entering the kernel via interrrupt or fault.
+// Registers saved on entering the kernel via interrupt or fault.
 struct iframe_t {
   uint64_t rdi, rsi, rbp, rbx, rdx, rcx, rax;     // pushed by common handler
   uint64_t r8, r9, r10, r11, r12, r13, r14, r15;  // pushed by common handler

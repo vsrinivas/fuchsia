@@ -40,7 +40,7 @@ const DEVICE_SIGNAL_HANGUP uint32 = fuchsia.io.DEVICE_SIGNAL_HANGUP;
 
 type DevicePowerState = strict enum : uint8 {
     /// Mandatory Working state. Device is fully functional, can take I/O,
-    /// issue interrrupts. This state is mandatory for all devices
+    /// issue interrupts. This state is mandatory for all devices
     /// The device enters into this state by default, when powered on.
     DEVICE_POWER_STATE_D0 = 0;
     /// [OPTIONAL] Device is not working when in this state. It cannot process
