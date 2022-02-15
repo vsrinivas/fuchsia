@@ -90,38 +90,38 @@ zx_status_t GuestConsole::ExecuteBlocking(const std::string& command, const std:
 
   zx_status_t status = SendBlocking(full_command + "\n", deadline);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to send command: " << zx_status_get_string(status);
+    FX_LOGS(INFO) << "Failed to send command: " << zx_status_get_string(status);
     return status;
   }
 
   std::string intermediate_result;
   status = WaitForMarker(full_command, deadline, &intermediate_result);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to wait for command echo: " << zx_status_get_string(status);
-    FX_LOGS(ERROR) << "Received: \"" << intermediate_result << "\"";
+    FX_LOGS(INFO) << "Failed to wait for command echo: " << zx_status_get_string(status);
+    FX_LOGS(INFO) << "Received: \"" << intermediate_result << "\"";
     return status;
   }
 
   status = WaitForMarker(header + "\n", deadline, &intermediate_result);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to wait for command header: " << zx_status_get_string(status);
-    FX_LOGS(ERROR) << "Received: \"" << intermediate_result << "\"";
+    FX_LOGS(INFO) << "Failed to wait for command header: " << zx_status_get_string(status);
+    FX_LOGS(INFO) << "Received: \"" << intermediate_result << "\"";
     return status;
   }
 
   status = WaitForMarker(footer + "\n", deadline, result);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to wait for command footer: " << zx_status_get_string(status);
+    FX_LOGS(INFO) << "Failed to wait for command footer: " << zx_status_get_string(status);
     if (result != nullptr && !result->empty()) {
-      FX_LOGS(ERROR) << "Received: \"" << *result << "\"";
+      FX_LOGS(INFO) << "Received: \"" << *result << "\"";
     }
     return status;
   }
 
   status = WaitForMarker(prompt, deadline, &intermediate_result);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to wait for command prompt: " << zx_status_get_string(status);
-    FX_LOGS(ERROR) << "Received: \"" << intermediate_result << "\"";
+    FX_LOGS(INFO) << "Failed to wait for command prompt: " << zx_status_get_string(status);
+    FX_LOGS(INFO) << "Received: \"" << intermediate_result << "\"";
     return status;
   }
 
