@@ -82,7 +82,7 @@ are accessible through handles, they are extremely powerful concepts.
 Filesystem objects (such as directories and files), services, devices,
 packages, and environments (visible by privileged processes) all are usable
 through handles, and may be composed arbitrarily within a child process. As a
-result, namespaces allows for customizable resource discovery within
+result, namespaces allow for customizable resource discovery within
 applications. The services that one process observes within “/svc” may or may
 not match what other processes see, and can be restricted or redirected
 according to application-launching policy.
