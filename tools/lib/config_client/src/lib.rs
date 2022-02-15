@@ -170,19 +170,22 @@ mod tests {
         };
 
         let observed_fidl_src = fidl::create_fidl_source(&decl, "cf.sc.internal".to_string());
-        let expected_fidl_src = "library cf.sc.internal;
+        let expected_fidl_src = "
+library cf.sc.internal;
+
 type Config = struct {
-snake_case_string bool;
-lower_camel_case_string bool;
-upper_camel_case_string bool;
-const_case bool;
-string_that_has02_digits bool;
-mixed_lower_camel_snake_case_string bool;
-mixed_upper_camel_snake_case_string bool;
-multiple__underscores bool;
-unsafe_ bool;
-server_mode_ bool;
-};";
+  snake_case_string bool;
+  lower_camel_case_string bool;
+  upper_camel_case_string bool;
+  const_case bool;
+  string_that_has02_digits bool;
+  mixed_lower_camel_snake_case_string bool;
+  mixed_upper_camel_snake_case_string bool;
+  multiple__underscores bool;
+  unsafe_ bool;
+  server_mode_ bool;
+};
+";
         assert_eq!(observed_fidl_src, expected_fidl_src);
 
         let actual_rust_src =

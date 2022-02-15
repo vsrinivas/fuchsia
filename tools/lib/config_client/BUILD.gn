@@ -13,12 +13,19 @@ if (is_host) {
       "src/lib.rs",
       "src/rust.rs",
     ]
+    inputs = [
+      "templates/cpp_elf.cc.hbs",
+      "templates/cpp_elf.h.hbs",
+    ]
     deps = [
       "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
       "//src/sys/lib/cm_rust",
       "//src/sys/lib/fidl_fuchsia_component_config_ext",
+      "//third_party/rust_crates:handlebars",
       "//third_party/rust_crates:proc-macro2",
       "//third_party/rust_crates:quote",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:syn",
       "//third_party/rust_crates:thiserror",
     ]

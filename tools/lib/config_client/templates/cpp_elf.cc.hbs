@@ -1,0 +1,132 @@
+#include <fidl/{{fidl_library_name}}/cpp/wire.h>
+#include <fidl/{{fidl_library_name}}/cpp/wire_types.h>
+#include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/traits.h>
+#include <lib/zx/vmo.h>
+#include <zircon/assert.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+
+#include <string>
+#include <vector>
+
+#include "config.h"
+
+template <class T>
+std::vector<T> from_vector_view(fidl::VectorView<T> v) {
+    size_t count = v.count();
+    std::vector<T> data(count);
+    for (size_t i = 0; i < count; i++) {
+        data[i] = v[i];
+    }
+    return data;
+}
+
+std::vector<std::string> from_vector_string_view(fidl::VectorView<fidl::StringView> v) {
+    size_t count = v.count();
+    std::vector<std::string> data(count);
+    for (size_t i = 0; i < count; i++) {
+        data[i] = std::string(v[i].get());
+    }
+    return data;
+}
+
+{{cpp_namespace}}::Config {{cpp_namespace}}::Config::from_args() noexcept {
+  // Get the VMO containing FIDL config
+  zx_handle_t config_vmo_handle = zx_take_startup_handle(PA_CONFIG_VMO);
+  ZX_ASSERT_MSG(config_vmo_handle != ZX_HANDLE_INVALID, "Could not obtain Config VMO Handle");
+  zx::vmo config_vmo(config_vmo_handle);
+
+  // Get the size of the VMO
+  uint64_t content_size_prop = 0;
+  zx_status_t status = config_vmo.get_prop_content_size(&content_size_prop);
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not get content size of config VMO");
+  size_t vmo_content_size = static_cast<size_t>(content_size_prop);
+
+  // Checksum length must be correct
+  uint16_t checksum_length = 0;
+  status = config_vmo.read(&checksum_length, 0, 2);
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not read checksum length from config VMO");
+
+  // Verify Checksum
+  std::vector<uint8_t> checksum(checksum_length);
+  status = config_vmo.read(checksum.data(), 2, checksum_length);
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not read checksum from config VMO");
+  std::vector<uint8_t> expected_checksum {
+    {{#each expected_checksum}}
+    {{(hex_byte this)}}{{#unless @last}},{{/unless}}
+    {{/each}}
+  };
+  ZX_ASSERT_MSG(checksum == expected_checksum, "Invalid checksum for config VMO");
+
+  // Read the FIDL struct into memory
+  // Skip the checksum length + checksum + FIDL persistent header
+  // Align the struct pointer to 8 bytes (as required by FIDL)
+  size_t header = 2 + checksum_length + 8;
+  size_t fidl_struct_size = vmo_content_size - header;
+  void* data = memalign(8, fidl_struct_size);
+  status = config_vmo.read(data, header, fidl_struct_size);
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not read FIDL struct from config VMO");
+  uint8_t* fidl_struct = static_cast<uint8_t*>(data);
+
+  // Decode the FIDL struct
+  fidl::unstable::DecodedMessage<::{{fidl_cpp_namespace}}::wire::Config> decoded(
+    fidl::internal::WireFormatVersion::kV2, fidl_struct, static_cast<uint32_t>(fidl_struct_size));
+  ZX_ASSERT_MSG(decoded.ok(), "Could not decode Config FIDL structure");
+  ::{{fidl_cpp_namespace}}::wire::Config* fidl_config = decoded.PrimaryObject();
+
+  // Convert the configuration into a new struct
+  {{cpp_namespace}}::Config c{
+    {{#each fields}}
+      {{#if (is_string_vector type_)}}
+        .{{ident}} = from_vector_string_view(fidl_config->{{ident}})
+      {{else}}
+        {{#if (is_vector type_)}}
+          .{{ident}} = from_vector_view(fidl_config->{{ident}})
+        {{else}}
+          {{#if (is_string type_)}}
+            .{{ident}} = std::string(fidl_config->{{ident}}.get())
+          {{else}}
+            .{{ident}} = fidl_config->{{ident}}
+          {{/if}}
+        {{/if}}
+      {{/if}}
+      {{~#unless @last}},{{/unless}}
+    {{~/each~}}
+  };
+
+  // Free up allocated memory
+  free(data);
+
+  return c;
+}
+
+void {{cpp_namespace}}::Config::record_to_inspect(sys::ComponentInspector  * inspector) {
+  inspect::Node inspect_config = inspector->root().CreateChild("config");
+  {{#each fields}}
+    {{#if (is_string_vector type_)}}
+      auto {{ident}} = inspect_config.CreateStringArray("{{ident}}", this->{{ident}}.size());
+      for (size_t i = 0; i < this->{{ident}}.size(); i++) {
+        auto ref = std::string_view(this->{{ident}}[i].data());
+        {{ident}}.Set(i, ref);
+      }
+      inspector->emplace(std::move({{ident}}));
+    {{else}}
+      {{#if (is_vector type_)}}
+        auto {{ident}} =
+          inspect_config.Create{{(inspect_type type_)}}Array("{{ident}}", this->{{ident}}.size());
+        for (size_t i = 0; i < this->{{ident}}.size(); i++) {
+            {{ident}}.Set(i, this->{{ident}}[i]);
+        }
+        inspector->emplace(std::move({{ident}}));
+      {{else}}
+        inspect_config.Create{{(inspect_type type_)}}("{{ident}}", this->{{ident}}, inspector);
+      {{/if}}
+    {{/if}}
+
+  {{/each}}
+  inspector->emplace(std::move(inspect_config));
+}
