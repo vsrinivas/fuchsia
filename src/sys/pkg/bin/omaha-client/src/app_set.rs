@@ -9,17 +9,16 @@ use {
 
 pub struct FuchsiaAppSet {
     system_app: App,
-    package_groups: Vec<PackageGroup>,
+    eager_packages: Vec<EagerPackage>,
 }
 
 impl FuchsiaAppSet {
     pub fn new(system_app: App) -> Self {
-        Self { system_app, package_groups: vec![] }
+        Self { system_app, eager_packages: vec![] }
     }
 
-    #[allow(dead_code)]
-    pub fn add_package_group(&mut self, group: PackageGroup) {
-        self.package_groups.push(group);
+    pub fn add_eager_package(&mut self, package: EagerPackage) {
+        self.eager_packages.push(package);
     }
 
     /// Get the system product id.
@@ -48,14 +47,14 @@ impl FuchsiaAppSet {
 impl AppSet for FuchsiaAppSet {
     fn get_apps(&self) -> Vec<App> {
         std::iter::once(&self.system_app)
-            .chain(self.package_groups.iter().map(|pg| &pg.app))
+            .chain(self.eager_packages.iter().map(|pg| &pg.app))
             .cloned()
             .collect()
     }
     fn iter_mut_apps(&mut self) -> Box<dyn Iterator<Item = &mut App> + '_> {
         Box::new(
             std::iter::once(&mut self.system_app)
-                .chain(self.package_groups.iter_mut().map(|pg| &mut pg.app)),
+                .chain(self.eager_packages.iter_mut().map(|pg| &mut pg.app)),
         )
     }
     fn get_system_app_id(&self) -> &str {
@@ -63,10 +62,16 @@ impl AppSet for FuchsiaAppSet {
     }
 }
 
-pub struct PackageGroup {
+pub struct EagerPackage {
     app: App,
     #[allow(dead_code)]
     channel_configs: Option<ChannelConfigs>,
+}
+
+impl EagerPackage {
+    pub fn new(app: App, channel_configs: Option<ChannelConfigs>) -> Self {
+        Self { app, channel_configs }
+    }
 }
 
 #[cfg(test)]
@@ -79,19 +84,19 @@ mod tests {
         let mut app_set = FuchsiaAppSet::new(app.clone());
         assert_eq!(app_set.get_apps(), vec![app.clone()]);
 
-        let package_group_app = App::builder("package_id", [5]).build();
-        let package_group = PackageGroup { app: package_group_app.clone(), channel_configs: None };
-        app_set.add_package_group(package_group);
-        assert_eq!(app_set.get_apps(), vec![app, package_group_app]);
+        let eager_package_app = App::builder("package_id", [5]).build();
+        let eager_package = EagerPackage { app: eager_package_app.clone(), channel_configs: None };
+        app_set.add_eager_package(eager_package);
+        assert_eq!(app_set.get_apps(), vec![app, eager_package_app]);
     }
 
     #[test]
     fn test_iter_mut_apps() {
         let app = App::builder("id1", [1]).build();
         let mut app_set = FuchsiaAppSet::new(app);
-        let package_group =
-            PackageGroup { app: App::builder("package_id", [5]).build(), channel_configs: None };
-        app_set.add_package_group(package_group);
+        let eager_package =
+            EagerPackage { app: App::builder("package_id", [5]).build(), channel_configs: None };
+        app_set.add_eager_package(eager_package);
 
         for app in app_set.iter_mut_apps() {
             app.id += "_mutated";

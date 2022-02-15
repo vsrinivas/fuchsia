@@ -24,7 +24,6 @@ pub struct EagerPackageConfigs {
 
 impl EagerPackageConfigs {
     /// Load the eager package config from namespace.
-    #[allow(dead_code)]
     pub fn from_namespace() -> Result<Self, Error> {
         let file = std::fs::File::open(EAGER_PACKAGE_CONFIG_PATH)
             .context("opening eager package config file")?;

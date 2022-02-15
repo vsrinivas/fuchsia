@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use crate::{
-    app_set::FuchsiaAppSet,
+    app_set::{EagerPackage, FuchsiaAppSet},
     channel::{ChannelConfig, ChannelConfigs},
+    eager_package_config::EagerPackageConfigs,
 };
 use anyhow::{anyhow, Error};
 use fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsProxy};
@@ -116,7 +117,24 @@ impl ClientConfiguration {
             .with_extra("channel", channel_name.clone().unwrap_or_default())
             .with_extra("product_id", product_id.unwrap_or_default())
             .build();
-        let app_set = FuchsiaAppSet::new(app);
+        let mut app_set = FuchsiaAppSet::new(app);
+
+        match EagerPackageConfigs::from_namespace() {
+            Ok(eager_package_configs) => {
+                Self::add_eager_packages(&mut app_set, eager_package_configs)
+            }
+            Err(e) => {
+                match e.downcast_ref::<std::io::Error>() {
+                    Some(io_err) if io_err.kind() == std::io::ErrorKind::NotFound => {
+                        warn!("eager package config not found: {:#}", anyhow!(e))
+                    }
+                    _ => error!(
+                        "Failed to load eager package config from namespace: {:#}",
+                        anyhow!(e)
+                    ),
+                };
+            }
+        }
 
         ClientConfiguration {
             platform_config: get_config(&version).await,
@@ -127,6 +145,37 @@ impl ClientConfiguration {
                 config: channel_config,
                 appid,
             },
+        }
+    }
+
+    /// Add all eager packages in eager package config to app set.
+    fn add_eager_packages(app_set: &mut FuchsiaAppSet, eager_package_configs: EagerPackageConfigs) {
+        for package in eager_package_configs.packages {
+            // TODO: ask pkg-resolver for current channel and version first.
+            let version = [0];
+            let channel_config = package.channel_config.get_default_channel();
+
+            let appid = match channel_config.as_ref().and_then(|c| c.appid.as_ref()) {
+                Some(appid) => &appid,
+                None => {
+                    error!("no appid for package '{}'", package.url);
+                    ""
+                }
+            };
+
+            let mut app_builder = App::builder(appid, version);
+            if let Some(channel_config) = channel_config {
+                app_builder = app_builder
+                    .with_cohort(Cohort {
+                        hint: Some(channel_config.name.clone()),
+                        name: Some(channel_config.name.clone()),
+                        ..Cohort::default()
+                    })
+                    .with_extra("channel", channel_config.name);
+            }
+            let app = app_builder.build();
+
+            app_set.add_eager_package(EagerPackage::new(app, Some(package.channel_config)));
         }
     }
 
@@ -211,9 +260,11 @@ async fn get_service_url_from_vbmeta_impl(proxy: ArgumentsProxy) -> Result<Optio
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::eager_package_config::EagerPackageConfig;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_boot::ArgumentsRequest;
     use fuchsia_async as fasync;
+    use fuchsia_url::pkg_url::PkgUrl;
     use futures::prelude::*;
     use omaha_client::app_set::AppSet;
 
@@ -491,5 +542,72 @@ mod tests {
             }
         };
         future::join(fut, stream_fut).await;
+    }
+
+    #[test]
+    fn test_add_eager_packages() {
+        let system_app = App::builder("system_app_id", [1]).build();
+        let mut app_set = FuchsiaAppSet::new(system_app.clone());
+        let config = EagerPackageConfigs {
+            packages: vec![
+                EagerPackageConfig {
+                    url: PkgUrl::parse("fuchsia-pkg://example.com/package").unwrap(),
+                    flavor: Some("debug".into()),
+                    channel_config: ChannelConfigs {
+                        default_channel: Some("stable".into()),
+                        known_channels: vec![
+                            ChannelConfig {
+                                name: "stable".into(),
+                                repo: "stable".into(),
+                                appid: Some("1a2b3c4d".into()),
+                                check_interval_secs: None,
+                            },
+                            ChannelConfig {
+                                name: "beta".into(),
+                                repo: "beta".into(),
+                                appid: Some("1a2b3c4d".into()),
+                                check_interval_secs: None,
+                            },
+                            ChannelConfig {
+                                name: "alpha".into(),
+                                repo: "alpha".into(),
+                                appid: Some("1a2b3c4d".into()),
+                                check_interval_secs: None,
+                            },
+                            ChannelConfig {
+                                name: "test".into(),
+                                repo: "test".into(),
+                                appid: Some("2b3c4d5e".into()),
+                                check_interval_secs: None,
+                            },
+                        ],
+                    },
+                },
+                EagerPackageConfig {
+                    url: PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap(),
+                    flavor: None,
+                    channel_config: ChannelConfigs {
+                        default_channel: None,
+                        known_channels: vec![ChannelConfig {
+                            name: "stable".into(),
+                            repo: "stable".into(),
+                            appid: Some("3c4d5e6f".into()),
+                            check_interval_secs: None,
+                        }],
+                    },
+                },
+            ],
+        };
+        ClientConfiguration::add_eager_packages(&mut app_set, config);
+        let package_app = App::builder("1a2b3c4d", [0])
+            .with_cohort(Cohort {
+                hint: Some("stable".into()),
+                name: Some("stable".into()),
+                ..Cohort::default()
+            })
+            .with_extra("channel", "stable")
+            .build();
+        let package2_app = App::builder("", [0]).build();
+        assert_eq!(app_set.get_apps(), vec![system_app, package_app, package2_app]);
     }
 }
