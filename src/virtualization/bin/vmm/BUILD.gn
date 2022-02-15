@@ -5,6 +5,13 @@
 import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
 
+group("vmm") {
+  deps = [
+    ":vmm_package",
+    "//src/virtualization/bin/vmm/device:packages",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
@@ -129,7 +136,7 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
-    "//src/virtualization/bin/vmm/device",
+    "//src/virtualization/bin/vmm/device:lib",
     "//third_party/acpica:headers",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/trace",
@@ -167,7 +174,8 @@ resource("vmm-resources") {
   outputs = [ "data/{{source_file_part}}" ]
 }
 
-fuchsia_package_with_single_component("vmm") {
+fuchsia_package_with_single_component("vmm_package") {
+  package_name = "vmm"
   manifest = "meta/vmm.cmx"
   deps = [
     ":bin",

@@ -35,7 +35,7 @@ group("packages") {
   ]
 }
 
-source_set("device") {
+source_set("lib") {
   sources = [
     "block.h",
     "config.h",
@@ -65,7 +65,7 @@ source_set("virtio") {
     "stream_base.h",
   ]
   public_deps = [
-    ":device",
+    ":lib",
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
@@ -151,7 +151,7 @@ source_set("block") {
     "request_queue.h",
   ]
   public_deps = [
-    ":device",
+    ":lib",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/block_client/cpp",
@@ -473,7 +473,7 @@ executable("device_tests") {
   ]
 
   deps = [
-    ":device",
+    ":lib",
     ":magma_image",
     "//sdk/fidl/fuchsia.hardware.network",
     "//sdk/fidl/fuchsia.logger",
