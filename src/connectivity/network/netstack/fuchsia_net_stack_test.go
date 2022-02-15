@@ -305,7 +305,7 @@ func TestFuchsiaNetStack(t *testing.T) {
 	})
 
 	t.Run("Remove loopback interface", func(t *testing.T) {
-		ns, _ := newNetstack(t)
+		ns, _ := newNetstack(t, netstackTestOptions{})
 		if err := ns.addLoopback(); err != nil {
 			t.Fatalf("ns.addLoopback() = %s", err)
 		}
