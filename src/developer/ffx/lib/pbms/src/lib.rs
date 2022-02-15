@@ -28,7 +28,10 @@ use {
     anyhow::{bail, Context, Result},
     ffx_config::sdk::SdkVersion,
     fms::{find_product_bundle, Entries},
-    std::{io::Write, path::Path},
+    std::{
+        io::Write,
+        path::{Path, PathBuf},
+    },
 };
 
 mod in_tree;
@@ -74,10 +77,37 @@ where
             .await
             .context("read pbms entries")?),
         SdkVersion::InTree => {
-            unimplemented!();
+            write!(
+                writer,
+                "\
+                There's no data download necessary for in-tree products.\
+                \nSimply build the desired product (e.g. using `fx set ...` and `fx build`)."
+            )?;
+            Ok(())
         }
         SdkVersion::Unknown => bail!("Unable to determine SDK version vs. in-tree"),
     }
+}
+
+/// Determine the path to the product data.
+pub async fn get_data_dir(product_name: &str) -> Result<PathBuf> {
+    let sdk = ffx_config::get_sdk().await?;
+    match sdk.get_version() {
+        SdkVersion::Version(version) => local_images_dir(version, product_name).await,
+        SdkVersion::InTree => Ok(sdk.get_path_prefix().to_path_buf()),
+        SdkVersion::Unknown => bail!("Unable to determine SDK version vs. in-tree"),
+    }
+}
+
+/// Determine the path to the local product metadata.
+pub async fn get_metadata_dir(product_name: &str) -> Result<PathBuf> {
+    let sdk = ffx_config::get_sdk().await.context("PBMS ffx config get sdk")?;
+    let root = match sdk.get_version() {
+        SdkVersion::Version(version) => local_images_dir(version, product_name).await?,
+        SdkVersion::InTree => sdk.get_path_prefix().to_path_buf(),
+        SdkVersion::Unknown => bail!("Unable to determine SDK version vs. in-tree"),
+    };
+    Ok(root.join("gen/build/images"))
 }
 
 /// Helper for `get_product_data()`, see docs there.
@@ -143,13 +173,24 @@ async fn fetch_bundle_uri(uri: &str, local_dir: &Path) -> Result<()> {
     if uri.starts_with("gs://") {
         fetch_from_gcs(uri, local_dir).await.context("Download from GCS.")?;
     } else if uri.starts_with("http://") || uri.starts_with("https://") {
-        unimplemented!();
+        fetch_from_web(uri, local_dir).await?;
     } else if uri.starts_with("file://") {
-        unimplemented!();
+        fetch_from_path(Path::new(uri.trim_start_matches("file://")), local_dir).await?;
+    } else if !uri.contains(":") {
+        // If there is no ":" in the string, assume it's a local file path.
+        fetch_from_path(Path::new(uri), local_dir).await?;
     } else {
         bail!("Unexpected URI scheme in ({:?})", uri);
     }
     Ok(())
+}
+
+async fn fetch_from_web(_uri: &str, _local_dir: &Path) -> Result<()> {
+    unimplemented!();
+}
+
+async fn fetch_from_path(_path: &Path, _local_dir: &Path) -> Result<()> {
+    unimplemented!();
 }
 
 #[cfg(test)]

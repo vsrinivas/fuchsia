@@ -11,11 +11,15 @@ use anyhow::{anyhow, Result};
 use sdk_metadata::{ProductBundleV1, VirtualDeviceV1};
 use std::path::PathBuf;
 
+/// - `data_root` is a path to a directory. When working in-tree it's the path
+///   to build output dir; when using the SDK it's the path to the downloaded
+///   images directory.
+/// - `metadata_root` is a path to a directory.
 pub fn convert_bundle_to_configs(
     product_bundle: &ProductBundleV1,
     virtual_device: &VirtualDeviceV1,
-    sdk_root: &PathBuf,
-    fms_path: &PathBuf,
+    data_root: &PathBuf,
+    metadata_root: &PathBuf,
 ) -> Result<EmulatorConfiguration> {
     let mut emulator_configuration: EmulatorConfiguration = EmulatorConfiguration::default();
 
@@ -34,7 +38,7 @@ pub fn convert_bundle_to_configs(
     };
 
     if let Some(template) = &virtual_device.start_up_args_template {
-        emulator_configuration.runtime.template = fms_path.join(&template);
+        emulator_configuration.runtime.template = metadata_root.join(&template);
     }
 
     if let Some(ports) = &virtual_device.ports {
@@ -50,9 +54,9 @@ pub fn convert_bundle_to_configs(
         if let Some(emu) = &manifests.emu {
             emulator_configuration.guest = GuestConfig {
                 // TODO(fxbug.dev/88908): Eventually we'll need to support multiple disk_images.
-                fvm_image: Some(sdk_root.join(&emu.disk_images[0])),
-                kernel_image: sdk_root.join(&emu.kernel),
-                zbi_image: sdk_root.join(&emu.initial_ramdisk),
+                fvm_image: Some(data_root.join(&emu.disk_images[0])),
+                kernel_image: data_root.join(&emu.kernel),
+                zbi_image: data_root.join(&emu.initial_ramdisk),
             };
         } else {
             return Err(anyhow!(

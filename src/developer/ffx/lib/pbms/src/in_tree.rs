@@ -10,7 +10,11 @@ use {
     errors::{ffx_bail, ffx_error},
     fms::Entries,
     serde::Deserialize,
-    std::{fs::File, io::BufReader, path::Path},
+    std::{
+        fs::File,
+        io::BufReader,
+        path::{Path, PathBuf},
+    },
 };
 
 /// Outer type in a "images.json" file.
@@ -29,6 +33,10 @@ struct Image {
 ///
 /// Tip: `let build_path = sdk.get_path_prefix();`.
 pub(crate) async fn pbms_from_tree(build_path: &Path) -> Result<Entries> {
+    if let Ok(entries) = from_config().await {
+        return Ok(entries);
+    }
+
     // The product_bundle.json path will be a relative path under `build_path`.
     // The "images.json" file provides an index of named items to paths. Open
     // "images.json" and search for the path of the "product_bundle" entry.
@@ -57,6 +65,28 @@ pub(crate) async fn pbms_from_tree(build_path: &Path) -> Result<Entries> {
     let file = File::open(&product_bundle_path).context("open product bundle")?;
     entries.add_json(&mut BufReader::new(file)).context("add metadata")?;
     Ok(entries)
+}
+
+/// Initialize the FMS database from paths in config.
+///
+/// Look for appropriate .json files in the "pbms.in-tree.files" config entry
+/// and import metadata from them.
+pub async fn from_config() -> Result<Entries> {
+    let files: Vec<PathBuf> =
+        ffx_config::get("pbms.in-tree.files").await.context("ffx_config::get fms data")?;
+    const SDK_ROOT: &str = "{sdk.root}/";
+    let sdk_root = ffx_config::get_sdk().await.context("get sdk")?.get_path_prefix().to_path_buf();
+    let files = files
+        .iter()
+        .map(|path| {
+            // If the path starts with SDK_ROOT, replace it with sdk_root.
+            match path.strip_prefix(SDK_ROOT) {
+                Ok(s) => sdk_root.join(&s),
+                Err(_) => path.to_path_buf(),
+            }
+        })
+        .collect::<Vec<_>>();
+    Ok(Entries::from_path_list(&files).await.context("Loading config pbms.in-tree.files")?)
 }
 
 #[cfg(test)]

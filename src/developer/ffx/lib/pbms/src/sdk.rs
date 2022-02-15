@@ -121,6 +121,25 @@ pub(crate) async fn local_entries(version: &str) -> Result<Entries> {
             .with_context(|| format!("Open file \"{}\".", path.display()))?;
         entries.add_json(&mut container)?;
     }
+    // TODO(fxbug.dev/93799): Remove this while loop. This is a workaround for
+    // missing data in the virtual device specification in the pb container.
+    // FYI: the while dir read is repeated so that these entries take precedence
+    //      over entries in pb container files.
+    let mut dir = async_fs::read_dir(&pb_path).await?;
+    while let Some(entry) = dir.try_next().await? {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let path = path.join("images/gen/build/images/virtual_device.json");
+        if !path.is_file() {
+            continue;
+        }
+        let mut container = File::open(&path)
+            .map(BufReader::new)
+            .with_context(|| format!("Open file \"{}\".", path.display()))?;
+        entries.add_json(&mut container)?;
+    }
     Ok(entries)
 }
 
@@ -149,9 +168,9 @@ async fn local_metadata_dir(version: &str) -> Result<PathBuf> {
     Ok(metadata_dir)
 }
 
-/// Determine the path to the local packages data.
+/// Determine the path to the local images data.
 ///
-/// The name "packages" can be misleading, this also includes product related
+/// The name "images" can be misleading, this also includes product related
 /// data, such as .zbi files and so on.
 pub(crate) async fn local_images_dir(version: &str, product_bundle_name: &str) -> Result<PathBuf> {
     let mut path = local_product_dir(version, product_bundle_name).await?;

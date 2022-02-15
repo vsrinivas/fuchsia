@@ -25,7 +25,8 @@ pub(crate) async fn make_configs(
     cmd: &StartCommand,
     ffx_config: &FfxConfigWrapper,
 ) -> Result<EmulatorConfiguration> {
-    let fms_entries = fms::Entries::from_config().await.context("problem with fms_entries")?;
+    let fms_entries =
+        pbms::get_pbms(/*update_metadata=*/ false).await.context("problem with fms_entries")?;
     let product_bundle = fms::find_product_bundle(&fms_entries, &cmd.product_bundle)
         .context("problem with product_bundle")?;
     let virtual_device = fms::find_virtual_device(&fms_entries, &product_bundle.device_refs)
@@ -37,15 +38,12 @@ pub(crate) async fn make_configs(
         );
     }
 
-    // TODO(fxbug.dev/90948): Don't hard-code the image directory path, once it's in the SDK.
-    let sdk = ffx_config::get_sdk().await?;
-
-    let sdk_root = sdk.get_path_prefix();
-    let fms_path = sdk_root.join("gen/build/images");
+    let data_root = pbms::get_data_dir(&product_bundle.name).await?;
+    let metadata_root = pbms::get_metadata_dir(&product_bundle.name).await?;
 
     // Apply the values from the manifest to an emulation configuration.
     let mut emu_config =
-        convert_bundle_to_configs(product_bundle, virtual_device, &sdk_root, &fms_path)
+        convert_bundle_to_configs(product_bundle, virtual_device, &data_root, &metadata_root)
             .context("problem with convert_bundle_to_configs")?;
 
     // Integrate the values from command line flags into the emulation configuration, and

@@ -7,6 +7,12 @@
         },
         "repos": [
             "gs://fuchsia/development/{version}/sdk/product_bundles.json"
-        ]
+        ],
+        "in-tree": {
+            "files": [
+                "{sdk.root}/gen/build/images/*_device.json",
+                "{sdk.root}/gen/build/images/product_bundle.json"
+            ]
+        }
     }
 }

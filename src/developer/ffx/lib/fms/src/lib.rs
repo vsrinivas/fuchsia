@@ -31,29 +31,6 @@ impl Entries {
         Self { data: HashMap::<_, _>::new() }
     }
 
-    /// Initialize the FMS database.
-    ///
-    /// Look for appropriate .json files in the "fms.data.files" config entry
-    /// and import metadata from them.
-    pub async fn from_config() -> Result<Self> {
-        let files: Vec<PathBuf> =
-            ffx_config::get("fms.data.files").await.context("ffx_config::get fms data")?;
-        const SDK_ROOT: &str = "{sdk.root}/";
-        let sdk_root =
-            ffx_config::get_sdk().await.context("get sdk")?.get_path_prefix().to_path_buf();
-        let files = files
-            .iter()
-            .map(|path| {
-                // If the path starts with SDK_ROOT, replace it with sdk_root.
-                match path.strip_prefix(SDK_ROOT) {
-                    Ok(s) => sdk_root.join(&s),
-                    Err(_) => path.to_path_buf(),
-                }
-            })
-            .collect::<Vec<_>>();
-        Ok(Entries::from_path_list(&files).await.context("Loading config fms.data.files")?)
-    }
-
     /// Initialize the FMS database from a list of file paths.
     pub async fn from_path_list(paths: &[PathBuf]) -> Result<Self> {
         let mut entries = Self::new();
