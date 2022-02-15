@@ -91,6 +91,7 @@
                 "fuchsia.settings.Keyboard",
                 "fuchsia.settings.Privacy",
                 "fuchsia.ssh.AuthorizedKeys",
+                "fuchsia.sys.Launcher",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.activity.Provider",
@@ -143,12 +144,13 @@
         {
             protocol: [ "fuchsia.ui.app.ViewProvider" ],
             from: "self",
-            to: "parent",
         },
         {
-            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.element.Manager",
+            ],
             from: "#ermine_shell",
-            to: "parent",
         },
     ],
 }

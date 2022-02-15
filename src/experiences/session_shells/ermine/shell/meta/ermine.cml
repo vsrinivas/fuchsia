@@ -10,6 +10,10 @@
     },
     children: [
         {
+            name: "element_manager",
+            url: "fuchsia-pkg://fuchsia.com/element_manager#meta/element_manager.cm",
+        },
+        {
             name: "chrome",
             url: "fuchsia-pkg://fuchsia.com/chrome#meta/chrome.cm",
         },
@@ -28,7 +32,6 @@
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.element.Manager",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.fonts.Provider",
                 "fuchsia.hardware.power.statecontrol.Admin",
@@ -73,11 +76,38 @@
         },
         {
             protocol: "fuchsia.element.Manager",
+            from: "#element_manager",
+            path: "/svc/fuchsia.element.Manager",
+        },
+        {
+            protocol: "fuchsia.element.Manager",
             from: "#chrome",
             path: "/svc/fuchsia.element.Manager-chrome",
         },
     ],
     offer: [
+        {
+            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            from: "self",
+            to: "#element_manager",
+            dependency: "weak",
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.Audio",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "parent",
+            to: "#element_manager",
+        },
+
         // Support Chrome as a static component.
         {
             protocol: [
@@ -136,7 +166,10 @@
                 "fuchsia.ui.app.ViewProvider",
             ],
             from: "self",
-            to: "parent",
+        },
+        {
+            protocol: "fuchsia.element.Manager",
+            from: "#element_manager",
         },
     ],
 }

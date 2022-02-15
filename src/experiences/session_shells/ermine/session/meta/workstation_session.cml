@@ -114,7 +114,10 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.element.Manager",
+            ],
             from: "#login_shell",
         },
     ],

@@ -56,7 +56,7 @@
     ],
     environments: [
         {
-            name: "elements_env",
+            name: "workstation_session_env",
             extends: "realm",
             runners: [
                 {
