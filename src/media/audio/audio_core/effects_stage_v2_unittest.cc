@@ -1399,7 +1399,7 @@ TEST_P(EffectsStageV2RingOutTest, RingoutFrames) {
   // Add another data packet to verify we correctly reset the ringout when the source goes silent
   // again.
   start_frame += 480;
-  packet_factory->SeekToFrame(start_frame);
+  packet_factory->SeekToFrame(Fixed(start_frame));
   stream->PushPacket(packet_factory->CreatePacket(1.0, zx::msec(1)));
 
   // Read the next packet.

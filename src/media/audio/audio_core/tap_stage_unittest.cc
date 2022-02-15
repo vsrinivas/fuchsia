@@ -130,6 +130,49 @@ TEST_F(TapStageTest, CopySinglePacket) {
   CheckStream<frame_count>(&ring_buffer(), 0, 1.0, true);
 }
 
+TEST_F(TapStageTest, CopySinglePacketWithFractionalDestPosition) {
+  packet_queue().PushPacket(packet_factory().CreatePacket(1.0, kPacketDuration));
+
+  // Like CopySinglePacket, but use dest_frame = 0.5.
+  constexpr int64_t frame_count = kPacketFrames;
+  {
+    auto buffer = tap().ReadLock(rlctx, Fixed(0) + ffl::FromRatio(1, 2), frame_count);
+    ASSERT_TRUE(buffer);
+    CheckBuffer<frame_count>(*buffer, 0, 1.0);
+  }
+  AdvanceTo(kPacketDuration);
+  {
+    auto buffer = ring_buffer().ReadLock(rlctx, Fixed(0) + ffl::FromRatio(1, 2), frame_count);
+    ASSERT_TRUE(buffer);
+    CheckBuffer<frame_count>(*buffer, 0, 1.0);
+  }
+}
+
+// TODO(fxbug.dev/50669): Currently this test doesn't pass because the source is allowed
+// to return the packet at the first ReadLock even though that intersection between
+// that packet and the first ReadLock is less than one frame. After the new ReadLock semantics
+// are implemented, this test should pass.
+TEST_F(TapStageTest, DISABLED_CopySinglePacketWithFractionalSourcePosition) {
+  // Seek to one packet - 0.5 frames.
+  packet_factory().SeekToFrame(Fixed(kPacketFrames) - ffl::FromRatio(1, 2));
+  packet_queue().PushPacket(packet_factory().CreatePacket(1.0, kPacketDuration));
+
+  // The tap and ring should have one packet of silence followed by one packet of data.
+  {
+    auto buffer = tap().ReadLock(rlctx, Fixed(0), kPacketFrames);
+    ASSERT_FALSE(buffer);
+  }
+  AdvanceTo(kPacketDuration);
+  {
+    auto buffer = tap().ReadLock(rlctx, Fixed(kPacketFrames), kPacketFrames);
+    ASSERT_TRUE(buffer);
+    CheckBuffer<kPacketFrames>(*buffer, kPacketFrames, 1.0);
+  }
+  AdvanceTo(kPacketDuration * 2);
+  CheckStream<kPacketFrames>(&ring_buffer(), 0, 0.0, true);
+  CheckStream<kPacketFrames>(&ring_buffer(), kPacketFrames, 1.0, true);
+}
+
 // Test that ReadLock returns a buffer correctly sized for whatever buffer was returned by
 // the source streams |ReadLock|.
 TEST_F(TapStageTest, TruncateToInputBuffer) {
@@ -293,7 +336,7 @@ TEST_F(TapStageTest, ShortSourceBuffer) {
 
   // Create region '2' in the source stream by seeking past these frames. The next 'CreatePacket'
   // will occur after this.
-  packet_factory().SeekToFrame(kPacketFrames / 4);
+  packet_factory().SeekToFrame(Fixed(kPacketFrames / 4));
   // Create region '3' in the source stream.
   packet_queue().PushPacket(packet_factory().CreatePacket(kSourceBufferColor, kPacketDuration / 2));
 
@@ -344,7 +387,7 @@ TEST_F(TapStageTest, ShortTapBuffer) {
 
   // Create region '2' in the source stream by seeking past these frames. The next 'CreatePacket'
   // will occur after this.
-  packet_factory().SeekToFrame(kPacketFrames / 4);
+  packet_factory().SeekToFrame(Fixed(kPacketFrames / 4));
   // Create region '3' in the source stream.
   packet_queue().PushPacket(packet_factory().CreatePacket(kSourceBufferColor, kPacketDuration / 2));
 

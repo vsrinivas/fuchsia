@@ -209,7 +209,7 @@ std::unique_ptr<AudioClock> MixStageTest::SetPacketFactoryWithOffsetAudioClock(
 
   int64_t seek_frame = round(
       static_cast<double>(kDefaultFormat.frames_per_second() * actual_offset.get()) / ZX_SEC(1));
-  factory.SeekToFrame(seek_frame);
+  factory.SeekToFrame(Fixed(seek_frame));
 
   return context().clock_factory()->CreateClientFixed(std::move(custom_clock));
 }

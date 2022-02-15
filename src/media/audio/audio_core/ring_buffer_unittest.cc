@@ -179,8 +179,8 @@ TEST_F(OutputRingBufferTest, WriteEmptyRing) {
   Advance(zx::time(0));
   auto buffer = ring_buffer()->WriteLock(0, 1);
   ASSERT_TRUE(buffer);
-  ASSERT_EQ(0u, buffer->start().Floor());
-  ASSERT_EQ(1u, buffer->length());
+  ASSERT_EQ(buffer->start(), 0);
+  ASSERT_EQ(buffer->length(), 1);
 }
 
 TEST_F(OutputRingBufferTest, WriteFullyExpiredBuffer) {
@@ -204,7 +204,7 @@ TEST_F(OutputRingBufferTest, WriteFullyAvailableRegion) {
   Advance(zx::time(0));
   auto buffer = ring_buffer()->WriteLock(0, kRingBufferFrameCount);
   ASSERT_TRUE(buffer);
-  EXPECT_EQ(buffer->start().Floor(), 0u);
+  EXPECT_EQ(buffer->start(), 0);
   EXPECT_EQ(buffer->length(), kRingBufferFrameCount);
 }
 
@@ -214,8 +214,8 @@ TEST_F(OutputRingBufferTest, WritePartialRegion) {
   Advance(zx::time(0) + zx::msec(1));
   auto buffer = ring_buffer()->WriteLock(0, 96);
   ASSERT_TRUE(buffer);
-  EXPECT_EQ(buffer->start().Floor(), 48u);
-  EXPECT_EQ(buffer->length(), 48u);
+  EXPECT_EQ(buffer->start(), 48);
+  EXPECT_EQ(buffer->length(), 48);
 }
 
 TEST_F(OutputRingBufferTest, WriteAfterTruncateBufferAtEndOfTheRing) {
@@ -224,14 +224,14 @@ TEST_F(OutputRingBufferTest, WriteAfterTruncateBufferAtEndOfTheRing) {
   Advance(zx::time(0) + zx::msec(9));
   auto buffer = ring_buffer()->WriteLock(432, 96);
   ASSERT_TRUE(buffer);
-  EXPECT_EQ(buffer->start().Floor(), 432u);
-  EXPECT_EQ(buffer->length(), 48u);
+  EXPECT_EQ(buffer->start(), 432);
+  EXPECT_EQ(buffer->length(), 48);
 
   // Now read that last 48 frames at the start of the ring again.
   buffer = ring_buffer()->WriteLock(kRingBufferFrameCount, 48);
   ASSERT_TRUE(buffer);
-  EXPECT_EQ(buffer->start().Floor(), kRingBufferFrameCount);
-  EXPECT_EQ(buffer->length(), 48u);
+  EXPECT_EQ(buffer->start(), kRingBufferFrameCount);
+  EXPECT_EQ(buffer->length(), 48);
 }
 
 }  // namespace

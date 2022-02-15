@@ -233,10 +233,11 @@ class WritableStream : public BaseStream {
    public:
     using DestructorT = fit::callback<void()>;
 
-    Buffer(Fixed start_frame, int64_t length_in_frames, void* payload, DestructorT dtor = nullptr)
+    Buffer(int64_t start_frame, int64_t length_in_frames, void* payload, DestructorT dtor = nullptr)
         : dtor_(std::move(dtor)),
           payload_(payload),
           start_(start_frame),
+          end_(start_frame + length_in_frames),
           length_(length_in_frames) {}
 
     ~Buffer() {
@@ -251,15 +252,16 @@ class WritableStream : public BaseStream {
     Buffer(const Buffer& rhs) = delete;
     Buffer& operator=(const Buffer& rhs) = delete;
 
-    Fixed start() const { return start_; }
-    Fixed end() const { return start_ + Fixed(length_); }
+    int64_t start() const { return start_; }
+    int64_t end() const { return end_; }
     int64_t length() const { return length_; }
     void* payload() const { return payload_; }
 
    private:
     DestructorT dtor_;
     void* payload_;
-    Fixed start_;
+    int64_t start_;
+    int64_t end_;
     int64_t length_;
   };
 

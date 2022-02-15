@@ -20,105 +20,106 @@ TapStage::TapStage(std::shared_ptr<ReadableStream> source, std::shared_ptr<Writa
 
 std::optional<ReadableStream::Buffer> TapStage::ReadLock(ReadLockContext& ctx, Fixed dest_frame,
                                                          int64_t frame_count) {
-  TRACE_DURATION("audio", "TapStage::ReadLock", "frame", dest_frame.Floor(), "length", frame_count);
+  // TapStage always produces data on integrally-aligned frames.
+  dest_frame = Fixed(dest_frame.Floor());
 
   // The source and tap may have different frame timelines.
   auto source_frac_frame_to_tap_frac_frame = SourceFracFrameToTapFracFrame();
 
-  // The source and destinations, however, share the same frame timelines, therefore we have no need
-  // to translate these parameters.
+  // First frame to populate in the tap stream.
+  //
+  // If the tap and dest streams are not integrally aligned, then the tap stream samples
+  // from the dest stream using SampleAndHold: if dest frame 99.0 translates to tap frame
+  // 1.X, then dest frame 99.0 is sampled by tap frame 2.0. Hence we round up.
+  int64_t next_tap_frame =
+      Fixed::FromRaw(source_frac_frame_to_tap_frac_frame.Apply(dest_frame.raw_value())).Ceiling();
+
+  // Source and dest share the same frame timelines.
   auto source_buffer = source_->ReadLock(ctx, dest_frame, frame_count);
-
-  // We need to write some silence to the tap if some part of the frame range is not available in
-  // the source stream. If a single write buffer extends beyond the end of the silent region it
-  // is returned so that we can copy some frames into the remaining portion of the buffer.
-  std::optional<WritableStream::Buffer> write_buffer;
-  const int64_t silent_frames =
-      source_buffer ? (source_buffer->start().Floor() - dest_frame.Floor()) : frame_count;
-  if (silent_frames > 0) {
-    const int64_t first_tap_frame =
-        Fixed::FromRaw(source_frac_frame_to_tap_frac_frame.Apply(dest_frame.raw_value())).Floor();
-    write_buffer = WriteSilenceToTap(first_tap_frame, silent_frames);
+  if (!source_buffer) {
+    WriteSilenceToTap(next_tap_frame, frame_count);
+    return std::nullopt;
   }
 
-  // If we have a source buffer, we need to copy frames into the tap.
-  if (source_buffer) {
-    // This is the first frame we need to populate in the tap stream.
-    const Fixed first_tap_frame = Fixed::FromRaw(
-        source_frac_frame_to_tap_frac_frame.Apply(source_buffer->start().raw_value()));
+  // Dest position is always integral. If source position is fractional, the dest stream
+  // samples from the source stream using SampleAndHold: source frame 1.X is sampled at
+  // dest frame 2.0, so round up.
+  const Fixed first_source_frame = Fixed(source_buffer->start().Ceiling());
 
-    // If we don't have a write buffer left over from writing silence, acquire one now. If we can't
-    // get a write buffer then we have nothing to do.
-    if (!write_buffer) {
-      write_buffer = tap_->WriteLock(first_tap_frame.Floor(), source_buffer->length());
-    }
-    if (write_buffer) {
-      CopyFrames(std::move(write_buffer), *source_buffer, source_frac_frame_to_tap_frac_frame);
-    }
+  // If there is a gap between dest_frame and the first source frame, write silence to fill the gap.
+  if (first_source_frame > dest_frame) {
+    const int64_t silent_frames = Fixed(first_source_frame - dest_frame).Floor();
+    WriteSilenceToTap(next_tap_frame, silent_frames);
+    next_tap_frame += silent_frames;
+    frame_count -= silent_frames;
   }
 
-  return source_buffer;
+  CopySourceToTap(*source_buffer, next_tap_frame, frame_count);
+
+  // Forward the source buffer using the integral start position.
+  return ReadableStream::Buffer(
+      first_source_frame, source_buffer->length(), source_buffer->payload(),
+      source_buffer->is_continuous(), source_buffer->usage_mask(),
+      source_buffer->total_applied_gain_db(),
+      [source_buffer = std::move(source_buffer)](bool fully_consumed) mutable {
+        source_buffer->set_is_fully_consumed(fully_consumed);
+      });
 }
 
-std::optional<WritableStream::Buffer> TapStage::WriteSilenceToTap(int64_t frame,
-                                                                  int64_t frame_count) {
-  int64_t last_frame_exclusive = frame + frame_count;
+void TapStage::WriteSilenceToTap(int64_t next_tap_frame, int64_t frame_count) {
   while (frame_count > 0) {
-    auto tap_buffer = tap_->WriteLock(frame, frame_count);
+    auto tap_buffer = tap_->WriteLock(next_tap_frame, frame_count);
     if (!tap_buffer) {
       break;
     }
 
-    size_t silent_frames =
-        std::min(tap_buffer->end().Floor(), last_frame_exclusive) - tap_buffer->start().Floor();
-    output_producer_->FillWithSilence(tap_buffer->payload(), silent_frames);
-    if (tap_buffer->end() > last_frame_exclusive) {
-      return tap_buffer;
-    }
+    // Required by WriteLock API.
+    FX_CHECK(tap_buffer->start() >= next_tap_frame &&
+             tap_buffer->end() <= next_tap_frame + frame_count)
+        << "WriteLock(" << next_tap_frame << ", " << frame_count << ") "
+        << "returned out-of-range buffer: [" << tap_buffer->start() << ", " << tap_buffer->end()
+        << ")";
 
-    frame = tap_buffer->end().Floor();
-    frame_count = last_frame_exclusive - frame;
+    // Fill the entire tap buffer.
+    output_producer_->FillWithSilence(tap_buffer->payload(), tap_buffer->length());
+
+    const int64_t frames_to_advance = tap_buffer->end() - next_tap_frame;
+    next_tap_frame += frames_to_advance;
+    frame_count -= frames_to_advance;
   }
-  return std::nullopt;
 }
 
-void TapStage::CopyFrames(std::optional<WritableStream::Buffer> tap_buffer,
-                          const ReadableStream::Buffer& source,
-                          const TimelineFunction& source_frac_frame_to_tap_frac_frame) {
-  Fixed first_available_frame =
-      Fixed::FromRaw(source_frac_frame_to_tap_frac_frame.Apply(source.start().raw_value()));
-  Fixed last_available_frame =
-      Fixed::FromRaw(source_frac_frame_to_tap_frac_frame.Apply(source.end().raw_value()));
+void TapStage::CopySourceToTap(const ReadableStream::Buffer& source_buffer, int64_t next_tap_frame,
+                               int64_t frame_count) {
+  auto source_payload = reinterpret_cast<uintptr_t>(source_buffer.payload());
+  frame_count = std::min(frame_count, source_buffer.length());
 
-  while (tap_buffer) {
-    // Compute the overlap between the read/write buffers.
-    Fixed first_tap_frame_to_copy = std::max(tap_buffer->start(), first_available_frame);
-    Fixed last_tap_frame_to_copy = tap_buffer->end();
-    FX_CHECK(last_tap_frame_to_copy > first_tap_frame_to_copy);
-    Fixed frames_to_copy = last_tap_frame_to_copy - first_tap_frame_to_copy;
-    size_t bytes_to_copy = frames_to_copy.Floor() * format().bytes_per_frame();
-
-    // We might have an offset into the source buffer.
-    ssize_t source_buffer_offset =
-        Fixed(first_tap_frame_to_copy - first_available_frame).Floor() * format().bytes_per_frame();
-    void* source_ptr = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(source.payload()) +
-                                               source_buffer_offset);
-
-    // We may also have an offset into the tap buffer if some part of this buffer was populated
-    // with silence above.
-    size_t tap_buffer_offset =
-        Fixed(first_tap_frame_to_copy - tap_buffer->start()).Floor() * format().bytes_per_frame();
-    void* tap_ptr = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(tap_buffer->payload()) +
-                                            tap_buffer_offset);
-
-    memmove(tap_ptr, source_ptr, bytes_to_copy);
-
-    // Get another buffer if needed.
-    int64_t frames_remaining = Fixed(last_available_frame - tap_buffer->end()).Floor();
-    if (frames_remaining <= 0) {
+  while (frame_count > 0) {
+    auto tap_buffer = tap_->WriteLock(next_tap_frame, frame_count);
+    if (!tap_buffer) {
       break;
     }
-    tap_buffer = tap_->WriteLock(tap_buffer->end().Floor(), frames_remaining);
+
+    // Required by WriteLock API.
+    FX_CHECK(tap_buffer->start() >= next_tap_frame &&
+             tap_buffer->end() <= next_tap_frame + frame_count)
+        << "WriteLock(" << next_tap_frame << ", " << frame_count << ") "
+        << "returned out-of-range buffer: [" << tap_buffer->start() << ", " << tap_buffer->end()
+        << ")";
+
+    // A gap is possible if there was an underflow.
+    const int64_t gap_frames = tap_buffer->start() - next_tap_frame;
+    source_payload += static_cast<uint64_t>(gap_frames) * format().bytes_per_frame();
+
+    // Copy enough frames to fill the entire tap buffer.
+    // Per the above FX_CHECK, this cannot overflow the source buffer.
+    uint64_t bytes_to_copy =
+        static_cast<uint64_t>(tap_buffer->length()) * format().bytes_per_frame();
+    memmove(tap_buffer->payload(), reinterpret_cast<const void*>(source_payload), bytes_to_copy);
+
+    source_payload += bytes_to_copy;
+    next_tap_frame += gap_frames + tap_buffer->length();
+    frame_count -= gap_frames + tap_buffer->length();
   }
 }
 

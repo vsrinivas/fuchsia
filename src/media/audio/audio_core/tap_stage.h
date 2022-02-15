@@ -32,10 +32,9 @@ class TapStage : public ReadableStream {
   void SetPresentationDelay(zx::duration external_delay) override;
 
  private:
-  std::optional<WritableStream::Buffer> WriteSilenceToTap(int64_t frame, int64_t frame_count);
-  void CopyFrames(std::optional<WritableStream::Buffer> write_buffer,
-                  const ReadableStream::Buffer& source,
-                  const TimelineFunction& source_frac_frame_to_tap_frac_frame);
+  void WriteSilenceToTap(int64_t frame, int64_t frame_count);
+  void CopySourceToTap(const ReadableStream::Buffer& source_buffer, int64_t next_tap_frame,
+                       int64_t frame_count);
 
   const TimelineFunction& SourceFracFrameToTapFracFrame();
 
