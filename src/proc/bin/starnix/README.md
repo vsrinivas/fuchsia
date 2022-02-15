@@ -44,6 +44,17 @@ fx log --tag starnix --hide_metadata --pretty
 
 ```
 
+Starnix produces a large amount of logs and this can overload archivist's ability to
+retain them, instead printing messages like:
+
+```
+[starnix] WARNING: Dropped logs count: 5165
+```
+If you see this, you can reduce or eliminate the dropped messages by increasing
+the value of `max_cached_original_bytes` the the JSON file
+`//src/diagnostics/archivist/configs/archivist_config.json' in your local checkout.
+Increasing by a facfor of 10 seems to work well.
+
 ### Run a Linux binary
 
 To run a Linux binary, ask starnix to start a component that wraps the binary:
