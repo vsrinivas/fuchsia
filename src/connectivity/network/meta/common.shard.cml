@@ -159,6 +159,10 @@
                 "fuchsia.net.stack.Stack",
                 "fuchsia.netstack.Netstack",
                 "fuchsia.posix.socket.Provider",
+
+                // TODO(https://fxbug.dev/93579): once product assembly supports product-specific
+                // components running in the network realm, remove this.
+                "fuchsia.posix.socket.raw.Provider",
             ],
             from: "#netstack",
         },
