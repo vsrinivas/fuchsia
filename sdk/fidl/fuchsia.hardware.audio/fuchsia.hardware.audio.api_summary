@@ -104,6 +104,42 @@ protocol fuchsia.hardware.audio/Device
 struct/member fuchsia.hardware.audio/EdgePair.processing_element_id_from uint64
 struct/member fuchsia.hardware.audio/EdgePair.processing_element_id_to uint64
 struct fuchsia.hardware.audio/EdgePair
+table/member fuchsia.hardware.audio/EqualizerBand.id uint64
+table fuchsia.hardware.audio/EqualizerBand
+table/member fuchsia.hardware.audio/EqualizerBandState.enabled bool
+table/member fuchsia.hardware.audio/EqualizerBandState.frequency uint32
+table/member fuchsia.hardware.audio/EqualizerBandState.gain_db float32
+table/member fuchsia.hardware.audio/EqualizerBandState.id uint64
+table/member fuchsia.hardware.audio/EqualizerBandState.q float32
+table/member fuchsia.hardware.audio/EqualizerBandState.type fuchsia.hardware.audio/EqualizerBandType
+table fuchsia.hardware.audio/EqualizerBandState
+enum/member fuchsia.hardware.audio/EqualizerBandType.HIGH_CUT 4
+enum/member fuchsia.hardware.audio/EqualizerBandType.HIGH_SHELF 6
+enum/member fuchsia.hardware.audio/EqualizerBandType.LOW_CUT 3
+enum/member fuchsia.hardware.audio/EqualizerBandType.LOW_SHELF 5
+enum/member fuchsia.hardware.audio/EqualizerBandType.NOTCH 2
+enum/member fuchsia.hardware.audio/EqualizerBandType.PEAK 1
+flexible enum fuchsia.hardware.audio/EqualizerBandType uint64
+table/member fuchsia.hardware.audio/EqualizerProcessingElementState.bands_state vector<fuchsia.hardware.audio/EqualizerBandState>:64
+table fuchsia.hardware.audio/EqualizerProcessingElementState
+bits/member fuchsia.hardware.audio/EqualizerSupportedControls.CAN_CONTROL_FREQUENCY 1
+bits/member fuchsia.hardware.audio/EqualizerSupportedControls.CAN_CONTROL_Q 2
+bits/member fuchsia.hardware.audio/EqualizerSupportedControls.SUPPORTS_TYPE_HIGH_CUT 32
+bits/member fuchsia.hardware.audio/EqualizerSupportedControls.SUPPORTS_TYPE_HIGH_SHELF 128
+bits/member fuchsia.hardware.audio/EqualizerSupportedControls.SUPPORTS_TYPE_LOW_CUT 16
+bits/member fuchsia.hardware.audio/EqualizerSupportedControls.SUPPORTS_TYPE_LOW_SHELF 64
+bits/member fuchsia.hardware.audio/EqualizerSupportedControls.SUPPORTS_TYPE_NOTCH 8
+bits/member fuchsia.hardware.audio/EqualizerSupportedControls.SUPPORTS_TYPE_PEAK 4
+flexible bits fuchsia.hardware.audio/EqualizerSupportedControls uint64
+table/member fuchsia.hardware.audio/EqualizerTypeSpecific.bands vector<fuchsia.hardware.audio/EqualizerBand>:64
+table/member fuchsia.hardware.audio/EqualizerTypeSpecific.can_disable_bands bool
+table/member fuchsia.hardware.audio/EqualizerTypeSpecific.max_frequency uint32
+table/member fuchsia.hardware.audio/EqualizerTypeSpecific.max_gain_db float32
+table/member fuchsia.hardware.audio/EqualizerTypeSpecific.max_q float32
+table/member fuchsia.hardware.audio/EqualizerTypeSpecific.min_frequency uint32
+table/member fuchsia.hardware.audio/EqualizerTypeSpecific.min_gain_db float32
+table/member fuchsia.hardware.audio/EqualizerTypeSpecific.supported_controls fuchsia.hardware.audio/EqualizerSupportedControls
+table fuchsia.hardware.audio/EqualizerTypeSpecific
 table/member fuchsia.hardware.audio/Format.pcm_format fuchsia.hardware.audio/PcmFormat
 table fuchsia.hardware.audio/Format
 enum/member fuchsia.hardware.audio/GainDomain.ANALOG 2
@@ -151,6 +187,7 @@ const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_FRAME_FORMATS uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_NUMBER_OF_CHANNELS uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_RATES uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_SAMPLE_FORMATS uint32 4
+const fuchsia.hardware.audio/MAX_COUNT_EQUALIZER_BANDS uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_FORMATS uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_PROCESSING_ELEMENTS uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_PROCESSING_ELEMENTS_EDGE_PAIRS uint32 64
@@ -203,9 +240,11 @@ enum/member fuchsia.hardware.audio/ProcessingElementType.MUTE 8
 enum/member fuchsia.hardware.audio/ProcessingElementType.SAMPLE_RATE_CONVERSION 11
 enum/member fuchsia.hardware.audio/ProcessingElementType.VENDOR_SPECIFIC 1
 flexible enum fuchsia.hardware.audio/ProcessingElementType uint32
+union/member fuchsia.hardware.audio/ProcessingElementTypeSpecific.equalizer fuchsia.hardware.audio/EqualizerTypeSpecific
 union/member fuchsia.hardware.audio/ProcessingElementTypeSpecific.gain fuchsia.hardware.audio/GainTypeSpecific
 union/member fuchsia.hardware.audio/ProcessingElementTypeSpecific.vendor_specific fuchsia.hardware.audio/VendorSpecificTypeSpecific
 flexible union fuchsia.hardware.audio/ProcessingElementTypeSpecific
+union/member fuchsia.hardware.audio/ProcessingElementTypeSpecificState.equalizer fuchsia.hardware.audio/EqualizerProcessingElementState
 union/member fuchsia.hardware.audio/ProcessingElementTypeSpecificState.gain fuchsia.hardware.audio/GainProcessingElementState
 union/member fuchsia.hardware.audio/ProcessingElementTypeSpecificState.vendor_specific fuchsia.hardware.audio/VendorSpecificState
 flexible union fuchsia.hardware.audio/ProcessingElementTypeSpecificState

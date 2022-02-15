@@ -50,7 +50,16 @@ application such as `audio_core`.
 
 The client is responsible for requesting and then configuring any signal processing capabilities.
 Once the server provides its PEs by replying to a client's `GetProcessingElements`, the client may
-dynamically control the PEs parameters as needed by calling `SetProcessingElementState`.
+issue `WatchProcessingElement` calls (see [hanging get pattern][hanging-get]) to retrieve
+PE state and `SetProcessingElementState` to dynamically control the PEs parameters as needed. For
+instance, to retrieve the `gain` of a PE of `type` `GAIN`, the client issues
+`WatchProcessingElement` calls, one to retrieve the initial state (the driver will reply to the
+first `WatchProcessingElement` sent by the client), and subsequent ones to get notified of updates
+to the `ProcessingElementState` that includes the `gain`. Similarly, to retrieve the state of a PE
+of `type` `EQUALIZER`, which is composed of multiple bands in its `bands_state`, a client would
+issue a `WatchProcessingElement` that would retrieve the initial state (the driver will reply to the
+first `WatchProcessingElement` sent by the client) including for instance `frequency` fields for
+each band.
 
 Also after the server provides its PEs by replying to a client's `GetProcessingElements`, the client
 may request available topologies with the `GetTopologies` method. If more than one topology is
@@ -106,6 +115,11 @@ if there is a single PE of type `AGL` in a `Codec` protocol with a `DaiFormat` `
 set to 2, then AGL (Automatic Gain Limiting) can be enabled or disabled for these 2 channels by a
 client calling `SetProcessingElementState` with `state` `enable` set to true or false (this assumes
 the AGL `ProcessingElement`s `can_disable` was set to true).
+
+If optional fields in the different PE types are not included, then the state of the processing
+element is not changed with respect to the particular field. For instance, if an
+`EqualizerBandState` in a `SetProcessingElement` does not include an optional `frequency` then the
+equalizer's band frequency state is not changed.
 
 ## Topologies {#topologies}
 
@@ -209,3 +223,5 @@ single pipeline in topology id 2 starts with PE id 2 and ends with PE id 6.
 <!-- Reference links -->
 
 [pipeline]: https://en.wikipedia.org/wiki/Pipeline_(computing)
+[hanging-get]: /docs/development/api/fidl.md#hanging-get
+

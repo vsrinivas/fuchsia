@@ -10,6 +10,7 @@ using zx;
 const MAX_COUNT_PROCESSING_ELEMENTS uint32 = 64;
 const MAX_COUNT_TOPOLOGIES uint32 = 64;
 const MAX_COUNT_PROCESSING_ELEMENTS_EDGE_PAIRS uint32 = 64;
+const MAX_COUNT_EQUALIZER_BANDS uint32 = 64;
 const MAX_STRING_SIZE uint32 = 256;
 
 type ProcessingElementType = flexible enum {
@@ -98,9 +99,112 @@ type GainTypeSpecific = table {
     5: min_gain_step float32;
 };
 
+/// Type of the equalizer band.
+type EqualizerBandType = flexible enum : uint64 {
+    /// Increase/decrease in `gain_db` in the vicinity of a `frequency` with an optional `q`.
+    PEAK = 1;
+
+    /// Narrow band rejection significantly attenuating a `frequency` with an optional `q`.
+    NOTCH = 2;
+
+    /// Decresase gain below a `frequency` with an optional `q`, a.k.a high pass.
+    LOW_CUT = 3;
+
+    /// Decresase gain above a `frequency` with an optional `q`, a.k.a low pass.
+    HIGH_CUT = 4;
+
+    /// Decresase gain below a `frequency` for a `gain_db` amount with a plateau effect.
+    LOW_SHELF = 5;
+
+    /// Decresase gain above a `frequency` for a `gain_db` amount with a plateau effect.
+    HIGH_SHELF = 6;
+};
+
+/// Parameters for an equalizer Band.
+type EqualizerBand = table {
+    /// Unique ID for this band, only required to be unique within the corresponding
+    /// `ProcessingElement`, and valid until the channel associated with the `SignalProcessing`
+    /// protocol is closed. Required.
+    1: id uint64;
+};
+
+/// Equalizer supported controls specified in `EqualizerTypeSpecific`.
+type EqualizerSupportedControls = flexible bits : uint64 {
+    /// If included, the `frequency` of the equalizer bands can be changed with
+    /// `SetProcessingElement`.
+    CAN_CONTROL_FREQUENCY = 0x1;
+
+    /// If included, the `q` of the equalizer bands can be changed with `SetProcessingElement`.
+    CAN_CONTROL_Q = 0x2;
+
+    /// If included, the `type` of the equalizer bands can be changed with `SetProcessingElement`
+    /// to `EqualizerBandType` `PEAK`.
+    SUPPORTS_TYPE_PEAK = 0x4;
+
+    /// If included, the `type` of the equalizer bands can be changed with `SetProcessingElement`
+    /// to `EqualizerBandType` `NOTCH`.
+    SUPPORTS_TYPE_NOTCH = 0x8;
+
+    /// If included, the `type` of the equalizer bands can be changed with `SetProcessingElement`
+    /// to `EqualizerBandType` `LOW_CUT`.
+    SUPPORTS_TYPE_LOW_CUT = 0x10;
+
+    /// If included, the `type` of the equalizer bands can be changed with `SetProcessingElement`
+    /// to `EqualizerBandType` `HIGH_CUT`.
+    SUPPORTS_TYPE_HIGH_CUT = 0x20;
+
+    /// If included, the `type` of the equalizer bands can be changed with `SetProcessingElement`
+    /// to `EqualizerBandType` `LOW_SHELF`.
+    SUPPORTS_TYPE_LOW_SHELF = 0x40;
+
+    /// If included, the `type` of the equalizer bands can be changed with `SetProcessingElement`
+    /// to `EqualizerBandType` `HIGH_SHELF`.
+    SUPPORTS_TYPE_HIGH_SHELF = 0x80;
+};
+
+/// Parameters for a `ProcessingElement` with `type` equal to `EQUALIZER`.
+type EqualizerTypeSpecific = table {
+    /// Equalizers in this protocol are built by a number of bands, each specifying a number of
+    /// parameters here and `EqualizerProcessingElementState` that can be changed with
+    /// `SetProcessingElement`.
+    /// The number of elements of the `bands` vector determines the number of bands
+    /// supported by this processing element.
+    1: bands vector<EqualizerBand>:MAX_COUNT_EQUALIZER_BANDS;
+
+    /// The controls supported by this equalizer.
+    2: supported_controls EqualizerSupportedControls;
+
+    /// If included and true, individual bands can be disabled via `ProcessingElementState`.
+    /// If not included or false, the bands are always enabled.
+    /// For a band to be functional its enclosing equalizer processing element has to be enabled.
+    3: can_disable_bands bool;
+
+    /// Minimum frequency for the bands in Hz. Required.
+    4: min_frequency uint32;
+
+    /// Maximum frequency for the bands in Hz. Required.
+    5: max_frequency uint32;
+
+    /// Maximum quality factor, usually denoted by "Q", for the bands. Optional.
+    /// Indicates how narrow the frequency transition is. Higher Q values imply narrower
+    /// notches/peaks and steeper cuts/shelves. Must be positive.
+    6: max_q float32;
+
+    /// Minimum gain in dB.
+    /// Required if any `EqualizerBand.EqualizerBandType` is set to `PEAK`, `LOW_SHELF`,
+    /// `HIGH_SHELF`.
+    7: min_gain_db float32;
+
+    /// Maximum gain in dB.
+    /// Required if any `EqualizerBand.EqualizerBandType` is set to `PEAK`, `LOW_SHELF`,
+    /// `HIGH_SHELF`.
+    8: max_gain_db float32;
+};
+
 type ProcessingElementTypeSpecific = flexible union {
     1: vendor_specific VendorSpecificTypeSpecific;
     2: gain GainTypeSpecific;
+    3: equalizer EqualizerTypeSpecific;
 };
 
 type Latency = flexible union {
@@ -141,6 +245,44 @@ type GainProcessingElementState = table {
     1: gain float32;
 };
 
+/// State for a single band within a `ProcessingElement` with `type` equal to `EQUALIZER`.
+type EqualizerBandState = table {
+    /// Unique ID for the band. Must match one of the `id`s specified in
+    /// `EqualizerTypeSpecific` `bands`. Required.
+    1: id uint64;
+
+    /// Type of band. Optional.
+    2: type EqualizerBandType;
+
+    /// Center frequency for the band. Optional.
+    3: frequency uint32;
+
+    /// Quality factor, usually denoted as "Q". Optional.
+    /// Indicates how narrow the frequency transition is. Higher Q values imply narrower
+    /// notches/peaks and steeper cuts/shelves. Must be positive.
+    4: q float32;
+
+    /// Gain in dB. Required for `EqualizerBandType` `PEAK`, `LOW_SHELF` and `HIGH_SHELF`.
+    /// May not be included for `EqualizerBandType` `NOTCH`, `LOW_CUT` or `HIGH_CUT`.
+    5: gain_db float32;
+
+    /// Enable/disable the band. Optional. By default all bands are enabled.
+    /// Disabling the enclosing processing element by setting `ProcessingElementState.enabled` to
+    /// false disables the whole equalizer and it does not change this field. For a band to be
+    /// functional its enclosing equalizer processing element has to be enabled.
+    6: enabled bool;
+};
+
+/// State for a `ProcessingElement` with `type` equal to `EQUALIZER`.
+type EqualizerProcessingElementState = table {
+    /// The number of elements of the `bands_state` vector must be equal or smaller than the
+    /// number of elements of the `bands` returned in returned in the corresponding
+    /// `EqualizerTypeSpecific`. `bands_state` must have at least one element.
+    /// The bands controlled by `bands_state` are determined by each `band.id`.
+    // Required.
+    1: bands_state vector<EqualizerBandState>:MAX_COUNT_EQUALIZER_BANDS;
+};
+
 /// Type specific processing element state.
 /// The type of processing element control is defined by the type of parameters provided in this
 /// union. Must match the type returned in the corresponding `ProcessingElementType` entry in the
@@ -148,6 +290,7 @@ type GainProcessingElementState = table {
 type ProcessingElementTypeSpecificState = flexible union {
     1: vendor_specific VendorSpecificState;
     2: gain GainProcessingElementState;
+    3: equalizer EqualizerProcessingElementState;
 };
 
 type ProcessingElementState = table {
@@ -160,7 +303,7 @@ type ProcessingElementState = table {
     /// hence any previous informational `ProcessingElementTypeSpecificState` is superceded.
     1: state ProcessingElementTypeSpecificState;
 
-    /// Process element enable/disable state. Optional.
+    /// Process element enable/disable state. Optional. By default processing elements are enabled.
     /// If the corresponding `ProcessingElement` returned `can_disable` equals to `false`, then
     /// this field can't be set to `false`.
     /// If `enabled` is not included, then `state` must be included if and only if the processing
@@ -209,6 +352,10 @@ protocol SignalProcessing {
     /// by `GetProcessingElements` or the type of `ProcessingElementTypeSpecificState` does not
     /// match the `ProcessingElementType` of the processing element returned by
     /// `GetProcessingElements` for this id.
+    /// The driver may return `ZX_ERR_INVALID_ARGS` if the `state` values are invalid, i.e. any
+    /// of the values violates rules specified in this protocol, e.g. trying to change an
+    /// `EQUALIZER` processing element's `EqualizerBandState` `frequency` when this processing
+    /// element did not advertise `CAN_CONTROL_FREQUENCY` in its `supported_controls`.
     ///
     /// `SetProcessingElementState` may be called before or after non-`SignalProcessing` protocol
     /// calls. If called after non-`SignalProcessing` protocol calls then
