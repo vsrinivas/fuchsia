@@ -28,14 +28,17 @@ group("tests") {
 #
 # TODO(https://fxbug.dev/89252): Remove this workaround once sub-packages
 # support has landed.
+sdk_component_manifests("realm_builder_shard_sdk") {
+  name = "sys/component"
+  manifests = [
+    "realm_builder_absolute.shard.cml",
+    "realm_builder_base.shard.cml",
+  ]
+  category = "partner"
+}
+
 sdk_component_manifests("realm_builder_shard") {
   name = "sys/component"
   manifests = [ "realm_builder.shard.cml" ]
   category = "internal"
-}
-
-sdk_component_manifests("realm_builder_absolute_shard_sdk") {
-  name = "sys/component"
-  manifests = [ "realm_builder_absolute.shard.cml" ]
-  category = "partner"
 }
