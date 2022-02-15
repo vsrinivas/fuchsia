@@ -1,0 +1,78 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/lowpan_spinel_driver",
+        args: [
+            "--newcf",
+            "--ot-stack",
+        ],
+    },
+    children: [
+        {
+            name: "ot-stack",
+            url: "fuchsia-pkg://fuchsia.com/ot-stack#meta/ot-stack.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.factory.lowpan.FactoryLookup",
+                "fuchsia.factory.lowpan.FactoryRegister",
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+                "fuchsia.logger.LogSink",
+                "fuchsia.lowpan.device.Lookup",
+                "fuchsia.lowpan.device.Register",
+                "fuchsia.net.interfaces.admin.Installer",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.net.tun.Control",
+                "fuchsia.posix.socket.Provider",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.lowpan.spinel.Device" ],
+            from: "#ot-stack",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.exception.Handler",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: "#ot-stack",
+        },
+        {
+            directory: "dev-class-ot-radio",
+            from: "parent",
+            to: "#ot-stack",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#ot-stack",
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: [ "#ot-stack" ],
+        },
+    ],
+}

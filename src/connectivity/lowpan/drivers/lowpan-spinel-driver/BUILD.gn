@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 rustc_binary("bin") {
   output_name = "lowpan_spinel_driver"
@@ -12,6 +13,8 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/files_async",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.factory.lowpan:fuchsia.factory.lowpan-rustc",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -25,6 +28,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
@@ -41,6 +45,7 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:assert_matches",
@@ -73,7 +78,14 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_package_with_single_component("lowpan-spinel-driver") {
+fuchsia_component("lowpan-spinel-driver-cv2") {
+  component_name = "lowpan-spinel-driver"
+  deps = [ ":bin" ]
+  manifest = "meta/lowpan-spinel-driver.cml"
+}
+
+fuchsia_component("lowpan-spinel-driver-cv1") {
+  component_name = "lowpan-spinel-driver"
   deps = [
     ":bin",
     #   TODO(fxbug.dev/78178): Commenting out to avoid name conflict
@@ -82,6 +94,13 @@ fuchsia_package_with_single_component("lowpan-spinel-driver") {
     #    ":config-default",
   ]
   manifest = "meta/lowpan-spinel-driver.cmx"
+}
+
+fuchsia_package("lowpan-spinel-driver") {
+  deps = [
+    ":lowpan-spinel-driver-cv1",
+    ":lowpan-spinel-driver-cv2",
+  ]
 }
 
 fuchsia_unittest_package("lowpan-spinel-driver-test") {
@@ -101,4 +120,8 @@ group("tests") {
     ":lowpan-spinel-driver-test",
     "tests",
   ]
+}
+
+core_shard("lowpan_spinel_driver_shard") {
+  shard_file = "meta/lowpan_spinel_driver.core_shard.cml"
 }

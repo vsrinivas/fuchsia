@@ -1,0 +1,45 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/ot-stack",
+        args: [ "/dev/class/ot-radio/000" ],
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.lowpan.spinel.Device" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.exception.Handler" ],
+        },
+        {
+            directory: "dev-class-ot-radio",
+            rights: [ "r*" ],
+            path: "/dev/class/ot-radio",
+        },
+
+        // Features: config-data.
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+
+        // Features: isolated-persistent-storage.
+        {
+            storage: "data",
+            path: "/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.lowpan.spinel.Device",
+            from: "self",
+        },
+    ],
+}

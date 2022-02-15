@@ -73,6 +73,14 @@ struct DriverArgs {
     #[argh(switch, long = "otstack", description = "launch and connect to ot-stack")]
     pub use_ot_stack: bool,
 
+    // long name does not accept number, so "newcf" is used instead
+    #[argh(
+        switch,
+        long = "newcf",
+        description = "start lowpan-spinel-driver in component v2 mode"
+    )]
+    pub cv2: bool,
+
     #[argh(
         option,
         long = "max-auto-restarts",
@@ -105,6 +113,9 @@ struct Config {
     #[serde(default = "Config::default_use_ot_stack")]
     pub use_ot_stack: bool,
 
+    #[serde(default = "Config::default_use_ot_stack")]
+    pub cv2: bool,
+
     #[serde(default = "Config::default_max_auto_restarts")]
     pub max_auto_restarts: u32,
 
@@ -129,6 +140,9 @@ impl Config {
     fn default_use_ot_stack() -> bool {
         false
     }
+    fn default_cv2() -> bool {
+        false
+    }
     fn default_max_auto_restarts() -> u32 {
         10
     }
@@ -142,7 +156,7 @@ impl Config {
         "/dev/class/ot-radio/000".to_string()
     }
     fn default_ot_stack_url() -> String {
-        "fuchsia-pkg://fuchsia.com/ot-stack#meta/ot-stack.cmx".to_string()
+        "fuchsia-pkg://fuchsia.com/ot-stack#meta/ot-stack.cml".to_string()
     }
 
     // Returns default config struct:
@@ -150,6 +164,7 @@ impl Config {
         Config {
             service_prefix: Config::default_service_prefix(),
             use_ot_stack: Config::default_use_ot_stack(),
+            cv2: Config::default_cv2(),
             max_auto_restarts: Config::default_max_auto_restarts(),
             is_integration_test: Config::default_is_integration_test(),
             name: Config::default_name(),
@@ -207,6 +222,11 @@ impl Config {
         if args.use_ot_stack {
             fx_log_info!("cmdline overriding use_ot_stack from {} to {}", self.use_ot_stack, true);
             self.use_ot_stack = true;
+        }
+
+        if args.cv2 {
+            fx_log_info!("cmdline overriding cv2 from {} to {}", self.cv2, true);
+            self.cv2 = true;
         }
 
         if args.is_integration_test {
@@ -316,7 +336,7 @@ async fn connect_to_spinel_device_proxy_hack() -> Result<(Option<App>, SpinelDev
     Ok((None, client_side.into_proxy()?))
 }
 
-fn connect_to_spinel_device_proxy(
+fn connect_to_spinel_device_proxy_cv1(
     config: &Config,
 ) -> Result<(Option<App>, SpinelDeviceProxy), Error> {
     let server_url = config.ot_stack_url.clone();
@@ -325,8 +345,18 @@ fn connect_to_spinel_device_proxy(
     let app = launch(&launcher, server_url, arg).expect("Failed to launch ot-stack service");
     let ot_stack_proxy = app
         .connect_to_protocol::<SpinelDeviceMarker>()
-        .expect("Failed to connect to ot-stack service");
+        .expect("Failed to connect to cv1 ot-stack service");
+
+    fx_log_info!("cv1 ot-stack is connected");
     Ok((Some(app), ot_stack_proxy))
+}
+
+fn connect_to_spinel_device_proxy_cv2(
+    _config: &Config,
+) -> Result<(Option<App>, SpinelDeviceProxy), Error> {
+    let ot_stack_proxy = connect_to_protocol::<SpinelDeviceMarker>()
+        .expect("Failed to connect to cv2 ot-stack service");
+    Ok((None, ot_stack_proxy))
 }
 
 fn connect_to_spinel_device_proxy_test() -> Result<(Option<App>, SpinelDeviceProxy), Error> {
@@ -339,10 +369,12 @@ fn connect_to_spinel_device_proxy_test() -> Result<(Option<App>, SpinelDevicePro
 async fn prepare_to_run(
     config: &Config,
 ) -> Result<(Option<App>, LocalBoxFuture<'_, Result<(), Error>>), Error> {
-    let (app, spinel_device) = if config.is_integration_test {
+    let (app, spinel_device) = if config.cv2 {
+        connect_to_spinel_device_proxy_cv2(config).context("connect_to_spinel_device_proxy")?
+    } else if config.is_integration_test {
         connect_to_spinel_device_proxy_test().context("connect_to_spinel_device_proxy_test")?
     } else if config.use_ot_stack {
-        connect_to_spinel_device_proxy(config).context("connect_to_spinel_device_proxy")?
+        connect_to_spinel_device_proxy_cv1(config).context("connect_to_spinel_device_proxy")?
     } else {
         connect_to_spinel_device_proxy_hack()
             .await
@@ -414,22 +446,25 @@ async fn main() -> Result<(), Error> {
 
         let start_timestamp = fasync::Time::now();
 
-        let ret = if let Some(app) = app {
-            futures::select! {
-                ret = driver_future.fuse() => {
-                    fx_log_err!("run_driver stopped: {:?}", ret);
-                    ret
-                },
-                ret = app.wait_with_output().fuse() => {
-                    let ret = ret.map(|out|out.ok());
-                    fx_log_err!("ot-stack stopped: {:?}", ret);
-                    ret.map(|_|())
-                }
-            }
-        } else {
+        let ret = if config.cv2 {
             driver_future.await
+        } else {
+            if let Some(app) = app {
+                futures::select! {
+                    ret = driver_future.fuse() => {
+                        fx_log_err!("run_driver stopped: {:?}", ret);
+                        ret
+                    },
+                    ret = app.wait_with_output().fuse() => {
+                        let ret = ret.map(|out|out.ok());
+                        fx_log_err!("ot-stack stopped: {:?}", ret);
+                        ret.map(|_|())
+                    }
+                }
+            } else {
+                driver_future.await
+            }
         };
-
         if (fasync::Time::now() - start_timestamp).into_minutes() >= 5 {
             // If the past run has been running for 5 minutes or longer,
             // then we go ahead and reset the attempt count.

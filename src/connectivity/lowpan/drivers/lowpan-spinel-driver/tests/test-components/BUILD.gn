@@ -36,7 +36,7 @@ fuchsia_component("lowpan-driver-provision-mock") {
     "//src/connectivity/lowpan:lowpan_for_components",
     "//src/connectivity/network/netstack:component-legacy",
     "//src/connectivity/network/tun/network-tun:component",
-    "//src/connectivity/openthread/ot-stack:component",
+    "//src/connectivity/openthread/ot-stack:ot-stack-v1",
     "//src/connectivity/openthread/tests/ot-devmgr:ot-devmgr-component-integration",
   ]
 }

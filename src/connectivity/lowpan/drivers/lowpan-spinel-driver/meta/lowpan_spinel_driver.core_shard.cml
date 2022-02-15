@@ -1,0 +1,82 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "lowpan-spinel-driver",
+            url: "fuchsia-pkg://fuchsia.com/lowpan-spinel-driver#meta/lowpan-spinel-driver.cm",
+
+            // This component needs to start at boot time.
+            // No one will connect to lowpan-ot-driver directly. It won't expose any capability.
+            // It registers service at boot time so that Matter/Weave can use it when they are brought up.
+            startup: "eager",
+            environment: "#full-resolver-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.factory.lowpan.FactoryLookup",
+                "fuchsia.factory.lowpan.FactoryRegister",
+                "fuchsia.lowpan.device.Lookup",
+                "fuchsia.lowpan.device.Register",
+            ],
+            from: "#lowpanservice",
+            to: "#lowpan-spinel-driver",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#lowpan-spinel-driver" ],
+            subdir: "lowpan-spinel-driver",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#lowpan-spinel-driver" ],
+        },
+        {
+            protocol: "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+            from: "#regulatory_region",
+            to: "#lowpan-spinel-driver",
+        },
+        {
+            protocol: [
+                "fuchsia.net.interfaces.admin.Installer",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#network",
+            to: [ "#lowpan-spinel-driver" ],
+        },
+        {
+            protocol: [ "fuchsia.buildinfo.Provider" ],
+            from: "#build-info",
+            to: [ "#lowpan-spinel-driver" ],
+        },
+        {
+            protocol: [ "fuchsia.net.tun.Control" ],
+            from: "#network-tun",
+            to: [ "#lowpan-spinel-driver" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#lowpan-spinel-driver" ],
+        },
+        {
+            protocol: [ "fuchsia.exception.Handler" ],
+            from: "#exceptions",
+            to: "#lowpan-spinel-driver",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-ot-radio",
+            to: "#lowpan-spinel-driver",
+            subdir: "class/ot-radio",
+        },
+    ],
+}

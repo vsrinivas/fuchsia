@@ -63,7 +63,13 @@ group("ot-stack") {
   deps = [ ":pkg" ]
 }
 
-fuchsia_component("component") {
+fuchsia_component("ot-stack-v2") {
+  component_name = "ot-stack"
+  manifest = "meta/ot-stack.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("ot-stack-v1") {
   component_name = "ot-stack"
   manifest = "meta/ot-stack.cmx"
   deps = [ ":bin" ]
@@ -71,5 +77,8 @@ fuchsia_component("component") {
 
 fuchsia_package("pkg") {
   package_name = "ot-stack"
-  deps = [ ":component" ]
+  deps = [
+    ":ot-stack-v1",
+    ":ot-stack-v2",
+  ]
 }

@@ -133,7 +133,7 @@ fuchsia_component("ot-stack-ncp-ver-query-mock-component") {
   manifest = "meta/ot-stack-ncp-ver-query-mock.cmx"
   deps = [
     ":ot-stack-ncp-ver-query-mock",
-    "//src/connectivity/openthread/ot-stack:component",
+    "//src/connectivity/openthread/ot-stack:ot-stack-v1",
     "//src/connectivity/openthread/tests/ot-devmgr:ot-devmgr-component-integration",
   ]
 }
@@ -143,7 +143,7 @@ fuchsia_component("ot-stack-soft-reset-mock-component") {
   manifest = "meta/ot-stack-soft-reset-mock.cmx"
   deps = [
     ":ot-stack-soft-reset-mock",
-    "//src/connectivity/openthread/ot-stack:component",
+    "//src/connectivity/openthread/ot-stack:ot-stack-v1",
     "//src/connectivity/openthread/tests/ot-devmgr:ot-devmgr-component-integration",
   ]
 }
