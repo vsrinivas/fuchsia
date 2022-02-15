@@ -140,7 +140,7 @@ mod test {
         super::*,
         crate::device::test::{create_ramdisk, format},
         fidl::endpoints::DiscoverableProtocolMarker,
-        fidl_fuchsia_fs::{AdminMarker, QueryMarker},
+        fidl_fuchsia_fs::QueryMarker,
         fuchsia_zircon as zx,
     };
 
@@ -163,18 +163,16 @@ mod test {
             fdio::service_connect_at(&svc_dir, QueryMarker::PROTOCOL_NAME, remote.into_channel())
                 .expect("Connection to query svc succeeds");
 
-            let (admin, remote) = fidl::endpoints::create_proxy::<AdminMarker>().unwrap();
-            fdio::service_connect_at(&svc_dir, AdminMarker::PROTOCOL_NAME, remote.into_channel())
-                .expect("Connection to admin svc succeeds");
-
-            let (_root_dir, remote) =
-                fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
-
-            let event = zx::Event::create().expect("create event pair");
+            let event1 = zx::Event::create().expect("create event pair");
+            let event2 = zx::Event::create().expect("create event pair");
 
             // Try sending two requests simultaneously to trigger a race.
-            let _: bool = query.is_node_in_filesystem(event).await.expect("is_node_in_filesystem");
-            admin.get_root(remote).expect("get_root OK");
+            let _: (bool, bool) = futures::future::try_join(
+                query.is_node_in_filesystem(event1),
+                query.is_node_in_filesystem(event2),
+            )
+            .await
+            .expect("is_node_in_filesystem");
 
             // Drop the connection to the ServiceFs so that the test can complete.
             std::mem::drop(svc_dir);

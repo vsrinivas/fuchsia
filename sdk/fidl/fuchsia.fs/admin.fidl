@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 library fuchsia.fs;
 
-using fuchsia.io;
-
 /// Administration functionality for filesystems.
 @discoverable
 protocol Admin {
@@ -14,11 +12,4 @@ protocol Admin {
     /// block devices or other owned channels are released, then it responds to this request and
     /// closes this channel.
     Shutdown() -> ();
-
-    /// Opens the given handle to the root directory of the filesystem.
-    /// If the open fails, the handle will be closed with an epitaph indicating
-    /// what went wrong.
-    GetRoot(resource struct {
-        dir server_end:fuchsia.io.Directory;
-    });
 };

@@ -9,5 +9,5 @@ fidl("fuchsia.fs") {
     "admin.fidl",
     "query.fidl",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.io" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

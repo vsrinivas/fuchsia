@@ -16,9 +16,6 @@ class AdminService : public fidl::WireServer<fuchsia_fs::Admin>, public fs::Serv
   AdminService(async_dispatcher_t* dispatcher, ShutdownRequester shutdown);
 
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override;
-  void GetRoot(GetRootRequestView request, GetRootCompleter::Sync& completer) override {
-    // Not yet supported.
-  }
 
  private:
   ShutdownRequester shutdown_;

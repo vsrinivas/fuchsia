@@ -13,7 +13,6 @@ class AdminService final : public fidl::WireServer<fuchsia_fs::Admin>, public fs
   AdminService(async_dispatcher_t* dispatcher, F2fs* f2fs);
 
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) final;
-  void GetRoot(GetRootRequestView request, GetRootCompleter::Sync& completer) final;
 
  private:
   F2fs* const f2fs_;

@@ -161,9 +161,6 @@ impl FxfsServer {
                     .unwrap_or_else(|e| log::warn!("Failed to send shutdown response: {}", e));
                 return Ok(true);
             }
-            _ => {
-                panic!("Unimplemented")
-            }
         }
     }
 

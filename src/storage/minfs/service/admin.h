@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_MINFS_ADMIN_SERVICE_H_
-#define SRC_STORAGE_MINFS_ADMIN_SERVICE_H_
+#ifndef SRC_STORAGE_MINFS_SERVICE_ADMIN_H_
+#define SRC_STORAGE_MINFS_SERVICE_ADMIN_H_
 
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/storage/minfs/minfs_private.h"
@@ -15,9 +15,6 @@ class AdminService : public fidl::WireServer<fuchsia_fs::Admin>, public fs::Serv
   AdminService(async_dispatcher_t* dispatcher, Minfs& minfs);
 
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override;
-  void GetRoot(GetRootRequestView request, GetRootCompleter::Sync& completer) override {
-    // Not yet supported.
-  }
 
  private:
   Minfs& minfs_;
@@ -25,4 +22,4 @@ class AdminService : public fidl::WireServer<fuchsia_fs::Admin>, public fs::Serv
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_ADMIN_SERVICE_H_
+#endif  // SRC_STORAGE_MINFS_SERVICE_ADMIN_H_

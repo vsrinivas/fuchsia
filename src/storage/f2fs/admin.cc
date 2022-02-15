@@ -22,9 +22,6 @@ void AdminService::Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync
   });
 }
 
-void AdminService::GetRoot(GetRootRequestView request, GetRootCompleter::Sync& completer) {
-  // TODO: Implement GetRoot admin service
-}
 #endif  // __Fuchsia__
 
 }  // namespace f2fs

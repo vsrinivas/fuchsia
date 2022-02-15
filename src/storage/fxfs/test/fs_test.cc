@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <fcntl.h>
-#include <fuchsia/fs/cpp/fidl.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/zx/status.h>
 
