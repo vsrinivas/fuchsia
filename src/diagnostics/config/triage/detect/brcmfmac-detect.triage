@@ -7,6 +7,7 @@
         rx_freeze_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy:rx_freeze_24hrs",
         sdio_max_tx_seq_err_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy:sdio_max_tx_seq_err_24hrs",
         ap_set_ssid_err_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy:ap_set_ssid_err_24hrs",
+        fw_recovered_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy:fw_recovered_24hrs",
     },
     act: {
         excessive_tx_qfull: {
@@ -50,6 +51,12 @@
             trigger: "ap_set_ssid_err_24hrs >= 1",
             repeat: "Hours(24)",
             signature: "occurrence-ap-set-ssid-err",
+        },
+        occurrence_fw_recovered: {
+            type: "Snapshot",
+            trigger: "fw_recovered_24hrs >= 1",
+            repeat: "Hours(24)",
+            signature: "occurrence-fw-recovered",
         },
     },
     test: {
@@ -177,6 +184,24 @@
             ],
             values: {
                 ap_set_ssid_err_24hrs: 0,
+            },
+        },
+        occurrence_fw_recovered: {
+            yes: [
+                "occurrence_fw_recovered",
+            ],
+            no: [],
+            values: {
+                fw_recovered_24hrs: 1,
+            },
+        },
+        no_occurrence_fw_recovered: {
+            yes: [],
+            no: [
+                "occurrence_fw_recovered",
+            ],
+            values: {
+                fw_recovered_24hrs: 0,
             },
         },
     },
