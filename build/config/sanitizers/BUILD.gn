@@ -180,6 +180,10 @@ variant("ubsan") {
     common_flags += [ "-fno-sanitize=vptr" ]
   }
 
+  # TODO(fxbug.dev/93804): Remove this once all instances of non-positive VLA
+  # sizes are fixed.
+  common_flags += [ "-fno-sanitize=vla-bound" ]
+
   # If asan is also in use, it handles ubsan_default_options indirectly.
   if (toolchain_variant.tags + [ "asan" ] - [ "asan" ] ==
       toolchain_variant.tags) {
