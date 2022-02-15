@@ -215,45 +215,45 @@ rs_debug_utils_set(VkDevice device, struct radix_sort_vk * rs)
 {
   if (pfn_vkSetDebugUtilsObjectNameEXT != NULL)
     {
-      VkDebugUtilsObjectNameInfoEXT name = {
+      VkDebugUtilsObjectNameInfoEXT duoni = {
         .sType      = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
         .pNext      = NULL,
         .objectType = VK_OBJECT_TYPE_PIPELINE,
       };
 
-      name.objectHandle = (uint64_t)rs->pipelines.named.init;
-      name.pObjectName  = "radix_sort_init";
-      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+      duoni.objectHandle = (uint64_t)rs->pipelines.named.init;
+      duoni.pObjectName  = "radix_sort_init";
+      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &duoni));
 
-      name.objectHandle = (uint64_t)rs->pipelines.named.fill;
-      name.pObjectName  = "radix_sort_fill";
-      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+      duoni.objectHandle = (uint64_t)rs->pipelines.named.fill;
+      duoni.pObjectName  = "radix_sort_fill";
+      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &duoni));
 
-      name.objectHandle = (uint64_t)rs->pipelines.named.histogram;
-      name.pObjectName  = "radix_sort_histogram";
-      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+      duoni.objectHandle = (uint64_t)rs->pipelines.named.histogram;
+      duoni.pObjectName  = "radix_sort_histogram";
+      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &duoni));
 
-      name.objectHandle = (uint64_t)rs->pipelines.named.prefix;
-      name.pObjectName  = "radix_sort_prefix";
-      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+      duoni.objectHandle = (uint64_t)rs->pipelines.named.prefix;
+      duoni.pObjectName  = "radix_sort_prefix";
+      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &duoni));
 
-      name.objectHandle = (uint64_t)rs->pipelines.named.scatter[0].even;
-      name.pObjectName  = "radix_sort_scatter_0_even";
-      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+      duoni.objectHandle = (uint64_t)rs->pipelines.named.scatter[0].even;
+      duoni.pObjectName  = "radix_sort_scatter_0_even";
+      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &duoni));
 
-      name.objectHandle = (uint64_t)rs->pipelines.named.scatter[0].odd;
-      name.pObjectName  = "radix_sort_scatter_0_odd";
-      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+      duoni.objectHandle = (uint64_t)rs->pipelines.named.scatter[0].odd;
+      duoni.pObjectName  = "radix_sort_scatter_0_odd";
+      vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &duoni));
 
       if (rs->config.keyval_dwords >= 2)
         {
-          name.objectHandle = (uint64_t)rs->pipelines.named.scatter[1].even;
-          name.pObjectName  = "radix_sort_scatter_1_even";
-          vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+          duoni.objectHandle = (uint64_t)rs->pipelines.named.scatter[1].even;
+          duoni.pObjectName  = "radix_sort_scatter_1_even";
+          vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &duoni));
 
-          name.objectHandle = (uint64_t)rs->pipelines.named.scatter[1].odd;
-          name.pObjectName  = "radix_sort_scatter_1_odd";
-          vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &name));
+          duoni.objectHandle = (uint64_t)rs->pipelines.named.scatter[1].odd;
+          duoni.pObjectName  = "radix_sort_scatter_1_odd";
+          vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &duoni));
         }
     }
 }

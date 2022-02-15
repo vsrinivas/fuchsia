@@ -11,8 +11,15 @@ config("config") {
   include_dirs = [ "include" ]
 }
 
+config("config_debug_utils") {
+  defines = [ "SPN_VK_ENABLE_DEBUG_UTILS" ]
+}
+
 source_set("vk") {
-  public_configs = [ ":config" ]
+  public_configs = [
+    ":config",
+    ":config_debug_utils",
+  ]
   public = [
     "include/spinel/platforms/vk/spinel_vk.h",
     "include/spinel/platforms/vk/spinel_vk_types.h",

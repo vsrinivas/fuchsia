@@ -6,10 +6,6 @@
 // Load the Spinel target and creating pipelines and pipeline layouts.
 //
 
-//
-// clang -I $VULKAN_SDK/include  -I ../.. -I ../../.. -I ../../include -I . -I ../../../tools/target_archive/include -E  spinel_vk.c | clang-format > spinel_vk_clang.c
-//
-
 #include "target_instance.h"
 
 #include <stdio.h>
@@ -25,9 +21,9 @@
 #include "target_archive/target_archive.h"
 
 //
+// Are Vulkan objects being tagged with names?
 //
-//
-#ifdef RADIX_SORT_VK_ENABLE_DEBUG_UTILS
+#ifdef SPN_VK_ENABLE_DEBUG_UTILS
 #include "common/vk/debug_utils.h"
 #endif
 
@@ -97,8 +93,8 @@ spinel_debug_utils_set(VkDevice device, struct spinel_target_instance * ti)
 
 #undef SPN_P_EXPAND_X
 #define SPN_P_EXPAND_X(pipeline_, push_)                                                           \
-  pipeline_.objectHandle = (uint64_t)ti->pipelines.named.pipeline_;                                \
-  pipeline_.pObjectName  = #pipeline_;                                                             \
+  duoni.objectHandle = (uint64_t)ti->pipelines.named.pipeline_;                                    \
+  duoni.pObjectName  = #pipeline_;                                                                 \
   vk_ok(pfn_vkSetDebugUtilsObjectNameEXT(device, &duoni));
 
       SPN_P_EXPAND()
