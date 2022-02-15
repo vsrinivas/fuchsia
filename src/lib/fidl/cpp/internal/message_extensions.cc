@@ -134,7 +134,7 @@ namespace internal {
   };
   // Ownership will be transferred to |fidl::OutgoingMessage|.
   body.ClearHandlesUnsafe();
-  return fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
+  return fidl::OutgoingMessage::FromEncodedCValue(&c_msg);
 }
 
 }  // namespace internal

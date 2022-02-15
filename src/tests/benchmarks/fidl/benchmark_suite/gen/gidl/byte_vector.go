@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package gidl
@@ -26,7 +27,7 @@ func init() {
 				},
 				EnableSendEventBenchmark: true,
 				EnableEchoCallBenchmark:  true,
-				Allowlist:                []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+				Allowlist:                []config.Binding{config.LLCPP, config.HLCPP, config.CPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name:    "ByteVector/256",
@@ -36,7 +37,7 @@ func init() {
 				},
 				EnableSendEventBenchmark: true,
 				EnableEchoCallBenchmark:  true,
-				Allowlist:                []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+				Allowlist:                []config.Binding{config.LLCPP, config.HLCPP, config.CPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name:    "ByteVector/4096",
@@ -46,7 +47,7 @@ func init() {
 				},
 				EnableSendEventBenchmark: true,
 				EnableEchoCallBenchmark:  true,
-				Allowlist:                []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+				Allowlist:                []config.Binding{config.LLCPP, config.HLCPP, config.CPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name: "ByteVector/65280",

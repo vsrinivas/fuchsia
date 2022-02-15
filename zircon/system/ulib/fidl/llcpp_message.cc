@@ -26,10 +26,14 @@
 namespace fidl {
 
 OutgoingMessage OutgoingMessage::FromEncodedCMessage(const fidl_outgoing_msg_t* c_msg) {
-  return OutgoingMessage(c_msg);
+  return OutgoingMessage(c_msg, true);
 }
 
-OutgoingMessage::OutgoingMessage(const fidl_outgoing_msg_t* c_msg)
+OutgoingMessage OutgoingMessage::FromEncodedCValue(const fidl_outgoing_msg_t* c_msg) {
+  return OutgoingMessage(c_msg, false);
+}
+
+OutgoingMessage::OutgoingMessage(const fidl_outgoing_msg_t* c_msg, bool is_transactional)
     : fidl::Result(fidl::Result::Ok()) {
   ZX_ASSERT(c_msg);
   transport_vtable_ = &internal::ChannelTransport::VTable;
@@ -66,7 +70,7 @@ OutgoingMessage::OutgoingMessage(const fidl_outgoing_msg_t* c_msg)
     default:
       ZX_PANIC("unhandled FIDL outgoing message type");
   }
-  is_transactional_ = true;
+  is_transactional_ = is_transactional;
 }
 
 OutgoingMessage::OutgoingMessage(const ::fidl::Result& failure)

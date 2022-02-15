@@ -82,6 +82,11 @@ class OutgoingMessage : public ::fidl::Result {
   // The bytes must represent a transactional message.
   static OutgoingMessage FromEncodedCMessage(const fidl_outgoing_msg_t* c_msg);
 
+  // Creates an object which can manage an encoded FIDL value.
+  // This is identical to |FromEncodedCMessage| but the |OutgoingMessage|
+  // is non-transactional instead of transactional.
+  static OutgoingMessage FromEncodedCValue(const fidl_outgoing_msg_t* c_msg);
+
   struct ConstructorArgs {
     const internal::TransportVTable* transport_vtable;
     zx_channel_iovec_t* iovecs;
@@ -235,7 +240,7 @@ class OutgoingMessage : public ::fidl::Result {
   friend ::fidl_testing::MessageChecker;
 
   explicit OutgoingMessage(ConstructorArgs args);
-  explicit OutgoingMessage(const fidl_outgoing_msg_t* msg);
+  explicit OutgoingMessage(const fidl_outgoing_msg_t* msg, bool is_transactional);
 
   void DecodeImplForCall(const internal::CodingConfig& coding_config,
                          const fidl_type_t* response_type, uint8_t* bytes,

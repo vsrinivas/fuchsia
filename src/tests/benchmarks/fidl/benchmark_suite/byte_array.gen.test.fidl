@@ -14,7 +14,7 @@ type ByteArray256 = struct {
     bytes array<uint8, 256>;
 };
 
-@bindings_denylist("rust, hlcpp, llcpp, walker")
+@bindings_denylist("rust, hlcpp, llcpp, cpp, walker")
 type ByteArray4096 = struct {
     bytes array<uint8, 4096>;
 };

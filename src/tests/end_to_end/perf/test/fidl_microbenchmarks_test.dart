@@ -47,6 +47,7 @@ void runPerftestFidlBenchmark(String benchmarkBinary) {
 void main(List<String> args) {
   enableLoggingOutput();
 
+  runPerftestFidlBenchmark('cpp_fidl_microbenchmarks');
   runPerftestFidlBenchmark('hlcpp_fidl_microbenchmarks');
   runPerftestFidlBenchmark('lib_fidl_microbenchmarks');
   runPerftestFidlBenchmark('llcpp_fidl_microbenchmarks');

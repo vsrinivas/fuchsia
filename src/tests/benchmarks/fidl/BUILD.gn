@@ -5,6 +5,7 @@
 group("benchmarks") {
   testonly = true
   deps = [
+    "cpp",
     "dart",
     "fidlc:fidlc_microbenchmarks",
     "go",

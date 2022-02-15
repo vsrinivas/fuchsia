@@ -9,6 +9,7 @@ import "fmt"
 type Binding string
 
 const (
+	CPP   Binding = "cpp"
 	HLCPP Binding = "hlcpp"
 	LLCPP Binding = "llcpp"
 	Dart  Binding = "dart"

@@ -6,7 +6,7 @@
 
 // 16 byte vector in a struct
 benchmark("ByteVector/16") {
-    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
+    bindings_allowlist = [llcpp, hlcpp, cpp, rust, go, walker, reference, dart],
     enable_send_event_benchmark = true,
     enable_echo_call_benchmark = true,
     value = ByteVector{
@@ -19,7 +19,7 @@ benchmark("ByteVector/16") {
 
 // 256 byte vector in a struct
 benchmark("ByteVector/256") {
-    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
+    bindings_allowlist = [llcpp, hlcpp, cpp, rust, go, walker, reference, dart],
     enable_send_event_benchmark = true,
     enable_echo_call_benchmark = true,
     value = ByteVector{
@@ -62,7 +62,7 @@ benchmark("ByteVector/256") {
 
 // 4096 byte vector in a struct
 benchmark("ByteVector/4096") {
-    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
+    bindings_allowlist = [llcpp, hlcpp, cpp, rust, go, walker, reference, dart],
     enable_send_event_benchmark = true,
     enable_echo_call_benchmark = true,
     value = ByteVector{

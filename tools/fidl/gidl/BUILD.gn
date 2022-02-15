@@ -24,6 +24,7 @@ if (is_host) {
       "audit/main.go",
       "c/conformance.go",
       "config/defaults.go",
+      "cpp/benchmarks.go",
       "cpp/builder.go",
       "cpp/conformance.go",
       "cpp/equality_builder.go",

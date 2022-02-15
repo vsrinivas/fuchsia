@@ -54,6 +54,7 @@ var conformanceGenerators = map[string]Generator{
 
 var benchmarkGenerators = map[string]Generator{
 	"go":        gidlgolang.GenerateBenchmarks,
+	"cpp":       gidlcpp.GenerateBenchmarks,
 	"llcpp":     gidlllcpp.GenerateBenchmarks,
 	"hlcpp":     gidlhlcpp.GenerateBenchmarks,
 	"rust":      gidlrust.GenerateBenchmarks,

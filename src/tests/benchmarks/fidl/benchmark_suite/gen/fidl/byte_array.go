@@ -33,7 +33,7 @@ func init() {
 				},
 				// The Rust bindings only supports arrays of size 0-32, 64, and 256.
 				// CPP generated code is slow to compile in clang.
-				Denylist: []config.Binding{config.Rust, config.HLCPP, config.LLCPP, config.Walker},
+				Denylist: []config.Binding{config.Rust, config.HLCPP, config.LLCPP, config.CPP, config.Walker},
 			},
 		},
 	})
