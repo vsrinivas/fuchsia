@@ -37,8 +37,6 @@ zx_status_t driver_write(fidl_handle_t handle, WriteOptions write_options, const
   zx_status_t status =
       fdf_channel_write(handle, 0, arena, const_cast<void*>(iovec.buffer), iovec.capacity,
                         static_cast<fdf_handle_t*>(arena_handles), handles_count);
-
-  fdf_arena_destroy(arena);
   return status;
 }
 
@@ -106,7 +104,6 @@ zx_status_t driver_call(fidl_handle_t handle, CallOptions call_options, const Ca
       .rd_num_handles = out_handles_actual_count,
   };
   zx_status_t status = fdf_channel_call(handle, 0, ZX_TIME_INFINITE, &args);
-  fdf_arena_destroy(arena);
   if (status != ZX_OK) {
     return status;
   }
