@@ -159,6 +159,8 @@ source_set("audio_core_lib") {
     "usage_settings.h",
     "utils.cc",
     "utils.h",
+    "verbose_log.cc",
+    "verbose_log.h",
     "versioned_timeline_function.h",
     "volume_control.cc",
     "volume_control.h",
