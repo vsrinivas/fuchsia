@@ -132,6 +132,13 @@ class CommandBufferPipelineState {
     render_pass_ = render_pass;
   }
 
+  uint32_t current_subpass() const { return current_subpass_; }
+
+  void reset_current_subpass() { current_subpass_ = 0; }
+
+  // Called by CommandBuffer::NextSubpass().
+  void IncrementSubpass();
+
   // Static state setters; these match the setters on CommandBuffer.
   void SetDepthTestAndWrite(bool depth_test, bool depth_write);
   void SetWireframe(bool wireframe);
@@ -333,7 +340,6 @@ class CommandBufferPipelineState {
 
   impl::RenderPass* render_pass_ = nullptr;
 
-  // TODO(fxbug.dev/7174): need support for updating current subpass.
   uint32_t current_subpass_ = 0;
 
   StaticState static_state_ = {};

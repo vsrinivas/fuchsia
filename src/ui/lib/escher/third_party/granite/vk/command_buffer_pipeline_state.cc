@@ -550,4 +550,10 @@ void CommandBufferPipelineState::SetToDefaultState(DefaultState default_state) {
   }
 }
 
+void CommandBufferPipelineState::IncrementSubpass() {
+  FX_DCHECK(render_pass_ != nullptr);
+  FX_DCHECK(current_subpass_ + 1 < render_pass_->num_subpasses());
+  current_subpass_++;
+}
+
 }  // namespace escher

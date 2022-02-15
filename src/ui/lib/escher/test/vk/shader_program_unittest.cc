@@ -595,6 +595,150 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
   }
 }
 
+// Used by InitRenderPassInfo() and InitRenderPassInfoHelper().
+static constexpr uint32_t kRenderTargetAttachmentIndex = 0;
+static constexpr uint32_t kResolveTargetAttachmentIndex = 1;
+
+// Helper function which factors out common code from the two InitRenderPassInfo() variants.
+static void TestMultipleSubpassHelper(RenderPassInfo* rp,
+                                      const RenderPassInfo::AttachmentInfo& color_info,
+                                      const RenderPassInfo::AttachmentInfo& depth_stencil_info,
+                                      const RenderPassInfo::AttachmentInfo* msaa_info) {
+  FX_DCHECK(color_info.sample_count == 1);
+  FX_DCHECK((!msaa_info && depth_stencil_info.sample_count == 1) ||
+            (msaa_info && msaa_info->sample_count > 1 &&
+             msaa_info->sample_count == depth_stencil_info.sample_count));
+
+  rp->color_attachment_infos[0] = color_info;
+  rp->depth_stencil_attachment_info = depth_stencil_info;
+
+  {
+    rp->num_color_attachments = 1;
+    // Clear and store color attachment 0, the sole color attachment.
+    rp->clear_attachments = 1u << kRenderTargetAttachmentIndex;
+    rp->store_attachments = 1u << kRenderTargetAttachmentIndex;
+
+    // Standard flags for a depth-testing render-pass that needs to first clear
+    // the depth image.
+    rp->op_flags = RenderPassInfo::kClearDepthStencilOp | RenderPassInfo::kOptimalColorLayoutOp |
+                   RenderPassInfo::kOptimalDepthStencilLayoutOp;
+    // NOTE: the flags above assume that there is a depth/stencil attachment.  If not, the flags
+    // will need to be modified (shouldn't be hard, but out of scope of current CL).
+    FX_DCHECK(depth_stencil_info.format != vk::Format::eUndefined);
+
+    rp->clear_color[0].setFloat32({0.f, 0.f, 0.f, 0.f});
+
+    for (uint32_t i = 0; i < 2; i++) {
+      rp->subpasses.push_back(RenderPassInfo::Subpass{
+          .color_attachments = {kRenderTargetAttachmentIndex},
+          .input_attachments = {},
+          .resolve_attachments = {kResolveTargetAttachmentIndex},
+          .num_color_attachments = 1,
+          .num_input_attachments = 0,
+          .num_resolve_attachments = 0,
+      });
+    }
+  }
+
+  for (size_t i = rp->num_color_attachments; i < VulkanLimits::kNumColorAttachments; ++i) {
+    rp->color_attachment_infos[i] = {};
+    rp->color_attachments[i] = nullptr;
+  }
+}
+
+bool TestRenderPassSubpasses(RenderPassInfo* rp, vk::Rect2D render_area,
+                             const ImagePtr& output_image, const TexturePtr& depth_texture) {
+  FX_DCHECK(output_image->info().sample_count == 1);
+  rp->render_area = render_area;
+
+  AttachmentInfo color_info;
+  AttachmentInfo depth_stencil_info;
+  AttachmentInfo msaa_info;
+  if (output_image) {
+    if (!output_image->is_swapchain_image()) {
+      FX_LOGS(ERROR) << "RenderPassInfo::InitRenderPassInfo(): Output image doesn't have valid "
+                        "swapchain layout.";
+      return false;
+    }
+    if (output_image->swapchain_layout() != output_image->layout()) {
+      FX_LOGS(ERROR) << "RenderPassInfo::InitRenderPassInfo(): Current layout of output image "
+                        "does not match its swapchain layout.";
+      return false;
+    }
+    color_info.InitFromImage(output_image);
+  }
+  if (depth_texture) {
+    depth_stencil_info.InitFromImage(depth_texture->image());
+  }
+
+  TestMultipleSubpassHelper(rp, color_info, depth_stencil_info,
+                            msaa_texture ? &msaa_info : nullptr);
+
+  // TODO(fxbug.dev/43279): Can we get away sharing image views across multiple RenderPassInfo
+  // structs?
+  ImageViewPtr output_image_view =
+      allocator ? allocator->ObtainImageView(output_image) : ImageView::New(output_image);
+
+  rp->color_attachments[kRenderTargetAttachmentIndex] = std::move(output_image_view);
+  rp->depth_stencil_attachment = depth_texture;
+  return true;
+}
+
+// Command buffer should be able to use a render pass that contains
+// 2 or more subpasses.
+VK_TEST_F(ShaderProgramTest, MultipleSubpasses) {
+  auto escher = test::GetEscher();
+
+  auto program = escher->GetProgram(kFlatlandStandardProgram);
+  EXPECT_TRUE(program);
+
+  auto cb = CommandBuffer::NewForGraphics(escher, /*use_protected_memory=*/false);
+
+  auto depth_format_result = escher->device()->caps().GetMatchingDepthFormat();
+  bool has_depth_attachment = depth_format_result.result != vk::Result::eSuccess;
+
+  const uint32_t kWidth = 512, kHeight = 512;
+
+  auto color_attachment = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, kWidth, kHeight,
+                                                       1, vk::Filter::eNearest);
+  auto depth_attachment = has_depth_attachment
+                              ? escher->NewAttachmentTexture(depth_format_result.value, kWidth,
+                                                             kHeight, 1, vk::Filter::eNearest)
+                              : TexturePtr();
+
+  // Initialize the render pass.
+  RenderPassInfo render_pass;
+  vk::Rect2D render_area = {{0, 0}, {color_attachment->width(), color_attachment->height()}};
+
+  if (!TestRenderpassSubpasses(&render_pass, render_area, color_attachment, depth_attachment) {
+    FX_LOGS(ERROR) << "RectangleCompositor::DrawBatch(): RenderPassInfo initialization failed. "
+                      "Exiting.";
+    return;
+  }
+
+
+  cb->BeginRenderPass(render_pass_info);
+
+  // Setting the program doesn't immediately result in a pipeline being set.
+  cb->SetShaderProgram(program);
+  EXPECT_EQ(GetCurrentVkPipeline(cb), vk::Pipeline());
+
+  cb->Draw(/*vertex_count*/6);
+
+  cb->NextSubpass();
+  cb->SetShaderProgram(program);
+
+  cb->Draw(/*vertex_count*/6);
+
+  cb->EndRenderPass();
+
+  // TODO(fxbug.dev/7174): ideally only submitted CommandBuffers would need to be
+  // cleaned up: if a never-submitted CB is destroyed, then it shouldn't
+  // keep anything alive, and it shouldn't cause problems in e.g.
+  // CommandBufferPool due to a forever-straggling buffer.
+  EXPECT_TRUE(cb->Submit(nullptr));
+}
+
 // TODO(fxbug.dev/7174): we need to set up so many meshes, materials, framebuffers, etc.
 // before we can obtain pipelines, we might as well just make this an end-to-end
 // test and actually render.  Or, go the other direction and manually set up

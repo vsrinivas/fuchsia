@@ -143,6 +143,7 @@ void CommandBuffer::BeginGraphicsOrComputeContext() {
 
 void CommandBuffer::BeginRenderPass(const RenderPassInfo& info) {
   FX_DCHECK(!IsInRenderPass());
+  FX_DCHECK(pipeline_state_.current_subpass() == 0);
 
   framebuffer_ = escher_->framebuffer_allocator()->ObtainFramebuffer(
       info, allow_renderpass_and_pipeline_creation_);
@@ -218,6 +219,7 @@ void CommandBuffer::EndRenderPass() {
 
   framebuffer_ = nullptr;
   pipeline_state_.set_render_pass(nullptr);
+  pipeline_state_.reset_current_subpass();
 
   BeginCompute();
 }
@@ -225,6 +227,13 @@ void CommandBuffer::EndRenderPass() {
 bool CommandBuffer::IsInRenderPass() {
   FX_DCHECK(!framebuffer_ == !pipeline_state_.render_pass());
   return static_cast<bool>(pipeline_state_.render_pass());
+}
+
+void CommandBuffer::NextSubpass() {
+  FX_DCHECK(IsInRenderPass());
+  SetDirty(kDirtyPipelineBit);
+  pipeline_state_.IncrementSubpass();
+  vk().nextSubpass(vk::SubpassContents::eInline);
 }
 
 void CommandBuffer::BufferBarrier(const BufferPtr& buffer, vk::PipelineStageFlags src_stages,

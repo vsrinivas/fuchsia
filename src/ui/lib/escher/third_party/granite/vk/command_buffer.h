@@ -463,6 +463,9 @@ class CommandBuffer : public Reffable {
   // EndRenderPass().
   bool IsInRenderPass();
 
+  // Sets the next subpass for the render pass we are currently in.
+  void NextSubpass();
+
   // Called immediately before compute dispatch calls are made, e.g. Dispatch().
   void FlushComputeState();
 
