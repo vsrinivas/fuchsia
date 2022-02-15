@@ -40,7 +40,6 @@ source_set("generic-arm") {
     "//zircon/kernel/vm",
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/ram-crashlog",
-    "//zircon/system/ulib/zbitl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

@@ -51,7 +51,6 @@ zx_library("crypto") {
     "//zircon/kernel/lib/unittest",
     "//zircon/kernel/phys:handoff",
     "//zircon/system/ulib/explicit-memory",
-    "//zircon/system/ulib/zbitl",
   ]
   public_deps = [
     # <lib/crypto/prng.h> has #include <ktl/atomic.h>.

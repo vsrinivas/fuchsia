@@ -93,12 +93,6 @@ zx::status<size_t> WriteMexecData(ktl::span<ktl::byte> buffer) {
     return zx::error{ZX_ERR_INTERNAL};
   }
 
-  // TODO(fxbug.dev/88059): The items appended here will eventually be appended
-  // in ConstructMexecDataZbi() above as a function of the physboot hand-off.
-  if (zx_status_t status = platform_append_mexec_data(image.storage()); status != ZX_OK) {
-    return zx::error{status};
-  }
-
   // Propagate any stashed crashlog to the next kernel.
   if (const fbl::RefPtr<VmObject> crashlog = crashlog_get_stashed()) {
     const zbi_header_t header = {

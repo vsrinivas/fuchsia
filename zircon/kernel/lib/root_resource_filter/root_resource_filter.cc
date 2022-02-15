@@ -7,7 +7,6 @@
 #include <lib/counters.h>
 #include <lib/root_resource_filter.h>
 #include <lib/root_resource_filter_internal.h>
-#include <lib/zbitl/view.h>
 #include <stdio.h>
 #include <trace.h>
 

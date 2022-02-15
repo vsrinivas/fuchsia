@@ -15,7 +15,6 @@
 
 #ifndef __ASSEMBLER__
 
-#include <lib/fitx/result.h>
 #include <lib/zx/status.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -26,27 +25,6 @@
 #include <ktl/byte.h>
 #include <ktl/span.h>
 #include <vm/vm_object.h>
-
-// Forward-declared; fully declared in <phys/handoff.h>
-struct PhysHandoff;
-
-namespace fbl {
-
-// Forward-declared; fully declared in <fbl/array.h>
-template <typename T>
-class Array;
-
-}  // namespace fbl
-
-namespace zbitl {
-
-// Forward-declared; fully declared in <lib/zbitl/image.h>
-template <typename Storage>
-class Image;
-
-}  // namespace zbitl
-
-using MexecDataImage = zbitl::Image<fbl::Array<ktl::byte>>;
 
 // Warning: The geometry of this struct is depended upon by the mexec assembly
 //          function. Do not modify without also updating mexec.S.
@@ -66,14 +44,6 @@ static_assert(MAX_OPS_PER_PAGE_DEF == MAX_OPS_PER_PAGE,
 // Implemented in assembly. Copies the new kernel into place and branches to it.
 typedef void (*mexec_asm_func)(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t aux,
                                memmov_ops_t* ops, void* new_kernel_addr);
-
-// Extend the provided data ZBI with the platform-specific items that might
-// be necessary for the kernel that mexec is chain-loading.
-//
-// TODO(fxbug.dev/88059): The items appended here will eventually be accounted
-// for in early boot as a function of the physboot hand-off. At that point,
-// this function will be deleted.
-zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi);
 
 // Writes an mexec data ZBI into the provided buffer and returns the size of
 // that ZBI if successful.

@@ -9,10 +9,6 @@
 
 #include <assert.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/zbitl/error-stdio.h>
-#include <lib/zbitl/image.h>
-#include <lib/zbitl/items/mem-config.h>
-#include <lib/zbitl/memory.h>
 #include <lib/zircon-internal/macros.h>
 
 #include <cstddef>
@@ -107,14 +103,11 @@ static void platform_save_bootloader_data(void) {
     PlatformCrashlog::Bind(crashlog_impls::ram_mappable.Get());
   }
 
-  // Handle individual ZBI items.
-  ktl::span<ktl::byte> zbi = ZbiInPhysmap();
-  zbitl::View view(zbi);
-
   // Prevent the early boot allocator from handing out the memory the ZBI data
   // is located in.
-  auto phys = reinterpret_cast<uintptr_t>(view.storage().data());
-  boot_alloc_reserve(phys, view.size_bytes());
+  ktl::span<ktl::byte> zbi = ZbiInPhysmap();
+  auto phys = reinterpret_cast<uintptr_t>(zbi.data());
+  boot_alloc_reserve(phys, zbi.size_bytes());
 }
 
 static void boot_reserve_zbi() {
@@ -215,8 +208,6 @@ static void platform_init_crashlog(void) {
   // Initialize and select the EfiCrashlog implementation.
   PlatformCrashlog::Bind(crashlog_impls::efi);
 }
-
-zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) { return ZX_OK; }
 
 // Number of pages required to identity map 8GiB of memory.
 constexpr size_t kBytesToIdentityMap = 8ull * GB;

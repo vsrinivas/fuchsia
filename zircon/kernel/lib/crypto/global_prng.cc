@@ -13,7 +13,6 @@
 #include <lib/crypto/entropy/quality_test.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
-#include <lib/zbitl/view.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/errors.h>

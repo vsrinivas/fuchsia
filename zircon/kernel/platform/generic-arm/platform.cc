@@ -17,7 +17,6 @@
 #include <lib/memory_limit.h>
 #include <lib/persistent-debuglog.h>
 #include <lib/system-topology.h>
-#include <lib/zbitl/items/cpu-topology.h>
 #include <mexec.h>
 #include <platform.h>
 #include <reg.h>
@@ -64,8 +63,6 @@
 #include <kernel/thread.h>
 #endif
 
-#include <lib/zbitl/error-stdio.h>
-#include <lib/zbitl/image.h>
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
 #include <zircon/rights.h>
@@ -84,9 +81,6 @@ static constexpr size_t kNumArenas = 16;
 static pmm_arena_info_t mem_arena[kNumArenas];
 static size_t arena_count = 0;
 
-// Backs mexec's data ZBI.
-static ktl::byte mexec_data_zbi[ZX_PAGE_SIZE];
-
 static ktl::atomic<int> panic_started;
 static ktl::atomic<int> halted;
 
@@ -95,10 +89,6 @@ namespace {
 lazy_init::LazyInit<RamMappableCrashlog, lazy_init::CheckType::None,
                     lazy_init::Destructor::Disabled>
     ram_mappable_crashlog;
-
-zbitl::Image<ktl::span<ktl::byte>> GetMexecDataImage() {
-  return zbitl::Image(ktl::span<ktl::byte>{mexec_data_zbi, sizeof(mexec_data_zbi)});
-}
 
 }  // namespace
 
@@ -409,14 +399,6 @@ void platform_early_init(void) {
 
   ProcessPhysHandoff();
 
-  // Create an empty ZBI container now, into which ProcessZbi(Early|Late) will
-  // append the items for the mexec data ZBI.
-  auto mexec_data_image = GetMexecDataImage();
-  if (auto result = mexec_data_image.clear(); result.is_error()) {
-    zbitl::PrintViewError(result.error_value());
-    panic("failed to create mexec Data ZBI\n");
-  }
-
   // is the cmdline option to bypass dlog set ?
   dlog_bypass_init();
 
@@ -574,22 +556,6 @@ void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_
 
   for (;;)
     ;
-}
-
-zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) {
-  auto mexec_data_image = GetMexecDataImage();
-  zbitl::Image image(data_zbi);
-  if (auto extend_result = image.Extend(mexec_data_image.begin(), mexec_data_image.end());
-      extend_result.is_error()) {
-    zbitl::PrintViewCopyError(extend_result.error_value());
-    // The only possible storage error that can result from a span-backed Image
-    // would be a failure to increase the capacity.
-    return extend_result.error_value().write_error ? ZX_ERR_BUFFER_TOO_SMALL : ZX_ERR_INTERNAL;
-  } else if (auto result = mexec_data_image.take_error(); result.is_error()) {
-    zbitl::PrintViewError(result.error_value());
-    return ZX_ERR_INTERNAL;
-  }
-  return ZX_OK;
 }
 
 void platform_mexec_prep(uintptr_t new_bootimage_addr, size_t new_bootimage_len) {
