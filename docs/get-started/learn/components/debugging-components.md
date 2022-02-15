@@ -206,15 +206,15 @@ After successfully connecting, the `zxdb` prompt is ready to accept commands.
 Before launching the component, configure `zxdb` to attach to an instance of
 `greeter`. This enables the debugger to attach as soon as the process starts:
 
-```none {:.devsite-disable-click-to-copy}
-{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}attach echo_args
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>attach echo_args
+</pre>
 
 Set a breakpoint on the `greeting()` function:
 
-```none {:.devsite-disable-click-to-copy}
-{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}break greeting
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>break greeting
+</pre>
 
 With the debugger ready, start a new `echo-args` component instance:
 
@@ -248,28 +248,31 @@ currently paused:
 The `print` command will output the state of any variables in the current stack
 frame. Print the current value of `names`:
 
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>print names
+</pre>
+
 ```none {:.devsite-disable-click-to-copy}
-{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}print names
 vec!["Alice", "Bob", "Spot"]
 ```
 
 Step through the `greeting()` function a few times using the `next` command:
 
-```none {:.devsite-disable-click-to-copy}
-{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}next
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>next
+</pre>
 
 To let the program continue to completion, use the `continue` command:
 
-```none {:.devsite-disable-click-to-copy}
-{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}continue
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>continue
+</pre>
 
 Exit the debugging session to return to the terminal:
 
-```none {:.devsite-disable-click-to-copy}
-{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}exit
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>exit
+</pre>
 
 ### Introduce some crashing code
 
@@ -310,12 +313,11 @@ ffx debug connect
 
 Configure the debugger to attach to the `echo-args` component:
 
-```none {:.devsite-disable-click-to-copy}
-{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}attach echo_args
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>attach echo_args
+</pre>
 
 Start a new instance of the component:
-
 
 ```posix-terminal
 ffx component run fuchsia-pkg://fuchsia.com/echo-args#meta/echo_args.cm
@@ -369,13 +371,16 @@ can inspect any stack frame by prefixing the command with the frame number from
 the stack trace. Print the value of `args` at the point of the crash by passing
 the frame number as follows:
 
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>frame 8 print args
+</pre>
+
 ```none {:.devsite-disable-click-to-copy}
-{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}frame 8 print args
 vec!["Alice", "Bob", "Spot"]
 ```
 
 Exit the debugging session to return to the terminal:
 
-```none {:.devsite-disable-click-to-copy}
-{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}exit
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>exit
+</pre>
