@@ -54,7 +54,7 @@ async fn make_directory_cmd(storage_admin: StorageAdminProxy, path: String) -> R
 mod test {
     use {
         super::*,
-        crate::setup_oneshot_fake_storage_admin,
+        crate::test::setup_oneshot_fake_storage_admin,
         fidl::endpoints::{RequestStream, ServerEnd},
         fidl::handle::AsyncChannel,
         fidl_fuchsia_io::*,

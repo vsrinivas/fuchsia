@@ -48,7 +48,7 @@ async fn list_cmd<W: std::io::Write>(
 mod test {
     use {
         super::*,
-        crate::setup_oneshot_fake_storage_admin,
+        crate::test::setup_oneshot_fake_storage_admin,
         fidl::endpoints::{RequestStream, ServerEnd},
         fidl::handle::AsyncChannel,
         fidl_fuchsia_io::*,

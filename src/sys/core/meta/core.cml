@@ -1056,9 +1056,21 @@
     ],
     expose: [
         {
-            // This is needed for the `ffx component data` command
+            // This is needed for the `ffx component data` command.
             protocol: "fuchsia.sys2.StorageAdmin",
             from: "#data",
+        },
+        {
+            // This is needed for the `ffx component data --provider cache` command.
+            protocol: "fuchsia.sys2.StorageAdmin",
+            from: "#cache",
+            as: 'fuchsia.sys2.StorageAdmin.cache',
+        },
+        {
+            // This is needed for the `ffx component data --provider temp` command.
+            protocol: "fuchsia.sys2.StorageAdmin",
+            from: "#tmp",
+            as: 'fuchsia.sys2.StorageAdmin.tmp',
         },
         {
             protocol: "fuchsia.component.Binder",

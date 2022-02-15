@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command};
+use {argh::FromArgs, ffx_core::ffx_command, std::str::FromStr};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -10,6 +10,35 @@ use {argh::FromArgs, ffx_core::ffx_command};
 pub struct DataCommand {
     #[argh(subcommand)]
     pub subcommand: SubcommandEnum,
+
+    #[argh(option, default = "Provider::Data")]
+    /// the storage provider to use.
+    /// Options: [data, cache, temp].
+    /// Defaults to 'data'
+    pub provider: Provider,
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Provider {
+    Data,
+    Cache,
+    Temp,
+}
+
+impl FromStr for Provider {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "data" => Ok(Provider::Data),
+            "cache" => Ok(Provider::Cache),
+            "temp" | "tmp" => Ok(Provider::Temp),
+            _ => Err(format!(
+                "'{}' is not a valid storage provider: Must be one of 'data', 'cache' or 'temp'",
+                s
+            )),
+        }
+    }
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
