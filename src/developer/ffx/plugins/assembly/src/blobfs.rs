@@ -7,18 +7,31 @@ use crate::config::{BlobFSConfig, ProductConfig};
 
 use anyhow::{Context, Result};
 use assembly_blobfs::BlobFSBuilder;
+use assembly_images_config::BlobFS;
 use assembly_tool::Tool;
+use std::convert::TryInto;
 use std::path::{Path, PathBuf};
+
+pub fn convert_to_new_config(config: &BlobFSConfig) -> Result<BlobFS> {
+    Ok(BlobFS {
+        name: "blob".into(),
+        layout: config.layout.as_str().try_into()?,
+        compress: config.compress,
+        maximum_bytes: None,
+        minimum_data_bytes: None,
+        minimum_inodes: None,
+    })
+}
 
 pub fn construct_blobfs(
     blobfs_tool: Box<dyn Tool>,
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     product: &ProductConfig,
-    blobfs_config: &BlobFSConfig,
+    blobfs_config: &BlobFS,
     base_package: &BasePackage,
 ) -> Result<PathBuf> {
-    let mut blobfs_builder = BlobFSBuilder::new(blobfs_tool, &blobfs_config.layout);
+    let mut blobfs_builder = BlobFSBuilder::new(blobfs_tool, blobfs_config.layout.to_string());
     blobfs_builder.set_compressed(blobfs_config.compress);
 
     // Add the base and cache packages.
@@ -43,9 +56,10 @@ pub fn construct_blobfs(
 
 #[cfg(test)]
 mod tests {
-    use super::construct_blobfs;
+    use super::{construct_blobfs, convert_to_new_config};
     use crate::base_package::BasePackage;
     use crate::config::{BlobFSConfig, ProductConfig};
+    use assembly_images_config::{BlobFS, BlobFSLayout};
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::ToolProvider;
     use fuchsia_hash::Hash;
@@ -54,10 +68,34 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
+    fn old_config() {
+        let old_config = BlobFSConfig { layout: "compact".into(), compress: true };
+        let new_config = convert_to_new_config(&old_config).unwrap();
+        assert_eq!(new_config.layout, BlobFSLayout::Compact);
+        assert_eq!(new_config.compress, true);
+
+        let old_config = BlobFSConfig { layout: "deprecated_padded".into(), compress: false };
+        let new_config = convert_to_new_config(&old_config).unwrap();
+        assert_eq!(new_config.layout, BlobFSLayout::DeprecatedPadded);
+        assert_eq!(new_config.compress, false);
+
+        let old_config = BlobFSConfig { layout: "invalid".into(), compress: false };
+        let result = convert_to_new_config(&old_config);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn construct() {
         let dir = tempdir().unwrap();
         let product_config = ProductConfig::new("kernel", 0);
-        let blobfs_config = BlobFSConfig { layout: "compact".to_string(), compress: true };
+        let blobfs_config = BlobFS {
+            name: "blob".into(),
+            layout: BlobFSLayout::Compact,
+            compress: true,
+            maximum_bytes: None,
+            minimum_data_bytes: None,
+            minimum_inodes: None,
+        };
 
         // Create a fake base package.
         let base_path = dir.path().join("base.far");

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::base_package::{construct_base_package, BasePackage};
-use crate::blobfs::construct_blobfs;
+use crate::blobfs;
 use crate::config::{BoardConfig, PartialProductConfig, ProductConfig};
 use crate::fvm::{construct_fvm, Fvms};
 use crate::util;
@@ -51,15 +51,16 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         None
     };
 
+    let blobfs_config = blobfs::convert_to_new_config(&board.blobfs)?;
     let blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
         info!("Creating the blobfs");
         Some(
-            construct_blobfs(
+            blobfs::construct_blobfs(
                 sdk_tools.get_tool("blobfs")?,
                 &outdir,
                 &gendir,
                 &product,
-                &board.blobfs,
+                &blobfs_config,
                 &base_package,
             )
             .context("Creating the blobfs")?,

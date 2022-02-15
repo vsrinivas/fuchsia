@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
+use std::fmt;
 use std::io::Read;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 /// The configuration file specifying which images to generate and how.
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -264,6 +267,41 @@ pub enum BlobFSLayout {
     DeprecatedPadded,
 }
 
+impl FromStr for BlobFSLayout {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self> {
+        blobfs_layout_from_str(s)
+    }
+}
+
+impl TryFrom<&str> for BlobFSLayout {
+    type Error = anyhow::Error;
+    fn try_from(s: &str) -> Result<Self> {
+        blobfs_layout_from_str(s)
+    }
+}
+
+impl fmt::Display for BlobFSLayout {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                BlobFSLayout::Compact => "compact",
+                BlobFSLayout::DeprecatedPadded => "deprecated_padded",
+            }
+        )
+    }
+}
+
+fn blobfs_layout_from_str(s: &str) -> Result<BlobFSLayout> {
+    match s {
+        "compact" => Ok(BlobFSLayout::Compact),
+        "deprecated_padded" => Ok(BlobFSLayout::DeprecatedPadded),
+        _ => Err(anyhow!("invalid blobfs layout")),
+    }
+}
+
 /// A FVM image to generate with a list of filesystems.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
@@ -367,6 +405,32 @@ impl ImagesConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::convert::TryInto;
+
+    #[test]
+    fn blobfs_layout_try_from() {
+        assert_eq!(BlobFSLayout::Compact, "compact".try_into().unwrap());
+        assert_eq!(BlobFSLayout::DeprecatedPadded, "deprecated_padded".try_into().unwrap());
+        let layout: Result<BlobFSLayout> = "else".try_into();
+        assert!(layout.is_err());
+    }
+
+    #[test]
+    fn blobfs_layout_from_string() {
+        assert_eq!(BlobFSLayout::Compact, BlobFSLayout::from_str("compact").unwrap());
+        assert_eq!(
+            BlobFSLayout::DeprecatedPadded,
+            BlobFSLayout::from_str("deprecated_padded").unwrap()
+        );
+        let layout: Result<BlobFSLayout> = BlobFSLayout::from_str("else");
+        assert!(layout.is_err());
+    }
+
+    #[test]
+    fn blobfs_layout_to_string() {
+        assert_eq!("compact".to_string(), BlobFSLayout::Compact.to_string());
+        assert_eq!("deprecated_padded".to_string(), BlobFSLayout::DeprecatedPadded.to_string());
+    }
 
     #[test]
     fn from_json() {
