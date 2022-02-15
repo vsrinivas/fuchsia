@@ -1315,7 +1315,7 @@ From //src/experiences/session_shells/ermine/shell/BUILD.gn:16
 ### ermine_start_screensaver
 Whether or not to launch screensaver.
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //src/experiences/session_shells/ermine/shell/BUILD.gn:19
 
