@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MODULAR_BIN_SESSIONMGR_STARTUP_AGENT_LAUNCHER_IMPL_H_
-#define SRC_MODULAR_BIN_SESSIONMGR_STARTUP_AGENT_LAUNCHER_IMPL_H_
+#ifndef SRC_MODULAR_BIN_SESSIONMGR_STARTUP_AGENT_LAUNCHER_H_
+#define SRC_MODULAR_BIN_SESSIONMGR_STARTUP_AGENT_LAUNCHER_H_
 
 #include <fuchsia/element/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
@@ -36,7 +36,7 @@ class StartupAgentLauncher : public AgentServicesFactory {
       fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider>
           intl_property_provider_connector,
       fidl::InterfaceRequestHandler<fuchsia::element::Manager> element_manager_connector,
-      fuchsia::sys::ServiceList additional_services_for_agents,
+      fuchsia::sys::ServiceList v2_services_for_sessionmgr,
       fit::function<bool()> is_terminating_cb);
 
   ~StartupAgentLauncher() override = default;
@@ -101,8 +101,8 @@ class StartupAgentLauncher : public AgentServicesFactory {
       intl_property_provider_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::element::Manager>)> element_manager_connector_;
 
-  fuchsia::sys::ServiceList additional_services_for_agents_;
-  sys::ServiceDirectory additional_services_for_agents_directory_;
+  fuchsia::sys::ServiceList v2_services_for_sessionmgr_;
+  sys::ServiceDirectory v2_services_for_sessionmgr_directory_;
 
   // Return |true| to avoid automatically restarting session_agents_.
   fit::function<bool()> is_terminating_cb_ = nullptr;
@@ -114,4 +114,4 @@ class StartupAgentLauncher : public AgentServicesFactory {
 
 }  // namespace modular
 
-#endif  // SRC_MODULAR_BIN_SESSIONMGR_STARTUP_AGENT_LAUNCHER_IMPL_H_
+#endif  // SRC_MODULAR_BIN_SESSIONMGR_STARTUP_AGENT_LAUNCHER_H_

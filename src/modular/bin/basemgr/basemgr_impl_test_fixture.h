@@ -66,22 +66,23 @@ class FakeSessionmgr : public fuchsia::modular::internal::testing::Sessionmgr_Te
   void Initialize(
       std::string session_id,
       fidl::InterfaceHandle<::fuchsia::modular::internal::SessionContext> session_context,
-      fuchsia::sys::ServiceList additional_services_for_agents,
+      fuchsia::sys::ServiceList v2_services_for_sessionmgr,
+      fidl::InterfaceRequest<::fuchsia::io::Directory> svc_from_v1_sessionmgr,
       fuchsia::ui::views::ViewToken view_token, fuchsia::ui::views::ViewRefControl control_ref,
       fuchsia::ui::views::ViewRef view_ref) override {
-    additional_services_for_agents_ = std::move(additional_services_for_agents);
+    v2_services_for_sessionmgr_ = std::move(v2_services_for_sessionmgr);
     initialized_ = true;
   }
 
   FakeComponentWithNamespace* component() { return &component_; }
   bool initialized() const { return initialized_; }
-  std::optional<fuchsia::sys::ServiceList>& additional_services_for_agents() {
-    return additional_services_for_agents_;
+  std::optional<fuchsia::sys::ServiceList>& v2_services_for_sessionmgr() {
+    return v2_services_for_sessionmgr_;
   }
 
  private:
   bool initialized_ = false;
-  std::optional<fuchsia::sys::ServiceList> additional_services_for_agents_ = std::nullopt;
+  std::optional<fuchsia::sys::ServiceList> v2_services_for_sessionmgr_ = std::nullopt;
   fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> bindings_;
   FakeComponentWithNamespace component_;
 };

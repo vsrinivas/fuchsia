@@ -1,0 +1,68 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/basemgr",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.modular.Lifecycle",
+                "fuchsia.modular.session.Launcher",
+                "fuchsia.process.lifecycle.Lifecycle",
+            ],
+        },
+        {
+            protocol: "fuchsia.modular.PuppetMaster",
+            path: "/svc_from_v1_sessionmgr/fuchsia.modular.PuppetMaster",
+        },
+        {
+            protocol: "fuchsia.examples.Echo",
+            path: "/svc_from_v1_sessionmgr/fuchsia.examples.Echo",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.sys.Launcher",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.policy.Presenter",
+            ],
+            from: "parent",
+        },
+        {
+            storage: "cache",
+            path: "/cache",
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/data",
+            subdir: "basemgr",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.examples.Echo",
+                "fuchsia.modular.Lifecycle",
+                "fuchsia.modular.PuppetMaster",
+                "fuchsia.modular.session.Launcher",
+            ],
+            from: "self",
+        },
+    ],
+}

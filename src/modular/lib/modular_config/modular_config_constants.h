@@ -16,6 +16,9 @@ constexpr char kPackageDataDir[] = "/pkg/data";
 constexpr char kOverriddenConfigDir[] = "/config_override/data";
 constexpr char kPersistentConfigDir[] = "/cache";
 
+static constexpr auto kServicesForV1Sessionmgr = "svc_for_v1_sessionmgr";
+static constexpr auto kServicesFromV1Sessionmgr = "svc_from_v1_sessionmgr";
+
 // This file path is rooted at |kDefaultConfigDir|
 constexpr char kAllowPersistentConfigOverrideFilePath[] = "allow_persistent_config_override";
 

@@ -133,9 +133,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // Contains configuration passed in via |Launcher.LaunchSessionmgr|
   std::unique_ptr<modular::ModularConfigAccessor> launch_sessionmgr_config_accessor_;
 
-  // Retained to be used in creating a `SessionProvider`.
-  const std::shared_ptr<sys::ServiceDirectory> component_context_services_;
-
   // Used to export protocols like Lifecycle
   const std::shared_ptr<sys::OutgoingDirectory> outgoing_services_;
 

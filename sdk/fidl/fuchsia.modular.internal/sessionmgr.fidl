@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.modular.internal;
 
+using fuchsia.io;
 using fuchsia.sys;
 using fuchsia.ui.policy;
 using fuchsia.ui.views;
@@ -18,12 +19,24 @@ protocol Sessionmgr {
     /// environment with a pre-existing name, because the services sessionmgr
     /// tries to access won't be available.
     ///
+    /// `additional_services_for_agents` is currently used by `basemgr` to
+    /// expose specified services from CFv2 components to `sessionmgr` so they
+    /// can be used by CFv1 components.
+    ///
+    /// `services_from_sessionmgr` is a handle to a subdirectory
+    /// (`/svc_from_v1_sessionmgr`) in the caller's (basemgr's) outgoing
+    /// directory, which should be populated by sessionmgr with services from
+    /// CFv1 components (such as agent services and modular APIs like
+    /// PuppetMaster) so they can also be used by CFv2 components hosted by
+    /// basemgr.
+    ///
     // TODO(fxbug.dev/16221): Address issues around client-generated session_id and
     // initialization pattern of sessionmgr.
     Initialize(resource struct {
         session_id string;
         session_context client_end:SessionContext;
         additional_services_for_agents fuchsia.sys.ServiceList;
+        services_from_sessionmgr server_end:fuchsia.io.Directory;
         view_token fuchsia.ui.views.ViewToken;
         control_ref fuchsia.ui.views.ViewRefControl;
         view_ref fuchsia.ui.views.ViewRef;

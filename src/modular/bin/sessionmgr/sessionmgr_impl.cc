@@ -17,6 +17,10 @@
 
 #include <fbl/unique_fd.h>
 
+#include "fuchsia/intl/cpp/fidl.h"
+#include "lib/fdio/directory.h"
+#include "lib/fidl/cpp/interface_request.h"
+#include "lib/vfs/cpp/pseudo_dir.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/types/type_converters.h"
@@ -102,7 +106,8 @@ SessionmgrImpl::~SessionmgrImpl() = default;
 void SessionmgrImpl::Initialize(
     std::string session_id,
     fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
-    fuchsia::sys::ServiceList additional_services_for_agents,
+    fuchsia::sys::ServiceList v2_services_for_sessionmgr,
+    fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr,
     fuchsia::ui::views::ViewToken view_token, fuchsia::ui::views::ViewRefControl control_ref,
     fuchsia::ui::views::ViewRef view_ref) {
   FX_LOGS(INFO) << "SessionmgrImpl::Initialize() called.";
@@ -119,7 +124,7 @@ void SessionmgrImpl::Initialize(
   InitializePuppetMaster();
   InitializeElementManager();
 
-  InitializeStartupAgentLauncher(std::move(additional_services_for_agents));
+  InitializeStartupAgentLauncher(std::move(v2_services_for_sessionmgr));
   InitializeAgentRunner(config_accessor_.session_shell_app_config().url());
   InitializeStartupAgents();
 
@@ -140,6 +145,8 @@ void SessionmgrImpl::Initialize(
   ConnectSessionShellToStoryProvider();
 
   InitializeSessionCtl();
+
+  ServeSvcFromV1SessionmgrDir(std::move(svc_from_v1_sessionmgr));
 
   ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToSessionMgr);
 }
@@ -186,7 +193,7 @@ void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
 // Future implementations will use the new SessionFramework, which will provide support for
 // multiple sessions.
 void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
-  session_id_ = session_id;
+  session_id_ = std::move(session_id);
 
   // Create the session's environment (in which we run stories, modules, agents, and so on) as a
   // child of sessionmgr's environment. Add session-provided additional services, |kEnvServices|.
@@ -225,7 +232,7 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
 }
 
 void SessionmgrImpl::InitializeStartupAgentLauncher(
-    fuchsia::sys::ServiceList additional_services_for_agents) {
+    fuchsia::sys::ServiceList v2_services_for_sessionmgr) {
   FX_DCHECK(puppet_master_impl_);
 
   startup_agent_launcher_ = std::make_unique<StartupAgentLauncher>(
@@ -254,11 +261,11 @@ void SessionmgrImpl::InitializeStartupAgentLauncher(
         }
         element_manager_impl_->Connect(std::move(request));
       },
-      std::move(additional_services_for_agents), [this]() { return terminating_; });
+      std::move(v2_services_for_sessionmgr), [this]() { return terminating_; });
   OnTerminate(Reset(&startup_agent_launcher_));
 }
 
-void SessionmgrImpl::InitializeAgentRunner(std::string session_shell_url) {
+void SessionmgrImpl::InitializeAgentRunner(const std::string& session_shell_url) {
   FX_DCHECK(startup_agent_launcher_);
 
   // Initialize the AgentRunner.
@@ -358,6 +365,17 @@ void SessionmgrImpl::InitializeSessionCtl() {
   OnTerminate(Reset(&session_ctl_));
 }
 
+void SessionmgrImpl::ServeSvcFromV1SessionmgrDir(
+    fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr) {
+  zx_status_t status = svc_from_v1_sessionmgr_dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE |
+                                                             fuchsia::io::OPEN_RIGHT_WRITABLE |
+                                                             fuchsia::io::OPEN_FLAG_DIRECTORY,
+                                                         svc_from_v1_sessionmgr.TakeChannel());
+  if (status != ZX_OK) {
+    FX_PLOGS(FATAL, status) << "Failed to serve the svc_from_v1_sessionmgr_dir";
+  }
+}
+
 void SessionmgrImpl::InitializeSessionShell(
     fuchsia::modular::session::AppConfig session_shell_config,
     fuchsia::ui::views::ViewToken view_token, scenic::ViewRefPair view_ref_pair) {
@@ -427,6 +445,23 @@ void SessionmgrImpl::InitializeSessionShell(
     service_list->provider = std::move(session_shell_service_provider);
   }
 
+  for (const auto& service_name : service_list->names) {
+    fuchsia::sys::ServiceProviderPtr service_provider;
+    session_shell_services_.AddBinding(service_provider.NewRequest());
+    zx_status_t status = svc_from_v1_sessionmgr_dir_.AddEntry(
+        service_name, std::make_unique<vfs::Service>(
+                          [service_provider = std::move(service_provider), service_name](
+                              zx::channel request, async_dispatcher_t* dispatcher) {
+                            service_provider->ConnectToService(service_name, std::move(request));
+                          }));
+
+    if (status != ZX_OK) {
+      FX_PLOGS(WARNING, status)
+          << "Could not add service_list handler to svc_from_v1_sessionmgr, for service name: "
+          << service_name;
+    }
+  }
+
   auto session_shell_app = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
       session_environment_->GetLauncher(), std::move(session_shell_config),
       /* data_origin = */ "", std::move(service_list));
@@ -445,7 +480,7 @@ void SessionmgrImpl::Terminate(fit::function<void()> done) {
   terminating_ = true;
   terminate_done_ = std::move(done);
 
-  TerminateRecurse(on_terminate_cbs_.size() - 1);
+  TerminateRecurse(static_cast<int>(on_terminate_cbs_.size()) - 1);
 }
 
 void SessionmgrImpl::GetComponentContext(

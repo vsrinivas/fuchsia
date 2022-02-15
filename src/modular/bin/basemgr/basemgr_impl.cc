@@ -24,8 +24,6 @@
 
 namespace modular {
 
-static constexpr auto kServicesForV1Sessionmgr = "/svc_for_v1_sessionmgr";
-
 using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
 
 // Implementation of the |fuchsia::modular::session::Launcher| protocol.
@@ -151,7 +149,7 @@ void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const confi
 
   // launch with additional v2 services published in "svc_for_v1_sessionmgr"
   fuchsia::sys::ServiceList svc_for_v1_sessionmgr;
-  auto path = kServicesForV1Sessionmgr;
+  auto path = std::string("/") + modular_config::kServicesForV1Sessionmgr;
   if (files::IsDirectory(path)) {
     FX_LOGS(INFO) << "Found svc_for_v1_sessionmgr";
     zx_status_t status;
@@ -159,8 +157,9 @@ void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const confi
     status = zx::channel::create(0, &ns_server, &svc_for_v1_sessionmgr.host_directory);
     FX_CHECK(status == ZX_OK) << "failed to create channel: " << zx_status_get_string(status);
 
-    status = fdio_open(path, ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_WRITABLE,
-                       ns_server.release());
+    status =
+        fdio_open(path.c_str(), ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_WRITABLE,
+                  ns_server.release());
     FX_CHECK(status == ZX_OK) << "failed to open " << path << ": " << zx_status_get_string(status);
 
     std::vector<std::string> v2_services;
@@ -177,7 +176,7 @@ void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const confi
 
   session_provider_.reset(new SessionProvider(
       /*delegate=*/this, launcher_.get(), device_administrator_.get(), config_accessor,
-      std::move(svc_for_v1_sessionmgr),
+      std::move(svc_for_v1_sessionmgr), outgoing_services_->root_dir(),
       /*on_zero_sessions=*/[this] {
         if (state_ == State::SHUTTING_DOWN) {
           return;

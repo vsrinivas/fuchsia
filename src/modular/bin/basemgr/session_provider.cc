@@ -6,7 +6,9 @@
 
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/vfs/cpp/remote_dir.h>
 #include <lib/zx/clock.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include "src/modular/lib/fidl/clone.h"
@@ -24,15 +26,17 @@ static constexpr auto kMaxCrashRecoveryDuration = zx::hour(1);
 SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
                                  fuchsia::hardware::power::statecontrol::Admin* const administrator,
                                  const modular::ModularConfigAccessor* const config_accessor,
-                                 fuchsia::sys::ServiceList services_for_sessionmgr,
+                                 fuchsia::sys::ServiceList v2_services_for_sessionmgr,
+                                 vfs::PseudoDir* outgoing_dir_root,
                                  fit::function<void()> on_zero_sessions)
     : delegate_(delegate),
       launcher_(launcher),
       administrator_(administrator),
       config_accessor_(config_accessor),
       on_zero_sessions_(std::move(on_zero_sessions)),
-      services_for_sessionmgr_names_(std::move(services_for_sessionmgr.names)),
-      services_for_sessionmgr_dir_(std::move(services_for_sessionmgr.host_directory)) {
+      v2_services_for_sessionmgr_names_(std::move(v2_services_for_sessionmgr.names)),
+      v2_services_for_sessionmgr_dir_(std::move(v2_services_for_sessionmgr.host_directory)),
+      outgoing_dir_root_(outgoing_dir_root) {
   last_crash_time_ = zx::clock::get_monotonic();
 }
 
@@ -48,14 +52,34 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
   sessionmgr_app_config.set_url(modular_config::kSessionmgrUrl);
 
   // Session context initializes and holds the sessionmgr process.
-  fuchsia::sys::ServiceList services_for_sessionmgr;
-  services_for_sessionmgr.names = services_for_sessionmgr_names_;
-  services_for_sessionmgr.host_directory =
-      services_for_sessionmgr_dir_.CloneChannel().TakeChannel();
+  fuchsia::sys::ServiceList v2_services_for_sessionmgr;
+  v2_services_for_sessionmgr.names = v2_services_for_sessionmgr_names_;
+  v2_services_for_sessionmgr.host_directory =
+      v2_services_for_sessionmgr_dir_.CloneChannel().TakeChannel();
+
+  fuchsia::io::DirectoryPtr svc_from_v1_sessionmgr_dir_ptr;
+  auto svc_from_v1_sessionmgr_dir_request = svc_from_v1_sessionmgr_dir_ptr.NewRequest();
+
+  auto path = modular_config::kServicesFromV1Sessionmgr;
+  zx_status_t status;
+  FX_LOGS(INFO) << "(Re-)adding subdir " << path << " to the outgoing root dir";
+  status = outgoing_dir_root_->RemoveEntry(path);
+  if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
+    FX_PLOGS(FATAL, status) << "Failed to remove previous instance of remote_dir from "
+                               "basemgr's outgoing directory, for path: /"
+                            << path;
+  }
+  status = outgoing_dir_root_->AddEntry(
+      path, std::make_unique<vfs::RemoteDir>(std::move(svc_from_v1_sessionmgr_dir_ptr)));
+  if (status != ZX_OK) {
+    FX_PLOGS(FATAL, status)
+        << "Failed to add remote_dir to basemgr's outgoing directory, for path: /" << path;
+  }
 
   session_context_ = std::make_unique<SessionContextImpl>(
       launcher_, std::move(sessionmgr_app_config), config_accessor_, std::move(view_token),
-      std::move(view_ref_pair), std::move(services_for_sessionmgr),
+      std::move(view_ref_pair), std::move(v2_services_for_sessionmgr),
+      std::move(svc_from_v1_sessionmgr_dir_request),
       /*get_presentation=*/
       [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));

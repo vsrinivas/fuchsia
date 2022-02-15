@@ -29,6 +29,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:tracint",
+    "//third_party/rust_crates:tracing",
   ]
 }

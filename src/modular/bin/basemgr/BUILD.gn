@@ -68,6 +68,11 @@ fuchsia_component("component_v2") {
   deps = [ ":basemgr_bin" ]
 }
 
+fuchsia_component("basemgr-for-testing-v1-to-v2") {
+  manifest = "meta/basemgr-for-testing-v1-to-v2.cml"
+  deps = [ ":basemgr_bin" ]
+}
+
 fuchsia_package("basemgr") {
   deps = [
     ":component_v1",
@@ -175,7 +180,7 @@ source_set("basemgr_impl_test_fixture") {
     "//src/lib/testing/loop_fixture",
     "//src/modular/lib/modular_config",
     "//src/modular/lib/modular_config:modular_config_accessor",
-    "//src/modular/lib/pseudo_dir:pseudo_dir_server",
+    "//src/modular/lib/pseudo_dir:pseudo_dir",
     "//src/modular/tests:fuchsia.testing.modular",
   ]
 }
@@ -206,6 +211,41 @@ fuchsia_unittest_component("basemgr-impl-unittest") {
 fuchsia_unittest_component("basemgr-v2-to-v1-unittest") {
   manifest = "meta/basemgr-v2-to-v1-unittest.cml"
   deps = [ ":basemgr_v2_to_v1_unittest" ]
+}
+
+rustc_test("basemgr_v1_to_v2_test_realm_bin") {
+  name = "basemgr_v1_to_v2_test_realm"
+  source_root = "basemgr_v1_to_v2_test_realm.rs"
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples-rustc",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular-rustc",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal-rustc",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//src/sys/lib/component-events",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "basemgr_v1_to_v2_test_realm.rs" ]
+}
+
+fuchsia_component("basemgr-v1-to-v2-test-realm") {
+  testonly = true
+  manifest = "meta/basemgr_v1_to_v2_test_realm.cml"
+  deps = [ ":basemgr_v1_to_v2_test_realm_bin" ]
 }
 
 executable("basemgr_non_hermetic_test") {
@@ -265,6 +305,18 @@ executable("inspector_unittest") {
   ]
 }
 
+fuchsia_component("v1_echo_server_component") {
+  component_name = "v1-echo-server"
+  testonly = true
+  manifest = "meta/v1-echo-server.cmx"
+  deps = [ "//examples/fidl/rust/server:bin" ]
+}
+
+group("v2_echo_server_component") {
+  testonly = true
+  deps = [ "//examples/fidl/rust/server:echo-server" ]
+}
+
 fuchsia_unittest_component("basemgr-inspector-unittest") {
   deps = [ ":inspector_unittest" ]
 }
@@ -273,13 +325,21 @@ fuchsia_test_package("basemgr_unittests") {
   package_deps_for_infra_only = [ "//src/modular/bin/basemgr" ]
   test_components = [
     ":basemgr-impl-unittest",
+    ":basemgr-v1-to-v2-test-realm",
     ":basemgr-v2-to-v1-unittest",
     ":basemgr-non-hermetic-test",
     ":session-context-impl-unittest",
     ":bounded-inspect-list-node-unittest",
     ":basemgr-inspector-unittest",
   ]
-  deps = [ "//examples/fidl/rust/server:echo-server" ]
+  deps = [
+    ":v1_echo_server_component",
+    ":v2_echo_server_component",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/modular/bin/basemgr:basemgr-for-testing-v1-to-v2",
+    "//src/modular/bin/sessionmgr",
+    "//src/modular/bin/sessionmgr:dev_session_shell_component",
+  ]
   test_specs = {
     # session_context_impl_unittest exercises crash handling that logs an ERROR.
     log_settings = {

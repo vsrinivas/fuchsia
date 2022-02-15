@@ -46,16 +46,14 @@ StartupAgentLauncher::StartupAgentLauncher(
         session_restart_controller_connector,
     fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider> intl_property_provider_connector,
     fidl::InterfaceRequestHandler<fuchsia::element::Manager> element_manager_connector,
-    fuchsia::sys::ServiceList additional_services_for_agents,
-    fit::function<bool()> is_terminating_cb)
+    fuchsia::sys::ServiceList v2_services_for_sessionmgr, fit::function<bool()> is_terminating_cb)
     : config_accessor_(config_accessor),
       puppet_master_connector_(std::move(puppet_master_connector)),
       session_restart_controller_connector_(std::move(session_restart_controller_connector)),
       intl_property_provider_connector_(std::move(intl_property_provider_connector)),
       element_manager_connector_(std::move(element_manager_connector)),
-      additional_services_for_agents_(std::move(additional_services_for_agents)),
-      additional_services_for_agents_directory_(
-          std::move(additional_services_for_agents_.host_directory)),
+      v2_services_for_sessionmgr_(std::move(v2_services_for_sessionmgr)),
+      v2_services_for_sessionmgr_directory_(std::move(v2_services_for_sessionmgr_.host_directory)),
       is_terminating_cb_(std::move(is_terminating_cb)) {}
 
 void StartupAgentLauncher::StartAgents(AgentRunner* agent_runner,
@@ -177,11 +175,11 @@ std::vector<std::string> StartupAgentLauncher::AddAgentServices(
         [this, url](auto request) { element_manager_connector_(std::move(request)); });
   }
 
-  for (const auto& name : additional_services_for_agents_.names) {
+  for (const auto& name : v2_services_for_sessionmgr_.names) {
     service_names.push_back(name);
     service_namespace->AddServiceForName(
         [this, name](auto request) {
-          auto status = additional_services_for_agents_directory_.Connect(name, std::move(request));
+          auto status = v2_services_for_sessionmgr_directory_.Connect(name, std::move(request));
           if (status != ZX_OK) {
             FX_PLOGS(WARNING, status) << "Could not connect to service " << name
                                       << " provided by the session launcher component.";

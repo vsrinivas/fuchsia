@@ -16,6 +16,7 @@
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 
+#include "lib/vfs/cpp/pseudo_dir.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/argv_injecting_launcher.h"
@@ -52,16 +53,17 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // |Sessionmgr|
   void Initialize(std::string session_id,
                   fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
-                  fuchsia::sys::ServiceList additional_services_for_agents,
+                  fuchsia::sys::ServiceList v2_services_for_sessionmgr,
+                  fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr,
                   fuchsia::ui::views::ViewToken view_token,
                   fuchsia::ui::views::ViewRefControl control_ref,
                   fuchsia::ui::views::ViewRef view_ref) override;
 
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeSessionEnvironment(std::string session_id);
-  void InitializeStartupAgentLauncher(fuchsia::sys::ServiceList additional_services_for_agents);
+  void InitializeStartupAgentLauncher(fuchsia::sys::ServiceList v2_services_for_sessionmgr);
   void InitializeStartupAgents();
-  void InitializeAgentRunner(std::string session_shell_url);
+  void InitializeAgentRunner(const std::string& session_shell_url);
   void InitializeStoryProvider(fuchsia::modular::session::AppConfig story_shell_config,
                                bool use_session_shell_for_story_shell_factory);
   void InitializeSessionShell(fuchsia::modular::session::AppConfig session_shell_config,
@@ -70,6 +72,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializePuppetMaster();
   void InitializeElementManager();
   void InitializeSessionCtl();
+  void ServeSvcFromV1SessionmgrDir(
+      fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr);
 
   // |fuchsia::modular::SessionShellContext|
   void GetComponentContext(
@@ -152,6 +156,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   std::unique_ptr<ArgvInjectingLauncher> agent_runner_launcher_;
   AsyncHolder<AgentRunner> agent_runner_;
+
+  vfs::PseudoDir svc_from_v1_sessionmgr_dir_;
 
   std::unique_ptr<StoryCommandExecutor> story_command_executor_;
   std::unique_ptr<PuppetMasterImpl> puppet_master_impl_;
