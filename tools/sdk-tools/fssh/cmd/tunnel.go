@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -320,5 +321,6 @@ func usedPortsString() string {
 	for key := range tunnel.UsedPorts {
 		result = append(result, strconv.Itoa(key))
 	}
+	sort.Strings(result)
 	return strings.Join(result, ", ")
 }
