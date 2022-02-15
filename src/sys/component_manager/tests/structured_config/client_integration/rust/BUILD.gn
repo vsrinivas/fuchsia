@@ -10,22 +10,22 @@ import("//build/rust/rustc_test.gni")
 
 rustc_binary("bin") {
   testonly = true
-  name = "basic_config_rust_receiver"
+  name = "structured_config_rust_receiver"
   sources = [ "src/main.rs" ]
   deps = [
     ":config_lib",
-    "../fidl:test.structuredconfig.receiver-rustc",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver-rustc",
     "//third_party/rust_crates:futures",
   ]
 }
 
 fuchsia_component_manifest("manifest") {
   testonly = true
-  component_name = "basic_config_receiver"
+  component_name = "rust_receiver"
   manifest = "meta/receiver.cml"
   restricted_features = [ "structured_config" ]
 }
@@ -42,14 +42,16 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
-fuchsia_structured_config_values("values_with_true") {
+fuchsia_structured_config_values("values") {
   testonly = true
   cm_target = ":manifest"
-  values = "../config/values_with_true.json5"
+  values = "../config/values.json5"
 }
 
-fuchsia_structured_config_values("values_with_false") {
+group("rust") {
   testonly = true
-  cm_target = ":manifest"
-  values = "../config/values_with_false.json5"
+  deps = [
+    ":component",
+    ":values",
+  ]
 }

@@ -1,0 +1,84 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/fidl/fidl.gni")
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("bin") {
+  name = "different_values_integration_tests"
+  testonly = true
+  sources = [ "src/lib.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver-rustc",
+    "//src/sys/lib/cm_rust",
+    "//src/sys/lib/config_encoder",
+  ]
+}
+
+resource("my_flag_is_true") {
+  sources = [ "config/include_in_pkg_if_my_flag_true" ]
+  outputs = [ "data/my_flag_is_true" ]
+}
+
+fuchsia_component_manifest("receiver_manifest") {
+  testonly = true
+  component_name = "receiver"
+  manifest = "//src/sys/component_manager/tests/structured_config/client_integration/rust/meta/receiver.cml"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("receiver_component") {
+  testonly = true
+  cm_target = ":receiver_manifest"
+  deps = [ "//src/sys/component_manager/tests/structured_config/client_integration/rust:bin" ]
+}
+
+fuchsia_structured_config_values("values_with_true") {
+  testonly = true
+  cm_target = ":receiver_manifest"
+  values = "config/values_with_true.json5"
+}
+
+fuchsia_structured_config_values("values_with_false") {
+  testonly = true
+  cm_target = ":receiver_manifest"
+  values = "config/values_with_false.json5"
+}
+
+fuchsia_unittest_package("different_values_false") {
+  package_name = "structured_config_different_values_false"
+  manifest = "meta/tests.cml"
+  deps = [
+    ":bin",
+    ":receiver_component",
+    ":values_with_false",
+  ]
+}
+
+fuchsia_unittest_package("different_values_true") {
+  package_name = "structured_config_different_values_true"
+  manifest = "meta/tests.cml"
+  deps = [
+    ":bin",
+    ":my_flag_is_true",
+    ":receiver_component",
+    ":values_with_true",
+  ]
+}
+
+group("different_values") {
+  testonly = true
+  deps = [
+    ":different_values_false",
+    ":different_values_true",
+  ]
+}

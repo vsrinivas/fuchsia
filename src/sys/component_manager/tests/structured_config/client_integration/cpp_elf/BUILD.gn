@@ -6,14 +6,14 @@ import("//build/components.gni")
 
 executable("bin") {
   testonly = true
-  output_name = "basic_config_cpp_receiver"
+  output_name = "structured_config_cpp_elf_receiver"
   sources = [ "src/main.cc" ]
   deps = [
     ":config_lib",
-    "../fidl:test.structuredconfig.receiver_hlcpp",
     "//sdk/lib/sys/cpp:cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver_hlcpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -22,7 +22,7 @@ executable("bin") {
 
 fuchsia_component_manifest("manifest") {
   testonly = true
-  component_name = "basic_config_receiver"
+  component_name = "cpp_elf_receiver"
   manifest = "meta/receiver.cml"
   restricted_features = [ "structured_config" ]
 }
@@ -39,14 +39,16 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
-fuchsia_structured_config_values("values_with_true") {
+fuchsia_structured_config_values("values") {
   testonly = true
   cm_target = ":manifest"
-  values = "../config/values_with_true.json5"
+  values = "../config/values.json5"
 }
 
-fuchsia_structured_config_values("values_with_false") {
+group("cpp_elf") {
   testonly = true
-  cm_target = ":manifest"
-  values = "../config/values_with_false.json5"
+  deps = [
+    ":component",
+    ":values",
+  ]
 }

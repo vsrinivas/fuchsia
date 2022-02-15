@@ -1,0 +1,42 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/client_integration_tests",
+    },
+    children: [
+        {
+            name: "rust_receiver",
+            url: "#meta/rust_receiver.cm",
+        },
+        {
+            name: "cpp_elf_receiver",
+            url: "#meta/cpp_elf_receiver.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "test.structuredconfig.receiver.ConfigReceiverPuppet",
+            from: "#rust_receiver",
+            path: "/svc/test.structuredconfig.receiver.ConfigReceiverPuppet.rust",
+        },
+        {
+            protocol: "test.structuredconfig.receiver.ConfigReceiverPuppet",
+            from: "#cpp_elf_receiver",
+            path: "/svc/test.structuredconfig.receiver.ConfigReceiverPuppet.cpp_elf",
+        },
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#cpp_elf_receiver",
+                "#rust_receiver",
+            ],
+        },
+    ],
+}

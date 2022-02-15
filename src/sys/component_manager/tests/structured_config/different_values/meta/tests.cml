@@ -4,12 +4,12 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/basic_integration_tests",
+        binary: "bin/different_values_integration_tests",
     },
     children: [
         {
             name: "receiver",
-            url: "#meta/basic_config_receiver.cm",
+            url: "#meta/receiver.cm",
         },
     ],
     use: [
@@ -17,13 +17,6 @@
             protocol: "test.structuredconfig.receiver.ConfigReceiverPuppet",
             from: "#receiver",
         },
-        {
-            directory: "hub",
-            from: "framework",
-            rights: [ "r*" ],
-            path: "/hub",
-        },
-        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
     ],
     offer: [
         {

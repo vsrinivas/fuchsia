@@ -6,7 +6,7 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/basic_config_rust_receiver",
+        binary: "bin/structured_config_cpp_elf_receiver",
     },
     capabilities: [
         {
