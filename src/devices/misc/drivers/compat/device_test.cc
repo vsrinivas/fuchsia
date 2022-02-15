@@ -4,6 +4,7 @@
 
 #include "src/devices/misc/drivers/compat/device.h"
 
+#include <fidl/fuchsia.device/cpp/markers.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire_test_base.h>
 #include <lib/ddk/metadata.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -12,6 +13,7 @@
 
 #include "lib/ddk/binding_priv.h"
 #include "lib/ddk/device.h"
+#include "src/devices/misc/drivers/compat/devfs_vnode.h"
 
 namespace fdf = fuchsia_driver_framework;
 namespace fio = fuchsia_io;
@@ -316,4 +318,43 @@ TEST_F(DeviceTest, GetFragmentProtocolFromDevice) {
   compat::Device with("with-protocol", nullptr, {}, &ops, std::nullopt, logger(), dispatcher());
   ASSERT_EQ(ZX_OK, device_get_fragment_protocol(with.ZxDevice(), "fragment-name", ZX_PROTOCOL_BLOCK,
                                                 nullptr));
+}
+
+TEST_F(DeviceTest, DevfsVnodeGetTopologicalPath) {
+  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+
+  // Create a device.
+  zx_protocol_device_t ops{};
+  compat::Device device("test-device", nullptr, {}, &ops, std::nullopt, logger(), dispatcher());
+  device.Bind({std::move(endpoints->client), dispatcher()});
+
+  // The root device doesn't have a valid topological path, so we add a child.
+  zx_device_t* second_device;
+  device_add_args_t args{
+      .name = "second-device",
+  };
+  device.Add(&args, &second_device);
+
+  DevfsVnode vnode(second_device, device.logger());
+  auto dev_endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
+  ASSERT_EQ(ZX_OK, endpoints.status_value());
+
+  fidl::BindServer(test_loop().dispatcher(), std::move(dev_endpoints->server), &vnode);
+
+  fidl::WireClient<fuchsia_device::Controller> client;
+  client.Bind(std::move(dev_endpoints->client), test_loop().dispatcher());
+
+  bool callback_called = false;
+  client->GetTopologicalPath(
+      [&callback_called](
+          fidl::WireResponse<fuchsia_device::Controller::GetTopologicalPath>* response) {
+        ASSERT_TRUE(response->result.is_response());
+        std::string path(response->result.response().path.data(),
+                         response->result.response().path.size());
+        EXPECT_STREQ("/dev/second-device", path.data());
+        callback_called = true;
+      });
+
+  ASSERT_TRUE(test_loop().RunUntilIdle());
+  ASSERT_TRUE(callback_called);
 }

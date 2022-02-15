@@ -133,7 +133,9 @@ void DevfsVnode::ScheduleUnbind(ScheduleUnbindRequestView request,
 
 void DevfsVnode::GetTopologicalPath(GetTopologicalPathRequestView request,
                                     GetTopologicalPathCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  std::string path("/dev/");
+  path.append(dev_->topological_path());
+  completer.ReplySuccess(fidl::StringView::FromExternal(path));
 }
 
 void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,
