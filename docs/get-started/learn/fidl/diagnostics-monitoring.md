@@ -63,7 +63,7 @@ Setting up the monitoring session requires the following high-level steps:
 1.  Run the `debug_agent` component on the target device.
 1.  Run the `fidlcat` client and connect to the target device.
 
-The simplest method to start a debug session is to use the `fx fidlcat`
+The simplest method to start a FIDL debug session is to use the `ffx debug fidl`
 command, which does all of these in the context of your local Fuchsia build.
 However, these steps can also be performed manually if you need to configure
 them separately.
@@ -141,11 +141,11 @@ behavior of the echo server component.
 ### Monitor FIDL traffic
 
 You can use `fidlcat` to monitor and debug the FIDL connections in your
-components. Launch `fidlcat` and configure it to monitor the echo server
+components. Launch `ffx debug fidl` and configure it to monitor the echo server
 component:
 
 ```posix-terminal
-fx fidlcat --remote-name=echo_server.cm
+ffx debug fidl --remote-name echo_server.cm
 ```
 
 ```none {:.devsite-disable-click-to-copy}
@@ -169,7 +169,7 @@ ffx component start /core/ffx-laboratory:echo-realm/echo_client
 ```
 
 The client binds to the server component and communicates using the `Echo`
-FIDL protocol. Review the `fidlcat` output to see a list of the FIDL
+FIDL protocol. Review the `ffx debug fidl` output to see a list of the FIDL
 transactions handled by echo server:
 
 ```none {:.devsite-disable-click-to-copy}
@@ -267,14 +267,14 @@ async fn main() -> Result<(), anyhow::Error> {
         {{ '<strong>' }}bytes_processed: root_node.create_uint("bytes_processed", 0), {{ '</strong>' }}
     {{ '<strong>' }}}; {{ '</strong>' }}
 
-    // Attach request handler for incoming requests
-    service_fs
-        .for_each_concurrent(None, |_request: IncomingRequest| async {
-            match _request {
+    {{ '<strong>' }}// Attach request handler for incoming requests {{ '</strong>' }}
+    {{ '<strong>' }}service_fs {{ '</strong>' }}
+        {{ '<strong>' }}.for_each_concurrent(None, |_request: IncomingRequest| async { {{ '</strong>' }}
+            {{ '<strong>' }}match _request { {{ '</strong>' }}
                 {{ '<strong>' }}IncomingRequest::Echo(stream) => handle_echo_request(stream, &stats).await, {{ '</strong>' }}
-            }
-        })
-        .await;
+            {{ '<strong>' }}} {{ '</strong>' }}
+        {{ '<strong>' }}}) {{ '</strong>' }}
+        {{ '<strong>' }}.await; {{ '</strong>' }}
 
     Ok(())
 }

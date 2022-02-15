@@ -115,7 +115,7 @@ matching process is currently running.
 The following example sets a pending breakpoint on main to stop at the
 beginning of execution, and waits for a process called "hello-world" to start:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 [zxdb] attach hello-world
 Waiting for process matching "hello-world"
 
@@ -192,7 +192,7 @@ Once the emulator has started up, start a `zxdb` debugging session with the
 ffx debug connect
 ```
 
-```none
+```none {:.devsite-disable-click-to-copy}
 Connecting (use "disconnect" to cancel)...
 Connected successfully.
 👉 To get started, try "status" or "help".
@@ -206,14 +206,14 @@ After successfully connecting, the `zxdb` prompt is ready to accept commands.
 Before launching the component, configure `zxdb` to attach to an instance of
 `greeter`. This enables the debugger to attach as soon as the process starts:
 
-```none
-[zxdb] attach echo_args
+```none {:.devsite-disable-click-to-copy}
+{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}attach echo_args
 ```
 
 Set a breakpoint on the `greeting()` function:
 
-```none
-[zxdb] break greeting
+```none {:.devsite-disable-click-to-copy}
+{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}break greeting
 ```
 
 With the debugger ready, start a new `echo-args` component instance:
@@ -229,7 +229,7 @@ Upon reaching the breakpoint in `greeting()`, execution stops and the debugger
 waits for a new command. Use the `list` command to show where execution is
 currently paused:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 [zxdb] list
    18
    19 // Return a proper greeting for the list
@@ -248,27 +248,27 @@ currently paused:
 The `print` command will output the state of any variables in the current stack
 frame. Print the current value of `names`:
 
-```none
-[zxdb] print names
+```none {:.devsite-disable-click-to-copy}
+{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}print names
 vec!["Alice", "Bob", "Spot"]
 ```
 
 Step through the `greeting()` function a few times using the `next` command:
 
-```none
-[zxdb] next
+```none {:.devsite-disable-click-to-copy}
+{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}next
 ```
 
 To let the program continue to completion, use the `continue` command:
 
-```none
-[zxdb] continue
+```none {:.devsite-disable-click-to-copy}
+{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}continue
 ```
 
 Exit the debugging session to return to the terminal:
 
-```none
-[zxdb] exit
+```none {:.devsite-disable-click-to-copy}
+{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}exit
 ```
 
 ### Introduce some crashing code
@@ -310,8 +310,8 @@ ffx debug connect
 
 Configure the debugger to attach to the `echo-args` component:
 
-```none
-[zxdb] attach echo_args
+```none {:.devsite-disable-click-to-copy}
+{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}attach echo_args
 ```
 
 Start a new instance of the component:
@@ -324,7 +324,7 @@ ffx component run fuchsia-pkg://fuchsia.com/echo-args#meta/echo_args.cm
 This time, the debugger detects that an exception was thrown. Use the `frame`
 command to inspect the stack trace at the point of the crash:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 [zxdb] frame
 ▶ 0 abort() • abort.c:7
   1 panic_abort::__rust_start_panic::abort() • panic_abort/src/lib.rs:43
@@ -369,13 +369,13 @@ can inspect any stack frame by prefixing the command with the frame number from
 the stack trace. Print the value of `args` at the point of the crash by passing
 the frame number as follows:
 
-```none
-[zxdb] frame 8 print args
+```none {:.devsite-disable-click-to-copy}
+{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}frame 8 print args
 vec!["Alice", "Bob", "Spot"]
 ```
 
 Exit the debugging session to return to the terminal:
 
-```none
-[zxdb] exit
+```none {:.devsite-disable-click-to-copy}
+{{ '<span class="no-select">' }}[zxdb] {{ '</span>' }}exit
 ```
