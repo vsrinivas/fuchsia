@@ -16,7 +16,7 @@ use carnelian::{
         layout::{Alignment, Stack, StackOptions},
         scene::{Scene, SceneBuilder},
     },
-    Point, Size, ViewAssistantContext,
+    Coord, Point, Size, ViewAssistantContext,
 };
 use euclid::{size2, Size2D, UnknownUnit};
 use fuchsia_zircon::Time;
@@ -65,14 +65,15 @@ impl Button {
             Point::zero(),
             TextFacetOptions {
                 color: Color::white(),
-                horizontal_alignment: TextHorizontalAlignment::Left,
-                vertical_alignment: TextVerticalAlignment::Top,
+                horizontal_alignment: TextHorizontalAlignment::Center,
+                vertical_alignment: TextVerticalAlignment::Center,
                 ..TextFacetOptions::default()
             },
         );
         let bg_color = Color::from_hash_code("#B7410E")?;
         let bg_size = size2(label_width + padding * 2.0, font_size + padding * 2.0);
-        let background = builder.rectangle(bg_size, bg_color);
+        let corner: Coord = Coord::from(5.0);
+        let background = builder.rounded_rectangle(bg_size, corner, bg_color);
         builder.end_group();
         let button = Button {
             font_size: font_size,

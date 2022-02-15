@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::keys;
-use crate::keys::{get_accent, Key, SpecialKey};
+use crate::keys::{get_accent, Accent, Key, SpecialKey};
 use crate::proxy_view_assistant::ProxyMessages;
 use anyhow::Error;
 use carnelian::{
@@ -23,7 +23,8 @@ use carnelian::{
         },
         scene::{Scene, SceneBuilder},
     },
-    AppSender, Message, MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewKey,
+    AppSender, Coord, Message, MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext,
+    ViewKey,
 };
 use euclid::{size2, Size2D};
 use fuchsia_zircon::{Duration, Event, Time};
@@ -80,7 +81,6 @@ impl KeyButton {
             Key::Letter(letter_key) => &letter_key.lower,
             Key::Special(_special_key, text) => text,
         };
-        let label_width = measure_text_width(&face, font_size, text);
         let label = builder.text(
             face.clone(),
             text,
@@ -94,8 +94,15 @@ impl KeyButton {
             },
         );
         let bg_color = Color::from_hash_code("#B7410E")?;
-        let bg_size = size2(label_width + padding * 1.5, font_size + padding);
-        let background = builder.rectangle(bg_size, bg_color);
+        let bg_size = match key {
+            Key::Letter(_letter_key) => size2(font_size + padding, font_size + padding),
+            Key::Special(_special_key, text) => {
+                let label_width = measure_text_width(&face, font_size, text);
+                size2(label_width + padding * 1.5, font_size + padding)
+            }
+        };
+        let corner: Coord = Coord::from(5.0);
+        let background = builder.rounded_rectangle(bg_size, corner, bg_color);
         builder.end_group();
         let button = KeyButton {
             key,
@@ -151,6 +158,17 @@ impl KeyButton {
                 Box::new(SetTextMessage { text: self.label_text.clone() }),
             );
         }
+    }
+
+    pub fn set_accented_char(
+        &mut self,
+        scene: &mut Scene,
+        accent_char: &Accent,
+        state_shift: bool,
+    ) {
+        self.label_text =
+            if state_shift { accent_char.upper } else { accent_char.lower }.to_string();
+        scene.send_message(&self.label, Box::new(SetTextMessage { text: self.label_text.clone() }));
     }
 
     pub fn set_special_action(&mut self, scene: &mut Scene, special_action: bool) {
@@ -261,19 +279,15 @@ pub struct KeyboardViewAssistant {
     user_text: String,
     field_name: &'static str,
     scene_details: Option<SceneDetails>,
-    #[allow(unused)]
     state_shift: bool,
     shift_time: Time,
     sticky_shift: bool,
-    #[allow(unused)]
     accent_key: Option<&'static Key>,
     state_alt: bool,
-    #[allow(unused)]
     state_symbols: bool,
 }
 
 impl KeyboardViewAssistant {
-    #[allow(unused)]
     pub fn new(app_sender: AppSender, view_key: ViewKey) -> Result<KeyboardViewAssistant, Error> {
         let bg_color = Color::from_hash_code("#EBD5B3")?;
         Ok(KeyboardViewAssistant {
@@ -364,6 +378,10 @@ impl KeyboardViewAssistant {
                     let mut chars = self.user_text.chars();
                     chars.next_back();
                     self.user_text = chars.into_iter().collect();
+                    if self.accent_key.is_some() {
+                        self.accent_key = None;
+                        keyboard_changed = true;
+                    }
                 }
                 SpecialKey::ENTER => {
                     // Finish this view and return to the calling view
@@ -384,6 +402,7 @@ impl KeyboardViewAssistant {
                     self.state_alt = !self.state_alt;
                     if self.state_alt {
                         self.state_shift = false;
+                        self.accent_key = None;
                     }
                     keyboard_changed = true;
                 }
@@ -424,12 +443,25 @@ impl KeyboardViewAssistant {
                     if let Key::Special(SpecialKey::ALT, _) = button.key {
                         button.set_special_action(&mut scene_details.scene, self.state_alt);
                     }
-                }
-                // Highlight the acccented kays
-                for key_button in &mut scene_details.buttons {
-                    for key in keys::ACCENTS {
-                        if key_button.key == key.alt_key {
-                            key_button.set_special_action(&mut scene_details.scene, self.state_alt);
+
+                    if let Key::Letter(letter_key) = button.key {
+                        // Reset background first
+                        button.set_special_action(&mut scene_details.scene, false);
+                        // Highlight accent keys if necessary
+                        if letter_key.is_alt_accent {
+                            button.set_special_action(&mut scene_details.scene, self.state_alt);
+                        }
+
+                        // Highlight possible keys that will go with the selected accent character
+                        if let Some(accent_key) = self.accent_key {
+                            if let Some(accent_char) = get_accent(accent_key, button.key) {
+                                button.set_accented_char(
+                                    &mut scene_details.scene,
+                                    accent_char,
+                                    self.state_shift,
+                                );
+                                button.set_special_action(&mut scene_details.scene, true);
+                            }
                         }
                     }
                 }

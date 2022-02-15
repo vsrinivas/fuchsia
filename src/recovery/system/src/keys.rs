@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub struct LetterKey {
     pub(crate) lower: &'static str,
     pub(crate) upper: &'static str,
@@ -11,7 +11,7 @@ pub struct LetterKey {
     pub(crate) is_alt_accent: bool,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum SpecialKey {
     ALT,
     DEL,
@@ -20,7 +20,7 @@ pub enum SpecialKey {
     SPACE,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum Key {
     Letter(LetterKey),
     Special(SpecialKey, &'static str),
@@ -80,7 +80,7 @@ const KEY_7: Key = Key::Letter(LetterKey { lower: "7", upper: "&", alt: "¶", ..
 const KEY_8: Key = Key::Letter(LetterKey { lower: "8", upper: "*", alt: "•", ..DEFAULT_KEY });
 const KEY_9: Key = Key::Letter(LetterKey { lower: "9", upper: "(", alt: "ª", ..DEFAULT_KEY });
 const KEY_BACK_TICK: Key =
-    Key::Letter(LetterKey { lower: "`", upper: "~", alt: "`", ..DEFAULT_KEY });
+    Key::Letter(LetterKey { lower: "`", upper: "~", alt: "`", is_alt_accent: true, ..DEFAULT_KEY });
 const KEY_HYPHEN: Key = Key::Letter(LetterKey { lower: "-", upper: "_", alt: "±", ..DEFAULT_KEY });
 const KEY_EQUALS: Key =
     Key::Letter(LetterKey { lower: "=", upper: "+", alt: "≠", ..DEFAULT_KEY });
@@ -165,6 +165,7 @@ const SPECIAL_ROW: &'static [&Key] = &[&KEY_SHIFT, &KEY_ALT, &KEY_SPACE, &KEY_DE
 pub const KEYBOARD: &'static [&'static [&Key]] = &[ROW0, ROW1, ROW2, ROW3, SPECIAL_ROW];
 
 #[allow(unused)]
+#[derive(Debug)]
 pub struct Accent {
     accent: &'static Key,
     pub(crate) lower: &'static str,
@@ -172,6 +173,7 @@ pub struct Accent {
 }
 
 #[allow(unused)]
+#[derive(Debug)]
 pub struct AccentKey {
     pub alt_key: &'static Key,
     accents: &'static [&'static Accent],
@@ -195,7 +197,7 @@ const ACCENT_ACUTE: AccentKey = AccentKey {
         &Accent { accent: &KEY_E, lower: "é", upper: "É" },
         &Accent { accent: &KEY_I, lower: "í", upper: "Í" },
         &Accent { accent: &KEY_O, lower: "ó", upper: "Ó" },
-        &Accent { accent: &KEY_U, lower: "ù", upper: "Ù" },
+        &Accent { accent: &KEY_U, lower: "ú", upper: "Ú" },
     ],
 };
 
@@ -230,11 +232,9 @@ const ACCENT_TILDE: AccentKey = AccentKey {
         &Accent { accent: &KEY_A, lower: "ã", upper: "Ã" },
         &Accent { accent: &KEY_N, lower: "ñ", upper: "Ñ" },
         &Accent { accent: &KEY_O, lower: "õ", upper: "Õ	" },
-        &Accent { accent: &KEY_U, lower: "û", upper: "Û" },
     ],
 };
 
-#[allow(unused)]
 pub const ACCENTS: &'static [AccentKey] =
     &[ACCENT_GRAVE, ACCENT_CIRCUMFLEX, ACCENT_ACUTE, ACCENT_RING, ACCENT_UMLAUT, ACCENT_TILDE];
 
