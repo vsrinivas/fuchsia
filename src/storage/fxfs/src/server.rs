@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_fs::{AdminRequest, AdminRequestStream, QueryRequest, QueryRequestStream},
     fidl_fuchsia_io::{self as fio, DirectoryMarker, FilesystemInfo, MAX_FILENAME},
     fuchsia_component::server::ServiceFs,
-    fuchsia_zircon::{self as zx},
+    fuchsia_zircon::{self as zx, AsHandleRef},
     futures::stream::{StreamExt, TryStreamExt},
     futures::TryFutureExt,
     std::{
@@ -61,10 +61,19 @@ enum Services {
 }
 
 pub struct FxfsServer {
+    /// Ensure the filesystem is closed when this object is dropped.
     fs: OpenFxFilesystem,
-    // TODO(fxbug.dev/89443): Support multiple volumes.
+
+    /// Encapsulates the root volume and the root directory.
+    /// TODO(fxbug.dev/89443): Support multiple volumes.
     volume: FxVolumeAndRoot,
+
+    /// Set to true once the associated ExecutionScope associated with the server is shut down.
     closed: AtomicBool,
+
+    /// Unique identifier for this filesystem instance (not preserved across reboots) based on
+    /// the kernel object ID to guarantee uniqueness within the system.
+    unique_id: zx::Event,
 }
 
 impl FxfsServer {
@@ -75,14 +84,16 @@ impl FxfsServer {
         crypt: Arc<dyn Crypt>,
     ) -> Result<Self, Error> {
         let root_volume = root_volume(&fs).await?;
+        let unique_id = zx::Event::create().expect("Failed to create event");
         let volume = FxVolumeAndRoot::new(
             root_volume
                 .open_or_create_volume(volume_name, crypt)
                 .await
                 .expect("Open or create volume failed"),
+            unique_id.get_koid()?.raw_koid(),
         )
         .await?;
-        Ok(Self { fs, volume, closed: AtomicBool::new(false) })
+        Ok(Self { fs, volume, closed: AtomicBool::new(false), unique_id })
     }
 
     pub async fn run(self, outgoing_chan: zx::Channel) -> Result<(), Error> {
@@ -159,11 +170,11 @@ impl FxfsServer {
     async fn handle_query(&self, _scope: &ExecutionScope, req: QueryRequest) -> Result<(), Error> {
         match req {
             QueryRequest::GetInfo { responder, .. } => {
-                // TODO(csuter): Support all the fields.
+                // TODO(fxbug.dev/93770): Support all fields (free_shared_pool_bytes is missing).
                 let info = self.fs.get_info();
-                responder.send(&mut Ok(
-                    info.to_filesystem_info(self.volume.volume().store().object_count())
-                ))?;
+                let object_count = self.volume.volume().store().object_count();
+                let fs_id = self.unique_id.get_koid()?.raw_koid();
+                responder.send(&mut Ok(info.to_filesystem_info(object_count, fs_id)))?;
             }
             _ => panic!("Unimplemented"),
         }
@@ -190,14 +201,15 @@ impl FxfsServer {
 }
 
 impl Info {
-    fn to_filesystem_info(self, object_count: u64) -> FilesystemInfo {
+    fn to_filesystem_info(self, object_count: u64, fs_id: u64) -> FilesystemInfo {
         FilesystemInfo {
             total_bytes: self.total_bytes,
             used_bytes: self.used_bytes,
             total_nodes: TOTAL_NODES,
             used_nodes: object_count,
+            // TODO(fxbug.dev/93770): Support free_shared_pool_bytes.
             free_shared_pool_bytes: 0,
-            fs_id: 0, // TODO(csuter)
+            fs_id,
             block_size: self.block_size.try_into().unwrap(),
             max_filename_size: MAX_FILENAME as u32,
             fs_type: VFS_TYPE_FXFS,

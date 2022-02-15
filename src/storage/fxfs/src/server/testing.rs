@@ -55,6 +55,7 @@ impl TestFixture {
             let root_volume = root_volume(&filesystem).await.unwrap();
             let vol = FxVolumeAndRoot::new(
                 root_volume.new_volume("vol", Arc::new(InsecureCrypt::new())).await.unwrap(),
+                0,
             )
             .await
             .unwrap();
@@ -64,6 +65,7 @@ impl TestFixture {
             let root_volume = root_volume(&filesystem).await.unwrap();
             let vol = FxVolumeAndRoot::new(
                 root_volume.volume("vol", Arc::new(InsecureCrypt::new())).await.unwrap(),
+                0,
             )
             .await
             .unwrap();

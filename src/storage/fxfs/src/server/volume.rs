@@ -46,18 +46,22 @@ pub struct FxVolume {
     pager: Pager,
     executor: fasync::EHandle,
 
-    // A tuple of the actual task and a channel to signal to terminate the task.
+    /// A tuple of the actual task and a channel to signal to terminate the task.
     flush_task: Mutex<Option<(fasync::Task<()>, oneshot::Sender<()>)>>,
+
+    /// Unique identifier of the filesystem that owns this volume.
+    fs_id: u64,
 }
 
 impl FxVolume {
-    pub fn new(store: Arc<ObjectStore>) -> Result<Self, Error> {
+    pub fn new(store: Arc<ObjectStore>, fs_id: u64) -> Result<Self, Error> {
         Ok(Self {
             cache: NodeCache::new(),
             store,
             pager: Pager::new()?,
             executor: fasync::EHandle::local(),
             flush_task: Mutex::new(None),
+            fs_id,
         })
     }
 
@@ -75,6 +79,10 @@ impl FxVolume {
 
     pub fn executor(&self) -> &fasync::EHandle {
         &self.executor
+    }
+
+    pub fn id(&self) -> u64 {
+        self.fs_id
     }
 
     pub async fn terminate(&self) {
@@ -358,8 +366,8 @@ pub struct FxVolumeAndRoot {
 }
 
 impl FxVolumeAndRoot {
-    pub async fn new(store: Arc<ObjectStore>) -> Result<Self, Error> {
-        let volume = Arc::new(FxVolume::new(store)?);
+    pub async fn new(store: Arc<ObjectStore>, unique_id: u64) -> Result<Self, Error> {
+        let volume = Arc::new(FxVolume::new(store, unique_id)?);
         let root_object_id = volume.store().root_directory_object_id();
         let root_dir = Directory::open(&volume, root_object_id).await?;
         let root: Arc<dyn FxNode> = Arc::new(FxDirectory::new(None, root_dir));
@@ -655,7 +663,7 @@ mod tests {
             .expect("create_object failed")
             .object_id();
             transaction.commit().await.expect("commit failed");
-            let vol = FxVolumeAndRoot::new(volume.clone()).await.unwrap();
+            let vol = FxVolumeAndRoot::new(volume.clone(), 0).await.unwrap();
 
             let file = vol
                 .volume()

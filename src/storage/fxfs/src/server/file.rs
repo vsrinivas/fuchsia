@@ -494,7 +494,10 @@ impl File for FxFile {
 
     fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
         let store = self.handle.store();
-        Ok(store.filesystem().get_info().to_filesystem_info(store.object_count()))
+        Ok(store
+            .filesystem()
+            .get_info()
+            .to_filesystem_info(store.object_count(), self.handle.owner().id()))
     }
 }
 

@@ -615,7 +615,10 @@ impl Directory for FxDirectory {
 
     fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
         let store = self.directory.store();
-        Ok(store.filesystem().get_info().to_filesystem_info(store.object_count()))
+        Ok(store
+            .filesystem()
+            .get_info()
+            .to_filesystem_info(store.object_count(), self.volume().id()))
     }
 }
 
