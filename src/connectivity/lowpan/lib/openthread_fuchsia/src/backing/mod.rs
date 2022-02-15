@@ -32,6 +32,7 @@ pub(super) struct PlatformBacking {
     pub(super) netif_index_thread: Option<ot::NetifIndex>,
     #[allow(dead_code)]
     pub(super) netif_index_backbone: Option<ot::NetifIndex>,
+    pub(super) trel: RefCell<Option<trel::TrelInstance>>,
 }
 
 impl PlatformBacking {

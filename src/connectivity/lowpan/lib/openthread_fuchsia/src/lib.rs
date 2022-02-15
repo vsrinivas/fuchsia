@@ -10,6 +10,7 @@
 mod backing;
 mod binding;
 mod logging;
+pub(crate) mod to_escaped_string;
 
 use futures::prelude::*;
 use openthread::prelude::*;
@@ -108,8 +109,6 @@ impl Platform {
         SpinelSink: SpinelDeviceClient + 'static,
         SpinelStream: Stream<Item = Result<Vec<u8>, anyhow::Error>> + 'static + Unpin + Send,
     {
-        ot::set_logging_level(ot::LogLevel::Info);
-
         // OpenThread to RCP data-pump and related machinery.
         let (timer_sender, timer_receiver) = fmpsc::channel(TIMER_BUFFER_LEN);
         let (ot_to_rcp_sender, ot_to_rcp_receiver) = mpsc::channel::<Vec<u8>>();
@@ -177,6 +176,7 @@ impl Platform {
                 timer_sender,
                 netif_index_thread: builder.thread_netif_index,
                 netif_index_backbone: builder.backbone_netif_index,
+                trel: RefCell::new(None),
             });
 
             // Initialize the lower-level platform implementation
@@ -204,6 +204,7 @@ impl ot::Platform for Platform {
         self.process_poll_alarm(instance, cx);
         self.process_poll_radio(instance, cx);
         self.process_poll_udp(instance, cx);
+        self.process_poll_trel(instance, cx);
         self.process_poll_tasks(cx);
     }
 }
@@ -246,6 +247,14 @@ impl Platform {
             if let Poll::Ready(Err(err)) = poll_ot_udp_socket(udp_socket, instance, cx) {
                 error!("Error in {:?}: {:?}", udp_socket, err);
             }
+        }
+    }
+
+    fn process_poll_trel(&mut self, instance: &ot::Instance, cx: &mut Context<'_>) {
+        // SAFETY: Guaranteed to only be called from the OpenThread thread.
+        let mut trel = unsafe { PlatformBacking::as_ref() }.trel.borrow_mut();
+        if let Some(trel) = trel.as_mut() {
+            trel.poll(instance, cx);
         }
     }
 
