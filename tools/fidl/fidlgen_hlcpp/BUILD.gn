@@ -52,7 +52,7 @@ if (is_host) {
   }
 
   golden_test("fidlgen_hlcpp_golden_tests") {
-    goldens_dir = "goldens/bindings"
+    goldens_dir = "goldens"
     reformat_goldens_bin = "${clang_prefix}/clang-format"
     reformat_goldens_args = [ "--style=google" ]
     deps = []
