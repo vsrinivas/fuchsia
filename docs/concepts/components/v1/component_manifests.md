@@ -71,7 +71,15 @@ checkout environment.
 fx cmc include {{ "<var>" }}cmx_file{{ "</var>" }} --includeroot $FUCHSIA_DIR --includepath $FUCHSIA_DIR/sdk/lib
 ```
 
-Includes can be recursive, meaning that shards can have their own includes.
+Includes are transitive, meaning that shards can have their own includes.
+
+Include paths can have diamond dependencies. For instance this is valid:
+A includes B, A includes C, B includes D, C includes D.
+In this case A will transitively include B, C, D.
+
+Include paths cannot have cycles. For instance this is invalid:
+A includes B, B includes A.
+A cycle such as the above will result in a compile-time error.
 
 ## program
 
