@@ -135,16 +135,16 @@ protocol Node2 {
         info ConnectionInfo;
     });
 
-    /// Acquires a token which can be used to identify this connection at
-    /// a later point in time.
-    ///
-    /// This method does not require any rights. Note that the token identifies
-    /// the connection, hence carries the rights information on this connection.
-    @transitional
-    @selector("fuchsia.io/Node.GetToken")
-    GetToken2() -> (resource struct {
-        token Token;
-    }) error zx.status;
+    // TODO(https://fxbug.dev/77623): uncomment and implement.
+    // /// Acquires a token which can be used to identify this connection at
+    // /// a later point in time.
+    // ///
+    // /// This method does not require any rights. Note that the token identifies
+    // /// the connection, hence carries the rights information on this connection.
+    // @selector("fuchsia.io/Node.GetToken")
+    // GetToken2() -> (resource struct {
+    //     token Token;
+    // }) error zx.status;
 
     /// Acquires information about the node.
     ///

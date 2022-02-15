@@ -41,10 +41,6 @@ class TestServerBase : public fidl::WireServer<fio::Node2> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetToken2(GetToken2RequestView request, GetToken2Completer::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
   void GetAttributes(GetAttributesRequestView request,
                      GetAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
