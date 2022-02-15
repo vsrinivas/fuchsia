@@ -5,7 +5,7 @@
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/async-loop/testing/cpp/real_loop.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
@@ -13,12 +13,11 @@
 
 #include <vector>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <sdk/lib/ui/scenic/cpp/view_creation_tokens.h>
+#include <zxtest/zxtest.h>
 
 #include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
-#include "src/ui/scenic/lib/utils/helpers.h"
+#include "src/ui/scenic/integration_tests/utils.h"
 
 // This test exercises the focus protocols implemented by Scenic (fuchsia.ui.focus.FocusChain,
 // fuchsia.ui.views.Focuser, fuchsia.ui.views.ViewRefFocused) in the context of the Flatland
@@ -30,7 +29,7 @@
 namespace integration_tests {
 
 #define EXPECT_VIEW_REF_MATCH(view_ref1, view_ref2) \
-  EXPECT_EQ(utils::ExtractKoid(view_ref1), utils::ExtractKoid(view_ref2))
+  EXPECT_EQ(ExtractKoid(view_ref1), ExtractKoid(view_ref2))
 
 using fuchsia::ui::composition::ChildViewWatcher;
 using fuchsia::ui::composition::ContentId;
@@ -56,7 +55,9 @@ const uint32_t kDefaultLogicalPixelSize = 1;
 
 }  // namespace
 
-class FlatlandFocusIntegrationTest : public gtest::RealLoopFixture, public FocusChainListener {
+class FlatlandFocusIntegrationTest : public zxtest::Test,
+                                     public loop_fixture::RealLoop,
+                                     public FocusChainListener {
  protected:
   FlatlandFocusIntegrationTest() : focus_chain_listener_(this) {}
 
@@ -84,7 +85,7 @@ class FlatlandFocusIntegrationTest : public gtest::RealLoopFixture, public Focus
     // Set up the display.
     flatland_display_ = realm_->Connect<fuchsia::ui::composition::FlatlandDisplay>();
     flatland_display_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
     fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
     auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
@@ -93,7 +94,7 @@ class FlatlandFocusIntegrationTest : public gtest::RealLoopFixture, public Focus
     // Set up root view.
     root_session_ = realm_->Connect<fuchsia::ui::composition::Flatland>();
     root_session_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
     fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
     auto identity = scenic::NewViewIdentityOnCreation();
@@ -316,7 +317,7 @@ TEST_F(FlatlandFocusIntegrationTest, FocusChain_Updated_OnViewDisconnect) {
 }
 
 TEST_F(FlatlandFocusIntegrationTest, ViewFocuserDisconnectDoesNotKillSession) {
-  root_session_.set_error_handler([](zx_status_t) { FAIL() << "Client shut down unexpectedly."; });
+  root_session_.set_error_handler([](zx_status_t) { FAIL("Client shut down unexpectedly."); });
   root_focuser_.Unbind();
   // Wait "long enough" and observe that the session channel doesn't close.
   RunLoopWithTimeout(kWaitTime);

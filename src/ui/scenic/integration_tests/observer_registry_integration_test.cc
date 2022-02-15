@@ -7,9 +7,9 @@
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/observation/test/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/async-loop/testing/cpp/real_loop.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -23,12 +23,11 @@
 #include <string>
 #include <vector>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <sdk/lib/ui/scenic/cpp/view_creation_tokens.h>
+#include <zxtest/zxtest.h>
 
 #include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
-#include "src/ui/scenic/lib/utils/helpers.h"
+#include "src/ui/scenic/integration_tests/utils.h"
 
 // This test exercises the fuchsia.ui.observation.test.Registry protocol implemented by Scenic.
 
@@ -156,11 +155,12 @@ void AssertViewDescriptor(const fuog_ViewDescriptor& view_descriptor,
     ASSERT_TRUE(view_descriptor.has_layout());
     auto& layout = view_descriptor.layout();
 
-    EXPECT_FLOAT_EQ(layout.extent.min.x, 0.);
-    EXPECT_FLOAT_EQ(layout.extent.min.y, 0.);
-    EXPECT_FLOAT_EQ(layout.extent.max.x, expected_view_descriptor.layout->first);
-    EXPECT_FLOAT_EQ(layout.extent.max.y, expected_view_descriptor.layout->second);
-    EXPECT_THAT(layout.pixel_scale, testing::ElementsAre(1.f, 1.f));
+    EXPECT_TRUE(CmpFloatingValues(layout.extent.min.x, 0.));
+    EXPECT_TRUE(CmpFloatingValues(layout.extent.min.y, 0.));
+    EXPECT_TRUE(CmpFloatingValues(layout.extent.max.x, expected_view_descriptor.layout->first));
+    EXPECT_TRUE(CmpFloatingValues(layout.extent.max.y, expected_view_descriptor.layout->second));
+    EXPECT_TRUE(CmpFloatingValues(layout.pixel_scale[0], 1.f));
+    EXPECT_TRUE(CmpFloatingValues(layout.pixel_scale[1], 1.f));
   }
 }
 
@@ -176,7 +176,8 @@ void AssertViewTreeSnapshot(const fuog_ViewTreeSnapshot& snapshot,
 
 // Test fixture that sets up an environment with Registry protocol we can connect to. This test
 // fixture is used for tests where the view nodes are created by Flatland instances.
-class FlatlandObserverRegistryIntegrationTest : public gtest::RealLoopFixture,
+class FlatlandObserverRegistryIntegrationTest : public zxtest::Test,
+                                                public loop_fixture::RealLoop,
                                                 public fuf_FocusChainListener {
  protected:
   FlatlandObserverRegistryIntegrationTest() : focus_chain_listener_(this) {}
@@ -204,18 +205,18 @@ class FlatlandObserverRegistryIntegrationTest : public gtest::RealLoopFixture,
     observer_registry_ptr_ = realm_->Connect<fuot_Registry>();
 
     observer_registry_ptr_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Observer Registry Protocol: " << zx_status_get_string(status);
+      FAIL("Lost connection to Observer Registry Protocol: %s", zx_status_get_string(status));
     });
 
     flatland_display_ = realm_->Connect<fuc_FlatlandDisplay>();
     flatland_display_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
 
     // Set up root view.
     root_session_ = realm_->Connect<fuc_Flatland>();
     root_session_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
 
     fidl::InterfacePtr<fuc_ChildViewWatcher> child_view_watcher;
@@ -298,7 +299,7 @@ class FlatlandObserverRegistryIntegrationTest : public gtest::RealLoopFixture,
 
 // Test fixture that sets up an environment with Registry protocol we can connect to. This test
 // fixture is used for tests where the view nodes are created by GFX instances.
-class GfxObserverRegistryIntegrationTest : public gtest::RealLoopFixture {
+class GfxObserverRegistryIntegrationTest : public zxtest::Test, public loop_fixture::RealLoop {
  protected:
   fus_Scenic* scenic() { return scenic_.get(); }
 
@@ -316,18 +317,18 @@ class GfxObserverRegistryIntegrationTest : public gtest::RealLoopFixture {
 
     scenic_ = realm_->Connect<fus_Scenic>();
     scenic_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
 
     observer_registry_ptr_ = realm_->Connect<fuot_Registry>();
     observer_registry_ptr_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Observer Registry Protocol: " << zx_status_get_string(status);
+      FAIL("Lost connection to Observer Registry Protocol: %s", zx_status_get_string(status));
     });
 
     // Set up root session.
     root_session_ = std::make_unique<GfxRootSession>(scenic());
     root_session_->session.set_error_handler([](zx_status_t status) {
-      FAIL() << "Root session terminated: " << zx_status_get_string(status);
+      FAIL("Root session terminated: %s", zx_status_get_string(status));
     });
     BlockingPresent(root_session_->session);
   }
@@ -430,9 +431,9 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesTopologyUpdatesFor
   ASSERT_TRUE(geometry_result->has_updates());
   ASSERT_EQ(geometry_result->updates().size(), 5UL);
 
-  auto root_view_ref_koid = utils::ExtractKoid(root_view_ref_);
-  auto parent_view_ref_koid = utils::ExtractKoid(parent_view_ref);
-  auto child_view_ref_koid = utils::ExtractKoid(child_view_ref);
+  auto root_view_ref_koid = ExtractKoid(root_view_ref_);
+  auto parent_view_ref_koid = ExtractKoid(parent_view_ref);
+  auto child_view_ref_koid = ExtractKoid(child_view_ref);
 
   // This snapshot captures the state of the view tree when the scene only has the root_view.
   AssertViewTreeSnapshot(geometry_result->updates()[0],
@@ -514,8 +515,8 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesLayoutUpdatesForFl
   ASSERT_TRUE(geometry_result->has_updates());
   ASSERT_EQ(geometry_result->updates().size(), 3UL);
 
-  auto root_view_ref_koid = utils::ExtractKoid(root_view_ref_);
-  auto child_view_ref_koid = utils::ExtractKoid(view_ref);
+  auto root_view_ref_koid = ExtractKoid(root_view_ref_);
+  auto child_view_ref_koid = ExtractKoid(view_ref);
 
   // This snapshot captures the state of the view tree when the root view sets the logical size
   // of the viewport as {|kDefaultSize|,|kDefaultSize|}.
@@ -596,7 +597,7 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectin
   auto& root_view_descriptor = snapshot.views()[0];
   auto& children = root_view_descriptor.children();
 
-  auto child_view_ref_koid = utils::ExtractKoid(child_view_ref);
+  auto child_view_ref_koid = ExtractKoid(child_view_ref);
 
   // Root view moves focus to the child view after it shows up in the fuog_ViewTreeSnapshot.
   std::optional<bool> request_processed = false;
@@ -686,8 +687,8 @@ TEST_F(GfxObserverRegistryIntegrationTest, ClientReceivesHierarchyUpdatesForGfx)
   ASSERT_TRUE(geometry_result->has_updates());
   ASSERT_EQ(geometry_result->updates().size(), 5UL);
 
-  auto parent_view_ref_koid = utils::ExtractKoid(parent_view_ref_copy);
-  auto child_view_ref_koid = utils::ExtractKoid(child_view_ref_copy);
+  auto parent_view_ref_koid = ExtractKoid(parent_view_ref_copy);
+  auto child_view_ref_koid = ExtractKoid(child_view_ref_copy);
 
   // This snapshot captures the state of the view tree when the scene only has the root_view.
   AssertViewTreeSnapshot(geometry_result->updates()[0],

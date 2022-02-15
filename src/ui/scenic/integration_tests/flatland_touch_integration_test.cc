@@ -5,7 +5,7 @@
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/pointer/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/async-loop/testing/cpp/real_loop.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
@@ -16,17 +16,11 @@
 #include <string>
 #include <vector>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <sdk/lib/ui/scenic/cpp/view_creation_tokens.h>
+#include <zxtest/zxtest.h>
 
 #include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
 #include "src/ui/scenic/integration_tests/utils.h"
-
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/quaternion.hpp>
 
 // These tests exercise the integration between Flatland and the InputSystem, including the
 // View-to-View transform logic between the injection point and the receiver.
@@ -41,13 +35,12 @@
 #define EXPECT_EQ_POINTER(pointer_sample, viewport_to_view_transform, expected_phase, expected_x, \
                           expected_y)                                                             \
   {                                                                                               \
-    constexpr float kEpsilon = std::numeric_limits<float>::epsilon() * 1000;                      \
     EXPECT_EQ(pointer_sample.phase(), expected_phase);                                            \
-    const glm::mat3 transform_matrix = ArrayToMat3(viewport_to_view_transform);                   \
+    const Mat3 transform_matrix = ArrayToMat3(viewport_to_view_transform);                        \
     const std::array<float, 2> transformed_pointer =                                              \
         TransformPointerCoords(pointer_sample.position_in_viewport(), transform_matrix);          \
-    EXPECT_NEAR(transformed_pointer[0], expected_x, kEpsilon);                                    \
-    EXPECT_NEAR(transformed_pointer[1], expected_y, kEpsilon);                                    \
+    EXPECT_TRUE(CmpFloatingValues(transformed_pointer[0], expected_x));                           \
+    EXPECT_TRUE(CmpFloatingValues(transformed_pointer[1], expected_y));                           \
   }
 
 namespace integration_tests {
@@ -70,30 +63,51 @@ using fuchsia::ui::pointer::TouchResponseType;
 using fuchsia::ui::views::ViewCreationToken;
 using fuchsia::ui::views::ViewportCreationToken;
 using fuchsia::ui::views::ViewRef;
+using Mat3 = std::array<std::array<float, 3>, 3>;
+using Vec3 = std::array<float, 3>;
 using RealmRoot = sys::testing::experimental::RealmRoot;
 
 namespace {
 
-glm::mat3 ArrayToMat3(std::array<float, 9> array) {
-  // clang-format off
-  return glm::mat3(array[0], array[1], array[2],  // first column
-                   array[3], array[4], array[5],  // second column
-                   array[6], array[7], array[8]); // third column
-  // clang-format on
+Mat3 ArrayToMat3(std::array<float, 9> array) {
+  Mat3 mat;
+  for (size_t row = 0; row < mat.size(); row++) {
+    for (size_t col = 0; col < mat[0].size(); col++) {
+      mat[row][col] = array[mat.size() * row + col];
+    }
+  }
+  return mat;
 }
 
-std::array<float, 2> TransformPointerCoords(std::array<float, 2> pointer,
-                                            const glm::mat3& transform) {
-  const glm::vec3 homogenous_pointer{pointer[0], pointer[1], 1};
-  const glm::vec3 transformed_pointer = transform * homogenous_pointer;
-  FX_CHECK(transformed_pointer.z != 0);
-  const glm::vec3 homogenized = transformed_pointer / transformed_pointer.z;
-  return {homogenized.x, homogenized.y};
+// Matrix multiplication between a 3X3 matrix and 3X1 matrix.
+Vec3 operator*(const Mat3& mat, const Vec3& vec) {
+  Vec3 result = {0, 0, 0};
+  for (size_t row = 0; row < mat.size(); row++) {
+    for (size_t col = 0; col < mat[0].size(); col++) {
+      result[row] += mat[row][col] * vec[col];
+    }
+  }
+  return result;
+}
+
+Vec3& operator/(Vec3& vec, float num) {
+  for (size_t i = 0; i < vec.size(); i++) {
+    vec[i] /= num;
+  }
+  return vec;
+}
+
+std::array<float, 2> TransformPointerCoords(std::array<float, 2> pointer, const Mat3& transform) {
+  const Vec3 homogenous_pointer = {pointer[0], pointer[1], 1};
+  Vec3 transformed_pointer = transform * homogenous_pointer;
+  FX_CHECK(transformed_pointer[2] != 0);
+  const Vec3& homogenized = transformed_pointer / transformed_pointer[2];
+  return {homogenized[0], homogenized[1]};
 }
 
 }  // namespace
 
-class FlatlandTouchIntegrationTest : public gtest::RealLoopFixture {
+class FlatlandTouchIntegrationTest : public zxtest::Test, public loop_fixture::RealLoop {
  protected:
   static constexpr uint32_t kDeviceId = 1111;
   static constexpr uint32_t kPointerId = 2222;
@@ -118,17 +132,17 @@ class FlatlandTouchIntegrationTest : public gtest::RealLoopFixture {
 
     flatland_display_ = realm_->Connect<fuchsia::ui::composition::FlatlandDisplay>();
     flatland_display_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
     pointerinjector_registry_ = realm_->Connect<fuchsia::ui::pointerinjector::Registry>();
     pointerinjector_registry_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to pointerinjector Registry: " << zx_status_get_string(status);
+      FAIL("Lost connection to pointerinjector Registry: %s", zx_status_get_string(status));
     });
 
     // Set up root view.
     root_session_ = realm_->Connect<fuchsia::ui::composition::Flatland>();
     root_session_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
 
     fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
@@ -214,7 +228,7 @@ class FlatlandTouchIntegrationTest : public gtest::RealLoopFixture {
         std::move(config), injector_.NewRequest(),
         [&register_callback_fired] { register_callback_fired = true; });
     injector_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
     RunLoopUntil([&register_callback_fired] { return register_callback_fired; });
     ASSERT_FALSE(injector_channel_closed_);
@@ -296,7 +310,7 @@ TEST_F(FlatlandTouchIntegrationTest, BasicInputTest) {
   fuchsia::ui::pointer::TouchSourcePtr child_touch_source;
   child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
   child_touch_source.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
+    FAIL("Touch source closed with status: %s", zx_status_get_string(status));
   });
 
   // Set up the root graph.
@@ -357,7 +371,7 @@ TEST_F(FlatlandTouchIntegrationTest, ChildCreatedUsingCreateView_DoesNotGetInput
   fuchsia::ui::composition::FlatlandPtr parent_session;
   fuchsia::ui::pointer::TouchSourcePtr parent_touch_source;
   parent_touch_source.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
+    FAIL("Touch source closed with status: %s", zx_status_get_string(status));
   });
 
   // Create the parent view using CreateView2 and attach it to |root_session_|. Register the parent

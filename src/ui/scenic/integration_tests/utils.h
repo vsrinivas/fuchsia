@@ -15,6 +15,12 @@ bool PointerMatches(
     fuchsia::ui::input::PointerEventType type = fuchsia::ui::input::PointerEventType::TOUCH,
     uint32_t buttons = 0);
 
+bool CmpFloatingValues(float num1, float num2);
+
+zx_koid_t ExtractKoid(const zx::object_base& object);
+
+zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref);
+
 // Creates pointer event commands for one finger, where the pointer "device" is
 // tied to one compositor. Helps remove boilerplate clutter.
 //

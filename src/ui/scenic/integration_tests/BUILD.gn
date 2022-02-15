@@ -34,6 +34,21 @@ source_set("common_deps") {
   deps = [ "//src/lib/fostr/fidl/fuchsia.ui.input:fuchsia.ui.input" ]
 }
 
+source_set("common_deps_cts") {
+  testonly = true
+  sources = [
+    "utils.cc",
+    "utils.h",
+  ]
+  public_deps = [
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
 source_set("scenic_realm_builder") {
   testonly = true
   sources = [
@@ -175,12 +190,11 @@ executable("flatland_touch_integration_test_bin") {
   testonly = true
   sources = [ "flatland_touch_integration_test.cc" ]
   deps = [
-    ":common_deps",
+    ":common_deps_cts",
     ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk//fidl/fuchsia.ui.pointer",
     "//sdk//fidl/fuchsia.ui.pointerinjector",
-    "//third_party/glm",
   ]
 }
 
@@ -194,11 +208,10 @@ executable("flatland_focus_integration_test_bin") {
   testonly = true
   sources = [ "flatland_focus_integration_test.cc" ]
   deps = [
-    ":common_deps",
+    ":common_deps_cts",
     ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.focus",
-    "//src/ui/scenic/lib/utils",
   ]
 }
 
@@ -212,13 +225,12 @@ executable("observer_registry_integration_test_bin") {
   testonly = true
   sources = [ "observer_registry_integration_test.cc" ]
   deps = [
-    ":common_deps",
+    ":common_deps_cts",
     ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk//fidl/fuchsia.ui.focus",
     "//sdk//fidl/fuchsia.ui.observation.geometry",
     "//sdk//fidl/fuchsia.ui.observation.test",
-    "//src/ui/scenic/lib/utils",
   ]
 }
 
@@ -252,7 +264,7 @@ executable("flatland_mouse_integration_test_bin") {
   testonly = true
   sources = [ "flatland_mouse_integration_test.cc" ]
   deps = [
-    ":common_deps",
+    ":common_deps_cts",
     ":scenic_realm_builder",
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk//fidl/fuchsia.ui.pointer",

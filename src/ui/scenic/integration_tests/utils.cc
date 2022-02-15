@@ -9,8 +9,6 @@
 
 #include <cmath>
 
-#include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
-
 namespace integration_tests {
 
 using InputCommand = fuchsia::ui::input::Command;
@@ -18,14 +16,51 @@ using fuchsia::ui::input::PointerEvent;
 using fuchsia::ui::input::PointerEventPhase;
 using fuchsia::ui::input::PointerEventType;
 
+namespace {
+std::ostream& operator<<(std::ostream& os, const PointerEventPhase& value) {
+  switch (value) {
+    case PointerEventPhase::ADD:
+      return os << "add";
+    case PointerEventPhase::HOVER:
+      return os << "hover";
+    case PointerEventPhase::DOWN:
+      return os << "down";
+    case PointerEventPhase::MOVE:
+      return os << "move";
+    case PointerEventPhase::UP:
+      return os << "up";
+    case PointerEventPhase::REMOVE:
+      return os << "remove";
+    case PointerEventPhase::CANCEL:
+      return os << "cancel";
+    default:
+      return os << "<invalid enum value: " << static_cast<uint32_t>(value) << ">";
+  }
+}
+
+std::ostream& operator<<(std::ostream& os, const PointerEventType& value) {
+  switch (value) {
+    case PointerEventType::TOUCH:
+      return os << "touch";
+    case PointerEventType::STYLUS:
+      return os << "stylus";
+    case PointerEventType::INVERTED_STYLUS:
+      return os << "inverted stylus";
+    case PointerEventType::MOUSE:
+      return os << "mouse";
+    default:
+      return os << "<invalid enum value: " << static_cast<uint32_t>(value) << ">";
+  }
+}
+
+}  // namespace
+
 // Used to compare whether two values are nearly equal.
 // 1000 times machine limits to account for scaling from [0,1] to viewing volume [0,1000].
 constexpr float kEpsilon = std::numeric_limits<float>::epsilon() * 1000;
 
 bool PointerMatches(const PointerEvent& event, uint32_t pointer_id, PointerEventPhase phase,
                     float x, float y, PointerEventType type, uint32_t buttons) {
-  using fuchsia::ui::input::operator<<;
-
   bool result = true;
   if (event.type != type) {
     FX_LOGS(ERROR) << "  Actual type: " << event.type;
@@ -58,6 +93,24 @@ bool PointerMatches(const PointerEvent& event, uint32_t pointer_id, PointerEvent
     result = false;
   }
   return result;
+}
+
+bool CmpFloatingValues(float num1, float num2) {
+  auto diff = fabs(num1 - num2);
+  return diff < kEpsilon;
+}
+
+zx_koid_t ExtractKoid(const zx::object_base& object) {
+  zx_info_handle_basic_t info{};
+  if (object.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) != ZX_OK) {
+    return ZX_KOID_INVALID;  // no info
+  }
+
+  return info.koid;
+}
+
+zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
+  return ExtractKoid(view_ref.reference);
 }
 
 PointerCommandGenerator::PointerCommandGenerator(uint32_t compositor_id, uint32_t device_id,

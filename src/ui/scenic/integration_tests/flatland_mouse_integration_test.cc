@@ -5,15 +5,14 @@
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/pointer/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/async-loop/testing/cpp/real_loop.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
 #include <zircon/status.h>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <sdk/lib/ui/scenic/cpp/view_creation_tokens.h>
+#include <zxtest/zxtest.h>
 
 #include "src/ui/scenic/integration_tests/scenic_realm_builder.h"
 
@@ -56,7 +55,7 @@ using fupi_Target = fuchsia::ui::pointerinjector::Target;
 using fupi_Viewport = fuchsia::ui::pointerinjector::Viewport;
 using RealmRoot = sys::testing::experimental::RealmRoot;
 
-class FlatlandMouseIntegrationTest : public gtest::RealLoopFixture {
+class FlatlandMouseIntegrationTest : public zxtest::Test, public loop_fixture::RealLoop {
  protected:
   static constexpr uint32_t kDeviceId = 1111;
 
@@ -85,18 +84,18 @@ class FlatlandMouseIntegrationTest : public gtest::RealLoopFixture {
 
     flatland_display_ = realm_->Connect<fuc_FlatlandDisplay>();
     flatland_display_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
 
     pointerinjector_registry_ = realm_->Connect<fupi_Registry>();
     pointerinjector_registry_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to pointerinjector Registry: " << zx_status_get_string(status);
+      FAIL("Lost connection to pointerinjector Registry: %s", zx_status_get_string(status));
     });
 
     // Set up root view.
     root_session_ = realm_->Connect<fuc_Flatland>();
     root_session_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
 
     fidl::InterfacePtr<fuc_ChildViewWatcher> child_view_watcher;
@@ -251,13 +250,13 @@ TEST_F(FlatlandMouseIntegrationTest, ChildReceivesFocus_OnMouseLatch) {
 
   child_session = realm_->Connect<fuc_Flatland>();
   child_session.set_error_handler([](zx_status_t status) {
-    FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+    FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
   });
   child_mouse_source.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Mouse source closed with status: " << zx_status_get_string(status);
+    FAIL("Mouse source closed with status: %s", zx_status_get_string(status));
   });
   child_focused_ptr.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "ViewRefFocused closed with status: " << zx_status_get_string(status);
+    FAIL("ViewRefFocused closed with status: %s", zx_status_get_string(status));
   });
 
   // Set up the child view watcher.
