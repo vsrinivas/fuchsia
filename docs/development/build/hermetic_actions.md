@@ -277,23 +277,38 @@ convenient alternative, instead of `write_file`, for this purpose. However due
 to a [bug][response_file_bug] rooted in Ninja, we currently don't allow
 `response_file_contents` in our builds.
 
+### Creating and deleting temporary files
+
+It is a common pattern in build actions to create temporary files.
+It's ok to not list temporary files as outputs so long as the same action that
+creates the temporary files also deletes them before returning.
+
+Temporary files should be saved under `target_out_dir` or `target_gen_dir`.
+Use of global temporary storage such as `/tmp`, or any reads and writes outside
+of the checkout or output directories, is discouraged because it's less
+portable and more difficult to troubleshoot.
+
 ### Creating and deleting temporary directories
 
-It is a common pattern in build scripts to create a temporary (staging)
-directory, and delete it later in the action. Some actions also check whether
-a staging directory exists from previous builds, and deletes it before
-populating again.
+Sometimes temporary files need to be created in temporary directories.
+Again this is fine as long as the action that creates the temporary directory
+also recursively deletes it before returning.
 
-[`shutil.rmtree`][shutil_rmtree] is a common function used to delete staging
+[`shutil.rmtree`][shutil_rmtree] is a common function used to delete temporary
 directories. However, due to a limitation in our tracer, this would sometimes
 result in spurious unexpected reads. See also: [Issue 75057: Properly handle
 directory deletion from shutil.rmtree in action tracer][shutil_rmtree_bug].
 
-To get around this, you can create a special directory, for example
-`__untraced_foo_tmp_outputs__`, and write temporary files into this directory,
-and ignore accesses to this directory in the
-[action tracer][action_tracer_ignored_path_parts]. Accesses to files in
-this special directory will be ignored by the tracer. __Because of this, this
+One way to get around this limitation is to only create temporary files, not
+temporary directories. Temporary files should be written under `target_out_dir`
+or `target_gen_dir`.
+
+Sometimes this is not possible, for instance when the temporary directory is
+created by an external build tool that cannot be modified. In this case, an
+alternative is to give your temporary directories a special name, for instance
+`__untraced_foo_tmp_outputs__`, and allowlist them in the
+[action tracer][action_tracer_ignored_path_parts]. Accesses to files in this
+special directory will be ignored by the tracer. __Because of this, this
 feature should not be used lightly.__
 
 For example, assuming `bar.py` always deletes all files in the `--tmp-dir`
@@ -314,7 +329,8 @@ Then in the action tracer, add an entry in `ignored_path_parts`:
 
 ```py
 ignored_path_parts = {
-  # Comment with clear explanation on why this is necessary.
+  # Comment with clear explanation on why this is necessary,
+  # preferably with a link to an associated bug for more context.
   "__untraced_bar_tmp_outputs__",
   ...
 }
