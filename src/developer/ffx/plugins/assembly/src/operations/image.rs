@@ -7,7 +7,7 @@ use crate::blobfs;
 use crate::config::{BoardConfig, PartialProductConfig, ProductConfig};
 use crate::fvm::{construct_fvm, Fvms};
 use crate::util;
-use crate::vbmeta::construct_vbmeta;
+use crate::vbmeta;
 use crate::zbi::{construct_zbi, vendor_sign_zbi};
 
 use anyhow::{Context, Result};
@@ -103,8 +103,9 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     let vbmeta_path: Option<PathBuf> = if let Some(vbmeta_config) = &board.vbmeta {
         info!("Creating the VBMeta image");
+        let vbmeta_config = vbmeta::convert_to_new_config(&board.zbi.name, vbmeta_config)?;
         Some(
-            construct_vbmeta(&outdir, &board.zbi.name, vbmeta_config, &zbi_path)
+            vbmeta::construct_vbmeta(&outdir, &vbmeta_config, &zbi_path)
                 .context("Creating the VBMeta image")?,
         )
     } else {

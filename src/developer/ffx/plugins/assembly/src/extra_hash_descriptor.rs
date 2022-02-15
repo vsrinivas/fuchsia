@@ -11,22 +11,22 @@ use vbmeta::{HashDescriptor, RawHashDescriptorBuilder, Salt};
 /// Used to deserialize a JSON representation of a HashDescriptor.
 #[derive(Debug, Deserialize)]
 pub struct ExtraHashDescriptor {
-    name: Option<String>,
+    pub name: Option<String>,
     #[serde(default)]
     #[serde(deserialize_with = "optional_u64_from_value")]
-    size: Option<u64>,
+    pub size: Option<u64>,
     #[serde(default)]
     #[serde(deserialize_with = "optional_salt_from_value")]
-    salt: Option<Salt>,
+    pub salt: Option<Salt>,
     #[serde(default)]
     #[serde(deserialize_with = "optional_bytes_from_value")]
-    digest: Option<[u8; 32]>,
+    pub digest: Option<[u8; 32]>,
     #[serde(default)]
     #[serde(deserialize_with = "optional_u32_from_value")]
-    flags: Option<u32>,
+    pub flags: Option<u32>,
     #[serde(default)]
     #[serde(deserialize_with = "optional_version_from_value")]
-    min_avb_version: Option<[u32; 2]>,
+    pub min_avb_version: Option<[u32; 2]>,
 }
 
 impl Into<HashDescriptor> for ExtraHashDescriptor {
