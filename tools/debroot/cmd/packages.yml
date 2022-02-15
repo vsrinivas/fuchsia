@@ -20,6 +20,8 @@ packages:
   - package: libgl1-mesa-dev
   - package: libgl1-mesa-glx
   - package: libglapi-mesa
+  - package: libglfw3
+  - package: libglfw3-dev
   - package: libpython3-dev
   - package: libpython3.7
   - package: libpython3.7-dev
