@@ -57,6 +57,9 @@ declare_args() {
   # By default clippy is set to allow all lints, this flag will change it to
   # warn on all. Note: setting lint levels in source takes precedence over this.
   clippy_warn = false
+
+  # Makes clippy targets fail to build when any deny lints are found
+  clippy_cause_failure = true
 }
 
 if (rustc_prefix == default_rustc_prefix &&

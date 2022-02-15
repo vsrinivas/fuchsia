@@ -70,6 +70,11 @@ template("clippy") {
     args = [
       rebase_path(_output, root_build_dir),
       rebase_path(_jq, root_build_dir),
+    ]
+    if (clippy_cause_failure) {
+      args += [ "--fail" ]
+    }
+    args += [
       "$rebased_rustc_prefix/clippy-driver",
       rebase_path(source_root, root_build_dir),
       "-${level}clippy::all",

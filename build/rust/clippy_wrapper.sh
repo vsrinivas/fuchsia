@@ -11,6 +11,11 @@ shift
 # the next arg is the path to jq.
 jq="$1"
 shift
+# the next arg is true or false based on clippy_cause_failure
+if [ "$1" == "--fail" ]; then
+    fail=$1
+    shift
+fi
 # after that the positional args are the clippy-driver command and args set
 # in the clippy GN template
 
@@ -22,7 +27,7 @@ RUSTC_LOG=error "$@" -Cpanic=abort -Zpanic_abort_tests -Zno_codegen \
     --error-format=json --json=diagnostic-rendered-ansi 2>"$output"
 result=$?
 
-if [ $result -ne 0 ]; then
+if [[ $result != 0 && $fail ]]; then
     "$jq" -sr '.[] | select(.level == "error") | .rendered' "$output" &1>2
     exit $result
 fi
