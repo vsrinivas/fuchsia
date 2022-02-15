@@ -340,6 +340,10 @@ pub(crate) struct TemporarySlaacConfig<Instant> {
     pub(crate) desync_factor: Duration,
     /// The time at which the address was created.
     pub(crate) creation_time: Instant,
+    /// The DAD_Counter parameter specified by RFC 8981 Section 3.3.2.1. This is
+    /// used to track the number of retries that occurred prior to picking this
+    /// address.
+    pub(crate) dad_counter: u8,
 }
 
 /// Configuration for an IPv6 address assigned via SLAAC.

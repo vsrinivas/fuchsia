@@ -934,9 +934,6 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
         let () = self
             .del_ipv6_addr(device_id, &addr.into_specified())
             .expect("expected to delete an address we are performing DAD on");
-
-        // TODO: we need to pick a different address depending on what flow we
-        // are using.
     }
 
     fn set_mtu(&mut self, device_id: C::DeviceId, mut mtu: u32) {
