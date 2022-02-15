@@ -124,7 +124,7 @@ func TestInterfacesChangeEvent(t *testing.T) {
 			defer cancel()
 
 			ndpDisp := newNDPDispatcherForTest()
-			ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
+			ns, _ := newNetstack(t, netstackTestOptions{ndpDisp: ndpDisp})
 			si := &interfaceStateImpl{ns: ns}
 			ndpDisp.start(ctx)
 
@@ -197,7 +197,7 @@ func TestNDPInvalidateUnknownOffLinkRoute(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, _ := newNetstack(t, netstackTestOptions{ndpDisp: ndpDisp})
 	ndpDisp.start(ctx)
 
 	ifs := addNoopEndpoint(t, ns, "")
@@ -220,7 +220,7 @@ func TestNDPIPv6OffLinkRoutePreferences(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, _ := newNetstack(t, netstackTestOptions{ndpDisp: ndpDisp})
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
@@ -274,7 +274,7 @@ func TestNDPIPv6OffLinkRouteDiscovery(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, _ := newNetstack(t, netstackTestOptions{ndpDisp: ndpDisp})
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
@@ -410,7 +410,7 @@ func TestNDPInvalidateUnknownIPv6Prefix(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, _ := newNetstack(t, netstackTestOptions{ndpDisp: ndpDisp})
 	ndpDisp.start(ctx)
 
 	ifs := addNoopEndpoint(t, ns, "")
@@ -435,7 +435,7 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, _ := newNetstack(t, netstackTestOptions{ndpDisp: ndpDisp})
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
@@ -541,7 +541,7 @@ func TestLinkDown(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, _ := newNetstack(t, netstackTestOptions{ndpDisp: ndpDisp})
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
@@ -669,7 +669,7 @@ func TestRecursiveDNSServers(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns, clock := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, clock := newNetstack(t, netstackTestOptions{ndpDisp: ndpDisp})
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
@@ -767,7 +767,7 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns, clock := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, clock := newNetstack(t, netstackTestOptions{ndpDisp: ndpDisp})
 	ndpDisp.start(ctx)
 
 	ifs := addNoopEndpoint(t, ns, "")

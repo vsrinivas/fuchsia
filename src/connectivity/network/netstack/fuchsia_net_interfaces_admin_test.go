@@ -120,7 +120,7 @@ func (f *fakeNetworkDeviceImpl) Clone(fidl.Context, network.DeviceWithCtxInterfa
 }
 
 func TestClosesNetworkDevice(t *testing.T) {
-	ns, _ := newNetstack(t)
+	ns, _ := newNetstack(t, netstackTestOptions{})
 	installer := &interfacesAdminInstallerImpl{ns: ns}
 
 	const (

@@ -59,7 +59,7 @@ func AssertNoError(t *testing.T, err error) {
 
 func TestFuchsiaNetStack(t *testing.T) {
 	t.Run("Add and Delete Forwarding Entries", func(t *testing.T) {
-		ns, _ := newNetstack(t)
+		ns, _ := newNetstack(t, netstackTestOptions{})
 		t.Cleanup(addNoopEndpoint(t, ns, "").RemoveByUser)
 		ni := stackImpl{ns: ns}
 
@@ -185,7 +185,7 @@ func TestFuchsiaNetStack(t *testing.T) {
 	})
 
 	t.Run("Enable and Disable IP Forwarding", func(t *testing.T) {
-		ns, _ := newNetstack(t)
+		ns, _ := newNetstack(t, netstackTestOptions{})
 		ifs1 := addNoopEndpoint(t, ns, "")
 		t.Cleanup(ifs1.RemoveByUser)
 
@@ -333,7 +333,7 @@ func TestFuchsiaNetStack(t *testing.T) {
 }
 
 func TestDnsServerWatcher(t *testing.T) {
-	ns, _ := newNetstack(t)
+	ns, _ := newNetstack(t, netstackTestOptions{})
 	watcherCollection := newDnsServerWatcherCollection(ns.dnsConfig.GetServersCacheAndChannel)
 	ni := stackImpl{ns: ns, dnsWatchers: watcherCollection}
 	request, watcher, err := name.NewDnsServerWatcherWithCtxInterfaceRequest()

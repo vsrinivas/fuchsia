@@ -138,7 +138,7 @@ func wantInterfaceProperties(ns *Netstack, nicid tcpip.NICID) interfaces.Propert
 }
 
 func TestInterfacesWatcherDisallowMultiplePending(t *testing.T) {
-	ns, _ := newNetstack(t)
+	ns, _ := newNetstack(t, netstackTestOptions{})
 	si := &interfaceStateImpl{ns: ns}
 
 	request, watcher, err := interfaces.NewWatcherWithCtxInterfaceRequest()
@@ -171,7 +171,7 @@ func TestInterfacesWatcherDisallowMultiplePending(t *testing.T) {
 }
 
 func TestInterfacesWatcher(t *testing.T) {
-	ns, _ := newNetstack(t)
+	ns, _ := newNetstack(t, netstackTestOptions{})
 	ni := &netstackImpl{ns: ns}
 	si := &interfaceStateImpl{ns: ns}
 

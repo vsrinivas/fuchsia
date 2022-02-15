@@ -18,7 +18,7 @@ import (
 
 func TestGetDhcpClient(t *testing.T) {
 	t.Run("bad NIC", func(t *testing.T) {
-		ns, _ := newNetstack(t)
+		ns, _ := newNetstack(t, netstackTestOptions{})
 		netstackServiceImpl := netstackImpl{ns: ns}
 		req, proxy, err := dhcp.NewClientWithCtxInterfaceRequest()
 		if err != nil {
