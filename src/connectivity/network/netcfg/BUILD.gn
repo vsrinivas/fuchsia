@@ -122,7 +122,11 @@ fuchsia_component("component-advanced") {
   deps = [ ":bin-advanced" ]
 }
 
-config_data("config-default") {
+# TODO(https://fxbug.dev/89115): rm once management soft-migration is complete.
+group("config-default") {
+}
+
+config_data("config-default-tmp") {
   for_pkg = "netcfg"
   sources = [ "config/default.json" ]
   outputs = [ "default.json" ]

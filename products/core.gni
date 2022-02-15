@@ -65,6 +65,7 @@ base_package_labels += [
   "//src/connectivity/management:network_config_default",
   "//src/connectivity/network/mdns/bundles:config",
   "//src/connectivity/network/mdns/bundles:services",
+  "//src/connectivity/network/netcfg:config-default",
   "//src/connectivity/network",
 
   # Serve fuchsia.intl.TimeZones through intl_services by default. This is
