@@ -38,6 +38,7 @@ verbose=false
 host=""
 dir=""
 serve_persist_arg="--no-persist"
+package_server_port="8083"
 has_tunnel_ports=false
 
 while [[ $# -ne 0 ]]; do
@@ -59,6 +60,15 @@ while [[ $# -ne 0 ]]; do
     ;;
   -v)
     verbose=true
+    ;;
+  --repo-port)
+    if [[ $# -lt 2 ]]; then
+      fx-error Invalid syntax
+      fx-command-help
+      exit 1
+    fi
+    package_server_port=$2
+    shift
     ;;
   --tunnel-ports)
     if [[ $# -lt 2 ]]; then
@@ -131,7 +141,7 @@ echo "Using target device ${FX_DEVICE_NAME} (${FX_SSH_ADDR}:${FX_SSH_PORT})"
 
 # Use a dedicated ControlPath so script can manage a connection seperately from the user's. We
 # intentionally do not use %h/%p in the control path because there can only be one forwarding
-# session at a time (due to the local forward of 8083).
+# session at a time (due to the local forward of the package server port).
 ssh_base_args=(
   -S "${HOME}/.ssh/control-fuchsia-fx-remote"
   -o "ControlMaster=auto"
@@ -156,8 +166,8 @@ trap trap_exit EXIT
 
 ssh_tunnel_args=(
   -6 # We want ipv6 binds for the port forwards
-  -L "\*:8083:localhost:8083"                 # fx serve
-  -R "8022:${FX_SSH_ADDR}:${FX_SSH_PORT}"     # fx shell
+  -L "\*:${package_server_port}:localhost:${package_server_port}"       # fx serve
+  -R "8022:${FX_SSH_ADDR}:${FX_SSH_PORT}"                               # fx shell
   -o ExitOnForwardFailure=yes
   # Match google default server timeout so in spotty network situations the client doesn't timeout
   # before server (and leave the server process still holding on to tunneling port).
@@ -222,7 +232,7 @@ if "${serve}"; then
     # remote server already running and kill it, this prevents most cases where
     # signal propagation seems to sometimes not make it to "pm".
     # TODO(drees) This can be combined with the serve-updates call later to reduce ssh calls.
-    if ssh "${host}" "${ssh_base_args[@]}" 'ss -ln | grep :8083' > /dev/null; then
+    if ssh "${host}" "${ssh_base_args[@]}" 'ss -ln | grep :${package_server_port}' > /dev/null; then
       ssh "${ssh_base_args[@]}" "${host}" 'pkill -x -u $USER pm'
     fi
   else
@@ -252,7 +262,7 @@ if "${serve}"; then
       fx-error "The local and remote ffx repository servers cannot both be $local_addr."
       fx-error "Either change the repository port with:"
       fx-error ""
-      fx-error "$ ffx config set repository.server.listen \"[::1]:8086\" && ffx doctor --restart-daemon"
+      fx-error "$ ffx config set repository.server.listen \"[::]:\$SOME_OTHER_PORT\" && ffx doctor --restart-daemon"
       fx-error ""
       fx-error "Or disable the repository server with:"
       fx-error ""
