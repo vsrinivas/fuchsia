@@ -409,7 +409,6 @@
                     "/core/full-resolver",
                 ],
             },
-
             //TODO(fxbug.dev/91765) - Remove source moniker after from target.
             {
                 source_moniker: "/bootstrap/cr50_agent",
@@ -450,6 +449,21 @@
                 target_monikers: [
                     "/core/account/credential_manager",
                     "/core/account/password_authenticator",
+                ],
+            },
+            // TODO(https://fxbug.dev/91765)
+            {
+                source_moniker: "/core/account/password_authenticator",
+                source: "component",
+                source_name: "fuchsia.identity.account.AccountManager",
+                capability: "protocol",
+                target_monikers: [
+                    "/core",
+                    "/core/account",
+                    "/core/account/password_authenticator",
+                    "/core/session-manager/session:session",
+                    "/core/session-manager/session:session/workstation_session",
+                    "/core/session-manager/session:session/workstation_session/login_shell",
                 ],
             },
         ],
