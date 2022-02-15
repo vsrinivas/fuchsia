@@ -9,6 +9,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
 common_sources = [
+  "src/bti.rs",
   "src/channel.rs",
   "src/clock.rs",
   "src/clock_update.rs",

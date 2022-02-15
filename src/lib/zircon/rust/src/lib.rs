@@ -136,6 +136,7 @@ macro_rules! assoc_values {
     }
 }
 
+mod bti;
 mod channel;
 mod clock;
 mod clock_update;
@@ -168,6 +169,7 @@ mod version;
 mod vmar;
 mod vmo;
 
+pub use self::bti::*;
 pub use self::channel::*;
 pub use self::clock::*;
 pub use self::clock_update::{ClockUpdate, ClockUpdateBuilder};
