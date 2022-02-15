@@ -178,9 +178,6 @@ class ::fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo>
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
-
- private:
-  ::fidl::internal::NaturalServerMessenger messenger_{this};
 };
 
 template <>
@@ -384,9 +381,6 @@ class ::fidl::internal::NaturalCompleterBase<::test_inheritance::Sub::Foo>
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
-
- private:
-  ::fidl::internal::NaturalServerMessenger messenger_{this};
 };
 
 template <>

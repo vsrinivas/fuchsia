@@ -118,10 +118,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 void fidl::internal::NaturalCompleterBase<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
         LibfuzzerNeedsNonemptyProtocol>::Reply() {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::
           kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
 }
@@ -619,9 +620,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::
     Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse&&
               payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -632,9 +634,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::
     Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse&&
               payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -645,9 +648,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::
     Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse&&
               payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -658,9 +662,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::
     Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse&&
               payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -671,9 +676,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::
     Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse&&
               payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(

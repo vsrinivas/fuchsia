@@ -141,9 +141,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocols::HandleRightsProtocol::ResponseMethod>::
     Reply(::test_protocols::HandleRightsProtocolResponseMethodTopResponse&&
               payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocols::
           test_protocols_HandleRightsProtocolResponseMethodTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -602,10 +603,11 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 void fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::
     Reply() {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
 }
@@ -615,10 +617,11 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_protocols::
               WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&
                   payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -628,10 +631,11 @@ void fidl::internal::NaturalCompleterBase<
 void fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::
     Reply() {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
 }
@@ -641,10 +645,11 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_protocols::
               WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&&
                   payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -966,9 +971,10 @@ fidl::internal::NaturalEventSender<::test_protocols::Transitional>::Event(
 void fidl::internal::
     NaturalCompleterBase<::test_protocols::Transitional::Request>::Reply(
         ::test_protocols::TransitionalRequestTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kTransitional_Request_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocols::test_protocols_TransitionalRequestTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
@@ -1278,9 +1284,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 void fidl::internal::
     NaturalCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds>::Reply(
         ::test_protocols::WithProtocolEndsClientEndsTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocols::
           test_protocols_WithProtocolEndsClientEndsTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -1290,9 +1297,10 @@ void fidl::internal::
 void fidl::internal::
     NaturalCompleterBase<::test_protocols::WithProtocolEnds::ServerEnds>::Reply(
         ::test_protocols::WithProtocolEndsServerEndsTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocols::
           test_protocols_WithProtocolEndsServerEndsTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -1303,9 +1311,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithProtocolEnds::StructContainingEnds>::
     Reply(::test_protocols::WithProtocolEndsStructContainingEndsTopResponse&&
               payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocols::
           test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -1660,9 +1669,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>::
     Reply(::test_protocols::WithErrorSyntaxResponseAsStructTopResponse&&
               payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocols::
           test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -1673,9 +1683,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
     Reply(::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse&&
               payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocols::
           test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -1685,9 +1696,10 @@ void fidl::internal::NaturalCompleterBase<
 void fidl::internal::
     NaturalCompleterBase<::test_protocols::WithErrorSyntax::ErrorAsEnum>::Reply(
         ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocols::
           test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -1698,9 +1710,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithErrorSyntax::HandleInResult>::
     Reply(
         ::test_protocols::WithErrorSyntaxHandleInResultTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocols::
           test_protocols_WithErrorSyntaxHandleInResultTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -2117,9 +2130,10 @@ fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>::EventA(
 void fidl::internal::
     NaturalCompleterBase<::test_protocols::ChannelProtocol::MethodB>::Reply(
         ::test_protocols::ChannelProtocolMethodBTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_MethodB_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocols::test_protocols_ChannelProtocolMethodBTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
@@ -2127,9 +2141,10 @@ void fidl::internal::
 
 void fidl::internal::NaturalCompleterBase<
     ::test_protocols::ChannelProtocol::TakeHandle>::Reply() {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_TakeHandle_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       nullptr,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
 }
@@ -2137,9 +2152,10 @@ void fidl::internal::NaturalCompleterBase<
 void fidl::internal::NaturalCompleterBase<
     ::test_protocols::ChannelProtocol::MutateSocket>::
     Reply(::test_protocols::ChannelProtocolMutateSocketTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_MutateSocket_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocols::
           test_protocols_ChannelProtocolMutateSocketTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(

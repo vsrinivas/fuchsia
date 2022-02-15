@@ -66,7 +66,10 @@ fuchsia_unittest_package("fidl_llcpp_gen_api_tests") {
 }
 
 fidl("fidl.test.coding.fuchsia") {
-  visibility = [ "//src/lib/fidl/llcpp/tests/*" ]
+  visibility = [
+    "//src/lib/fidl/cpp/tests/*",
+    "//src/lib/fidl/llcpp/tests/*",
+  ]
   sources = [ "llcpp.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

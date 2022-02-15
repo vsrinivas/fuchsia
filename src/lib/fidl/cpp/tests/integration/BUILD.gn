@@ -8,7 +8,10 @@ import("//build/test.gni")
 
 group("integration") {
   testonly = true
-  deps = [ ":fidl_cpp_wire_interop_tests" ]
+  deps = [
+    ":fidl_cpp_gen_api_tests",
+    ":fidl_cpp_wire_interop_tests",
+  ]
 }
 
 fidl("fidl.cpp.wire.interop.test") {
@@ -32,4 +35,20 @@ test("fidl_cpp_wire_interop_tests_bin") {
 
 fuchsia_unittest_package("fidl_cpp_wire_interop_tests") {
   deps = [ ":fidl_cpp_wire_interop_tests_bin" ]
+}
+
+test("fidl_cpp_gen_api_tests_bin") {
+  output_name = "fidl_cpp_gen_api_tests"
+  sources = [ "server_gen_api_test.cc" ]
+  deps = [
+    "//src/lib/fidl/llcpp/tests/integration:fidl.test.coding.fuchsia_cpp",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("fidl_cpp_gen_api_tests") {
+  deps = [ ":fidl_cpp_gen_api_tests_bin" ]
 }

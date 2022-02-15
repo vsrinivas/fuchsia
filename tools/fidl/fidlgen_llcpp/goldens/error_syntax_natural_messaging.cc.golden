@@ -133,10 +133,11 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_errorsyntax_parent::
               ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse&&
                   payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_errorsyntax::
           kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_errorsyntax::
           test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -148,9 +149,10 @@ void fidl::internal::NaturalCompleterBase<
     Reply(
         ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&&
             payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_errorsyntax::
           test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(

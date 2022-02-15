@@ -55,8 +55,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 void fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo>::
     Reply(::test_inheritance::SuperFooTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{::test_inheritance::ksuper_foo_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_inheritance::test_inheritance_SuperFooTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
@@ -160,8 +161,9 @@ fidl::internal::NaturalEventDispatcher<::test_inheritance::Sub>::DispatchEvent(
 
 void fidl::internal::NaturalCompleterBase<::test_inheritance::Sub::Foo>::Reply(
     ::test_inheritance::SuperFooTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{::test_inheritance::ksub_foo_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_inheritance::test_inheritance_SuperFooTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));

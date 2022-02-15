@@ -183,9 +183,6 @@ class ::fidl::internal::NaturalCompleterBase<
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
-
- private:
-  ::fidl::internal::NaturalServerMessenger messenger_{this};
 };
 
 template <>

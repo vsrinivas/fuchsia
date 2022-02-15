@@ -174,9 +174,6 @@ class ::fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
-
- private:
-  ::fidl::internal::NaturalServerMessenger messenger_{this};
 };
 
 template <>

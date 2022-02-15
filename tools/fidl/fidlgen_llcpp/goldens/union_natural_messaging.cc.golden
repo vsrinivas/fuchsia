@@ -125,10 +125,11 @@ void fidl::internal::NaturalCompleterBase<
         ::test_union::
             TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&&
                 payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_union::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_union::
           test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -142,10 +143,11 @@ void fidl::internal::NaturalCompleterBase<
         ::test_union::
             TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&&
                 payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_union::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_union::
           test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(

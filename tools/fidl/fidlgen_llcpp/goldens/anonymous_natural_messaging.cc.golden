@@ -64,9 +64,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 void fidl::internal::
     NaturalCompleterBase<::test_anonymous::SomeProtocol::SomeMethod>::Reply(
         ::test_anonymous::SomeProtocolSomeMethodTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_anonymous::test_anonymous_SomeProtocolSomeMethodTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));

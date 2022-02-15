@@ -122,9 +122,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 void fidl::internal::
     NaturalCompleterBase<::test_protocolrequest::Parent::GetChild>::Reply(
         ::test_protocolrequest::ParentGetChildTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocolrequest::kParent_GetChild_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocolrequest::
           test_protocolrequest_ParentGetChildTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -134,9 +135,10 @@ void fidl::internal::
 void fidl::internal::NaturalCompleterBase<
     ::test_protocolrequest::Parent::GetChildRequest>::
     Reply(::test_protocolrequest::ParentGetChildRequestTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocolrequest::kParent_GetChildRequest_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocolrequest::
           test_protocolrequest_ParentGetChildRequestTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(

@@ -64,9 +64,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 void fidl::internal::NaturalCompleterBase<
     ::test_transitivedependenciescompose::Top::GetFoo>::
     Reply(::test_bottom::BottomGetFooTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_transitivedependenciescompose::
           test_bottom_BottomGetFooTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(

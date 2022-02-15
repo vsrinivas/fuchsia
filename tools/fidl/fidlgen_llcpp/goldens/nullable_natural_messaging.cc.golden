@@ -57,8 +57,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 void fidl::internal::
     NaturalCompleterBase<::test_nullable::SimpleProtocol::Add>::Reply(
         ::test_nullable::SimpleProtocolAddTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{::test_nullable::kSimpleProtocol_Add_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_nullable::test_nullable_SimpleProtocolAddTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));

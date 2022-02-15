@@ -850,9 +850,10 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
 void fidl::internal::NaturalCompleterBase<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>::
     Reply(::test_protocolpayloads_imported::ImportStructPayload&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -863,9 +864,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::
     Reply(::test_protocolpayloads_imported::
               ComposedProtocolTwoWayComposedWithErrorTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ComposedProtocolTwoWayComposedWithErrorTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -875,9 +877,10 @@ void fidl::internal::NaturalCompleterBase<
 void fidl::internal::NaturalCompleterBase<
     ::test_protocolpayloads::MainProtocol::TwoWayLocal>::
     Reply(::test_protocolpayloads::LocalStructPayload&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
           _encoder, std::move(payload)));
@@ -887,9 +890,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::
     Reply(::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse&&
               payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -899,9 +903,10 @@ void fidl::internal::NaturalCompleterBase<
 void fidl::internal::NaturalCompleterBase<
     ::test_protocolpayloads::MainProtocol::TwoWayImport>::
     Reply(::test_protocolpayloads_imported::ImportStructPayload&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -913,9 +918,10 @@ void fidl::internal::NaturalCompleterBase<
     Reply(
         ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse&&
             payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -926,9 +932,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocolpayloads::MainProtocol::TwoWayAnon>::
     Reply(
         ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -939,9 +946,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::
     Reply(::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse&&
               payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(

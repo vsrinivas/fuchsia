@@ -134,9 +134,10 @@ void fidl::internal::NaturalCompleterBase<
     ::test_emptystruct::EmptyProtocol::SendAndReceive>::
     Reply(
         ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_emptystruct::
           test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(

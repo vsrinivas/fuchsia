@@ -135,9 +135,6 @@ class {{ .NaturalCompleterBase }} : public ::fidl::CompleterBase {
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
-
- private:
-  ::fidl::internal::NaturalServerMessenger messenger_{this};
 };
 
 template<>
@@ -152,8 +149,9 @@ struct {{ .NaturalMethodTypes }} {
 {{ EnsureNamespace "" }}
 void {{ .NaturalCompleterBase.NoLeading }}::Reply(
     {{- template "Method:NaturalReplySignature:Helper" . }}) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{ {{ .OrdinalName }} };
-  messenger_.SendReply(
+  _messenger.SendReply(
       {{- if .HasResponsePayload -}}
         &{{ .Response.WireCodingTable }}
       {{- else -}}

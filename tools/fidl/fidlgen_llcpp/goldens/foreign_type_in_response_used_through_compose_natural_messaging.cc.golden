@@ -66,9 +66,10 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 void fidl::internal::NaturalCompleterBase<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
     Reply(::test_middle::MiddleGetFooTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_foreigntypeinresponseusedthroughcompose::
           test_middle_MiddleGetFooTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(

@@ -136,10 +136,11 @@ void fidl::internal::NaturalCompleterBase<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::
     Reply(::test_requestflexibleenvelope::
               ProtocolRequestStrictResponseFlexibleTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_requestflexibleenvelope::
           kProtocol_RequestStrictResponseFlexible_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -150,10 +151,11 @@ void fidl::internal::NaturalCompleterBase<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::
     Reply(::test_requestflexibleenvelope::
               ProtocolRequestFlexibleResponseStrictTopResponse&& payload) {
+  ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::MessageEncoder _encoder{
       ::test_requestflexibleenvelope::
           kProtocol_RequestFlexibleResponseStrict_Ordinal};
-  messenger_.SendReply(
+  _messenger.SendReply(
       &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
