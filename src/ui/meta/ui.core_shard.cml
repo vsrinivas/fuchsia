@@ -65,12 +65,11 @@
             from: "#vulkan_loader",
             to: "#ui",
         },
-
-        // Add fuchsia.accessibility.semantics.SemanticsManager from
-        // #ui to #session-manager after removing session-manager's
-        // scene_manager.
         {
-            protocol: [ "fuchsia.session.scene.Manager" ],
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.session.scene.Manager",
+            ],
             from: "#ui",
             to: "#session-manager",
         },

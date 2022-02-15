@@ -27,11 +27,6 @@
             to: "#session-manager",
         },
         {
-            protocol: "fuchsia.accessibility.semantics.SemanticsManager",
-            from: "self",
-            to: "#session-manager",
-        },
-        {
             protocol: "fuchsia.recovery.FactoryReset",
             from: "#factory_reset",
             to: "#session-manager",
