@@ -6,7 +6,7 @@
 
 use crate::ok;
 use crate::{object_get_info, object_get_property, object_set_property, ObjectQuery, Topic};
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Koid, Resource, Rights, Status};
+use crate::{AsHandleRef, Bti, Handle, HandleBased, HandleRef, Koid, Resource, Rights, Status};
 use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
 use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
@@ -85,6 +85,24 @@ impl Vmo {
         let status = unsafe { sys::zx_vmo_create(size, opts.bits(), &mut handle) };
         ok(status)?;
         unsafe { Ok(Vmo::from(Handle::from_raw(handle))) }
+    }
+
+    /// Create a physically contiguous virtual memory object.
+    ///
+    /// Wraps the
+    /// [`zx_vmo_create_contiguous`](https://fuchsia.dev/fuchsia-src/reference/syscalls/vmo_create_contiguous) syscall.
+    pub fn create_contiguous(bti: &Bti, size: usize, alignment_log2: u32) -> Result<Vmo, Status> {
+        let mut vmo_handle = sys::zx_handle_t::default();
+        let status = unsafe {
+            // SAFETY: regular system call with no unsafe parameters.
+            sys::zx_vmo_create_contiguous(bti.raw_handle(), size, alignment_log2, &mut vmo_handle)
+        };
+        ok(status)?;
+        unsafe {
+            // SAFETY: The syscall docs claim that upon success, vmo_handle will be a valid
+            // handle to a virtual memory object.
+            Ok(Vmo::from(Handle::from_raw(vmo_handle)))
+        }
     }
 
     /// Read from a virtual memory object.
@@ -203,6 +221,7 @@ bitflags! {
         const RESIZABLE = sys::ZX_INFO_VMO_RESIZABLE;
         const IS_COW_CLONE = sys::ZX_INFO_VMO_IS_COW_CLONE;
         const PAGER_BACKED = sys::ZX_INFO_VMO_PAGER_BACKED;
+        const CONTIGUOUS = sys::ZX_INFO_VMO_CONTIGUOUS;
     }
 }
 
@@ -253,9 +272,38 @@ unsafe_handle_properties!(object: Vmo,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Handle, Rights};
+    use crate::{Handle, Iommu, IommuDescDummy, ObjectType, Rights};
+    use fidl_fuchsia_boot as fboot;
     use fidl_fuchsia_kernel as fkernel;
     use fuchsia_component::client::connect_channel_to_protocol;
+
+    #[test]
+    fn vmo_create_contiguous_invalid_handle() {
+        let status = Vmo::create_contiguous(&Bti::from(Handle::invalid()), 4096, 0);
+        assert_eq!(status, Err(Status::BAD_HANDLE));
+    }
+
+    #[test]
+    fn vmo_create_contiguous() {
+        use fuchsia_zircon::{Channel, HandleBased, Time};
+        let (client_end, server_end) = Channel::create().unwrap();
+        connect_channel_to_protocol::<fboot::RootResourceMarker>(server_end).unwrap();
+        let service = fboot::RootResourceSynchronousProxy::new(client_end);
+        let resource = service.get(Time::INFINITE).expect("couldn't get root resource");
+        // This test and fuchsia-zircon are different crates, so we need
+        // to use from_raw to convert between the fuchsia_zircon handle and this test handle.
+        // See https://fxbug.dev/91562 for details.
+        let resource = unsafe { Resource::from(Handle::from_raw(resource.into_raw())) };
+        let iommu = Iommu::create_dummy(&resource, IommuDescDummy::default()).unwrap();
+        let bti = Bti::create(&iommu, 0).unwrap();
+
+        let vmo = Vmo::create_contiguous(&bti, 8192, 0).unwrap();
+        let info = vmo.as_handle_ref().basic_info().unwrap();
+        assert_eq!(info.object_type, ObjectType::VMO);
+
+        let vmo_info = vmo.info().unwrap();
+        assert!(vmo_info.flags.contains(VmoInfoFlags::CONTIGUOUS));
+    }
 
     #[test]
     fn vmo_get_size() {

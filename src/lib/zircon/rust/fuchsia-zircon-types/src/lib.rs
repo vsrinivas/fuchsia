@@ -119,6 +119,7 @@ multiconst!(u32, [
     ZX_INFO_VMO_RESIZABLE = 1 << 1;
     ZX_INFO_VMO_IS_COW_CLONE = 1 << 2;
     ZX_INFO_VMO_PAGER_BACKED = 1 << 5;
+    ZX_INFO_VMO_CONTIGUOUS = 1 << 6;
 ]);
 
 // TODO: add an alias for this type in the C headers.
