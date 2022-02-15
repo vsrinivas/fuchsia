@@ -121,7 +121,17 @@ impl<P: Payload> Segment<P> {
             (_len, WindowSize::ZERO) => false,
             (len, rwnd) => {
                 (!rnxt.after(seq) && seq.before(rnxt + rwnd))
-                    || (rnxt.before(seq + len) && !(seq + len).after(rnxt + rwnd))
+                    // Note: here we use RCV.NXT <= SEG.SEQ+SEG.LEN instead of
+                    // the condition as quoted above because of the following
+                    // text immediately after the above table:
+                    //   One could tailor actual segments to fit this assumption by
+                    //   trimming off any portions that lie outside the window 
+                    //   (including SYN and FIN), and only processing further if
+                    //   the segment then begins at RCV.NXT.
+                    // This is essential for TCP simultaneous open to work,
+                    // otherwise, the state machine would reject the SYN-ACK 
+                    // sent by the peer.
+                    || (!(seq + len).before(rnxt) && !(seq + len).after(rnxt + rwnd))
             }
         };
         overlap.then(move || {
@@ -175,7 +185,12 @@ impl<P: Payload> Segment<P> {
 
 impl Segment<()> {
     /// Creates a segment with no data.
-    fn new(seq: SeqNum, ack: Option<SeqNum>, control: Option<Control>, wnd: WindowSize) -> Self {
+    pub(super) fn new(
+        seq: SeqNum,
+        ack: Option<SeqNum>,
+        control: Option<Control>,
+        wnd: WindowSize,
+    ) -> Self {
         // All of the checks on lengths are optimized out:
         // https://godbolt.org/z/KPd537G6Y
         let (seg, truncated) = Segment::with_data(seq, ack, control, wnd, ());
@@ -516,7 +531,14 @@ mod test {
         data_len: 1,
         rcv_nxt: 1,
         rcv_wnd: 1,
-    } => None)]
+    } => Some((SeqNum::new(1), None, 1..1)))]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 0,
+        control: Some(Control::SYN),
+        data_len: 0,
+        rcv_nxt: 1,
+        rcv_wnd: 1,
+    } => Some((SeqNum::new(1), None, 0..0)))]
     #[test_case(OverlapTestArgs{
         seg_seq: 2,
         control: None,
