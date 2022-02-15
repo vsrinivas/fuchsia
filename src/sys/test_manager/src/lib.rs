@@ -60,6 +60,7 @@ use {
             Arc, Weak,
         },
     },
+    thiserror::Error,
     tracing::{debug, error, info, warn},
 };
 
@@ -966,14 +967,7 @@ async fn run_single_suite(
 
     if let Some(instance) = maybe_instance.take() {
         inspect_node.set_execution_state(self_diagnostics::ExecutionState::TearDown);
-        const TEARDOWN_TIMEOUT: zx::Duration = zx::Duration::from_seconds(30);
-
-        // TODO(fxbug.dev/92769) Remove timeout once component manager hangs are removed.
-        if let Err(err) = instance
-            .destroy()
-            .on_timeout(TEARDOWN_TIMEOUT, || Err(anyhow!("Timeout waiting for realm destruction")))
-            .await
-        {
+        if let Err(err) = instance.destroy().await {
             // Failure to destroy an instance could mean that some component events fail to send.
             // Missing events could cause debug data collection to hang as it relies on events to
             // understand when a realm has stopped.
@@ -1440,6 +1434,9 @@ impl RunningSuite {
     /// Mark the resources associated with the suite for destruction, then wait for destruction to
     /// complete. Returns an error only if destruction fails.
     async fn destroy(mut self) -> Result<(), Error> {
+        // TODO(fxbug.dev/92769) Remove timeout once component manager hangs are removed.
+        const TEARDOWN_TIMEOUT: zx::Duration = zx::Duration::from_seconds(30);
+
         // before destroying the realm, wait for any clients to finish accessing storage.
         // TODO(fxbug.dev/84825): Separate realm destruction and destruction of custom
         // storage resources.
@@ -1449,17 +1446,53 @@ impl RunningSuite {
             fasync::OnSignals::new(token, zx::Signals::EVENTPAIR_CLOSED | zx::Signals::USER_0)
                 .unwrap_or_else(|_| zx::Signals::empty())
         });
-        futures::future::join_all(tokens_closed_signals).await;
+        futures::future::join_all(tokens_closed_signals)
+            .map(|_| Ok(()))
+            .on_timeout(TEARDOWN_TIMEOUT, || {
+                Err(anyhow!("Timeout waiting for clients to access storage"))
+            })
+            .await?;
 
         let destroy_waiter = self.instance.root.take_destroy_waiter();
         drop(self.instance);
         drop(self.archive_accessor);
+        #[derive(Debug, Error)]
+        enum TeardownError {
+            #[error("timeout")]
+            Timeout,
+            #[error("{}", .0)]
+            Other(Error),
+        }
         // When serving logs over ArchiveIterator in the host, we should also wait for all logs to
         // be drained.
-        if let Some(task) = self.logs_iterator_task {
-            task.await.unwrap_or_else(|e| warn!("Error streaming logs: {:?}", e));
+        let logs_iterator_task = self
+            .logs_iterator_task
+            .unwrap_or_else(|| fasync::Task::spawn(futures::future::ready(Ok(()))));
+        let (logs_iterator_res, teardown_res) = futures::future::join(
+            logs_iterator_task
+                .map_err(|e| TeardownError::Other(e))
+                .on_timeout(TEARDOWN_TIMEOUT, || Err(TeardownError::Timeout)),
+            destroy_waiter
+                .map_err(|e| TeardownError::Other(e))
+                .on_timeout(TEARDOWN_TIMEOUT, || Err(TeardownError::Timeout)),
+        )
+        .await;
+        let logs_iterator_res = match logs_iterator_res {
+            Err(TeardownError::Other(e)) => {
+                // Allow test teardown to proceed if failed to stream logs
+                warn!("Error streaming logs: {}", e);
+                Ok(())
+            }
+            r => r,
+        };
+        match (logs_iterator_res, teardown_res) {
+            (Err(e1), Err(e2)) => {
+                Err(anyhow!("Draining logs failed: {}. Realm teardown failed: {}", e1, e2))
+            }
+            (Err(e), Ok(())) => Err(anyhow!("Draining logs failed: {}", e)),
+            (Ok(()), Err(e)) => Err(anyhow!("Realm teardown failed: {}", e)),
+            (Ok(()), Ok(())) => Ok(()),
         }
-        destroy_waiter.await
     }
 }
 
