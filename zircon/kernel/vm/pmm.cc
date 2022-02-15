@@ -245,10 +245,26 @@ LK_INIT_HOOK(
 
 static Timer dump_free_mem_timer;
 
+// Allocate memory until the PMM returns ZX_ERR_NO_MEMORY, then free it all.
+//
+// The idea is to cause the system to briefly dip into an out of memory state.
+static int cmd_oom_dip() {
+  list_node list = LIST_INITIAL_VALUE(list);
+  while (pmm_node.AllocPages(1, 0, &list) != ZX_ERR_NO_MEMORY) {
+  }
+  pmm_node.FreeList(&list);
+  printf("allocated until ZX_ERR_NO_MEMORY (and then freed)\n");
+  return ZX_OK;
+}
+
 static int cmd_oom(int argc, const cmd_args* argv) {
   uint64_t rate = 0;
   bool hard = false;
   if (argc > 2) {
+    if (!strcmp(argv[2].str, "dip")) {
+      return cmd_oom_dip();
+    }
+
     if (!strcmp(argv[2].str, "signal")) {
       pmm_node.DebugMemAvailStateCallback(0);
       return ZX_OK;
@@ -317,6 +333,8 @@ static int cmd_usage(const char* cmd_name, bool is_panic) {
         "%s oom [<rate>]                             : leak memory until oom is triggered, "
         "optionally specify the rate at which to leak (in MB per second)\n",
         cmd_name);
+    printf("%s oom dip                                  : allocate until no mem, then free\n",
+           cmd_name);
     printf(
         "%s oom hard                                 : leak memory aggressively and keep on "
         "leaking\n",
