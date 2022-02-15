@@ -41,6 +41,8 @@ class ScenicFake : public fuchsia::ui::scenic::testing::Scenic_TestBase,
         ZX_OK);
   }
 
+  bool HasStarted() const { return handles_ != nullptr; }
+
  private:
   async::Loop& loop_;
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
@@ -114,6 +116,8 @@ class VirtioGpuTest : public TestWithDevice {
     // Finish negotiating features.
     status = gpu_->Ready(0);
     ASSERT_EQ(ZX_OK, status);
+
+    RunLoopUntil([&] { return scenic_fake_.HasStarted(); });
   }
 
   template <typename T>
