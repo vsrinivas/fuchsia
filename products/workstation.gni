@@ -69,9 +69,11 @@ base_package_labels +=
     [ "//src/connectivity/management:network_config_prefer_wired" ]
 
 cache_package_labels += [
+  "//src/chromium:chrome_browser",
   "//src/experiences/bin/settings/license:license_settings",
   "//src/experiences/bin/simple_browser:simple-browser",
   "//src/experiences/session_shells/ermine",
+  "//src/experiences/tests/chrome:end_to_end_deps",
   "//src/dart:dart_jit",
   "//src/dart:dart_jit_product",
   "//src/fonts",
@@ -155,6 +157,7 @@ cache_package_labels += [
 # E2E Product Tests. They don't produce fuchsia packages, but host executables
 # used by the tests.
 host_labels += [
+  "//src/experiences/tests/chrome:test",
   "//src/experiences/tests/e2e:test",
   "//src/experiences/tests/performance:test",
   "//src/tests/end_to_end/copy_files:test",
