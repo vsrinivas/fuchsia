@@ -11,7 +11,7 @@ use {
             WriteObjectHandle,
         },
         object_store::{
-            crypt::UnwrappedKeys,
+            crypt::{UnwrappedKeys, XtsCipherSet},
             extent_record::{Checksums, ExtentKey, ExtentValue},
             journal::fletcher64,
             object_manager::ObjectManager,
@@ -51,7 +51,7 @@ pub struct StoreObjectHandle<S: AsRef<ObjectStore> + Send + Sync + 'static> {
     pub(super) attribute_id: u64,
     pub(super) options: HandleOptions,
     pub(super) trace: AtomicBool,
-    keys: Option<UnwrappedKeys>,
+    keys: Option<XtsCipherSet>,
     content_size: AtomicU64,
 }
 
@@ -68,7 +68,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         Self {
             owner,
             object_id,
-            keys,
+            keys: keys.as_ref().map(XtsCipherSet::new),
             attribute_id,
             options,
             trace: AtomicBool::new(trace),

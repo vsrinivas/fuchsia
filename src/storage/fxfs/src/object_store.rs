@@ -50,7 +50,7 @@ use {
             filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
             journal::{checksum_list::ChecksumList, JournalCheckpoint},
             object_manager::{ObjectManager, ReservationUpdate},
-            object_record::{EncryptionKeys, ObjectKind},
+            object_record::{EncryptionKeys, ObjectKind, WrappedKeys},
             store_object_handle::DirectWriter,
             transaction::{
                 AssocObj, AssociatedObject, ExtentMutation, LockKey, Mutation, NoOrd,
@@ -116,7 +116,7 @@ pub struct StoreInfo {
     object_count: u64,
 
     // The (wrapped) key that encrypted mutations should use.
-    mutations_key: Option<Box<[u8]>>,
+    mutations_key: Option<WrappedKeys>,
 
     // Mutations for the store are encrypted using a stream cipher.  To decrypt the mutations, we
     // need to know the offset in the cipher stream to start it.
@@ -407,13 +407,13 @@ impl ObjectStore {
         crypt: Arc<dyn Crypt>,
     ) -> Result<Arc<Self>, Error> {
         let filesystem = parent_store.filesystem();
-        let keys = crypt.create_key(0).await?;
+        let (wrapped_keys, unwrapped_keys) = crypt.create_key(handle.object_id()).await?;
         let store = Self::new(
             Some(parent_store),
             handle.object_id(),
             filesystem.clone(),
-            Some(StoreInfo { mutations_key: Some(keys.0.keys[0].1.into()), ..Default::default() }),
-            Some(StreamCipher::new(0)),
+            Some(StoreInfo { mutations_key: Some(wrapped_keys), ..Default::default() }),
+            Some(StreamCipher::new(&unwrapped_keys[0], 0)),
             LockState::Unlocked(crypt),
         );
         assert!(store.store_info_handle.set(handle).is_ok());
@@ -978,9 +978,11 @@ impl ObjectStore {
             )
             .await?;
 
-        // TODO(fxbug.dev/92275): this should pass the key into the cipher.
-        *self.mutations_cipher.lock().unwrap() =
-            Some(StreamCipher::new(store_info.mutations_cipher_offset));
+        let unwrapped_keys = crypt
+            .unwrap_keys(store_info.mutations_key.as_ref().unwrap(), self.store_object_id)
+            .await?;
+        let mut mutations_cipher =
+            StreamCipher::new(&unwrapped_keys[0], store_info.mutations_cipher_offset);
 
         // Apply the encrypted mutations.
         let mut mutations = {
@@ -1015,7 +1017,7 @@ impl ObjectStore {
         }
 
         let EncryptedMutations { transactions, mut data } = mutations;
-        self.mutations_cipher.lock().unwrap().as_mut().unwrap().decrypt(&mut data);
+        mutations_cipher.decrypt(&mut data);
         let mut cursor = std::io::Cursor::new(data);
         for (checkpoint, count) in transactions {
             let context = ApplyContext { mode: ApplyMode::Replay, checkpoint };
@@ -1029,6 +1031,7 @@ impl ObjectStore {
             }
         }
 
+        *self.mutations_cipher.lock().unwrap() = Some(mutations_cipher);
         *self.lock_state.lock().unwrap() = LockState::Unlocked(crypt);
 
         // TODO(fxbug.dev/92275): we should force a flush here since otherwise it is possible to end

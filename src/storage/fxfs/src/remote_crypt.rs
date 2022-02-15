@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::object_store::crypt::{Crypt, UnwrappedKeys, WrappedKeys},
+    crate::object_store::crypt::{Crypt, UnwrappedKey, UnwrappedKeys, WrappedKeys},
     anyhow::{anyhow, bail, Error},
     async_trait::async_trait,
     fidl_fuchsia_fxfs::CryptProxy,
@@ -30,10 +30,10 @@ impl Crypt for RemoteCrypt {
                 wrapping_key_id,
                 keys: vec![(0, key.try_into().map_err(|_| anyhow!("Unexpected key length"))?)],
             },
-            UnwrappedKeys::new([(
+            vec![UnwrappedKey::new(
                 0,
                 unwrapped_key.try_into().map_err(|_| anyhow!("Unexpected key length"))?,
-            )]),
+            )],
         ))
     }
 
@@ -50,11 +50,11 @@ impl Crypt for RemoteCrypt {
                 bail!("Unexpected key length");
             }
         }
-        Ok(UnwrappedKeys::new(
-            keys.keys
-                .iter()
-                .zip(unwrapped_keys.into_iter())
-                .map(|((id, _), key)| (*id, key.try_into().unwrap())),
-        ))
+        Ok(keys
+            .keys
+            .iter()
+            .zip(unwrapped_keys.into_iter())
+            .map(|((id, _), key)| UnwrappedKey::new(*id, key.try_into().unwrap()))
+            .collect())
     }
 }
