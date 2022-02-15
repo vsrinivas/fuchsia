@@ -47,8 +47,11 @@ fx-config-read
 
 # Each tool $t has a NAME=${t%% *} and DIR=${t##* }, for which there must exist
 # $(dirname $DIR)/BUILD.gn containing golden_test("${NAME}_golden_tests") with
-# goldens_dir="$(basename $DIR)". See //build/testing/golden_test.gni for more
-# information about golden tests. Please keep this list sorted alphabetically.
+# goldens_dir="$(basename $DIR)", and also group("tests") containing
+# ":${NAME}_golden_tests($host_toolchain)". See //build/testing/golden_test.gni
+# for more information about golden tests.
+#
+# Please keep this list sorted alphabetically.
 readonly all_tools=(
     "fidlc tools/fidl/fidlc/goldens"
     "fidldoc tools/fidl/fidldoc/goldens"
@@ -142,9 +145,19 @@ case $exit_code in
         fi
         ;;
     3) # test not found
-        if ! grep -q "//bundles:tests" "$FUCHSIA_BUILD_DIR/args.gn"; then
-            echo
-            echo "Hint: Try again after \`fx set ... --with //bundles:tests\`"
+        echo "Error: Could not find test targets needed to regenerate goldens"
+        with=()
+        for t in "${tools[@]}"; do
+            parent=$(dirname "${t##* }")
+            target="//$parent:${t%% *}_golden_tests"
+            if ! fx-command-run jq -e \
+                    "any(.test.label | startswith(\"$target\"))" \
+                    "$FUCHSIA_BUILD_DIR/tests.json" > /dev/null; then
+                with+=("--with" "//$parent:tests")
+            fi
+        done
+        if [[ ${#with[@]} -gt 0 ]]; then
+            echo "Hint: Try again after \`fx set ... ${with[*]}\`"
         fi
         ;;
 esac
