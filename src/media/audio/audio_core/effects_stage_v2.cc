@@ -212,7 +212,7 @@ fuchsia_audio_effects::wire::ProcessorConfiguration CloneConfigAndTakeHandles(
 }  // namespace
 
 // static
-EffectsStageV2::Buffers EffectsStageV2::Buffers::Create(
+EffectsStageV2::FidlBuffers EffectsStageV2::FidlBuffers::Create(
     const fuchsia_mem::wire::Range& input_range, const fuchsia_mem::wire::Range& output_range) {
   const auto input_end = input_range.offset + input_range.size;
   const auto output_end = output_range.offset + output_range.size;
@@ -257,7 +257,7 @@ EffectsStageV2::Buffers EffectsStageV2::Buffers::Create(
                             << " size=" << output_range.size;
   }
 
-  return Buffers{
+  return FidlBuffers{
       .input = input_mapper->start(),
       .output = output_mapper->start(),
       .input_size = input_range.size,
@@ -401,7 +401,7 @@ EffectsStageV2::EffectsStageV2(fuchsia_audio_effects::wire::ProcessorConfigurati
     : ReadableStream(ToOldFormat(config.outputs()[0].format())),
       source_(std::move(source)),
       processor_(fidl::BindSyncClient(std::move(config.processor()))),
-      buffers_(Buffers::Create(config.inputs()[0].buffer(), config.outputs()[0].buffer())),
+      fidl_buffers_(FidlBuffers::Create(config.inputs()[0].buffer(), config.outputs()[0].buffer())),
       max_frames_per_call_(config.max_frames_per_call()),
       block_size_frames_(config.block_size_frames()),
       latency_frames_(config.outputs()[0].latency_frames()),
@@ -446,7 +446,7 @@ std::optional<ReadableStream::Buffer> EffectsStageV2::ReadLock(ReadLockContext& 
   if (source_buffer) {
     // Copy source_buffer to buffers_.input.
     const int64_t num_frames = source_buffer->length();
-    memmove(buffers_.input, source_buffer->payload(),
+    memmove(fidl_buffers_.input, source_buffer->payload(),
             num_frames * static_cast<int64_t>(source_->format().bytes_per_frame()));
 
     // Synchronous IPC.
@@ -459,9 +459,9 @@ std::optional<ReadableStream::Buffer> EffectsStageV2::ReadLock(ReadLockContext& 
 
     // Cache the output buffer.
     cached_buffer_.Set(ReadableStream::Buffer(
-        source_buffer->start(), source_buffer->length(), reinterpret_cast<float*>(buffers_.output),
-        source_buffer->is_continuous(), source_buffer->usage_mask(),
-        source_buffer->total_applied_gain_db()));
+        source_buffer->start(), source_buffer->length(),
+        reinterpret_cast<float*>(fidl_buffers_.output), source_buffer->is_continuous(),
+        source_buffer->usage_mask(), source_buffer->total_applied_gain_db()));
     return cached_buffer_.Get();
   }
 
@@ -470,13 +470,13 @@ std::optional<ReadableStream::Buffer> EffectsStageV2::ReadLock(ReadLockContext& 
   int64_t ringout_end_frame = next_ringout_frame_ + ringout_total_frames_;
   if (next_ringout_frame_ <= aligned_first_frame && aligned_first_frame < ringout_end_frame) {
     // Synchronous IPC.
-    memset(buffers_.input, 0, aligned_frame_count * source_->format().bytes_per_frame());
+    memset(fidl_buffers_.input, 0, aligned_frame_count * source_->format().bytes_per_frame());
     CallProcess(ctx, aligned_frame_count, 0.0f /* total_applied_gain_db */, 0 /* usage_mask */);
 
     // Ringout frames are by definition continuous with the previous buffer.
     const bool is_continuous = true;
     cached_buffer_.Set(ReadableStream::Buffer(Fixed(aligned_first_frame), aligned_frame_count,
-                                              reinterpret_cast<float*>(buffers_.output),
+                                              reinterpret_cast<float*>(fidl_buffers_.output),
                                               is_continuous, StreamUsageMask(), 0.0f));
     return cached_buffer_.Get();
   }
@@ -520,7 +520,7 @@ void EffectsStageV2::CallProcess(ReadLockContext& ctx, int64_t num_frames,
 
   // On failure, zero the output buffer.
   if (status != ZX_OK) {
-    memset(buffers_.output, 0, buffers_.output_size);
+    memset(fidl_buffers_.output, 0, fidl_buffers_.output_size);
     // Log 1 error per 10s, assuming one call per 10ms.
     if ((fidl_error_count_++) % 1000 == 0) {
       FX_PLOGS(WARNING, status) << "Process call failed";
@@ -530,7 +530,7 @@ void EffectsStageV2::CallProcess(ReadLockContext& ctx, int64_t num_frames,
     return;
   }
 
-  // On success, update our MixJobInfo.
+  // On success, update our metrics.
   auto& server_metrics = result->result.response().per_stage_metrics;
   for (size_t k = 0; k < server_metrics.count(); k++) {
     StageMetrics metrics;

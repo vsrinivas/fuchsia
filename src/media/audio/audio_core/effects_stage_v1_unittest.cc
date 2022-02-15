@@ -24,7 +24,7 @@ namespace {
 // Used when the ReadLockContext is unused by the test.
 static media::audio::ReadableStream::ReadLockContext rlctx;
 
-const Format k48k2ChanFloatFormat =
+static const Format k48k2ChanFloatFormat =
     Format::Create(fuchsia::media::AudioStreamType{
                        .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
                        .channels = 2,
@@ -44,14 +44,18 @@ class EffectsStageV1Test : public testing::ThreadingModelFixture {
     return reinterpret_cast<std::array<T, N>&>(static_cast<T*>(ptr)[offset]);
   }
 
+  testing::PacketFactory& packet_factory() { return packet_factory_; }
+  testing::TestEffectsV1Module& test_effects() { return test_effects_; }
+  VolumeCurve& volume_curve() { return volume_curve_; }
+
+ private:
+  testing::PacketFactory packet_factory_{dispatcher(), k48k2ChanFloatFormat,
+                                         zx_system_get_page_size()};
   testing::TestEffectsV1Module test_effects_ = testing::TestEffectsV1Module::Open();
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
 };
 
 TEST_F(EffectsStageV1Test, ApplyEffectsToSourceStream) {
-  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
-                                        zx_system_get_page_size());
-
   // Create a packet queue to use as our source stream.
   auto timeline_function =
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
@@ -62,7 +66,7 @@ TEST_F(EffectsStageV1Test, ApplyEffectsToSourceStream) {
       context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create an effect we can load.
-  test_effects_.AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+  test_effects().AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
 
   // Create the effects stage.
   std::vector<PipelineConfig::EffectV1> effects;
@@ -71,10 +75,10 @@ TEST_F(EffectsStageV1Test, ApplyEffectsToSourceStream) {
       .effect_name = "add_1.0",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   // Enqueue 10ms of frames in the packet queue.
-  stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
+  stream->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10)));
 
   {
     // Read from the effects stage. Since our effect adds 1.0 to each sample, and we populated the
@@ -102,7 +106,8 @@ TEST_F(EffectsStageV1Test, BlockAlignRequests) {
 
   // Create an effect we can load.
   const uint32_t kBlockSize = 128;
-  test_effects_.AddEffect("add_1.0")
+  test_effects()
+      .AddEffect("add_1.0")
       .WithAction(TEST_EFFECTS_ACTION_ADD, 1.0)
       .WithBlockSize(kBlockSize);
 
@@ -113,7 +118,7 @@ TEST_F(EffectsStageV1Test, BlockAlignRequests) {
       .effect_name = "add_1.0",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   EXPECT_EQ(effects_stage->block_size(), kBlockSize);
 
@@ -160,7 +165,8 @@ TEST_F(EffectsStageV1Test, TruncateToMaxBufferSize) {
 
   const uint32_t kBlockSize = 128;
   const uint32_t kMaxBufferSize = 300;
-  test_effects_.AddEffect("test_effect")
+  test_effects()
+      .AddEffect("test_effect")
       .WithBlockSize(kBlockSize)
       .WithMaxFramesPerBuffer(kMaxBufferSize);
 
@@ -171,7 +177,7 @@ TEST_F(EffectsStageV1Test, TruncateToMaxBufferSize) {
       .effect_name = "test_effect",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   EXPECT_EQ(effects_stage->block_size(), kBlockSize);
 
@@ -192,8 +198,8 @@ TEST_F(EffectsStageV1Test, CompensateForEffectDelayInStreamTimeline) {
   stream->timeline_function()->Update(TimelineFunction(TimelineRate(
       Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
-  test_effects_.AddEffect("effect_with_delay_3").WithSignalLatencyFrames(3);
-  test_effects_.AddEffect("effect_with_delay_10").WithSignalLatencyFrames(10);
+  test_effects().AddEffect("effect_with_delay_3").WithSignalLatencyFrames(3);
+  test_effects().AddEffect("effect_with_delay_10").WithSignalLatencyFrames(10);
 
   // Create the effects stage. We expect 13 total frames of latency (summed across the 2 effects).
   std::vector<PipelineConfig::EffectV1> effects;
@@ -207,7 +213,7 @@ TEST_F(EffectsStageV1Test, CompensateForEffectDelayInStreamTimeline) {
       .effect_name = "effect_with_delay_3",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   // Since our effect introduces 13 frames of latency, the incoming source frame at time 0 can only
   // emerge from the effect in output frame 13.
@@ -233,8 +239,8 @@ TEST_F(EffectsStageV1Test, AddDelayFramesIntoMinLeadTime) {
   stream->timeline_function()->Update(TimelineFunction(TimelineRate(
       Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
-  test_effects_.AddEffect("effect_with_delay_3").WithSignalLatencyFrames(3);
-  test_effects_.AddEffect("effect_with_delay_10").WithSignalLatencyFrames(10);
+  test_effects().AddEffect("effect_with_delay_3").WithSignalLatencyFrames(3);
+  test_effects().AddEffect("effect_with_delay_10").WithSignalLatencyFrames(10);
 
   // Create the effects stage. We expect 13 total frames of latency (summed across the 2 effects).
   std::vector<PipelineConfig::EffectV1> effects;
@@ -248,7 +254,7 @@ TEST_F(EffectsStageV1Test, AddDelayFramesIntoMinLeadTime) {
       .effect_name = "effect_with_delay_3",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   // Check our initial lead time is only the effect delay.
   auto effect_lead_time =
@@ -266,9 +272,6 @@ static const std::string kInitialConfig = "different size than kConfig";
 static const std::string kConfig = "config";
 
 TEST_F(EffectsStageV1Test, UpdateEffect) {
-  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
-                                        zx_system_get_page_size());
-
   // Create a packet queue to use as our source stream.
   auto timeline_function =
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
@@ -279,7 +282,8 @@ TEST_F(EffectsStageV1Test, UpdateEffect) {
       context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create an effect we can load.
-  test_effects_.AddEffect("assign_config_size")
+  test_effects()
+      .AddEffect("assign_config_size")
       .WithAction(TEST_EFFECTS_ACTION_ASSIGN_CONFIG_SIZE, 0.0);
 
   // Create the effects stage.
@@ -290,12 +294,12 @@ TEST_F(EffectsStageV1Test, UpdateEffect) {
       .instance_name = kInstanceName,
       .effect_config = kInitialConfig,
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   effects_stage->UpdateEffect(kInstanceName, kConfig);
 
   // Enqueue 10ms of frames in the packet queue.
-  stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
+  stream->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10)));
 
   // Read from the effects stage. Our effect sets each sample to the size of the config.
   auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
@@ -310,12 +314,10 @@ TEST_F(EffectsStageV1Test, UpdateEffect) {
 }
 
 TEST_F(EffectsStageV1Test, CreateStageWithRechannelization) {
-  test_effects_.AddEffect("increment")
+  test_effects()
+      .AddEffect("increment")
       .WithChannelization(FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY, FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY)
       .WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
-
-  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
-                                        zx_system_get_page_size());
 
   // Create a packet queue to use as our source stream.
   auto timeline_function =
@@ -345,10 +347,10 @@ TEST_F(EffectsStageV1Test, CreateStageWithRechannelization) {
       .instance_name = "incremement_without_upchannel",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
-  stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
+  stream->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10)));
   EXPECT_EQ(4, effects_stage->format().channels());
 
   {
@@ -375,9 +377,7 @@ TEST_F(EffectsStageV1Test, CreateStageWithRechannelization) {
 }
 
 TEST_F(EffectsStageV1Test, ReleasePacketWhenFullyConsumed) {
-  test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
-  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
-                                        zx_system_get_page_size());
+  test_effects().AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
 
   // Create a packet queue to use as our source stream.
   auto timeline_function =
@@ -395,12 +395,12 @@ TEST_F(EffectsStageV1Test, ReleasePacketWhenFullyConsumed) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   bool packet_released = false;
-  stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10),
-                                                 [&packet_released] { packet_released = true; }));
+  stream->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10),
+                                                   [&packet_released] { packet_released = true; }));
 
   // Acquire a buffer.
   auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
@@ -418,9 +418,7 @@ TEST_F(EffectsStageV1Test, ReleasePacketWhenFullyConsumed) {
 }
 
 TEST_F(EffectsStageV1Test, ReleasePacketWhenNoLongerReferenced) {
-  test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
-  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
-                                        zx_system_get_page_size());
+  test_effects().AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
 
   // Create a packet queue to use as our source stream.
   auto timeline_function =
@@ -438,12 +436,12 @@ TEST_F(EffectsStageV1Test, ReleasePacketWhenNoLongerReferenced) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   bool packet_released = false;
-  stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10),
-                                                 [&packet_released] { packet_released = true; }));
+  stream->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10),
+                                                   [&packet_released] { packet_released = true; }));
 
   // Acquire a buffer.
   auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
@@ -468,7 +466,7 @@ TEST_F(EffectsStageV1Test, ReleasePacketWhenNoLongerReferenced) {
 }
 
 TEST_F(EffectsStageV1Test, SendStreamInfoToEffects) {
-  test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+  test_effects().AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
 
   // Set timeline rate to match our format.
   auto timeline_function = TimelineFunction(TimelineRate(
@@ -486,7 +484,7 @@ TEST_F(EffectsStageV1Test, SendStreamInfoToEffects) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, input, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, input, volume_curve());
 
   constexpr uint32_t kRequestedFrames = 48;
 
@@ -498,7 +496,7 @@ TEST_F(EffectsStageV1Test, SendStreamInfoToEffects) {
     EXPECT_TRUE(buf->usage_mask().is_empty());
     EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), Gain::kUnityGainDb);
     test_effects_v1_inspect_state effect_state;
-    EXPECT_EQ(ZX_OK, test_effects_.InspectInstance(
+    EXPECT_EQ(ZX_OK, test_effects().InspectInstance(
                          effects_stage->effects_processor().GetEffectAt(0).get(), &effect_state));
     EXPECT_EQ(0u, effect_state.stream_info.usage_mask);
     EXPECT_FLOAT_EQ(0.0, effect_state.stream_info.gain_dbfs);
@@ -516,7 +514,7 @@ TEST_F(EffectsStageV1Test, SendStreamInfoToEffects) {
               StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
     EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), -20.0);
     test_effects_v1_inspect_state effect_state;
-    EXPECT_EQ(ZX_OK, test_effects_.InspectInstance(
+    EXPECT_EQ(ZX_OK, test_effects().InspectInstance(
                          effects_stage->effects_processor().GetEffectAt(0).get(), &effect_state));
     EXPECT_EQ(FUCHSIA_AUDIO_EFFECTS_USAGE_COMMUNICATION, effect_state.stream_info.usage_mask);
     EXPECT_FLOAT_EQ(-20.0, effect_state.stream_info.gain_dbfs);
@@ -535,7 +533,7 @@ TEST_F(EffectsStageV1Test, SendStreamInfoToEffects) {
                                StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION)}));
     EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), -4.0);
     test_effects_v1_inspect_state effect_state;
-    EXPECT_EQ(ZX_OK, test_effects_.InspectInstance(
+    EXPECT_EQ(ZX_OK, test_effects().InspectInstance(
                          effects_stage->effects_processor().GetEffectAt(0).get(), &effect_state));
     EXPECT_EQ(FUCHSIA_AUDIO_EFFECTS_USAGE_MEDIA | FUCHSIA_AUDIO_EFFECTS_USAGE_INTERRUPTION,
               effect_state.stream_info.usage_mask);
@@ -545,8 +543,6 @@ TEST_F(EffectsStageV1Test, SendStreamInfoToEffects) {
 }
 
 TEST_F(EffectsStageV1Test, SkipRingoutIfDiscontinuous) {
-  testing::PacketFactory packet_factory{dispatcher(), k48k2ChanFloatFormat,
-                                        zx_system_get_page_size()};
   auto timeline_function =
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
           Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
@@ -557,7 +553,8 @@ TEST_F(EffectsStageV1Test, SkipRingoutIfDiscontinuous) {
   static const uint32_t kBlockSize = 48;
   static const uint32_t kRingOutBlocks = 4;
   static const uint32_t kRingOutFrames = kBlockSize * kRingOutBlocks;
-  test_effects_.AddEffect("effect")
+  test_effects()
+      .AddEffect("effect")
       .WithRingOutFrames(kRingOutFrames)
       .WithBlockSize(kBlockSize)
       .WithMaxFramesPerBuffer(kBlockSize);
@@ -569,11 +566,11 @@ TEST_F(EffectsStageV1Test, SkipRingoutIfDiscontinuous) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
   EXPECT_EQ(2, effects_stage->format().channels());
 
   // Add 48 frames to our source.
-  stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(1)));
+  stream->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(1)));
 
   {  // Read the frames out.
     auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
@@ -628,8 +625,6 @@ class EffectsStageV1RingoutTest : public EffectsStageV1Test,
         context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
   }
 
-  testing::PacketFactory packet_factory_{dispatcher(), k48k2ChanFloatFormat,
-                                         zx_system_get_page_size()};
   std::shared_ptr<PacketQueue> stream_;
 };
 
@@ -654,7 +649,8 @@ TEST_P(EffectsStageV1RingoutTest, RingoutBuffer) {
 }
 
 TEST_P(EffectsStageV1RingoutTest, RingoutFrames) {
-  test_effects_.AddEffect("effect")
+  test_effects()
+      .AddEffect("effect")
       .WithRingOutFrames(GetParam().effect_ring_out_frames)
       .WithBlockSize(GetParam().effect_block_size)
       .WithMaxFramesPerBuffer(GetParam().effect_max_frames_per_buffer);
@@ -666,11 +662,11 @@ TEST_P(EffectsStageV1RingoutTest, RingoutFrames) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream_, volume_curve_);
+  auto effects_stage = EffectsStageV1::Create(effects, stream_, volume_curve());
   EXPECT_EQ(2, effects_stage->format().channels());
 
   // Add 48 frames to our source.
-  stream_->PushPacket(packet_factory_.CreatePacket(1.0, zx::msec(1)));
+  stream_->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(1)));
 
   {  // Read the frames out.
     auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
@@ -702,8 +698,8 @@ TEST_P(EffectsStageV1RingoutTest, RingoutFrames) {
   // Add another data packet to verify we correctly reset the ringout when the source goes silent
   // again.
   start_frame += 480;
-  packet_factory_.SeekToFrame(start_frame);
-  stream_->PushPacket(packet_factory_.CreatePacket(1.0, zx::msec(1)));
+  packet_factory().SeekToFrame(start_frame);
+  stream_->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(1)));
 
   {  // Read the frames out.
     auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), 48);

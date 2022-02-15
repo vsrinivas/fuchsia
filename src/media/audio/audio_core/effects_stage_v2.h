@@ -43,10 +43,10 @@ class EffectsStageV2 : public ReadableStream {
 
   // Manages buffers for the FIDL connection.
   // Exported so it can be tested and used in tests.
-  struct Buffers {
+  struct FidlBuffers {
     // Will crash if the VMOs are not R+W mappable.
-    static Buffers Create(const fuchsia_mem::wire::Range& input_range,
-                          const fuchsia_mem::wire::Range& output_range);
+    static FidlBuffers Create(const fuchsia_mem::wire::Range& input_range,
+                              const fuchsia_mem::wire::Range& output_range);
 
     void* input;
     void* output;
@@ -68,7 +68,7 @@ class EffectsStageV2 : public ReadableStream {
 
   std::shared_ptr<ReadableStream> source_;
   fidl::WireSyncClient<fuchsia_audio_effects::Processor> processor_;
-  Buffers buffers_;
+  FidlBuffers fidl_buffers_;
 
   const int64_t max_frames_per_call_;
   const int64_t block_size_frames_;
