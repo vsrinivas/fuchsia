@@ -66,9 +66,7 @@ enum class obj_type : uint32_t {
 
   STREAM = 31u,
 
-  MSI_ALLOCATION = 32u,
-
-  MSI_INTERRUPT = 33u,
+  MSI = 32u,
 };
 
 inline zx_status_t Clone(::test::handles::obj_type value,

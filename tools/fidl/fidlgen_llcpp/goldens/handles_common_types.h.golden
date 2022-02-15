@@ -65,9 +65,7 @@ enum class obj_type : uint32_t {
 
   kStream = 31u,
 
-  kMsiAllocation = 32u,
-
-  kMsiInterrupt = 33u,
+  kMsi = 32u,
 };
 
 }  // namespace test_handles

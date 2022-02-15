@@ -36,7 +36,7 @@ syn match fidlBadType "\<zx.handle:[A-Z]*?\?"
 " complex handle types.
 syn match fidlType "\<zx.handle:<[^>]*>\?"
 " And specifically make known handle subtypes recognized.
-syn match fidlType "\<zx.handle:\(BTI\|CHANNEL\|CLOCK\|EVENT\|EVENTPAIR\|EXCEPTION\|FIFO\|GUEST\|INTERRUPT\|IOMMU\|JOB\|LOG\|MSI_ALLOCATION\|MSI_INTERRUPT\|PAGER\|PCI_DEVICE\|PMT\|PORT\|PROCESS\|PROFILE\|RESOURCE\|SOCKET\|STREAM\|SUSPEND_TOKEN\|THREAD\|TIMER\|VCPU\|VMAR\|VMO\)\>"
+syn match fidlType "\<zx.handle:\(BTI\|CHANNEL\|CLOCK\|EVENT\|EVENTPAIR\|EXCEPTION\|FIFO\|GUEST\|INTERRUPT\|IOMMU\|JOB\|LOG\|MSI\|PAGER\|PCI_DEVICE\|PMT\|PORT\|PROCESS\|PROFILE\|RESOURCE\|SOCKET\|STREAM\|SUSPEND_TOKEN\|THREAD\|TIMER\|VCPU\|VMAR\|VMO\)\>"
 
 syn match fidlType "\<string\>\%(:\%(\d\+\|\K\k*\%(\.\K\k*\)*\)\)\??\?"
 syn match fidlType "\<bool\>"

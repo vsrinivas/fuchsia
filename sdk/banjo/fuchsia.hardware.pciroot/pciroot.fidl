@@ -165,6 +165,6 @@ protocol Pciroot {
         can_target_64bit bool;
     }) -> (resource struct {
         s zx.status;
-        allocation zx.handle:MSI_ALLOCATION;
+        allocation zx.handle:MSI;
     });
 };

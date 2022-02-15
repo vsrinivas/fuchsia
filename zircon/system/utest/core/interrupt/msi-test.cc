@@ -79,10 +79,10 @@ struct MsiCreateTestCase {
   zx_status_t status;
 };
 
-// Copied from MsiDispatcher's MsiCapability, but we can't include that kernel header.
+// Copied from MsiInterruptDispatcher's MsiCapability, but we can't include that kernel header.
 namespace FakeMsi {
 // All of these values are sourced from the PCI Local Bus Specification rev 3.0 figure 6-9
-// and the header msi_dispatcher.h which cannot be included due to being kernel-side. The
+// and the header msi_interrupt_dispatcher.h which cannot be included due to being kernel-side. The
 // intent is to mock the bare minimum functionality of an MSI capability so that the dispatcher
 // behavior can be controlled and observed.
 // TODO(fxbug.dev/32978): The maximum size for this capability can vary based on PVM and bit count,

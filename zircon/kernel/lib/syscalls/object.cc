@@ -26,7 +26,7 @@
 #include <object/exception_dispatcher.h>
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
-#include <object/msi_allocation_dispatcher.h>
+#include <object/msi_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resource.h>
 #include <object/resource_dispatcher.h>
@@ -920,7 +920,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       return ZX_OK;
     }
     case ZX_INFO_MSI: {
-      fbl::RefPtr<MsiAllocationDispatcher> allocation;
+      fbl::RefPtr<MsiDispatcher> allocation;
       zx_status_t status =
           up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &allocation);
       if (status != ZX_OK) {

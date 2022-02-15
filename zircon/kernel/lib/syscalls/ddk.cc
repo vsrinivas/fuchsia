@@ -31,9 +31,8 @@
 #include <object/interrupt_dispatcher.h>
 #include <object/interrupt_event_dispatcher.h>
 #include <object/iommu_dispatcher.h>
-#include <object/msi_allocation.h>
-#include <object/msi_allocation_dispatcher.h>
 #include <object/msi_dispatcher.h>
+#include <object/msi_interrupt_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resource.h>
 #include <object/vcpu_dispatcher.h>
@@ -312,9 +311,8 @@ zx_status_t sys_msi_allocate(zx_handle_t root, uint32_t count, user_out_handle* 
   }
 
   zx_rights_t rights;
-  KernelHandle<MsiAllocationDispatcher> alloc_handle;
-  if ((status = MsiAllocationDispatcher::Create(ktl::move(alloc), &alloc_handle, &rights)) !=
-      ZX_OK) {
+  KernelHandle<MsiDispatcher> alloc_handle;
+  if ((status = MsiDispatcher::Create(ktl::move(alloc), &alloc_handle, &rights)) != ZX_OK) {
     return status;
   }
 
@@ -325,7 +323,7 @@ zx_status_t sys_msi_allocate(zx_handle_t root, uint32_t count, user_out_handle* 
 zx_status_t sys_msi_create(zx_handle_t msi_alloc, uint32_t options, uint32_t msi_id,
                            zx_handle_t vmo, size_t vmo_offset, user_out_handle* out) {
   auto* up = ProcessDispatcher::GetCurrent();
-  fbl::RefPtr<MsiAllocationDispatcher> msi_alloc_disp;
+  fbl::RefPtr<MsiDispatcher> msi_alloc_disp;
 
   zx_status_t status;
   if ((status = up->handle_table().GetDispatcher(msi_alloc, &msi_alloc_disp)) != ZX_OK) {
@@ -340,7 +338,7 @@ zx_status_t sys_msi_create(zx_handle_t msi_alloc, uint32_t options, uint32_t msi
 
   zx_rights_t rights;
   KernelHandle<InterruptDispatcher> msi_handle;
-  if ((status = MsiDispatcher::Create(
+  if ((status = MsiInterruptDispatcher::Create(
            msi_alloc_disp->msi_allocation(), /* msi_id= */ msi_id, vmo_disp->vmo(),
            /* cap_offset= */ vmo_offset, /* options= */ options, &rights, &msi_handle)) != ZX_OK) {
     return status;

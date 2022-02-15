@@ -132,9 +132,9 @@ class FakePciProtocolInternal
     return config_.write(&value, offset, sizeof(T));
   }
 
-  // This allows us to mimic the kernel's handling of outstanding MsiDispatchers per MsiAllocation
-  // objects. A device's legacy interrupt is still a valid object if the interrupt mode is
-  // switched, albeit not a useful one.
+  // This allows us to mimic the kernel's handling of outstanding MsiInterruptDispatchers per
+  // MsiAllocation objects. A device's legacy interrupt is still a valid object if the interrupt
+  // mode is switched, albeit not a useful one.
   bool AllMappedInterruptsFreed();
   zx_status_t CommonCapabilitySearch(uint8_t id, std::optional<uint8_t> offset,
                                      uint8_t* out_offset);

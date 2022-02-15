@@ -21,7 +21,7 @@
 #include <object/resource_dispatcher.h>
 
 // An MsiAllocation is a wrapper around an allocated block oVf MSI interrupts.
-// It allows for multiple MsiDispatchers to share an allocated block, and
+// It allows for multiple MsiInterruptDispatchers to share an allocated block, and
 // synchronize access to an MSI capability dealing with multiple IRQs.
 //
 // By default, all MSI Allocations use the platform's kernel msi_*
@@ -52,9 +52,9 @@ class MsiAllocation : public fbl::RefCounted<MsiAllocation> {
 
   void GetInfo(zx_info_msi* info) const TA_EXCL(lock_);
 
-  static zx_obj_type_t get_type() { return ZX_OBJ_TYPE_MSI_ALLOCATION; }
+  static zx_obj_type_t get_type() { return ZX_OBJ_TYPE_MSI; }
   const msi_block_t& block() const { return block_; }
-  // Interface for MsiDispatchers to reserve a given MSI id for management.
+  // Interface for MsiInterruptDispatchers to reserve a given MSI id for management.
   zx_status_t ReserveId(MsiId msi_id) TA_EXCL(lock_);
   zx_status_t ReleaseId(MsiId msi_id) TA_EXCL(lock_);
 
@@ -68,7 +68,7 @@ class MsiAllocation : public fbl::RefCounted<MsiAllocation> {
   MsiFreeFn msi_free_fn_;
   // Function pointers for MSI platform functions to facilitate unit tests.
   const msi_block_t block_;
-  // A bitfield of MSI ids currently associated with MsiDispatchers.
+  // A bitfield of MSI ids currently associated with MsiInterruptDispatchers.
   IdBitMaskType ids_in_use_ TA_GUARDED(lock_) = 0;
   // Used to synchronize access to an MSI vector control register for
   // MSI blocks that consist of multiple vectors and MsiInterruptDispatchers.

@@ -100,7 +100,6 @@ static bool EnumValidatorFor_test_handles_obj_type(uint64_t v) {
     case 30ul:
     case 31ul:
     case 32ul:
-    case 33ul:
       return true;
     default:
       return false;

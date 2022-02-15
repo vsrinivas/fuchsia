@@ -557,8 +557,7 @@ void PrettyPrinter::DisplayObjType(zx_obj_type_t obj_type) {
     ObjTypeCase(ZX_OBJ_TYPE_EXCEPTION);
     ObjTypeCase(ZX_OBJ_TYPE_CLOCK);
     ObjTypeCase(ZX_OBJ_TYPE_STREAM);
-    ObjTypeCase(ZX_OBJ_TYPE_MSI_ALLOCATION);
-    ObjTypeCase(ZX_OBJ_TYPE_MSI_INTERRUPT);
+    ObjTypeCase(ZX_OBJ_TYPE_MSI);
     default:
       *this << obj_type << ResetColor;
       return;

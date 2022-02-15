@@ -121,13 +121,8 @@
     },
     {
         "kind": "enum/member",
-        "name": "zx/obj_type.MSI_ALLOCATION",
+        "name": "zx/obj_type.MSI",
         "value": "32"
-    },
-    {
-        "kind": "enum/member",
-        "name": "zx/obj_type.MSI_INTERRUPT",
-        "value": "33"
     },
     {
         "kind": "enum/member",

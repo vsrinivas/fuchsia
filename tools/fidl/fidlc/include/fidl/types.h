@@ -59,7 +59,7 @@ enum struct HandleSubtype : uint32_t {
   kIommu = 23,
   kJob = 17,
   kLog = 12,
-  kMsiAllocation = 32,
+  kMsi = 32,
   kPager = 28,
   kPciDevice = 11,
   kPmt = 26,

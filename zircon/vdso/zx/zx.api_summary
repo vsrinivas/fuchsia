@@ -20,8 +20,7 @@ enum/member zx/obj_type.INTERRUPT 9
 enum/member zx/obj_type.IOMMU 23
 enum/member zx/obj_type.JOB 17
 enum/member zx/obj_type.LOG 12
-enum/member zx/obj_type.MSI_ALLOCATION 32
-enum/member zx/obj_type.MSI_INTERRUPT 33
+enum/member zx/obj_type.MSI 32
 enum/member zx/obj_type.NONE 0
 enum/member zx/obj_type.PAGER 28
 enum/member zx/obj_type.PCI_DEVICE 11

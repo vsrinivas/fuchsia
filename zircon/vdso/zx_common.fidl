@@ -85,8 +85,7 @@ type obj_type = strict enum : uint32 {
     EXCEPTION = 29;
     CLOCK = 30;
     STREAM = 31;
-    MSI_ALLOCATION = 32;
-    MSI_INTERRUPT = 33;
+    MSI = 32;
 };
 
 resource_definition handle : uint32 {

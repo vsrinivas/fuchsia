@@ -69,8 +69,7 @@ class ObjType extends $fidl.Enum {
     0x1d: exception,
     0x1e: clock,
     0x1f: stream,
-    0x20: msiAllocation,
-    0x21: msiInterrupt,
+    0x20: msi,
   };
   factory ObjType(int _v) {
     if (!_values.containsKey(_v)) {
@@ -106,8 +105,7 @@ class ObjType extends $fidl.Enum {
   static const ObjType exception = ObjType._(0x1d);
   static const ObjType clock = ObjType._(0x1e);
   static const ObjType stream = ObjType._(0x1f);
-  static const ObjType msiAllocation = ObjType._(0x20);
-  static const ObjType msiInterrupt = ObjType._(0x21);
+  static const ObjType msi = ObjType._(0x20);
 
   const ObjType._(this.$value);
 
@@ -142,8 +140,7 @@ class ObjType extends $fidl.Enum {
     r'exception': exception,
     r'clock': clock,
     r'stream': stream,
-    r'msiAllocation': msiAllocation,
-    r'msiInterrupt': msiInterrupt,
+    r'msi': msi,
   };
 
   static const List<ObjType> $values = [
@@ -174,8 +171,7 @@ class ObjType extends $fidl.Enum {
     exception,
     clock,
     stream,
-    msiAllocation,
-    msiInterrupt,
+    msi,
   ];
 
   static ObjType? $valueOf(String name) => $valuesMap[name];
@@ -218,8 +214,7 @@ const $fidl.EnumType<ObjType> kobj_type_Type = $fidl.EnumType<ObjType>(
       0x1d: null,
       0x1e: null,
       0x1f: null,
-      0x20: null,
-      0x21: null
+      0x20: null
     },
     ctor: ObjType._ctor);
 

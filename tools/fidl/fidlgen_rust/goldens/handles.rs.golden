@@ -57,8 +57,7 @@ pub enum ObjType {
     Exception = 29,
     Clock = 30,
     Stream = 31,
-    MsiAllocation = 32,
-    MsiInterrupt = 33,
+    Msi = 32,
 }
 
 impl ObjType {
@@ -92,8 +91,7 @@ impl ObjType {
             29 => Some(Self::Exception),
             30 => Some(Self::Clock),
             31 => Some(Self::Stream),
-            32 => Some(Self::MsiAllocation),
-            33 => Some(Self::MsiInterrupt),
+            32 => Some(Self::Msi),
             _ => None,
         }
     }

@@ -52,7 +52,6 @@ macro_rules! invoke_for_handle_types {
         $x! {Exception, "Exception", EXCEPTION, 26, Stub}
         $x! {Clock, "Clock", CLOCK, 27, FuchsiaOnly}
         $x! {Stream, "Stream", STREAM, 11, FuchsiaOnly}
-        $x! {MsiAllocation, "MSI Allocation", MSI_ALLOCATION, 28, Stub}
-        $x! {MsiInterrupt, "MSI Interrupt", MSI_INTERRUPT, 29, Stub}
+        $x! {MsiAllocation, "MSI", MSI, 28, Stub}
     };
 }

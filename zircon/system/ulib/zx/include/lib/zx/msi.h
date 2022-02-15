@@ -16,12 +16,12 @@
 
 namespace zx {
 
-// This wrapper encompasses both MsiDispatcher MsiAllocationDispatcher due
-// to them only having static members and MsiDispatcher otherwise using the
+// This wrapper encompasses both MsiInterruptDispatcher MsiDispatcher due
+// to them only having static members and MsiInterruptDispatcher otherwise using the
 // same interface as a zx::interrupt.
 class msi final : public object<msi> {
  public:
-  static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_MSI_ALLOCATION;
+  static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_MSI;
 
   constexpr msi() = default;
 

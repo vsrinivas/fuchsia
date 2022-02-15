@@ -66,9 +66,7 @@ std::string HandleTypeToString(uint32_t handle_type) {
     case 31u:
       return "ZX_OBJ_TYPE_STREAM";
     case 32u:
-      return "ZX_OBJ_TYPE_MSI_ALLOCATION";
-    case 33u:
-      return "ZX_OBJ_TYPE_MSI_INTERRUPT";
+      return "ZX_OBJ_TYPE_MSI";
     default:
       return "<unknown (" + std::to_string(handle_type) + ")>";
   }

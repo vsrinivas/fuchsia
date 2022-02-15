@@ -12,35 +12,34 @@ var _ _bindings.Enum = ObjType(0)
 type ObjType uint32
 
 const (
-	ObjTypeNone          ObjType = 0
-	ObjTypeProcess       ObjType = 1
-	ObjTypeThread        ObjType = 2
-	ObjTypeVmo           ObjType = 3
-	ObjTypeChannel       ObjType = 4
-	ObjTypeEvent         ObjType = 5
-	ObjTypePort          ObjType = 6
-	ObjTypeInterrupt     ObjType = 9
-	ObjTypeLog           ObjType = 12
-	ObjTypeSocket        ObjType = 14
-	ObjTypeResource      ObjType = 15
-	ObjTypeEventpair     ObjType = 16
-	ObjTypeJob           ObjType = 17
-	ObjTypeVmar          ObjType = 18
-	ObjTypeFifo          ObjType = 19
-	ObjTypeGuest         ObjType = 20
-	ObjTypeVcpu          ObjType = 21
-	ObjTypeTimer         ObjType = 22
-	ObjTypeIommu         ObjType = 23
-	ObjTypeBti           ObjType = 24
-	ObjTypeProfile       ObjType = 25
-	ObjTypePmt           ObjType = 26
-	ObjTypeSuspendToken  ObjType = 27
-	ObjTypePager         ObjType = 28
-	ObjTypeException     ObjType = 29
-	ObjTypeClock         ObjType = 30
-	ObjTypeStream        ObjType = 31
-	ObjTypeMsiAllocation ObjType = 32
-	ObjTypeMsiInterrupt  ObjType = 33
+	ObjTypeNone         ObjType = 0
+	ObjTypeProcess      ObjType = 1
+	ObjTypeThread       ObjType = 2
+	ObjTypeVmo          ObjType = 3
+	ObjTypeChannel      ObjType = 4
+	ObjTypeEvent        ObjType = 5
+	ObjTypePort         ObjType = 6
+	ObjTypeInterrupt    ObjType = 9
+	ObjTypeLog          ObjType = 12
+	ObjTypeSocket       ObjType = 14
+	ObjTypeResource     ObjType = 15
+	ObjTypeEventpair    ObjType = 16
+	ObjTypeJob          ObjType = 17
+	ObjTypeVmar         ObjType = 18
+	ObjTypeFifo         ObjType = 19
+	ObjTypeGuest        ObjType = 20
+	ObjTypeVcpu         ObjType = 21
+	ObjTypeTimer        ObjType = 22
+	ObjTypeIommu        ObjType = 23
+	ObjTypeBti          ObjType = 24
+	ObjTypeProfile      ObjType = 25
+	ObjTypePmt          ObjType = 26
+	ObjTypeSuspendToken ObjType = 27
+	ObjTypePager        ObjType = 28
+	ObjTypeException    ObjType = 29
+	ObjTypeClock        ObjType = 30
+	ObjTypeStream       ObjType = 31
+	ObjTypeMsi          ObjType = 32
 )
 
 func (_ ObjType) I_EnumValues() []ObjType {
@@ -72,8 +71,7 @@ func (_ ObjType) I_EnumValues() []ObjType {
 		ObjTypeException,
 		ObjTypeClock,
 		ObjTypeStream,
-		ObjTypeMsiAllocation,
-		ObjTypeMsiInterrupt,
+		ObjTypeMsi,
 	}
 }
 
@@ -139,8 +137,6 @@ func (x ObjType) IsUnknown() bool {
 		return false
 	case 32:
 		return false
-	case 33:
-		return false
 	}
 	return true
 }
@@ -202,9 +198,7 @@ func (x ObjType) String() string {
 	case 31:
 		return "Stream"
 	case 32:
-		return "MsiAllocation"
-	case 33:
-		return "MsiInterrupt"
+		return "Msi"
 	}
 	return "Unknown"
 }
