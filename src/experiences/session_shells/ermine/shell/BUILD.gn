@@ -16,7 +16,7 @@ declare_args() {
   ermine_app_entries = "config/app_launch_entries.json"
 
   # Whether or not to launch screensaver.
-  ermine_start_screensaver = true
+  ermine_start_screensaver = false
 }
 
 dart_library("lib") {
