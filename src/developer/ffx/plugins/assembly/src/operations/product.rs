@@ -32,6 +32,7 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     let image_assembly = builder.build(&outdir).context("Building Image Assembly config")?;
     // TODO pass a reference to a whole assembly once that type is extracted to a library
     assembly_validate_product::validate_product(
+        image_assembly.bootfs_files.iter().map(|entry| (&entry.destination, &entry.source)),
         image_assembly
             .system
             .iter()

@@ -44,6 +44,9 @@ template("component_manifest_resources") {
                                "data_deps",
                                "testonly",
                              ])
+
+      # NOTE: must be kept in sync with path in fuchsia_structured_config.gni
+      config_values_package_path = "meta/${name}.cvf"
       manifest = source
       output_name = "$name.cm"
       visibility = [ ":*" ]

@@ -4,19 +4,20 @@
 
 //! Utilities for working with structured configuration during the product assembly process.
 
+use assembly_validate_util::PkgNamespace;
 use cm_rust::FidlIntoNative;
 use fidl_fuchsia_component_config as fconfig;
 use fidl_fuchsia_component_decl as fdecl;
-use std::io::{Read, Seek};
+use std::{error::Error, fmt::Debug};
 
-/// Validate a component manifest within the `meta/` directory.
+/// Validate a component manifest given access to the contents of its `/pkg` directory.
 ///
 /// Ensures that if a component has a `config` stanza it can be paired with the specified
 /// value file and that together they can produce a valid configuration for the component.
-pub fn validate_component(
+pub fn validate_component<Ns: PkgNamespace>(
     manifest_path: &str,
-    reader: &mut fuchsia_archive::Reader<impl Read + Seek>,
-) -> Result<(), ValidationError> {
+    reader: &mut Ns,
+) -> Result<(), ValidationError<Ns::Err>> {
     // get the manifest and validate it
     let manifest_bytes =
         reader.read_file(manifest_path).map_err(ValidationError::ManifestMissing)?;
@@ -29,7 +30,9 @@ pub fn validate_component(
     if let Some(config_decl) = manifest.config {
         // it's required, so find out where it's stored
         let cm_rust::ConfigValueSource::PackagePath(path) = &config_decl.value_source;
-        let config_bytes = reader.read_file(&path).map_err(ValidationError::ConfigValuesMissing)?;
+        let config_bytes = reader.read_file(&path).map_err(|source| {
+            ValidationError::ConfigValuesMissing { path: path.to_owned(), source }
+        })?;
 
         // read and validate the config values
         let config_values: fconfig::ValuesData = fidl::encoding::decode_persistent(&config_bytes)
@@ -46,15 +49,19 @@ pub fn validate_component(
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum ValidationError {
+pub enum ValidationError<NamespaceError: Debug + Error + 'static> {
     #[error("Couldn't read manifest.")]
-    ManifestMissing(#[source] fuchsia_archive::Error),
+    ManifestMissing(#[source] NamespaceError),
     #[error("Couldn't decode manifest.")]
     DecodeManifest(#[source] fidl::Error),
     #[error("Couldn't validate manifest.")]
     ValidateManifest(#[source] cm_fidl_validator::error::ErrorList),
-    #[error("Couldn't read config values.")]
-    ConfigValuesMissing(#[source] fuchsia_archive::Error),
+    #[error("Couldn't read config values from `{path}`.")]
+    ConfigValuesMissing {
+        path: String,
+        #[source]
+        source: NamespaceError,
+    },
     #[error("Couldn't decode config values.")]
     DecodeConfig(#[source] fidl::Error),
     #[error("Couldn't validate config values.")]

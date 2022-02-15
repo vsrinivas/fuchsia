@@ -6,24 +6,18 @@ import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
 if (is_host) {
-  rustc_library("validate_product") {
-    name = "assembly_validate_product"
+  rustc_library("validate_util") {
+    name = "assembly_validate_util"
     with_unit_tests = true
     deps = [
-      "//src/lib/assembly/structured_config",
-      "//src/lib/assembly/validate_util",
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-      "//src/sys/pkg/lib/fuchsia-pkg",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:rayon",
-      "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:textwrap",
+      "//third_party/rust_crates:thiserror",
     ]
     sources = [ "src/lib.rs" ]
   }
 
   group("host_tests") {
     testonly = true
-    deps = [ ":validate_product_test" ]
+    deps = [ ":validate_util_test" ]
   }
 }

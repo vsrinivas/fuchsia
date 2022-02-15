@@ -21,6 +21,7 @@ if (is_host) {
       "update_packages_manifest:host_tests",
       "util:host_tests",
       "validate_product:host_tests",
+      "validate_util:host_tests",
       "vbmeta:host_tests",
       "zbi:host_tests",
     ]

@@ -23,7 +23,7 @@ fn no_config_passes() {
 #[test]
 fn config_requires_values() {
     match validate_component("meta/fail_missing_config.cm", &mut test_meta_far()).unwrap_err() {
-        ValidationError::ConfigValuesMissing(..) => (),
+        ValidationError::ConfigValuesMissing { .. } => (),
         other => panic!("expected missing values, got {}", other),
     }
 }
