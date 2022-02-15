@@ -125,6 +125,40 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     }
   }
 
+  device->properties_.reserve(zx_args->prop_count);
+  bool has_protocol = false;
+  for (auto [id, _, value] : cpp20::span(zx_args->props, zx_args->prop_count)) {
+    device->properties_.emplace_back(arena_)
+        .set_key(arena_, fdf::wire::NodePropertyKey::WithIntValue(id))
+        .set_value(arena_, fdf::wire::NodePropertyValue::WithIntValue(value));
+    if (id == BIND_PROTOCOL) {
+      has_protocol = true;
+    }
+  }
+
+  // Some DFv1 devices expect to be able to set their own protocol, without specifying proto_id.
+  // If we saw a BIND_PROTOCOL property, don't add our own.
+  if (!has_protocol) {
+    device->properties_.emplace_back(arena_)
+        .set_key(arena_, fdf::wire::NodePropertyKey::WithIntValue(BIND_PROTOCOL))
+        .set_value(arena_, fdf::wire::NodePropertyValue::WithIntValue(zx_args->proto_id));
+  }
+  device->device_flags_ = zx_args->flags;
+
+  zx_status_t status = device->CreateNode();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  children_.push_back(std::move(device));
+
+  if (out) {
+    *out = device_ptr->ZxDevice();
+  }
+  return ZX_OK;
+}
+
+zx_status_t Device::CreateNode() {
   // Create NodeAddArgs from `zx_args`.
   fidl::Arena arena;
 
@@ -134,7 +168,7 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   compat_dir.set_source_name(arena, "fuchsia.driver.compat.Service");
   compat_dir.set_target_name(arena, "fuchsia.driver.compat.Service");
   compat_dir.set_rights(arena, fuchsia_io::wire::kRwStarDir);
-  compat_dir.set_subdir(arena, fidl::StringView::FromExternal(device->name_));
+  compat_dir.set_subdir(arena, fidl::StringView::FromExternal(name_));
   compat_dir.set_dependency_type(fcd::wire::DependencyType::kStrong);
 
   fcd::wire::Offer offer;
@@ -143,81 +177,62 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   std::vector<fdf::wire::NodeSymbol> symbols;
   symbols.emplace_back(arena)
       .set_name(arena, kName)
-      .set_address(arena, reinterpret_cast<uint64_t>(device_ptr->Name()));
+      .set_address(arena, reinterpret_cast<uint64_t>(Name()));
   symbols.emplace_back(arena)
       .set_name(arena, kContext)
-      .set_address(arena, reinterpret_cast<uint64_t>(zx_args->ctx));
+      .set_address(arena, reinterpret_cast<uint64_t>(context_));
   symbols.emplace_back(arena)
       .set_name(arena, kOps)
-      .set_address(arena, reinterpret_cast<uint64_t>(zx_args->ops));
+      .set_address(arena, reinterpret_cast<uint64_t>(ops_));
   symbols.emplace_back(arena)
       .set_name(arena, kProtoOps)
-      .set_address(arena, reinterpret_cast<uint64_t>(&device_ptr->proto_ops_));
-  std::vector<fdf::wire::NodeProperty> props;
-  props.reserve(zx_args->prop_count);
-  bool has_protocol = false;
-  for (auto [id, _, value] : cpp20::span(zx_args->props, zx_args->prop_count)) {
-    props.emplace_back(arena)
-        .set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(id))
-        .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(value));
-    if (id == BIND_PROTOCOL) {
-      has_protocol = true;
-    }
-  }
-
-  // Some DFv1 devices expect to be able to set their own protocol, without specifying proto_id.
-  // If we saw a BIND_PROTOCOL property, don't add our own.
-  if (!has_protocol) {
-    props.emplace_back(arena)
-        .set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(BIND_PROTOCOL))
-        .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(zx_args->proto_id));
-  }
+      .set_address(arena, reinterpret_cast<uint64_t>(&proto_ops_));
 
   fdf::wire::NodeAddArgs args(arena);
-  auto valid_name = MakeValidName(zx_args->name);
+  auto valid_name = MakeValidName(name_);
   args.set_name(arena, fidl::StringView::FromExternal(valid_name))
       .set_symbols(arena, fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(symbols))
       .set_offers(arena, fidl::VectorView<fcd::wire::Offer>::FromExternal(&offer, 1))
-      .set_properties(arena, fidl::VectorView<fdf::wire::NodeProperty>::FromExternal(props));
+      .set_properties(arena, fidl::VectorView<fdf::wire::NodeProperty>::FromExternal(properties_));
 
   // Create NodeController, so we can control the device.
   auto controller_ends = fidl::CreateEndpoints<fdf::NodeController>();
   if (controller_ends.is_error()) {
     return controller_ends.status_value();
   }
-  device_ptr->controller_.Bind(std::move(controller_ends->client), dispatcher_,
-                               fidl::ObserveTeardown([device = device->weak_from_this()] {
-                                 // Because the dispatcher can be multi-threaded, we must use a
-                                 // `fidl::WireSharedClient`. The `fidl::WireSharedClient` uses a
-                                 // two-phase destruction to teardown the client.
-                                 //
-                                 // Because of this, the teardown might be happening after the
-                                 // Device has already been erased. This is likely to occur if the
-                                 // Driver is asked to shutdown. If that happens, the Driver will
-                                 // free its Devices, the Device will release its NodeController,
-                                 // and then this shutdown will occur later. In order to not have a
-                                 // Use-After-Free here, only try to remove the Device if the
-                                 // weak_ptr still exists.
-                                 //
-                                 // The weak pointer will be valid here if the NodeController
-                                 // representing the Device exits on its own. This represents the
-                                 // Device's child Driver exiting, and in that instance we want to
-                                 // Remove the Device.
-                                 if (auto ptr = device.lock()) {
-                                   if (ptr->parent_.has_value()) {
-                                     (*ptr->parent_)->RemoveChild(ptr);
-                                   }
-                                 }
-                               }));
+  controller_.Bind(std::move(controller_ends->client), dispatcher_,
+                   fidl::ObserveTeardown([device = weak_from_this()] {
+                     // Because the dispatcher can be multi-threaded, we must use a
+                     // `fidl::WireSharedClient`. The `fidl::WireSharedClient` uses a
+                     // two-phase destruction to teardown the client.
+                     //
+                     // Because of this, the teardown might be happening after the
+                     // Device has already been erased. This is likely to occur if the
+                     // Driver is asked to shutdown. If that happens, the Driver will
+                     // free its Devices, the Device will release its NodeController,
+                     // and then this shutdown will occur later. In order to not have a
+                     // Use-After-Free here, only try to remove the Device if the
+                     // weak_ptr still exists.
+                     //
+                     // The weak pointer will be valid here if the NodeController
+                     // representing the Device exits on its own. This represents the
+                     // Device's child Driver exiting, and in that instance we want to
+                     // Remove the Device.
+                     if (auto ptr = device.lock()) {
+                       if (ptr->parent_.has_value()) {
+                         (*ptr->parent_)->RemoveChild(ptr);
+                       }
+                     }
+                   }));
 
   // If the node is not bindable, we own the node.
   fidl::ServerEnd<fdf::Node> node_server;
-  if ((zx_args->flags & DEVICE_ADD_NON_BINDABLE) != 0) {
+  if ((device_flags_ & DEVICE_ADD_NON_BINDABLE) != 0) {
     auto node_ends = fidl::CreateEndpoints<fdf::Node>();
     if (node_ends.is_error()) {
       return node_ends.status_value();
     }
-    device_ptr->node_.Bind(std::move(node_ends->client), dispatcher_);
+    node_.Bind(std::move(node_ends->client), dispatcher_);
     node_server = std::move(node_ends->server);
   }
 
@@ -236,34 +251,27 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     }
     completer.complete_ok();
   };
-  node_->AddChild(std::move(args), std::move(controller_ends->server), std::move(node_server),
-                  std::move(callback));
-  auto task =
-      bridge.consumer.promise_or(fpromise::error(ZX_ERR_UNAVAILABLE))
-          .and_then([device_ptr]() {
-            // Emulate fuchsia.device.manager.DeviceController behaviour, and run the
-            // init task after adding the device.
-            if (HasOp(device_ptr->ops_, &zx_protocol_device_t::init)) {
-              device_ptr->ops_->init(device_ptr->context_);
-            }
-          })
-          .or_else([device_ptr](std::variant<zx_status_t, fdf::NodeError>& status) {
-            if (std::holds_alternative<zx_status_t>(status)) {
-              FDF_LOGL(ERROR, device_ptr->logger_, "Failed to add device: status: '%s': %u",
-                       device_ptr->Name(), std::get<zx_status_t>(status));
-            } else if (std::holds_alternative<fdf::NodeError>(status)) {
-              FDF_LOGL(ERROR, device_ptr->logger_, "Failed to add device: NodeError: '%s': %u",
-                       device_ptr->Name(), std::get<fdf::NodeError>(status));
-            }
-          })
-          .wrap_with(device_ptr->scope_);
-  device_ptr->executor_.schedule_task(std::move(task));
-
-  children_.push_back(std::move(device));
-
-  if (out) {
-    *out = device_ptr->ZxDevice();
-  }
+  (*parent_)->node_->AddChild(std::move(args), std::move(controller_ends->server),
+                              std::move(node_server), std::move(callback));
+  auto task = bridge.consumer.promise_or(fpromise::error(ZX_ERR_UNAVAILABLE))
+                  .and_then([this]() {
+                    // Emulate fuchsia.device.manager.DeviceController behaviour, and run the
+                    // init task after adding the device.
+                    if (HasOp(ops_, &zx_protocol_device_t::init)) {
+                      ops_->init(context_);
+                    }
+                  })
+                  .or_else([this](std::variant<zx_status_t, fdf::NodeError>& status) {
+                    if (std::holds_alternative<zx_status_t>(status)) {
+                      FDF_LOG(ERROR, "Failed to add device: status: '%s': %u", Name(),
+                              std::get<zx_status_t>(status));
+                    } else if (std::holds_alternative<fdf::NodeError>(status)) {
+                      FDF_LOG(ERROR, "Failed to add device: NodeError: '%s': %u", Name(),
+                              std::get<fdf::NodeError>(status));
+                    }
+                  })
+                  .wrap_with(scope_);
+  executor_.schedule_task(std::move(task));
   return ZX_OK;
 }
 

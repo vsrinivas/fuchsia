@@ -77,6 +77,8 @@ class Device : public std::enable_shared_from_this<Device>,
   Device(Device&&) = delete;
   Device& operator=(Device&&) = delete;
 
+  zx_status_t CreateNode();
+
   // fuchsia.driver.compat.Compat
   void GetTopologicalPath(GetTopologicalPathRequestView request,
                           GetTopologicalPathCompleter::Sync& completer) override;
@@ -84,12 +86,18 @@ class Device : public std::enable_shared_from_this<Device>,
 
   void RemoveChild(std::shared_ptr<Device>& child);
 
+  // This arena backs `properties_`.
+  // This should be declared before any objects it backs so it is destructed last.
+  fidl::Arena<512> arena_;
+  std::vector<fuchsia_driver_framework::wire::NodeProperty> properties_;
+
   std::string topological_path_;
   const std::string name_;
   void* const context_;
   const zx_protocol_device_t* const ops_;
   driver::Logger& logger_;
   async_dispatcher_t* const dispatcher_;
+  uint32_t device_flags_ = 0;
 
   // The default protocol of the device.
   compat_device_proto_ops_t proto_ops_ = {};
