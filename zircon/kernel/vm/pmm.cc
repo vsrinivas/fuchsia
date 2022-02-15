@@ -245,55 +245,119 @@ LK_INIT_HOOK(
 
 static Timer dump_free_mem_timer;
 
+static int cmd_oom(int argc, const cmd_args* argv) {
+  uint64_t rate = 0;
+  bool hard = false;
+  if (argc > 2) {
+    if (!strcmp(argv[2].str, "signal")) {
+      pmm_node.DebugMemAvailStateCallback(0);
+      return ZX_OK;
+    }
+    if (!strcmp(argv[2].str, "hard")) {
+      hard = true;
+    } else {
+      rate = strtoul(argv[2].str, nullptr, 0) * 1024 * 1024 / PAGE_SIZE;
+    }
+  }
+
+  // When we reach the oom state the kernel may 'try harder' to reclaim memory and prevent us from
+  // hitting oom. To avoid this we disable the scanner to prevent additional memory from becoming
+  // classified as evictable, and then evict anything that is already considered.
+  printf("Disabling VM scanner\n");
+  scanner_push_disable_count();
+  uint64_t pages_evicted = pmm_evictor()->EvictOneShotSynchronous(
+      UINT64_MAX, Evictor::EvictionLevel::IncludeNewest, Evictor::Output::NoPrint);
+  if (pages_evicted > 0) {
+    printf("Leaked %" PRIu64 " pages from eviction\n", pages_evicted);
+  }
+
+  uint64_t pages_till_oom;
+  // In case we are racing with someone freeing pages we will leak in a loop until we are sure
+  // we have hit the oom state.
+  while ((pages_till_oom = pmm_node.DebugNumPagesTillMemState(0)) > 0) {
+    list_node list = LIST_INITIAL_VALUE(list);
+    if (rate > 0) {
+      uint64_t pages_leaked = 0;
+      while (pages_leaked < pages_till_oom) {
+        uint64_t alloc_pages = ktl::min(rate, pages_till_oom - pages_leaked);
+        if (pmm_node.AllocPages(alloc_pages, 0, &list) == ZX_OK) {
+          pages_leaked += alloc_pages;
+          printf("Leaked %lu pages\n", pages_leaked);
+        }
+        Thread::Current::SleepRelative(ZX_SEC(1));
+      }
+    } else {
+      if (pmm_node.AllocPages(pages_till_oom, 0, &list) == ZX_OK) {
+        printf("Leaked %lu pages\n", pages_till_oom);
+      }
+    }
+    // Ignore any errors under the assumption we had a racy allocation and try again next time
+    // around the loop.
+  }
+
+  if (hard) {
+    printf("Continuing to leak pages forever\n");
+    // Keep leaking as fast possible.
+    while (true) {
+      vm_page_t* p;
+      pmm_alloc_page(0, &p);
+    }
+  }
+
+  return ZX_OK;
+}
+
+static int cmd_usage(const char* cmd_name, bool is_panic) {
+  printf("usage:\n");
+  printf("%s dump                                     : dump pmm info \n", cmd_name);
+  if (!is_panic) {
+    printf("%s free                                     : periodically dump free mem count\n",
+           cmd_name);
+    printf(
+        "%s oom [<rate>]                             : leak memory until oom is triggered, "
+        "optionally specify the rate at which to leak (in MB per second)\n",
+        cmd_name);
+    printf(
+        "%s oom hard                                 : leak memory aggressively and keep on "
+        "leaking\n",
+        cmd_name);
+    printf(
+        "%s oom signal                               : trigger oom signal without leaking "
+        "memory\n",
+        cmd_name);
+    printf("%s mem_avail_state info                     : dump memory availability state info\n",
+           cmd_name);
+    printf(
+        "%s mem_avail_state [step] <state> [<nsecs>] : allocate memory to go to memstate "
+        "<state>, hold the state for <nsecs> (10s by default). Only works if going to <state> "
+        "from current state requires allocating memory, can't free up pre-allocated memory. In "
+        "optional [step] mode, allocation pauses for 1 second at each intermediate memory "
+        "availability state until <state> is reached.\n",
+        cmd_name);
+    printf("%s drop_user_pt                             : drop all user hardware page tables\n",
+           cmd_name);
+    printf("%s checker status                           : prints the status of the pmm checker\n",
+           cmd_name);
+    printf(
+        "%s checker enable [<size>] [oops|panic]     : enables the pmm checker with optional "
+        "fill size and optional action\n",
+        cmd_name);
+    printf("%s checker disable                          : disables the pmm checker\n", cmd_name);
+    printf(
+        "%s checker check                            : forces a check of all free pages in the "
+        "pmm\n",
+        cmd_name);
+  }
+  return ZX_ERR_INTERNAL;
+}
+
 static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
   const bool is_panic = flags & CMD_FLAG_PANIC;
-  auto usage = [cmd_name = argv[0].str, is_panic]() -> int {
-    printf("usage:\n");
-    printf("%s dump                                     : dump pmm info \n", cmd_name);
-    if (!is_panic) {
-      printf("%s free                                     : periodically dump free mem count\n",
-             cmd_name);
-      printf(
-          "%s oom [<rate>]                             : leak memory until oom is triggered, "
-          "optionally specify the rate at which to leak (in MB per second)\n",
-          cmd_name);
-      printf(
-          "%s oom hard                                 : leak memory aggressively and keep on "
-          "leaking\n",
-          cmd_name);
-      printf(
-          "%s oom signal                               : trigger oom signal without leaking "
-          "memory\n",
-          cmd_name);
-      printf("%s mem_avail_state info                     : dump memory availability state info\n",
-             cmd_name);
-      printf(
-          "%s mem_avail_state [step] <state> [<nsecs>] : allocate memory to go to memstate "
-          "<state>, hold the state for <nsecs> (10s by default). Only works if going to <state> "
-          "from current state requires allocating memory, can't free up pre-allocated memory. In "
-          "optional [step] mode, allocation pauses for 1 second at each intermediate memory "
-          "availability state until <state> is reached.\n",
-          cmd_name);
-      printf("%s drop_user_pt                             : drop all user hardware page tables\n",
-             cmd_name);
-      printf("%s checker status                           : prints the status of the pmm checker\n",
-             cmd_name);
-      printf(
-          "%s checker enable [<size>] [oops|panic]     : enables the pmm checker with optional "
-          "fill size and optional action\n",
-          cmd_name);
-      printf("%s checker disable                          : disables the pmm checker\n", cmd_name);
-      printf(
-          "%s checker check                            : forces a check of all free pages in the "
-          "pmm\n",
-          cmd_name);
-    }
-    return ZX_ERR_INTERNAL;
-  };
+  const char* name = argv[0].str;
 
   if (argc < 2) {
     printf("not enough arguments\n");
-    return usage();
+    return cmd_usage(name, is_panic);
   }
 
   if (!strcmp(argv[1].str, "dump")) {
@@ -301,7 +365,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
   } else if (is_panic) {
     // No other operations will work during a panic.
     printf("Only the \"arenas\" command is available during a panic.\n");
-    return usage();
+    return cmd_usage(name, is_panic);
   } else if (!strcmp(argv[1].str, "free")) {
     static bool show_mem = false;
 
@@ -318,69 +382,12 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     }
   } else if (!strcmp(argv[1].str, "oom")) {
     if (argc > 3) {
-      return usage();
+      return cmd_usage(name, is_panic);
     }
-
-    uint64_t rate = 0;
-    bool hard = false;
-    if (argc > 2) {
-      if (!strcmp(argv[2].str, "signal")) {
-        pmm_node.DebugMemAvailStateCallback(0);
-        return ZX_OK;
-      }
-      if (!strcmp(argv[2].str, "hard")) {
-        hard = true;
-      } else {
-        rate = strtoul(argv[2].str, nullptr, 0) * 1024 * 1024 / PAGE_SIZE;
-      }
-    }
-
-    // When we reach the oom state the kernel may 'try harder' to reclaim memory and prevent us from
-    // hitting oom. To avoid this we disable the scanner to prevent additional memory from becoming
-    // classified as evictable, and then evict anything that is already considered.
-    printf("Disabling VM scanner\n");
-    scanner_push_disable_count();
-    uint64_t pages_evicted = pmm_evictor()->EvictOneShotSynchronous(
-        UINT64_MAX, Evictor::EvictionLevel::IncludeNewest, Evictor::Output::NoPrint);
-    if (pages_evicted > 0) {
-      printf("Leaked %" PRIu64 " pages from eviction\n", pages_evicted);
-    }
-
-    uint64_t pages_till_oom;
-    // In case we are racing with someone freeing pages we will leak in a loop until we are sure
-    // we have hit the oom state.
-    while ((pages_till_oom = pmm_node.DebugNumPagesTillMemState(0)) > 0) {
-      list_node list = LIST_INITIAL_VALUE(list);
-      if (rate > 0) {
-        uint64_t pages_leaked = 0;
-        while (pages_leaked < pages_till_oom) {
-          uint64_t alloc_pages = ktl::min(rate, pages_till_oom - pages_leaked);
-          if (pmm_node.AllocPages(alloc_pages, 0, &list) == ZX_OK) {
-            pages_leaked += alloc_pages;
-            printf("Leaked %lu pages\n", pages_leaked);
-          }
-          Thread::Current::SleepRelative(ZX_SEC(1));
-        }
-      } else {
-        if (pmm_node.AllocPages(pages_till_oom, 0, &list) == ZX_OK) {
-          printf("Leaked %lu pages\n", pages_till_oom);
-        }
-      }
-      // Ignore any errors under the assumption we had a racy allocation and try again next time
-      // around the loop.
-    }
-
-    if (hard) {
-      printf("Continuing to leak pages forever\n");
-      // Keep leaking as fast possible.
-      while (true) {
-        vm_page_t* p;
-        pmm_alloc_page(0, &p);
-      }
-    }
+    return cmd_oom(argc, argv);
   } else if (!strcmp(argv[1].str, "mem_avail_state")) {
     if (argc < 3) {
-      return usage();
+      return cmd_usage(name, is_panic);
     }
     if (!strcmp(argv[2].str, "info")) {
       pmm_node.DumpMemAvailState();
@@ -396,7 +403,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
       if (state > pmm_node.DebugMaxMemAvailState()) {
         printf("Invalid memstate %u. Specify a value between 0 and %u.\n", state,
                pmm_node.DebugMaxMemAvailState());
-        return usage();
+        return cmd_usage(name, is_panic);
       }
 
       uint64_t pages_to_alloc, pages_to_free = 0;
@@ -450,7 +457,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     VmAspace::DropAllUserPageTables();
   } else if (!strcmp(argv[1].str, "checker")) {
     if (argc < 3 || argc > 5) {
-      return usage();
+      return cmd_usage(name, is_panic);
     }
     if (!strcmp(argv[2].str, "status")) {
       pmm_checker_print_status();
@@ -488,11 +495,12 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
       pmm_checker_check_all_free_pages();
       printf("done\n");
     } else {
-      return usage();
+      return cmd_usage(name, is_panic);
     }
   } else {
     printf("unknown command\n");
-    return usage();
+
+    return cmd_usage(name, is_panic);
   }
 
   return ZX_OK;
