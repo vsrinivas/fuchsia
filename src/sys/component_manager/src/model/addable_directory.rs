@@ -37,7 +37,13 @@ pub trait AddableDirectoryWithResult {
         moniker: &'a InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError>;
 
-    fn remove_node<'a>(&'a self, name: &'a str) -> Result<Arc<dyn DirectoryEntry>, ModelError>;
+    /// Removes an entry in the directory.
+    ///
+    /// Returns the entry to the caller if the entry was present in the directory.
+    fn remove_node<'a>(
+        &'a self,
+        name: &'a str,
+    ) -> Result<Option<Arc<dyn DirectoryEntry>>, ModelError>;
 }
 
 impl AddableDirectory for Directory {
@@ -65,10 +71,80 @@ impl AddableDirectoryWithResult for Directory {
             .map_err(|_| ModelError::add_entry_error(moniker.to_partial(), name))
     }
 
-    fn remove_node<'a>(&'a self, name: &'a str) -> Result<Arc<dyn DirectoryEntry>, ModelError> {
+    fn remove_node<'a>(
+        &'a self,
+        name: &'a str,
+    ) -> Result<Option<Arc<dyn DirectoryEntry>>, ModelError> {
         self.clone()
             .remove_entry(String::from(name), false)
-            .unwrap()
-            .ok_or(ModelError::remove_entry_error(name))
+            .map_err(|_| ModelError::remove_entry_error(name))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*, assert_matches::assert_matches, std::convert::TryInto,
+        vfs::file::vmo::read_only_static,
+    };
+
+    #[test]
+    fn addable_with_result_add_ok() {
+        let dir = vfs::directory::immutable::simple();
+
+        assert!(
+            dir.add_node(
+                "node_name",
+                read_only_static(b"test"),
+                &InstancedAbsoluteMoniker::parse_string_without_instances("/node").unwrap(),
+            )
+            .is_ok(),
+            "add node with valid name should succeed"
+        );
+    }
+
+    #[test]
+    fn addable_with_result_add_error() {
+        let dir = vfs::directory::immutable::simple();
+
+        let err = dir
+            .add_node(
+                "node_name/with/separators",
+                read_only_static(b"test"),
+                &InstancedAbsoluteMoniker::parse_string_without_instances("/node").unwrap(),
+            )
+            .expect_err("add entry with path separator should fail");
+        assert_matches!(err, ModelError::AddEntryError { .. });
+    }
+
+    #[test]
+    fn addable_with_result_remove_ok() {
+        let dir = vfs::directory::immutable::simple();
+
+        dir.add_node(
+            "node_name",
+            read_only_static(b"test"),
+            &InstancedAbsoluteMoniker::parse_string_without_instances("/node").unwrap(),
+        )
+        .expect("add node with valid name should succeed");
+
+        let entry = dir.remove_node("node_name").expect("remove node should succeed");
+        assert!(entry.is_some(), "entry should have existed before remove");
+    }
+
+    #[test]
+    fn addable_with_result_remove_missing_ok() {
+        let dir = vfs::directory::immutable::simple();
+
+        let entry = dir.remove_node("does_not_exist").expect("remove node should succeed");
+        assert!(entry.is_none(), "entry should not have existed before remove");
+    }
+
+    #[test]
+    fn addable_with_result_remove_error() {
+        let dir = vfs::directory::immutable::simple();
+
+        let entry_name = "x".repeat((vfs::MAX_NAME_LENGTH + 1).try_into().unwrap());
+        assert!(dir.remove_node(&entry_name).is_err(), "remove node should fail");
     }
 }

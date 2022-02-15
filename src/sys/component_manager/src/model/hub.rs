@@ -611,7 +611,10 @@ impl Hub {
             .get_mut(target_moniker)
             .ok_or(ModelError::instance_not_found(target_moniker.to_partial()))?;
 
-        instance.directory.remove_node("exec")?;
+        instance.directory.remove_node("exec")?.ok_or_else(|| {
+            log::warn!("exec directory for instance {} was already removed", target_moniker);
+            ModelError::remove_entry_error("exec")
+        })?;
         instance.has_execution_directory = false;
         Ok(())
     }
@@ -623,23 +626,27 @@ impl Hub {
         trace::duration!("component_manager", "hub:on_destroyed_async");
         let parent_moniker = target_moniker.parent().expect("A root component cannot be destroyed");
         let mut instance_map = self.instances.lock().await;
-        let instance = match instance_map.get_mut(&parent_moniker) {
+        let parent_instance = match instance_map.get_mut(&parent_moniker) {
             Some(i) => i,
             // Evidently this a duplicate dispatch of Destroyed.
             None => return Ok(()),
         };
 
-        let leaf = target_moniker.leaf().expect("A root component cannot be destroyed");
-
+        let child_moniker = target_moniker.leaf().expect("A root component cannot be destroyed");
         // In the children directory, the child's instance id is not used
+        let child_entry = child_moniker.to_partial().as_str().to_string();
+
         // TODO: It's possible for the Destroyed event to be dispatched twice if there
         // are two concurrent `DestroyChild` operations. In such cases we should probably cause
         // this update to no-op instead of returning an error.
-        let child_moniker = leaf.to_partial();
-        instance
-            .children_directory
-            .remove_node(child_moniker.as_str())
-            .map_err(|_| ModelError::remove_entry_error(leaf.as_str()))?;
+        parent_instance.children_directory.remove_node(&child_entry)?.ok_or_else(|| {
+            log::warn!(
+                "child directory {} in parent instance {} was already removed",
+                child_entry,
+                parent_moniker
+            );
+            ModelError::remove_entry_error(child_entry)
+        })?;
         Ok(())
     }
 
