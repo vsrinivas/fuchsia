@@ -91,6 +91,9 @@ class __EXPORT Fastboot {
   zx::status<> WriteFirmware(fuchsia_paver::wire::Configuration config,
                              std::string_view firmware_type, Transport *transport,
                              fidl::WireSyncClient<fuchsia_paver::DataSink> &data_sink);
+  zx::status<> WriteAsset(fuchsia_paver::wire::Configuration config,
+                          fuchsia_paver::wire::Asset asset, Transport *transport,
+                          fidl::WireSyncClient<fuchsia_paver::DataSink> &data_sink);
 
   struct CommandEntry {
     const char *name;

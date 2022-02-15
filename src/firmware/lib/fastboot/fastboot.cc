@@ -10,6 +10,7 @@
 #include <lib/syslog/global.h>
 #include <zircon/status.h>
 
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -71,6 +72,33 @@ bool MatchCommand(const std::string_view cmd, std::string_view ref) {
     size_t pos = cmd.find(":");
     return cmd.compare(0, pos, ref, 0, ref.size()) == 0;
   }
+}
+
+struct FlashPartitionInfo {
+  std::string_view partition;
+  std::optional<fuchsia_paver::wire::Configuration> configuration;
+};
+
+FlashPartitionInfo GetPartitionInfo(std::string_view partition_label) {
+  size_t len = partition_label.length();
+  if (len < 2) {
+    return {partition_label, std::nullopt};
+  }
+
+  FlashPartitionInfo ret;
+  ret.partition = partition_label.substr(0, len - 2);
+  std::string_view slot_suffix = partition_label.substr(len - 2, 2);
+  if (slot_suffix == "_a") {
+    ret.configuration = fuchsia_paver::wire::Configuration::kA;
+  } else if (slot_suffix == "_b") {
+    ret.configuration = fuchsia_paver::wire::Configuration::kB;
+  } else if (slot_suffix == "_r") {
+    ret.configuration = fuchsia_paver::wire::Configuration::kRecovery;
+  } else {
+    ret.partition = partition_label;
+  }
+
+  return ret;
 }
 
 }  // namespace
@@ -269,6 +297,21 @@ zx::status<> Fastboot::WriteFirmware(fuchsia_paver::wire::Configuration config,
   return SendResponse(ResponseType::kOkay, "", transport);
 }
 
+zx::status<> Fastboot::WriteAsset(fuchsia_paver::wire::Configuration config,
+                                  fuchsia_paver::wire::Asset asset, Transport* transport,
+                                  fidl::WireSyncClient<fuchsia_paver::DataSink>& data_sink) {
+  fuchsia_mem::wire::Buffer buf;
+  buf.size = download_vmo_mapper_.size();
+  buf.vmo = download_vmo_mapper_.Release();
+  auto ret = data_sink->WriteAsset(config, asset, std::move(buf));
+  zx_status_t status = ret.status() == ZX_OK ? ret.value().status : ret.status();
+  if (status != ZX_OK) {
+    return SendResponse(ResponseType::kFail, "Failed to flash asset", transport, zx::error(status));
+  }
+
+  return SendResponse(ResponseType::kOkay, "", transport);
+}
+
 zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
   std::vector<std::string_view> args =
       fxl::SplitString(command, ":", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
@@ -292,18 +335,16 @@ zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
   paver_client_res.value()->FindDataSink(std::move(data_sink_remote));
   auto data_sink = fidl::BindSyncClient(std::move(data_sink_local));
 
-  if (args[1] == "bootloader_a") {
+  FlashPartitionInfo info = GetPartitionInfo(args[1]);
+  if (info.partition == "bootloader" && info.configuration) {
     std::string_view firmware_type = args.size() == 3 ? args[2] : "";
-    return WriteFirmware(fuchsia_paver::wire::Configuration::kA, firmware_type, transport,
-                         data_sink);
-  } else if (args[1] == "bootloader_b") {
-    std::string_view firmware_type = args.size() == 3 ? args[2] : "";
-    return WriteFirmware(fuchsia_paver::wire::Configuration::kB, firmware_type, transport,
-                         data_sink);
-  } else if (args[1] == "bootloader_r") {
-    std::string_view firmware_type = args.size() == 3 ? args[2] : "";
-    return WriteFirmware(fuchsia_paver::wire::Configuration::kRecovery, firmware_type, transport,
-                         data_sink);
+    return WriteFirmware(*info.configuration, firmware_type, transport, data_sink);
+  } else if (info.partition == "zircon" && info.configuration) {
+    return WriteAsset(*info.configuration, fuchsia_paver::wire::Asset::kKernel, transport,
+                      data_sink);
+  } else if (info.partition == "vbmeta" && info.configuration) {
+    return WriteAsset(*info.configuration, fuchsia_paver::wire::Asset::kVerifiedBootMetadata,
+                      transport, data_sink);
   } else {
     return SendResponse(ResponseType::kFail, "Unsupported partition", transport);
   }

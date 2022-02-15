@@ -304,6 +304,7 @@ class FastbootFlashTest : public FastbootDownloadTest {
 
     std::vector<std::string> expected_packets = {"OKAY"};
     ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+    ASSERT_EQ(fake_paver.last_firmware_config(), config);
   }
 
   void TestFlashBootloaderNoFirmwareType(Fastboot& fastboot,
@@ -319,6 +320,26 @@ class FastbootFlashTest : public FastbootDownloadTest {
     fake_paver_.set_supported_firmware_type(type);
     ASSERT_NO_FATAL_FAILURE(TestFlashBootloader(fastboot, config, ":" + type));
     ASSERT_EQ(fake_paver_.last_firmware_type(), type);
+  }
+
+  void TestFlashAsset(const std::string partition, fuchsia_paver::wire::Configuration config,
+                      fuchsia_paver::wire::Asset asset) {
+    Fastboot fastboot(0x40000, std::move(svc_chan()));
+    std::vector<uint8_t> download_content(256, 1);
+    ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+    paver_test::FakePaver& fake_paver = paver();
+    fake_paver.set_expected_payload_size(download_content.size());
+
+    std::string command = "flash:" + partition;
+    TestTransport transport;
+    transport.AddInPacket(command);
+    zx::status<> ret = fastboot.ProcessPacket(&transport);
+    ASSERT_TRUE(ret.is_ok());
+
+    std::vector<std::string> expected_packets = {"OKAY"};
+    ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+    ASSERT_EQ(fake_paver.last_asset_config(), config);
+    ASSERT_EQ(fake_paver.last_asset(), asset);
   }
 
   async::Loop loop_;
@@ -436,6 +457,52 @@ TEST_F(FastbootFlashTest, FlashBooloaderUnsupportedFirmwareType) {
   const std::vector<std::string>& sent_packets = transport.GetOutPackets();
   ASSERT_EQ(sent_packets.size(), 1ULL);
   ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, FlashAssetZirconA) {
+  TestFlashAsset("zircon_a", fuchsia_paver::wire::Configuration::kA,
+                 fuchsia_paver::wire::Asset::kKernel);
+}
+
+TEST_F(FastbootFlashTest, FlashAssetZirconB) {
+  TestFlashAsset("zircon_b", fuchsia_paver::wire::Configuration::kB,
+                 fuchsia_paver::wire::Asset::kKernel);
+}
+
+TEST_F(FastbootFlashTest, FlashAssetZirconR) {
+  TestFlashAsset("zircon_r", fuchsia_paver::wire::Configuration::kRecovery,
+                 fuchsia_paver::wire::Asset::kKernel);
+}
+
+TEST_F(FastbootFlashTest, FlashAssetVerifiedBootMetadataA) {
+  TestFlashAsset("vbmeta_a", fuchsia_paver::wire::Configuration::kA,
+                 fuchsia_paver::wire::Asset::kVerifiedBootMetadata);
+}
+
+TEST_F(FastbootFlashTest, FlashAssetVerifiedBootMetadataB) {
+  TestFlashAsset("vbmeta_b", fuchsia_paver::wire::Configuration::kB,
+                 fuchsia_paver::wire::Asset::kVerifiedBootMetadata);
+}
+
+TEST_F(FastbootFlashTest, FlashAssetVerifiedBootMetadataR) {
+  TestFlashAsset("vbmeta_r", fuchsia_paver::wire::Configuration::kRecovery,
+                 fuchsia_paver::wire::Asset::kVerifiedBootMetadata);
+}
+
+TEST_F(FastbootFlashTest, FlashAssetFail) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::vector<uint8_t> download_content(256, 1);
+  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+  paver_test::FakePaver& fake_paver = paver();
+  // Trigger an internal error by using an incorrect size
+  fake_paver.set_expected_payload_size(128);
+
+  std::string command = "flash:zircon_a";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_FALSE(ret.is_ok());
+  ASSERT_EQ(transport.GetOutPackets().back().compare(0, 4, "FAIL"), 0);
 }
 
 }  // namespace

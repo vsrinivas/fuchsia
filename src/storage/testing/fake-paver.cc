@@ -162,6 +162,8 @@ void FakePaver::WriteAsset(WriteAssetRequestView request, WriteAssetCompleter::S
   fbl::AutoLock al(&lock_);
   AppendCommand(Command::kWriteAsset);
   auto status = request->payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
+  last_asset_ = request->asset;
+  last_asset_config_ = request->configuration;
   completer.Reply(status);
 }
 
@@ -171,6 +173,7 @@ void FakePaver::WriteFirmware(WriteFirmwareRequestView request,
   fbl::AutoLock al(&lock_);
   AppendCommand(Command::kWriteFirmware);
   last_firmware_type_ = std::string(request->type.data(), request->type.size());
+  last_firmware_config_ = request->configuration;
 
   // Reply varies depending on whether we support |type| or not.
   if (supported_firmware_type_ == std::string_view(request->type.data(), request->type.size())) {
@@ -293,6 +296,21 @@ const std::vector<Command> FakePaver::GetCommandTrace() {
 std::string FakePaver::last_firmware_type() const {
   fbl::AutoLock al(&lock_);
   return last_firmware_type_;
+}
+
+fuchsia_paver::wire::Configuration FakePaver::last_firmware_config() const {
+  fbl::AutoLock al(&lock_);
+  return last_firmware_config_;
+}
+
+fuchsia_paver::wire::Configuration FakePaver::last_asset_config() const {
+  fbl::AutoLock al(&lock_);
+  return last_asset_config_;
+}
+
+fuchsia_paver::wire::Asset FakePaver::last_asset() const {
+  fbl::AutoLock al(&lock_);
+  return last_asset_;
 }
 
 void FakePaver::set_supported_firmware_type(std::string type) {

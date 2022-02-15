@@ -150,6 +150,9 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
   const std::vector<Command> GetCommandTrace();
 
   std::string last_firmware_type() const;
+  fuchsia_paver::wire::Configuration last_firmware_config() const;
+  fuchsia_paver::wire::Configuration last_asset_config() const;
+  fuchsia_paver::wire::Asset last_asset() const;
 
   void set_expected_payload_size(size_t size) { expected_payload_size_ = size; }
   void set_supported_firmware_type(std::string type);
@@ -168,6 +171,9 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
   mutable fbl::Mutex lock_;
 
   std::string last_firmware_type_ TA_GUARDED(lock_);
+  fuchsia_paver::wire::Asset last_asset_ TA_GUARDED(lock_);
+  fuchsia_paver::wire::Configuration last_firmware_config_ TA_GUARDED(lock_);
+  fuchsia_paver::wire::Configuration last_asset_config_ TA_GUARDED(lock_);
 
   std::atomic<size_t> expected_payload_size_ = 0;
   std::string expected_block_device_ TA_GUARDED(lock_);
