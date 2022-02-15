@@ -7,6 +7,7 @@ import("//build/drivers/arguments.gni")
 group("bootstrap") {
   deps = [
     "//src/connectivity/ethernet/drivers/ethernet",
+    "//src/connectivity/ethernet/drivers/ethernet/netdevice-migration",
     "//src/connectivity/network/drivers/network-device",
     "//src/devices/bundles:bootstrap-dev",
     "//src/graphics/display/drivers/display",

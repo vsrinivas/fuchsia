@@ -8,3 +8,4 @@ extend uint fuchsia.BIND_PROTOCOL {
   INTERFACE = 14,
   IMPL = 15,
 };
+bool NETDEVICE_MIGRATION;

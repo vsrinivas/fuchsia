@@ -4,3 +4,8 @@
 
 using fuchsia.ethernet;
 fuchsia.BIND_PROTOCOL == fuchsia.ethernet.BIND_PROTOCOL.IMPL;
+// If a property is unset, an inequality expression will evaluate to true. Thus,
+// if the property is unset or the property is set to false, then this
+// expression will evaluate to true. This ensures that the ethernet driver binds
+// by default.
+fuchsia.ethernet.NETDEVICE_MIGRATION != true;
