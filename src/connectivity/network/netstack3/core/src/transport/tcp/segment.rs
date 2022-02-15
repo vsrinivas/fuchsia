@@ -97,6 +97,82 @@ impl<P: Payload> Segment<P> {
     }
 }
 
+impl<P: Payload> Segment<P> {
+    /// Returns the part of the incoming segment within the receive window.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(super) fn overlap(self, rnxt: SeqNum, rwnd: WindowSize) -> Option<Segment<P>> {
+        let Segment { seq, ack, wnd, contents } = self;
+        let len = contents.len();
+        let Contents { control, data } = contents;
+        // RFC 793 (https://tools.ietf.org/html/rfc793#page-69):
+        //   There are four cases for the acceptability test for an incoming
+        //   segment:
+        //       Segment Receive  Test
+        //       Length  Window
+        //       ------- -------  -------------------------------------------
+        //          0       0     SEG.SEQ = RCV.NXT
+        //          0      >0     RCV.NXT =< SEG.SEQ < RCV.NXT+RCV.WND
+        //         >0       0     not acceptable
+        //         >0      >0     RCV.NXT =< SEG.SEQ < RCV.NXT+RCV.WND
+        //                     or RCV.NXT =< SEG.SEQ+SEG.LEN-1 < RCV.NXT+RCV.WND
+        let overlap = match (len, rwnd) {
+            (0, WindowSize::ZERO) => seq == rnxt,
+            (0, rwnd) => !rnxt.after(seq) && seq.before(rnxt + rwnd),
+            (_len, WindowSize::ZERO) => false,
+            (len, rwnd) => {
+                (!rnxt.after(seq) && seq.before(rnxt + rwnd))
+                    || (rnxt.before(seq + len) && !(seq + len).after(rnxt + rwnd))
+            }
+        };
+        overlap.then(move || {
+            // We deliberately don't define `PartialOrd` for `SeqNum`, so we use
+            // `cmp` below to utilize `cmp::{max,min}_by`.
+            let cmp = |lhs: &SeqNum, rhs: &SeqNum| (*lhs - *rhs).cmp(&0);
+            let new_seq = core::cmp::max_by(seq, rnxt, cmp);
+            let new_len = core::cmp::min_by(seq + len, rnxt + rwnd, cmp) - new_seq;
+            // The following unwrap won't panic because:
+            // 1. if `seq` is after `rnxt`, then `start` would be 0.
+            // 2. the interesting case is when `rnxt` is after `seq`, in that
+            // case, we have `rnxt - seq > 0`, thus `new_seq - seq > 0`.
+            let start = u32::try_from(new_seq - seq).unwrap();
+            // The following unwrap won't panic because:
+            // 1. The witness on `Segment` and `WindowSize` guarantees that
+            // `len <= 2^31` and `rwnd <= 2^30-1` thus
+            // `seq <= seq + len` and `rnxt <= rnxt + rwnd`.
+            // 2. We are in the closure because `overlap` is true which means
+            // `seq <= rnxt + rwnd` and `rnxt <= seq + len`.
+            // With these two conditions combined, `new_len` can't be negative
+            // so the unwrap can't panic.
+            let new_len = u32::try_from(new_len).unwrap();
+            let (new_control, new_data) = {
+                match control {
+                    Some(Control::SYN) => {
+                        if seq == new_seq {
+                            (Some(Control::SYN), data.slice(start..start + new_len - 1))
+                        } else {
+                            (None, data.slice(start - 1..start + new_len - 1))
+                        }
+                    }
+                    Some(Control::FIN) => {
+                        if seq + len == new_seq + new_len {
+                            (Some(Control::FIN), data.slice(start..start + new_len - 1))
+                        } else {
+                            (None, data.slice(start..start + new_len))
+                        }
+                    }
+                    Some(Control::RST) | None => (control, data.slice(start..start + new_len)),
+                }
+            };
+            Segment {
+                seq: new_seq,
+                ack,
+                wnd,
+                contents: Contents { control: new_control, data: new_data },
+            }
+        })
+    }
+}
+
 impl Segment<()> {
     /// Creates a segment with no data.
     fn new(seq: SeqNum, ack: Option<SeqNum>, control: Option<Control>, wnd: WindowSize) -> Self {
@@ -277,17 +353,24 @@ mod test {
         buffer
     }
 
-    struct PayloadLen {
-        len: usize,
+    #[derive(Debug, PartialEq, Eq)]
+    struct TestPayload(Range<u32>);
+
+    impl TestPayload {
+        fn new(len: usize) -> Self {
+            Self(0..u32::try_from(len).unwrap())
+        }
     }
 
-    impl Payload for PayloadLen {
+    impl Payload for TestPayload {
         fn len(&self) -> usize {
-            self.len
+            self.0.len()
         }
 
         fn slice(self, range: Range<u32>) -> Self {
-            PayloadLen { len: range.len() }
+            let Self(this) = self;
+            assert!(range.start >= this.start && range.end <= this.end);
+            TestPayload(range)
         }
 
         fn copy_to(&self, _dst: &mut [u8]) {
@@ -326,8 +409,209 @@ mod test {
     #[test_case(u32::MAX as usize, Some(Control::SYN)
     => (MAX_PAYLOAD_AND_CONTROL_LEN - 1, Some(Control::SYN), 1 << 31))]
     fn segment_truncate(len: usize, control: Option<Control>) -> (usize, Option<Control>, usize) {
-        let (seg, truncated) =
-            Segment::with_data(SeqNum::new(0), None, control, WindowSize::ZERO, PayloadLen { len });
+        let (seg, truncated) = Segment::with_data(
+            SeqNum::new(0),
+            None,
+            control,
+            WindowSize::ZERO,
+            TestPayload::new(len),
+        );
         (seg.contents.data.len(), seg.contents.control, truncated)
+    }
+
+    struct OverlapTestArgs {
+        seg_seq: u32,
+        control: Option<Control>,
+        data_len: u32,
+        rcv_nxt: u32,
+        rcv_wnd: u32,
+    }
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: None,
+        data_len: 0,
+        rcv_nxt: 0,
+        rcv_wnd: 0,
+    } => None)]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: None,
+        data_len: 0,
+        rcv_nxt: 1,
+        rcv_wnd: 0,
+    } => Some((SeqNum::new(1), None, 0..0)))]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: None,
+        data_len: 0,
+        rcv_nxt: 2,
+        rcv_wnd: 0,
+    } => None)]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: Some(Control::SYN),
+        data_len: 0,
+        rcv_nxt: 2,
+        rcv_wnd: 0,
+    } => None)]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: Some(Control::SYN),
+        data_len: 0,
+        rcv_nxt: 1,
+        rcv_wnd: 0,
+    } => None)]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: Some(Control::SYN),
+        data_len: 0,
+        rcv_nxt: 0,
+        rcv_wnd: 0,
+    } => None)]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: Some(Control::FIN),
+        data_len: 0,
+        rcv_nxt: 2,
+        rcv_wnd: 0,
+    } => None)]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: Some(Control::FIN),
+        data_len: 0,
+        rcv_nxt: 1,
+        rcv_wnd: 0,
+    } => None)]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: Some(Control::FIN),
+        data_len: 0,
+        rcv_nxt: 0,
+        rcv_wnd: 0,
+    } => None)]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 0,
+        control: None,
+        data_len: 0,
+        rcv_nxt: 1,
+        rcv_wnd: 1,
+    } => None)]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: None,
+        data_len: 0,
+        rcv_nxt: 1,
+        rcv_wnd: 1,
+    } => Some((SeqNum::new(1), None, 0..0)))]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 2,
+        control: None,
+        data_len: 0,
+        rcv_nxt: 1,
+        rcv_wnd: 1,
+    } => None)]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 0,
+        control: None,
+        data_len: 1,
+        rcv_nxt: 1,
+        rcv_wnd: 1,
+    } => None)]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 2,
+        control: None,
+        data_len: 1,
+        rcv_nxt: 1,
+        rcv_wnd: 1,
+    } => None)]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 0,
+        control: None,
+        data_len: 2,
+        rcv_nxt: 1,
+        rcv_wnd: 1,
+    } => Some((SeqNum::new(1), None, 1..2)))]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: None,
+        data_len: 2,
+        rcv_nxt: 1,
+        rcv_wnd: 1,
+    } => Some((SeqNum::new(1), None, 0..1)))]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 0,
+        control: Some(Control::SYN),
+        data_len: 1,
+        rcv_nxt: 1,
+        rcv_wnd: 1,
+    } => Some((SeqNum::new(1), None, 0..1)))]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: Some(Control::SYN),
+        data_len: 1,
+        rcv_nxt: 1,
+        rcv_wnd: 1,
+    } => Some((SeqNum::new(1), Some(Control::SYN), 0..0)))]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 0,
+        control: Some(Control::FIN),
+        data_len: 1,
+        rcv_nxt: 1,
+        rcv_wnd: 1,
+    } => Some((SeqNum::new(1), Some(Control::FIN), 1..1)))]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: Some(Control::FIN),
+        data_len: 1,
+        rcv_nxt: 1,
+        rcv_wnd: 1,
+    } => Some((SeqNum::new(1), None, 0..1)))]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: None,
+        data_len: MAX_PAYLOAD_AND_CONTROL_LEN_U32,
+        rcv_nxt: 1,
+        rcv_wnd: 10,
+    } => Some((SeqNum::new(1), None, 0..10)))]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 10,
+        control: None,
+        data_len: MAX_PAYLOAD_AND_CONTROL_LEN_U32,
+        rcv_nxt: 1,
+        rcv_wnd: 10,
+    } => Some((SeqNum::new(10), None, 0..1)))]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 1,
+        control: None,
+        data_len: 10,
+        rcv_nxt: 1,
+        rcv_wnd: 1 << 30 - 1,
+    } => Some((SeqNum::new(1), None, 0..10)))]
+    #[test_case(OverlapTestArgs{
+        seg_seq: 10,
+        control: None,
+        data_len: 10,
+        rcv_nxt: 1,
+        rcv_wnd: 1 << 30 - 1,
+    } => Some((SeqNum::new(10), None, 0..10)))]
+    fn segment_overlap(
+        OverlapTestArgs { seg_seq, control, data_len, rcv_nxt, rcv_wnd }: OverlapTestArgs,
+    ) -> Option<(SeqNum, Option<Control>, Range<u32>)> {
+        let (seg, discarded) = Segment::with_data(
+            SeqNum::new(seg_seq),
+            None,
+            control,
+            WindowSize::ZERO,
+            TestPayload(0..data_len),
+        );
+        assert_eq!(discarded, 0);
+        seg.overlap(SeqNum::new(rcv_nxt), WindowSize::new(rcv_wnd).unwrap()).map(
+            |Segment {
+                 seq,
+                 ack: _,
+                 wnd: _,
+                 contents: Contents { control, data: TestPayload(range) },
+             }| { (seq, control, range) },
+        )
     }
 }

@@ -109,7 +109,6 @@ impl SeqNum {
 
 // TODO(https://fxbug.dev/88814): The code below will trigger dead code lint
 // because there is no user currently. Disallow when it is actually used.
-#[cfg_attr(not(test), allow(dead_code))]
 impl SeqNum {
     /// A predicate for whether a sequence number is before the other.
     ///
