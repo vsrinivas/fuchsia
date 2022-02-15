@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_hardware_display::{self as display, ControllerEvent},
     fuchsia_async::{self as fasync, futures::TryStreamExt, DurationExt, TimeoutExt},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, HandleBased},
     futures::{channel::mpsc, future},
     parking_lot::RwLock,
     std::{
@@ -22,7 +22,7 @@ use {
 use crate::{
     config::{DisplayConfig, LayerConfig},
     error::{ConfigError, Error, Result},
-    types::{CollectionId, DisplayId, DisplayInfo, ImageId, LayerId},
+    types::{CollectionId, DisplayId, DisplayInfo, Event, EventId, ImageId, LayerId},
 };
 
 const DEV_DIR_PATH: &str = "/dev/class/display-controller";
@@ -188,6 +188,17 @@ impl Controller {
         Ok(LayerId(id))
     }
 
+    /// Creates and registers a zircon event with the display driver. The returned event can be
+    /// used as a fence in a display configuration.
+    pub fn create_event(&self) -> Result<Event> {
+        let event = zx::Event::create()?;
+        let remote = event.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
+        let id = self.inner.write().next_free_event_id()?;
+
+        self.inner.read().proxy.import_event(zx::Event::from(remote), id.0)?;
+        Ok(Event::new(id, event))
+    }
+
     /// Apply a display configuration. The client is expected to receive a vsync event once the
     /// configuration is successfully applied. Returns an error if the FIDL message cannot be sent.
     pub async fn apply_config(
@@ -209,9 +220,19 @@ impl Controller {
                             &color_bytes,
                         )?;
                     }
-                    LayerConfig::Primary { image_id, mut image_config } => {
+                    LayerConfig::Primary {
+                        image_id,
+                        mut image_config,
+                        unblock_event,
+                        retirement_event,
+                    } => {
                         proxy.set_layer_primary_config(layer.id.0, &mut image_config)?;
-                        proxy.set_layer_image(layer.id.0, image_id.0, 0, 0)?;
+                        proxy.set_layer_image(
+                            layer.id.0,
+                            image_id.0,
+                            unblock_event.map_or(0, |id| id.0),
+                            retirement_event.map_or(0, |id| id.0),
+                        )?;
                     }
                     _ => (),
                 }
@@ -281,6 +302,11 @@ impl ControllerInner {
     fn next_free_collection_id(&mut self) -> Result<CollectionId> {
         self.id_counter = self.id_counter.checked_add(1).ok_or(Error::IdsExhausted)?;
         Ok(CollectionId(self.id_counter))
+    }
+
+    fn next_free_event_id(&mut self) -> Result<EventId> {
+        self.id_counter = self.id_counter.checked_add(1).ok_or(Error::IdsExhausted)?;
+        Ok(EventId(self.id_counter))
     }
 
     fn handle_displays_changed(&self, _added: Vec<display::Info>, _removed: Vec<u64>) {

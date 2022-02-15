@@ -2,12 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::pixel_format::PixelFormat;
-use {fidl_fuchsia_hardware_display::Info, std::fmt};
+use crate::{error::Result, pixel_format::PixelFormat};
+use {
+    fidl_fuchsia_hardware_display::Info,
+    fuchsia_async::OnSignals,
+    fuchsia_zircon::{self as zx, AsHandleRef},
+    std::fmt,
+};
 
 /// Strongly typed wrapper around a display ID.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialOrd, PartialEq)]
 pub struct DisplayId(pub u64);
+
+/// Strongly typed wrapper around a display driver event ID.
+#[derive(Clone, Copy, Debug)]
+pub struct EventId(pub u64);
 
 /// Strongly typed wrapper around a display layer ID.
 #[derive(Clone, Copy, Debug)]
@@ -74,5 +83,35 @@ impl fmt::Display for DisplayInfo {
         }
 
         write!(f, "")
+    }
+}
+
+/// A zircon event that has been registered with the display driver.
+pub struct Event {
+    id: EventId,
+    event: zx::Event,
+}
+
+impl Event {
+    pub(crate) fn new(id: EventId, event: zx::Event) -> Event {
+        Event { id, event }
+    }
+
+    /// Returns the ID for this event.
+    pub fn id(&self) -> EventId {
+        self.id
+    }
+
+    /// Returns a future that completes when the event has been signaled.
+    pub async fn wait(&self) -> Result<()> {
+        OnSignals::new(&self.event, zx::Signals::EVENT_SIGNALED).await?;
+        self.event.as_handle_ref().signal(zx::Signals::EVENT_SIGNALED, zx::Signals::NONE)?;
+        Ok(())
+    }
+
+    /// Signals the event.
+    pub fn signal(&self) -> Result<()> {
+        self.event.as_handle_ref().signal(zx::Signals::NONE, zx::Signals::EVENT_SIGNALED)?;
+        Ok(())
     }
 }

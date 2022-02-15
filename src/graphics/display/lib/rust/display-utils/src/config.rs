@@ -4,7 +4,7 @@
 
 use crate::{
     pixel_format::PixelFormat,
-    types::{DisplayId, ImageId, LayerId},
+    types::{DisplayId, EventId, ImageId, LayerId},
 };
 use fidl_fuchsia_hardware_display as fdisplay;
 
@@ -35,6 +35,14 @@ pub enum LayerConfig {
 
         /// Describes the dimensions, pixel format, and usage of the layer image.
         image_config: fdisplay::ImageConfig,
+
+        /// When present, the display driver will not apply the configuration until the client
+        /// signals this event.
+        unblock_event: Option<EventId>,
+
+        /// Event signaled by the display driver when a display configuration has been retired
+        /// (i.e. it is no longer active) following the application of a new configuration.
+        retirement_event: Option<EventId>,
     },
 }
 

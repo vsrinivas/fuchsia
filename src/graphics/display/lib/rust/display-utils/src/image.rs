@@ -57,6 +57,9 @@ pub struct Image {
     /// The VMO that contains the shared image buffer.
     pub vmo: zx::Vmo,
 
+    /// The parameters that the image was initialized with.
+    pub parameters: ImageParameters,
+
     /// The image format constraints that resulted from the sysmem buffer negotiation. Contains the
     /// effective image parameters.
     pub format_constraints: fsysmem::ImageFormatConstraints,
@@ -74,8 +77,8 @@ pub struct Image {
 impl Image {
     /// Construct a new sysmem-buffer-backed image and register it with the display driver. If
     /// successful, the image can be assigned to a primary layer in a display configuration.
-    pub async fn create(ctrl: Controller, params: ImageParameters) -> Result<Image> {
-        let mut collection = allocate_image_buffer(ctrl.clone(), params.clone()).await?;
+    pub async fn create(ctrl: Controller, params: &ImageParameters) -> Result<Image> {
+        let mut collection = allocate_image_buffer(ctrl.clone(), params).await?;
         let id = ctrl.import_image(collection.id, params.into()).await?;
         let vmo = collection.info.buffers[0]
             .vmo
@@ -88,6 +91,7 @@ impl Image {
             id,
             collection_id: collection.id,
             vmo,
+            parameters: params.clone(),
             format_constraints: collection.info.settings.image_format_constraints,
             buffer_settings: collection.info.settings.buffer_settings,
             proxy: collection.proxy.clone(),
@@ -103,14 +107,20 @@ impl Drop for Image {
     }
 }
 
-impl From<ImageParameters> for fdisplay::ImageConfig {
-    fn from(src: ImageParameters) -> Self {
+impl From<&ImageParameters> for fdisplay::ImageConfig {
+    fn from(src: &ImageParameters) -> Self {
         Self {
             width: src.width,
             height: src.height,
             pixel_format: src.pixel_format.into(),
             type_: fdisplay::TYPE_SIMPLE,
         }
+    }
+}
+
+impl From<ImageParameters> for fdisplay::ImageConfig {
+    fn from(src: ImageParameters) -> Self {
+        fdisplay::ImageConfig::from(&src)
     }
 }
 
@@ -144,7 +154,7 @@ impl Drop for BufferCollection {
 // buffer can be used to construct a display layer image.
 async fn allocate_image_buffer(
     ctrl: Controller,
-    params: ImageParameters,
+    params: &ImageParameters,
 ) -> Result<BufferCollection> {
     let allocator =
         connect_to_protocol::<AllocatorMarker>().map_err(|_| Error::SysmemConnection)?;
@@ -187,7 +197,7 @@ async fn allocate_image_buffer(
 }
 
 async fn allocate_image_buffer_helper(
-    params: ImageParameters,
+    params: &ImageParameters,
     allocator: fsysmem::AllocatorProxy,
     token: BufferCollectionTokenProxy,
 ) -> Result<(BufferCollectionInfo2, BufferCollectionProxy)> {
@@ -217,7 +227,7 @@ async fn allocate_image_buffer_helper(
     Ok((collection_info, collection))
 }
 
-fn buffer_collection_constraints(params: ImageParameters) -> fsysmem::BufferCollectionConstraints {
+fn buffer_collection_constraints(params: &ImageParameters) -> fsysmem::BufferCollectionConstraints {
     let usage = fsysmem::BufferUsage {
         cpu: fsysmem::CPU_USAGE_READ_OFTEN | fsysmem::CPU_USAGE_WRITE_OFTEN,
         ..BUFFER_USAGE_DEFAULT

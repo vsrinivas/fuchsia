@@ -66,7 +66,7 @@ pub(crate) async fn fps(controller: &Controller, id: Option<u64>) -> Result<()> 
         color_space: fidl_fuchsia_sysmem::ColorSpaceType::Srgb,
         name: Some("display-tool fps layer".to_string()),
     };
-    let image = Image::create(controller.clone(), params.clone()).await?;
+    let image = Image::create(controller.clone(), &params).await?;
     // Fill with Fuchsia as the color ([blue, green, red, alpha])
     draw::fill(&image, &[255, 0, 255, 255]).context("failed to draw fill color")?;
 
@@ -78,7 +78,12 @@ pub(crate) async fn fps(controller: &Controller, id: Option<u64>) -> Result<()> 
         id: display.id(),
         layers: vec![Layer {
             id: layer,
-            config: LayerConfig::Primary { image_id: image.id, image_config: params.into() },
+            config: LayerConfig::Primary {
+                image_id: image.id,
+                image_config: params.into(),
+                unblock_event: None,
+                retirement_event: None,
+            },
         }],
     }];
     controller.apply_config(&configs).await?;
