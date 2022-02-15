@@ -1057,4 +1057,62 @@ TEST(ProcessTest, ProcessHwTraceContextIdProperty) {
   }
 }
 
+TEST(ProcessTest, InfoProcessNoProcessHandles) {
+  // Create process with a thread
+  zx::process process;
+  zx::thread thread;
+  zx::vmar vmar;
+
+  zx::unowned<zx::job> job = zx::job::default_job();
+
+  ASSERT_OK(zx::process::create(*job, "mini-p", 3u, 0, &process, &vmar));
+  ASSERT_OK(zx::thread::create(process, "mini-p", 2u, 0u, &thread));
+
+  zx::event event;
+  ASSERT_OK(zx::event::create(0u, &event));
+
+  zx_handle_t cmd_channel;
+  EXPECT_OK(start_mini_process_etc(process.get(), thread.get(), vmar.get(), event.get(), true,
+                                   &cmd_channel));
+
+  // Get our KOID.
+  zx_info_handle_basic_t handle_info = {};
+  size_t actual = 0;
+  size_t avail = 0;
+  ASSERT_OK(
+      process.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info), &actual, &avail));
+  EXPECT_EQ(actual, 1);
+  EXPECT_EQ(avail, 1);
+  const zx_koid_t process_koid = handle_info.koid;
+
+  // Check that our handle count is one.
+  zx_info_handle_count_t handle_count = {};
+  ASSERT_OK(
+      process.get_info(ZX_INFO_HANDLE_COUNT, &handle_count, sizeof(handle_count), &actual, &avail));
+  EXPECT_EQ(actual, 1);
+  EXPECT_EQ(avail, 1);
+  EXPECT_EQ(handle_count.handle_count, 1);
+
+  // Close the handle, the runnable thread will keep the process alive.
+  process.reset();
+
+  // Query the job and make sure the process is still listed.
+  std::vector<zx_koid_t> children;
+  do {
+    ASSERT_OK(job->get_info(ZX_INFO_JOB_PROCESSES, children.data(),
+                            sizeof(zx_koid_t) * children.size(), &actual, &avail));
+    children.resize(avail);
+  } while (avail > actual);
+
+  EXPECT_TRUE(std::any_of(children.begin(), children.end(),
+                          [process_koid](zx_koid_t koid) { return koid == process_koid; }));
+
+  // Now retrieve the handle.
+  zx::process original_process;
+  EXPECT_OK(job->get_child(process_koid, ZX_RIGHT_SAME_RIGHTS, &original_process));
+
+  // Cleanup
+  EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_EXIT_NORMAL, nullptr), ZX_ERR_PEER_CLOSED);
+}
+
 }  // namespace
