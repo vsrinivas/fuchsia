@@ -112,34 +112,7 @@ zx_status_t InitializeClock() {
 }
 
 // Parse ZBI_TYPE_IMAGE_ARGS-encoded arguments out of the given ZBI.
-zx_status_t ExtractLegacyBootArgsFromImage(std::vector<char>* buf, const zx::vmo& image_vmo,
-                                           bootsvc::ItemMap* item_map) {
-  auto it = item_map->find(bootsvc::ItemKey{ZBI_TYPE_IMAGE_ARGS, 0});
-  if (it == item_map->end()) {
-    return ZX_OK;
-  }
-
-  for (const bootsvc::ItemValue& value : it->second) {
-    auto [offset, length] = value;
-
-    auto payload = std::make_unique<char[]>(length);
-    if (zx_status_t status = image_vmo.read(payload.get(), offset, length); status != ZX_OK) {
-      return status;
-    }
-
-    std::string_view str(payload.get(), length);
-    if (zx_status_t status = bootsvc::ParseLegacyBootArgs(str, buf); status != ZX_OK) {
-      return status;
-    }
-  }
-
-  item_map->erase(it);
-  return ZX_OK;
-}
-
-// Parse ZBI_TYPE_IMAGE_ARGS-encoded arguments out of the given ZBI.
-zx_status_t ExtractBootArgsFromImage(std::vector<char>* buf, const zx::vmo& image_vmo,
-                                     bootsvc::ItemMap* item_map,
+zx_status_t ExtractBootArgsFromImage(const zx::vmo& image_vmo, bootsvc::ItemMap* item_map,
                                      std::optional<std::string>* next_program) {
   auto it = item_map->find(bootsvc::ItemKey{ZBI_TYPE_CMDLINE, 0});
   if (it == item_map->end()) {
@@ -155,89 +128,12 @@ zx_status_t ExtractBootArgsFromImage(std::vector<char>* buf, const zx::vmo& imag
     }
 
     std::string_view str(payload.get(), length);
-    if (auto next = bootsvc::ParseBootArgs(str, buf); next) {
+    if (auto next = bootsvc::GetBootsvcNext(str); next) {
       *next_program = next;
     }
   }
 
   item_map->erase(it);
-  return ZX_OK;
-}
-
-zx_status_t ExtractBootArgsFromBootfs(std::vector<char>* buf,
-                                      const fbl::RefPtr<bootsvc::BootfsService> bootfs,
-                                      zbitl::MapUnownedVmo unowned_bootfs) {
-  // TODO(fxb/91451): Rename this file.
-  const char* config_path = "config/devmgr";
-
-  // This config file may not be present depending on the device, but errors besides NOT_FOUND
-  // should not be ignored.
-  zx::vmo config_vmo;
-  uint64_t file_size;
-  if (bootfs) {
-    zx_status_t status = bootfs->Open(config_path, /*executable=*/false, &config_vmo, &file_size);
-    if (status == ZX_ERR_NOT_FOUND) {
-      printf("bootsvc: No boot config found in bootfs, skipping\n");
-      return ZX_OK;
-    } else if (status != ZX_OK) {
-      return status;
-    }
-  } else {
-    zbitl::MapUnownedVmo invalid_bootfs_exec;  // We only need a readonly file.
-    zx::status<zx::vmo> result = bootsvc::BootfsService::GetFileFromBootfsVmo(
-        std::move(unowned_bootfs), std::move(invalid_bootfs_exec), config_path, &file_size);
-    if (result.status_value() == ZX_ERR_NOT_FOUND) {
-      printf("bootsvc: No boot config found in bootfs, skipping\n");
-      return ZX_OK;
-    } else if (result.status_value() != ZX_OK) {
-      return result.status_value();
-    }
-    config_vmo = std::move(result.value());
-  }
-
-  auto config = std::make_unique<char[]>(file_size);
-  zx_status_t status = config_vmo.read(config.get(), 0, file_size);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Parse boot arguments file from bootfs.
-  std::string_view str(config.get(), file_size);
-  return bootsvc::ParseLegacyBootArgs(str, buf);
-}
-
-// Load the boot arguments from the BOOTFS and select, text-formatted argument
-// ZBI types.
-zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
-                         zbitl::MapUnownedVmo unowned_bootfs, const zx::vmo& image_vmo,
-                         bootsvc::ItemMap* item_map, zx::vmo* out, std::vector<char>* boot_args,
-                         uint64_t* size) {
-  printf("bootsvc: Loading remaining boot arguments...\n");
-  zx_status_t status;
-  status = ExtractLegacyBootArgsFromImage(boot_args, image_vmo, item_map);
-  ZX_ASSERT_MSG(status == ZX_OK, "Retrieving IMAGE_ARGS boot args failed: %s\n",
-                zx_status_get_string(status));
-
-  status = ExtractBootArgsFromBootfs(boot_args, bootfs, std::move(unowned_bootfs));
-  ZX_ASSERT_MSG(status == ZX_OK, "Retrieving boot config failed: %s\n",
-                zx_status_get_string(status));
-
-  // Copy boot arguments into VMO.
-  zx::vmo args_vmo;
-  status = zx::vmo::create(boot_args->size(), 0, &args_vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = args_vmo.write(boot_args->data(), 0, boot_args->size());
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = args_vmo.replace(ZX_DEFAULT_VMO_RIGHTS & ~ZX_RIGHT_WRITE, &args_vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
-  *out = std::move(args_vmo);
-  *size = boot_args->size();
   return ZX_OK;
 }
 
@@ -256,8 +152,8 @@ void LaunchNextProcess(const std::vector<std::string>& args,
                        fbl::RefPtr<bootsvc::BootfsService> bootfs,
                        fbl::RefPtr<bootsvc::SvcfsService> svcfs,
                        std::shared_ptr<bootsvc::BootfsLoaderService> loader_svc,
-                       Resources& resources, Vmos& vmos, const zx::debuglog& log, async::Loop& loop,
-                       const zx::vmo& bootargs_vmo, const uint64_t bootargs_size) {
+                       Resources& resources, Vmos& vmos, const zx::debuglog& log,
+                       async::Loop& loop) {
   ZX_DEBUG_ASSERT(!args.empty());
 
   // Maximum of two handles (bootfs and svcfs), but only svcfs will be set when
@@ -354,28 +250,6 @@ void LaunchNextProcess(const std::vector<std::string>& args,
 
   ZX_ASSERT(count <= std::size(nametable));
   launchpad_set_nametable(lp, count, nametable);
-
-  // Set up the environment table for launchpad.
-  std::vector<char> env(bootargs_size);
-  std::vector<char*> envp;
-  status = bootargs_vmo.read(env.data(), 0, bootargs_size);
-  ZX_ASSERT_MSG(status == ZX_OK, "failed to read bootargs from vmo: %s",
-                zx_status_get_string(status));
-
-  uint64_t last_env_start = 0;
-  uint64_t i;
-  for (i = 0; i < bootargs_size; i++) {
-    if (env[i] == 0) {
-      envp.push_back(&env[last_env_start]);
-      last_env_start = i + 1;
-    }
-  }
-  envp.push_back(nullptr);
-
-  status = launchpad_set_environ(lp, envp.data());
-  if (status != ZX_OK) {
-    launchpad_abort(lp, status, "bootsvc: cannot set up environment");
-  }
 
   zx::debuglog log_dup;
   status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
@@ -560,16 +434,9 @@ int main(int argc, char** argv) {
   ZX_ASSERT_MSG(status == ZX_OK, "Retrieving boot image failed: %s\n",
                 zx_status_get_string(status));
 
-  // We load the arguments in two steps as the first set of arguments may contain our component
-  // manager hosted bootfs flag. If it doesn't we'll use the legacy method of querying the C++
-  // bootfs VFS for the other arguments, but if it does contain the flag we will not create a
-  // bootfs VFS in bootsvc, and so we will need to parse the bootfs image directly.
-  //
-  // This is temporary as we remove bootfs from bootsvc, and eventually remove bootsvc itself.
-  std::vector<char> boot_args;
   std::optional<std::string> next_program;
   printf("bootsvc: Loading CMDLINE boot arguments...\n");
-  status = ExtractBootArgsFromImage(&boot_args, image_vmo, &item_map, &next_program);
+  status = ExtractBootArgsFromImage(image_vmo, &item_map, &next_program);
   ZX_ASSERT_MSG(status == ZX_OK, "Retrieving CMDLINE boot args failed: %s\n",
                 zx_status_get_string(status));
   if (!next_program) {
@@ -578,8 +445,6 @@ int main(int argc, char** argv) {
   printf("bootsvc: bootsvc.next = %s\n", next_program->c_str());
   std::vector<std::string> next_args = bootsvc::SplitString(*next_program, ',');
 
-  zx::vmo args_vmo;
-  uint64_t args_size = 0;
   fbl::RefPtr<bootsvc::BootfsService> bootfs_svc = nullptr;
   std::shared_ptr<bootsvc::BootfsLoaderService> loader_svc = nullptr;
 
@@ -588,25 +453,9 @@ int main(int argc, char** argv) {
     printf("bootsvc: Creating bootfs service...\n");
     bootfs_svc = CreateBootfsService(loop.dispatcher(), resources, vmos);
 
-    zbitl::MapUnownedVmo invalid_unowned_bootfs;  // Arguments will be loaded from bootfs service.
-
-    // Load the remaining boot arguments using the bootfs VFS.
-    status = LoadBootArgs(bootfs_svc, std::move(invalid_unowned_bootfs), image_vmo, &item_map,
-                          &args_vmo, &boot_args, &args_size);
-    ZX_ASSERT_MSG(status == ZX_OK, "Loading boot arguments failed: %s\n",
-                  zx_status_get_string(status));
-
     loader_svc = bootsvc::BootfsLoaderService::Create(loop.dispatcher(), bootfs_svc);
     ZX_ASSERT_MSG(loader_svc != nullptr, "Failed to create bootfs loader service\n");
   } else {
-    zbitl::MapUnownedVmo unowned_bootfs(vmos.bootfs.borrow());
-
-    // Load the remaining boot arguments by querying the bootfs image directly.
-    status = LoadBootArgs(nullptr, std::move(unowned_bootfs), image_vmo, &item_map, &args_vmo,
-                          &boot_args, &args_size);
-    ZX_ASSERT_MSG(status == ZX_OK, "Loading boot arguments failed: %s\n",
-                  zx_status_get_string(status));
-
     // Duplicates the bootfs VMOs as needed.
     loader_svc =
         bootsvc::BootfsLoaderService::Create(loop.dispatcher(), vmos.bootfs, vmos.bootfs_exec);
@@ -622,7 +471,7 @@ int main(int argc, char** argv) {
   // starts running after this.
   printf("bootsvc: Launching next process...\n");
   std::thread(LaunchNextProcess, next_args, bootfs_svc, svcfs_svc, loader_svc, std::ref(resources),
-              std::ref(vmos), std::cref(log), std::ref(loop), std::cref(args_vmo), args_size)
+              std::ref(vmos), std::cref(log), std::ref(loop))
       .detach();
 
   // Begin serving the bootfs fileystem and loader

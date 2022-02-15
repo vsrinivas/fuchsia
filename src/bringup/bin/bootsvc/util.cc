@@ -32,7 +32,6 @@ constexpr std::string_view kBootsvcNextArg = "bootsvc.next=";
 bool StoreItem(uint32_t type) {
   switch (type) {
     case ZBI_TYPE_CMDLINE:
-    case ZBI_TYPE_IMAGE_ARGS:
       return true;
     default:
       return false;
@@ -134,53 +133,15 @@ zx_status_t RetrieveBootImage(zx::vmo vmo, zx::vmo* out_vmo, ItemMap* out_map,
   return ZX_OK;
 }
 
-std::optional<std::string> ParseBootArgs(std::string_view str, std::vector<char>* buf) {
-  buf->reserve(buf->size() + str.size());
+std::optional<std::string> GetBootsvcNext(std::string_view str) {
   std::optional<std::string> next;
   for (std::string_view word : WordView(str)) {
-    for (char c : word) {
-      buf->push_back(c);
-    }
-    buf->push_back('\0');
-
     if (cpp20::starts_with(word, kBootsvcNextArg)) {
       next = word.substr(kBootsvcNextArg.size());
     }
   }
-  return next;
-}
 
-zx_status_t ParseLegacyBootArgs(std::string_view str, std::vector<char>* buf) {
-  buf->reserve(buf->size() + str.size());
-  for (auto it = str.begin(); it != str.end();) {
-    // Skip any leading whitespace.
-    if (isspace(*it)) {
-      it++;
-      continue;
-    }
-    // Is the line a comment or a zero-length name?
-    bool is_comment = *it == '#' || *it == '=';
-    // Append line, if it is not a comment.
-    for (; it != str.end(); it++) {
-      if (*it == '\n') {
-        // We've reached the end of the line.
-        it++;
-        break;
-      } else if (is_comment) {
-        // Skip this character, as it is part of a comment.
-        continue;
-      } else if (isspace(*it)) {
-        // It is invalid to have a space within an argument.
-        return ZX_ERR_INVALID_ARGS;
-      } else {
-        buf->push_back(*it);
-      }
-    }
-    if (!is_comment) {
-      buf->push_back(0);
-    }
-  }
-  return ZX_OK;
+  return next;
 }
 
 zx_status_t CreateVnodeConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode,

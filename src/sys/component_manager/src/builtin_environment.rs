@@ -458,6 +458,8 @@ impl BuiltinEnvironment {
         let mut zbi_parser = match zbi_vmo_handle {
             Some(zbi_vmo) => Some(
                 ZbiParser::new(zbi_vmo)
+                    .set_store_item(ZbiType::Cmdline)
+                    .set_store_item(ZbiType::ImageArgs)
                     .set_store_item(ZbiType::Crashlog)
                     .set_store_item(ZbiType::KernelDriver)
                     .set_store_item(ZbiType::PlatformId)
@@ -473,7 +475,7 @@ impl BuiltinEnvironment {
         };
 
         // Set up BootArguments service.
-        let boot_args = BootArguments::new(&mut zbi_parser);
+        let boot_args = BootArguments::new(&mut zbi_parser).await?;
         model.root().hooks.install(boot_args.hooks()).await;
 
         let (factory_items_service, items_service) = match zbi_parser {

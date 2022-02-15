@@ -52,33 +52,4 @@ TEST(UtilTest, TestSplitString) {
   }
 }
 
-// Make sure that we can parse boot args from a configuration string
-TEST(UtilTest, TestParseLegacyBootArgs) {
-  const char config1[] = R"(
-# comment
-key
-key=value
-=value
-)";
-
-  // Parse a valid config.
-  std::vector<char> buf;
-  zx_status_t status = bootsvc::ParseLegacyBootArgs(config1, &buf);
-  ASSERT_EQ(ZX_OK, status);
-
-  const char expected[] = "key\0key=value";
-  auto actual = reinterpret_cast<const uint8_t*>(buf.data());
-  ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected), actual, buf.size(), "");
-
-  // Parse a config that doesn't ends with newline.
-  const char config2[] = "key=value";
-  status = bootsvc::ParseLegacyBootArgs(config2, &buf);
-  ASSERT_EQ(ZX_OK, status);
-
-  // Parse an invalid config.
-  const char config3[] = "k ey=value";
-  status = bootsvc::ParseLegacyBootArgs(config3, &buf);
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, status);
-}
-
 }  // namespace
