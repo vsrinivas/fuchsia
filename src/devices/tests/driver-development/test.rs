@@ -6,7 +6,8 @@ mod test_utils;
 
 use {
     anyhow::{Context, Result},
-    fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_test as fdt,
+    fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_framework as fdf,
+    fidl_fuchsia_driver_test as fdt,
     fuchsia_async::{
         self as fasync,
         futures::{stream::FuturesUnordered, TryStreamExt},
@@ -18,6 +19,22 @@ use {
 };
 
 const DRIVERS_TO_WAIT_ON: [&str; 1] = ["sys/test/sample_driver"];
+
+const NO_PROTOCOL_DFV2_NODE_PROPERTY_LIST: Option<[fdf::NodeProperty; 1]> =
+    Some([fdf::NodeProperty {
+        key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
+        value: Some(fdf::NodePropertyValue::IntValue(0)),
+        unknown_data: None,
+        ..fdf::NodeProperty::EMPTY
+    }]);
+
+const TEST_PARENT_DFV2_NODE_PROPERTY_LIST: Option<[fdf::NodeProperty; 1]> =
+    Some([fdf::NodeProperty {
+        key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
+        value: Some(fdf::NodePropertyValue::IntValue(fidl_bind_fuchsia_test::BIND_PROTOCOL_PARENT)),
+        unknown_data: None,
+        ..fdf::NodeProperty::EMPTY
+    }]);
 
 fn assert_not_found_error(error: fidl::Error) {
     if let fidl::Error::ClientChannelClosed { status, protocol_name: _ } = error {
@@ -66,7 +83,7 @@ async fn get_device_info(
         if device_info.len() == 0 {
             break;
         }
-        device_infos.append(&mut device_info)
+        device_infos.append(&mut device_info);
     }
     Ok(device_infos)
 }
@@ -321,17 +338,19 @@ async fn test_get_device_info_no_filter_dfv1() -> Result<()> {
     wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
     let device_infos = get_device_info(&driver_dev, &[]).await?;
 
-    let device_nodes = test_utils::create_device_topology(&device_infos);
+    let device_nodes = test_utils::create_device_topology(device_infos);
     assert_eq!(device_nodes.len(), 1);
 
     let root_sys_test = &device_nodes[0];
     assert_eq!(
-        root_sys_test.topological_path.as_ref().expect("DFv1 device missing topological path"),
+        root_sys_test.info.topological_path.as_ref().expect("DFv1 device missing topological path"),
         "/dev/sys/test"
     );
-    assert!(root_sys_test.moniker.is_none());
+    assert!(root_sys_test.info.moniker.is_none());
+    assert!(root_sys_test.info.node_property_list.is_none());
     assert_eq!(
         root_sys_test
+            .info
             .bound_driver_libname
             .as_ref()
             .expect("DFv1 driver missing bound driver libname"),
@@ -342,12 +361,14 @@ async fn test_get_device_info_no_filter_dfv1() -> Result<()> {
 
     let sample_driver = &root_sys_test.child_nodes[0];
     assert_eq!(
-        sample_driver.topological_path.as_ref().expect("DFv1 device missing topological path"),
+        sample_driver.info.topological_path.as_ref().expect("DFv1 device missing topological path"),
         "/dev/sys/test/sample_driver"
     );
-    assert!(sample_driver.moniker.is_none());
+    assert!(sample_driver.info.moniker.is_none());
+    assert!(sample_driver.info.node_property_list.is_none());
     assert_eq!(
         sample_driver
+            .info
             .bound_driver_libname
             .as_ref()
             .expect("DFv1 driver missing bound driver libname"),
@@ -366,17 +387,22 @@ async fn test_get_device_info_with_filter_dfv1() -> Result<()> {
     wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
     let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
 
-    let device_nodes = test_utils::create_device_topology(&device_infos);
+    let device_nodes = test_utils::create_device_topology(device_infos);
     assert_eq!(device_nodes.len(), 1);
 
     let sys_test = &device_nodes[0];
     assert_eq!(
-        sys_test.topological_path.as_ref().expect("DFv1 device missing topological path"),
+        sys_test.info.topological_path.as_ref().expect("DFv1 device missing topological path"),
         "/dev/sys/test"
     );
-    assert!(sys_test.moniker.is_none());
+    assert!(sys_test.info.moniker.is_none());
+    assert!(sys_test.info.node_property_list.is_none());
     assert_eq!(
-        sys_test.bound_driver_libname.as_ref().expect("DFv1 driver missing bound driver libname"),
+        sys_test
+            .info
+            .bound_driver_libname
+            .as_ref()
+            .expect("DFv1 driver missing bound driver libname"),
         "fuchsia-boot:///#driver/test-parent-sys.so"
     );
     assert_eq!(sys_test.num_children, 1);
@@ -392,17 +418,19 @@ async fn test_get_device_info_with_duplicate_filter_dfv1() -> Result<()> {
     wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
     let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
 
-    let device_nodes = test_utils::create_device_topology(&device_infos);
+    let device_nodes = test_utils::create_device_topology(device_infos);
     assert_eq!(device_nodes.len(), 2);
 
     let sample_driver = &device_nodes[0];
     assert_eq!(
-        sample_driver.topological_path.as_ref().expect("DFv1 device missing topological path"),
+        sample_driver.info.topological_path.as_ref().expect("DFv1 device missing topological path"),
         "/dev/sys/test/sample_driver"
     );
-    assert!(sample_driver.moniker.is_none());
+    assert!(sample_driver.info.moniker.is_none());
+    assert!(sample_driver.info.node_property_list.is_none());
     assert_eq!(
         sample_driver
+            .info
             .bound_driver_libname
             .as_ref()
             .expect("DFv1 driver missing bound driver libname"),
@@ -412,12 +440,14 @@ async fn test_get_device_info_with_duplicate_filter_dfv1() -> Result<()> {
 
     let sample_driver = &device_nodes[1];
     assert_eq!(
-        sample_driver.topological_path.as_ref().expect("DFv1 device missing topological path"),
+        sample_driver.info.topological_path.as_ref().expect("DFv1 device missing topological path"),
         "/dev/sys/test/sample_driver"
     );
-    assert!(sample_driver.moniker.is_none());
+    assert!(sample_driver.info.moniker.is_none());
+    assert!(sample_driver.info.node_property_list.is_none());
     assert_eq!(
         sample_driver
+            .info
             .bound_driver_libname
             .as_ref()
             .expect("DFv1 driver missing bound driver libname"),
@@ -461,45 +491,61 @@ async fn test_get_device_info_no_filter_dfv2() -> Result<()> {
     wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
     let device_infos = get_device_info(&driver_dev, &[]).await?;
 
-    let device_nodes = test_utils::create_device_topology(&device_infos);
+    let device_nodes = test_utils::create_device_topology(device_infos);
     assert_eq!(device_nodes.len(), 1);
 
     let root = &device_nodes[0];
-    assert_eq!(root.moniker.as_ref().expect("DFv2 node missing moniker"), "root");
-    assert!(root.bound_driver_libname.is_none(), "DFv2 node specified bound driver libname");
+    assert_eq!(root.info.moniker.as_ref().expect("DFv2 node missing moniker"), "root");
+    assert!(root.info.bound_driver_libname.is_none(), "DFv2 node specified bound driver libname");
     assert_eq!(
-        root.bound_driver_url.as_ref().expect("DFv2 node missing driver URL"),
+        root.info.bound_driver_url.as_ref().expect("DFv2 node missing driver URL"),
         "fuchsia-boot:///#meta/test-parent-sys.cm"
     );
+    assert!(root.info.property_list.is_none());
+    assert!(root.info.node_property_list.is_none());
     assert_eq!(root.num_children, 1);
     assert_eq!(root.child_nodes.len(), 1);
 
     let sys = &root.child_nodes[0];
-    assert_eq!(sys.moniker.as_ref().expect("DFv2 node missing moniker"), "root.sys");
-    assert!(sys.bound_driver_libname.is_none(), "DFv2 node specified bound driver libname");
-    assert!(sys.bound_driver_url.is_none());
+    assert_eq!(sys.info.moniker.as_ref().expect("DFv2 node missing moniker"), "root.sys");
+    assert!(sys.info.bound_driver_libname.is_none(), "DFv2 node specified bound driver libname");
+    assert!(sys.info.bound_driver_url.is_none());
+    assert_eq!(
+        sys.info.node_property_list.as_ref().map(|x| x.as_slice()),
+        NO_PROTOCOL_DFV2_NODE_PROPERTY_LIST.as_ref().map(|x| x.as_slice())
+    );
+    assert_eq!(sys.num_children, 1);
     assert_eq!(sys.child_nodes.len(), 1);
 
     let test = &sys.child_nodes[0];
-    assert_eq!(test.moniker.as_ref().expect("DFv2 node missing moniker"), "root.sys.test");
-    assert!(test.bound_driver_libname.is_none(), "DFv2 node specified bound driver libname");
+    assert_eq!(test.info.moniker.as_ref().expect("DFv2 node missing moniker"), "root.sys.test");
+    assert!(test.info.bound_driver_libname.is_none(), "DFv2 node specified bound driver libname");
     assert_eq!(
-        test.bound_driver_url.as_ref().expect("DFv2 node missing driver URL"),
+        test.info.bound_driver_url.as_ref().expect("DFv2 node missing driver URL"),
         "fuchsia-boot:///#meta/sample-driver.cm"
+    );
+    assert_eq!(
+        test.info.node_property_list.as_ref().map(|x| x.as_slice()),
+        TEST_PARENT_DFV2_NODE_PROPERTY_LIST.as_ref().map(|x| x.as_slice())
     );
     assert_eq!(test.num_children, 1);
     assert_eq!(test.child_nodes.len(), 1);
 
     let sample_driver = &test.child_nodes[0];
+    println!("{:?}", sample_driver.info.node_property_list);
     assert_eq!(
-        sample_driver.moniker.as_ref().expect("DFv2 node missing moniker"),
+        sample_driver.info.moniker.as_ref().expect("DFv2 node missing moniker"),
         "root.sys.test.sample_driver"
     );
     assert!(
-        sample_driver.bound_driver_libname.is_none(),
+        sample_driver.info.bound_driver_libname.is_none(),
         "DFv2 node specified bound driver libname"
     );
-    assert!(sample_driver.bound_driver_url.is_none());
+    assert!(sample_driver.info.bound_driver_url.is_none());
+    assert_eq!(
+        sample_driver.info.node_property_list.as_ref().map(|x| x.as_slice()),
+        NO_PROTOCOL_DFV2_NODE_PROPERTY_LIST.as_ref().map(|x| x.as_slice())
+    );
     assert_eq!(sample_driver.num_children, 0);
     assert!(sample_driver.child_nodes.is_empty());
     Ok(())
@@ -513,18 +559,25 @@ async fn test_get_device_info_with_filter_dfv2() -> Result<()> {
     wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
     let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
 
-    let device_nodes = test_utils::create_device_topology(&device_infos);
+    let device_nodes = test_utils::create_device_topology(device_infos);
     assert_eq!(device_nodes.len(), 1);
 
     let root_sys_test = &device_nodes[0];
-    assert_eq!(root_sys_test.moniker.as_ref().expect("DFv2 node missing moniker"), "root.sys.test");
+    assert_eq!(
+        root_sys_test.info.moniker.as_ref().expect("DFv2 node missing moniker"),
+        "root.sys.test"
+    );
     assert!(
-        root_sys_test.bound_driver_libname.is_none(),
+        root_sys_test.info.bound_driver_libname.is_none(),
         "DFv2 node specified bound driver libname"
     );
     assert_eq!(
-        root_sys_test.bound_driver_url.as_ref().expect("DFv2 node missing driver URL"),
+        root_sys_test.info.bound_driver_url.as_ref().expect("DFv2 node missing driver URL"),
         "fuchsia-boot:///#meta/sample-driver.cm"
+    );
+    assert_eq!(
+        root_sys_test.info.node_property_list.as_ref().map(|x| x.as_slice()),
+        TEST_PARENT_DFV2_NODE_PROPERTY_LIST.as_ref().map(|x| x.as_slice())
     );
     assert!(root_sys_test.child_nodes.is_empty());
     assert_eq!(root_sys_test.num_children, 1);
@@ -539,18 +592,25 @@ async fn test_get_device_info_with_duplicate_filter_dfv2() -> Result<()> {
     wait_for_drivers(&instance, &DRIVERS_TO_WAIT_ON).await?;
     let device_infos = get_device_info(&driver_dev, &DEVICE_FILTER).await?;
 
-    let device_nodes = test_utils::create_device_topology(&device_infos);
+    let device_nodes = test_utils::create_device_topology(device_infos);
     assert_eq!(device_nodes.len(), 1);
 
     let root_sys_test = &device_nodes[0];
-    assert_eq!(root_sys_test.moniker.as_ref().expect("DFv2 node missing moniker"), "root.sys.test");
+    assert_eq!(
+        root_sys_test.info.moniker.as_ref().expect("DFv2 node missing moniker"),
+        "root.sys.test"
+    );
     assert!(
-        root_sys_test.bound_driver_libname.is_none(),
+        root_sys_test.info.bound_driver_libname.is_none(),
         "DFv2 node specified bound driver libname"
     );
     assert_eq!(
-        root_sys_test.bound_driver_url.as_ref().expect("DFv2 node missing driver URL"),
+        root_sys_test.info.bound_driver_url.as_ref().expect("DFv2 node missing driver URL"),
         "fuchsia-boot:///#meta/sample-driver.cm"
+    );
+    assert_eq!(
+        root_sys_test.info.node_property_list.as_ref().map(|x| x.as_slice()),
+        TEST_PARENT_DFV2_NODE_PROPERTY_LIST.as_ref().map(|x| x.as_slice())
     );
     assert!(root_sys_test.child_nodes.is_empty());
     assert_eq!(root_sys_test.num_children, 1);

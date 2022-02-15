@@ -20,6 +20,7 @@
 #include <unordered_set>
 
 #include "fidl/fuchsia.driver.development/cpp/wire_types.h"
+#include "fidl/fuchsia.driver.framework/cpp/wire_types.h"
 #include "src/devices/lib/driver2/start_args.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/fxl/strings/join_strings.h"
@@ -288,6 +289,8 @@ fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() const {
   return {};
 }
 
+const std::vector<fdf::wire::NodeProperty>& Node::properties() const { return properties_; }
+
 DriverHostComponent* Node::driver_host() const { return *driver_host_; }
 
 void Node::set_collection(Collection collection) { collection_ = collection; }
@@ -461,6 +464,20 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
       }
 
       child->offers_.push_back(OwnedMessage<fdecl::wire::Offer>::From(offer));
+    }
+  }
+
+  if (request->args.has_properties()) {
+    child->properties_.reserve(request->args.properties().count());
+    for (auto& property : request->args.properties()) {
+      fdf::wire::NodeProperty node_property(child->arena_);
+      if (property.has_key()) {
+        node_property.set_key(child->arena_, property.key());
+      }
+      if (property.has_value()) {
+        node_property.set_value(child->arena_, property.value());
+      }
+      child->properties_.push_back(std::move(node_property));
     }
   }
 

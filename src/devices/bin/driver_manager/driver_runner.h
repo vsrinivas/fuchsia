@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.component.runner/cpp/wire.h>
 #include <fidl/fuchsia.component/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.driver.framework/cpp/wire_types.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
@@ -169,6 +170,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   const std::vector<std::shared_ptr<Node>>& children() const;
   std::vector<OwnedOffer>& offers() const;
   fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols() const;
+  const std::vector<fuchsia_driver_framework::wire::NodeProperty>& properties() const;
   DriverHostComponent* driver_host() const;
 
   void set_collection(Collection collection);
@@ -209,6 +211,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   fidl::Arena<128> arena_;
   std::vector<OwnedOffer> offers_;
   std::vector<fuchsia_driver_framework::wire::NodeSymbol> symbols_;
+  std::vector<fuchsia_driver_framework::wire::NodeProperty> properties_;
 
   Collection collection_ = Collection::kNone;
   fit::nullable<DriverHostComponent*> driver_host_;

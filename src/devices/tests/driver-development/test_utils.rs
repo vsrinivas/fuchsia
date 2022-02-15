@@ -4,16 +4,16 @@
 
 use {
     fidl_fuchsia_driver_development as fdd,
-    std::collections::{HashMap, HashSet},
+    std::{
+        collections::{HashMap, HashSet},
+        rc::Rc,
+    },
 };
 
 /// Represents either a DFv1 device or DFv2 node.
 #[derive(Debug, PartialEq)]
 pub struct DeviceNode {
-    pub topological_path: Option<String>,
-    pub moniker: Option<String>,
-    pub bound_driver_libname: Option<String>,
-    pub bound_driver_url: Option<String>,
+    pub info: Rc<fdd::DeviceInfo>,
     pub child_nodes: Vec<DeviceNode>,
     /// The number of child devices a device has. This can be different than
     /// `child_nodes.len()` if, for example, the call to GetDeviceInfo passes a
@@ -23,52 +23,25 @@ pub struct DeviceNode {
 
 impl DeviceNode {
     pub fn new(
-        topological_path: Option<String>,
-        moniker: Option<String>,
-        bound_driver_libname: Option<String>,
-        bound_driver_url: Option<String>,
+        info: Rc<fdd::DeviceInfo>,
         child_nodes: Vec<DeviceNode>,
         num_children: usize,
     ) -> Self {
-        Self {
-            topological_path,
-            moniker,
-            bound_driver_libname,
-            bound_driver_url,
-            child_nodes,
-            num_children,
-        }
+        Self { info, child_nodes, num_children }
     }
 }
 
 // Used internally for quick lookup of DFv1 devices or DFv2 nodes within a
 // hashmap.
 struct DeviceVertex {
+    info: Rc<fdd::DeviceInfo>,
     parent_ids: HashSet<u64>,
     child_ids: HashSet<u64>,
-    topological_path: Option<String>,
-    moniker: Option<String>,
-    bound_driver_libname: Option<String>,
-    bound_driver_url: Option<String>,
 }
 
 impl DeviceVertex {
-    fn new(
-        parent_ids: HashSet<u64>,
-        child_ids: HashSet<u64>,
-        topological_path: Option<String>,
-        moniker: Option<String>,
-        bound_driver_libname: Option<String>,
-        bound_driver_url: Option<String>,
-    ) -> Self {
-        Self {
-            parent_ids,
-            child_ids,
-            topological_path,
-            moniker,
-            bound_driver_libname,
-            bound_driver_url,
-        }
+    fn new(info: Rc<fdd::DeviceInfo>, parent_ids: HashSet<u64>, child_ids: HashSet<u64>) -> Self {
+        Self { info, parent_ids, child_ids }
     }
 }
 
@@ -92,14 +65,7 @@ fn device_vertex_to_device_node(
             }
         })
         .collect();
-    DeviceNode::new(
-        vertex.topological_path.clone(),
-        vertex.moniker.clone(),
-        vertex.bound_driver_libname.clone(),
-        vertex.bound_driver_url.clone(),
-        child_nodes,
-        vertex.child_ids.len(),
-    )
+    DeviceNode::new(Rc::clone(&vertex.info), child_nodes, vertex.child_ids.len())
 }
 
 // DFS approach to detect cycles.
@@ -122,12 +88,14 @@ fn is_cyclic(vertices: &HashMap<u64, DeviceVertex>) -> bool {
         if let Some(vertex) = vertices.get(&id) {
             for child_id in vertex.child_ids.iter() {
                 match states.get(child_id) {
-                    // We found another Node that's processing which means there's a cycle.
+                    // We found another Node that's processing which means
+                    // there's a cycle.
                     Some(State::Processing) => {
                         return true;
                     }
                     Some(State::Unprocessed) => {
-                        // Check our unprocessed child for cycles and return if we find one.
+                        // Check our unprocessed child for cycles and return if
+                        // we find one.
                         if process_vertex(*child_id, vertices, states) {
                             return true;
                         }
@@ -155,8 +123,8 @@ fn is_cyclic(vertices: &HashMap<u64, DeviceVertex>) -> bool {
     false
 }
 
-impl From<&fdd::DeviceInfo> for DeviceVertex {
-    fn from(device_info: &fdd::DeviceInfo) -> Self {
+impl From<Rc<fdd::DeviceInfo>> for DeviceVertex {
+    fn from(device_info: Rc<fdd::DeviceInfo>) -> Self {
         let mut parent_ids = HashSet::<u64>::new();
         if let Some(ids) = device_info.parent_ids.as_ref() {
             parent_ids = ids.iter().map(|id| *id).collect();
@@ -177,14 +145,7 @@ impl From<&fdd::DeviceInfo> for DeviceVertex {
             );
         };
 
-        Self::new(
-            parent_ids,
-            child_ids,
-            device_info.topological_path.clone(),
-            device_info.moniker.clone(),
-            device_info.bound_driver_libname.clone(),
-            device_info.bound_driver_url.clone(),
-        )
+        Self::new(device_info, parent_ids, child_ids)
     }
 }
 
@@ -198,11 +159,15 @@ impl From<&fdd::DeviceInfo> for DeviceVertex {
 /// Panics if one of the resulting graphs is cyclic or if `device_infos`
 /// contains conflicting information about the devices'/nodes' topology or if a
 /// device's/node's ID or topological path is missing.
-pub fn create_device_topology(device_infos: &Vec<fdd::DeviceInfo>) -> Vec<DeviceNode> {
+pub fn create_device_topology(device_infos: Vec<fdd::DeviceInfo>) -> Vec<DeviceNode> {
+    let device_infos: Vec<Rc<fdd::DeviceInfo>> =
+        device_infos.into_iter().map(|device_info| Rc::new(device_info)).collect();
     // Key: ID of the vertex
     let device_vertices: HashMap<u64, DeviceVertex> = device_infos
         .iter()
-        .map(|device_info| (device_info.id.expect("Device ID missing"), device_info.into()))
+        .map(|device_info| {
+            (device_info.id.expect("Device ID missing"), Rc::clone(&device_info).into())
+        })
         .collect();
     assert!(!is_cyclic(&device_vertices), "Device topology is cyclic");
 

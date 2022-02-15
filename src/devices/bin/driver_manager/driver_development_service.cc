@@ -4,6 +4,7 @@
 
 #include "src/devices/bin/driver_manager/driver_development_service.h"
 
+#include <fidl/fuchsia.driver.framework/cpp/wire_types.h>
 #include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/service/llcpp/service.h>
 
@@ -14,6 +15,7 @@
 #include "src/lib/storage/vfs/cpp/service.h"
 
 namespace fdd = fuchsia_driver_development;
+namespace fdf = fuchsia_driver_framework;
 
 namespace driver_manager {
 
@@ -98,7 +100,22 @@ fdd::wire::DeviceInfo CreateDeviceInfo(fidl::AnyArena& allocator, const Node* no
 
   // TODO(fxbug.dev/90735): Get KOID of driver host
 
-  // TODO(fxbug.dev/90735): Get property list
+  auto properties = node->properties();
+  if (!properties.empty()) {
+    fidl::VectorView<fdf::wire::NodeProperty> node_properties(allocator, properties.size());
+    for (size_t i = 0; i < properties.size(); ++i) {
+      const auto& src = properties[i];
+      auto& dst = node_properties[i];
+      dst = fdf::wire::NodeProperty(allocator);
+      if (src.has_key()) {
+        dst.set_key(allocator, src.key());
+      }
+      if (src.has_value()) {
+        dst.set_value(allocator, src.value());
+      }
+    }
+    device_info.set_node_property_list(allocator, node_properties);
+  }
 
   // TODO(fxbug.dev/90735): Get topological path
 

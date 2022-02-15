@@ -20,9 +20,12 @@ rustc_test("driver_development_test") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
+    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework-rustc",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
     "//sdk/lib/device-watcher/rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/devices/bind/fuchsia.test:bind.fuchsia.test-rustc",
+    "//src/devices/lib/bind:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
