@@ -152,7 +152,7 @@ std::vector<TestCase> kTestCasesIntegralBoundaries = {
     },
 };
 
-// Same as kTestCasesIntegralBounderies except packet_start and packet_end are fractional.
+// Same as kTestCasesIntegralBoundaries except packet_start and packet_end are fractional.
 std::vector<TestCase> kTestCasesFractionalBoundaries = {
     {
         // Fractional packet: Range entirely before.
