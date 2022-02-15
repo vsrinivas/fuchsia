@@ -5,10 +5,10 @@
         "type": "version_history",
         "versions": [
             {
-                "abi_revision": "0xDEADBEEF",
+                "abi_revision": "0xDEADBEEFBADF1234",
                 "api_level": "1"
             }
         ]
     },
-    "schema_id": "https://fuchsia.dev/schema/version_history-038fa854.json"
+    "schema_id": "https://fuchsia.dev/schema/version_history-ef02ef45.json"
 }

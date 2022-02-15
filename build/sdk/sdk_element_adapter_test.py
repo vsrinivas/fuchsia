@@ -19,12 +19,12 @@ class TestVersionHistory(unittest.TestCase):
                 "type": "version_history",
                 "versions": [
                     {
-                        "abi_revision": "0x02160C9D",
+                        "abi_revision": "0x1FA3D8DDFBEDC6C7",
                         "api_level": "1"
                     }
                 ]
             },
-            "schema_id": "https://fuchsia.dev/schema/version_history-038fa854.json"
+            "schema_id": "https://fuchsia.dev/schema/version_history-ef02ef45.json"
         }""")
         gn_meta = json.loads(
             """[
@@ -54,12 +54,12 @@ class TestVersionHistory(unittest.TestCase):
                         'version_history',
                     'versions':
                         [{
-                            'abi_revision': '0x02160C9D',
+                            'abi_revision': '0x1FA3D8DDFBEDC6C7',
                             'api_level': '1'
                         }],
                 },
             'schema_id':
-                'https://fuchsia.dev/schema/version_history-038fa854.json'
+                'https://fuchsia.dev/schema/version_history-ef02ef45.json'
         }
         self.assertEqual(self.adapter['meta'], expected)
 

@@ -24,7 +24,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/merkle"
 )
 
-const testABIRevision uint64 = 0x02160C9D
+const testABIRevision uint64 = 0xE9CACD17EA11859D
 
 func TestInit(t *testing.T) {
 	cfg := TestConfig()

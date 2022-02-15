@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -38,7 +38,7 @@ def generate_random_abi_revision():
 
     ABI revisions are hex encodings of 64-bit, unsigned integeres.
     """
-    return '0x{abi_revision}'.format(abi_revision=secrets.token_hex(4).upper())
+    return '0x{abi_revision}'.format(abi_revision=secrets.token_hex(8).upper())
 
 
 def update_version_history(fuchsia_api_level):

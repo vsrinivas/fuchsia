@@ -33,7 +33,7 @@ schemas = [
             "manifest.json",
             "product_bundle_container-76a5c104.json",
             "sysroot.json",
-            "version_history-038fa854.json",
+            "version_history-ef02ef45.json",
           ] + product_bundle_container_required_schemas
 
 sdk_documentation("meta") {

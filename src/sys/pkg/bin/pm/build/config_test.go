@@ -69,7 +69,7 @@ func TestCannotParseAPILevelAndABIRevision(t *testing.T) {
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
 	cfg.InitFlags(fs)
 
-	if err := fs.Parse([]string{"--api-level", "1", "--abi-revision", fmt.Sprintf("%d", testABIRevision)}); err == nil {
+	if err := fs.Parse([]string{"--api-level", "6", "--abi-revision", fmt.Sprintf("%d", testABIRevision)}); err == nil {
 		t.Fatalf("expected an error, but parsed ABI revision %x", cfg.PkgABIRevision)
 	}
 }
@@ -81,7 +81,7 @@ func TestParseAPILevelIntoABIRevision(t *testing.T) {
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
 	cfg.InitFlags(fs)
 
-	if err := fs.Parse([]string{"--api-level", "1"}); err != nil {
+	if err := fs.Parse([]string{"--api-level", "6"}); err != nil {
 		t.Fatal(err)
 	}
 	if cfg.PkgABIRevision != testABIRevision {

@@ -4,34 +4,22 @@
         "type": "version_history",
         "versions": [
             {
-                "abi_revision": "0x02160C9D",
-                "api_level": "1"
+                "api_level": "4",
+                "abi_revision": "0x601665C5B1A89C7F"
             },
             {
-                "abi_revision": "0xED8DFC35",
-                "api_level": "2"
+                "api_level": "5",
+                "abi_revision": "0x1FA3D8DDFBEDC6C7"
             },
             {
-                "abi_revision": "0x5732FD34",
-                "api_level": "3"
-            },
-            {
-                "abi_revision": "0x8A03A915",
-                "api_level": "4"
-            },
-            {
-                "abi_revision": "0xC7003BF9",
-                "api_level": "5"
-            },
-            {
-                "abi_revision": "0xFF9D15AE",
-                "api_level": "6"
+                "api_level": "6",
+                "abi_revision": "0xE9CACD17EA11859D"
             },
             {
                 "api_level": "7",
-                "abi_revision": "0x734CB63B"
+                "abi_revision": "0xECCEA2F70ACD6FC0"
             }
         ]
     },
-    "schema_id": "https://fuchsia.dev/schema/version_history-038fa854.json"
+    "schema_id": "https://fuchsia.dev/schema/version_history-ef02ef45.json"
 }

@@ -8,7 +8,7 @@ use serde::{
 };
 
 const VERSION_HISTORY_BYTES: &[u8] = include_bytes!(env!("SDK_VERSION_HISTORY"));
-const VERSION_HISTORY_SCHEMA_ID: &str = "https://fuchsia.dev/schema/version_history-038fa854.json";
+const VERSION_HISTORY_SCHEMA_ID: &str = "https://fuchsia.dev/schema/version_history-ef02ef45.json";
 const VERSION_HISTORY_NAME: &str = "Platform version map";
 const VERSION_HISTORY_TYPE: &str = "version_history";
 
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn test_version_history_works() {
         let versions = version_history().unwrap();
-        assert_eq!(versions[0], Version { api_level: 1, abi_revision: 34999453 })
+        assert_eq!(versions[0], Version { api_level: 4, abi_revision: 0x601665C5B1A89C7F })
     }
 
     #[test]
@@ -144,7 +144,7 @@ mod tests {
                     }
                 ]
             },
-            "schema_id": "https://fuchsia.dev/schema/version_history-038fa854.json"
+            "schema_id": "https://fuchsia.dev/schema/version_history-ef02ef45.json"
         }"#;
 
         assert_eq!(
@@ -169,7 +169,7 @@ mod tests {
 
         assert_eq!(
             &parse_version_history(&expected_bytes[..]).unwrap_err().to_string(),
-            "invalid value: string \"some-schema\", expected https://fuchsia.dev/schema/version_history-038fa854.json"
+            "invalid value: string \"some-schema\", expected https://fuchsia.dev/schema/version_history-ef02ef45.json"
         );
     }
 
@@ -181,7 +181,7 @@ mod tests {
                 "type": "version_history",
                 "versions": []
             },
-            "schema_id": "https://fuchsia.dev/schema/version_history-038fa854.json"
+            "schema_id": "https://fuchsia.dev/schema/version_history-ef02ef45.json"
         }"#;
 
         assert_eq!(
@@ -198,7 +198,7 @@ mod tests {
                 "type": "some-type",
                 "versions": []
             },
-            "schema_id": "https://fuchsia.dev/schema/version_history-038fa854.json"
+            "schema_id": "https://fuchsia.dev/schema/version_history-ef02ef45.json"
         }"#;
 
         assert_eq!(

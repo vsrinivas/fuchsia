@@ -110,7 +110,7 @@ group("tests") {
 }
 
 version_history_sdk_element("version_history_sdk_element") {
-  schema = "//build/sdk/meta/version_history-038fa854.json"
+  schema = "//build/sdk/meta/version_history-ef02ef45.json"
   data = "version_history.json"
 }
 
