@@ -46,10 +46,12 @@ type DeviceMetadata struct {
 
 // Data contained in the device metadata.
 type DeviceMetadataData struct {
-	Description json.RawMessage `json:"description"`
-	Type        json.RawMessage `json:"type"`
-	Name        string          `json:"name"`
-	Hardware    json.RawMessage `json:"hardware"`
+	Description         json.RawMessage `json:"description"`
+	Type                json.RawMessage `json:"type"`
+	Name                string          `json:"name"`
+	Hardware            json.RawMessage `json:"hardware"`
+	Ports               json.RawMessage `json:"ports,omitempty"`
+	StartUpArgsTemplate json.RawMessage `json:"start_up_args_template,omitempty"`
 }
 
 // Data contained in the PBM container.

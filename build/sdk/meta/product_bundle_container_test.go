@@ -124,7 +124,13 @@ func TestValidateProductBundleContainer(t *testing.T) {
 				  "quantity":2,
 				  "units":"gigabytes"
 				}
-			  }
+			  },
+			  "ports": {
+				"ssh": 22,
+				"mdns": 5353,
+				"debug": 2345
+			  },
+			  "start_up_args_template": "emulator_flags.json.template"
 			},
 			{
 			  "hardware":{
