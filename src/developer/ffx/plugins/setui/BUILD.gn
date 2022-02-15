@@ -14,6 +14,7 @@ ffx_plugin("ffx_setui") {
     "do_not_disturb:ffx_setui_do_not_disturb",
     "factory_reset:ffx_setui_factory_reset",
     "intl:ffx_setui_intl",
+    "light:ffx_setui_light",
     "night_mode:ffx_setui_night_mode",
     "privacy:ffx_setui_privacy",
     "setup:ffx_setui_setup",
