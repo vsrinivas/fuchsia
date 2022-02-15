@@ -343,6 +343,19 @@ TEST_P(HardLinkTest, UnlinkRace) {
   }
 }
 
+using HardLinkUnsupportedTest = FilesystemTest;
+
+TEST_P(HardLinkUnsupportedTest, LinkReturnsError) {
+  const std::string path = GetPath("a");
+  const std::string newpath = GetPath("b");
+
+  fbl::unique_fd fd(open(path.c_str(), O_RDWR | O_CREAT, 0644));
+  ASSERT_TRUE(fd) << strerror(errno);
+
+  ASSERT_NE(link(path.c_str(), newpath.c_str()), 0);
+  ASSERT_EQ(errno, ENOTSUP) << strerror(errno);
+}
+
 INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, HardLinkTest,
     testing::ValuesIn(MapAndFilterAllTestFilesystems(
@@ -356,6 +369,20 @@ INSTANTIATE_TEST_SUITE_P(
     testing::PrintToStringParamName());
 
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(HardLinkTest);
+
+INSTANTIATE_TEST_SUITE_P(
+    /*no prefix*/, HardLinkUnsupportedTest,
+    testing::ValuesIn(MapAndFilterAllTestFilesystems(
+        [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
+          if (options.filesystem->GetTraits().supports_hard_links) {
+            return std::nullopt;
+          } else {
+            return options;
+          }
+        })),
+    testing::PrintToStringParamName());
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(HardLinkUnsupportedTest);
 
 }  // namespace
 }  // namespace fs_test
