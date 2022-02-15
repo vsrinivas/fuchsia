@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Context as _;
 use fuchsia_pkg::PackageManifest;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::{
@@ -84,7 +85,8 @@ fn validate_component(
     manifest_path: &str,
     meta_far: &mut fuchsia_archive::Reader<File>,
 ) -> anyhow::Result<()> {
-    assembly_structured_config::validate_component(manifest_path, meta_far)?;
+    assembly_structured_config::validate_component(manifest_path, meta_far)
+        .context("Validating structured configuration")?;
     Ok(())
 }
 
@@ -102,7 +104,7 @@ impl From<ProductValidationError> for anyhow::Error {
 
 impl fmt::Display for ProductValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Validating structured configuration of product failed:")?;
+        writeln!(f, "Validating product assembly failed:")?;
         for (package, error) in &self.packages {
             let error_msg = textwrap::indent(&error.to_string(), "        ");
             write!(f, "    └── {}: {}", package.display(), error_msg)?;
@@ -134,8 +136,10 @@ impl fmt::Display for PackageValidationError {
             InvalidComponents(components) => {
                 for (name, error) in components {
                     write!(f, "\n└── {}: {}", name, error)?;
-                    if let Some(source) = error.source() {
-                        write!(f, "\n    └── {}", source)?;
+                    let mut source = error.source();
+                    while let Some(s) = source {
+                        write!(f, "\n    └── {}", s)?;
+                        source = s.source();
                     }
                 }
                 Ok(())
