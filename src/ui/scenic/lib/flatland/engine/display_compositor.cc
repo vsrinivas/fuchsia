@@ -135,7 +135,10 @@ bool DisplayCompositor::ImportBufferCollection(
   auto sync_token = token.BindSync();
   fuchsia::sysmem::BufferCollectionTokenSyncPtr renderer_token;
   zx_status_t status = sync_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, renderer_token.NewRequest());
-  FX_DCHECK(status == ZX_OK);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Cannot duplicate token. The client may have invalidated the token.";
+    return false;
+  }
 
   // Import the collection to the renderer.
   if (!renderer_->ImportBufferCollection(collection_id, sysmem_allocator,
@@ -146,7 +149,6 @@ bool DisplayCompositor::ImportBufferCollection(
 
   if (import_mode_ == BufferCollectionImportMode::RendererOnly) {
     status = sync_token->Close();
-    FX_DCHECK(status == ZX_OK);
     return true;
   }
 
@@ -158,29 +160,50 @@ bool DisplayCompositor::ImportBufferCollection(
   fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
   if (import_mode_ == BufferCollectionImportMode::EnforceDisplayConstraints) {
     status = sync_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, display_token.NewRequest());
-    FX_DCHECK(status == ZX_OK);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Cannot duplicate token. The client may have invalidated the token.";
+      return false;
+    }
     status = sync_token->Close();
-    FX_DCHECK(status == ZX_OK);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Cannot close token. The client may have invalidated the token.";
+      return false;
+    }
   } else if (import_mode_ == BufferCollectionImportMode::AttemptDisplayConstraints) {
     fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_sync_ptr;
     sysmem_allocator->BindSharedCollection(std::move(sync_token),
                                            buffer_collection_sync_ptr.NewRequest());
     status = buffer_collection_sync_ptr->Sync();
-    FX_DCHECK(status == ZX_OK);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Cannot sync token. The client may have invalidated the token.";
+      return false;
+    }
     // TODO(fxbug.dev/74423): Replace with prunable token when it is available.
     status =
         buffer_collection_sync_ptr->AttachToken(ZX_RIGHT_SAME_RIGHTS, display_token.NewRequest());
-    FX_DCHECK(status == ZX_OK);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Cannot create AttachToken. The client may have invalidated the token.";
+      return false;
+    }
     status = buffer_collection_sync_ptr->Close();
-    FX_DCHECK(status == ZX_OK);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Cannot close token. The client may have invalidated the token.";
+      return false;
+    }
   }
 
   // Duplicate display token to check later if attach token can be used in the allocated buffers.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token_dup;
   status = display_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, display_token_dup.NewRequest());
-  FX_DCHECK(status == ZX_OK);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Cannot duplicate token. The client may have invalidated the token.";
+    return false;
+  }
   status = display_token->Sync();
-  FX_DCHECK(status == ZX_OK);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Cannot sync token. The client may have invalidated the token.";
+    return false;
+  }
   fuchsia::sysmem::BufferCollectionSyncPtr display_token_sync_ptr;
   sysmem_allocator->BindSharedCollection(std::move(display_token),
                                          display_token_sync_ptr.NewRequest());
@@ -191,7 +214,10 @@ bool DisplayCompositor::ImportBufferCollection(
     // domain of |buffer_collection_sync_ptr|).
     fuchsia::sysmem::BufferCollectionConstraints constraints;
     status = display_token_sync_ptr->SetConstraints(false, constraints);
-    FX_DCHECK(status == ZX_OK);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Cannot set constraints. The client may have invalidated the token.";
+      return false;
+    }
   }
   display_tokens_[collection_id] = std::move(display_token_sync_ptr);
 
@@ -263,8 +289,10 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
       fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
       status = display_tokens_[metadata.collection_id]->WaitForBuffersAllocated(
           &allocation_status, &buffer_collection_info);
-      FX_DCHECK(status == ZX_OK) << "status: " << status;
-      FX_DCHECK(allocation_status == ZX_OK) << "allocation_status: " << allocation_status;
+      if (status != ZX_OK || allocation_status != ZX_OK) {
+        FX_LOGS(ERROR) << "WaitForBuffersAllocated failed: " << status << ":" << allocation_status;
+        return false;
+      }
       buffer_collection_pixel_format_[metadata.collection_id] =
           buffer_collection_info.settings.image_format_constraints.pixel_format;
     }

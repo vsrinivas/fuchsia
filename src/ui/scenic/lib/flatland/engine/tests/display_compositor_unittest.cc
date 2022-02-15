@@ -173,6 +173,48 @@ INSTANTIATE_TEST_SUITE_P(BufferCollectionImportModes, ParameterizedDisplayCompos
                          ::testing::Values(BufferCollectionImportMode::EnforceDisplayConstraints,
                                            BufferCollectionImportMode::AttemptDisplayConstraints));
 
+TEST_F(DisplayCompositorTest, ClientDropSysmemToken) {
+  auto mock = mock_display_controller_.get();
+  // Set the mock display controller functions and wait for messages.
+  std::thread server([&mock]() mutable {
+    // Wait once for call to deleter.
+    // TODO(fxbug.dev/71264): Use function call counters from display's MockDisplayController.
+    for (uint32_t i = 0; i < 1; i++) {
+      mock->WaitForMessage();
+    }
+  });
+
+  const auto kGlobalBufferCollectionId = allocation::GenerateUniqueBufferCollectionId();
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
+  // Let client drop token.
+  {
+    auto token = CreateToken();
+    auto sync_token = token.BindSync();
+    sync_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, dup_token.NewRequest());
+  }
+
+  // Save token to avoid early token failure in Renderer import.
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token_ref;
+  EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
+      .WillOnce([&token_ref](allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
+                             fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+        token_ref = std::move(token);
+        return true;
+      });
+  EXPECT_FALSE(display_compositor_->ImportBufferCollection(
+      kGlobalBufferCollectionId, sysmem_allocator_.get(), std::move(dup_token)));
+
+  EXPECT_CALL(*mock, CheckConfig(_, _))
+      .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
+        fuchsia::hardware::display::ConfigResult result =
+            fuchsia::hardware::display::ConfigResult::OK;
+        std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+        callback(result, ops);
+      }));
+  display_compositor_.reset();
+  server.join();
+}
+
 TEST_F(DisplayCompositorTest, ImageIsValidAfterReleaseBufferCollection) {
   auto mock = mock_display_controller_.get();
   // Set the mock display controller functions and wait for messages.

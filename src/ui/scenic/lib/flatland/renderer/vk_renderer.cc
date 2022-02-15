@@ -145,7 +145,10 @@ bool VkRenderer::RegisterCollection(
   // TODO(fxbug.dev/51213): See if this can become asynchronous.
   zx_status_t status =
       local_token->Duplicate(std::numeric_limits<uint32_t>::max(), vulkan_token.NewRequest());
-  FX_DCHECK(status == ZX_OK);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Cannot duplicate token. The client may have invalidated the token.";
+    return false;
+  }
 
   // Create the sysmem collection.
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
@@ -165,7 +168,10 @@ bool VkRenderer::RegisterCollection(
     buffer_collection->SetName(10u, "FlatlandImageMemory");
     status = buffer_collection->SetConstraints(false /* has_constraints */,
                                                fuchsia::sysmem::BufferCollectionConstraints());
-    FX_DCHECK(status == ZX_OK);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Cannot set constraints. The client may have invalidated the token.";
+      return false;
+    }
   }
 
   // Create the vk collection.
@@ -197,7 +203,10 @@ bool VkRenderer::RegisterCollection(
         vk_device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader));
     auto vk_result = vk_device.setBufferCollectionImageConstraintsFUCHSIA(
         collection, image_constraints_info, vk_loader);
-    FX_DCHECK(vk_result == vk::Result::eSuccess);
+    if (vk_result != vk::Result::eSuccess) {
+      FX_LOGS(ERROR) << "Cannot set vulkan constraints. The client may have invalidated the token.";
+      return false;
+    }
   }
 
   // Multiple threads may be attempting to read/write from |collections_|
