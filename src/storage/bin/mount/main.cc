@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
   std::string mount_name;
   std::string fshost_path(fshost::kHubAdminServicePath);
   fidl::Arena arena;
-  fuchsia_fshost::wire::MountOptions options;
+  fuchsia_fshost::wire::MountOptions options(arena);
   if (int r = parse_args(argc, argv, arena, options, &devicepath, &mount_name, fshost_path)) {
     return r;
   }
