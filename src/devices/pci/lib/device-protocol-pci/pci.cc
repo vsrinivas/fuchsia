@@ -7,16 +7,20 @@
 
 zx_status_t pci_configure_interrupt_mode(const pci_protocol_t* pci, uint32_t requested_irq_count,
                                          pci_irq_mode_t* out_mode) {
-  pci_irq_mode_t modes[] = {PCI_IRQ_MODE_MSI_X, PCI_IRQ_MODE_MSI, PCI_IRQ_MODE_LEGACY};
-  for (pci_irq_mode_t mode : modes) {
-    uint32_t irq_cnt = 0;
-    zx_status_t query_status = pci->ops->query_irq_mode(pci->ctx, mode, &irq_cnt);
-    if (query_status == ZX_OK && irq_cnt >= requested_irq_count) {
-      zx_status_t set_status = pci->ops->set_interrupt_mode(pci->ctx, mode, requested_irq_count);
-      if (set_status == ZX_OK && out_mode) {
-        *out_mode = mode;
+  pci_interrupt_modes modes{};
+  pci_get_interrupt_modes(pci, &modes);
+  std::pair<pci_irq_mode_t, uint32_t> pairs[] = {{PCI_IRQ_MODE_MSI_X, modes.msix},
+                                                 {PCI_IRQ_MODE_MSI, modes.msi},
+                                                 {PCI_IRQ_MODE_LEGACY, modes.legacy}};
+  for (auto& [mode, irq_cnt] : pairs) {
+    if (irq_cnt >= requested_irq_count) {
+      zx_status_t status = pci_set_interrupt_mode(pci, mode, requested_irq_count);
+      if (status == ZX_OK) {
+        if (out_mode) {
+          *out_mode = mode;
+        }
+        return status;
       }
-      return set_status;
     }
   }
   return ZX_ERR_NOT_SUPPORTED;
