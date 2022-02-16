@@ -5,14 +5,14 @@
 use std::f32;
 use std::ops::{Add, Div, Mul, Sub};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Point<T> {
-    pub x: T,
-    pub y: T,
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Point {
+    pub x: f32,
+    pub y: f32,
 }
 
-impl<T> Point<T> {
-    pub fn new(x: T, y: T) -> Self {
+impl Point {
+    pub fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
 }
@@ -42,7 +42,7 @@ fn approx_atan2(y: f32, x: f32) -> f32 {
 }
 
 // Restrict the Point functions visibility as we do not want to run into the business of delivering a linear algebra package.
-impl Point<f32> {
+impl Point {
     pub(crate) fn len(self) -> f32 {
         (self.x * self.x + self.y * self.y).sqrt()
     }
@@ -52,7 +52,7 @@ impl Point<f32> {
     }
 }
 
-impl<T: Add<Output = T>> Add for Point<T> {
+impl Add<Point> for Point {
     type Output = Self;
 
     #[inline]
@@ -61,7 +61,7 @@ impl<T: Add<Output = T>> Add for Point<T> {
     }
 }
 
-impl<T: Sub<Output = T>> Sub for Point<T> {
+impl Sub<Point> for Point {
     type Output = Self;
 
     #[inline]
@@ -70,29 +70,20 @@ impl<T: Sub<Output = T>> Sub for Point<T> {
     }
 }
 
-impl<T: Mul<Output = T> + Copy> Mul<T> for Point<T> {
+impl Mul<f32> for Point {
     type Output = Self;
 
     #[inline]
-    fn mul(self, other: T) -> Self {
+    fn mul(self, other: f32) -> Self {
         Self { x: self.x * other, y: self.y * other }
     }
 }
 
-impl<T: Mul<Output = T> + Add<Output = T> + Copy> Mul<Point<T>> for Point<T> {
-    type Output = T;
-
-    #[inline]
-    fn mul(self, other: Point<T>) -> T {
-        self.x * other.x + self.y * other.y
-    }
-}
-
-impl<T: Div<Output = T> + Copy> Div<T> for Point<T> {
+impl Div<f32> for Point {
     type Output = Self;
 
     #[inline]
-    fn div(self, other: T) -> Self {
+    fn div(self, other: f32) -> Self {
         Self { x: self.x / other, y: self.y / other }
     }
 }

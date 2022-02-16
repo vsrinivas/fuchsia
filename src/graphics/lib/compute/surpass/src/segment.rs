@@ -18,13 +18,13 @@ pub(crate) fn to_sub_pixel(v: f32) -> i32 {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct Segment<T> {
-    pub p0: Point<T>,
-    pub p1: Point<T>,
+pub struct Segment {
+    pub p0: Point,
+    pub p1: Point,
 }
 
-impl<T> Segment<T> {
-    pub fn new(p0: Point<T>, p1: Point<T>) -> Self {
+impl Segment {
+    pub fn new(p0: Point, p1: Point) -> Self {
         Self { p0, p1 }
     }
 }
@@ -81,7 +81,7 @@ impl LinesBuilder {
     }
 
     #[cfg(test)]
-    pub fn push(&mut self, layer_id: u32, segment: &Segment<f32>) {
+    pub fn push(&mut self, layer_id: u32, segment: &Segment) {
         let new_point_needed =
             if let (Some(&x), Some(&y)) = (self.lines.x.last(), self.lines.y.last()) {
                 let last_point = Point { x, y };

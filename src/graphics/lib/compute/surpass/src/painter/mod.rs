@@ -778,7 +778,7 @@ mod tests {
         }
     }
 
-    fn line_segments(points: &[(Point<f32>, Point<f32>)], same_layer: bool) -> Vec<PixelSegment> {
+    fn line_segments(points: &[(Point, Point)], same_layer: bool) -> Vec<PixelSegment> {
         let mut builder = LinesBuilder::new();
 
         for (layer, &(p0, p1)) in points.iter().enumerate() {

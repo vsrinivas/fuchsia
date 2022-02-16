@@ -46,12 +46,12 @@ fn inv_curvature(k: f32) -> f32 {
 
 #[derive(Clone, Copy, Debug)]
 pub struct WeightedPoint {
-    pub point: Point<f32>,
+    pub point: Point,
     pub weight: f32,
 }
 
 impl WeightedPoint {
-    pub fn applied(self) -> Point<f32> {
+    pub fn applied(self) -> Point {
         let w_recip = self.weight.recip();
 
         Point { x: self.point.x * w_recip, y: self.point.y * w_recip }
@@ -156,14 +156,14 @@ struct Contour;
 #[derive(Clone, Debug)]
 struct Spline {
     curvature: f32,
-    p0: Point<f32>,
-    p2: Point<f32>,
+    p0: Point,
+    p2: Point,
     contour: Option<Contour>,
 }
 
 impl Spline {
     #[inline]
-    pub fn new_spline_needed(&mut self, angle_changed: bool, point: Point<f32>) -> Option<Contour> {
+    pub fn new_spline_needed(&mut self, angle_changed: bool, point: Point) -> Option<Contour> {
         let needed = angle_changed || (point - self.p2).len() >= MAX_ERROR;
 
         needed.then(|| self.contour.take()).flatten()
@@ -191,7 +191,7 @@ impl Primitives {
     fn last_spline_or_insert_with<F>(
         &mut self,
         angle: Option<f32>,
-        point: Point<f32>,
+        point: Point,
         f: F,
     ) -> &mut Spline
     where
@@ -415,7 +415,7 @@ impl Primitives {
         }
     }
 
-    pub fn eval_quad(&self, quad_index: usize, t: f32) -> Point<f32> {
+    pub fn eval_quad(&self, quad_index: usize, t: f32) -> Point {
         let i0 = 3 * quad_index;
         let i1 = i0 + 1;
         let i2 = i0 + 2;
@@ -732,7 +732,7 @@ impl PathBuilder {
     }
 
     #[inline]
-    pub fn move_to(&mut self, p: Point<f32>) -> &mut Self {
+    pub fn move_to(&mut self, p: Point) -> &mut Self {
         {
             let mut inner = self.inner.borrow_mut();
             let len = inner.x.len();
@@ -760,7 +760,7 @@ impl PathBuilder {
     }
 
     #[inline]
-    pub fn line_to(&mut self, p: Point<f32>) -> &mut Self {
+    pub fn line_to(&mut self, p: Point) -> &mut Self {
         {
             let mut inner = self.inner.borrow_mut();
 
@@ -775,7 +775,7 @@ impl PathBuilder {
     }
 
     #[inline]
-    pub fn quad_to(&mut self, p1: Point<f32>, p2: Point<f32>) -> &mut Self {
+    pub fn quad_to(&mut self, p1: Point, p2: Point) -> &mut Self {
         {
             let mut inner = self.inner.borrow_mut();
 
@@ -794,7 +794,7 @@ impl PathBuilder {
     }
 
     #[inline]
-    pub fn cubic_to(&mut self, p1: Point<f32>, p2: Point<f32>, p3: Point<f32>) -> &mut Self {
+    pub fn cubic_to(&mut self, p1: Point, p2: Point, p3: Point) -> &mut Self {
         {
             let mut inner = self.inner.borrow_mut();
 
@@ -817,7 +817,7 @@ impl PathBuilder {
     }
 
     #[inline]
-    pub fn rat_quad_to(&mut self, p1: Point<f32>, p2: Point<f32>, weight: f32) -> &mut Self {
+    pub fn rat_quad_to(&mut self, p1: Point, p2: Point, weight: f32) -> &mut Self {
         {
             let mut inner = self.inner.borrow_mut();
 
@@ -836,14 +836,7 @@ impl PathBuilder {
     }
 
     #[inline]
-    pub fn rat_cubic_to(
-        &mut self,
-        p1: Point<f32>,
-        p2: Point<f32>,
-        p3: Point<f32>,
-        w1: f32,
-        w2: f32,
-    ) -> &mut Self {
+    pub fn rat_cubic_to(&mut self, p1: Point, p2: Point, p3: Point, w1: f32, w2: f32) -> &mut Self {
         {
             let mut inner = self.inner.borrow_mut();
 
@@ -881,14 +874,14 @@ mod tests {
 
     use crate::Point;
 
-    fn dist(p0: Point<f32>, p1: Point<f32>, p2: Point<f32>) -> f32 {
+    fn dist(p0: Point, p1: Point, p2: Point) -> f32 {
         let d10 = p1 - p0;
         let d21 = p2 - p1;
 
         (d21.x * d10.y - d10.x * d21.y).abs() / d21.len()
     }
 
-    fn min_dist(p: Point<f32>, points: &[Point<f32>]) -> f32 {
+    fn min_dist(p: Point, points: &[Point]) -> f32 {
         points
             .windows(2)
             .map(|window| dist(p, window[0], window[1]))
@@ -896,7 +889,7 @@ mod tests {
             .unwrap()
     }
 
-    fn eval_quad(t: f32, points: &[WeightedPoint; 3]) -> Point<f32> {
+    fn eval_quad(t: f32, points: &[WeightedPoint; 3]) -> Point {
         let x = lerp(
             t,
             lerp(t, points[0].point.x, points[1].point.x),

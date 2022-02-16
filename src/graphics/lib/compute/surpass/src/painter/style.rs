@@ -74,13 +74,13 @@ const NO_STOP: f32 = -0.0;
 #[derive(Clone, Debug)]
 pub struct GradientBuilder {
     r#type: GradientType,
-    start: Point<f32>,
-    end: Point<f32>,
+    start: Point,
+    end: Point,
     stops: Vec<(Color, f32)>,
 }
 
 impl GradientBuilder {
-    pub fn new(start: Point<f32>, end: Point<f32>) -> Self {
+    pub fn new(start: Point, end: Point) -> Self {
         Self { r#type: GradientType::Linear, start, end, stops: Vec::new() }
     }
 
@@ -127,8 +127,8 @@ impl GradientBuilder {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Gradient {
     r#type: GradientType,
-    start: Point<f32>,
-    end: Point<f32>,
+    start: Point,
+    end: Point,
     stops: Arc<[(Color, f32)]>,
 }
 

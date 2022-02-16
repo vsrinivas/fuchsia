@@ -75,7 +75,7 @@ impl GeomPresTransform {
         &self.0
     }
 
-    pub(crate) fn transform(&self, point: Point<f32>) -> Point<f32> {
+    pub(crate) fn transform(&self, point: Point) -> Point {
         Point {
             x: self.0[0].mul_add(point.x, self.0[1].mul_add(point.y, self.0[4])),
             y: self.0[2].mul_add(point.x, self.0[3].mul_add(point.y, self.0[5])),

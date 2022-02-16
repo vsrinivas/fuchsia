@@ -12,7 +12,7 @@ pub struct MoldPath {
     pub(crate) path: mold::Path,
 }
 
-fn to_mold_point(point: Point) -> mold::Point<f32> {
+fn to_mold_point(point: Point) -> mold::Point {
     mold::Point::new(point.x, point.y)
 }
 

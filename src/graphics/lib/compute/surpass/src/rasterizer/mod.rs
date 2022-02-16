@@ -310,7 +310,7 @@ mod tests {
         assert_eq!(unsafe { pixel_indices.assume_init() }, [0, 0, 1, 0, 1, 2, 0, 0, 1, 0, 1, 2]);
     }
 
-    fn segments(p0: Point<f32>, p1: Point<f32>) -> Vec<PixelSegment> {
+    fn segments(p0: Point, p1: Point) -> Vec<PixelSegment> {
         let mut builder = LinesBuilder::new();
         builder.push(0, &Segment::new(p0, p1));
         let lines = builder.build(|_| None);
