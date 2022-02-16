@@ -81,7 +81,7 @@ protocol Device {
         notification_channel zx.handle:CHANNEL;
     });
 
-    /// Dumps driver and hardware state.
+    /// Dumps driver and hardware state to the log.
     DumpState(struct {
         dump_type uint32;
     });
@@ -92,7 +92,8 @@ protocol Device {
         icd_list vector<IcdInfo>:MAX_ICD_COUNT;
     });
 
-    /// For testing only.
+    /// Tears down and restarts the Magma Device. For testing only; if run on a non-test build of
+    /// the driver this will be a no-op.
     TestRestart();
 
     /// For testing only - on non-test drivers this will close the channel.
