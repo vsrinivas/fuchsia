@@ -48,7 +48,7 @@ using QuitCallback = fit::function<void(int)>;
 // This test verifies that a service published by the remote end is properly
 // discovered and that the host name of the remote end can be successfully
 // resolved to an IP address.
-class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber2 {
+class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber {
  public:
   static std::unique_ptr<LocalEnd> Create(sys::ComponentContext* component_context,
                                           QuitCallback quit_callback) {
@@ -74,7 +74,7 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber2 {
       Quit(1);
     });
 
-    fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber2> subscriber_handle;
+    fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> subscriber_handle;
 
     subscriber_binding_.Bind(subscriber_handle.NewRequest());
     subscriber_binding_.set_error_handler([this](zx_status_t status) {
@@ -83,7 +83,7 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber2 {
       Quit(1);
     });
 
-    subscriber_->SubscribeToService2(kServiceName, std::move(subscriber_handle));
+    subscriber_->SubscribeToService(kServiceName, std::move(subscriber_handle));
 
     resolver_->ResolveHostName(
         kRemoteHostName, kTimeout,
@@ -125,8 +125,8 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber2 {
   }
 
  private:
-  // fuchsia::net::mdns::ServiceSubscriber2 implementation.
-  void OnInstanceDiscovered(fuchsia::net::mdns::ServiceInstance2 instance,
+  // fuchsia::net::mdns::ServiceSubscriber implementation.
+  void OnInstanceDiscovered(fuchsia::net::mdns::ServiceInstance instance,
                             OnInstanceDiscoveredCallback callback) override {
     callback();
     if (VerifyInstance(instance)) {
@@ -144,7 +144,7 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber2 {
     }
   }
 
-  void OnInstanceChanged(fuchsia::net::mdns::ServiceInstance2 instance,
+  void OnInstanceChanged(fuchsia::net::mdns::ServiceInstance instance,
                          OnInstanceChangedCallback callback) override {
     callback();
   }
@@ -170,14 +170,14 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber2 {
     quit_callback_(exit_code);
   }
 
-  bool VerifyInstance(const fuchsia::net::mdns::ServiceInstance2& instance) {
+  bool VerifyInstance(const fuchsia::net::mdns::ServiceInstance& instance) {
     return instance.service() == kServiceName && instance.instance() == kInstanceName &&
            VerifyRemoteEndpoints(instance) &&
            std::equal(kText.begin(), kText.end(), instance.text().begin(), instance.text().end()) &&
            instance.srv_priority() == kPriority && instance.srv_weight() == kWeight;
   }
 
-  bool VerifyRemoteEndpoints(const fuchsia::net::mdns::ServiceInstance2& instance) {
+  bool VerifyRemoteEndpoints(const fuchsia::net::mdns::ServiceInstance& instance) {
     bool valid_v4 = false;
     bool valid_v6 = false;
     if (instance.has_ipv4_endpoint()) {
@@ -195,7 +195,7 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber2 {
   sys::ComponentContext* component_context_;
   QuitCallback quit_callback_;
   fuchsia::net::mdns::SubscriberPtr subscriber_;
-  fidl::Binding<fuchsia::net::mdns::ServiceSubscriber2> subscriber_binding_;
+  fidl::Binding<fuchsia::net::mdns::ServiceSubscriber> subscriber_binding_;
   fuchsia::net::mdns::ResolverPtr resolver_;
   bool instance_discovered_ = false;
   bool host_name_resolved_ = false;
@@ -207,7 +207,7 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber2 {
 //
 // An instance of this class runs as the 'remote' end of the test, responding
 // to messages from the local end.
-class RemoteEnd : public fuchsia::net::mdns::PublicationResponder2 {
+class RemoteEnd : public fuchsia::net::mdns::PublicationResponder {
  public:
   static std::unique_ptr<RemoteEnd> Create(sys::ComponentContext* component_context,
                                            QuitCallback quit_callback) {
@@ -227,7 +227,7 @@ class RemoteEnd : public fuchsia::net::mdns::PublicationResponder2 {
       Quit(1);
     });
 
-    fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder2> responder_handle;
+    fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder> responder_handle;
 
     responder_binding_.Bind(responder_handle.NewRequest());
     responder_binding_.set_error_handler([this](zx_status_t status) {
@@ -241,13 +241,15 @@ class RemoteEnd : public fuchsia::net::mdns::PublicationResponder2 {
       responder_binding_.Unbind();
     });
 
-    publisher_->PublishServiceInstance2(
-        kServiceName, kInstanceName, true, std::move(responder_handle),
-        [this](fuchsia::net::mdns::Publisher_PublishServiceInstance2_Result result) {
+    publisher_->PublishServiceInstance(
+        kServiceName, kInstanceName,
+        fuchsia::net::mdns::Media::WIRED | fuchsia::net::mdns::Media::WIRED, true,
+        std::move(responder_handle),
+        [this](fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result) {
           if (result.is_response()) {
             std::cout << "Instance successfully published.\n";
           } else {
-            std::cerr << "PublishServiceInstance2 failed, err " << result.err() << ".\n";
+            std::cerr << "PublishServiceInstance failed, err " << result.err() << ".\n";
             Quit(1);
           }
         });
@@ -265,21 +267,23 @@ class RemoteEnd : public fuchsia::net::mdns::PublicationResponder2 {
       Quit(1);
     });
 
-    publisher_->PublishServiceInstance2(
-        kServiceName, kInstanceName, true, std::move(responder_handle),
-        [this](fuchsia::net::mdns::Publisher_PublishServiceInstance2_Result result) {
+    publisher_->PublishServiceInstance(
+        kServiceName, kInstanceName,
+        fuchsia::net::mdns::Media::WIRED | fuchsia::net::mdns::Media::WIRED, true,
+        std::move(responder_handle),
+        [this](fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result) {
           if (result.is_response()) {
             std::cout << "Instance successfully republished.\n";
           } else {
-            std::cerr << "PublishServiceInstance2 failed, err " << result.err() << ".\n";
+            std::cerr << "PublishServiceInstance failed, err " << result.err() << ".\n";
             Quit(1);
           }
         });
   }
 
  private:
-  // fuchsia::net::mdns::PublicationResponder2 implementation.
-  void OnPublication(bool query, fidl::StringPtr subtype,
+  // fuchsia::net::mdns::PublicationResponder implementation.
+  void OnPublication(fuchsia::net::mdns::PublicationCause cause, fidl::StringPtr subtype,
                      std::vector<fuchsia::net::IpAddress> source_addresses,
                      OnPublicationCallback callback) override {
     auto publication = std::make_unique<fuchsia::net::mdns::Publication>();
@@ -311,8 +315,8 @@ class RemoteEnd : public fuchsia::net::mdns::PublicationResponder2 {
   sys::ComponentContext* component_context_;
   QuitCallback quit_callback_;
   fuchsia::net::mdns::PublisherPtr publisher_;
-  fidl::Binding<fuchsia::net::mdns::PublicationResponder2> responder_binding_;
-  fidl::Binding<fuchsia::net::mdns::PublicationResponder2> responder_2_binding_;
+  fidl::Binding<fuchsia::net::mdns::PublicationResponder> responder_binding_;
+  fidl::Binding<fuchsia::net::mdns::PublicationResponder> responder_2_binding_;
 };
 
 }  // namespace mdns::test

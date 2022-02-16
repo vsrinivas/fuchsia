@@ -23,7 +23,7 @@ class ServiceInstanceResolver : public MdnsAgent {
   // Creates a |ServiceInstanceResolver|.
   ServiceInstanceResolver(MdnsAgent::Host* host, const std::string& service,
                           const std::string& instance, zx::time timeout,
-                          Mdns::ResolveServiceInstance2Callback callback);
+                          Mdns::ResolveServiceInstanceCallback callback);
 
   ~ServiceInstanceResolver() override;
 
@@ -40,9 +40,9 @@ class ServiceInstanceResolver : public MdnsAgent {
   std::string service_;
   std::string instance_name_;
   std::string service_instance_;
-  fuchsia::net::mdns::ServiceInstance2 instance_;
+  fuchsia::net::mdns::ServiceInstance instance_;
   zx::time timeout_;
-  Mdns::ResolveServiceInstance2Callback callback_;
+  Mdns::ResolveServiceInstanceCallback callback_;
   inet::IpPort port_;
 
  public:

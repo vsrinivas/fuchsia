@@ -184,7 +184,7 @@ class Mdns : public MdnsAgent::Host {
       fit::function<void(const std::string& host_name, const inet::IpAddress& v4_address,
                          const inet::IpAddress& v6_address)>;
 
-  using ResolveServiceInstance2Callback = fit::function<void(fuchsia::net::mdns::ServiceInstance2)>;
+  using ResolveServiceInstanceCallback = fit::function<void(fuchsia::net::mdns::ServiceInstance)>;
 
   // |transceiver| must live as long as this |Mdns| object.
   Mdns(Transceiver& transceiver);
@@ -216,7 +216,7 @@ class Mdns : public MdnsAgent::Host {
   // Resolves |service+instance| to a node, i.e sends an SRV query and gets
   // a valid response if the service instance exists/is active.
   void ResolveServiceInstance(const std::string& service, const std::string& instance,
-                              zx::time timeout, ResolveServiceInstance2Callback callback);
+                              zx::time timeout, ResolveServiceInstanceCallback callback);
 
   // Subscribes to the specified service. The subscription is cancelled when
   // the subscriber is deleted or its |Unsubscribe| method is called.

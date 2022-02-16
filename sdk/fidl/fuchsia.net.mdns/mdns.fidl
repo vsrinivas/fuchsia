@@ -6,20 +6,6 @@ library fuchsia.net.mdns;
 using fuchsia.net;
 using zx;
 
-// TODO(dalesat): Soft transition in progress.
-// 1) Add the following definitions:
-//    Subscriber.SubscribeToService2
-//    ServiceSubscriber2
-//    Publisher.PublishServiceInstance2
-//    PublicationResponder2 (completed)
-// 2) Transition all clients to the '2' versions. (completed)
-// 3) Change the originals to be identical to the '2' versions. (completed)
-// 3.1) Implement new features under the original names. (completed)
-// 4) Transition all clients to the original names.
-// 5) Remove the '2' versions.
-
-// TODO(fxbug.dev/7904): Make these alias comments doc comments.
-
 /// Identifies a host. Host names consist of one or more labels separated by
 /// '.'s. A host name must not end with a '.'. Labels must each be 63 characters
 /// or less (not including the separator) and are UTF-8-encoded. A complete host
@@ -73,19 +59,9 @@ protocol Resolver {
 protocol Subscriber {
     /// Subscribes to a service. The subscription lasts until `subscriber` is
     /// unbound.
-    @transitional
     SubscribeToService(resource struct {
         service service_name;
         subscriber client_end:ServiceSubscriber;
-    });
-
-    /// Subscribes to a service. The subscription lasts until `subscriber` is
-    /// unbound.
-    @transitional
-    @deprecated
-    SubscribeToService2(resource struct {
-        service service_name;
-        subscriber client_end:ServiceSubscriber2;
     });
 };
 
@@ -104,34 +80,12 @@ protocol Publisher {
     /// If a service with the same service and instance names is already published, the
     /// old publication will be terminated, and the responder channel for the old
     /// publication will be closed.
-    @transitional
     PublishServiceInstance(resource struct {
         service service_name;
         instance instance_name;
         media Media;
         perform_probe bool;
         publication_responder client_end:PublicationResponder;
-    }) -> (struct {}) error Error;
-
-    /// Publishes a service instance. `publication_responder` is consulted via its
-    /// `OnPublication` method for initial announcements and to answer queries.
-    /// The service is published until the `publication_responder` channel closes. In
-    /// addition to announcements and queries for the service type, all queries
-    /// for subtypes are answered subject to filtering through the responder.
-    /// `perform_probe` indicates whether a probe for a conflicting instance
-    /// should be performed before publishing the instance. This value should
-    /// be `true` unless the instance name is known to be unique.
-    ///
-    /// If a service with the same service and instance names is already published, the
-    /// old publication will be terminated, and the responder channel for the old
-    /// publication will be closed.
-    @transitional
-    @deprecated
-    PublishServiceInstance2(resource struct {
-        service service_name;
-        instance instance_name;
-        perform_probe bool;
-        publication_responder client_end:PublicationResponder2;
     }) -> (struct {}) error Error;
 };
 
@@ -144,12 +98,12 @@ protocol ServiceInstanceResolver {
     /// A successful resolution will return target and at least one endpoint.
     /// Unsuccessful resolution occurs when either the service instance doesn't respond or
     /// there is no endpoint (IP & port).
-    ResolveServiceInstance2(struct {
+    ResolveServiceInstance(struct {
         service service_name;
         instance instance_name;
         timeout zx.duration;
     }) -> (struct {
-        instance ServiceInstance2;
+        instance ServiceInstance;
     }) error Error;
 };
 
@@ -206,33 +160,6 @@ protocol ServiceSubscriber {
     }) -> ();
 };
 
-/// Client-implemented interface for subscribers. Method replies are used to
-/// throttle traffic. The service won't necessarily wait for a reply before
-/// calling another method.
-protocol ServiceSubscriber2 {
-    /// Notifies the subscriber that a service instance has been discovered.
-    OnInstanceDiscovered(struct {
-        instance ServiceInstance2;
-    }) -> ();
-
-    /// Notifies the subscriber that addresses or text for a known service
-    /// instance have changed.
-    OnInstanceChanged(struct {
-        instance ServiceInstance2;
-    }) -> ();
-
-    /// Notifies the subscriber that a known service instance has been lost.
-    OnInstanceLost(struct {
-        service service_name;
-        instance instance_name;
-    }) -> ();
-
-    /// Notifies the subscriber that a PTR query has been sent.
-    OnQuery(struct {
-        resource_type ResourceType;
-    }) -> ();
-};
-
 /// DNS resource types.
 type ResourceType = strict enum {
     /// Domain name pointer.
@@ -243,35 +170,6 @@ type ResourceType = strict enum {
 
 /// Describes a service instance.
 type ServiceInstance = table {
-    /// The name of the service.
-    1: service service_name;
-
-    /// The name of the service instance.
-    2: instance instance_name;
-
-    /// IPv4 socket address for the service. May be unset.
-    3: ipv4_endpoint fuchsia.net.Ipv4SocketAddress;
-
-    /// IPv6 socket address for the service. May be unset.
-    4: ipv6_endpoint fuchsia.net.Ipv6SocketAddress;
-
-    /// Text strings describing the instance.
-    5: text vector<txt_string>:MAX_TEXT_STRINGS;
-
-    /// The priority of the SRV resource record for this publication. See
-    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
-    6: srv_priority uint16;
-
-    /// The weight of the SRV resource record for this publication. See
-    /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
-    7: srv_weight uint16;
-
-    /// The domain name of the target host.
-    8: target host_name;
-};
-
-/// Describes a service instance.
-type ServiceInstance2 = table {
     /// The name of the service.
     1: service service_name;
 
@@ -341,38 +239,6 @@ type PublicationCause = strict enum : int32 {
     /// Indicates the publication is in response to a question that requests a
     /// unicast response.
     QUERY_UNICAST_RESPONSE = 3;
-};
-
-/// Client-supplied publication responder interface.
-protocol PublicationResponder2 {
-    /// Provides instance information for initial announcements and query
-    /// responses relating to the service instance specified in
-    /// `Publisher.PublishServiceInstance`. `query` indicates whether data is
-    /// requested for an initial announcement (false) or in response to a query
-    /// (true). If the publication relates to a subtype of the service,
-    /// `subtype` contains the subtype, otherwise it is null. If `publication`
-    /// is null, no announcement or response is transmitted. Strings in `text`
-    /// are transmitted in the TXT record.
-    OnPublication(struct {
-        query bool;
-        subtype subtype_name:optional;
-        source_addresses vector<fuchsia.net.IpAddress>:64;
-    }) -> (struct {
-        publication box<Publication>;
-    });
-
-    /// Sets the subtypes for the service instance. The specified subtypes will
-    /// be announced subject to filtering through the responder. The initial
-    /// subtype collection is empty.
-    -> SetSubtypes(struct {
-        subtypes vector<subtype_name>:MAX_SUBTYPES;
-    });
-
-    /// Initiates reannouncement of the service instance due to a change in the
-    /// instance's port number or text strings. All announcements are filtered
-    /// through `OnPublication`, which replies with the new port and text
-    /// values.
-    -> Reannounce();
 };
 
 /// Describes an initial instance announcement or query response. In typical

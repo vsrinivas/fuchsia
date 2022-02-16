@@ -29,17 +29,8 @@ protocol/member fuchsia.net.mdns/PublicationResponder.OnPublication(fuchsia.net.
 protocol/member fuchsia.net.mdns/PublicationResponder.Reannounce -> ()
 protocol/member fuchsia.net.mdns/PublicationResponder.SetSubtypes -> (vector<string:63>:256 subtypes)
 protocol fuchsia.net.mdns/PublicationResponder
-protocol/member fuchsia.net.mdns/PublicationResponder2.OnPublication(bool query,string:<63,optional> subtype,vector<fuchsia.net/IpAddress>:64 source_addresses) -> (box<fuchsia.net.mdns/Publication> publication)
-protocol/member fuchsia.net.mdns/PublicationResponder2.Reannounce -> ()
-protocol/member fuchsia.net.mdns/PublicationResponder2.SetSubtypes -> (vector<string:63>:256 subtypes)
-protocol fuchsia.net.mdns/PublicationResponder2
 protocol/member fuchsia.net.mdns/Publisher.PublishServiceInstance(string:22 service,string:63 instance,fuchsia.net.mdns/Media media,bool perform_probe,client_end:fuchsia.net.mdns/PublicationResponder publication_responder) -> (fuchsia.net.mdns/Publisher_PublishServiceInstance_Result result)
-protocol/member fuchsia.net.mdns/Publisher.PublishServiceInstance2(string:22 service,string:63 instance,bool perform_probe,client_end:fuchsia.net.mdns/PublicationResponder2 publication_responder) -> (fuchsia.net.mdns/Publisher_PublishServiceInstance2_Result result)
 protocol fuchsia.net.mdns/Publisher
-struct fuchsia.net.mdns/Publisher_PublishServiceInstance2_Response
-union/member fuchsia.net.mdns/Publisher_PublishServiceInstance2_Result.err fuchsia.net.mdns/Error
-union/member fuchsia.net.mdns/Publisher_PublishServiceInstance2_Result.response fuchsia.net.mdns/Publisher_PublishServiceInstance2_Response
-strict union fuchsia.net.mdns/Publisher_PublishServiceInstance2_Result
 struct fuchsia.net.mdns/Publisher_PublishServiceInstance_Response
 union/member fuchsia.net.mdns/Publisher_PublishServiceInstance_Result.err fuchsia.net.mdns/Error
 union/member fuchsia.net.mdns/Publisher_PublishServiceInstance_Result.response fuchsia.net.mdns/Publisher_PublishServiceInstance_Response
@@ -58,33 +49,18 @@ table/member fuchsia.net.mdns/ServiceInstance.srv_weight uint16
 table/member fuchsia.net.mdns/ServiceInstance.target string:255
 table/member fuchsia.net.mdns/ServiceInstance.text vector<string:255>:256
 table fuchsia.net.mdns/ServiceInstance
-table/member fuchsia.net.mdns/ServiceInstance2.instance string:63
-table/member fuchsia.net.mdns/ServiceInstance2.ipv4_endpoint fuchsia.net/Ipv4SocketAddress
-table/member fuchsia.net.mdns/ServiceInstance2.ipv6_endpoint fuchsia.net/Ipv6SocketAddress
-table/member fuchsia.net.mdns/ServiceInstance2.service string:22
-table/member fuchsia.net.mdns/ServiceInstance2.srv_priority uint16
-table/member fuchsia.net.mdns/ServiceInstance2.srv_weight uint16
-table/member fuchsia.net.mdns/ServiceInstance2.target string:255
-table/member fuchsia.net.mdns/ServiceInstance2.text vector<string:255>:256
-table fuchsia.net.mdns/ServiceInstance2
-protocol/member fuchsia.net.mdns/ServiceInstanceResolver.ResolveServiceInstance2(string:22 service,string:63 instance,int64 timeout) -> (fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance2_Result result)
+protocol/member fuchsia.net.mdns/ServiceInstanceResolver.ResolveServiceInstance(string:22 service,string:63 instance,int64 timeout) -> (fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Result result)
 protocol fuchsia.net.mdns/ServiceInstanceResolver
-struct/member fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance2_Response.instance fuchsia.net.mdns/ServiceInstance2
-struct fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance2_Response
-union/member fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance2_Result.err fuchsia.net.mdns/Error
-union/member fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance2_Result.response fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance2_Response
-strict union fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance2_Result
+struct/member fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Response.instance fuchsia.net.mdns/ServiceInstance
+struct fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Response
+union/member fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Result.err fuchsia.net.mdns/Error
+union/member fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Result.response fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Response
+strict union fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Result
 protocol/member fuchsia.net.mdns/ServiceSubscriber.OnInstanceChanged(fuchsia.net.mdns/ServiceInstance instance) -> ()
 protocol/member fuchsia.net.mdns/ServiceSubscriber.OnInstanceDiscovered(fuchsia.net.mdns/ServiceInstance instance) -> ()
 protocol/member fuchsia.net.mdns/ServiceSubscriber.OnInstanceLost(string:22 service,string:63 instance) -> ()
 protocol/member fuchsia.net.mdns/ServiceSubscriber.OnQuery(fuchsia.net.mdns/ResourceType resource_type) -> ()
 protocol fuchsia.net.mdns/ServiceSubscriber
-protocol/member fuchsia.net.mdns/ServiceSubscriber2.OnInstanceChanged(fuchsia.net.mdns/ServiceInstance2 instance) -> ()
-protocol/member fuchsia.net.mdns/ServiceSubscriber2.OnInstanceDiscovered(fuchsia.net.mdns/ServiceInstance2 instance) -> ()
-protocol/member fuchsia.net.mdns/ServiceSubscriber2.OnInstanceLost(string:22 service,string:63 instance) -> ()
-protocol/member fuchsia.net.mdns/ServiceSubscriber2.OnQuery(fuchsia.net.mdns/ResourceType resource_type) -> ()
-protocol fuchsia.net.mdns/ServiceSubscriber2
 protocol/member fuchsia.net.mdns/Subscriber.SubscribeToService(string:22 service,client_end:fuchsia.net.mdns/ServiceSubscriber subscriber)
-protocol/member fuchsia.net.mdns/Subscriber.SubscribeToService2(string:22 service,client_end:fuchsia.net.mdns/ServiceSubscriber2 subscriber)
 protocol fuchsia.net.mdns/Subscriber
 library fuchsia.net.mdns

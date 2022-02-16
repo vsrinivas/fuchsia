@@ -14,7 +14,7 @@ namespace mdns {
 
 ServiceInstanceResolver::ServiceInstanceResolver(MdnsAgent::Host* host, const std::string& service,
                                                  const std::string& instance, zx::time timeout,
-                                                 Mdns::ResolveServiceInstance2Callback callback)
+                                                 Mdns::ResolveServiceInstanceCallback callback)
     : MdnsAgent(host),
       service_(service),
       instance_name_(instance),

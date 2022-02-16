@@ -141,7 +141,7 @@ void Mdns::ResolveHostName(const std::string& host_name, zx::time timeout,
 }
 
 void Mdns::ResolveServiceInstance(const std::string& service, const std::string& instance,
-                                  zx::time timeout, ResolveServiceInstance2Callback callback) {
+                                  zx::time timeout, ResolveServiceInstanceCallback callback) {
   FX_DCHECK(!service.empty());
   FX_DCHECK(!instance.empty());
   FX_DCHECK(callback);

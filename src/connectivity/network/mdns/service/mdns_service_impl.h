@@ -38,10 +38,6 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
       std::string service,
       fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> subscriber) override;
 
-  void SubscribeToService2(
-      std::string service,
-      fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber2> subscriber) override;
-
   // fuchsia::net::mdns::Publisher implementation.
   void PublishServiceInstance(
       std::string service, std::string instance, fuchsia::net::mdns::Media media,
@@ -49,21 +45,13 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
       fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder> responder_handle,
       PublishServiceInstanceCallback callback) override;
 
-  void PublishServiceInstance2(
-      std::string service, std::string instance, bool perform_probe,
-      fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder2> responder_handle,
-      PublishServiceInstance2Callback callback) override;
-
   // fuchsia::net:mdns::ServiceInstanceResolver implementation.
-  void ResolveServiceInstance2(std::string service, std::string instance, int64_t timeout,
-                               ResolveServiceInstance2Callback callback) override;
+  void ResolveServiceInstance(std::string service, std::string instance, int64_t timeout,
+                              ResolveServiceInstanceCallback callback) override;
 
   class Subscriber : public Mdns::Subscriber {
    public:
     Subscriber(fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> handle,
-               fit::closure deleter);
-
-    Subscriber(fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber2> handle,
                fit::closure deleter);
 
     ~Subscriber() override;
@@ -109,7 +97,6 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
     void ReplyReceived();
 
     fuchsia::net::mdns::ServiceSubscriberPtr client_;
-    fuchsia::net::mdns::ServiceSubscriber2Ptr client2_;
     std::queue<Entry> entries_;
     size_t pipeline_depth_ = 0;
 
@@ -149,9 +136,6 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
    public:
     ResponderPublisher(fuchsia::net::mdns::PublicationResponderPtr responder,
                        PublishServiceInstanceCallback callback, fit::closure deleter);
-
-    ResponderPublisher(fuchsia::net::mdns::PublicationResponder2Ptr responder,
-                       PublishServiceInstance2Callback callback, fit::closure deleter);
 
     ~ResponderPublisher() override;
 
@@ -199,8 +183,6 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
 
     fuchsia::net::mdns::PublicationResponderPtr responder_;
     PublishServiceInstanceCallback callback_;
-    fuchsia::net::mdns::PublicationResponder2Ptr responder2_;
-    PublishServiceInstance2Callback callback2_;
     std::queue<Entry> pending_publications_;
     uint32_t on_publication_calls_in_progress_ = 0;
   };
