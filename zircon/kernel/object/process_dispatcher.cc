@@ -133,7 +133,8 @@ void ProcessDispatcher::on_zero_handles() {
   {
     Guard<Mutex> guard{get_lock()};
     if (state_ != State::INITIAL) {
-      // Use the normal cleanup path instead.
+      // Initalized proceses are kept alive by their threads, see
+      // RemoveThread() for the details.
       return;
     }
     SetStateLocked(State::DEAD);
