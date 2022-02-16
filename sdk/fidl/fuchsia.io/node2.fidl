@@ -104,7 +104,6 @@ protocol Node2 {
     /// associated error.
     ///
     /// This method does not require any rights.
-    @transitional
     @selector("fuchsia.io/Node.Describe")
     Describe2(struct {
         query @generated_name("ConnectionInfoQuery") strict bits : uint64 {

@@ -54,6 +54,16 @@ class TestServerBase : public fidl::WireServer<fio::Node> {
         fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
   }
 
+  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override {
+    fio::wire::FileInfo file_info;
+    fio::wire::Representation representation = fio::wire::Representation::WithFile(
+        fidl::ObjectView<decltype(file_info)>::FromExternal(&file_info));
+    fio::wire::ConnectionInfo connection_info;
+    connection_info.set_representation(
+        fidl::ObjectView<decltype(representation)>::FromExternal(&representation));
+    completer.Reply(connection_info);
+  }
+
   void SyncDeprecated(SyncDeprecatedRequestView request,
                       SyncDeprecatedCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);

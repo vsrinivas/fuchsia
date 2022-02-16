@@ -100,6 +100,11 @@ void NullPtyDeviceImpl::Describe(DescribeRequestView request, DescribeCompleter:
   ZX_ASSERT(false);
 }
 
+void NullPtyDeviceImpl::Describe2(Describe2RequestView request,
+                                  Describe2Completer::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void NullPtyDeviceImpl::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
