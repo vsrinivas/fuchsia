@@ -1,0 +1,18 @@
+{
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/system_power_mode_template_output_test",
+    },
+    use: [
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+            subdir: "system-power-mode-template-output-test-pkg",
+        },
+    ],
+}

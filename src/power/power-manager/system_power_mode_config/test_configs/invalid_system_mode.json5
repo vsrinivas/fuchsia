@@ -1,0 +1,15 @@
+// This config is invalid because the wlan configuration specifies "imaginary_mode" as a system
+// mode, which isn't a valid `fuchsia.power.systemmode.SystemMode`.
+{
+    clients: {
+        wlan: {
+            mode_matches: [
+                {
+                    mode: "imaginary_mode",
+                    power_level: 0,
+                },
+            ],
+            default_level: 1,
+        },
+    },
+}

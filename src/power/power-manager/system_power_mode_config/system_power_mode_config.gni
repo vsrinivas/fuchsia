@@ -1,0 +1,85 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/config.gni")
+
+# Define a system power mode configuration target for a given JSON5 file.
+#
+# The template validates the provided JSON5 file to ensure it matches the expected system power mode
+# configuration schema and criteria. If valid, a `resource` target will be created to allow the file
+# to be included in a package. If invalid, the build will fail.
+#
+# When a `system_power_mode_config` target is added as a bootfs dependency, the provided JSON5 file
+# will be accessible at the `output` path on the device (defaults to
+# "/pkg/config/power_manager/system_power_mode_config.json").
+#
+# Parameters:
+#
+#   config_file (required)
+#     [string] The path to the JSON5 system power mode configuration file.
+#
+#   output (optional)
+#     [string] The name of the JSON5 file as it will be published on the filesystem. Defaults to
+#     "system_power_mode_config.json", but the template accepts this as an argument to allow
+#     overriding for tests.
+#
+# Example usage:
+#
+#   system_power_mode_config("astro") {
+#     config_file = "astro.json5"
+#   }
+#
+#   system_power_mode_config("test_config") {
+#     config_file = "valid_system_power_mode_config.json5"
+#     output = "test_config.json"
+#   }
+#
+template("system_power_mode_config") {
+  assert(defined(invoker.config_file), "Need to specify a config file")
+
+  output_config_name = "system_power_mode_config.json"
+  if (defined(invoker.output)) {
+    output_config_name = invoker.output
+  }
+
+  compiled_action("${target_name}_validate") {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+
+    tool = "//src/power/power-manager/system_power_mode_config/validator"
+    tool_output_name = "system_power_mode_config_validator"
+
+    inputs = [ invoker.config_file ]
+    outputs = [ "$target_gen_dir/$target_name.validated" ]
+
+    args = [
+      "--input",
+      rebase_path(inputs[0], root_build_dir),
+      "--stamp",
+      rebase_path(outputs[0], root_build_dir),
+    ]
+  }
+
+  resource("${target_name}_data") {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    sources = [ invoker.config_file ]
+    outputs = [ "config/power_manager/${output_config_name}" ]
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [
+      ":${target_name}_data",
+      ":${target_name}_validate",
+    ]
+  }
+}

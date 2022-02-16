@@ -1,0 +1,19 @@
+// This config is invalid because the wlan configuration contains two `mode_match` entries for the
+// same "low_battery" `SystemMode`.
+{
+    clients: {
+        wlan: {
+            mode_matches: [
+                {
+                    mode: "low_battery",
+                    power_level: 0,
+                },
+                {
+                    mode: "low_battery",
+                    power_level: 1,
+                },
+            ],
+            default_level: 1,
+        },
+    },
+}

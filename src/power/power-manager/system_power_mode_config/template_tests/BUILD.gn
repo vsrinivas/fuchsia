@@ -1,0 +1,35 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import(
+    "//src/power/power-manager/system_power_mode_config/system_power_mode_config.gni")
+
+rustc_test("system-power-mode-template-output-test") {
+  deps = [
+    "//src/power/power-manager/system_power_mode_config/parser",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+system_power_mode_config("config") {
+  testonly = true
+  config_file = "../test_configs/valid_test_config.json5"
+  output = "test_config.json"
+}
+
+fuchsia_unittest_package("system-power-mode-template-output-test-pkg") {
+  manifest = "meta/system-power-mode-template-output-test.cml"
+  deps = [
+    ":config",
+    ":system-power-mode-template-output-test",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":system-power-mode-template-output-test-pkg" ]
+}

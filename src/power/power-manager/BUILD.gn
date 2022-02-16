@@ -147,6 +147,7 @@ group("tests") {
   deps = [
     ":power-manager-tests",
     "rkf45:rkf45-tests",
+    "system_power_mode_config:tests",
     "thermal_config:tests",
   ]
 }

@@ -1,0 +1,8 @@
+// This config is invalid because the wlan configuration does not specify a `default_level`.
+{
+    clients: {
+        wlan: {
+            mode_matches: [],
+        },
+    },
+}

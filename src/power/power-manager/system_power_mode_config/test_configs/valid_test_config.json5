@@ -1,0 +1,8 @@
+{
+    clients: {
+        wlan: {
+            mode_matches: [],
+            default_level: 1,
+        },
+    },
+}

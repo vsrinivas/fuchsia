@@ -1,0 +1,45 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/testing/host_test_data.gni")
+
+if (is_host) {
+  rustc_binary("validator") {
+    name = "system_power_mode_config_validator"
+    with_unit_tests = true
+    deps = [
+      "//src/power/power-manager/system_power_mode_config/parser",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+    ]
+
+    test_deps = [
+      ":invalid_system_power_mode_test_configs",
+      ":valid_system_power_mode_test_configs",
+      "//third_party/rust_crates:tempfile",
+    ]
+
+    sources = [ "src/main.rs" ]
+  }
+
+  host_test_data("valid_system_power_mode_test_configs") {
+    sources = [ "../test_configs/valid_test_config.json5" ]
+    outputs = [ "${root_out_dir}/valid_system_power_mode_test_configs/{{source_file_part}}" ]
+  }
+
+  host_test_data("invalid_system_power_mode_test_configs") {
+    sources = [
+      "../test_configs/invalid_missing_default_level.json5",
+      "../test_configs/invalid_repeated_system_mode.json5",
+      "../test_configs/invalid_system_mode.json5",
+    ]
+    outputs = [ "${root_out_dir}/invalid_system_power_mode_test_configs/{{source_file_part}}" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":validator_test($host_toolchain)" ]
+}
