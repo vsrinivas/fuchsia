@@ -73,11 +73,11 @@ impl EmulatorEngine for QemuEngine {
     fn show(&self) {
         println!("{:#?}", self.emulator_configuration);
     }
-    async fn shutdown(&self, proxy: &bridge::TargetCollectionProxy) -> Result<()> {
+    async fn stop(&self, proxy: &bridge::TargetCollectionProxy) -> Result<()> {
         // Extract values from the self here, since there are sharing issues with trying to call
         // shutdown_emulator from another thread.
         let target_id = &self.emulator_configuration.runtime.name;
-        Self::shutdown_emulator(self.is_running(), self.get_pid(), target_id, proxy).await
+        Self::stop_emulator(self.is_running(), self.get_pid(), target_id, proxy).await
     }
     fn validate(&self) -> Result<()> {
         if self.emulator_configuration.device.pointing_device == PointingDevice::Touch {

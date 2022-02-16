@@ -16,8 +16,8 @@ if (is_host) {
     plugin_deps = [
       "list:ffx_emulator_list",
       "show:ffx_emulator_show",
-      "shutdown:ffx_emulator_shutdown",
       "start:ffx_emulator_start",
+      "stop:ffx_emulator_stop",
     ]
     test_deps = [
       "common:tests",
@@ -25,8 +25,8 @@ if (is_host) {
       "engines:tests",
       "list:tests",
       "show:tests",
-      "shutdown:tests",
       "start:tests",
+      "stop:tests",
     ]
     deps = [ ":aemu_internal" ]
   }

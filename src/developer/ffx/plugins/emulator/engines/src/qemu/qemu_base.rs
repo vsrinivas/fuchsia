@@ -252,12 +252,12 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                     let running = self.is_running();
                     let pid = self.get_pid();
                     let target_id = self.emu_config().runtime.name.clone();
-                    if let Some(shutdown_error) =
-                        Self::shutdown_emulator(running, pid, &target_id, proxy).await.err()
+                    if let Some(stop_error) =
+                        Self::stop_emulator(running, pid, &target_id, proxy).await.err()
                     {
                         log::debug!(
-                            "Error encountered in shutdown when handling failed launch: {:?}",
-                            shutdown_error
+                            "Error encountered in stop when handling failed launch: {:?}",
+                            stop_error
                         );
                     }
                     bail!("Emulator launcher did not terminate properly, error: {}", e)
@@ -292,10 +292,10 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         Ok(0)
     }
 
-    /// The parameters here may be a bit unintuitive: because shutdown_emulator is called from
+    /// The parameters here may be a bit unintuitive: because stop_emulator is called from
     /// run(), it can't receive "self" as a parameter. Since both are running async (required for
     /// calls to add_target/remove_target), they run in separate threads, and self can't be safely
-    /// shared across threads. Instead, we pull only those variables we need for shutdown out of
+    /// shared across threads. Instead, we pull only those variables we need for stop out of
     /// "self" and pass them in explicitly.
     ///
     /// running:    Boolean to indicate that the engine specified is active.
@@ -306,7 +306,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     /// proxy:      The interface to the `ffx target` backend, provided by the ffx front-end as a
     ///             parameter to the plugin subcommands. Used to issue a `ffx target remove`
     ///             command.
-    async fn shutdown_emulator(
+    async fn stop_emulator(
         running: bool,
         pid: u32,
         target_id: &str,
@@ -369,7 +369,7 @@ mod tests {
         async fn start(&mut self, _: &bridge::TargetCollectionProxy) -> Result<i32> {
             todo!()
         }
-        async fn shutdown(&self, _: &bridge::TargetCollectionProxy) -> Result<()> {
+        async fn stop(&self, _: &bridge::TargetCollectionProxy) -> Result<()> {
             todo!()
         }
         fn show(&self) {

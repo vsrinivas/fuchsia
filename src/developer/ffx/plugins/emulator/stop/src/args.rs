@@ -9,30 +9,30 @@ use ffx_core::ffx_command;
 #[derive(FromArgs, Default, Debug, PartialEq)]
 #[argh(
     subcommand,
-    name = "shutdown",
+    name = "stop",
     description = "Shut down a running Fuchsia emulator.",
-    example = "ffx emu shutdown
-ffx emu shutdown --all
-ffx emu shutdown fuchsia-emulator --persist",
-    note = "By default, the shutdown command will remove an emulator's on-disk
+    example = "ffx emu stop
+ffx emu stop --all
+ffx emu stop fuchsia-emulator --persist",
+    note = "By default, the stop command will remove an emulator's on-disk
 working directory, which contains emulator state, staged image files, etc.
 
 Use the --persist flag if you need to leave the working directory intact while
 shutting down the emulator, for debugging or troubleshooting purposes. The
 working directory will be left in place, and the emulator will be marked
-[Inactive] in `ffx emu list` results until shutdown is called for that instance
+[Inactive] in `ffx emu list` results until stop is called for that instance
 without the --persist flag."
 )]
-pub struct ShutdownCommand {
+pub struct StopCommand {
     /// shut down and clean up all emulator instances running on the device.
     #[argh(switch)]
     pub all: bool,
 
-    /// don't remove the state directory on shutdown, just terminate the emulator.
+    /// don't remove the state directory on stop, just terminate the emulator.
     #[argh(switch, short = 'p')]
     pub persist: bool,
 
-    /// name of the emulator to shutdown, as specified to the start command.
+    /// name of the emulator to stop, as specified to the start command.
     /// See a list of available instances by running `ffx emu list`. Default
     /// is "fuchsia-emulator", which matches the default for the start command.
     #[argh(positional, default = "\"fuchsia-emulator\".to_string()")]

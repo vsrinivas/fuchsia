@@ -17,7 +17,7 @@ The `start` subcommand launches an emulator according to the configuration in
 the Product Bundle. Once one or more emulators are running, you can use the
 `list` subcommand to see the name and status of all running emulators, and the
 `show` subcommand to get a printout of the configuration for a specific
-emulator. When you're done with an emulator, use the `shutdown` subcommand to
+emulator. When you're done with an emulator, use the `stop` subcommand to
 cleanly terminate that emulator.
 
 For more information on the Fuchsia emulator, see the Getting Started page at

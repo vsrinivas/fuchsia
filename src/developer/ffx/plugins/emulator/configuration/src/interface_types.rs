@@ -33,7 +33,7 @@ pub trait EmulatorEngine {
     /// will terminate a running emulator instance, which will be specified on the command line. It
     /// may return an error if the instance doesn't exist or the shut down fails, but should succeed
     /// if it's no longer running or gets successfully shut down.
-    async fn shutdown(&self, proxy: &bridge::TargetCollectionProxy) -> Result<()>;
+    async fn stop(&self, proxy: &bridge::TargetCollectionProxy) -> Result<()>;
 
     /// Output the details of an existing emulation instance. The engine should have been
     /// instantiated from a saved and serialized instance, so no additional initialization should be

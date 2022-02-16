@@ -127,14 +127,14 @@ impl EngineBuilder {
             let engine = read_from_disk(&self.emulator_configuration.runtime.instance_directory)
                 .context(format!(
                     "Found an existing emulator with the name {}, but couldn't load it from disk. \
-                    Use `ffx emu shutdown {}` to terminate and clean up the existing emulator.",
+                    Use `ffx emu stop {}` to terminate and clean up the existing emulator.",
                     name, name
                 ))?;
             if engine.is_running() {
                 bail!(
                     "An emulator named {} is already running. \
-                    Use a different name, or run `ffx emu shutdown {}` \
-                    to shutdown the running emulator.",
+                    Use a different name, or run `ffx emu stop {}` \
+                    to stop the running emulator.",
                     name,
                     name
                 );
