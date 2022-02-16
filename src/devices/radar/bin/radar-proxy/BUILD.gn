@@ -1,0 +1,64 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+group("common") {
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.radar",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
+  ]
+}
+
+executable("radar-proxy-bin") {
+  output_name = "radar_proxy"
+  sources = [
+    "main.cc",
+    "radar-proxy.cc",
+  ]
+  deps = [ ":common" ]
+}
+
+fuchsia_package_with_single_component("radar-proxy") {
+  manifest = "meta/radar-proxy.cml"
+  deps = [ ":radar-proxy-bin" ]
+}
+
+core_shard("radar-proxy-shard") {
+  shard_file = "meta/radar-proxy.core_shard.cml"
+}
+
+test("radar-proxy-test-bin") {
+  sources = [
+    "radar-proxy-test.cc",
+    "radar-proxy.cc",
+  ]
+  deps = [
+    ":common",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("radar-proxy-test") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  deps = [ ":radar-proxy-test-bin" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":radar-proxy-test" ]
+}

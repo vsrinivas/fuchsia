@@ -1,0 +1,31 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "radar-proxy",
+            url: "fuchsia-pkg://fuchsia.com/radar-proxy#meta/radar-proxy.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.hardware.radar.RadarBurstReaderProvider",
+            from: "#radar-proxy",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-radar",
+            to: "#radar-proxy",
+            subdir: "class/radar",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#radar-proxy",
+        },
+    ],
+}
