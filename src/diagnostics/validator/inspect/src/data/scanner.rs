@@ -9,7 +9,10 @@ use {
     diagnostics_hierarchy::LinkNodeDisposition,
     fuchsia_inspect::{reader as ireader, reader::snapshot::ScannedBlock},
     fuchsia_zircon::Vmo,
-    inspect_format::{constants::MIN_ORDER_SIZE, ArrayFormat, BlockType, PropertyFormat},
+    inspect_format::{
+        constants::EMPTY_STRING_SLOT_INDEX, constants::MIN_ORDER_SIZE, ArrayFormat, BlockType,
+        PropertyFormat,
+    },
     std::{
         self,
         cmp::min,
@@ -486,6 +489,11 @@ impl Scanner {
                             (0..slots).map(|i| block.array_get_double_slot(i)).collect();
                         ScannedPayload::DoubleArray(numbers?, array_format)
                     }
+                    BlockType::StringReference => {
+                        let indexes: Result<Vec<u32>, _> =
+                            (0..slots).map(|i| block.array_get_string_index_slot(i)).collect();
+                        ScannedPayload::StringArray(indexes?, array_format)
+                    }
                     illegal_type => {
                         return Err(format_err!(
                             "No way I should see {:?} for ArrayEntryType",
@@ -601,6 +609,17 @@ impl Scanner {
             ScannedPayload::IntArray(data, format) => Payload::IntArray(data, format),
             ScannedPayload::UintArray(data, format) => Payload::UintArray(data, format),
             ScannedPayload::DoubleArray(data, format) => Payload::DoubleArray(data, format),
+            ScannedPayload::StringArray(indexes, _) => Payload::StringArray(
+                indexes
+                    .iter()
+                    .map(|i| {
+                        if *i == EMPTY_STRING_SLOT_INDEX {
+                            return "".into();
+                        }
+                        self.final_dereferenced_strings.get(i).unwrap().clone()
+                    })
+                    .collect(),
+            ),
             ScannedPayload::Bytes { length, link } => {
                 Payload::Bytes(self.make_valid_vector(length, link)?)
             }
@@ -702,6 +721,7 @@ enum ScannedPayload {
     IntArray(Vec<i64>, ArrayFormat),
     UintArray(Vec<u64>, ArrayFormat),
     DoubleArray(Vec<f64>, ArrayFormat),
+    StringArray(Vec<u32>, ArrayFormat),
     Link { disposition: LinkNodeDisposition, scanned_tree: Scanner },
 }
 

@@ -25,6 +25,7 @@ pub fn real_trials() -> Vec<Trial> {
         basic_bytes(),
         basic_bool(),
         basic_int_array(),
+        basic_string_array(),
         basic_uint_array(),
         basic_double_array(),
         int_histogram_ops_trial(),
@@ -399,6 +400,43 @@ fn basic_int_array() -> Trial {
     }
     actions.push(delete_property!(id: 5));
     Trial { name: "Int Array Ops".into(), steps: vec![Step::Actions(actions)] }
+}
+
+fn basic_string_array() -> Trial {
+    const ID: u32 = 5;
+    let mut actions = vec![
+        create_array_property!(parent: ROOT_ID, id: ID, name: "string", slots: 5, type: ValueType::String),
+    ];
+
+    for index in array_indexes_to_test().iter() {
+        if *index % 2 == 0 {
+            actions
+            .push(array_set!(id: ID, index: *index, value: Value::StringT(format!("string data {}", *index))));
+        } else if *index % 3 == 0 {
+            actions.push(array_set!(id: ID, index: *index, value: Value::StringT(String::new())));
+        } else {
+            actions.push(
+                array_set!(id: ID, index: *index, value: Value::StringT("string data".into())),
+            );
+        }
+    }
+
+    for index in array_indexes_to_test().iter() {
+        if *index % 2 == 0 {
+            actions.push(array_set!(id: ID, index: *index, value: Value::StringT("".into())));
+        }
+    }
+
+    for index in array_indexes_to_test().iter() {
+        if *index % 4 == 0 {
+            actions.push(
+                array_set!(id: ID, index: *index, value: Value::StringT(format!("{}", *index))),
+            );
+        }
+    }
+
+    actions.push(delete_property!(id: ID));
+    Trial { name: "String Array Ops".into(), steps: vec![Step::Actions(actions)] }
 }
 
 fn basic_uint_array() -> Trial {

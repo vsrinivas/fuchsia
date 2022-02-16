@@ -91,6 +91,7 @@ enum Payload {
     IntArray(Vec<i64>, ArrayFormat),
     UintArray(Vec<u64>, ArrayFormat),
     DoubleArray(Vec<f64>, ArrayFormat),
+    StringArray(Vec<String>),
     Link { disposition: LinkNodeDisposition, parsed_data: Data },
 
     // Used when parsing from JSON. We have trouble identifying numeric types and types of
@@ -105,7 +106,7 @@ fn to_string<T: std::fmt::Display>(v: T) -> String {
     format!("{}", v)
 }
 
-fn to_string_array<T: std::fmt::Display>(values: Vec<T>) -> Vec<String> {
+fn stringify_list<T: std::fmt::Display>(values: Vec<T>) -> Vec<String> {
     values.into_iter().map(|x| to_string(x)).collect()
 }
 
@@ -129,9 +130,10 @@ impl ToGeneric for Payload {
     /// Convert this payload into a generic representation that is compatible with JSON.
     fn to_generic(self) -> Self {
         match self {
-            Payload::IntArray(val, format) => handle_array(to_string_array(val), format),
-            Payload::UintArray(val, format) => handle_array(to_string_array(val), format),
-            Payload::DoubleArray(val, format) => handle_array(to_string_array(val), format),
+            Payload::IntArray(val, format) => handle_array(stringify_list(val), format),
+            Payload::UintArray(val, format) => handle_array(stringify_list(val), format),
+            Payload::DoubleArray(val, format) => handle_array(stringify_list(val), format),
+            Payload::StringArray(val) => handle_array(val, ArrayFormat::Default),
             Payload::Bytes(val) => Payload::String(format!("b64:{}", base64::encode(&val))),
             Payload::Int(val) => Payload::GenericNumber(to_string(val)),
             Payload::Uint(val) => Payload::GenericNumber(to_string(val)),
@@ -147,8 +149,8 @@ impl ToGeneric for Payload {
 impl<T: std::fmt::Display> ToGeneric for ArrayContent<T> {
     fn to_generic(self) -> Payload {
         match self {
-            ArrayContent::Values(values) => Payload::GenericArray(to_string_array(values)),
-            ArrayContent::Buckets(buckets) => Payload::GenericHistogram(to_string_array(
+            ArrayContent::Values(values) => Payload::GenericArray(stringify_list(values)),
+            ArrayContent::Buckets(buckets) => Payload::GenericHistogram(stringify_list(
                 buckets.into_iter().map(|bucket| bucket.count).collect(),
             )),
         }
@@ -265,13 +267,26 @@ struct Op {
     int: fn(i64, i64) -> i64,
     uint: fn(u64, u64) -> u64,
     double: fn(f64, f64) -> f64,
+    string: fn(String, String) -> String,
     name: &'static str,
 }
 
-const ADD: Op = Op { int: |a, b| a + b, uint: |a, b| a + b, double: |a, b| a + b, name: "add" };
-const SUBTRACT: Op =
-    Op { int: |a, b| a - b, uint: |a, b| a - b, double: |a, b| a - b, name: "subtract" };
-const SET: Op = Op { int: |_a, b| b, uint: |_a, b| b, double: |_a, b| b, name: "set" };
+const ADD: Op = Op {
+    int: |a, b| a + b,
+    uint: |a, b| a + b,
+    double: |a, b| a + b,
+    string: |_, _| unreachable!(),
+    name: "add",
+};
+const SUBTRACT: Op = Op {
+    int: |a, b| a - b,
+    uint: |a, b| a - b,
+    double: |a, b| a - b,
+    string: |_, _| unreachable!(),
+    name: "subtract",
+};
+const SET: Op =
+    Op { int: |_a, b| b, uint: |_a, b| b, double: |_a, b| b, string: |_a, b| b, name: "set" };
 
 macro_rules! insert_linear_fn {
     ($name:ident, $type:ident) => {
@@ -419,6 +434,9 @@ impl Data {
                     }
                     validate::ValueType::Double => {
                         Payload::DoubleArray(vec![0.0; *slots as usize], ArrayFormat::Default)
+                    }
+                    validate::ValueType::String => {
+                        Payload::StringArray(vec![String::new(); *slots as usize])
                     }
                 },
             ),
@@ -826,13 +844,6 @@ impl Data {
         Ok(())
     }
 
-    fn check_index<T>(numbers: &Vec<T>, index: usize) -> Result<(), Error> {
-        if index >= numbers.len() as usize {
-            return Err(format_err!("Index {} too big for vector length {}", index, numbers.len()));
-        }
-        Ok(())
-    }
-
     fn modify_array(
         &mut self,
         id: u32,
@@ -843,7 +854,7 @@ impl Data {
         if let Some(mut property) = self.properties.get_mut(&id) {
             let index = index64 as usize;
             // Out of range index is a NOP, not an error.
-            let number_len = match &property {
+            let array_len = match &property {
                 Property { payload: Payload::IntArray(numbers, ArrayFormat::Default), .. } => {
                     numbers.len()
                 }
@@ -853,6 +864,7 @@ impl Data {
                 Property {
                     payload: Payload::DoubleArray(numbers, ArrayFormat::Default), ..
                 } => numbers.len(),
+                Property { payload: Payload::StringArray(values), .. } => values.len(),
                 unexpected => {
                     return Err(format_err!(
                         "Bad types {:?} trying to set number of elements",
@@ -860,24 +872,24 @@ impl Data {
                     ))
                 }
             };
-            if index >= number_len {
+            if index >= array_len {
                 return Ok(());
             }
             match (&mut property, value) {
                 (Property { payload: Payload::IntArray(numbers, _), .. }, Value::IntT(value)) => {
-                    Self::check_index(numbers, index)?;
                     numbers[index] = (op.int)(numbers[index], *value);
                 }
                 (Property { payload: Payload::UintArray(numbers, _), .. }, Value::UintT(value)) => {
-                    Self::check_index(numbers, index)?;
                     numbers[index] = (op.uint)(numbers[index], *value);
                 }
                 (
                     Property { payload: Payload::DoubleArray(numbers, _), .. },
                     Value::DoubleT(value),
                 ) => {
-                    Self::check_index(numbers, index)?;
                     numbers[index] = (op.double)(numbers[index], *value);
+                }
+                (Property { payload: Payload::StringArray(values), .. }, Value::StringT(value)) => {
+                    values[index] = (op.string)(values[index].clone(), value.clone());
                 }
                 unexpected => {
                     return Err(format_err!("Type mismatch {:?} trying to set value", unexpected))
@@ -1182,8 +1194,8 @@ impl From<DiagnosticsHierarchy> for Data {
                     iProperty::IntArray(n, content) => (n, content.to_generic()),
                     iProperty::UintArray(n, content) => (n, content.to_generic()),
                     iProperty::DoubleArray(n, content) => (n, content.to_generic()),
-                    iProperty::StringList(_, _) => {
-                        panic!("StringList is not supported in Inspect");
+                    iProperty::StringList(n, content) => {
+                        (n, Payload::StringArray(content).to_generic())
                     }
                 };
 
@@ -1474,6 +1486,37 @@ mod tests {
         assert!(info.apply(&set_number!(id: 3, value: Value::UintT(23))).is_err());
         assert!(info.apply(&set_number!(id: 3, value: Value::DoubleT(24.0))).is_err());
         assert!(info.to_string().contains("value: Int(22)"));
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    fn test_array_string_ops() -> Result<(), Error> {
+        let mut info = Data::new();
+        info.apply(&create_array_property!(parent: ROOT_ID, id: 3, name: "value", slots: 3,
+                                           type: ValueType::String))?;
+        assert!(info.apply(&array_add!(id: 3, index: 1, value: Value::IntT(3))).is_err());
+        assert!(info.to_string().contains(r#"value: StringArray(["", "", ""])"#));
+        assert!(info.apply(&array_add!(id: 3, index: 1, value: Value::UintT(3))).is_err());
+        assert!(info.apply(&array_add!(id: 3, index: 1, value: Value::DoubleT(3.0))).is_err());
+        assert!(info.to_string().contains(r#"value: StringArray(["", "", ""]"#));
+        assert!(info.apply(&array_subtract!(id: 3, index: 2, value: Value::IntT(5))).is_err());
+        assert!(info.apply(&array_subtract!(id: 3, index: 2, value: Value::UintT(5))).is_err());
+        assert!(info
+            .apply(&array_subtract!(id: 3, index: 2,
+                                            value: Value::DoubleT(5.0)))
+            .is_err());
+        assert!(info.to_string().contains(r#"value: StringArray(["", "", ""])"#));
+        assert!(info
+            .apply(&array_set!(id: 3, index: 1, value: Value::StringT("data".into())))
+            .is_ok());
+        assert!(info.to_string().contains(r#"value: StringArray(["", "data", ""])"#));
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Value::UintT(23))).is_err());
+        assert!(info.apply(&array_set!(id: 3, index: 1, value: Value::DoubleT(24.0))).is_err());
+        assert!(info.to_string().contains(r#"value: StringArray(["", "data", ""])"#));
+        let long: String = (0..3000).map(|_| ".").collect();
+        let expected = format!(r#"value: StringArray(["{}", "data", ""])"#, long.clone());
+        assert!(info.apply(&array_set!(id: 3, index: 0, value: Value::StringT(long))).is_ok());
+        assert!(info.to_string().contains(&expected));
         Ok(())
     }
 

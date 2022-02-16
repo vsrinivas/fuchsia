@@ -28,6 +28,7 @@ impl Summary for Value {
             Self::IntT(_) => "Int",
             Self::UintT(_) => "Uint",
             Self::DoubleT(_) => "Double",
+            Self::StringT(_) => "String",
             _ => "Unknown",
         }
         .to_string()
@@ -40,6 +41,7 @@ impl Summary for ValueType {
             ValueType::Int => "Int",
             ValueType::Uint => "Uint",
             ValueType::Double => "Double",
+            ValueType::String => "String",
         }
         .to_string()
     }

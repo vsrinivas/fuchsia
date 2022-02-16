@@ -60,12 +60,14 @@ type ValueType = strict enum : uint8 {
     INT = 1;
     UINT = 2;
     DOUBLE = 3;
+    STRING = 4;
 };
 
 type Value = flexible union {
     1: int_t int64;
     2: uint_t uint64;
     3: double_t float64;
+    4: string_t string;
 };
 
 /// Tells the puppet to create a property with the given numeric value.

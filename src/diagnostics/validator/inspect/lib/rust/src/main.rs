@@ -54,6 +54,7 @@ enum Property {
     IntArray(IntArrayProperty),
     UintArray(UintArrayProperty),
     DoubleArray(DoubleArrayProperty),
+    StringArray(StringArrayProperty<'static>),
     IntLinearHistogram(IntLinearHistogramProperty),
     UintLinearHistogram(UintLinearHistogramProperty),
     DoubleLinearHistogram(DoubleLinearHistogramProperty),
@@ -230,6 +231,7 @@ impl Actor {
                 slots,
                 value_type,
             }) => {
+                let name: StringReference<'static> = name.into();
                 self.properties.insert(
                     id,
                     match value_type {
@@ -242,6 +244,11 @@ impl Actor {
                         ValueType::Double => Property::DoubleArray(
                             self.find_parent(parent)?.create_double_array(name, slots as usize),
                         ),
+                        ValueType::String => Property::StringArray({
+                            let array: StringArrayProperty<'static> =
+                                self.find_parent(parent)?.create_string_array(name, slots as usize);
+                            array
+                        }),
                     },
                 );
             }
@@ -250,6 +257,10 @@ impl Actor {
                     (Property::IntArray(p), Value::IntT(v)) => p.set(index as usize, v),
                     (Property::UintArray(p), Value::UintT(v)) => p.set(index as usize, v),
                     (Property::DoubleArray(p), Value::DoubleT(v)) => p.set(index as usize, v),
+                    (Property::StringArray(p), Value::StringT(v)) => {
+                        let v: StringReference<'static> = v.into();
+                        p.set(index as usize, v);
+                    }
                     unexpected => {
                         return Err(format_err!("Illegal types {:?} for ArraySet", unexpected))
                     }
