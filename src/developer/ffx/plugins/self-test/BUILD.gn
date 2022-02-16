@@ -26,14 +26,13 @@ ffx_plugin("ffx_selftest") {
   plugin_deps = [ "experiment:ffx_selftest_experiment" ]
 
   deps = [
-    "//src/developer/ffx/daemon:lib",
     "//src/developer/ffx/lib/errors:lib",
+    "//src/developer/ffx/lib/isolate:lib",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:once_cell",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:termion",
   ]
 }

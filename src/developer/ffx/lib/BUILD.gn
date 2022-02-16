@@ -13,6 +13,7 @@ if (is_host) {
     "fastboot",
     "fidl-fuchsia-developer-bridge-ext",
     "fms",
+    "isolate",
     "metrics",
     "netext",
     "pbms",
