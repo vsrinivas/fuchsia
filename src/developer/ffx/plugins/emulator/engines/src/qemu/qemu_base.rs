@@ -76,42 +76,54 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             .file_name()
             .ok_or(anyhow!("cannot read kernel file name '{:?}'", guest_config.kernel_image));
         let kernel_path = instance_root.join(kernel_name?);
-        fs::copy(&guest_config.kernel_image, &kernel_path).expect("cannot stage kernel file");
+        if kernel_path.exists() {
+            log::debug!("Using existing file for {:?}", kernel_path.file_name().unwrap());
+        } else {
+            fs::copy(&guest_config.kernel_image, &kernel_path).expect("cannot stage kernel file");
+        }
 
         let zbi_path = instance_root
             .join(guest_config.zbi_image.file_name().ok_or(anyhow!("cannot read zbi file name"))?);
 
-        // Add the authorized public keys to the zbi image to enable SSH access to
-        // the guest.
-        Self::embed_authorized_keys(&guest_config.zbi_image, &zbi_path, config)
-            .await
-            .expect("cannot embed authorized keys");
+        if zbi_path.exists() {
+            log::debug!("Using existing file for {:?}", zbi_path.file_name().unwrap());
+        } else {
+            // Add the authorized public keys to the zbi image to enable SSH access to
+            // the guest.
+            Self::embed_authorized_keys(&guest_config.zbi_image, &zbi_path, config)
+                .await
+                .expect("cannot embed authorized keys");
+        }
 
         let fvm_path = match &guest_config.fvm_image {
             Some(src_fvm) => {
                 let fvm_path = instance_root
                     .join(src_fvm.file_name().ok_or(anyhow!("cannot read fvm file name"))?);
-                fs::copy(src_fvm, &fvm_path).expect("cannot stage fvm file");
+                if fvm_path.exists() {
+                    log::debug!("Using existing file for {:?}", fvm_path.file_name().unwrap());
+                } else {
+                    fs::copy(src_fvm, &fvm_path).expect("cannot stage fvm file");
 
-                // Resize the fvm image if needed.
-                let image_size = format!(
-                    "{}{}",
-                    device_config.storage.quantity,
-                    device_config.storage.units.abbreviate()
-                );
-                let fvm_tool = config
-                    .get_host_tool(config::FVM_HOST_TOOL)
-                    .await
-                    .expect("cannot locate fvm tool");
-                let resize_result = Command::new(fvm_tool)
-                    .arg(&fvm_path)
-                    .arg("extend")
-                    .arg("--length")
-                    .arg(&image_size)
-                    .output()?;
+                    // Resize the fvm image if needed.
+                    let image_size = format!(
+                        "{}{}",
+                        device_config.storage.quantity,
+                        device_config.storage.units.abbreviate()
+                    );
+                    let fvm_tool = config
+                        .get_host_tool(config::FVM_HOST_TOOL)
+                        .await
+                        .expect("cannot locate fvm tool");
+                    let resize_result = Command::new(fvm_tool)
+                        .arg(&fvm_path)
+                        .arg("extend")
+                        .arg("--length")
+                        .arg(&image_size)
+                        .output()?;
 
-                if !resize_result.status.success() {
-                    bail!("Error resizing fvm: {}", str::from_utf8(&resize_result.stderr)?);
+                    if !resize_result.status.success() {
+                        bail!("Error resizing fvm: {}", str::from_utf8(&resize_result.stderr)?);
+                    }
                 }
                 Some(fvm_path)
             }
