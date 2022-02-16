@@ -137,7 +137,7 @@ From //products/bringup.gni:45
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:26
+From //BUILD.gn:25
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -145,7 +145,7 @@ From //products/bringup.gni:45
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:26
+From //BUILD.gn:25
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -160,7 +160,7 @@ From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:33
+From //BUILD.gn:32
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -168,7 +168,7 @@ From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:33
+From //BUILD.gn:32
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -659,7 +659,7 @@ From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:41
+From //BUILD.gn:40
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -667,7 +667,7 @@ From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:41
+From //BUILD.gn:40
 
 ### camera_debug
 
@@ -822,6 +822,13 @@ This toolchain is expected to support both Fuchsia targets and the host.
 **Current value (from the default):** `""`
 
 From //build/toolchain/zircon/clang.gni:11
+
+### clippy_cause_failure
+Makes clippy targets fail to build when any deny lints are found
+
+**Current value (from the default):** `true`
+
+From //build/rust/config.gni:62
 
 ### clippy_warn
 By default clippy is set to allow all lints, this flag will change it to
@@ -2025,7 +2032,7 @@ From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:60
+From //BUILD.gn:59
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
@@ -2033,7 +2040,7 @@ From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:60
+From //BUILD.gn:59
 
 ### host_os
 
@@ -3700,7 +3707,7 @@ From //products/bringup.gni:65
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:64
+From //BUILD.gn:63
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -3708,7 +3715,7 @@ From //products/bringup.gni:65
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:64
+From //BUILD.gn:63
 
 ### sdk_dirs
 The directories to search for parts of the SDK.
@@ -4076,7 +4083,7 @@ afterwards.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:47
+From //BUILD.gn:46
 
 ### testonly_in_containers
 Whether to allow testonly=true targets in fuchsia ZBI or base/cache packages.
@@ -4196,7 +4203,7 @@ From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:55
+From //BUILD.gn:54
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot", "//bundles:kitchen_sink"]`
 
@@ -4204,7 +4211,7 @@ From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:55
+From //BUILD.gn:54
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
