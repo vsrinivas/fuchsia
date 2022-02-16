@@ -270,6 +270,15 @@ class PackageManagerRepo {
     return _sl4fRun(msg, 'pkgctl resolve', [url], retCode);
   }
 
+  /// Get the named component from the repo using `pkgctl resolve --verbose`.
+  ///
+  /// Uses this command:
+  /// `pkgctl resolve --verbose <component URL>`
+  Future<ProcessResult> pkgctlResolveV(
+      String msg, String url, int retCode) async {
+    return _sl4fRun(msg, 'pkgctl resolve --verbose', [url], retCode);
+  }
+
   /// List repo sources using `pkgctl repo`.
   ///
   /// Uses this command:

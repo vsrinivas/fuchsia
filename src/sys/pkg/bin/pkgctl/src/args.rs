@@ -34,6 +34,10 @@ pub enum Command {
 pub struct ResolveCommand {
     #[argh(positional)]
     pub pkg_url: String,
+
+    /// prints the contents of the resolved package, which can be slow for large packages.
+    #[argh(switch, short = 'v')]
+    pub verbose: bool,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -322,12 +326,13 @@ mod tests {
 
     #[test]
     fn resolve() {
-        fn check(args: &[&str], expected_pkg_url: &str) {
+        fn check(args: &[&str], expected_pkg_url: &str, expected_verbose: bool) {
             assert_eq!(
                 Args::from_args(CMD_NAME, args),
                 Ok(Args {
                     command: Command::Resolve(ResolveCommand {
                         pkg_url: expected_pkg_url.to_string(),
+                        verbose: expected_verbose,
                     })
                 })
             );
@@ -335,9 +340,9 @@ mod tests {
 
         let url = "fuchsia-pkg://fuchsia.com/foo/bar";
 
-        check(&["resolve", url], url);
-
-        check(&["resolve", url], url);
+        check(&["resolve", url], url, false);
+        check(&["resolve", "--verbose", url], url, true);
+        check(&["resolve", "-v", url], url, true);
     }
 
     #[test]

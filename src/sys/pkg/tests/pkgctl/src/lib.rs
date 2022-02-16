@@ -42,6 +42,7 @@ use {
         sync::Arc,
     },
     tempfile::TempDir,
+    vfs::directory::entry::DirectoryEntry,
 };
 
 struct TestEnv {
@@ -355,18 +356,24 @@ impl MockRepositoryManagerService {
 
 #[derive(PartialEq, Debug)]
 enum CapturedPackageResolverRequest {
-    Resolve,
+    Resolve { package_url: String },
     GetHash { package_url: String },
 }
 
 struct MockPackageResolverService {
     captured_args: Mutex<Vec<CapturedPackageResolverRequest>>,
     get_hash_response: Mutex<Option<Result<fidl_fuchsia_pkg::BlobId, Status>>>,
+    resolve_response:
+        Mutex<Option<(Arc<dyn DirectoryEntry>, Result<(), fidl_fuchsia_pkg::ResolveError>)>>,
 }
 
 impl MockPackageResolverService {
     fn new() -> Self {
-        Self { captured_args: Mutex::new(vec![]), get_hash_response: Mutex::new(None) }
+        Self {
+            captured_args: Mutex::new(vec![]),
+            get_hash_response: Mutex::new(None),
+            resolve_response: Mutex::new(None),
+        }
     }
     async fn run_service(
         self: Arc<Self>,
@@ -374,8 +381,20 @@ impl MockPackageResolverService {
     ) -> Result<(), Error> {
         while let Some(req) = stream.try_next().await? {
             match req {
-                PackageResolverRequest::Resolve { .. } => {
-                    self.captured_args.lock().push(CapturedPackageResolverRequest::Resolve);
+                PackageResolverRequest::Resolve { package_url, dir, responder } => {
+                    self.captured_args
+                        .lock()
+                        .push(CapturedPackageResolverRequest::Resolve { package_url });
+
+                    let (dir_server, mut res) = self.resolve_response.lock().take().unwrap();
+                    let () = dir_server.open(
+                        vfs::execution_scope::ExecutionScope::new(),
+                        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                        0,
+                        vfs::path::Path::dot(),
+                        dir.into_channel().into(),
+                    );
+                    responder.send(&mut res).unwrap()
                 }
                 PackageResolverRequest::GetHash { package_url, responder } => {
                     self.captured_args.lock().push(CapturedPackageResolverRequest::GetHash {
@@ -852,6 +871,40 @@ async fn test_pkg_status_fail_pkg_not_in_tuf_repo() {
     );
     assert_eq!(output.exit_status.code(), 3);
     env.assert_only_package_resolver_called_with(vec![CapturedPackageResolverRequest::GetHash {
+        package_url: "the-url".into(),
+    }]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_resolve() {
+    let env = TestEnv::new();
+    env.package_resolver
+        .resolve_response
+        .lock()
+        .replace((vfs::pseudo_directory! { "meta" => vfs::pseudo_directory! {} }, Ok(())));
+
+    let output = env.run_pkgctl(vec!["resolve", "the-url"]).await;
+
+    assert_stdout(&output, "resolving the-url\n");
+
+    env.assert_only_package_resolver_called_with(vec![CapturedPackageResolverRequest::Resolve {
+        package_url: "the-url".into(),
+    }]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_resolve_verbose() {
+    let env = TestEnv::new();
+    env.package_resolver
+        .resolve_response
+        .lock()
+        .replace((vfs::pseudo_directory! { "meta" => vfs::pseudo_directory! {} }, Ok(())));
+
+    let output = env.run_pkgctl(vec!["resolve", "the-url", "--verbose"]).await;
+
+    assert_stdout(&output, "resolving the-url\npackage contents:\n/meta\n");
+
+    env.assert_only_package_resolver_called_with(vec![CapturedPackageResolverRequest::Resolve {
         package_url: "the-url".into(),
     }]);
 }

@@ -50,7 +50,7 @@ pub fn main() -> Result<(), anyhow::Error> {
 
 async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
     match command {
-        Command::Resolve(ResolveCommand { pkg_url }) => {
+        Command::Resolve(ResolveCommand { pkg_url, verbose }) => {
             let resolver = connect_to_protocol::<PackageResolverMarker>()
                 .context("Failed to connect to resolver service")?;
             println!("resolving {}", pkg_url);
@@ -63,10 +63,12 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                 .map_err(fidl_fuchsia_pkg_ext::ResolveError::from)
                 .with_context(|| format!("Failed to resolve {}", pkg_url))?;
 
-            println!("package contents:");
-            let mut stream = files_async::readdir_recursive(&dir, /*timeout=*/ None);
-            while let Some(entry) = stream.try_next().await? {
-                println!("/{}", entry.name);
+            if verbose {
+                println!("package contents:");
+                let mut stream = files_async::readdir_recursive(&dir, /*timeout=*/ None);
+                while let Some(entry) = stream.try_next().await? {
+                    println!("/{}", entry.name);
+                }
             }
 
             Ok(0)

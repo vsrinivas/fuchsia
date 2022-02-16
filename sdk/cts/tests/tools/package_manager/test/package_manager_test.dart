@@ -364,13 +364,15 @@ void main() {
       //
       // Newly covered:
       // pkgctl resolve fuchsia-pkg://fuchsia.com/<name>
-      var resolveOutput = (await repoServer.pkgctlResolve(
-              'Confirm that `$testPackageName` does not exist.',
-              'fuchsia-pkg://fuchsia.com/$testPackageName',
-              1))
-          .stdout
-          .toString();
-      expect(resolveOutput.contains('package contents:'), isFalse);
+      var resolveProcessResult = await repoServer.pkgctlResolve(
+          'Confirm that `$testPackageName` does not exist.',
+          'fuchsia-pkg://fuchsia.com/$testPackageName',
+          1);
+      expect(resolveProcessResult.exitCode, isNonZero);
+      expect(
+          resolveProcessResult.stdout.toString(),
+          equals(
+              'resolving fuchsia-pkg://fuchsia.com/cts-package-manager-sample-component\n'));
 
       await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
       final optionalPort = repoServer.getServePort();
@@ -396,13 +398,65 @@ void main() {
       await repoServer.pkgctlRuleReplace(
           'Setting rewriting rule for new repository', localRewriteRule, 0);
 
-      resolveOutput = (await repoServer.pkgctlResolve(
-              'Confirm that `$testPackageName` now exists.',
-              'fuchsia-pkg://fuchsia.com/$testPackageName',
-              0))
-          .stdout
-          .toString();
-      expect(resolveOutput.contains('package contents:'), isTrue);
+      resolveProcessResult = await repoServer.pkgctlResolve(
+          'Confirm that `$testPackageName` now exists.',
+          'fuchsia-pkg://fuchsia.com/$testPackageName',
+          0);
+      expect(resolveProcessResult.exitCode, isZero);
+      expect(
+          resolveProcessResult.stdout.toString(),
+          equals(
+              'resolving fuchsia-pkg://fuchsia.com/cts-package-manager-sample-component\n'));
+
+      await repoServer.pkgctlRuleReplace(
+          'Restoring rewriting rule to original state',
+          originalRewriteRuleJson,
+          0);
+    });
+    test('Test `pkgctl resolve --verbose` base case.', () async {
+      // Covers these commands (success cases only):
+      //
+      // Newly covered:
+      // pkgctl resolve --verbose fuchsia-pkg://fuchsia.com/<name>
+      var resolveVProcessResult = await repoServer.pkgctlResolveV(
+          'Confirm that `$testPackageName` does not exist.',
+          'fuchsia-pkg://fuchsia.com/$testPackageName',
+          1);
+      expect(resolveVProcessResult.exitCode, isNonZero);
+      expect(resolveVProcessResult.stdout.toString(),
+          isNot(contains('package contents:\n')));
+
+      await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
+      final optionalPort = repoServer.getServePort();
+      expect(optionalPort.isPresent, isTrue);
+      final port = optionalPort.value;
+
+      // The repo path usually contains disallowed characters like '/' and
+      // uppercase characters. pkgctl will return an error in this case.
+      // Ensure we have a repoNameFixed that is known to comply with
+      // https://fuchsia.dev/fuchsia-src/concepts/packages/package_url?hl=en#repository
+      var repoNameFixed = validRepoName(repoServer.getRepoPath());
+
+      await repoServer.pkgctlRepoAddUrlNF(
+          'Adding the new repository with http://$hostAddress:$port',
+          'http://$hostAddress:$port/config.json',
+          repoNameFixed,
+          '1',
+          0);
+
+      var localRewriteRule = testRepoRewriteRule;
+      localRewriteRule =
+          localRewriteRule.replaceAll('%%NAME%%', '$repoNameFixed');
+      await repoServer.pkgctlRuleReplace(
+          'Setting rewriting rule for new repository', localRewriteRule, 0);
+
+      resolveVProcessResult = await repoServer.pkgctlResolveV(
+          'Confirm that `$testPackageName` now exists.',
+          'fuchsia-pkg://fuchsia.com/$testPackageName',
+          0);
+      expect(resolveVProcessResult.exitCode, isZero);
+      expect(resolveVProcessResult.stdout.toString(),
+          contains('package contents:\n'));
 
       await repoServer.pkgctlRuleReplace(
           'Restoring rewriting rule to original state',
@@ -419,14 +473,12 @@ void main() {
       // 3. We are able to serve our repo to a given Fuchsia device.
       // 4. The device is able to pull the given component from our repo.
       // 5. The given component contains the expected content.
-      var resolveOutput = (await repoServer.pkgctlResolve(
+      var resolveExitCode = (await repoServer.pkgctlResolve(
               'Confirm that `$testPackageName` does not exist.',
               'fuchsia-pkg://fuchsia.com/$testPackageName',
               1))
-          .stdout
-          .toString();
-      log.info('resolve before: $resolveOutput');
-      expect(resolveOutput.contains('package contents:'), isFalse);
+          .exitCode;
+      expect(resolveExitCode, isNonZero);
 
       await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
       final optionalPort = repoServer.getServePort();
