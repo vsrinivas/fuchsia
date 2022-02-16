@@ -361,7 +361,9 @@ zx_status_t AmlRawNand::AmlGetECCCorrections(int ecc_pages, uint32_t nand_page,
     stats.ecc_corrected += info->ecc.eccerr_cnt;
     bitflips = std::max(static_cast<uint8_t>(bitflips), static_cast<uint8_t>(info->ecc.eccerr_cnt));
   }
-  *ecc_corrected = bitflips;
+  if (ecc_corrected) {
+    *ecc_corrected = bitflips;
+  }
   *erased = false;
   if (erased_ecc_pages == ecc_pages) {
     *erased = true;

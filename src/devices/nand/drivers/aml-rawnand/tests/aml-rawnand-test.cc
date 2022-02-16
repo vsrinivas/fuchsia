@@ -432,6 +432,33 @@ TEST(AmlRawnand, ReadPage) {
   EXPECT_EQ(0xABCD, oob.back());
 }
 
+TEST(AmlRawnand, ReadPageNullEcc) {
+  auto nand = FakeAmlRawNand::Create();
+  ASSERT_NOT_NULL(nand);
+
+  NandPage page;
+  page.data.front() = 0x55;
+  page.data.back() = 0xAA;
+  page.info.front().info_bytes = 0x1234;
+  page.info.back().info_bytes = 0xABCD;
+  ASSERT_NO_FATAL_FAILURE(nand->SetFakePage(5, page));
+
+  std::vector<uint8_t> data(kTestNandWriteSize);
+  std::vector<uint16_t> oob(kDefaultNumUserBytes / 2);  // /2 for 16-bit values.
+  size_t data_bytes_read = 0;
+  size_t oob_bytes_read = 0;
+  ASSERT_OK(nand->RawNandReadPageHwecc(5, data.data(), kTestNandWriteSize, &data_bytes_read,
+                                       reinterpret_cast<uint8_t*>(oob.data()), kDefaultNumUserBytes,
+                                       &oob_bytes_read, nullptr));
+
+  EXPECT_EQ(kTestNandWriteSize, data_bytes_read);
+  EXPECT_EQ(kDefaultNumUserBytes, oob_bytes_read);
+  EXPECT_EQ(0x55, data.front());
+  EXPECT_EQ(0xAA, data.back());
+  EXPECT_EQ(0x1234, oob.front());
+  EXPECT_EQ(0xABCD, oob.back());
+}
+
 TEST(AmlRawnand, ReadPageDataOnly) {
   auto nand = FakeAmlRawNand::Create();
   ASSERT_NOT_NULL(nand);
