@@ -107,8 +107,7 @@ impl ComponentResolversVisitor {
                 }
             };
 
-            let moniker =
-                moniker::AbsoluteMoniker::parse_string_without_instances(&self.request.moniker)?;
+            let moniker = moniker::AbsoluteMoniker::parse_str(&self.request.moniker)?;
 
             if *resolver_source.abs_moniker() == moniker {
                 for use_decl in &resolver_source.decl_for_testing().uses {

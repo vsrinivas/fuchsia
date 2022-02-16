@@ -33,7 +33,7 @@ use {
         child_moniker::{ChildMoniker, ChildMonikerBase},
         error::MonikerError,
     },
-    std::{convert::TryFrom, fmt, iter},
+    std::{convert::TryFrom, fmt},
 };
 
 pub trait RelativeMonikerBase: Sized {
@@ -65,24 +65,6 @@ pub trait RelativeMonikerBase: Sized {
 
     fn is_self(&self) -> bool {
         self.up_path().is_empty() && self.down_path().is_empty()
-    }
-
-    fn to_string_without_instances(&self) -> String {
-        let mut res = ".".to_string();
-        for (segment, leading_char) in self
-            .up_path()
-            .iter()
-            .zip(iter::repeat("\\"))
-            .chain(self.down_path().iter().zip(iter::repeat("/")))
-        {
-            res.push_str(leading_char);
-            if let Some(collection) = segment.collection() {
-                res.push_str(collection);
-                res.push_str(":");
-            }
-            res.push_str(segment.name());
-        }
-        res
     }
 
     fn parse_up_down_paths(rep: &str) -> Result<(Vec<&str>, Vec<&str>), MonikerError> {
@@ -135,13 +117,6 @@ pub trait RelativeMonikerBase: Sized {
             .collect::<Result<Vec<Self::Part>, MonikerError>>()?;
 
         Ok(Self::new(up_path, down_path))
-    }
-
-    fn to_partial(&self) -> RelativeMoniker {
-        let up_path: Vec<ChildMoniker> = self.up_path().iter().map(|p| p.to_partial()).collect();
-        let down_path: Vec<ChildMoniker> =
-            self.down_path().iter().map(|p| p.to_partial()).collect();
-        RelativeMoniker::new(up_path, down_path)
     }
 }
 #[derive(Debug, Eq, PartialEq, Clone, Hash, Default)]

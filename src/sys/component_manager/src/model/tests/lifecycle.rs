@@ -238,7 +238,7 @@ async fn bind_child_non_existent() {
     // Can't start the logger. It does not exist.
     let m: AbsoluteMoniker = vec!["system", "logger"].into();
     let res = model.start_instance(&m, &StartReason::Root).await;
-    let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(m.to_partial()));
+    let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(m));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     mock_runner.wait_for_urls(&["test:///system_resolved"]).await;
 }
@@ -431,13 +431,13 @@ async fn bind_action_sequence() {
 
     // Start child and check that it gets resolved, with a Resolve event and action.
     let bind = async {
-        model.start_instance(&m.to_partial(), &StartReason::Root).await.unwrap();
+        model.start_instance(&m.to_absolute_moniker(), &StartReason::Root).await.unwrap();
     };
     let check_events = async {
         let event = event_stream.wait_until(EventType::Resolved, m.clone()).await.unwrap();
         // While the Resolved hook is handled, it should be possible to look up the component
         // without deadlocking.
-        let component = model.look_up(&m.to_partial()).await.unwrap();
+        let component = model.look_up(&m.to_absolute_moniker()).await.unwrap();
         {
             let actions = component.lock_actions().await;
             assert!(actions.contains(&ActionKey::Resolve));

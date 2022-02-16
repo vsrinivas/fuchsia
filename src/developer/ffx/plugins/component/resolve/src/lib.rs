@@ -26,13 +26,13 @@ async fn resolve_impl<W: std::io::Write>(
     moniker: String,
     writer: &mut W,
 ) -> Result<()> {
-    let moniker = AbsoluteMoniker::parse_string_without_instances(&moniker)
+    let moniker = AbsoluteMoniker::parse_str(&moniker)
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
     writeln!(writer, "Moniker: {}", moniker)?;
     writeln!(writer, "Resolving component instance...")?;
 
     // LifecycleController accepts RelativeMonikers only
-    let moniker = format!(".{}", moniker.to_string_without_instances());
+    let moniker = format!(".{}", moniker.to_string());
     match lifecycle_controller.resolve(&moniker).await {
         Ok(Ok(())) => Ok(()),
         Ok(Err(e)) => {

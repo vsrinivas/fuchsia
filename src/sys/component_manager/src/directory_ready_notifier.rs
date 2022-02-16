@@ -83,7 +83,7 @@ impl DirectoryReadyNotifier {
 
         // Don't block the handling on the event on the exposed capabilities being ready
         let this = self.clone();
-        let moniker = target_moniker.to_partial();
+        let moniker = target_moniker.to_absolute_moniker();
         fasync::Task::spawn(async move {
             // If we can't find the component then we can't dispatch any DirectoryReady event,
             // error or otherwise. This isn't necessarily an error as the model or component might've been
@@ -122,10 +122,13 @@ impl DirectoryReadyNotifier {
     ) -> Result<(), ModelError> {
         let mut events = node.take_event_stream();
         match events.next().await {
-            Some(Ok(NodeEvent::OnOpen_ { s: status, info: _ })) => zx::Status::ok(status)
-                .map_err(|_| ModelError::open_directory_error(target_moniker.to_partial(), path)),
+            Some(Ok(NodeEvent::OnOpen_ { s: status, info: _ })) => {
+                zx::Status::ok(status).map_err(|_| {
+                    ModelError::open_directory_error(target_moniker.to_absolute_moniker(), path)
+                })
+            }
             Some(Ok(NodeEvent::OnConnectionInfo { .. })) => Ok(()),
-            _ => Err(ModelError::open_directory_error(target_moniker.to_partial(), path)),
+            _ => Err(ModelError::open_directory_error(target_moniker.to_absolute_moniker(), path)),
         }
     }
 
@@ -367,10 +370,10 @@ async fn clone_outgoing_root(
         &outgoing_dir,
         fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE,
     )
-    .map_err(|_| ModelError::open_directory_error(target_moniker.to_partial(), "/"))?;
+    .map_err(|_| ModelError::open_directory_error(target_moniker.to_absolute_moniker(), "/"))?;
     let outgoing_dir_channel = outgoing_dir
         .into_channel()
-        .map_err(|_| ModelError::open_directory_error(target_moniker.to_partial(), "/"))?;
+        .map_err(|_| ModelError::open_directory_error(target_moniker.to_absolute_moniker(), "/"))?;
     Ok(NodeProxy::from_channel(outgoing_dir_channel))
 }
 

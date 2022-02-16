@@ -185,7 +185,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
                     if *m == AbsoluteMoniker::root() {
                         "<root>".to_string()
                     } else {
-                        m.to_string_without_instances().replacen("/", "", 1)
+                        m.to_string().replacen("/", "", 1)
                     }
                 }
             };
@@ -354,7 +354,8 @@ impl Hook for ComponentTreeStats<DiagnosticsTask> {
         let target_moniker = event
             .target_moniker
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?
-            .to_partial();
+            .to_absolute_moniker()
+            .into();
         match event.event_type() {
             EventType::Started => {
                 if let Some(EventPayload::Started { runtime, .. }) = event.result.as_ref().ok() {

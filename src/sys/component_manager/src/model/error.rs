@@ -16,7 +16,7 @@ use {
     clonable_error::ClonableError,
     cm_runner::RunnerError,
     fuchsia_inspect, fuchsia_zircon as zx,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker},
+    moniker::{AbsoluteMoniker, ChildMoniker},
     std::{ffi::OsString, path::PathBuf},
     thiserror::Error,
 };
@@ -182,7 +182,7 @@ impl ModelError {
     }
 
     pub fn instance_not_found(moniker: AbsoluteMoniker) -> ModelError {
-        ModelError::from(ComponentInstanceError::instance_not_found(moniker.to_partial()))
+        ModelError::from(ComponentInstanceError::instance_not_found(moniker))
     }
 
     pub fn collection_not_found(name: impl Into<String>) -> ModelError {

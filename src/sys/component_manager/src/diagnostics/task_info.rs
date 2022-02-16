@@ -33,7 +33,7 @@ pub(crate) fn create_cpu_histogram(
     moniker: &ExtendedMoniker,
 ) -> inspect::UintLinearHistogramProperty {
     node.create_uint_linear_histogram(
-        moniker.to_string_without_instances(),
+        moniker.to_string(),
         inspect::LinearHistogramParams { floor: 1, step_size: 1, buckets: 99 },
     )
 }
@@ -549,10 +549,8 @@ mod tests {
         let readings = fake_readings(1, vec![1, 0, 500, 989, 990, 991, 999, 0]);
         let inspector = inspect::Inspector::new();
         let clock = FakeTime::new();
-        let histogram = create_cpu_histogram(
-            &inspector.root(),
-            &ExtendedMoniker::parse_string_without_instances("/foo").unwrap(),
-        );
+        let histogram =
+            create_cpu_histogram(&inspector.root(), &ExtendedMoniker::parse_str("/foo").unwrap());
         //assert_data_tree!(            inspector,            root: {});
         let mut task = TaskInfo::try_from_internal(
             readings,
@@ -612,10 +610,8 @@ mod tests {
         let readings = fake_readings(1, vec![100, 100, 100, 100]);
         let inspector = inspect::Inspector::new();
         let clock = FakeTime::new();
-        let histogram = create_cpu_histogram(
-            &inspector.root(),
-            &ExtendedMoniker::parse_string_without_instances("/foo").unwrap(),
-        );
+        let histogram =
+            create_cpu_histogram(&inspector.root(), &ExtendedMoniker::parse_str("/foo").unwrap());
         let mut task = TaskInfo::try_from_internal(
             readings,
             Some(histogram),
@@ -651,10 +647,8 @@ mod tests {
         let readings = fake_readings(1, vec![400]);
         let inspector = inspect::Inspector::new();
         let clock = FakeTime::new();
-        let histogram = create_cpu_histogram(
-            &inspector.root(),
-            &ExtendedMoniker::parse_string_without_instances("/foo").unwrap(),
-        );
+        let histogram =
+            create_cpu_histogram(&inspector.root(), &ExtendedMoniker::parse_str("/foo").unwrap());
         let mut task = TaskInfo::try_from_internal(
             readings,
             Some(histogram),

@@ -205,11 +205,11 @@ impl StorageAdmin {
                     object,
                     control_handle: _,
                 } => {
-                    let relative_moniker =
+                    let instanced_relative_moniker =
                         InstancedRelativeMoniker::try_from(relative_moniker.as_str())?;
                     let abs_moniker = AbsoluteMoniker::from_relative(
                         component.abs_moniker(),
-                        &relative_moniker.to_partial(),
+                        &instanced_relative_moniker.to_relative_moniker(),
                     )?;
                     let instance_id = component
                         .try_get_component_id_index()?
@@ -218,7 +218,7 @@ impl StorageAdmin {
 
                     let dir_proxy = storage::open_isolated_storage(
                         storage_capability_source_info.clone(),
-                        relative_moniker,
+                        instanced_relative_moniker,
                         instance_id.as_ref(),
                         mode,
                         &StartReason::StorageAdmin,
@@ -298,10 +298,10 @@ impl StorageAdmin {
                             warn!("couldn't parse string as relative moniker for storage admin protocol: {:?}", e);
                             Err(fcomponent::Error::InvalidArguments)
                         }
-                        Ok(relative_moniker) => {
+                        Ok(instanced_relative_moniker) => {
                             let abs_moniker = AbsoluteMoniker::from_relative(
                                 component.abs_moniker(),
-                                &relative_moniker.to_partial(),
+                                &instanced_relative_moniker.to_relative_moniker(),
                             )?;
                             let instance_id = component
                                 .try_get_component_id_index()?
@@ -309,7 +309,7 @@ impl StorageAdmin {
                                 .cloned();
                             let res = storage::delete_isolated_storage(
                                 storage_capability_source_info.clone(),
-                                relative_moniker,
+                                instanced_relative_moniker,
                                 instance_id.as_ref(),
                             )
                             .await;

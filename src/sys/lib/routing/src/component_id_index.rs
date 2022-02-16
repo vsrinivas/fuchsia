@@ -137,9 +137,7 @@ pub mod tests {
     async fn look_up_moniker_no_exists() {
         let index_file = make_index_file(component_id_index::Index::default()).unwrap();
         let index = ComponentIdIndex::new(index_file.path().to_str().unwrap()).await.unwrap();
-        assert!(index
-            .look_up_moniker(&AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap())
-            .is_none());
+        assert!(index.look_up_moniker(&AbsoluteMoniker::parse_str("/a/b/c").unwrap()).is_none());
     }
 
     #[fuchsia::test]
@@ -149,7 +147,7 @@ pub mod tests {
             instances: vec![component_id_index::InstanceIdEntry {
                 instance_id: Some(iid.clone()),
                 appmgr_moniker: None,
-                moniker: Some(AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()),
+                moniker: Some(AbsoluteMoniker::parse_str("/a/b/c").unwrap()),
             }],
             ..component_id_index::Index::default()
         })
@@ -157,9 +155,7 @@ pub mod tests {
         let index = ComponentIdIndex::new(index_file.path().to_str().unwrap()).await.unwrap();
         assert_eq!(
             Some(&iid),
-            index.look_up_moniker(
-                &AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
-            )
+            index.look_up_moniker(&AbsoluteMoniker::parse_str("/a/b/c").unwrap())
         );
     }
 
@@ -170,9 +166,7 @@ pub mod tests {
             instances: vec![component_id_index::InstanceIdEntry {
                 instance_id: Some(iid.clone()),
                 appmgr_moniker: None,
-                moniker: Some(
-                    AbsoluteMoniker::parse_string_without_instances("/a/coll:name").unwrap(),
-                ),
+                moniker: Some(AbsoluteMoniker::parse_str("/a/coll:name").unwrap()),
             }],
             ..component_id_index::Index::default()
         })
@@ -194,7 +188,7 @@ pub mod tests {
             instances: vec![component_id_index::InstanceIdEntry {
                 instance_id: Some(iid.clone()),
                 appmgr_moniker: None,
-                moniker: Some(AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()),
+                moniker: Some(AbsoluteMoniker::parse_str("/a/b/c").unwrap()),
             }],
             ..component_id_index::Index::default()
         };
@@ -202,9 +196,7 @@ pub mod tests {
             .expect("failed to create component id index from inner index");
         assert_eq!(
             Some(&iid),
-            index.look_up_moniker(
-                &AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
-            )
+            index.look_up_moniker(&AbsoluteMoniker::parse_str("/a/b/c").unwrap())
         );
     }
 

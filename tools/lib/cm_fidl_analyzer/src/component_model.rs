@@ -301,11 +301,11 @@ impl ComponentModelForAnalyzer {
         self: &Arc<Self>,
         id: &NodePath,
     ) -> Result<Arc<ComponentInstanceForAnalyzer>, ComponentInstanceError> {
-        let abs_moniker = AbsoluteMoniker::parse_string_without_instances(&id.to_string())
-            .expect("failed to parse moniker from id");
         match self.instances.get(id) {
             Some(instance) => Ok(Arc::clone(instance)),
-            None => Err(ComponentInstanceError::instance_not_found(abs_moniker)),
+            None => Err(ComponentInstanceError::instance_not_found(
+                AbsoluteMoniker::parse_str(&id.to_string()).unwrap(),
+            )),
         }
     }
 
@@ -830,7 +830,7 @@ mod tests {
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
         fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_internal as component_internal,
-        moniker::AbsoluteMoniker,
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
         routing::{
             component_instance::WeakExtendedInstanceInterface, environment::EnvironmentInterface,
         },
@@ -887,8 +887,7 @@ mod tests {
         assert_eq!(
             get_other_result.err().unwrap().to_string(),
             ComponentInstanceError::instance_not_found(
-                AbsoluteMoniker::parse_string_without_instances(&other_id.to_string())
-                    .expect("failed to parse moniker from id")
+                AbsoluteMoniker::parse_str(&other_id.to_string()).unwrap()
             )
             .to_string()
         );
@@ -898,15 +897,10 @@ mod tests {
         assert_eq!(root_instance.abs_moniker(), &AbsoluteMoniker::root());
         assert_eq!(root_instance.instanced_moniker(), &InstancedAbsoluteMoniker::root());
 
-        assert_eq!(
-            child_instance.abs_moniker(),
-            &AbsoluteMoniker::parse_string_without_instances("/child")
-                .expect("failed to parse moniker from id")
-        );
+        assert_eq!(child_instance.abs_moniker(), &AbsoluteMoniker::parse_str("/child").unwrap());
         assert_eq!(
             child_instance.instanced_moniker(),
-            &InstancedAbsoluteMoniker::parse_string_without_instances("/child")
-                .expect("failed to parse moniker from id")
+            &InstancedAbsoluteMoniker::parse_str("/child:0").unwrap()
         );
 
         match root_instance.try_get_parent()? {

@@ -39,7 +39,7 @@ async fn run_impl<W: std::io::Write>(
     };
 
     let moniker = format!("/core/{}:{}", COLLECTION_NAME, name);
-    let moniker = AbsoluteMoniker::parse_string_without_instances(&moniker)
+    let moniker = AbsoluteMoniker::parse_str(&moniker)
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
 
     writeln!(writer, "URL: {}", url)?;
@@ -104,7 +104,7 @@ async fn run_impl<W: std::io::Write>(
     writeln!(writer, "Starting component instance...")?;
 
     // LifecycleController accepts RelativeMonikers only
-    let moniker = format!(".{}", moniker.to_string_without_instances());
+    let moniker = format!(".{}", moniker.to_string());
 
     let start_result = lifecycle_controller
         .start(&moniker)

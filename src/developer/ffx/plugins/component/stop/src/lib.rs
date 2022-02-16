@@ -24,7 +24,7 @@ async fn stop_impl<W: std::io::Write>(
     recursive: bool,
     writer: &mut W,
 ) -> Result<()> {
-    let moniker = AbsoluteMoniker::parse_string_without_instances(&moniker)
+    let moniker = AbsoluteMoniker::parse_str(&moniker)
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
     writeln!(writer, "Moniker: {}", moniker)?;
 
@@ -35,7 +35,7 @@ async fn stop_impl<W: std::io::Write>(
     }
 
     // LifecycleController accepts RelativeMonikers only
-    let moniker = format!(".{}", moniker.to_string_without_instances());
+    let moniker = format!(".{}", moniker.to_string());
     match lifecycle_controller.stop(&moniker, recursive).await {
         Ok(Ok(())) => Ok(()),
         Ok(Err(e)) => {

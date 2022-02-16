@@ -57,9 +57,7 @@ impl TryFrom<fcomponent_internal::ComponentIdIndex> for Index {
                     .transpose()?,
                 moniker: entry
                     .moniker
-                    .map(|moniker_str| {
-                        AbsoluteMoniker::parse_string_without_instances(&moniker_str)
-                    })
+                    .map(|moniker_str| AbsoluteMoniker::parse_str(&moniker_str))
                     .transpose()?,
             });
         }
@@ -87,9 +85,7 @@ impl From<Index> for fcomponent_internal::ComponentIdIndex {
                                 ..fcomponent_internal::AppmgrMoniker::EMPTY
                             }
                         }),
-                        moniker: entry
-                            .moniker
-                            .map(|abs_moniker| abs_moniker.to_string_without_instances()),
+                        moniker: entry.moniker.map(|abs_moniker| abs_moniker.to_string()),
                         ..fcomponent_internal::InstanceIdEntry::EMPTY
                     })
                     .collect(),
@@ -138,7 +134,7 @@ mod tests {
                         "path".to_string(),
                     ]]),
                 }),
-                moniker: Some(AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()),
+                moniker: Some(AbsoluteMoniker::parse_str("/a/b/c").unwrap()),
             }],
         };
 

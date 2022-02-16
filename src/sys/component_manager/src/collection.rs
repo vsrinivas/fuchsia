@@ -16,7 +16,7 @@ use {
     async_trait::async_trait,
     cm_moniker::InstancedExtendedMoniker,
     cm_rust::CapabilityTypeName,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::AbsoluteMoniker,
     routing::capability_source::{AggregateCapability, AggregateCapabilityProvider},
     std::sync::{Arc, Weak},
 };
@@ -91,7 +91,7 @@ impl Hook for CollectionCapabilityHost {
             *capability_provider = self
                 .on_collection_capability_routed_async(
                     component.clone(),
-                    target_moniker.to_partial().clone(),
+                    target_moniker.to_absolute_moniker(),
                     aggregate_capability_provider.clone_boxed(),
                     &capability,
                     capability_provider.take(),

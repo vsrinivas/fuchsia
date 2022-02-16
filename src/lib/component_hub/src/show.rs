@@ -85,8 +85,8 @@ fn find_components_internal(
             matching_components.append(&mut result);
         }
 
-        let should_include = moniker.to_string_without_instances().contains(&query)
-            || does_url_match_query(&query, &hub_dir).await;
+        let should_include =
+            moniker.to_string().contains(&query) || does_url_match_query(&query, &hub_dir).await;
         if should_include {
             let component = Component::parse(moniker, &hub_dir).await?;
             matching_components.push(component);
@@ -141,8 +141,8 @@ fn find_cmx_components(
             matching_components.append(&mut child_components);
         }
 
-        let should_include = moniker.to_string_without_instances().contains(&query)
-            || does_url_match_query(&query, &hub_dir).await;
+        let should_include =
+            moniker.to_string().contains(&query) || does_url_match_query(&query, &hub_dir).await;
         if should_include {
             let component = Component::parse_cmx(moniker, hub_dir).await?;
             matching_components.push(component);

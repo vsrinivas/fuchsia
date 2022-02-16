@@ -45,9 +45,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::prelude::*,
-    moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, RelativeMonikerBase,
-    },
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
     std::{
         collections::{HashMap, HashSet},
         convert::{TryFrom, TryInto},
@@ -404,8 +402,7 @@ impl RoutingTest {
         collection: &'a str,
         name: &'a str,
     ) {
-        let component =
-            self.model.look_up(&moniker.to_partial()).await.expect("failed to look up component");
+        let component = self.model.look_up(&moniker).await.expect("failed to look up component");
         self.model
             .start_instance(&component.abs_moniker, &StartReason::Eager)
             .await
@@ -782,9 +779,11 @@ impl RoutingTestModel for RoutingTest {
                 let (storage_proxy, server_end) = create_proxy().unwrap();
                 let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE;
                 let relative_moniker_string = format!("{}", storage_relation);
-                let component_abs_moniker =
-                    AbsoluteMoniker::from_relative(&moniker, &storage_relation.to_partial())
-                        .unwrap();
+                let component_abs_moniker = AbsoluteMoniker::from_relative(
+                    &moniker,
+                    &storage_relation.to_relative_moniker(),
+                )
+                .unwrap();
                 let component_instance_id = self
                     .model
                     .root()
@@ -901,7 +900,7 @@ impl RoutingTestModel for RoutingTest {
         &self,
         moniker: &AbsoluteMoniker,
     ) -> Result<Arc<ComponentInstance>, anyhow::Error> {
-        self.model.look_up(&moniker.to_partial()).await.map_err(|err| anyhow!(err))
+        self.model.look_up(&moniker).await.map_err(|err| anyhow!(err))
     }
 
     async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {

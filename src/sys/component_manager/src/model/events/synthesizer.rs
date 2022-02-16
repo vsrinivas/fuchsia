@@ -184,7 +184,7 @@ impl SynthesisTask {
                     scope_moniker.clone()
                 }
             };
-            let root = model.look_up(&scope_moniker.to_partial()).await?;
+            let root = model.look_up(&scope_moniker.to_absolute_moniker()).await?;
             let mut component_stream = get_subcomponents(root, visited_components.clone());
             while let Some(component) = component_stream.next().await {
                 visited_components.insert(component.instanced_moniker().clone());

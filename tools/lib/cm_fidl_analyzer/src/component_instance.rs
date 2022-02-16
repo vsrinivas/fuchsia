@@ -71,7 +71,7 @@ impl ComponentInstanceForAnalyzer {
         let environment =
             EnvironmentForAnalyzer::new_root(runner_registry, &runtime_config, &top_instance);
         let instanced_moniker = InstancedAbsoluteMoniker::root();
-        let abs_moniker = instanced_moniker.clone().to_partial();
+        let abs_moniker = instanced_moniker.clone().to_absolute_moniker();
         Arc::new(Self {
             instanced_moniker,
             abs_moniker,
@@ -99,7 +99,7 @@ impl ComponentInstanceForAnalyzer {
         let environment = EnvironmentForAnalyzer::new_for_child(&parent, child)?;
         let instanced_moniker =
             parent.instanced_moniker.child(InstancedChildMoniker::new(child.name.clone(), None, 0));
-        let abs_moniker = instanced_moniker.clone().to_partial();
+        let abs_moniker = instanced_moniker.clone().to_absolute_moniker();
         Ok(Arc::new(Self {
             instanced_moniker,
             abs_moniker,
@@ -155,6 +155,10 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
 
     fn abs_moniker(&self) -> &AbsoluteMoniker {
         &self.abs_moniker
+    }
+
+    fn child_moniker(&self) -> Option<&ChildMoniker> {
+        self.abs_moniker.leaf()
     }
 
     fn instanced_child_moniker(&self) -> Option<&InstancedChildMoniker> {

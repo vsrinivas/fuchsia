@@ -24,12 +24,12 @@ async fn start_impl<W: std::io::Write>(
     moniker: String,
     writer: &mut W,
 ) -> Result<fsys::StartResult> {
-    let moniker = AbsoluteMoniker::parse_string_without_instances(&moniker)
+    let moniker = AbsoluteMoniker::parse_str(&moniker)
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
     writeln!(writer, "Moniker: {}", moniker)?;
 
     // LifecycleController accepts RelativeMonikers only
-    let moniker = format!(".{}", moniker.to_string_without_instances());
+    let moniker = format!(".{}", moniker.to_string());
     let res = lifecycle_controller.start(&moniker).await;
     match res {
         Ok(sr) => match sr {

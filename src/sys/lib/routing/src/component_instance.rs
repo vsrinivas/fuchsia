@@ -33,7 +33,12 @@ pub trait ComponentInstanceInterface: Sized + Send + Sync {
         WeakComponentInstanceInterface::new(self)
     }
 
-    /// Returns this `ComponentInstanceInterface`'s child moniker, if it is not the root instance.
+    /// Returns this `ComponentInstanceInterface`'s child moniker, if it is
+    /// not the root instance.
+    fn child_moniker(&self) -> Option<&ChildMoniker>;
+
+    /// Returns this `ComponentInstanceInterface`'s instanced child moniker,
+    /// if it is not the root instance.
     fn instanced_child_moniker(&self) -> Option<&InstancedChildMoniker>;
 
     /// Returns this `ComponentInstanceInterface`'s instanced absolute moniker.

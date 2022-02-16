@@ -32,7 +32,7 @@ use {
     cm_rust::{CapabilityName, EventMode, UseDecl, UseEventDecl},
     fuchsia_trace as trace,
     futures::lock::Mutex,
-    moniker::AbsoluteMonikerBase,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::{
         collections::HashMap,
         sync::{Arc, Weak},
@@ -220,7 +220,8 @@ impl EventRegistry {
                 })
                 .collect(),
             SubscriptionType::Component(target_moniker) => {
-                let route_result = self.route_events(&target_moniker, &event_names).await?;
+                let route_result =
+                    self.route_events(&target_moniker.to_absolute_moniker(), &event_names).await?;
                 if route_result.len() != event_names.len() {
                     let names = event_names
                         .keys()
@@ -338,11 +339,11 @@ impl EventRegistry {
 
     pub async fn route_events(
         &self,
-        target_moniker: &InstancedAbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
         events: &HashMap<CapabilityName, EventMode>,
     ) -> Result<RouteEventsResult, ModelError> {
         let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
-        let component = model.look_up(&target_moniker.to_partial()).await?;
+        let component = model.look_up(&target_moniker).await?;
         let decl = {
             let state = component.lock_state().await;
             match *state {
@@ -351,7 +352,7 @@ impl EventRegistry {
                 }
                 InstanceState::Resolved(ref s) => s.decl().clone(),
                 InstanceState::Purged => {
-                    return Err(ModelError::instance_not_found(target_moniker.to_partial()));
+                    return Err(ModelError::instance_not_found(target_moniker.clone()));
                 }
             }
         };
@@ -483,7 +484,7 @@ mod tests {
             root.clone(),
             "fuchsia-pkg://root",
             Err(EventError::new(
-                &ModelError::instance_not_found(root.to_partial()),
+                &ModelError::instance_not_found(root.to_absolute_moniker()),
                 EventErrorPayload::Resolved,
             )),
         );

@@ -505,9 +505,7 @@ mod tests {
                 instances: vec![component_id_index::InstanceIdEntry {
                     instance_id: Some(iid.clone()),
                     appmgr_moniker: None,
-                    moniker: Some(
-                        AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap(),
-                    ),
+                    moniker: Some(AbsoluteMoniker::parse_str("/a/b/c").unwrap()),
                 }],
                 ..component_id_index::Index::default()
             },
@@ -522,9 +520,9 @@ mod tests {
 
         assert_eq!(
             Some(&iid),
-            root_instance.try_get_component_id_index()?.look_up_moniker(
-                &AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap()
-            )
+            root_instance
+                .try_get_component_id_index()?
+                .look_up_moniker(&AbsoluteMoniker::parse_str("/a/b/c").unwrap())
         );
         Ok(())
     }

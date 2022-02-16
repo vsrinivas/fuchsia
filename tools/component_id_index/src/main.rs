@@ -131,9 +131,7 @@ mod tests {
                         realm_path: vec!["root".to_string(), "child".to_string(), i.to_string()],
                         transitional_realm_paths: None,
                     }),
-                    moniker: Some(
-                        AbsoluteMoniker::parse_string_without_instances("/a/b/c").unwrap(),
-                    ),
+                    moniker: Some(AbsoluteMoniker::parse_str("/a/b/c").unwrap()),
                 })
                 .collect(),
         }

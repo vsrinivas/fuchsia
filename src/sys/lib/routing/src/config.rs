@@ -286,7 +286,7 @@ fn parse_allowlist_entries(strs: &Option<Vec<String>>) -> Result<Vec<AllowlistEn
                 let realm = if prefix.is_empty() {
                     AbsoluteMoniker::root()
                 } else {
-                    AbsoluteMoniker::parse_string_without_instances(prefix)
+                    AbsoluteMoniker::parse_str(prefix)
                         .map_err(|e| AllowlistEntryError::RealmEntryInvalidMoniker(s.clone(), e))?
                 };
                 Ok(AllowlistEntry::Realm(realm))
@@ -301,13 +301,13 @@ fn parse_allowlist_entries(strs: &Option<Vec<String>>) -> Result<Vec<AllowlistEn
                 let realm = if realm.is_empty() {
                     AbsoluteMoniker::root()
                 } else {
-                    AbsoluteMoniker::parse_string_without_instances(realm).map_err(|e| {
+                    AbsoluteMoniker::parse_str(realm).map_err(|e| {
                         AllowlistEntryError::CollectionEntryInvalidMoniker(s.clone(), e)
                     })?
                 };
                 Ok(AllowlistEntry::Collection(realm, collection.to_string()))
             } else {
-                let realm = AbsoluteMoniker::parse_string_without_instances(s)
+                let realm = AbsoluteMoniker::parse_str(s.as_str())
                     .map_err(|e| AllowlistEntryError::OtherInvalidMoniker(s.clone(), e))?;
                 Ok(AllowlistEntry::Exact(realm))
             }
@@ -411,9 +411,9 @@ fn parse_capability_policy(
         if let Some(allowlist) = capability_policy.allowlist {
             let mut policies = HashMap::new();
             for e in allowlist.into_iter() {
-                let source_moniker = ExtendedMoniker::parse_string_without_instances(
+                let source_moniker = ExtendedMoniker::parse_str(
                     e.source_moniker
-                        .as_ref()
+                        .as_deref()
                         .ok_or(Error::new(PolicyConfigError::EmptySourceMoniker))?,
                 )?;
                 let source_name = if let Some(source_name) = e.source_name {
@@ -483,9 +483,9 @@ fn parse_debug_capability_policy(
             let mut policies: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>> =
                 HashMap::new();
             for e in allowlist.into_iter() {
-                let source_moniker = ExtendedMoniker::parse_string_without_instances(
+                let source_moniker = ExtendedMoniker::parse_str(
                     e.source_moniker
-                        .as_ref()
+                        .as_deref()
                         .ok_or(Error::new(PolicyConfigError::EmptySourceMoniker))?,
                 )?;
                 let source_name = if let Some(source_name) = e.source_name.as_ref() {
@@ -505,9 +505,9 @@ fn parse_debug_capability_policy(
                     Err(Error::new(PolicyConfigError::EmptyAllowlistedDebugRegistration))
                 }?;
 
-                let target_moniker = AbsoluteMoniker::parse_string_without_instances(
+                let target_moniker = AbsoluteMoniker::parse_str(
                     e.target_moniker
-                        .as_ref()
+                        .as_deref()
                         .ok_or(PolicyConfigError::EmptyTargetMonikerDebugRegistration)?,
                 )?;
                 let environment_name = e

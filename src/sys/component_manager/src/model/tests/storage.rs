@@ -486,9 +486,7 @@ async fn use_restricted_storage_start_failure() {
         instances: vec![component_id_index::InstanceIdEntry {
             instance_id: parent_consumer_instance_id.clone(),
             appmgr_moniker: None,
-            moniker: Some(
-                AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
-            ),
+            moniker: Some(AbsoluteMoniker::parse_str("/parent_consumer").unwrap()),
         }],
         ..component_id_index::Index::default()
     })
@@ -550,17 +548,12 @@ async fn use_restricted_storage_start_failure() {
         .build()
         .await;
 
-    test.start_instance(
-        &AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
-    )
-    .await
-    .expect("start /parent_consumer failed");
+    test.start_instance(&AbsoluteMoniker::parse_str("/parent_consumer").unwrap())
+        .await
+        .expect("start /parent_consumer failed");
 
     let child_bind_result = test
-        .start_instance(
-            &AbsoluteMoniker::parse_string_without_instances("/parent_consumer/child_consumer")
-                .unwrap(),
-        )
+        .start_instance(&AbsoluteMoniker::parse_str("/parent_consumer/child_consumer").unwrap())
         .await;
     assert!(matches!(
         child_bind_result,
@@ -585,10 +578,7 @@ async fn use_restricted_storage_open_failure() {
         instances: vec![component_id_index::InstanceIdEntry {
             instance_id: parent_consumer_instance_id.clone(),
             appmgr_moniker: None,
-            moniker: Some(
-                AbsoluteMoniker::parse_string_without_instances("/parent_consumer/child_consumer")
-                    .unwrap(),
-            ),
+            moniker: Some(AbsoluteMoniker::parse_str("/parent_consumer/child_consumer").unwrap()),
         }],
         ..component_id_index::Index::default()
     })
@@ -634,8 +624,7 @@ async fn use_restricted_storage_open_failure() {
         .build()
         .await;
 
-    let parent_consumer_moniker =
-        AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap();
+    let parent_consumer_moniker = AbsoluteMoniker::parse_str("/parent_consumer").unwrap();
     let parent_consumer_instance = test
         .start_and_get_instance(&parent_consumer_moniker, StartReason::Eager, false)
         .await

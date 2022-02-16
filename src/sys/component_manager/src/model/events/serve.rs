@@ -310,14 +310,16 @@ async fn create_event_fidl_object(
         (
             InstancedExtendedMoniker::ComponentInstance(target),
             InstancedExtendedMoniker::ComponentManager,
-        ) => RelativeMoniker::from_absolute(&AbsoluteMoniker::root(), &target.to_partial())
-            .to_string(),
+        ) => {
+            RelativeMoniker::from_absolute(&AbsoluteMoniker::root(), &target.to_absolute_moniker())
+                .to_string()
+        }
         (
             InstancedExtendedMoniker::ComponentInstance(target),
             InstancedExtendedMoniker::ComponentInstance(scope),
         ) => RelativeMoniker::from_absolute::<AbsoluteMoniker>(
-            &scope.to_partial(),
-            &target.to_partial(),
+            &scope.to_absolute_moniker(),
+            &target.to_absolute_moniker(),
         )
         .to_string(),
     };

@@ -20,7 +20,7 @@ use {
     cm_util::channel,
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::AbsoluteMoniker,
     routing::capability_source::{ComponentCapability, InternalCapability},
     std::{
         path::PathBuf,
@@ -151,7 +151,7 @@ impl Hook for BinderCapabilityHost {
             *capability_provider = self
                 .on_scoped_framework_capability_routed_async(
                     component.clone(),
-                    target_moniker.to_partial().clone(),
+                    target_moniker.to_absolute_moniker(),
                     &capability,
                     capability_provider.take(),
                 )
@@ -227,12 +227,12 @@ mod tests {
             let builtin_environment = self.builtin_environment.lock().await;
             let source = builtin_environment
                 .model
-                .look_up(&source.to_partial())
+                .look_up(&source.to_absolute_moniker())
                 .await
                 .expect("failed to look up source moniker");
             let target = builtin_environment
                 .model
-                .look_up(&target.to_partial())
+                .look_up(&target.to_absolute_moniker())
                 .await
                 .expect("failed to look up target moniker");
 

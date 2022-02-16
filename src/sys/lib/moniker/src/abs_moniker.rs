@@ -9,7 +9,6 @@ use {
         relative_moniker::RelativeMonikerBase,
     },
     core::cmp::{self, Ord, Ordering},
-    itertools,
     std::{fmt, hash::Hash},
 };
 
@@ -34,27 +33,9 @@ pub trait AbsoluteMonikerBase:
         Ok(Self::new(path?))
     }
 
+    fn parse_str(input: &str) -> Result<Self, MonikerError>;
+
     fn path(&self) -> &Vec<Self::Part>;
-
-    /// Parse the given string as an absolute moniker. The string should be a '/' delimited series
-    /// of child monikers without any instance identifiers, e.g. "/", or "/name1/name2" or
-    /// "/name1:collection1".
-    fn parse_string_without_instances(input: &str) -> Result<Self, MonikerError>;
-
-    // Serializes absolute moniker into its string format, omitting instance ids.
-    //
-    // This method is the inverse of `parse_string_without_instances()`.
-    fn to_string_without_instances(&self) -> String {
-        format!(
-            "/{}",
-            itertools::join(
-                (&self.path())
-                    .into_iter()
-                    .map(|segment: &Self::Part| segment.to_partial().as_str().to_string()),
-                "/"
-            )
-        )
-    }
 
     /// Given an absolute moniker realm `start`, and a relative moniker from `start` to an `end`
     /// realm, returns the absolute moniker of the `end` realm.
@@ -169,11 +150,6 @@ pub trait AbsoluteMonikerBase:
         }
         Ok(())
     }
-
-    fn to_partial(&self) -> AbsoluteMoniker {
-        let path: Vec<ChildMoniker> = self.path().iter().map(|p| p.to_partial()).collect();
-        AbsoluteMoniker::new(path)
-    }
 }
 
 /// AbsoluteMoniker describes the identity of a component instance
@@ -199,7 +175,10 @@ impl AbsoluteMonikerBase for AbsoluteMoniker {
         &self.path
     }
 
-    fn parse_string_without_instances(input: &str) -> Result<AbsoluteMoniker, MonikerError> {
+    /// Parse the given string as an absolute moniker. The string should be a '/' delimited series
+    /// of child monikers without any instance identifiers, e.g. "/", or "/name1/name2" or
+    /// "/name1:collection1".
+    fn parse_str(input: &str) -> Result<AbsoluteMoniker, MonikerError> {
         if input.chars().nth(0) != Some('/') {
             return Err(MonikerError::invalid_moniker(input));
         }

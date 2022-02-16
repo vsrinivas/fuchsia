@@ -108,9 +108,10 @@ async fn single_storage_user() {
     assert_eq!(
         storage_users
             .iter()
-            .map(|moniker_with_instances| InstancedRelativeMoniker::parse(&moniker_with_instances)
+            .map(|moniker_with_instances| InstancedRelativeMoniker::parse(moniker_with_instances)
                 .unwrap()
-                .to_string_without_instances())
+                .to_relative_moniker()
+                .to_string())
             .collect::<HashSet<_>>(),
         hashset! {
             storage_user_moniker.clone()
@@ -178,9 +179,10 @@ async fn multiple_storage_users() {
     assert_eq!(
         storage_users
             .iter()
-            .map(|moniker_with_instances| InstancedRelativeMoniker::parse(&moniker_with_instances)
+            .map(|moniker_with_instances| InstancedRelativeMoniker::parse(moniker_with_instances)
                 .unwrap()
-                .to_string_without_instances())
+                .to_relative_moniker()
+                .to_string())
             .collect::<HashSet<_>>(),
         expected_storage_users
     );
@@ -213,9 +215,10 @@ async fn purged_storage_user() {
     assert_eq!(
         storage_users
             .iter()
-            .map(|moniker_with_instances| InstancedRelativeMoniker::parse(&moniker_with_instances)
+            .map(|moniker_with_instances| InstancedRelativeMoniker::parse(moniker_with_instances)
                 .unwrap()
-                .to_string_without_instances())
+                .to_relative_moniker()
+                .to_string())
             .collect::<HashSet<_>>(),
         hashset! {
             storage_user_moniker.clone()
@@ -237,9 +240,10 @@ async fn purged_storage_user() {
         .await
         .iter()
         .map(|moniker_with_instances| {
-            InstancedRelativeMoniker::parse(&moniker_with_instances)
+            InstancedRelativeMoniker::parse(moniker_with_instances)
                 .unwrap()
-                .to_string_without_instances()
+                .to_relative_moniker()
+                .to_string()
         })
         .collect::<HashSet<_>>();
     assert!(!storage_users.contains(&instance_moniker));

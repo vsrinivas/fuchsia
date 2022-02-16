@@ -1278,7 +1278,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
             instances: vec![component_id_index::InstanceIdEntry {
                 instance_id: b_instance_id.clone(),
                 appmgr_moniker: None,
-                moniker: Some(AbsoluteMoniker::parse_string_without_instances("/b").unwrap()),
+                moniker: Some(AbsoluteMoniker::parse_str("/b").unwrap()),
             }],
             ..component_id_index::Index::default()
         })

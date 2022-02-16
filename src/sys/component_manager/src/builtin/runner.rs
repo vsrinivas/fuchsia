@@ -20,7 +20,6 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component_runner as fcrunner, fuchsia_zircon as zx,
     futures::stream::TryStreamExt,
-    moniker::AbsoluteMonikerBase,
     std::{
         path::PathBuf,
         sync::{Arc, Weak},
@@ -75,8 +74,10 @@ impl Hook for BuiltinRunner {
             // caller.
             if let InternalCapability::Runner(runner_name) = capability {
                 if *runner_name == self.name {
-                    let checker =
-                        ScopedPolicyChecker::new(self.config.clone(), target_moniker.to_partial());
+                    let checker = ScopedPolicyChecker::new(
+                        self.config.clone(),
+                        target_moniker.to_absolute_moniker(),
+                    );
                     let runner = self.runner.clone().get_scoped_runner(checker);
                     *capability_provider.lock().await =
                         Some(Box::new(RunnerCapabilityProvider::new(runner)));

@@ -84,11 +84,6 @@ impl ChildMonikerBase for InstancedChildMoniker {
     fn as_str(&self) -> &str {
         &self.rep
     }
-
-    /// Converts this instanced moniker to a regular child moniker by stripping the instance id.
-    fn to_partial(&self) -> ChildMoniker {
-        ChildMoniker::new(self.name.clone(), self.collection.clone())
-    }
 }
 
 impl InstancedChildMoniker {
@@ -104,9 +99,15 @@ impl InstancedChildMoniker {
         Self { name, collection, instance, rep }
     }
 
-    /// Converts this child moniker to an instanced moniker.
-    pub fn from_partial(m: &ChildMoniker, instance: InstanceId) -> Self {
+    /// Converts this child moniker into an instanced moniker.
+    pub fn from_child_moniker(m: &ChildMoniker, instance: InstanceId) -> Self {
         Self::new(m.name.clone(), m.collection.clone(), instance)
+    }
+
+    /// Convert an InstancedChildMoniker to an allocated ChildMoniker
+    /// without an InstanceId
+    pub fn to_child_moniker(&self) -> ChildMoniker {
+        ChildMoniker::new(self.name.clone(), self.collection.clone())
     }
 
     pub fn instance(&self) -> InstanceId {
@@ -156,8 +157,8 @@ mod tests {
         assert_eq!("test:42", m.as_str());
         assert_eq!("test:42", format!("{}", m));
         assert_eq!(m, InstancedChildMoniker::from("test:42"));
-        assert_eq!("test", m.to_partial().as_str());
-        assert_eq!(m, InstancedChildMoniker::from_partial(&"test".into(), 42));
+        assert_eq!("test", m.to_child_moniker().as_str());
+        assert_eq!(m, InstancedChildMoniker::from_child_moniker(&"test".into(), 42));
 
         let m = InstancedChildMoniker::new("test".to_string(), Some("coll".to_string()), 42);
         assert_eq!("test", m.name());
@@ -166,8 +167,8 @@ mod tests {
         assert_eq!("coll:test:42", m.as_str());
         assert_eq!("coll:test:42", format!("{}", m));
         assert_eq!(m, InstancedChildMoniker::from("coll:test:42"));
-        assert_eq!("coll:test", m.to_partial().as_str());
-        assert_eq!(m, InstancedChildMoniker::from_partial(&"coll:test".into(), 42));
+        assert_eq!("coll:test", m.to_child_moniker().as_str());
+        assert_eq!(m, InstancedChildMoniker::from_child_moniker(&"coll:test".into(), 42));
 
         let max_length_part = "f".repeat(100);
         let m = InstancedChildMoniker::parse(format!("{0}:{0}:42", max_length_part))

@@ -31,7 +31,7 @@ async fn destroy_impl<W: std::io::Write>(
     moniker: String,
     writer: &mut W,
 ) -> Result<()> {
-    let moniker = AbsoluteMoniker::parse_string_without_instances(&moniker)
+    let moniker = AbsoluteMoniker::parse_str(&moniker)
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
     let parent = moniker
         .parent()
@@ -51,7 +51,7 @@ async fn destroy_impl<W: std::io::Write>(
         fdecl::ChildRef { name: name.to_string(), collection: Some(collection.to_string()) };
 
     // LifecycleController accepts RelativeMonikers only
-    let parent_moniker = format!(".{}", parent.to_string_without_instances());
+    let parent_moniker = format!(".{}", parent.to_string());
 
     let result = lifecycle_controller
         .destroy_child(&parent_moniker, &mut child)

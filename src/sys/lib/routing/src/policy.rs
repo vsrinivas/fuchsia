@@ -412,13 +412,10 @@ mod tests {
         let disallowed_child_of_allowed = AbsoluteMoniker::from(vec!["foo", "bar", "baz"]);
         let disallowed = AbsoluteMoniker::from(vec!["baz", "fiz"]);
         let allowlist_exact = AllowlistEntry::Exact(allowed.clone());
-        assert!(allowlist_entry_matches(&allowlist_exact, &allowed.to_partial()));
-        assert!(!allowlist_entry_matches(&allowlist_exact, &root.to_partial()));
-        assert!(!allowlist_entry_matches(&allowlist_exact, &disallowed.to_partial()));
-        assert!(!allowlist_entry_matches(
-            &allowlist_exact,
-            &disallowed_child_of_allowed.to_partial()
-        ));
+        assert!(allowlist_entry_matches(&allowlist_exact, &allowed));
+        assert!(!allowlist_entry_matches(&allowlist_exact, &root));
+        assert!(!allowlist_entry_matches(&allowlist_exact, &disallowed));
+        assert!(!allowlist_entry_matches(&allowlist_exact, &disallowed_child_of_allowed));
 
         let allowed_realm_root = AbsoluteMoniker::from(vec!["qux"]);
         let allowed_child_of_realm = AbsoluteMoniker::from(vec!["qux", "quux"]);

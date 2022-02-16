@@ -16,7 +16,6 @@ use {
         future::{join_all, BoxFuture},
         Future,
     },
-    moniker::ChildMonikerBase,
     std::sync::Arc,
 };
 
@@ -65,7 +64,7 @@ async fn do_purge(component: &Arc<ComponentInstance>) -> Result<(), ModelError> 
                     let nf = async move {
                         ActionSet::register(
                             component.clone(),
-                            DestroyChildAction::new(m.to_partial()),
+                            DestroyChildAction::new(m.to_child_moniker()),
                         )
                         .await?;
                         ActionSet::register(component, PurgeChildAction::new(m)).await

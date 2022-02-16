@@ -31,7 +31,7 @@ async fn create_impl<W: std::io::Write>(
 ) -> Result<()> {
     verify_fuchsia_pkg_cm_url(url.as_str())?;
 
-    let moniker = AbsoluteMoniker::parse_string_without_instances(&moniker)
+    let moniker = AbsoluteMoniker::parse_str(&moniker)
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
     let parent = moniker
         .parent()
@@ -57,7 +57,7 @@ async fn create_impl<W: std::io::Write>(
         ..fdecl::Child::EMPTY
     };
     // LifecycleController accepts RelativeMonikers only
-    let parent_moniker = format!(".{}", parent.to_string_without_instances());
+    let parent_moniker = format!(".{}", parent.to_string());
 
     let result = lifecycle_controller
         .create_child(&parent_moniker, &mut collection, decl, fcomponent::CreateChildArgs::EMPTY)

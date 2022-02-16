@@ -407,7 +407,7 @@ pub(crate) mod test_utils {
     use {
         crate::model::component::{ComponentInstance, InstanceState},
         cm_moniker::InstancedChildMoniker,
-        moniker::{AbsoluteMonikerBase, ChildMonikerBase},
+        moniker::AbsoluteMonikerBase,
         routing::component_instance::ComponentInstanceInterface,
     };
 
@@ -419,7 +419,7 @@ pub(crate) mod test_utils {
         component: &ComponentInstance,
         instanced_moniker: &InstancedChildMoniker,
     ) -> bool {
-        let moniker = instanced_moniker.to_partial();
+        let moniker = instanced_moniker.to_child_moniker();
         match *component.lock_state().await {
             InstanceState::Resolved(ref s) => match s.get_child(instanced_moniker) {
                 Some(child) => {

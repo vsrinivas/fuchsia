@@ -160,9 +160,7 @@ mod tests {
             instances: vec![component_id_index::InstanceIdEntry {
                 instance_id: parent_consumer_instance_id.clone(),
                 appmgr_moniker: None,
-                moniker: Some(
-                    AbsoluteMoniker::parse_string_without_instances("/parent_consumer").unwrap(),
-                ),
+                moniker: Some(AbsoluteMoniker::parse_str("/parent_consumer").unwrap()),
             }],
             ..component_id_index::Index::default()
         })
@@ -211,7 +209,7 @@ mod tests {
 
         model
             .check_use(
-                AbsoluteMoniker::parse_string_without_instances("/consumer").unwrap(),
+                AbsoluteMoniker::parse_str("/consumer").unwrap(),
                 CheckUse::Storage {
                     path: "/storage".try_into().unwrap(),
                     storage_relation: Some(InstancedRelativeMoniker::new(

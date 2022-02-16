@@ -73,7 +73,10 @@ impl CapabilityProvider for HubCapabilityProvider {
             .to_string();
         relative_path.push('/');
         let dir_path = pfsPath::validate_and_split(relative_path.clone()).map_err(|_| {
-            ModelError::open_directory_error(self.instanced_moniker.to_partial(), relative_path)
+            ModelError::open_directory_error(
+                self.instanced_moniker.to_absolute_moniker(),
+                relative_path,
+            )
         })?;
         self.hub.open(&self.instanced_moniker, flags, open_mode, dir_path, server_end).await?;
         Ok(())
@@ -110,7 +113,7 @@ impl Hub {
         let instanced_moniker = InstancedAbsoluteMoniker::root();
 
         let lifecycle_controller =
-            lifecycle_controller_factory.create(&instanced_moniker.to_partial());
+            lifecycle_controller_factory.create(&instanced_moniker.to_absolute_moniker());
 
         Hub::add_instance_if_necessary(
             lifecycle_controller,
@@ -165,7 +168,7 @@ impl Hub {
         let instance_map = self.instances.lock().await;
         let instance =
             instance_map.get(&instanced_moniker).ok_or(ModelError::open_directory_error(
-                instanced_moniker.to_partial(),
+                instanced_moniker.to_absolute_moniker(),
                 relative_path.clone().into_string(),
             ))?;
         let server_end = channel::take_channel(server_end);
@@ -262,7 +265,7 @@ impl Hub {
             trace::duration!("component_manager", "hub:add_instance_to_parent");
             match instance_map.get_mut(&parent_moniker) {
                 Some(instance) => {
-                    let child_moniker = leaf.to_partial();
+                    let child_moniker = leaf.to_child_moniker();
                     instance.children_directory.add_node(
                         child_moniker.as_str(),
                         controlled.clone(),
@@ -463,7 +466,7 @@ impl Hub {
 
         let instance = instance_map
             .get_mut(target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.to_partial()))?;
+            .ok_or(ModelError::instance_not_found(target_moniker.to_absolute_moniker()))?;
 
         // If the resolved directory already exists, report error.
         assert!(!instance.has_resolved_directory);
@@ -515,7 +518,7 @@ impl Hub {
 
         let instance = instance_map
             .get_mut(target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.to_partial()))?;
+            .ok_or(ModelError::instance_not_found(target_moniker.to_absolute_moniker()))?;
 
         // Don't create an execution directory if it already exists
         if instance.has_execution_directory {
@@ -575,7 +578,7 @@ impl Hub {
         trace::duration!("component_manager", "hub:on_discovered_async");
 
         let lifecycle_controller =
-            self.lifecycle_controller_factory.create(&target_moniker.to_partial());
+            self.lifecycle_controller_factory.create(&target_moniker.to_absolute_moniker());
 
         let mut instance_map = self.instances.lock().await;
 
@@ -597,7 +600,7 @@ impl Hub {
         let mut instance_map = self.instances.lock().await;
         instance_map
             .remove(&target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.to_partial()))?;
+            .ok_or(ModelError::instance_not_found(target_moniker.to_absolute_moniker()))?;
         Ok(())
     }
 
@@ -609,7 +612,7 @@ impl Hub {
         let mut instance_map = self.instances.lock().await;
         let mut instance = instance_map
             .get_mut(target_moniker)
-            .ok_or(ModelError::instance_not_found(target_moniker.to_partial()))?;
+            .ok_or(ModelError::instance_not_found(target_moniker.to_absolute_moniker()))?;
 
         instance.directory.remove_node("exec")?.ok_or_else(|| {
             log::warn!("exec directory for instance {} was already removed", target_moniker);
@@ -632,9 +635,9 @@ impl Hub {
             None => return Ok(()),
         };
 
-        let child_moniker = target_moniker.leaf().expect("A root component cannot be destroyed");
+        let instanced_child = target_moniker.leaf().expect("A root component cannot be destroyed");
         // In the children directory, the child's instance id is not used
-        let child_entry = child_moniker.to_partial().as_str().to_string();
+        let child_entry = instanced_child.to_child_moniker().to_string();
 
         // TODO: It's possible for the Destroyed event to be dispatched twice if there
         // are two concurrent `DestroyChild` operations. In such cases we should probably cause
@@ -1185,7 +1188,7 @@ mod tests {
             instances: vec![component_id_index::InstanceIdEntry {
                 instance_id: Some(iid.clone()),
                 appmgr_moniker: None,
-                moniker: Some(AbsoluteMoniker::parse_string_without_instances("/a").unwrap()),
+                moniker: Some(AbsoluteMoniker::parse_str("/a").unwrap()),
             }],
             ..component_id_index::Index::default()
         })
@@ -1227,10 +1230,7 @@ mod tests {
 
         // Starting will resolve the component and cause the instance id to be written.
         model
-            .start_instance(
-                &AbsoluteMoniker::parse_string_without_instances("/a").unwrap(),
-                &StartReason::Debug,
-            )
+            .start_instance(&AbsoluteMoniker::parse_str("/a").unwrap(), &StartReason::Debug)
             .await
             .unwrap();
         let resolved_dir = io_util::open_directory(

@@ -5,7 +5,6 @@
 use {
     crate::model::error::ModelError,
     cm_moniker::InstancedAbsoluteMoniker,
-    moniker::AbsoluteMonikerBase,
     std::sync::Arc,
     vfs::directory::{entry::DirectoryEntry, helper::DirectlyMutable, immutable::simple as pfs},
 };
@@ -55,7 +54,7 @@ impl AddableDirectory for Directory {
     ) -> Result<(), ModelError> {
         self.clone()
             .add_entry(name, entry)
-            .map_err(|_| ModelError::add_entry_error(moniker.to_partial(), name))
+            .map_err(|_| ModelError::add_entry_error(moniker.to_absolute_moniker(), name))
     }
 }
 
@@ -68,7 +67,7 @@ impl AddableDirectoryWithResult for Directory {
     ) -> Result<(), ModelError> {
         self.clone()
             .add_entry(String::from(name), entry)
-            .map_err(|_| ModelError::add_entry_error(moniker.to_partial(), name))
+            .map_err(|_| ModelError::add_entry_error(moniker.to_absolute_moniker(), name))
     }
 
     fn remove_node<'a>(
@@ -84,8 +83,8 @@ impl AddableDirectoryWithResult for Directory {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, assert_matches::assert_matches, std::convert::TryInto,
-        vfs::file::vmo::read_only_static,
+        super::*, assert_matches::assert_matches, moniker::AbsoluteMonikerBase,
+        std::convert::TryInto, vfs::file::vmo::read_only_static,
     };
 
     #[test]
@@ -96,7 +95,7 @@ mod tests {
             dir.add_node(
                 "node_name",
                 read_only_static(b"test"),
-                &InstancedAbsoluteMoniker::parse_string_without_instances("/node").unwrap(),
+                &InstancedAbsoluteMoniker::parse_str("/node:0").unwrap(),
             )
             .is_ok(),
             "add node with valid name should succeed"
@@ -111,7 +110,7 @@ mod tests {
             .add_node(
                 "node_name/with/separators",
                 read_only_static(b"test"),
-                &InstancedAbsoluteMoniker::parse_string_without_instances("/node").unwrap(),
+                &InstancedAbsoluteMoniker::parse_str("/node:0").unwrap(),
             )
             .expect_err("add entry with path separator should fail");
         assert_matches!(err, ModelError::AddEntryError { .. });
@@ -124,7 +123,7 @@ mod tests {
         dir.add_node(
             "node_name",
             read_only_static(b"test"),
-            &InstancedAbsoluteMoniker::parse_string_without_instances("/node").unwrap(),
+            &InstancedAbsoluteMoniker::parse_str("/node:0").unwrap(),
         )
         .expect("add node with valid name should succeed");
 

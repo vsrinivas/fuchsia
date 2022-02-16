@@ -29,7 +29,7 @@
 /// Display notation: ".", "./down1", ".\up1/down1", ".\up1\up2/down1", ...
 use {
     crate::instanced_child_moniker::InstancedChildMoniker,
-    moniker::{ChildMoniker, ChildMonikerBase, MonikerError, RelativeMonikerBase},
+    moniker::{ChildMoniker, MonikerError, RelativeMoniker, RelativeMonikerBase},
     std::{convert::TryFrom, fmt},
 };
 
@@ -40,23 +40,14 @@ pub struct InstancedRelativeMoniker {
 }
 
 impl InstancedRelativeMoniker {
-    /// Parse the given string as an relative moniker. The string should be a '/' delimited series
-    /// of child monikers without any instance identifiers, e.g. "/", or "/name1/name2" or
-    /// "/name1:collection1".
-    pub fn parse_string_without_instances(rep: &str) -> Result<Self, MonikerError> {
-        let (up_path, down_path) = Self::parse_up_down_paths(rep)?;
-        let up_path = up_path
-            .iter()
-            .map(ChildMoniker::parse)
-            .map(|p| p.map(|ok_p| InstancedChildMoniker::from_partial(&ok_p, 0)))
-            .collect::<Result<_, MonikerError>>()?;
-        let down_path = down_path
-            .iter()
-            .map(ChildMoniker::parse)
-            .map(|p| p.map(|ok_p| InstancedChildMoniker::from_partial(&ok_p, 0)))
-            .collect::<Result<_, MonikerError>>()?;
-
-        Ok(Self::new(up_path, down_path))
+    /// Create and allocate a `RelativeMoniker`, without instance ids
+    /// from this instanced moniker
+    pub fn to_relative_moniker(&self) -> RelativeMoniker {
+        let up_path: Vec<ChildMoniker> =
+            self.up_path().iter().map(|p| p.to_child_moniker()).collect();
+        let down_path: Vec<ChildMoniker> =
+            self.down_path().iter().map(|p| p.to_child_moniker()).collect();
+        RelativeMoniker::new(up_path, down_path)
     }
 }
 
@@ -108,12 +99,14 @@ impl TryFrom<&str> for InstancedRelativeMoniker {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::instanced_abs_moniker::InstancedAbsoluteMoniker, anyhow::Error,
-        moniker::AbsoluteMonikerBase, std::convert::TryInto,
+        super::*,
+        crate::instanced_abs_moniker::InstancedAbsoluteMoniker,
+        moniker::{AbsoluteMonikerBase, ChildMonikerBase, MonikerError},
+        std::convert::TryInto,
     };
 
     #[test]
-    fn relative_monikers() {
+    fn instanced_relative_monikers() {
         let me = InstancedRelativeMoniker::new(vec![], vec![]);
         assert_eq!(true, me.is_self());
         assert_eq!(".", format!("{}", me));
@@ -160,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn relative_monikers_from_absolute() {
+    fn instanced_relative_monikers_from_absolute() {
         let me = InstancedRelativeMoniker::from_absolute::<InstancedAbsoluteMoniker>(
             &vec![].into(),
             &vec![].into(),
@@ -232,7 +225,7 @@ mod tests {
         assert_eq!(".\\a:1\\a0:1/b0:2/b:2", format!("{}", cousin));
     }
     #[test]
-    fn absolute_moniker_from_relative_success() {
+    fn instanced_absolute_moniker_from_relative_success() {
         // This test assumes the following topology:
         //        a
         //     b     c
@@ -240,8 +233,8 @@ mod tests {
 
         // ====
         // Test cases where relative moniker has up path *and* down path
-        let ac = InstancedAbsoluteMoniker::parse_string_without_instances("/a/c").unwrap();
-        let abd = InstancedAbsoluteMoniker::parse_string_without_instances("/a/b/d").unwrap();
+        let ac = InstancedAbsoluteMoniker::parse_str("/a:0/c:0").unwrap();
+        let abd = InstancedAbsoluteMoniker::parse_str("/a:0/b:0/d:0").unwrap();
         let c_to_d = InstancedRelativeMoniker::from_absolute(&ac, &abd);
         assert_eq!(abd, InstancedAbsoluteMoniker::from_relative(&ac, &c_to_d).unwrap());
         // Test the opposite direction
@@ -250,7 +243,7 @@ mod tests {
 
         // ===
         // Test case where relative moniker has only up path
-        let ab = InstancedAbsoluteMoniker::parse_string_without_instances("/a/b").unwrap();
+        let ab = InstancedAbsoluteMoniker::parse_str("/a:0/b:0").unwrap();
         let d_to_b = InstancedRelativeMoniker::from_absolute(&abd, &ab);
         assert_eq!(ab, InstancedAbsoluteMoniker::from_relative(&abd, &d_to_b).unwrap());
 
@@ -261,17 +254,17 @@ mod tests {
     }
 
     #[test]
-    fn absolute_moniker_from_relative_failure() {
+    fn instanced_absolute_moniker_from_relative_failure() {
         // This test assumes the following topology:
         //        a
         //     b     c
         //  d
 
         // InstancedAbsolute moniker does not point to the right path
-        let a = InstancedAbsoluteMoniker::parse_string_without_instances("/a").unwrap();
-        let ab = InstancedAbsoluteMoniker::parse_string_without_instances("/a/b").unwrap();
-        let ac = InstancedAbsoluteMoniker::parse_string_without_instances("/a/c").unwrap();
-        let abd = InstancedAbsoluteMoniker::parse_string_without_instances("/a/b/d").unwrap();
+        let a = InstancedAbsoluteMoniker::parse_str("/a:0").unwrap();
+        let ab = InstancedAbsoluteMoniker::parse_str("/a:0/b:0").unwrap();
+        let ac = InstancedAbsoluteMoniker::parse_str("/a:0/c:0").unwrap();
+        let abd = InstancedAbsoluteMoniker::parse_str("/a:0/b:0/d:0").unwrap();
 
         let d_to_c = InstancedRelativeMoniker::from_absolute(&abd, &ac);
         // error: `d_to_c`'s up_path is longer than `a`'s path
@@ -291,7 +284,7 @@ mod tests {
     }
 
     #[test]
-    fn relative_monikers_parse() {
+    fn instanced_relative_monikers_parse() {
         for (up_path, down_path, string_to_parse) in vec![
             (vec![], vec![], "."),
             (vec!["a:0"], vec![], ".\\a:0"),
@@ -337,37 +330,5 @@ mod tests {
                 invalid_string_to_parse
             );
         }
-    }
-
-    #[test]
-    fn relative_monikers_parse_string_without_instances() -> Result<(), Error> {
-        let under_test = |s| InstancedRelativeMoniker::parse_string_without_instances(s);
-
-        let a = InstancedChildMoniker::new("a".to_string(), None, 0);
-        let bb = InstancedChildMoniker::new("b".to_string(), Some("b".to_string()), 0);
-
-        assert_eq!(under_test("./a")?, InstancedRelativeMoniker::new(vec![], vec![a.clone()]));
-        assert_eq!(
-            under_test("./a/b:b")?,
-            InstancedRelativeMoniker::new(vec![], vec![a.clone(), bb.clone()])
-        );
-        assert_eq!(
-            under_test("./a/b:b/a/b:b")?,
-            InstancedRelativeMoniker::new(
-                vec![],
-                vec![a.clone(), bb.clone(), a.clone(), bb.clone()]
-            )
-        );
-
-        assert!(under_test("").is_err(), "cannot be empty");
-        assert!(under_test("a").is_err(), "must start with root");
-        assert!(under_test("/").is_err(), "must start with root");
-        assert!(under_test("..a/b").is_err(), "double dot");
-        assert!(under_test(".//").is_err(), "path segments cannot be empty");
-        assert!(under_test("./a/").is_err(), "path segments cannot be empty");
-        assert!(under_test("./a//b").is_err(), "path segments cannot be empty");
-        assert!(under_test("./a:a:0").is_err(), "cannot contain instance id");
-
-        Ok(())
     }
 }

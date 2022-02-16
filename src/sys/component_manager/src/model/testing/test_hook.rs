@@ -64,8 +64,10 @@ impl Eq for ComponentInstance {}
 
 impl ComponentInstance {
     pub async fn print(&self) -> String {
-        let mut s: String =
-            self.instanced_moniker.leaf().map_or(String::new(), |m| format!("{}", m.to_partial()));
+        let mut s: String = self
+            .instanced_moniker
+            .leaf()
+            .map_or(String::new(), |m| m.to_child_moniker().to_string());
         let mut children = self.children.lock().await;
         if children.is_empty() {
             return s;

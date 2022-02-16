@@ -113,10 +113,10 @@ mod tests {
         anyhow::Error,
         assert_matches::assert_matches,
         async_trait::async_trait,
+        cm_moniker::InstancedAbsoluteMoniker,
         fidl_fuchsia_component_decl as fdecl,
         moniker::AbsoluteMonikerBase,
-        std::sync::Arc,
-        std::sync::Weak,
+        std::sync::{Arc, Weak},
     };
 
     struct MockOkResolver {
@@ -193,7 +193,7 @@ mod tests {
 
         let child = ComponentInstance::new(
             root.environment.clone(),
-            cm_moniker::InstancedAbsoluteMoniker::parse_string_without_instances("/root/child")?,
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
             "#meta/my-child.cml".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
@@ -239,7 +239,7 @@ mod tests {
 
         let child_one = ComponentInstance::new(
             root.environment.clone(),
-            cm_moniker::InstancedAbsoluteMoniker::parse_string_without_instances("/root/child")?,
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
             "#meta/my-child.cml".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
@@ -251,7 +251,7 @@ mod tests {
 
         let child_two = ComponentInstance::new(
             root.environment.clone(),
-            cm_moniker::InstancedAbsoluteMoniker::parse_string_without_instances("/root/child")?,
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
             "#meta/my-child2.cml".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
@@ -297,7 +297,7 @@ mod tests {
 
         let child = ComponentInstance::new(
             root.environment.clone(),
-            cm_moniker::InstancedAbsoluteMoniker::parse_string_without_instances("/root/child")?,
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
             "#meta/my-child.cml".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,
@@ -334,7 +334,7 @@ mod tests {
 
         let child = ComponentInstance::new(
             root.environment.clone(),
-            cm_moniker::InstancedAbsoluteMoniker::parse_string_without_instances("/root/child")?,
+            InstancedAbsoluteMoniker::parse_str("/root:0/child:0")?,
             "#meta/my-child.cml".to_string(),
             fdecl::StartupMode::Lazy,
             fdecl::OnTerminate::None,

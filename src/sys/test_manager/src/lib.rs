@@ -1402,17 +1402,15 @@ impl RunningSuite {
                 .skip(3)
                 .map(Clone::clone)
                 .collect::<Vec<cm_moniker::InstancedChildMoniker>>();
-            let moniker_relative_to_test_root =
-                cm_moniker::InstancedRelativeMoniker::new(vec![], down_path);
+            let instanced_moniker = cm_moniker::InstancedRelativeMoniker::new(vec![], down_path);
+            let moniker_relative_to_test_root = instanced_moniker.to_relative_moniker();
             sender
                 .send(Ok(SuiteEvents::suite_custom_artifact(ftest_manager::CustomArtifact {
                     directory_and_token: Some(ftest_manager::DirectoryAndToken {
                         directory,
                         token: event_client,
                     }),
-                    component_moniker: Some(
-                        moniker_relative_to_test_root.to_string_without_instances(),
-                    ),
+                    component_moniker: Some(moniker_relative_to_test_root.to_string()),
                     ..ftest_manager::CustomArtifact::EMPTY
                 })
                 .into()))

@@ -12,7 +12,7 @@ use {
     fuchsia_zircon as zx,
     futures::{lock::Mutex, TryStreamExt},
     lazy_static::lazy_static,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::AbsoluteMoniker,
     std::sync::Arc,
 };
 
@@ -34,7 +34,7 @@ impl Into<fsys::ComponentCrashInfo> for ComponentCrashInfo {
     fn into(self) -> fsys::ComponentCrashInfo {
         fsys::ComponentCrashInfo {
             url: Some(self.url),
-            moniker: Some(self.moniker.to_string_without_instances()),
+            moniker: Some(self.moniker.to_string()),
             ..fsys::ComponentCrashInfo::EMPTY
         }
     }
@@ -181,7 +181,7 @@ mod tests {
         assert_eq!(
             Ok(fsys::ComponentCrashInfo {
                 url: Some(url.clone()),
-                moniker: Some(moniker.to_string_without_instances()),
+                moniker: Some(moniker.to_string()),
                 ..fsys::ComponentCrashInfo::EMPTY
             }),
             crash_records_proxy.find_component_by_thread_koid(koid_raw).await?,

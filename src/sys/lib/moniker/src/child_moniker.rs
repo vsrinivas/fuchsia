@@ -22,8 +22,6 @@ pub trait ChildMonikerBase: Eq + PartialOrd + Clone + Default + fmt::Display {
     fn collection(&self) -> Option<&str>;
 
     fn as_str(&self) -> &str;
-
-    fn to_partial(&self) -> ChildMoniker;
 }
 
 /// Validates that the given string is valid as the instance or collection name in a moniker.
@@ -83,10 +81,6 @@ impl ChildMonikerBase for ChildMoniker {
 
     fn as_str(&self) -> &str {
         &self.rep
-    }
-
-    fn to_partial(&self) -> ChildMoniker {
-        ChildMoniker::new(self.name.clone(), self.collection.clone())
     }
 }
 

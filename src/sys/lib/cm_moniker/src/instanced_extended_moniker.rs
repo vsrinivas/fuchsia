@@ -22,13 +22,13 @@ pub enum InstancedExtendedMoniker {
 const EXTENDED_MONIKER_COMPONENT_MANAGER_STR: &'static str = "<component_manager>";
 
 impl InstancedExtendedMoniker {
-    pub fn parse_string_without_instances(rep: &str) -> Result<Self, MonikerError> {
+    pub fn parse_str(rep: &str) -> Result<Self, MonikerError> {
         if rep == EXTENDED_MONIKER_COMPONENT_MANAGER_STR {
             Ok(InstancedExtendedMoniker::ComponentManager)
         } else {
-            Ok(InstancedExtendedMoniker::ComponentInstance(
-                InstancedAbsoluteMoniker::parse_string_without_instances(rep)?,
-            ))
+            Ok(InstancedExtendedMoniker::ComponentInstance(InstancedAbsoluteMoniker::parse_str(
+                rep,
+            )?))
         }
     }
 
@@ -47,13 +47,6 @@ impl InstancedExtendedMoniker {
             (Self::ComponentManager, _) => true,
             (Self::ComponentInstance(_), Self::ComponentManager) => false,
             (Self::ComponentInstance(a), Self::ComponentInstance(b)) => a.contains_in_realm(b),
-        }
-    }
-
-    pub fn to_string_without_instances(&self) -> String {
-        match self {
-            Self::ComponentInstance(m) => m.to_string_without_instances(),
-            Self::ComponentManager => EXTENDED_MONIKER_COMPONENT_MANAGER_STR.into(),
         }
     }
 }
@@ -83,48 +76,31 @@ mod tests {
     use super::*;
 
     #[test]
-    fn extended_monikers_parse() {
+    fn instanced_extended_monikers_parse() {
         assert_eq!(
-            InstancedExtendedMoniker::parse_string_without_instances(
-                EXTENDED_MONIKER_COMPONENT_MANAGER_STR
-            )
-            .unwrap(),
+            InstancedExtendedMoniker::parse_str(EXTENDED_MONIKER_COMPONENT_MANAGER_STR).unwrap(),
             InstancedExtendedMoniker::ComponentManager
         );
         assert_eq!(
-            InstancedExtendedMoniker::parse_string_without_instances("/foo/bar").unwrap(),
+            InstancedExtendedMoniker::parse_str("/foo:0/bar:0").unwrap(),
             InstancedExtendedMoniker::ComponentInstance(
-                InstancedAbsoluteMoniker::parse_string_without_instances("/foo/bar").unwrap()
+                InstancedAbsoluteMoniker::parse_str("/foo:0/bar:0").unwrap()
             )
         );
-        assert!(
-            InstancedExtendedMoniker::parse_string_without_instances("").is_err(),
-            "cannot be empty"
-        );
-        assert!(
-            InstancedExtendedMoniker::parse_string_without_instances("foo/bar").is_err(),
-            "must start with /"
-        );
+        assert!(InstancedExtendedMoniker::parse_str("").is_err(), "cannot be empty");
+        assert!(InstancedExtendedMoniker::parse_str("foo:0/bar:0").is_err(), "must start with /");
     }
 
     #[test]
     fn to_string_functions() {
-        let cm_moniker = InstancedExtendedMoniker::parse_string_without_instances(
-            EXTENDED_MONIKER_COMPONENT_MANAGER_STR,
-        )
-        .unwrap();
-        let foobar_moniker =
-            InstancedExtendedMoniker::parse_string_without_instances("/foo/bar").unwrap();
-        let empty_moniker = InstancedExtendedMoniker::parse_string_without_instances("/").unwrap();
+        let cm_moniker =
+            InstancedExtendedMoniker::parse_str(EXTENDED_MONIKER_COMPONENT_MANAGER_STR).unwrap();
+        let foobar_moniker = InstancedExtendedMoniker::parse_str("/foo:0/bar:0").unwrap();
+        let empty_moniker = InstancedExtendedMoniker::parse_str("/").unwrap();
 
         assert_eq!(format!("{}", cm_moniker), EXTENDED_MONIKER_COMPONENT_MANAGER_STR.to_string());
-        assert_eq!(
-            cm_moniker.to_string_without_instances(),
-            EXTENDED_MONIKER_COMPONENT_MANAGER_STR.to_string()
-        );
+        assert_eq!(cm_moniker.to_string(), EXTENDED_MONIKER_COMPONENT_MANAGER_STR.to_string());
         assert_eq!(format!("{}", foobar_moniker), "/foo:0/bar:0".to_string());
-        assert_eq!(foobar_moniker.to_string_without_instances(), "/foo/bar".to_string());
         assert_eq!(format!("{}", empty_moniker), "/".to_string());
-        assert_eq!(empty_moniker.to_string_without_instances(), "/".to_string());
     }
 }
