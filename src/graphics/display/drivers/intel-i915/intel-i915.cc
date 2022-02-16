@@ -327,7 +327,7 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     }
 
     // Do the magic sequence for Changing CD Clock Frequency specified on
-    // intel-gfx-prm-osrc-skl-vol12-display.pdf p.135
+    // intel-gfx-prm-osrc-skl-vol12-display.pdf p.138-139
     constexpr uint32_t kGtDriverMailboxInterface = 0x138124;
     constexpr uint32_t kGtDriverMailboxData0 = 0x138128;
     constexpr uint32_t kGtDriverMailboxData1 = 0x13812c;
@@ -353,7 +353,8 @@ bool Controller::BringUpDisplayEngine(bool resume) {
 
     cd_clk.WriteTo(mmio_space());
 
-    mmio_space()->Write32(kGtDriverMailboxData0, 0x3);
+    // Write 0x0 to inform the power manager of the move to 337.5MHz
+    mmio_space()->Write32(kGtDriverMailboxData0, 0x0);
     mmio_space()->Write32(kGtDriverMailboxData1, 0x0);
     mmio_space()->Write32(kGtDriverMailboxInterface, 0x80000007);
   } else {
