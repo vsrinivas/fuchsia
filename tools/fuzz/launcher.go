@@ -7,8 +7,10 @@ package fuzz
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -302,53 +304,79 @@ func (q *QemuLauncher) Start() (conn Connector, returnErr error) {
 	defer logFile.Close()
 
 	// Save output from QEMU itself in case of error. This should be very
-	// minimal in size if present at all.
+	// minimal in size, if present at all.
+	//
+	// Watching for EOF on the pipe also doubles as a way of detecting
+	// subprocess exit without having to call Wait(), which we can't do since
+	// we intend to detach later.
+	var stdoutBuf bytes.Buffer
+
 	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("error attaching stdout: %s", err)
 	}
 	cmd.Stderr = cmd.Stdout // capture stderr too
 
-	// Storage for system boot log
-	var logBuf bytes.Buffer
-	logBuf.Grow(64 * 1024) // 64KB should be plenty
+	// Use buffered channels, so goroutines will not block writing to them even
+	// if we never end up needing the result (i.e. because an error/success
+	// condition was reported sooner by another goroutine).
+	stdoutErrCh := make(chan error, 1)
+	go func() {
+		// Copy() will block until either the subprocess exits or we close the
+		// pipe before detaching.
+		if _, err := io.Copy(&stdoutBuf, outPipe); err != nil {
+			stdoutErrCh <- fmt.Errorf("error copying stdout: %s", err)
+		}
+		stdoutErrCh <- fmt.Errorf("qemu exited early")
+	}()
 
-	errCh := make(chan error)
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start qemu: %s", err)
+	}
+
+	// Storage for system boot log, i.e. early serial output.
+	var logBuf bytes.Buffer
+	logBuf.Grow(64 * 1024) // Preallocate 64KB, which should be plenty.
+
+	// Since we ignore EOFs when monitoring the QEMU serial log, the only
+	// straightforward way the goroutine below can know to exit is to be
+	// notified externally. This is done with a Context, which will either
+	// time out or be cancelled by the defer when this method returns.
+	ctx, cancel := context.WithTimeout(context.Background(), q.timeout)
+	defer cancel()
+
+	// In the case of a successful boot, a nil error will be sent to the channel.
+	bootErrCh := make(chan error, 1)
 	go func() {
 		logReader := bufio.NewReader(logFile)
 
 		// Tail the QEMU log file
 		for {
-			// Wait for input to be available
-			for readAttempts := 0; ; readAttempts++ {
-				// There is an overall timeout at a higher level, but if we are
-				// not getting any input coming in at all let's check on the
-				// process in case we can bail sooner (and to ensure that the
-				// goroutine eventually gets cleaned up).
-				if q.Pid != 0 && readAttempts > 2 {
-					alive, err := q.IsRunning()
-					if err != nil {
-						errCh <- fmt.Errorf("error checking process status: %s", err)
-						return
-					}
-					if !alive {
-						errCh <- fmt.Errorf("qemu exited early")
-						return
-					}
+			// Check for any early-exit conditions
+			select {
+			case <-ctx.Done():
+				// The context.Context interface specifies that the
+				// returned error will be either DeadlineExceeded or
+				// Canceled. We should exit in both cases, but want to
+				// report an error in the timeout case.
+				if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+					bootErrCh <- fmt.Errorf("timeout waiting for boot")
 				}
+				return
+			default:
+			}
 
-				_, err := logReader.Peek(1)
-				if err == nil {
-					break
-				} else if err != io.EOF {
-					errCh <- fmt.Errorf("log peek failed: %s", err)
-					return
-				}
+			// See if any input is available
+			if _, err = logReader.Peek(1); err == io.EOF {
 				time.Sleep(100 * time.Millisecond)
+				continue
+			} else if err != nil {
+				bootErrCh <- fmt.Errorf("log peek failed: %s", err)
+				return
 			}
 
 			if _, err := logBuf.ReadFrom(logReader); err != nil {
-				errCh <- fmt.Errorf("log read failed: %s", err)
+				bootErrCh <- fmt.Errorf("log read failed: %s", err)
 				return
 			}
 
@@ -356,41 +384,43 @@ func (q *QemuLauncher) Start() (conn Connector, returnErr error) {
 			// can't recover from EOFs and it doesn't seem worth reimplementing.
 			if bytes.Contains(logBuf.Bytes(), []byte(successfulBootMarker)) {
 				// Early boot has finished
-				errCh <- nil
+				bootErrCh <- nil
 				return
 			}
 		}
 	}()
 
-	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("failed to start qemu: %s", err)
-	}
-
-	q.Pid = cmd.Process.Pid
-
 	glog.Info("Waiting for boot to complete...")
 
+	var bootErr error
 	select {
-	case err := <-errCh:
+	case err := <-stdoutErrCh:
+		bootErr = fmt.Errorf("error starting qemu: %s", err)
+	case err := <-bootErrCh:
 		if err != nil {
-			// Kill the process, just in case this was an error other than EOF
-			cmd.Process.Kill()
-
-			dumpLogs(outPipe, logBuf)
-			return nil, fmt.Errorf("error during boot: %s", err)
+			bootErr = fmt.Errorf("error during boot: %s", err)
 		}
-	case <-time.After(q.timeout):
-		// Kill the process, and wait for the goroutine above to terminate
-		cmd.Process.Kill()
-		<-errCh
+	}
 
-		dumpLogs(outPipe, logBuf)
-		return nil, fmt.Errorf("timeout waiting for boot")
+	if bootErr != nil {
+		// Kill the process, just in case this was an error other than early exit.
+		cmd.Process.Kill()
+
+		// Dump logs before calling Wait(), which will release resources.
+		glog.Errorf("QEMU output: %s", stdoutBuf.String())
+		glog.Errorf("Boot log: %s", logBuf.String())
+
+		// Wait on the process to prevent it from becoming a zombie. Errors
+		// don't matter here.
+		cmd.Wait()
+
+		return nil, bootErr
 	}
 
 	glog.Info("Instance started.")
+	q.Pid = cmd.Process.Pid
 
-	// Detach from the child, since we will never wait on it
+	// Detach from the child, since we will never wait on it.
 	outPipe.Close()
 	cmd.Process.Release()
 
@@ -458,16 +488,6 @@ func (q *QemuLauncher) GetLogs(out io.Writer) error {
 	}
 
 	return nil
-}
-
-// Dump the qemu and boot logs
-func dumpLogs(outPipe io.Reader, logBuf bytes.Buffer) {
-	if errLog, err := ioutil.ReadAll(outPipe); err != nil {
-		glog.Errorf("error reading QEMU output: %s", err)
-	} else {
-		glog.Errorf("QEMU output: %s", errLog)
-	}
-	glog.Errorf("Boot log: %s", logBuf.String())
 }
 
 func loadLauncherFromHandle(build Build, handle Handle) (Launcher, error) {

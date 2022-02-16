@@ -30,6 +30,11 @@ import (
 
 // Drop-in replacement for exec.Command for use during testing.
 func mockCommand(command string, args ...string) *exec.Cmd {
+	// For ps, pass through directly
+	if command == "ps" {
+		return exec.Command(command, args...)
+	}
+
 	// Call ourself as the subprocess so we can mock behavior as appropriate
 	argv := []string{"-logtostderr", "-test.run=TestDoProcessMock", "--", command}
 	argv = append(argv, args...)
@@ -39,6 +44,7 @@ func mockCommand(command string, args ...string) *exec.Cmd {
 	cmd.Env = append(cmd.Env, "MOCK_PROCESS=yes")
 	// Ensure the subprocess CPRNG is seeded uniquely (but deterministically)
 	cmd.Env = append(cmd.Env, fmt.Sprintf("RAND_SEED=%d", rand.Int63()))
+
 	return cmd
 }
 
@@ -136,27 +142,6 @@ func TestDoProcessMock(t *testing.T) {
 		io.WriteString(logWriter, lateBootMessage+"\n")
 
 		exitCode = 0
-	case "ps":
-		// This is kind of a mess. We can't rely on ps to reflect the killed
-		// state of a child process that we don't wait for if we, the parent
-		// process, are still alive, because it will become a zombie and still
-		// show up in the process list. This hacks around that by filtering out
-		// zombie processes and then patching in an appropriate exit code.
-
-		// Request an explicit output format to normalize different flavors of `ps`:
-		args = append([]string{"-ostate="}, args...)
-		cmd := exec.Command(cmd, args...)
-		psOut, err := cmd.Output()
-		if err != nil {
-			if cmderr, ok := err.(*exec.ExitError); ok {
-				exitCode = cmderr.ExitCode()
-			} else {
-				t.Fatalf("Error proxying ps call: %s", err)
-			}
-		}
-		if strings.HasPrefix(string(psOut), "Z") {
-			exitCode = 1
-		}
 	case "symbolizer":
 		if err := fakeSymbolize(os.Stdin, os.Stdout); err != nil {
 			t.Fatalf("failed during scan: %s", err)
