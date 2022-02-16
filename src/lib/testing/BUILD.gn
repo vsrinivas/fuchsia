@@ -11,6 +11,7 @@ group("testing") {
     "loop_fixture",
     "predicates",
     "temp_test_env",
+    "test_list",
   ]
 }
 
