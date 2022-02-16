@@ -8,18 +8,20 @@
 
 use {
     crate::{dirs_to_test, just_pkgfs_for_now, repeat_by_n, PackageSource},
+    anyhow::{anyhow, Context as _, Error},
     assert_matches::assert_matches,
     fidl::endpoints::create_proxy,
     fidl::AsHandleRef,
     fidl_fuchsia_io::{
-        DirectoryProxy, FileProxy, SeekOrigin, MAX_BUF, OPEN_FLAG_APPEND,
-        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+        DirectoryProxy, FileEvent, FileMarker, FileProxy, NodeInfo, SeekOrigin, MAX_BUF,
+        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_NO_REMOTE,
         OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_EXECUTABLE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE,
         VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fuchsia_zircon as zx,
+    futures::StreamExt,
     io_util::directory::open_file,
     std::{
         cmp,
@@ -452,24 +454,56 @@ async fn clone() {
     }
 }
 
-// TODO(fxbug.dev/81447) test Clones for meta as file. Currently, if we try and test Cloning
-// meta as file, it will hang.
 async fn clone_per_package_source(source: PackageSource) {
-    let root_dir = source.dir;
-    assert_clone_success(&root_dir, "file").await;
-    assert_clone_success(&root_dir, "meta/file").await;
+    let root_dir = &source.dir;
+    assert_clone_success(root_dir, "file", "file").await;
+    assert_clone_success(root_dir, "meta/file", "meta/file").await;
+    assert_clone_sends_on_open_event(root_dir, "file").await;
+    assert_clone_sends_on_open_event(root_dir, "meta/file").await;
+
+    // `/meta` opened as a file supports `Clone()`.
+    if source.is_pkgdir() {
+        assert_clone_success(root_dir, "meta", TEST_PKG_HASH).await;
+        assert_clone_sends_on_open_event(root_dir, "meta").await;
+    }
 }
 
-async fn assert_clone_success(package_root: &DirectoryProxy, path: &str) {
+async fn assert_clone_success(package_root: &DirectoryProxy, path: &str, expected_contents: &str) {
     let parent =
         open_file(package_root, path, OPEN_RIGHT_READABLE).await.expect("open parent directory");
     let (clone, server_end) = create_proxy::<fidl_fuchsia_io::FileMarker>().expect("create_proxy");
     let node_request = fidl::endpoints::ServerEnd::new(server_end.into_channel());
     parent.clone(OPEN_RIGHT_READABLE, node_request).expect("cloned node");
-
     let (status, bytes) = clone.read(MAX_BUF).await.unwrap();
     let () = zx::Status::ok(status).unwrap();
-    assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
+    assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
+}
+
+async fn assert_clone_sends_on_open_event(package_root: &DirectoryProxy, path: &str) {
+    async fn verify_file_clone_sends_on_open_event(file: FileProxy) -> Result<(), Error> {
+        match file.take_event_stream().next().await {
+            Some(Ok(FileEvent::OnOpen_ { s, info: Some(boxed) })) => {
+                assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
+                match *boxed {
+                    NodeInfo::File(_) => return Ok(()),
+                    _ => return Err(anyhow!("wrong NodeInfo returned")),
+                }
+            }
+            Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
+            Some(Err(e)) => return Err(e).context("failed to call onopen"),
+            None => return Err(anyhow!("no events!")),
+        }
+    }
+
+    let parent =
+        open_file(package_root, path, OPEN_RIGHT_READABLE).await.expect("open parent directory");
+    let (file_proxy, server_end) = create_proxy::<FileMarker>().expect("create_proxy");
+
+    parent.clone(OPEN_FLAG_DESCRIBE, server_end.into_channel().into()).expect("clone file");
+
+    if let Err(e) = verify_file_clone_sends_on_open_event(file_proxy).await {
+        panic!("failed to verify clone. parent: {:?}, error: {:#}", path, e);
+    }
 }
 
 #[fuchsia::test]

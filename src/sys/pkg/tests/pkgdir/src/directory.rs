@@ -962,7 +962,6 @@ async fn verify_open_failed(node: NodeProxy) -> Result<(), Error> {
     }
 }
 
-// TODO(fxbug.dev/81447) enhance Clone tests.
 #[fuchsia::test]
 async fn clone() {
     for source in dirs_to_test().await {
@@ -972,6 +971,12 @@ async fn clone() {
 
 async fn clone_per_package_source(source: PackageSource) {
     let root_dir = &source.dir;
+
+    assert_clone_sends_on_open_event(root_dir, ".").await;
+    assert_clone_sends_on_open_event(root_dir, "dir").await;
+    assert_clone_sends_on_open_event(root_dir, "meta").await;
+    assert_clone_sends_on_open_event(root_dir, "meta/dir").await;
+
     for flag in [
         0,
         OPEN_RIGHT_READABLE,
@@ -994,6 +999,7 @@ async fn clone_per_package_source(source: PackageSource) {
             // "OPEN_RIGHT_WRITABLE not supported"
             continue;
         }
+
         assert_clone_directory_overflow(
             root_dir,
             ".",
@@ -1015,6 +1021,7 @@ async fn clone_per_package_source(source: PackageSource) {
             ],
         )
         .await;
+
         assert_clone_directory_no_overflow(
             root_dir,
             "dir",
@@ -1064,6 +1071,28 @@ async fn clone_per_package_source(source: PackageSource) {
             )
             .await;
         }
+    }
+}
+
+async fn assert_clone_sends_on_open_event(package_root: &DirectoryProxy, path: &str) {
+    async fn verify_directory_clone_sends_on_open_event(node: NodeProxy) -> Result<(), Error> {
+        match node.take_event_stream().next().await {
+            Some(Ok(NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
+                assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
+                assert_eq!(*boxed, NodeInfo::Directory(DirectoryObject {}));
+                return Ok(());
+            }
+            Some(Ok(other)) => return Err(anyhow!("wrong node event returned: {:?}", other)),
+            Some(Err(e)) => return Err(e).context("failed to call onopen"),
+            None => return Err(anyhow!("no events!")),
+        }
+    }
+
+    let parent = open_parent(package_root, path).await;
+    let (node, server_end) = create_proxy::<NodeMarker>().expect("create_proxy");
+    parent.clone(OPEN_FLAG_DESCRIBE, server_end).expect("clone dir");
+    if let Err(e) = verify_directory_clone_sends_on_open_event(node).await {
+        panic!("failed to verify clone. path: {:?}, error: {:#}", path, e);
     }
 }
 
