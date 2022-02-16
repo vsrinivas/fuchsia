@@ -13,7 +13,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 )
 
-var cmdline = []string{"devmgr.log-to-debuglog=true", "kernel.oom.behavior=reboot"}
+var cmdlineCommon = []string{"devmgr.log-to-debuglog=true", "kernel.oom.behavior=reboot"}
 
 // Triggers the OOM signal without leaking memory. Verifies that fileystems are shut down and the
 // system reboots in a somewhat orderly fashion.
@@ -24,7 +24,7 @@ func TestOOMSignal(t *testing.T) {
 	})
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
-	device.KernelArgs = append(device.KernelArgs, cmdline...)
+	device.KernelArgs = append(device.KernelArgs, cmdlineCommon...)
 	i := distro.Create(device)
 	i.Start()
 
@@ -61,7 +61,7 @@ func TestOOMSignalBeforeCriticalProcess(t *testing.T) {
 	})
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
-	device.KernelArgs = append(device.KernelArgs, cmdline...)
+	device.KernelArgs = append(device.KernelArgs, cmdlineCommon...)
 	i := distro.Create(device)
 	i.Start()
 
@@ -89,9 +89,7 @@ func TestOOMSignalBeforeCriticalProcess(t *testing.T) {
 	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC")
 }
 
-// Leaks memory until an out of memory event is triggered, then backs off.  Verifies that the system
-// reboots.
-func TestOOM(t *testing.T) {
+func testOOMCommon(t *testing.T, cmdline []string, cmd string) {
 	exDir := execDir(t)
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
@@ -109,7 +107,7 @@ func TestOOM(t *testing.T) {
 	i.WaitForLogMessage("console.shell: enabled")
 
 	// Trigger an OOM.
-	i.RunCommand("k pmm oom")
+	i.RunCommand(cmd)
 
 	// Ensure the memory state transition happens.
 	//
@@ -130,34 +128,19 @@ func TestOOM(t *testing.T) {
 	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC")
 }
 
+// Leaks memory until an out of memory event is triggered, then backs off.  Verifies that the system
+// reboots.
+func TestOOM(t *testing.T) {
+	testOOMCommon(t, cmdlineCommon, "k pmm oom")
+}
+
 // Similar to |TestOOM| this test will trigger an out of memory situation and verify the system
 // reboots.  It differs from |TestOOM| in that once the out of memory condition is reached, the
 // kernel continues to leak memory as fast as it can, which may cause various user mode programs to
 // be terminated (e.g. because a page fault cannot commit).  As a result, the reboot sequence may be
 // less orderly and predictable.
 func TestOOMHard(t *testing.T) {
-	exDir := execDir(t)
-	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
-		Emulator: emulator.Qemu,
-	})
-	arch := distro.TargetCPU()
-	device := emulator.DefaultVirtualDevice(string(arch))
-	device.KernelArgs = append(device.KernelArgs, cmdline...)
-	i := distro.Create(device)
-	i.Start()
-
-	// Ensure the kernel OOM system was properly initialized.
-	i.WaitForLogMessage("memory-pressure: memory availability state - Normal")
-
-	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("console.shell: enabled")
-
-	// Trigger an OOM.
-	i.RunCommand("k pmm oom hard")
-	i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory")
-
-	// Ensure that the system reboots without panicking.
-	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC")
+	testOOMCommon(t, cmdlineCommon, "k pmm oom hard")
 }
 
 func execDir(t *testing.T) string {
