@@ -850,6 +850,7 @@ impl std::ops::BitXorAssign for default_enum {
     }
 }
 
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union this_is_a_union {

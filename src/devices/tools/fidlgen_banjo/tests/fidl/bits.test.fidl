@@ -1,0 +1,42 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library banjo.examples.bits;
+
+type uint8_bits = strict bits : uint8 {
+    kOne = 1;
+    kTwo = 2;
+    kFour = 4;
+    kEight = 8;
+    kSixteen = 16;
+};
+
+type uint16_bits = strict bits : uint16 {
+    kOne = 1;
+    kTwo = 2;
+    kFour = 4;
+    kEight = 8;
+    kSixteen = 16;
+    kThirtyTwo = 32;
+};
+
+type uint32_bits = strict bits : uint32 {
+    kOne = 1;
+    kTwo = 2;
+    kFour = 4;
+    kEight = 8;
+    kSixteen = 16;
+    kThirtyTwo = 32;
+    kSixtyFour = 64;
+};
+
+type uint64_bits = strict bits : uint64 {
+    kOne = 1;
+    kTwo = 2;
+    kFour = 4;
+    kEight = 8;
+    kSixteen = 16;
+    kThirtyTwo = 32;
+    kSixtyFour = 64;
+    kOneHundredTwentyEight = 128;
+};

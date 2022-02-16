@@ -64,6 +64,7 @@ impl std::ops::BitXorAssign for ThisIsAnEnum {
     }
 }
 
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union ThisIsAUnion {

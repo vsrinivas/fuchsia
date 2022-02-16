@@ -52,6 +52,7 @@ mod c {
     c_test!(constants);
     c_test!(empty);
     c_test!(enums);
+    c_test!(bits);
     c_test!(example0);
     c_test!(example1);
     c_test!(example2);
@@ -100,6 +101,7 @@ mod rust {
     rust_test!(buffer);
     rust_test!(empty);
     rust_test!(enums);
+    rust_test!(bits);
     rust_test!(example0);
     rust_test!(example1);
     rust_test!(example2);

@@ -139,6 +139,7 @@ impl std::ops::BitXorAssign for SomeEnum {
     }
 }
 
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union SomeUnion {

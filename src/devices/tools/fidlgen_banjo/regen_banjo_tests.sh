@@ -72,10 +72,10 @@ do
     dependencies="$dependencies --files $FIDL_FILES/callback2.test.fidl"
   fi
 
-  if [ "$filename" = "enums" ] || [ "$filename" = "types" ] || [ "$filename" = "example0" ] \
-    || [ "$filename" = "example1" ] || [ "$filename" = "example2" ] \
-    || [ "$filename" = "example3" ] || [ "$filename" = "alignment" ] \
-    || [ "$filename" = "example8" ] || [ "$filename" = "point" ] \
+  if [ "$filename" = "enums" ] || [ "$filename" = "bits" ] || [ "$filename" = "types" ] \
+    || [ "$filename" = "example0" ] || [ "$filename" = "example1" ] \
+    || [ "$filename" = "example2" ] || [ "$filename" = "example3" ] \
+    || [ "$filename" = "alignment" ]  || [ "$filename" = "example8" ] || [ "$filename" = "point" ] \
     || [ "$filename" = "tables" ]; then
     with_cpp=false
   fi

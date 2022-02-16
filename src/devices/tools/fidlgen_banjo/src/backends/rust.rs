@@ -4,7 +4,7 @@
 
 use {
     super::{
-        util::{get_declarations, is_bits, name_buffer, name_size, to_c_name, Decl},
+        util::{get_declarations, name_buffer, name_size, to_c_name, Decl},
         Backend,
     },
     crate::fidl::*,
@@ -57,6 +57,7 @@ fn can_derive_partialeq(
                 }
                 // enum.rs template always derive PartialEq
                 Declaration::Enum { .. } => Ok(true),
+                Declaration::Bits { .. } => Ok(true),
                 // Protocols are not generated, but this supports some tests.
                 Declaration::Interface { .. } => Ok(true),
                 Declaration::Struct => {
@@ -171,6 +172,7 @@ fn type_to_rust_str(
                     type_to_rust_str(&decl._type, maybe_attributes, ir)
                 }
                 Declaration::Enum => Ok(format!("{}", name = identifier.get_name())),
+                Declaration::Bits => Ok(format!("{}", name = identifier.get_name())),
                 // Protocols are not generated, but this supports some tests.
                 Declaration::Interface => return Ok(to_c_name(identifier.get_name())),
                 Declaration::Struct | Declaration::Table | Declaration::Union => {
@@ -281,7 +283,51 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                 for v in &data.members {
                     let c_name = v.name.0.as_str().to_uppercase();
                     let name = if c_name.chars().next().unwrap().is_numeric() {
-                        "_".to_string() + c_name.as_str()
+                        format!("_{}", c_name)
+                    } else {
+                        c_name
+                    };
+                    let value = match v.value {
+                        Constant::Identifier { ref expression, .. } => expression,
+                        Constant::Literal { ref expression, .. } => expression,
+                        Constant::BinaryOperator { ref expression, .. } => expression,
+                    };
+                    enum_defines.push(format!(
+                        "    pub const {name}: Self = Self({val});",
+                        name = name,
+                        val = value,
+                    ));
+                }
+
+                Ok(format!(
+                    include_str!("templates/rust/enum.rs"),
+                    ty = ty,
+                    name = data.name.get_name(),
+                    enum_decls = enum_defines.join("\n")
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join(""))
+    }
+
+    fn codegen_bits_decl(
+        &self,
+        declarations: &Vec<Decl<'_>>,
+        ir: &FidlIr,
+    ) -> Result<String, Error> {
+        Ok(declarations
+            .iter()
+            .filter_map(|decl| match decl {
+                Decl::Bits { data } => Some(data),
+                _ => None,
+            })
+            .map(|data| {
+                let mut enum_defines = Vec::new();
+                let ty = type_to_rust_str(&data._type, &data.maybe_attributes, ir)?;
+                for v in &data.members {
+                    let c_name = v.name.0.as_str().to_uppercase();
+                    let name = if c_name.chars().next().unwrap().is_numeric() {
+                        format!("_{}", c_name)
                     } else {
                         c_name
                     };
@@ -353,13 +399,6 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                 let mut partial_eq = true;
                 let mut parents = HashSet::new();
                 for field in &data.members {
-                    if is_bits(&field._type, ir) {
-                        field_str.push(format!(
-                            "    // Skipping type {:?}, see http:://fxbug.dev/82088",
-                            &field._type
-                        ));
-                        continue;
-                    }
                     parents.clear();
                     parents.insert(data.name.clone());
                     if !can_derive_partialeq(&field._type, &mut parents, ir)? {
@@ -409,13 +448,6 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                 for field in &data.members {
                     if field.reserved {
                         // Ignore reserved fields.
-                        continue;
-                    }
-                    if is_bits(&field._type.as_ref().expect("Missing type on table field"), ir) {
-                        field_str.push(format!(
-                            "    // Skipping type {:?}, see http:://fxbug.dev/82088",
-                            &field._type
-                        ));
                         continue;
                     }
                     parents.clear();
@@ -523,6 +555,7 @@ impl<'a, W: io::Write> Backend<'a, W> for RustBackend<'a, W> {
             self.w.write_fmt(format_args!(
                 include_str!("templates/rust/body.rs"),
                 enum_decls = self.codegen_enum_decl(&decl_order, &ir)?,
+                bits_decls = self.codegen_bits_decl(&decl_order, &ir)?,
                 constant_decls = self.codegen_const_decl(&decl_order, &ir)?,
                 struct_decls = self.codegen_struct_decl(&decl_order, &ir)?,
                 table_decls = self.codegen_table_decl(&decl_order, &ir)?,

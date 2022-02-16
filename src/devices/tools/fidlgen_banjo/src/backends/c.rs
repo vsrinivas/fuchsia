@@ -6,8 +6,8 @@ use {
     super::{
         util::{
             array_bounds, for_banjo_transport, get_base_type_from_alias, get_declarations,
-            get_doc_comment, is_bits, is_derive_debug, is_namespaced, name_buffer, name_size,
-            not_callback, primitive_type_to_c_str, to_c_name, Decl, ProtocolType,
+            get_doc_comment, is_derive_debug, is_namespaced, name_buffer, name_size, not_callback,
+            primitive_type_to_c_str, to_c_name, Decl, ProtocolType,
         },
         Backend,
     },
@@ -138,14 +138,6 @@ fn field_to_c_str(
     ir: &FidlIr,
 ) -> Result<String, Error> {
     let mut accum = String::new();
-
-    if is_bits(ty, ir) {
-        return Ok(format!(
-            "{indent}// Skipping type {ty:?}, see http:://fxbug.dev/82088",
-            indent = indent,
-            ty = ty,
-        ));
-    }
 
     accum.push_str(get_doc_comment(maybe_attributes, 1).as_str());
     let c_name = if preserve_names { String::from(&ident.0) } else { to_c_name(&ident.0) };
@@ -565,6 +557,46 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         Ok(accum)
     }
 
+    fn codegen_bits_decl(&self, data: &Bits, ir: &FidlIr) -> Result<String, Error> {
+        let name = &data.name.get_name();
+        let c_name_lowercase = to_c_name(&name);
+        let c_name_uppercase = to_c_name(&name).to_uppercase();
+
+        struct BitsParts {
+            v_name: String,
+            c_size: String,
+        }
+        let bits_defines = data
+            .members
+            .iter()
+            .map(|v| {
+                Ok(BitsParts {
+                    v_name: v.name.0.to_uppercase().trim().to_string(),
+                    c_size: constant_to_c_str(&data._type, &v.value, ir)?,
+                })
+            })
+            .map(|bits_parts: Result<_, Error>| {
+                let bits_parts = bits_parts?;
+                Ok(format!(
+                    "#define {c_name}_{v_name} {c_size}",
+                    c_name = c_name_uppercase,
+                    v_name = bits_parts.v_name,
+                    c_size = bits_parts.c_size,
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join("\n");
+
+        let declarations = format!(
+            "typedef {ty} {c_name}_t;\n{bits_defines}",
+            c_name = c_name_lowercase,
+            ty = type_to_c_str(&data._type, ir)?,
+            bits_defines = bits_defines,
+        );
+
+        Ok(declarations)
+    }
+
     fn codegen_union_decl(&self, data: &Union) -> Result<String, Error> {
         Ok(format!("typedef union {c_name} {c_name}_t;", c_name = to_c_name(&data.name.get_name())))
     }
@@ -935,6 +967,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
             .filter_map(|decl| match decl {
                 Decl::Const { data } => Some(self.codegen_constant_decl(data, &ir)),
                 Decl::Enum { data } => Some(self.codegen_enum_decl(data, &ir)),
+                Decl::Bits { data } => Some(self.codegen_bits_decl(data, &ir)),
                 Decl::Interface { data } => Some(self.codegen_protocol_decl(data, &ir)),
                 Decl::Struct { data } => Some(self.codegen_struct_decl(data)),
                 Decl::Table { data } => Some(self.codegen_table_decl(data)),

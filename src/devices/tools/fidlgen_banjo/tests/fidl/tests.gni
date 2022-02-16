@@ -47,6 +47,13 @@ _simple_libraries = [
     ]
   },
   {
+    name = "bits"
+    backends = [
+      "c",
+      "rust",
+    ]
+  },
+  {
     name = "callback"
     backends = [
       "c",

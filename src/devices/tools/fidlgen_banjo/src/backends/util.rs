@@ -17,6 +17,7 @@ static ATTR_NAME_TRANSPORT: &'static str = "transport";
 pub enum Decl<'a> {
     Const { data: &'a fidl::Const },
     Enum { data: &'a fidl::Enum },
+    Bits { data: &'a fidl::Bits },
     Interface { data: &'a fidl::Interface },
     Struct { data: &'a fidl::Struct },
     Table { data: &'a fidl::Table },
@@ -33,6 +34,9 @@ pub fn get_declarations<'b>(ir: &'b FidlIr) -> Result<Vec<Decl<'b>>, Error> {
             })),
             Declaration::Enum => Some(Ok(Decl::Enum {
                 data: ir.enum_declarations.iter().filter(|e| e.name == *ident).next()?,
+            })),
+            Declaration::Bits => Some(Ok(Decl::Bits {
+                data: ir.bits_declarations.iter().filter(|e| e.name == *ident).next()?,
             })),
             Declaration::Interface => Some(Ok(Decl::Interface {
                 data: ir.interface_declarations.iter().filter(|e| e.name == *ident).next()?,
@@ -346,19 +350,6 @@ pub fn name_size(maybe_attributes: &Option<Vec<Attribute>>) -> &'static str {
     }
 }
 
-pub fn is_bits(ty: &Type, ir: &FidlIr) -> bool {
-    match ty {
-        Type::Identifier { identifier, .. } => match ir
-            .get_declaration(identifier)
-            .expect(&format!("Could not find declaration for {:?}", identifier))
-        {
-            Declaration::Bits => true,
-            _ => false,
-        },
-        _ => false,
-    }
-}
-
 //--------------------------------------------
 // Utilities shared by the three C++ backends.
 
@@ -411,9 +402,11 @@ pub fn type_to_cpp_str(ty: &Type, wrappers: bool, ir: &FidlIr) -> Result<String,
             .get_declaration(identifier)
             .expect(&format!("Could not find declaration for {:?}", identifier))
         {
-            Declaration::Struct | Declaration::Table | Declaration::Union | Declaration::Enum => {
-                Ok(format!("{}_t", to_c_name(&identifier.get_name())))
-            }
+            Declaration::Struct
+            | Declaration::Table
+            | Declaration::Union
+            | Declaration::Enum
+            | Declaration::Bits => Ok(format!("{}_t", to_c_name(&identifier.get_name()))),
             Declaration::Interface => {
                 let c_name = to_c_name(&identifier.get_name());
                 if not_callback(identifier, ir)? {
@@ -512,7 +505,9 @@ pub fn get_in_params(
                                 if param.maybe_attributes.has("InOut") { "" } else { "const " };
                             Ok(format!("{}{}* {}", prefix, ty_name, name))
                         }
-                        Declaration::Enum => Ok(format!("{} {}", ty_name, name)),
+                        Declaration::Enum | Declaration::Bits => {
+                            Ok(format!("{} {}", ty_name, name))
+                        }
                         decl => Err(anyhow!("Unsupported declaration: {:?}", decl)),
                     }
                 }
