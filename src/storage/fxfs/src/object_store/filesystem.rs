@@ -160,11 +160,9 @@ impl From<Arc<FxFilesystem>> for OpenFxFilesystem {
 impl Drop for OpenFxFilesystem {
     fn drop(&mut self) {
         if !self.read_only && !self.closed.load(atomic::Ordering::SeqCst) {
-            let this = self.0.clone();
-            fasync::Task::spawn(async move {
-                let _ = this.close().await;
-            })
-            .detach();
+            log::error!(
+                "OpenFxFilesystem dropped without first being closed. Data loss may occur."
+            );
         }
     }
 }

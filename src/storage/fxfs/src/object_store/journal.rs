@@ -1402,6 +1402,7 @@ mod tests {
                 object_ids.push(handle.object_id());
             }
         }
+        fs.close().await.expect("fs close failed");
         let device = fs.take_device().await;
         device.reopen();
         let fs = FxFilesystem::open(device).await.expect("open failed");
