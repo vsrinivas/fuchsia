@@ -5,9 +5,9 @@
 source_set("llcpp") {
   sources = [
     "constants.h",
+    "handlers.h",
     "outgoing_directory.cc",
     "outgoing_directory.h",
-    "service_handler.h",
   ]
 
   public_deps = [
@@ -17,6 +17,7 @@ source_set("llcpp") {
     "//sdk/lib/stdcompat",
     "//sdk/lib/svc",
     "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/zx",
   ]

@@ -15,13 +15,13 @@
 #include <lib/stdcompat/string_view.h>
 #include <lib/sys/component/llcpp/constants.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
-#include <lib/sys/component/llcpp/service_handler.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
 #include <algorithm>
+#include <array>
 #include <memory>
 #include <utility>
 
@@ -33,6 +33,9 @@ namespace {
 
 // Expected path of directory hosting FIDL Services & Protocols.
 constexpr char kSvcDirectoryPath[] = "svc";
+
+constexpr char kTestString[] = "FizzBuzz";
+constexpr char kTestStringReversed[] = "zzuBzziF";
 
 class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
  public:
@@ -56,11 +59,13 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
 class OutgoingDirectoryTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
-    outgoing_directory_ = std::make_unique<component_llcpp::OutgoingDirectory>(dispatcher());
+    outgoing_directory_ = std::make_unique<component_llcpp::OutgoingDirectory>();
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-    ZX_ASSERT(outgoing_directory_->Serve(std::move(endpoints->server)).is_ok());
+    ZX_ASSERT(outgoing_directory_->Serve(std::move(endpoints->server), dispatcher()).is_ok());
     svc_client_ =
         fidl::WireClient<fuchsia_io::Directory>(std::move(endpoints->client), dispatcher());
+
+    async_set_default_dispatcher(dispatcher());
   }
 
   component_llcpp::OutgoingDirectory* GetOutgoingDirectory() { return outgoing_directory_.get(); }
@@ -108,10 +113,7 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
 // Test that outgoing directory is able to serve multiple service members. In
 // this case, the directory will host the `fuchsia.examples.EchoService` which
 // contains two `fuchsia.examples.Echo` member. One regular, and one reversed.
-TEST_F(OutgoingDirectoryTest, Control) {
-  constexpr char kTestString[] = "FizzBuzz";
-  constexpr char kTestStringReversed[] = "zzuBzziF";
-
+TEST_F(OutgoingDirectoryTest, AddServiceServesAllMembers) {
   // Setup service handler.
   component_llcpp::ServiceHandler service_handler;
   fuchsia_examples::EchoService::Handler echo_service_handler(&service_handler);
@@ -168,10 +170,10 @@ TEST_F(OutgoingDirectoryTest, Control) {
 // Test user errors on |Serve| method.
 // These test cases use a local instance of outgoing directory instead of
 // the class' instance in order to test |Serve|.
-TEST_F(OutgoingDirectoryTest, Serve) {
+TEST_F(OutgoingDirectoryTest, ServeFailsOnBadInput) {
   // Test invalid directory handle.
   {
-    auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>(dispatcher());
+    auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>();
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     // Close server end in order to  invalidate channel.
     endpoints->server.reset();
@@ -181,7 +183,7 @@ TEST_F(OutgoingDirectoryTest, Serve) {
 
   // Test multiple invocations of |Serve|.
   {
-    auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>(dispatcher());
+    auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>();
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ZX_ASSERT(outgoing_directory->Serve(std::move(endpoints->server)).is_ok());
     auto fresh_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
@@ -190,13 +192,104 @@ TEST_F(OutgoingDirectoryTest, Serve) {
   }
 }
 
+// Test that serving a FIDL Protocol works as expected.
+TEST_F(OutgoingDirectoryTest, AddProtocolCanServeMultipleProtocols) {
+  constexpr static std::array<std::pair<bool, const char*>, 2> kIsReversedAndPaths = {
+      {{false, "fuchsia.examples.Echo"}, {true, "fuchsia.examples.Ohce"}}};
+
+  // Setup fuchsia.examples.Echo servers
+  EchoImpl regular_impl(/*reversed=*/false);
+  EchoImpl reversed_impl(/*reversed=*/true);
+  for (auto [reversed, path] : kIsReversedAndPaths) {
+    auto* impl = reversed ? &reversed_impl : &regular_impl;
+    ASSERT_EQ(GetOutgoingDirectory()
+                  ->AddProtocol<fuchsia_examples::Echo>(impl, dispatcher(), path)
+                  .status_value(),
+              ZX_OK);
+  }
+
+  // Setup fuchsia.examples.Echo client
+  for (auto [reversed, path] : kIsReversedAndPaths) {
+    auto client_end = service::ConnectAt<fuchsia_examples::Echo>(TakeSvcClientEnd(), path);
+    ASSERT_EQ(client_end.status_value(), ZX_OK);
+    fidl::WireClient<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher());
+
+    std::string reply_received;
+    client->EchoString(
+        kTestString, [&reply_received, quit_loop = QuitLoopClosure()](
+                         fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
+          ZX_ASSERT_MSG(result.ok(), "EchoString failed: %s",
+                        result.error().FormatDescription().c_str());
+          auto* response = result.Unwrap();
+          reply_received = std::string(response->response.data(), response->response.size());
+          quit_loop();
+        });
+    RunLoop();
+
+    auto expected_reply = reversed ? kTestStringReversed : kTestString;
+    EXPECT_EQ(reply_received, expected_reply);
+  }
+}
+
+TEST_F(OutgoingDirectoryTest, AddProtocolFailsIfServeNotCalled) {
+  auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>();
+  EchoImpl impl(/*reversed=*/false);
+  EXPECT_EQ(
+      outgoing_directory->AddProtocol<fuchsia_examples::Echo>(&impl, dispatcher()).status_value(),
+      ZX_ERR_BAD_HANDLE);
+}
+
+TEST_F(OutgoingDirectoryTest, AddProtocolFailsIfImplIsNullptr) {
+  EXPECT_EQ(GetOutgoingDirectory()
+                ->AddProtocol<fuchsia_examples::Echo>(/*impl=*/nullptr, dispatcher())
+                .status_value(),
+            ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(OutgoingDirectoryTest, AddProtocolFailsIfDispatcherIsNullptr) {
+  EchoImpl impl(/*reversed=*/false);
+  // Before nullifying the global dispatcher, we'll keep a reference to it
+  // in a local variable. This is needed because this test's teardown relies on
+  // it being present.
+  async_dispatcher_t* dispatcher = async_get_default_dispatcher();
+
+  // Now that it's in a local variable, it's safe to set this to nullptr.
+  async_set_default_dispatcher(nullptr);
+  EXPECT_EQ(GetOutgoingDirectory()
+                ->AddProtocol<fuchsia_examples::Echo>(&impl, /*dispatcher=*/nullptr)
+                .status_value(),
+            ZX_ERR_INVALID_ARGS);
+
+  // Return original dispatcher before test tear down.
+  async_set_default_dispatcher(dispatcher);
+}
+
+TEST_F(OutgoingDirectoryTest, RemoveProtocolFailsIfEntryDoesNotExist) {
+  EXPECT_EQ(GetOutgoingDirectory()->RemoveProtocol<fuchsia_examples::Echo>().status_value(),
+            ZX_ERR_NOT_FOUND);
+}
+
+TEST_F(OutgoingDirectoryTest, RemoveProtocolFailsIfServeNotCalled) {
+  auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>();
+  component_llcpp::ServiceHandler service_handler;
+  EXPECT_EQ(outgoing_directory->RemoveProtocol<fuchsia_examples::Echo>().status_value(),
+            ZX_ERR_BAD_HANDLE);
+}
+
 TEST_F(OutgoingDirectoryTest, AddServiceFailsIfServeNotCalled) {
-  auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>(dispatcher());
+  auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>();
   component_llcpp::ServiceHandler service_handler;
   EXPECT_EQ(
       outgoing_directory->AddService<fuchsia_examples::EchoService>(std::move(service_handler))
           .status_value(),
-      ZX_ERR_ACCESS_DENIED);
+      ZX_ERR_BAD_HANDLE);
+}
+
+TEST_F(OutgoingDirectoryTest, RemoveServiceFailsIfServeNotCalled) {
+  auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>();
+  component_llcpp::ServiceHandler service_handler;
+  EXPECT_EQ(outgoing_directory->RemoveService<fuchsia_examples::EchoService>().status_value(),
+            ZX_ERR_BAD_HANDLE);
 }
 
 TEST_F(OutgoingDirectoryTest, RemoveServiceFailsIfEntryDoesNotExist) {
@@ -216,7 +309,7 @@ class OutgoingDirectoryPathParameterizedFixture
 
 TEST_P(OutgoingDirectoryPathParameterizedFixture, BadServicePaths) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>(loop.dispatcher());
+  auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>();
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ZX_ASSERT(outgoing_directory->Serve(std::move(endpoints->server)).is_ok());
   component_llcpp::ServiceHandler service_handler;
