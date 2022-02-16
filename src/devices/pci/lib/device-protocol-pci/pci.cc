@@ -12,7 +12,7 @@ zx_status_t pci_configure_irq_mode(const pci_protocol_t* pci, uint32_t requested
     uint32_t irq_cnt = 0;
     zx_status_t query_status = pci->ops->query_irq_mode(pci->ctx, mode, &irq_cnt);
     if (query_status == ZX_OK && irq_cnt >= requested_irq_count) {
-      zx_status_t set_status = pci->ops->set_irq_mode(pci->ctx, mode, requested_irq_count);
+      zx_status_t set_status = pci->ops->set_interrupt_mode(pci->ctx, mode, requested_irq_count);
       if (set_status == ZX_OK && out_mode) {
         *out_mode = mode;
       }

@@ -1638,7 +1638,7 @@ enable_msi:
     return status;
   }
 
-  return pci_set_irq_mode(trans_pcie->pci, trans_pcie->irq_mode, request_irq_count);
+  return pci_set_interrupt_mode(trans_pcie->pci, trans_pcie->irq_mode, request_irq_count);
 }
 
 #if 0   // NEEDS_PORTING

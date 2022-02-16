@@ -146,7 +146,7 @@ protocol Pci {
         s zx.status;
         max_irqs uint32;
     });
-    SetIrqMode(struct {
+    SetInterruptMode(struct {
         mode fuchsia.hardware.syscalls.pci.PciIrqMode;
         requested_irq_count uint32;
     }) -> (struct {

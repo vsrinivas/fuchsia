@@ -304,7 +304,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
   }
   {
     pci_irq_mode_t mode = PCI_IRQ_MODE_LEGACY;
-    ASSERT_OK(dev.SetIrqMode(mode, 1));
+    ASSERT_OK(dev.PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
     auto* node = hierarchy().GetByPath({kTestNodeName});
     ASSERT_NO_FATAL_FAILURE(
@@ -313,7 +313,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
   }
   {
     pci_irq_mode_t mode = PCI_IRQ_MODE_LEGACY_NOACK;
-    ASSERT_OK(dev.SetIrqMode(mode, 1));
+    ASSERT_OK(dev.PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
     auto* node = hierarchy().GetByPath({kTestNodeName});
     ASSERT_NO_FATAL_FAILURE(
@@ -322,7 +322,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
   }
   {
     pci_irq_mode_t mode = PCI_IRQ_MODE_MSI;
-    ASSERT_OK(dev.SetIrqMode(mode, 1));
+    ASSERT_OK(dev.PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
     auto* node = hierarchy().GetByPath({kTestNodeName});
     ASSERT_NO_FATAL_FAILURE(
@@ -333,7 +333,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
 #ifdef ENABLE_MSIX
   {
     pci_irq_mode_t mode = PCI_IRQ_MODE_MSI_X;
-    ASSERT_OK(dev.SetIrqMode(mode, 1));
+    ASSERT_OK(dev.PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
     auto* node = hierarchy().GetByPath({kTestNodeName});
     ASSERT_NO_FATAL_FAILURE(
@@ -356,7 +356,7 @@ TEST_F(PciDeviceTests, InspectLegacyNoPin) {
 TEST_F(PciDeviceTests, InspectLegacy) {
   // Signal and Ack the legacy IRQ once each to ensure add is happening.
   auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
-  ASSERT_OK(dev.SetIrqMode(PCI_IRQ_MODE_LEGACY, 1));
+  ASSERT_OK(dev.PciSetInterruptMode(PCI_IRQ_MODE_LEGACY, 1));
   {
     fbl::AutoLock _(dev.dev_lock());
     ASSERT_OK(dev.SignalLegacyIrq(0x10000));
@@ -396,7 +396,7 @@ TEST_F(PciDeviceTests, InspectLegacy) {
 TEST_F(PciDeviceTests, InspectMSI) {
   uint32_t irq_cnt = 4;
   auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
-  ASSERT_OK(dev.SetIrqMode(PCI_IRQ_MODE_MSI_X, irq_cnt));
+  ASSERT_OK(dev.PciSetInterruptMode(PCI_IRQ_MODE_MSI_X, irq_cnt));
 
   zx_info_msi_t info{};
   {

@@ -16,7 +16,7 @@ protocol/member fuchsia.hardware.pci/Pci.GetNextExtendedCapability(uint16 id,uin
 protocol/member fuchsia.hardware.pci/Pci.MapInterrupt(uint32 which_irq) -> (int32 s,zx/handle:INTERRUPT handle)
 protocol/member fuchsia.hardware.pci/Pci.QueryIrqMode(fuchsia.hardware.syscalls.pci/PciIrqMode mode) -> (int32 s,uint32 max_irqs)
 protocol/member fuchsia.hardware.pci/Pci.ResetDevice() -> (int32 s)
-protocol/member fuchsia.hardware.pci/Pci.SetIrqMode(fuchsia.hardware.syscalls.pci/PciIrqMode mode,uint32 requested_irq_count) -> (int32 s)
+protocol/member fuchsia.hardware.pci/Pci.SetInterruptMode(fuchsia.hardware.syscalls.pci/PciIrqMode mode,uint32 requested_irq_count) -> (int32 s)
 protocol fuchsia.hardware.pci/Pci
 enum/member fuchsia.hardware.pci/PciCapId.ADVANCED_FEATURES 19
 enum/member fuchsia.hardware.pci/PciCapId.AGP 2

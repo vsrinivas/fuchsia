@@ -66,10 +66,10 @@ zx_status_t PciBackend::ConfigureIrqMode() {
   pci_irq_mode_t mode = PCI_IRQ_MODE_MSI_X;
   zx_status_t st = pci().QueryIrqMode(mode, &irq_cnt);
   irq_cnt = std::min(2u, irq_cnt);
-  if ((st != ZX_OK || irq_cnt < 2) || (st = pci().SetIrqMode(mode, irq_cnt)) != ZX_OK) {
+  if ((st != ZX_OK || irq_cnt < 2) || (st = pci().SetInterruptMode(mode, irq_cnt)) != ZX_OK) {
     mode = PCI_IRQ_MODE_LEGACY;
     zx_status_t intx_st = pci().QueryIrqMode(mode, &irq_cnt);
-    if (intx_st != ZX_OK || (intx_st = pci().SetIrqMode(mode, irq_cnt)) != ZX_OK) {
+    if (intx_st != ZX_OK || (intx_st = pci().SetInterruptMode(mode, irq_cnt)) != ZX_OK) {
       zxlogf(ERROR, "Failed to configure a virtio IRQ mode (MSI-X: %s, INTx: %s)",
              zx_status_get_string(st), zx_status_get_string(intx_st));
       return intx_st;

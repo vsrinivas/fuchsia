@@ -88,7 +88,7 @@ IntelHDAController::~IntelHDAController() {
   // Disable IRQs at the PCI level.
   if (pci_.ops != nullptr) {
     ZX_DEBUG_ASSERT(pci_.ctx != nullptr);
-    pci_.ops->set_irq_mode(pci_.ctx, ZX_PCIE_IRQ_MODE_DISABLED, 0);
+    pci_.ops->set_interrupt_mode(pci_.ctx, ZX_PCIE_IRQ_MODE_DISABLED, 0);
   }
 
   // Let go of our stream state.

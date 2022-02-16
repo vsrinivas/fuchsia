@@ -195,7 +195,7 @@ zx_status_t KernelPci::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_ir
   return zx_pci_query_irq_mode(device_.handle, mode, out_max_irqs);
 }
 
-zx_status_t KernelPci::PciSetIrqMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
+zx_status_t KernelPci::PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
   return zx_pci_set_irq_mode(device_.handle, mode, requested_irq_count);
 }
 

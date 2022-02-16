@@ -62,10 +62,10 @@ Steps `1` and `2` are usually done closely together, for example:
 // Query whether we have MSI or Legacy interrupts.
 uint32_t irq_cnt = 0;
 if ((pci_query_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt) == ZX_OK) &&
-    (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
+    (pci_set_interrupt_mode(&edev->pci, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
     // using MSI interrupts
 } else if ((pci_query_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == ZX_OK) &&
-           (pci_set_irq_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
+           (pci_set_interrupt_mode(&edev->pci, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
     // using legacy interrupts
 } else {
     // an error
@@ -94,7 +94,7 @@ The third argument is a pointer to integer that returns how many
 interrupts of the specified type your device supports.
 
 Having determined the kind of interrupt supported, you then call
-**pci_set_irq_mode()**
+**pci_set_interrupt_mode()**
 to indicate that this is indeed the kind of interrupt that you wish to use.
 
 Finally, you call **pci_map_interrupt()**

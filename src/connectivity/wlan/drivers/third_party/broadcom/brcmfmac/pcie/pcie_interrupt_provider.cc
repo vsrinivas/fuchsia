@@ -69,7 +69,7 @@ zx_status_t PcieInterruptProvider::Create(
               zx_status_get_string(status));
     return status;
   }
-  if ((status = pci_proto->SetIrqMode(ZX_PCIE_IRQ_MODE_MSI, 1)) != ZX_OK) {
+  if ((status = pci_proto->SetInterruptMode(ZX_PCIE_IRQ_MODE_MSI, 1)) != ZX_OK) {
     BRCMF_ERR("Failed to set MSI interrupt mode: %s", zx_status_get_string(status));
     return status;
   }

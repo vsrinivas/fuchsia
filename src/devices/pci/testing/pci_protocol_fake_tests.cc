@@ -150,7 +150,7 @@ TEST_F(FakePciProtocolTests, QueryIrqMode) {
   ASSERT_EQ(3, irq_cnt);
 }
 
-TEST_F(FakePciProtocolTests, SetIrqMode) {
+TEST_F(FakePciProtocolTests, SetInterruptMode) {
   fake_pci().AddLegacyInterrupt();
   fake_pci().AddMsiInterrupt();
   fake_pci().AddMsiInterrupt();
@@ -160,25 +160,25 @@ TEST_F(FakePciProtocolTests, SetIrqMode) {
   fake_pci().AddMsixInterrupt();
 
   pci_irq_mode_t mode = PCI_IRQ_MODE_LEGACY;
-  ASSERT_OK(pci().SetIrqMode(mode, 1));
+  ASSERT_OK(pci().SetInterruptMode(mode, 1));
   ASSERT_EQ(1, fake_pci().GetIrqCount());
   ASSERT_EQ(mode, fake_pci().GetIrqMode());
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().SetIrqMode(mode, 2));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().SetInterruptMode(mode, 2));
 
   mode = PCI_IRQ_MODE_MSI;
-  ASSERT_OK(pci().SetIrqMode(mode, 1));
+  ASSERT_OK(pci().SetInterruptMode(mode, 1));
   ASSERT_EQ(1, fake_pci().GetIrqCount());
   ASSERT_EQ(mode, fake_pci().GetIrqMode());
 
-  ASSERT_OK(pci().SetIrqMode(mode, 2));
+  ASSERT_OK(pci().SetInterruptMode(mode, 2));
   ASSERT_EQ(2, fake_pci().GetIrqCount());
   ASSERT_EQ(mode, fake_pci().GetIrqMode());
 
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().SetIrqMode(mode, 3));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().SetInterruptMode(mode, 3));
   ASSERT_EQ(2, fake_pci().GetIrqCount());
   ASSERT_EQ(mode, fake_pci().GetIrqMode());
 
-  ASSERT_OK(pci().SetIrqMode(mode, 4));
+  ASSERT_OK(pci().SetInterruptMode(mode, 4));
   ASSERT_EQ(4, fake_pci().GetIrqCount());
   ASSERT_EQ(mode, fake_pci().GetIrqMode());
 }
@@ -200,7 +200,7 @@ bool MatchKoids(const zx::object<T>& first, const zx::object<T>& second) {
 
 TEST_F(FakePciProtocolTests, MapInterrupt) {
   // One notable difference between this fake and the real PCI protocol is that
-  // it is an error to call SetIrqMode and switch modes if an existing MSI is
+  // it is an error to call SetInterruptMode and switch modes if an existing MSI is
   // mapped still. In the fake though, it's fine to do so. Switching IRQ modes
   // is not something drivers do in practice, so it's fine if they encounter
   // ZX_ERR_BAD_STATE at runtime if documentation details it.
@@ -213,7 +213,7 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
 
   zx::interrupt interrupt{};
   uint32_t irq_cnt = 1;
-  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_LEGACY, irq_cnt));
+  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_LEGACY, irq_cnt));
   ASSERT_OK(pci().MapInterrupt(0, &interrupt));
   ASSERT_TRUE(MatchKoids(legacy, interrupt));
   ASSERT_FALSE(MatchKoids(msi0, interrupt));
@@ -224,7 +224,7 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().MapInterrupt(irq_cnt, &interrupt));
   interrupt.reset();
 
-  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_LEGACY_NOACK, irq_cnt));
+  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_LEGACY_NOACK, irq_cnt));
   ASSERT_OK(pci().MapInterrupt(0, &interrupt));
   ASSERT_TRUE(MatchKoids(legacy, interrupt));
   ASSERT_FALSE(MatchKoids(msi0, interrupt));
@@ -236,7 +236,7 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   interrupt.reset();
 
   irq_cnt = 2;
-  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, irq_cnt));
+  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_MSI, irq_cnt));
   ASSERT_OK(pci().MapInterrupt(0, &interrupt));
   ASSERT_FALSE(MatchKoids(legacy, interrupt));
   ASSERT_TRUE(MatchKoids(msi0, interrupt));
@@ -257,7 +257,7 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   interrupt.reset();
 
   irq_cnt = 3;
-  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI_X, irq_cnt));
+  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_MSI_X, irq_cnt));
   ASSERT_OK(pci().MapInterrupt(0, &interrupt));
   ASSERT_FALSE(MatchKoids(legacy, interrupt));
   ASSERT_FALSE(MatchKoids(msi0, interrupt));
@@ -293,24 +293,24 @@ TEST_F(FakePciProtocolTests, VerifyAllocatedMsis) {
   fake_pci().AddMsixInterrupt();
 
   zx::interrupt zero, one;
-  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, 2));
+  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_MSI, 2));
   ASSERT_OK(pci().MapInterrupt(0, &zero));
   ASSERT_OK(pci().MapInterrupt(1, &one));
   // Changing to other IRQ modes should be blocked because IRQ handles are outstanding.
-  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetIrqMode(PCI_IRQ_MODE_LEGACY, 1));
-  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetIrqMode(PCI_IRQ_MODE_LEGACY_NOACK, 1));
-  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetIrqMode(PCI_IRQ_MODE_MSI_X, 1));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetInterruptMode(PCI_IRQ_MODE_LEGACY, 1));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetInterruptMode(PCI_IRQ_MODE_LEGACY_NOACK, 1));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetInterruptMode(PCI_IRQ_MODE_MSI_X, 1));
   zero.reset();
   one.reset();
   // Now transitioning should work.
-  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_LEGACY, 1));
-  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI_X, 1));
+  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_LEGACY, 1));
+  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_MSI_X, 1));
 
   // Verify MSI-X works the same.
   ASSERT_OK(pci().MapInterrupt(0, &zero));
-  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetIrqMode(PCI_IRQ_MODE_LEGACY, 1));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetInterruptMode(PCI_IRQ_MODE_LEGACY, 1));
   zero.reset();
-  ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_LEGACY, 1));
+  ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_LEGACY, 1));
 }
 
 TEST_F(FakePciProtocolTests, ConfigRW) {

@@ -2643,7 +2643,7 @@ static zx_status_t ath10k_pci_init_irq(struct ath10k* ar) {
   /* Try MSI */
   if ((ath10k_pci_irq_mode != ATH10K_PCI_IRQ_LEGACY) &&
       (pci_query_irq_mode(pdev, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt) == ZX_OK) &&
-      (pci_set_irq_mode(pdev, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
+      (pci_set_interrupt_mode(pdev, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
     ar_pci->oper_irq_mode = ATH10K_PCI_IRQ_MSI;
 
     return ZX_OK;
@@ -2659,7 +2659,7 @@ static zx_status_t ath10k_pci_init_irq(struct ath10k* ar) {
    * synchronization checking.
    */
   if ((pci_query_irq_mode(pdev, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == ZX_OK) &&
-      (pci_set_irq_mode(pdev, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
+      (pci_set_interrupt_mode(pdev, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
     ar_pci->oper_irq_mode = ATH10K_PCI_IRQ_LEGACY;
 
     ath10k_pci_write32(ar, SOC_CORE_BASE_ADDRESS + PCIE_INTR_ENABLE_ADDRESS,

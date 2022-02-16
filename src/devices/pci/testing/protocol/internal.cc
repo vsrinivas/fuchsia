@@ -102,8 +102,8 @@ zx_status_t FakePciProtocolInternal::PciQueryIrqMode(pci_irq_mode_t mode, uint32
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t FakePciProtocolInternal::PciSetIrqMode(pci_irq_mode_t mode,
-                                                   uint32_t requested_irq_count) {
+zx_status_t FakePciProtocolInternal::PciSetInterruptMode(pci_irq_mode_t mode,
+                                                         uint32_t requested_irq_count) {
   if (!AllMappedInterruptsFreed()) {
     return ZX_ERR_BAD_STATE;
   }

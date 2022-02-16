@@ -101,7 +101,7 @@ class FakePciProtocol : public FakePciProtocolInternal {
   zx::unowned_vmo GetConfigVmo() { return config().borrow(); }
   // Returns the presently configured interrupt mode.
   pci_irq_mode_t GetIrqMode() const { return irq_mode(); }
-  // Returns the present number of interrupts configured by |PciSetIrqMode|.
+  // Returns the present number of interrupts configured by |PciSetInterruptMode|.
   uint32_t GetIrqCount() const { return irq_cnt(); }
   // Returns how many times |PciResetDevice| has been called.
   uint32_t GetResetCount() const { return reset_cnt(); }

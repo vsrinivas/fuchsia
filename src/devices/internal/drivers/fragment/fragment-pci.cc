@@ -84,9 +84,9 @@ zx_status_t RpcQueryIrqMode(const ddk::PciProtocolClient& pci, const PciRpcReque
   return st;
 }
 
-zx_status_t RpcSetIrqMode(const ddk::PciProtocolClient& pci, const PciRpcRequest* req,
-                          PciRpcResponse* resp) {
-  return pci.SetIrqMode(req->irq.mode, req->irq.requested_irqs);
+zx_status_t RpcSetInterruptMode(const ddk::PciProtocolClient& pci, const PciRpcRequest* req,
+                                PciRpcResponse* resp) {
+  return pci.SetInterruptMode(req->irq.mode, req->irq.requested_irqs);
 }
 
 zx_status_t RpcGetNextCapability(const ddk::PciProtocolClient& pci, const PciRpcRequest* req,
@@ -168,7 +168,7 @@ zx_status_t Fragment::RpcPci(const uint8_t* req_buf, uint32_t req_size, uint8_t*
       status = RpcResetDevice(pci_client_.proto_client(), request, response);
       break;
     case pci::PCI_OP_SET_IRQ_MODE:
-      status = RpcSetIrqMode(pci_client_.proto_client(), request, response);
+      status = RpcSetInterruptMode(pci_client_.proto_client(), request, response);
       break;
     case pci::PCI_OP_ACK_INTERRUPT:
       status = RpcAckInterrupt(pci_client_.proto_client(), request, response);

@@ -151,7 +151,7 @@ zx_status_t FragmentProxy::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_ma
   return st;
 }
 
-zx_status_t FragmentProxy::PciSetIrqMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
+zx_status_t FragmentProxy::PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
   PciRpcRequest req{};
   PciRpcResponse resp{};
 
