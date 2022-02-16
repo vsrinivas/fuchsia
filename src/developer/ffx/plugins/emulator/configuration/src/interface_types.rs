@@ -16,7 +16,7 @@ use async_trait::async_trait;
 use fidl_fuchsia_developer_bridge as bridge;
 use sdk_metadata::{AudioDevice, DataAmount, PointingDevice, Screen};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, time::Duration};
 
 #[async_trait]
 pub trait EmulatorEngine {
@@ -190,6 +190,10 @@ pub struct RuntimeConfig {
     /// The human-readable name for this instance. Must be unique from any other current
     /// instance on the host.
     pub name: String,
+
+    /// Maximum amount of time to wait on the emulator health check to succeed before returning
+    /// control to the user.
+    pub startup_timeout: Duration,
 
     /// Path to an enumeration flags template file, which contains a Handlebars-renderable
     /// set of arguments to be passed to the Command which starts the emulator.

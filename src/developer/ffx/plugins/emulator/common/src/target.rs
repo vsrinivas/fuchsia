@@ -5,6 +5,8 @@
 use anyhow::Result;
 use fidl_fuchsia_developer_bridge as bridge;
 use fidl_fuchsia_net as net;
+use std::time::Duration;
+use timeout::timeout;
 
 /// Equivalent to a call to `ffx target add`. This adds a target at `127.0.0.1:ssh_port`.
 /// At this time, this is restricted to IPV4 only, as QEMU's DHCP server gets in the way of port
@@ -23,17 +25,41 @@ pub async fn add_target(proxy: &bridge::TargetCollectionProxy, ssh_port: u16) ->
     Ok(())
 }
 
-/// Equivalent to a call to `ffx target remove`. This removes the emulator at
-/// `127.0.0.1:ssh_port` from the target list. If no such target exists, the function logs a
-/// warning.
-pub async fn remove_target(proxy: &bridge::TargetCollectionProxy, ssh_port: u16) -> Result<()> {
-    let target_id = format!("127.0.0.1:{}", ssh_port);
-    if proxy.remove_target(&target_id).await? {
+/// Equivalent to a call to `ffx target remove`. This removes the emulator with the name which
+/// matches the target_id parameter from the target list. If no such target exists, the function
+/// logs a warning.
+pub async fn remove_target(proxy: &bridge::TargetCollectionProxy, target_id: &str) -> Result<()> {
+    if proxy.remove_target(target_id).await? {
         log::debug!("[emulator] Removed target {:?}", target_id);
     } else {
         log::warn!("[emulator] No matching target found for {:?}", target_id);
     }
     Ok(())
+}
+
+/// Makes a call to the TargetCollection (similar to `ffx target show`) to see if it has a target
+/// that matches the specified emulator. If the emulator responds to the request, such that a
+/// handle is returned, it's considered "active".
+///
+/// The request documentation indicates that the call to OpenTarget will hang until the device
+/// responds, possibly indefinitely. We wrap the call in a timeout of 1 second, so this function
+/// will not hang indefinitely. If the caller expects the response to take longer (such as during
+/// Fuchsia bootup), it's safe to call the function repeatedly with a longer local timeout.
+pub async fn is_active(collection_proxy: &bridge::TargetCollectionProxy, name: &str) -> bool {
+    let (_proxy, handle) = fidl::endpoints::create_proxy::<bridge::TargetHandleMarker>().unwrap();
+    let target = Some(name.to_string());
+    let res = timeout(Duration::from_secs(1), async {
+        collection_proxy
+            .open_target(
+                bridge::TargetQuery { string_matcher: target, ..bridge::TargetQuery::EMPTY },
+                handle,
+            )
+            .await
+    })
+    .await;
+    return res.is_ok()                    // It didn't time out...
+        && res.as_ref().unwrap().is_ok()  // The call was issued successfully...
+        && res.unwrap().unwrap().is_ok(); // And the actual return value was Ok(_).
 }
 
 #[cfg(test)]
@@ -85,11 +111,38 @@ mod test {
         })
     }
 
+    fn setup_fake_target_server_open<T: 'static + Fn(String) -> bool + Send>(
+        test: T,
+    ) -> TargetCollectionProxy {
+        setup_fake_target_proxy(move |req| match req {
+            TargetCollectionRequest::OpenTarget { query, responder, .. } => {
+                assert!(query.string_matcher.is_some());
+                if !test(query.string_matcher.unwrap()) {
+                    assert!(responder
+                        .send(&mut Err(bridge::OpenTargetError::TargetNotFound))
+                        .is_ok());
+                } else {
+                    assert!(responder.send(&mut Ok(())).is_ok());
+                }
+            }
+            _ => assert!(false),
+        })
+    }
+
+    fn setup_fake_target_server_open_timeout() -> TargetCollectionProxy {
+        setup_fake_target_proxy(move |req| match req {
+            TargetCollectionRequest::OpenTarget { .. } => {
+                // We just don't send a response. This thread terminates right away, but the caller
+                // will still timeout waiting for a response that never comes.
+            }
+            _ => assert!(false),
+        })
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_remove() {
-        let server =
-            setup_fake_target_server_remove(|id| assert_eq!(id, "127.0.0.1:33399".to_owned()));
-        remove_target(&server, 33399).await.unwrap();
+        let server = setup_fake_target_server_remove(|id| assert_eq!(id, "target_id".to_owned()));
+        remove_target(&server, "target_id").await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -108,5 +161,18 @@ mod test {
             )
         });
         add_target(&server, ssh_port).await.unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_is_active() {
+        let server = setup_fake_target_server_open(|id| id == "target_id".to_owned());
+        // The "target" that we expect is "active".
+        assert!(is_active(&server, "target_id").await);
+        // The "target" that we don't expect is "inactive".
+        assert!(!is_active(&server, "bad_target").await);
+
+        // This should timeout waiting for a response, which is indicated as "inactive".
+        let timeout_server = setup_fake_target_server_open_timeout();
+        assert!(!is_active(&timeout_server, "target").await);
     }
 }

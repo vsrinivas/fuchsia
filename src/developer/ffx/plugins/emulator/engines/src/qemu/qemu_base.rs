@@ -12,7 +12,7 @@ use ffx_emulator_common::{
     config,
     config::FfxConfigWrapper,
     process, tap_available,
-    target::{add_target, remove_target},
+    target::{add_target, is_active, remove_target},
 };
 use ffx_emulator_config::{
     ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine, GuestConfig, LogLevel,
@@ -20,7 +20,10 @@ use ffx_emulator_config::{
 };
 use fidl_fuchsia_developer_bridge as bridge;
 use shared_child::SharedChild;
-use std::{fs, fs::File, path::PathBuf, process::Command, str, sync::Arc};
+use std::{
+    fs, fs::File, io::Write, ops::Sub, path::PathBuf, process::Command, str, sync::Arc,
+    time::Duration,
+};
 
 /// QemuBasedEngine collects the interface for
 /// emulator engine implementations that use
@@ -236,8 +239,9 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                 Err(e) => {
                     let running = self.is_running();
                     let pid = self.get_pid();
+                    let target_id = self.emu_config().runtime.name.clone();
                     if let Some(shutdown_error) =
-                        Self::shutdown_emulator(running, pid, ssh_port, proxy).await.err()
+                        Self::shutdown_emulator(running, pid, &target_id, proxy).await.err()
                     {
                         log::debug!(
                             "Error encountered in shutdown when handling failed launch: {:?}",
@@ -245,6 +249,31 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                         );
                     }
                     bail!("Emulator launcher did not terminate properly, error: {}", e)
+                }
+            }
+        } else if !self.emu_config().runtime.startup_timeout.is_zero() {
+            // Wait until the emulator is considered "active" before returning to the user.
+            let mut time_left = self.emu_config().runtime.startup_timeout.clone();
+            print!("Waiting for Fuchsia to start (up to {} seconds).", &time_left.as_secs());
+            log::debug!("Waiting for Fuchsia to start (up to {} seconds)...", &time_left.as_secs());
+            let name = &self.emu_config().runtime.name;
+            while !time_left.is_zero() {
+                if is_active(proxy, name).await {
+                    println!("Emulator is ready.");
+                    log::debug!("Emulator is ready.");
+                    break;
+                } else {
+                    // Output a little status indicator to show we haven't gotten stuck.
+                    // Note that we discard the result on the flush call; it's not important enough
+                    // that we flushed the output stream to derail the launch.
+                    print!(".");
+                    std::io::stdout().flush().ok();
+
+                    time_left = time_left.sub(Duration::from_secs(1));
+                    if time_left.is_zero() {
+                        eprintln!("Emulator did not respond to a health check before timing out.");
+                        log::warn!("Emulator did not respond to a health check before timing out.");
+                    }
                 }
             }
         }
@@ -257,26 +286,23 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     /// shared across threads. Instead, we pull only those variables we need for shutdown out of
     /// "self" and pass them in explicitly.
     ///
-    /// running:  Boolean to indicate that the engine specified is active.
-    ///           Typically comes from `engine::is_running();`.
-    /// pid:      The process ID of the running emulator; used to send a signal to the process to
-    ///           cause termination.
-    /// ssh_port: If the emulator is running over user-mode networking, this is the port ssh is
-    ///           mapped to. Used to issue a `ffx target remove` command. If this is "None", no
-    ///           remove command will be issued.
-    /// proxy:    The interface to the `ffx target` backend, provided by the ffx front-end as a
-    ///           parameter to the plugin subcommands. Used to issue a `ffx target remove` command.
+    /// running:    Boolean to indicate that the engine specified is active.
+    ///             Typically comes from `engine::is_running();`.
+    /// pid:        The process ID of the running emulator; used to send a signal to the process to
+    ///             cause termination.
+    /// target_id:  This is the engine name, used to issue a `ffx target remove` command.
+    /// proxy:      The interface to the `ffx target` backend, provided by the ffx front-end as a
+    ///             parameter to the plugin subcommands. Used to issue a `ffx target remove`
+    ///             command.
     async fn shutdown_emulator(
         running: bool,
         pid: u32,
-        ssh_port: Option<u16>,
+        target_id: &str,
         proxy: &bridge::TargetCollectionProxy,
     ) -> Result<()> {
-        if let Some(ssh_port) = ssh_port {
-            if let Err(e) = remove_target(proxy, ssh_port).await {
-                // Even if we can't remove it, still continue shutting down.
-                log::warn!("Couldn't remove target during shutdown: {:?}", e);
-            }
+        if let Err(e) = remove_target(proxy, target_id).await {
+            // Even if we can't remove it, still continue shutting down.
+            log::warn!("Couldn't remove target from ffx during shutdown: {:?}", e);
         }
         if running {
             println!("Terminating running instance {:?}", pid);

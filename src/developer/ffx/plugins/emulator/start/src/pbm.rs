@@ -18,7 +18,7 @@ use ffx_emulator_start_args::StartCommand;
 use fms;
 use futures::executor::block_on;
 use port_picker::{is_free_tcp_port, pick_unused_port};
-use std::{collections::hash_map::DefaultHasher, hash::Hasher, path::PathBuf};
+use std::{collections::hash_map::DefaultHasher, hash::Hasher, path::PathBuf, time::Duration};
 
 /// Create a RuntimeConfiguration based on the command line args.
 pub(crate) async fn make_configs(
@@ -111,6 +111,7 @@ async fn apply_command_line_options(
     emu_config.runtime.debugger = cmd.debugger;
     emu_config.runtime.dry_run = cmd.dry_run;
     emu_config.runtime.headless = cmd.headless;
+    emu_config.runtime.startup_timeout = Duration::from_secs_f64(cmd.startup_timeout().await?);
     emu_config.runtime.hidpi_scaling = cmd.hidpi_scaling;
     emu_config.runtime.name = cmd.name.clone();
 

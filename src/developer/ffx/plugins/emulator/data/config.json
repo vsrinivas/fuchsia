@@ -1,6 +1,9 @@
 {
     "emu": {
         "instance_dir": "$DATA/emu/instances",
+        "startup": {
+            "timeout": 60.0
+        },
         "upscript": ""
     }
 }

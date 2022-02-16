@@ -74,9 +74,10 @@ impl EmulatorEngine for QemuEngine {
         println!("{:#?}", self.emulator_configuration);
     }
     async fn shutdown(&self, proxy: &bridge::TargetCollectionProxy) -> Result<()> {
-        let ssh = self.emulator_configuration.host.port_map.get("ssh");
-        let ssh_port = if let Some(ssh) = ssh { ssh.host } else { None };
-        Self::shutdown_emulator(self.is_running(), self.get_pid(), ssh_port, proxy).await
+        // Extract values from the self here, since there are sharing issues with trying to call
+        // shutdown_emulator from another thread.
+        let target_id = &self.emulator_configuration.runtime.name;
+        Self::shutdown_emulator(self.is_running(), self.get_pid(), target_id, proxy).await
     }
     fn validate(&self) -> Result<()> {
         if self.emulator_configuration.device.pointing_device == PointingDevice::Touch {

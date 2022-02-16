@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use argh::FromArgs;
+use ffx_config::FfxConfigBacked;
 use ffx_core::ffx_command;
 use ffx_emulator_config::{AccelerationMode, EngineType, GpuType, NetworkingMode};
 use std::path::PathBuf;
 
 #[ffx_command()]
-#[derive(Clone, FromArgs, Debug, Default, PartialEq)]
+#[derive(Clone, FromArgs, FfxConfigBacked, Debug, Default, PartialEq)]
 #[argh(
     subcommand,
     name = "start",
@@ -89,6 +90,13 @@ pub struct StartCommand {
     #[argh(option, default = "\"fuchsia-emulator\".to_string()")]
     pub name: String,
 
+    /// specify the networking mode for the emulator. Allowed values are "none" which disables
+    /// networking, "tap" which attaches to a Tun/Tap interface, "user" which sets up mapped ports
+    /// via SLiRP, and "auto" which will check the host system's capabilities and select "tap" if
+    /// it is available and "user" otherwise. Default is "auto".
+    #[argh(option, default = "NetworkingMode::Auto")]
+    pub net: NetworkingMode,
+
     /// specify a host port mapping for user-networking mode. Ignored in other networking modes.
     /// Syntax is "--port-map <portname>:<port>". The <portname> must be one of those specified in
     /// the virtual device specification. This flag may be repeated for multiple port mappings.
@@ -108,12 +116,12 @@ pub struct StartCommand {
     #[argh(option)]
     pub start_up_args_template: Option<PathBuf>,
 
-    /// specify the networking mode for the emulator. Allowed values are "none" which disables
-    /// networking, "tap" which attaches to a Tun/Tap interface, "user" which sets up mapped ports
-    /// via SLiRP, and "auto" which will check the host system's capabilities and select "tap" if
-    /// it is available and "user" otherwise. Default is "auto".
-    #[argh(option, default = "NetworkingMode::Auto")]
-    pub net: NetworkingMode,
+    /// the maximum time (in seconds) to wait on an emulator to boot before returning control
+    /// to the user. A value of 0 will skip the check entirely. Default is 60 seconds. This
+    /// can be overridden with `ffx config set emu.start.timeout <seconds>`.
+    #[argh(option, short = 's')]
+    #[ffx_config_default(key = "emu.start.timeout", default = "60.0")]
+    pub startup_timeout: Option<f64>,
 
     /// enables extra logging for debugging.
     #[argh(switch, short = 'V')]
