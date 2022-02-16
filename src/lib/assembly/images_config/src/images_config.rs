@@ -61,7 +61,7 @@ fn default_zbi_compression() -> ZbiCompression {
 }
 
 /// The compression format for the ZBI.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum ZbiCompression {
     /// zstd compression.
     #[serde(rename = "zstd")]
@@ -70,6 +70,41 @@ pub enum ZbiCompression {
     /// zstd.max compression.
     #[serde(rename = "zstd.max")]
     ZStdMax,
+}
+
+impl FromStr for ZbiCompression {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self> {
+        zbi_compression_from_str(s)
+    }
+}
+
+impl TryFrom<&str> for ZbiCompression {
+    type Error = anyhow::Error;
+    fn try_from(s: &str) -> Result<Self> {
+        zbi_compression_from_str(s)
+    }
+}
+
+impl fmt::Display for ZbiCompression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                ZbiCompression::ZStd => "zstd",
+                ZbiCompression::ZStdMax => "zstd.max",
+            }
+        )
+    }
+}
+
+fn zbi_compression_from_str(s: &str) -> Result<ZbiCompression> {
+    match s {
+        "zstd" => Ok(ZbiCompression::ZStd),
+        "zstd.max" => Ok(ZbiCompression::ZStdMax),
+        invalid => Err(anyhow!("invalid zbi compression: {}", invalid)),
+    }
 }
 
 /// A script to process the ZBI after it is constructed.
@@ -406,6 +441,28 @@ impl ImagesConfig {
 mod tests {
     use super::*;
     use std::convert::TryInto;
+
+    #[test]
+    fn zbi_compression_try_from() {
+        assert_eq!(ZbiCompression::ZStd, "zstd".try_into().unwrap());
+        assert_eq!(ZbiCompression::ZStdMax, "zstd.max".try_into().unwrap());
+        let compression: Result<ZbiCompression> = "else".try_into();
+        assert!(compression.is_err());
+    }
+
+    #[test]
+    fn zbi_compression_from_string() {
+        assert_eq!(ZbiCompression::ZStd, ZbiCompression::from_str("zstd").unwrap());
+        assert_eq!(ZbiCompression::ZStdMax, ZbiCompression::from_str("zstd.max").unwrap());
+        let compression: Result<ZbiCompression> = ZbiCompression::from_str("else");
+        assert!(compression.is_err());
+    }
+
+    #[test]
+    fn zbi_compressoin_to_string() {
+        assert_eq!("zstd".to_string(), ZbiCompression::ZStd.to_string());
+        assert_eq!("zstd.max".to_string(), ZbiCompression::ZStdMax.to_string());
+    }
 
     #[test]
     fn blobfs_layout_try_from() {

@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use crate::base_package::BasePackage;
-use crate::config::{BoardConfig, ProductConfig, ZbiSigningScript};
+use crate::config::{ProductConfig, ZbiConfig};
 use crate::util::pkg_manifest_from_path;
 
 use anyhow::{anyhow, Context, Result};
+use assembly_images_config::{PostProcessingScript, Zbi, ZbiCompression};
 use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
 use fuchsia_pkg::PackageManifest;
@@ -14,12 +15,26 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use zbi::ZbiBuilder;
 
+pub fn convert_to_new_config(zbi_config: &ZbiConfig) -> Result<Zbi> {
+    Ok(Zbi {
+        name: zbi_config.name.clone(),
+        compression: zbi_config.compression.parse()?,
+        postprocessing_script: match &zbi_config.signing_script {
+            None => None,
+            Some(signing_script) => Some(PostProcessingScript {
+                path: signing_script.tool.clone(),
+                args: signing_script.extra_arguments.clone(),
+            }),
+        },
+    })
+}
+
 pub fn construct_zbi(
     zbi_tool: Box<dyn Tool>,
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     product: &ProductConfig,
-    board: &BoardConfig,
+    zbi_config: &Zbi,
     base_package: Option<&BasePackage>,
     fvm: Option<impl AsRef<Path>>,
 ) -> Result<PathBuf> {
@@ -82,13 +97,16 @@ pub fn construct_zbi(
     }
 
     // Set the zbi compression to use.
-    zbi_builder.set_compression(&board.zbi.compression);
+    zbi_builder.set_compression(match zbi_config.compression {
+        ZbiCompression::ZStd => "zstd",
+        ZbiCompression::ZStdMax => "zstd.max",
+    });
 
     // Create an output manifest that describes the contents of the built ZBI.
     zbi_builder.set_output_manifest(&gendir.as_ref().join("zbi.json"));
 
     // Build and return the ZBI.
-    let zbi_path = outdir.as_ref().join(format!("{}.zbi", &board.zbi.name));
+    let zbi_path = outdir.as_ref().join(format!("{}.zbi", zbi_config.name));
     zbi_builder.build(gendir, zbi_path.as_path())?;
     Ok(zbi_path)
 }
@@ -97,12 +115,16 @@ pub fn construct_zbi(
 /// the bootloaders, then perform that task here.
 pub fn vendor_sign_zbi(
     outdir: impl AsRef<Path>,
-    board: &BoardConfig,
-    signing_config: &ZbiSigningScript,
+    zbi_config: &Zbi,
     zbi: impl AsRef<Path>,
 ) -> Result<PathBuf> {
+    let script = match &zbi_config.postprocessing_script {
+        Some(script) => script,
+        _ => return Err(anyhow!("Missing postprocessing_script")),
+    };
+
     // The resultant file path
-    let signed_path = outdir.as_ref().join(format!("{}.zbi.signed", board.zbi.name));
+    let signed_path = outdir.as_ref().join(format!("{}.zbi.signed", zbi_config.name));
 
     // The parameters of the script that are required:
     let mut args = Vec::new();
@@ -112,12 +134,12 @@ pub fn vendor_sign_zbi(
     args.push(signed_path.path_to_string()?);
 
     // If the script config defines extra arguments, add them:
-    args.extend_from_slice(&signing_config.extra_arguments[..]);
+    args.extend_from_slice(&script.args[..]);
 
-    let output = Command::new(&signing_config.tool)
+    let output = Command::new(&script.path)
         .args(&args)
         .output()
-        .context(format!("Failed to run the vendor tool: {}", signing_config.tool.display()))?;
+        .context(format!("Failed to run the vendor tool: {}", script.path.display()))?;
 
     // The tool ran, but may have returned an error.
     if output.status.success() {
@@ -133,10 +155,11 @@ pub fn vendor_sign_zbi(
 
 #[cfg(test)]
 mod tests {
-    use super::{construct_zbi, vendor_sign_zbi};
+    use super::{construct_zbi, convert_to_new_config, vendor_sign_zbi};
 
     use crate::base_package::BasePackage;
-    use crate::config::{BoardConfig, ProductConfig, ZbiConfig, ZbiSigningScript};
+    use crate::config::{ProductConfig, ZbiConfig, ZbiSigningScript};
+    use assembly_images_config::{PostProcessingScript, Zbi, ZbiCompression};
     use assembly_test_util::generate_fake_tool;
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::ToolProvider;
@@ -151,6 +174,38 @@ mod tests {
     use std::str::FromStr;
     use tempfile::tempdir;
 
+    #[test]
+    fn old_config() {
+        let old_config = ZbiConfig {
+            name: "fuchsia".into(),
+            max_size: 0,
+            embed_fvm_in_zbi: false,
+            compression: "zstd".into(),
+            signing_script: Some(ZbiSigningScript {
+                tool: "tool".into(),
+                extra_arguments: vec!["one".to_string(), "two".to_string()],
+            }),
+        };
+        let new_config = convert_to_new_config(&old_config).unwrap();
+        assert_eq!(new_config.name, "fuchsia");
+        assert_eq!(new_config.compression, ZbiCompression::ZStd);
+        let script = new_config.postprocessing_script.unwrap();
+        assert_eq!(script.path, PathBuf::from("tool"));
+        assert_eq!(script.args, vec!["one".to_string(), "two".to_string()]);
+
+        let old_config = ZbiConfig {
+            name: "fuchsia".into(),
+            max_size: 0,
+            embed_fvm_in_zbi: false,
+            compression: "zstd.max".into(),
+            signing_script: None,
+        };
+        let new_config = convert_to_new_config(&old_config).unwrap();
+        assert_eq!(new_config.name, "fuchsia");
+        assert_eq!(new_config.compression, ZbiCompression::ZStdMax);
+        assert!(new_config.postprocessing_script.is_none());
+    }
+
     // These tests must be ran serially, because otherwise they will affect each
     // other through process spawming. If a test spawns a process while the
     // other test has an open file, then the spawned process will get a copy of
@@ -163,7 +218,11 @@ mod tests {
         // Create fake product/board definitions.
         let kernel_path = dir.path().join("kernel");
         let mut product_config = ProductConfig::new(&kernel_path, 0);
-        let board_config = BoardConfig::default();
+        let zbi_config = Zbi {
+            name: "fuchsia".into(),
+            compression: ZbiCompression::ZStd,
+            postprocessing_script: None,
+        };
 
         // Create a kernel which is equivalent to: zbi --ouput <zbi-name>
         let kernel_bytes = vec![
@@ -198,7 +257,7 @@ mod tests {
             dir.path(),
             dir.path(),
             &product_config,
-            &board_config,
+            &zbi_config,
             Some(&base),
             None::<PathBuf>,
         )
@@ -214,12 +273,6 @@ mod tests {
         // Create a fake zbi.
         let zbi_path = dir.path().join("fuchsia.zbi");
         std::fs::write(&zbi_path, "fake zbi").unwrap();
-
-        // Create fake board definitions.
-        let board_config = BoardConfig {
-            zbi: ZbiConfig { name: "fuchsia".into(), ..ZbiConfig::default() },
-            ..BoardConfig::default()
-        };
 
         // Create the signing tool that ensures that we pass the correct arguments.
         let tool_path = dir.path().join("tool.sh");
@@ -250,11 +303,19 @@ mod tests {
 
         // Create the signing config.
         let extra_arguments = vec!["arg1".into(), "arg2".into()];
-        let signing_config = ZbiSigningScript { tool: tool_path, extra_arguments };
+
+        // Create fake zbi config.
+        let zbi = Zbi {
+            name: "fuchsia".into(),
+            compression: ZbiCompression::ZStd,
+            postprocessing_script: Some(PostProcessingScript {
+                path: tool_path,
+                args: extra_arguments,
+            }),
+        };
 
         // Sign the zbi.
-        let signed_zbi_path =
-            vendor_sign_zbi(dir.path(), &board_config, &signing_config, &zbi_path).unwrap();
+        let signed_zbi_path = vendor_sign_zbi(dir.path(), &zbi, &zbi_path).unwrap();
         assert_eq!(signed_zbi_path, expected_output);
     }
 

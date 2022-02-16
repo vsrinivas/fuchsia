@@ -8,7 +8,7 @@ use crate::config::{BoardConfig, PartialProductConfig, ProductConfig};
 use crate::fvm::{construct_fvm, Fvms};
 use crate::util;
 use crate::vbmeta;
-use crate::zbi::{construct_zbi, vendor_sign_zbi};
+use crate::zbi;
 
 use anyhow::{Context, Result};
 use assembly_images_manifest::{Image, ImagesManifest};
@@ -91,12 +91,13 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     };
 
     info!("Creating the ZBI");
-    let zbi_path = construct_zbi(
+    let zbi_config = zbi::convert_to_new_config(&board.zbi)?;
+    let zbi_path = zbi::construct_zbi(
         sdk_tools.get_tool("zbi")?,
         &outdir,
         &gendir,
         &product,
-        &board,
+        &zbi_config,
         base_package.as_ref(),
         fvm_for_zbi,
     )?;
@@ -116,10 +117,10 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     // If the board specifies a vendor-specific signing script, use that to
     // post-process the ZBI, and then use the post-processed ZBI in the update
     // package and the
-    let (zbi_for_update_path, signed) = if let Some(signing_config) = &board.zbi.signing_script {
+    let (zbi_for_update_path, signed) = if zbi_config.postprocessing_script.is_some() {
         info!("Vendor signing the ZBI");
         (
-            vendor_sign_zbi(&outdir, &board, signing_config, &zbi_path)
+            zbi::vendor_sign_zbi(&outdir, &zbi_config, &zbi_path)
                 .context("Vendor-signing the ZBI")?,
             true,
         )
