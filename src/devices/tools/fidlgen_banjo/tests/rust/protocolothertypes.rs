@@ -16,6 +16,7 @@ pub struct ThisIsAStruct {
     pub s: *const std::os::raw::c_char,
 }
 
+
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct ThisIsAnEnum(pub u32);

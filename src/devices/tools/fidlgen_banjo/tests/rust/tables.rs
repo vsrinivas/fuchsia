@@ -13,7 +13,7 @@ use fuchsia_zircon_types as zircon_types;
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct F {
-    // Skipping type Identifier { identifier: CompoundIdentifier("banjo.examples.tables/E"), nullable: false }, see http:://fxbug.dev/82088
+    pub quuz: E,
 }
 
 #[repr(C)]
@@ -38,6 +38,12 @@ pub struct B {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct A {
     pub foo: *mut B,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct E {
+    pub quux: u8,
 }
 
 

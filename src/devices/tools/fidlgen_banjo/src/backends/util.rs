@@ -19,6 +19,7 @@ pub enum Decl<'a> {
     Enum { data: &'a fidl::Enum },
     Interface { data: &'a fidl::Interface },
     Struct { data: &'a fidl::Struct },
+    Table { data: &'a fidl::Table },
     TypeAlias { data: &'a fidl::TypeAlias },
     Union { data: &'a fidl::Union },
 }
@@ -54,6 +55,9 @@ pub fn get_declarations<'b>(ir: &'b FidlIr) -> Result<Vec<Decl<'b>>, Error> {
                     Err(err) => Err(err),
                 })
             }
+            Declaration::Table => Some(Ok(Decl::Table {
+                data: ir.table_declarations.iter().filter(|e| e.name == *ident).next()?,
+            })),
             Declaration::TypeAlias => Some(Ok(Decl::TypeAlias {
                 data: ir.type_alias_declarations.iter().filter(|e| e.name == *ident).next()?,
             })),
@@ -342,13 +346,13 @@ pub fn name_size(maybe_attributes: &Option<Vec<Attribute>>) -> &'static str {
     }
 }
 
-pub fn is_table_or_bits(ty: &Type, ir: &FidlIr) -> bool {
+pub fn is_bits(ty: &Type, ir: &FidlIr) -> bool {
     match ty {
         Type::Identifier { identifier, .. } => match ir
             .get_declaration(identifier)
             .expect(&format!("Could not find declaration for {:?}", identifier))
         {
-            Declaration::Bits | Declaration::Table => true,
+            Declaration::Bits => true,
             _ => false,
         },
         _ => false,
@@ -407,7 +411,7 @@ pub fn type_to_cpp_str(ty: &Type, wrappers: bool, ir: &FidlIr) -> Result<String,
             .get_declaration(identifier)
             .expect(&format!("Could not find declaration for {:?}", identifier))
         {
-            Declaration::Struct | Declaration::Union | Declaration::Enum => {
+            Declaration::Struct | Declaration::Table | Declaration::Union | Declaration::Enum => {
                 Ok(format!("{}_t", to_c_name(&identifier.get_name())))
             }
             Declaration::Interface => {
@@ -503,7 +507,7 @@ pub fn get_in_params(
                                 Ok(format!("const {}* {}", ty_name, name))
                             }
                         }
-                        Declaration::Struct | Declaration::Union => {
+                        Declaration::Struct | Declaration::Table | Declaration::Union => {
                             let prefix =
                                 if param.maybe_attributes.has("InOut") { "" } else { "const " };
                             Ok(format!("{}{}* {}", prefix, ty_name, name))

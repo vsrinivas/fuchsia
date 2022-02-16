@@ -434,6 +434,7 @@ pub struct arrays {
     pub handle_2: [[zircon_types::zx_handle_t; 4 as usize]; 32 as usize],
 }
 
+
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct u8_enum(pub u8);

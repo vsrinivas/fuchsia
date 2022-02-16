@@ -17,6 +17,7 @@ pub struct Point {
     pub y: i64,
 }
 
+
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Direction(pub u8);

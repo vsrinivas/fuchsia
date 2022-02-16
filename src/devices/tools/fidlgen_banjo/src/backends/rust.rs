@@ -4,7 +4,7 @@
 
 use {
     super::{
-        util::{get_declarations, is_table_or_bits, name_buffer, name_size, to_c_name, Decl},
+        util::{get_declarations, is_bits, name_buffer, name_size, to_c_name, Decl},
         Backend,
     },
     crate::fidl::*,
@@ -72,6 +72,30 @@ fn can_derive_partialeq(
                         }
                         parents.insert(type_id.clone());
                         if !can_derive_partialeq(&field._type, parents, ir)? {
+                            return Ok(false);
+                        }
+                        parents.remove(type_id);
+                    }
+                    Ok(true)
+                }
+                Declaration::Table => {
+                    let decl = ir.get_table(type_id)?;
+                    for field in &decl.members {
+                        if field.reserved {
+                            continue;
+                        }
+                        if let Type::Identifier { identifier: field_id, .. } =
+                            &field._type.as_ref().unwrap()
+                        {
+                            // Circular reference. Skip the check on this field to prevent stack
+                            // overflow. It's still possible to derive PartialEq as long as other
+                            // fields do not prevent the derive.
+                            if field_id == type_id || parents.contains(field_id) {
+                                continue;
+                            }
+                        }
+                        parents.insert(type_id.clone());
+                        if !can_derive_partialeq(&field._type.as_ref().unwrap(), parents, ir)? {
                             return Ok(false);
                         }
                         parents.remove(type_id);
@@ -149,7 +173,7 @@ fn type_to_rust_str(
                 Declaration::Enum => Ok(format!("{}", name = identifier.get_name())),
                 // Protocols are not generated, but this supports some tests.
                 Declaration::Interface => return Ok(to_c_name(identifier.get_name())),
-                Declaration::Struct | Declaration::Union => {
+                Declaration::Struct | Declaration::Table | Declaration::Union => {
                     if *nullable {
                         Ok(format!("*mut {name}", name = identifier.get_name()))
                     } else {
@@ -194,6 +218,39 @@ fn field_to_rust_str(field: &StructMember, ir: &FidlIr) -> Result<String, Error>
             ))
         }
         _ => Err(anyhow!("Can't handle type {:?}", field._type)),
+    }
+}
+
+fn table_field_to_rust_str(field: &TableMember, ir: &FidlIr) -> Result<String, Error> {
+    let c_name = &field.name.as_ref().expect("Missing name on table field").0;
+    let maybe_attributes = &field.maybe_attributes;
+
+    match field._type.as_ref().expect("Missing type on table field") {
+        Type::Array { .. }
+        | Type::Str { .. }
+        | Type::Primitive { .. }
+        | Type::Identifier { .. }
+        | Type::Handle { .. } => Ok(format!(
+            "    pub {c_name}: {ty},",
+            c_name = c_name,
+            ty = type_to_rust_str(&field._type.as_ref().unwrap(), maybe_attributes, ir)?
+        )),
+        Type::Vector { ref element_type, .. } => {
+            let out_of_line = if maybe_attributes.has("OutOfLineContents") { "*mut " } else { "" };
+            let mutable = if maybe_attributes.has("Mutable") { "mut" } else { "const" };
+            Ok(format!(
+                "{indent}pub {c_name}_{buffer}: *{mutable} {out_of_line}{ty},\
+                 \n{indent}pub {c_name}_{size}: usize,",
+                indent = "    ",
+                buffer = name_buffer(&maybe_attributes),
+                size = name_size(&maybe_attributes),
+                mutable = mutable,
+                out_of_line = out_of_line,
+                c_name = c_name,
+                ty = type_to_rust_str(element_type, maybe_attributes, ir)?
+            ))
+        }
+        ty => Err(anyhow!("Can't handle type {:?}", ty)),
     }
 }
 
@@ -296,15 +353,13 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                 let mut partial_eq = true;
                 let mut parents = HashSet::new();
                 for field in &data.members {
-                    if is_table_or_bits(&field._type, ir) {
+                    if is_bits(&field._type, ir) {
                         field_str.push(format!(
                             "    // Skipping type {:?}, see http:://fxbug.dev/82088",
                             &field._type
                         ));
                         continue;
                     }
-                    parents.clear();
-                    parents.insert(data.name.clone());
                     parents.clear();
                     parents.insert(data.name.clone());
                     if !can_derive_partialeq(&field._type, &mut parents, ir)? {
@@ -321,6 +376,54 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                     } else {
                         field_str.push(field_to_rust_str(&field, ir)?);
                     };
+                }
+                Ok(format!(
+                    include_str!("templates/rust/struct.rs"),
+                    debug = ", Debug",
+                    partial_eq = if partial_eq { ", PartialEq" } else { "" },
+                    name = data.name.get_name(),
+                    struct_fields = field_str.join("\n"),
+                    alignment = alignment,
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join("\n"))
+    }
+
+    fn codegen_table_decl(
+        &self,
+        declarations: &Vec<Decl<'_>>,
+        ir: &FidlIr,
+    ) -> Result<String, Error> {
+        Ok(declarations
+            .iter()
+            .filter_map(|decl| match decl {
+                Decl::Table { data } => Some(data),
+                _ => None,
+            })
+            .map(|data| {
+                let mut field_str = Vec::new();
+                let alignment = if data.maybe_attributes.has("Packed") { "C, packed" } else { "C" };
+                let mut partial_eq = true;
+                let mut parents = HashSet::new();
+                for field in &data.members {
+                    if field.reserved {
+                        // Ignore reserved fields.
+                        continue;
+                    }
+                    if is_bits(&field._type.as_ref().expect("Missing type on table field"), ir) {
+                        field_str.push(format!(
+                            "    // Skipping type {:?}, see http:://fxbug.dev/82088",
+                            &field._type
+                        ));
+                        continue;
+                    }
+                    parents.clear();
+                    parents.insert(data.name.clone());
+                    if !can_derive_partialeq(&field._type.as_ref().unwrap(), &mut parents, ir)? {
+                        partial_eq = false;
+                    }
+                    field_str.push(table_field_to_rust_str(&field, ir)?);
                 }
                 Ok(format!(
                     include_str!("templates/rust/struct.rs"),
@@ -422,6 +525,7 @@ impl<'a, W: io::Write> Backend<'a, W> for RustBackend<'a, W> {
                 enum_decls = self.codegen_enum_decl(&decl_order, &ir)?,
                 constant_decls = self.codegen_const_decl(&decl_order, &ir)?,
                 struct_decls = self.codegen_struct_decl(&decl_order, &ir)?,
+                table_decls = self.codegen_table_decl(&decl_order, &ir)?,
                 union_decls = self.codegen_union_decl(&decl_order, &ir)?,
             ))?;
         }

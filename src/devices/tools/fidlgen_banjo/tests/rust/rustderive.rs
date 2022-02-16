@@ -90,6 +90,7 @@ pub struct Foo {
     pub bar: Bar,
 }
 
+
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct SomeEnum(pub u32);

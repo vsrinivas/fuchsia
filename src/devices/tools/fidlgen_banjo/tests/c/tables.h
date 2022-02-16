@@ -14,6 +14,7 @@
 __BEGIN_CDECLS
 
 // Forward declarations
+typedef struct e e_t;
 typedef struct f f_t;
 typedef struct c c_t;
 typedef struct d d_t;
@@ -21,8 +22,12 @@ typedef struct b b_t;
 typedef struct a a_t;
 
 // Declarations
+struct e {
+    uint8_t quux;
+};
+
 struct f {
-    // Skipping type Identifier { identifier: CompoundIdentifier("banjo.examples.tables/E"), nullable: false }, see http:://fxbug.dev/82088
+    e_t quuz;
 };
 
 struct c {

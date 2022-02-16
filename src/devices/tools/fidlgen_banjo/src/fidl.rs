@@ -531,6 +531,7 @@ pub struct TableMember {
     pub max_out_of_line: Option<Count>,
     pub alignment: Option<Count>,
     pub offset: Option<Count>,
+    pub maybe_attributes: Option<Vec<Attribute>>,
     pub maybe_default_value: Option<Constant>,
 }
 
@@ -690,6 +691,10 @@ impl FidlIr {
             Ok(found_struct) => Ok(found_struct),
             Err(_) => fetch_declaration!(self, external_struct_declarations, identifier),
         }
+    }
+
+    pub fn get_table(&self, identifier: &CompoundIdentifier) -> Result<&Table, Error> {
+        fetch_declaration!(self, table_declarations, identifier)
     }
 
     pub fn get_const(&self, identifier: &CompoundIdentifier) -> Result<&Const, Error> {

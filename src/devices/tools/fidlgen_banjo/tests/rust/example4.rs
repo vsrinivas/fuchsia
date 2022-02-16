@@ -16,6 +16,7 @@ pub struct Point {
     pub x: u64,
 }
 
+
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Enum(pub u32);

@@ -6,8 +6,8 @@ use {
     super::{
         util::{
             array_bounds, for_banjo_transport, get_base_type_from_alias, get_declarations,
-            get_doc_comment, is_derive_debug, is_namespaced, is_table_or_bits, name_buffer,
-            name_size, not_callback, primitive_type_to_c_str, to_c_name, Decl, ProtocolType,
+            get_doc_comment, is_bits, is_derive_debug, is_namespaced, name_buffer, name_size,
+            not_callback, primitive_type_to_c_str, to_c_name, Decl, ProtocolType,
         },
         Backend,
     },
@@ -43,7 +43,7 @@ fn type_to_c_str(ty: &Type, ir: &FidlIr) -> Result<String, Error> {
             .get_declaration(identifier)
             .expect(&format!("Could not find declaration for {:?}", identifier))
         {
-            Declaration::Struct | Declaration::Union | Declaration::Enum => {
+            Declaration::Struct | Declaration::Table | Declaration::Union | Declaration::Enum => {
                 Ok(format!("{}_t", to_c_name(&identifier.get_name())))
             }
             Declaration::Interface => {
@@ -139,7 +139,7 @@ fn field_to_c_str(
 ) -> Result<String, Error> {
     let mut accum = String::new();
 
-    if is_table_or_bits(ty, ir) {
+    if is_bits(ty, ir) {
         return Ok(format!(
             "{indent}// Skipping type {ty:?}, see http:://fxbug.dev/82088",
             indent = indent,
@@ -279,7 +279,7 @@ fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>
                                 Ok(format!("const {}* {}", ty_name, c_name))
                             }
                         }
-                        Declaration::Struct | Declaration::Union => {
+                        Declaration::Struct | Declaration::Table | Declaration::Union => {
                             let prefix = if param.maybe_attributes.has("InOut")
                                 || param.maybe_attributes.has("Mutable")
                             {
@@ -652,6 +652,49 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         Ok(accum)
     }
 
+    fn codegen_table_decl(&self, data: &Table) -> Result<String, Error> {
+        Ok(format!(
+            "typedef struct {c_name} {c_name}_t;",
+            c_name = to_c_name(&data.name.get_name())
+        ))
+    }
+
+    fn codegen_table_def(&self, data: &Table, ir: &FidlIr) -> Result<String, Error> {
+        let attrs = struct_attrs_to_c_str(&data.maybe_attributes);
+        let preserve_names = data.maybe_attributes.has("PreserveCNames");
+        let members = data
+            .members
+            .iter()
+            // Ignore reserved fields as they lack types and names.
+            .filter(|f| f.reserved == false)
+            .map(|f| {
+                field_to_c_str(
+                    &f.maybe_attributes,
+                    &f._type.as_ref().expect(&format!("Missing type on table field {:?}", f)),
+                    &f.name.as_ref().expect(&format!("Missing name on table field {:?}", f)),
+                    "    ",
+                    preserve_names,
+                    &None,
+                    ir,
+                )
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join("\n");
+        let mut accum = String::new();
+        accum.push_str(get_doc_comment(&data.maybe_attributes, 0).as_str());
+        accum.push_str(
+            format!(
+                include_str!("templates/c/struct.h"),
+                c_name = to_c_name(&data.name.get_name()),
+                decl = "struct",
+                attrs = if attrs.is_empty() { "".to_string() } else { format!(" {}", attrs) },
+                members = members
+            )
+            .as_str(),
+        );
+        Ok(accum)
+    }
+
     fn codegen_protocol_def2(
         &self,
         name: &str,
@@ -894,6 +937,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
                 Decl::Enum { data } => Some(self.codegen_enum_decl(data, &ir)),
                 Decl::Interface { data } => Some(self.codegen_protocol_decl(data, &ir)),
                 Decl::Struct { data } => Some(self.codegen_struct_decl(data)),
+                Decl::Table { data } => Some(self.codegen_table_decl(data)),
                 Decl::TypeAlias { data } => Some(self.codegen_alias_decl(data, &ir)),
                 Decl::Union { data } => Some(self.codegen_union_decl(data)),
             })
@@ -905,6 +949,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
             .filter_map(|decl| match decl {
                 Decl::Interface { data } => Some(self.codegen_protocol_def(data, &ir)),
                 Decl::Struct { data } => Some(self.codegen_struct_def(data, &ir)),
+                Decl::Table { data } => Some(self.codegen_table_def(data, &ir)),
                 Decl::Union { data } => Some(self.codegen_union_def(data, &ir)),
                 _ => None,
             })
