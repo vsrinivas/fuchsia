@@ -264,6 +264,99 @@ protocol D {
   EXPECT_EQ(protocol_d->all_methods.size(), 4);
 }
 
+TEST(ProtocolTests, GoodValidOpenClosedProtocolCompoition) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(
+library example;
+
+closed protocol Closed {};
+ajar protocol Ajar {};
+open protocol Open {};
+
+closed protocol ComposeInClosed {
+  compose Closed;
+};
+
+ajar protocol ComposeInAjar {
+  compose Closed;
+  compose Ajar;
+};
+
+open protocol ComposeInOpen {
+  compose Closed;
+  compose Ajar;
+  compose Open;
+};
+
+)FIDL",
+                      experiment_flags);
+  ASSERT_COMPILED(library);
+
+  auto compose_in_closed = library.LookupProtocol("ComposeInClosed");
+  ASSERT_NOT_NULL(compose_in_closed);
+  EXPECT_EQ(compose_in_closed->composed_protocols.size(), 1);
+
+  auto compose_in_ajar = library.LookupProtocol("ComposeInAjar");
+  ASSERT_NOT_NULL(compose_in_ajar);
+  EXPECT_EQ(compose_in_ajar->composed_protocols.size(), 2);
+
+  auto compose_in_open = library.LookupProtocol("ComposeInOpen");
+  ASSERT_NOT_NULL(compose_in_open);
+  EXPECT_EQ(compose_in_open->composed_protocols.size(), 3);
+}
+
+TEST(ProtocolTests, BadInavlidComposeOpenInClosed) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(
+library example;
+
+open protocol Composed {};
+
+closed protocol Composing {
+  compose Composed;
+};
+
+)FIDL",
+                      experiment_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrComposedProtocolTooOpen);
+}
+
+TEST(ProtocolTests, BadInavlidComposeAjarInClosed) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(
+library example;
+
+ajar protocol Composed {};
+
+closed protocol Composing {
+  compose Composed;
+};
+
+)FIDL",
+                      experiment_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrComposedProtocolTooOpen);
+}
+
+TEST(ProtocolTests, BadInavlidComposeOpenInAjar) {
+  auto experiment_flags =
+      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  TestLibrary library(R"FIDL(
+library example;
+
+open protocol Composed {};
+
+ajar protocol Composing {
+  compose Composed;
+};
+
+)FIDL",
+                      experiment_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrComposedProtocolTooOpen);
+}
+
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
 // off when unknown interactions are always-on.
 TEST(ProtocolTests, BadModifierStrictOnComposeWithoutUnkownInteractions) {

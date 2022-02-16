@@ -249,6 +249,14 @@ constexpr ErrorDef ErrCannotUseService("cannot use services in other declaration
 constexpr ErrorDef ErrCannotUseProtocol("cannot use protocol in this context");
 constexpr ErrorDef ErrCannotUseType("cannot use type in this context");
 constexpr ErrorDef ErrOnlyClientEndsInServices("service members must be client_end:P");
+constexpr ErrorDef<types::Openness, flat::Name, types::Openness, flat::Name>
+    ErrComposedProtocolTooOpen(
+        "{} protocol '{}' cannot compose {} protocol '{}'; composed protocol may not be more open "
+        "than composing protocol");
+constexpr ErrorDef<types::Openness> ErrFlexibleTwoWayMethodRequiresOpenProtocol(
+    "flexible two-way method may only be defined in an open protocol, not {}");
+constexpr ErrorDef<std::string_view> ErrFlexibleOneWayMethodInClosedProtocol(
+    "flexible {} may only be defined in an open or ajar protocol, not closed");
 
 // ---------------------------------------------------------------------------
 // Attribute Validation: Placement, Values, Constraints

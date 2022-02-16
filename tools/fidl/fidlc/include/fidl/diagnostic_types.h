@@ -13,6 +13,7 @@
 
 #include "source_span.h"
 #include "token.h"
+#include "types.h"
 #include "utils.h"
 
 namespace fidl {
@@ -41,6 +42,7 @@ std::string Display(std::string_view s);
 std::string Display(const std::set<std::string>& s);
 std::string Display(const SourceSpan& s);
 std::string Display(const Token::KindAndSubkind& t);
+std::string Display(const types::Openness o);
 std::string Display(const raw::AttributeList* a);
 std::string Display(const std::vector<std::string_view>& library_name);
 std::string Display(const flat::Attribute* a);

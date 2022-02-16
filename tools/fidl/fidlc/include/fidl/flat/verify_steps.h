@@ -56,6 +56,16 @@ class VerifyDependenciesStep : public Compiler::Step {
   void RunImpl() override;
 };
 
+class VerifyOpenInteractionsStep : public Compiler::Step {
+ public:
+  using Step::Step;
+
+ private:
+  void RunImpl() override;
+  void VerifyProtocolOpenness(const Protocol& protocol);
+  static bool IsAllowedComposition(types::Openness composing, types::Openness composed);
+};
+
 }  // namespace fidl::flat
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VERIFY_STEPS_H_

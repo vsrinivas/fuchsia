@@ -39,6 +39,10 @@ std::unique_ptr<Library> Compiler::Compile() {
     return nullptr;
   if (!VerifyDependenciesStep(this).Run())
     return nullptr;
+  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUnknownInteractions)) {
+    if (!VerifyOpenInteractionsStep(this).Run())
+      return nullptr;
+  }
 
   assert(checkpoint.NoNewErrors() && "errors should have caused an early return");
   return std::move(library_);

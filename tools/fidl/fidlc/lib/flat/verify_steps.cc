@@ -189,4 +189,62 @@ void VerifyInlineSizeStep::RunImpl() {
   }
 }
 
+void VerifyOpenInteractionsStep::RunImpl() {
+  for (const auto& protocol : library()->protocol_declarations) {
+    VerifyProtocolOpenness(*protocol);
+  }
+}
+
+void VerifyOpenInteractionsStep::VerifyProtocolOpenness(const Protocol& protocol) {
+  assert(protocol.compiled && "verification must happen after compilation of decls");
+
+  for (const auto& composed : protocol.composed_protocols) {
+    auto decl = library()->LookupDeclByName(composed.name);
+
+    // These shoud be ensured by CompileStep.
+    assert(decl && "Composed protocol unknown");
+    assert(decl->kind == Decl::Kind::kProtocol && "Composed protocol not a protocol");
+
+    auto composed_protocol = static_cast<const Protocol*>(decl);
+
+    if (!IsAllowedComposition(protocol.openness, composed_protocol->openness)) {
+      Fail(ErrComposedProtocolTooOpen, composed.name.span().value(), protocol.openness,
+           protocol.name, composed_protocol->openness, composed_protocol->name);
+    }
+  }
+
+  for (const auto& method : protocol.methods) {
+    if (method.strictness == types::Strictness::kFlexible) {
+      if (method.has_request && method.has_response) {
+        // This is a two-way method, so it must be in an open protocol.
+        if (protocol.openness != types::Openness::kOpen) {
+          Fail(ErrFlexibleTwoWayMethodRequiresOpenProtocol, method.name, protocol.openness);
+        }
+      } else {
+        // This is an event or one-way method, so it can be in either an open
+        // protocol or an ajar protocol.
+        if (protocol.openness == types::Openness::kClosed) {
+          Fail(ErrFlexibleOneWayMethodInClosedProtocol, method.name,
+               method.has_request ? "one-way method" : "event");
+        }
+      }
+    }
+  }
+}
+
+bool VerifyOpenInteractionsStep::IsAllowedComposition(types::Openness composing,
+                                                      types::Openness composed) {
+  switch (composing) {
+    case types::Openness::kOpen:
+      // Open protocol can compose any other protocol.
+      return true;
+    case types::Openness::kAjar:
+      // Ajar protocols can compose anything that isn't open.
+      return composed != types::Openness::kOpen;
+    case types::Openness::kClosed:
+      // Closed protocol can only compose another closed protocol.
+      return composed == types::Openness::kClosed;
+  }
+}
+
 }  // namespace fidl::flat

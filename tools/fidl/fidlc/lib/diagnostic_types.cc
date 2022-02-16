@@ -32,6 +32,17 @@ std::string Display(const SourceSpan& s) { return s.position_str(); }
 
 std::string Display(const Token::KindAndSubkind& t) { return std::string(Token::Name(t)); }
 
+std::string Display(const types::Openness o) {
+  switch (o) {
+    case types::Openness::kOpen:
+      return "open";
+    case types::Openness::kAjar:
+      return "ajar";
+    case types::Openness::kClosed:
+      return "closed";
+  }
+}
+
 std::string Display(const raw::AttributeList* a) {
   std::stringstream attributes_found;
   for (auto it = a->attributes.begin(); it != a->attributes.end(); it++) {
