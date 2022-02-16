@@ -1179,12 +1179,12 @@ static bool region_list_get_alloc_spot_no_memory_test() {
 
   size_t alloc_size = 0x2000;
   vaddr_t alloc_spot = 0;
-  // There is only a 1 page gap, and we are asking for two pages, so ZX_ERR_NO_MEMORY should be
+  // There is only a 1 page gap, and we are asking for two pages, so ZX_ERR_NO_RESOURCES should be
   // returned.
   zx_status_t status =
       regions.GetAllocSpot(&alloc_spot, align_pow2, /*entropy=*/0, alloc_size, base, size,
                            /*prng=*/nullptr);
-  EXPECT_EQ(ZX_ERR_NO_MEMORY, status);
+  EXPECT_EQ(ZX_ERR_NO_RESOURCES, status);
 
   END_TEST;
 }

@@ -113,6 +113,8 @@ and non-zero.  In the event of failure, a negative error value is returned.
 **ZX_ERR_ALREADY_EXISTS**  **ZX_VM_SPECIFIC** has been specified without
 **ZX_VM_SPECIFIC_OVERWRITE**, and the requested range overlaps with another mapping.
 
+**ZX_ERR_NO_RESOURCES** If a spot could not be found in the VMAR to create the mapping.
+
 **ZX_ERR_ACCESS_DENIED**  Insufficient privileges to make the requested mapping.
 
 **ZX_ERR_NOT_SUPPORTED** If the vmo is resizable, or backed by a pager but

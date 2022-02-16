@@ -356,7 +356,7 @@ class RegionList final {
     size_t candidate_spot_count = alloc_spot_info.candidate_spot_count;
     if (candidate_spot_count == 0) {
       DEBUG_ASSERT(!alloc_spot_info.found);
-      return ZX_ERR_NO_MEMORY;
+      return ZX_ERR_NO_RESOURCES;
     }
     if (!alloc_spot_info.found) {
       if (candidate_spot_count > max_candidate_spaces) {

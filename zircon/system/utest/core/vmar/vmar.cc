@@ -215,7 +215,7 @@ TEST(Vmar, MapInUpperLimitTest) {
 
   // Mapping one more time should fail now that all of the VMAR below the upper limit is consumed.
   ASSERT_EQ(zx_vmar_map(parent_region, options, upper_limit, vmo, 0, map_size, &map_addr),
-            ZX_ERR_NO_MEMORY);
+            ZX_ERR_NO_RESOURCES);
 
   // Mapping one more time without the upper limit should succeed.
   ASSERT_EQ(zx_vmar_map(parent_region, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, map_size,
@@ -293,7 +293,7 @@ TEST(Vmar, AllocateUnsatisfiableTest) {
   // Attempt to allocate a page inside of the full region
   EXPECT_EQ(zx_vmar_allocate(region1, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0,
                              zx_system_get_page_size(), &region3, &region3_addr),
-            ZX_ERR_NO_MEMORY);
+            ZX_ERR_NO_RESOURCES);
 
   EXPECT_EQ(zx_handle_close(region2), ZX_OK);
   EXPECT_EQ(zx_handle_close(region1), ZX_OK);
