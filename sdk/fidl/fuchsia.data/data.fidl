@@ -28,7 +28,7 @@ type DictionaryEntry = struct {
 };
 
 /// A dictionary's value is a string, or a list of strings.
-type DictionaryValue = strict union {
+type DictionaryValue = flexible union {
     1: str string:MAX_VALUE_LENGTH;
     2: str_vec vector<string:MAX_VALUE_LENGTH>:MAX_NUM_VALUE_ITEMS;
 };
