@@ -229,17 +229,16 @@ async fn create_blobfs_and_boot_args_from_this_package() -> (BlobfsRamdisk, Boot
     (blobfs, BootArgsFixedHash::new(*system_image.meta_far_merkle_root()))
 }
 
-// Blocks reads until signalled.
+// Signals when Self is opened, then blocks until signalled.
 #[derive(Clone)]
-struct BlockingMinfs {
-    block_until: Shared<oneshot::Receiver<()>>,
-    open_self_call_count: Arc<std::sync::atomic::AtomicU64>,
+struct MinfsSyncOnOpenSelf {
+    sync_point: SyncPoint,
 }
 
-impl BlockingMinfs {
-    fn new() -> (Self, oneshot::Sender<()>) {
-        let (send, recv) = oneshot::channel();
-        (Self { block_until: recv.shared(), open_self_call_count: Arc::new(0.into()) }, send)
+impl MinfsSyncOnOpenSelf {
+    fn new() -> (Self, SyncPoint) {
+        let sync_point = SyncPoint::new();
+        (Self { sync_point: sync_point.clone() }, sync_point)
     }
 
     fn directory_entry(&self) -> Arc<dyn DirectoryEntry> {
@@ -247,7 +246,7 @@ impl BlockingMinfs {
     }
 }
 
-impl vfs::directory::entry::DirectoryEntry for BlockingMinfs {
+impl vfs::directory::entry::DirectoryEntry for MinfsSyncOnOpenSelf {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
@@ -257,10 +256,9 @@ impl vfs::directory::entry::DirectoryEntry for BlockingMinfs {
         server_end: fidl::endpoints::ServerEnd<NodeMarker>,
     ) {
         if path.is_empty() {
-            self.open_self_call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            let block_until = self.block_until.clone();
+            let sync_point = self.sync_point.clone();
             let () = scope.clone().spawn(async move {
-                let () = block_until.await.unwrap();
+                let () = sync_point.signal_reached_then_wait_until_can_continue().await;
                 let () =
                 vfs::directory::immutable::connection::io1::ImmutableConnection::create_connection(
                     scope, self, flags, server_end,
@@ -280,7 +278,7 @@ impl vfs::directory::entry::DirectoryEntry for BlockingMinfs {
 }
 
 #[async_trait]
-impl vfs::directory::entry_container::Directory for BlockingMinfs {
+impl vfs::directory::entry_container::Directory for MinfsSyncOnOpenSelf {
     async fn read_dirents<'a>(
         &'a self,
         pos: &'a vfs::directory::traversal_position::TraversalPosition,
@@ -340,10 +338,57 @@ impl vfs::directory::entry_container::Directory for BlockingMinfs {
     }
 }
 
+// Allows synchronizing two async processes, P0 and P1, around the first time event E occurs in P1:
+//   * P0 performs `sync_point.wait_until_reached().await` to block until E occurs
+//   * P1 performs `sync_point.signal_reached_then_wait_until_can_continue().await` to:
+//       1. signal that E has occurred
+//       2. block until P0 is ready
+//   * P0 performs `sync_point.signal_can_continue()` to signal that it is aware E has occurred and
+//     P1 can continue
+#[derive(Clone)]
+struct SyncPoint {
+    reached: Shared<oneshot::Receiver<()>>,
+    reached_signaller: Arc<futures::lock::Mutex<Option<oneshot::Sender<()>>>>,
+    can_continue: Shared<oneshot::Receiver<()>>,
+    can_continue_signaller: Arc<futures::lock::Mutex<Option<oneshot::Sender<()>>>>,
+}
+
+impl SyncPoint {
+    fn new() -> Self {
+        let (reached_signaller, reached) = oneshot::channel();
+        let reached_signaller = Arc::new(futures::lock::Mutex::new(Some(reached_signaller)));
+        let reached = reached.shared();
+
+        let (can_continue_signaller, can_continue) = oneshot::channel();
+        let can_continue_signaller =
+            Arc::new(futures::lock::Mutex::new(Some(can_continue_signaller)));
+        let can_continue = can_continue.shared();
+
+        Self { reached, reached_signaller, can_continue, can_continue_signaller }
+    }
+
+    fn wait_until_reached(&self) -> impl futures::Future<Output = ()> {
+        self.reached.clone().map(|res| res.expect("never cancelled"))
+    }
+
+    async fn signal_reached_then_wait_until_can_continue(&self) {
+        if let Some(sender) = self.reached_signaller.lock().await.take() {
+            sender.send(()).unwrap()
+        }
+        let () = self.can_continue.clone().await.unwrap();
+    }
+
+    async fn signal_can_continue(&self) {
+        if let Some(sender) = self.can_continue_signaller.lock().await.take() {
+            sender.send(()).unwrap()
+        }
+    }
+}
+
 #[fuchsia::test]
 async fn pkg_cache_resolver_waits_for_minfs() {
     let (blobfs, boot_args) = create_blobfs_and_boot_args_from_this_package().await;
-    let (minfs, unblocker) = BlockingMinfs::new();
+    let (minfs, minfs_sync_point) = MinfsSyncOnOpenSelf::new();
 
     let env = TestEnvBuilder::new(
         vfs::remote::remote_dir(blobfs.root_dir_proxy().unwrap()),
@@ -353,16 +398,19 @@ async fn pkg_cache_resolver_waits_for_minfs() {
     .build()
     .await;
 
-    let mut timeout = fuchsia_async::Timer::new(std::time::Duration::from_millis(500)).fuse();
+    let mut minfs_opened = minfs_sync_point.wait_until_reached().fuse();
     let mut resolve = env.pkg_cache_resolver().resolve(PKG_CACHE_COMPONENT_URL).fuse();
-
     let () = futures::select! {
-        _ = timeout => (),
+        () = minfs_opened => (),
+        _ = resolve => panic!("resolve should not succeed before minfs open attempt")
+    };
+
+    let mut timeout = fuchsia_async::Timer::new(std::time::Duration::from_millis(100)).fuse();
+    let () = futures::select! {
+        () = timeout => (),
         _ = resolve => panic!("resolve should not succeed before minfs unblocked")
     };
 
-    unblocker.send(()).unwrap();
-
-    assert_eq!(minfs.open_self_call_count.load(std::sync::atomic::Ordering::SeqCst), 1);
+    let () = minfs_sync_point.signal_can_continue().await;
     assert_matches!(resolve.await.unwrap(), Ok(Component { .. }));
 }
