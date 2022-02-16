@@ -498,6 +498,10 @@ zx_status_t sys_system_powerctl(zx_handle_t power_rsrc, uint32_t cmd,
       platform_graceful_halt_helper(HALT_ACTION_REBOOT, ZirconCrashReason::NoCrash,
                                     ZX_TIME_INFINITE);
       break;
+    // TODO(91972): Signal halt token event once there is one
+    case ZX_SYSTEM_POWERCTL_ACK_KERNEL_INITIATED_REBOOT:
+      platform_graceful_halt_helper(HALT_ACTION_REBOOT, ZirconCrashReason::Oom, ZX_TIME_INFINITE);
+      break;
     case ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER:
       platform_graceful_halt_helper(HALT_ACTION_REBOOT_BOOTLOADER, ZirconCrashReason::NoCrash,
                                     ZX_TIME_INFINITE);

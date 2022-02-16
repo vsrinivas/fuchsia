@@ -20,7 +20,27 @@ zx_status_t zx_system_powerctl(zx_handle_t resource,
 
 ## DESCRIPTION
 
-TODO(fxbug.dev/32938)
+Changes the power state of the system based on the value of `arg`. Zircon may
+not be able to put the system in a given power state, depending on its level of
+support for the architecture being used.
+
+If the architecture is fully support the following are the behaviors of the
+given value:
+* **ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS** - set all processor cores as active
+* **ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY** - set only the primary CPU
+  as active
+* **ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE** - TODO(fxbug.dev/32938)
+* **ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1** - set CPU to power level 1 (x86 only)
+* **ZX_SYSTEM_POWERCTL_REBOOT** - restart the system, control should go through
+  any relevant firmware and bootloaders
+* **ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER** - restart the system, but stop in the
+  bootloader instead of loading the operating system
+* **ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY** - restart the system, but load the
+  recovery operating system instead of the primary OS
+* **ZX_SYSTEM_POWERCTL_SHUTDOWN** - turn the system off
+* **ZX_SYSTEM_POWERCTL_ACK_KERNEL_INITIATED_REBOOT** - used by userspace when it
+  is ready for a reboot in response to a previous signal from the kernel that
+  the kernel wanted to reboot the system
 
 ## RIGHTS
 
@@ -30,11 +50,15 @@ TODO(fxbug.dev/32938)
 
 ## RETURN VALUE
 
-TODO(fxbug.dev/32938)
+**ZX_OK**
 
 ## ERRORS
 
-TODO(fxbug.dev/32938)
+Returns **ZX_ERR_BAD_STATE** if
+**ZX_SYSTEM_POWERCTL_ACK_KERNEL_INITIATED_REBOOT** is supplied and the kernel
+had not previously signaled a desire to reboot.
+
+Returns **ZX_ERR_INVALID_ARGS** when an unrecognized `cmd` value is supplied.
 
 ## SEE ALSO
 
