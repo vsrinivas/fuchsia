@@ -7,7 +7,9 @@ import("//build/zircon/migrated_targets.gni")
 # TODO(schottm): make sdk_source_set when zxc is in the SDK
 source_set("fasync-source-set") {
   sources = [
+    "include/lib/fasync/bridge.h",
     "include/lib/fasync/future.h",
+    "include/lib/fasync/internal/bridge.h",
     "include/lib/fasync/internal/compiler.h",
     "include/lib/fasync/internal/future.h",
     "include/lib/fasync/internal/type_traits.h",
@@ -29,9 +31,11 @@ zx_library("fasync") {
   sdk_publishable = false
   sdk_name = "fasync-experimental-driver-only"
   sdk_headers = [
+    "lib/fasync/internal/bridge.h",
     "lib/fasync/internal/compiler.h",
     "lib/fasync/internal/future.h",
     "lib/fasync/internal/type_traits.h",
+    "lib/fasync/bridge.h",
     "lib/fasync/future.h",
     "lib/fasync/poll.h",
     "lib/fasync/scheduler.h",

@@ -36,11 +36,32 @@ struct first<T, Ts...> {
 template <typename... Ts>
 using first_t = typename first<Ts...>::type;
 
+template <typename T>
+struct is_tuple : std::false_type {};
+
+template <typename... Ts>
+struct is_tuple<std::tuple<Ts...>> : std::true_type {};
+
+template <typename T>
+LIB_FASYNC_INLINE_CONSTANT constexpr bool is_tuple_v = is_tuple<T>::value;
+
+template <typename T, typename = void>
+struct has_type : std::false_type {};
+
+template <typename T>
+struct has_type<T, cpp17::void_t<typename T::type>> : std::true_type {};
+
+template <typename T>
+LIB_FASYNC_INLINE_CONSTANT constexpr bool has_type_v = has_type<T>::value;
+
 template <typename T, typename = void>
 struct has_value_type : std::false_type {};
 
 template <typename T>
 struct has_value_type<T, cpp17::void_t<typename T::value_type>> : std::true_type {};
+
+template <typename T>
+LIB_FASYNC_INLINE_CONSTANT constexpr bool has_value_type_v = has_type<T>::value;
 
 template <typename R>
 struct is_value_result : cpp17::conjunction<is_result<R>, has_value_type<R>>::type {};
