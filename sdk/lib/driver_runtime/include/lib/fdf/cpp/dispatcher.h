@@ -67,18 +67,20 @@ class Dispatcher {
                                        cpp17::string_view scheduler_role = {}) {
     // We need to create an additional destruction context in addition to the fdf::Dispatcher
     // object, as |fdf_dispatcher_destroy_async| is called in the fdf::Dispatcher destructor.
-    //
-    // TODO(fxbug.dev/87840): pass |destructed_context->observer()| to |fdf_dispatcher_create|
-    // once supported. We also need to call |destructed_context.release()|, as it should be
-    // deleted on  callback, rather than dropped here.
-    __UNUSED auto dispatcher_destructed_context =
-        std::make_unique<DispatcherDestructedContext>(std::move(destructed_handler));
+    std::unique_ptr<DispatcherDestructedContext> dispatcher_destructed_context;
+    if (destructed_handler) {
+      dispatcher_destructed_context =
+          std::make_unique<DispatcherDestructedContext>(std::move(destructed_handler));
+    }
     fdf_dispatcher_t* dispatcher;
-    zx_status_t status = fdf_dispatcher_create(options, scheduler_role.data(),
-                                               scheduler_role.size(), nullptr, &dispatcher);
+    zx_status_t status = fdf_dispatcher_create(
+        options, scheduler_role.data(), scheduler_role.size(),
+        dispatcher_destructed_context ? dispatcher_destructed_context->observer() : nullptr,
+        &dispatcher);
     if (status != ZX_OK) {
       return zx::error(status);
     }
+    dispatcher_destructed_context.release();
     return zx::ok(Dispatcher(dispatcher));
   }
 

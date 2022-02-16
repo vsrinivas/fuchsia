@@ -10,6 +10,7 @@
 #include <lib/fdf/dispatcher.h>
 #include <lib/fdf/types.h>
 #include <lib/sync/completion.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/zx/event.h>
 
 #include <zxtest/zxtest.h>
@@ -38,6 +39,55 @@ class RuntimeTestCase : public zxtest::Test {
     next_driver_++;
     return reinterpret_cast<const void*>(driver);
   }
+
+  // Example usage:
+  //   DispatcherDestructedObserver observer;
+  //   driver_runtime::Dispatcher* dispatcher;
+  //   fdf_status_t status =
+  //       driver_runtime::Dispatcher::Create(..., observer.fdf_observer(), &dispatcher);
+  //   ...
+  //   dispatcher->Destroy();
+  //   ASSERT_OK(observer.WaitUntilDestructed());
+  class DispatcherDestructedObserver {
+   public:
+    // |require_callback| specifies whether the destructor will check that the callback was called.
+    // This can be set to false for tests that expect construction of the dispatcher to fail,
+    // but want to pass in a valid observer.
+    DispatcherDestructedObserver(bool require_callback = true)
+        : require_callback_(require_callback) {
+      observer_.fdf_observer.handler = DispatcherDestructedHandler;
+    }
+
+    ~DispatcherDestructedObserver() {
+      if (require_callback_) {
+        ASSERT_TRUE(observer_.signal.signaled());
+      }
+    }
+
+    DispatcherDestructedObserver(const DispatcherDestructedObserver&) = delete;
+    DispatcherDestructedObserver& operator=(const DispatcherDestructedObserver&) = delete;
+    DispatcherDestructedObserver& operator=(DispatcherDestructedObserver&&) = delete;
+    DispatcherDestructedObserver(DispatcherDestructedObserver&&) = delete;
+
+    zx_status_t WaitUntilDestructed() { return observer_.signal.Wait(zx::time::infinite()); }
+
+    // Returns the observer that can be passed to |driver_runtime::Dispatcher::Create|.
+    fdf_dispatcher_destructed_observer_t* fdf_observer() { return &observer_.fdf_observer; }
+
+   private:
+    struct DestructedObserver {
+      fdf_dispatcher_destructed_observer_t fdf_observer;
+      sync::Completion signal;
+    };
+
+    static void DispatcherDestructedHandler(fdf_dispatcher_destructed_observer_t* fdf_observer) {
+      DestructedObserver* observer = reinterpret_cast<DestructedObserver*>(fdf_observer);
+      observer->signal.Signal();
+    }
+
+    DestructedObserver observer_;
+    bool require_callback_;
+  };
 
  private:
   int next_driver_ = 1;

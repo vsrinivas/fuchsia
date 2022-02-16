@@ -119,13 +119,9 @@ __EXPORT fdf_status_t fdf_dispatcher_create(uint32_t options, const char* schedu
                                             size_t scheduler_role_len,
                                             fdf_dispatcher_destructed_observer_t* observer,
                                             fdf_dispatcher_t** out_dispatcher) {
-  // TODO(fxbug.dev/87840): remove this once implemented.
-  if (observer) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
   driver_runtime::Dispatcher* dispatcher;
-  auto status =
-      driver_runtime::Dispatcher::Create(options, scheduler_role, scheduler_role_len, &dispatcher);
+  auto status = driver_runtime::Dispatcher::Create(options, scheduler_role, scheduler_role_len,
+                                                   observer, &dispatcher);
   if (status != ZX_OK) {
     return status;
   }
