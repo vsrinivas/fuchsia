@@ -13,6 +13,7 @@
 #include <lib/stdcompat/span.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <string_view>
 
