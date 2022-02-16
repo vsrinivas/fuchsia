@@ -10,7 +10,7 @@
     },
     capabilities: [
         {
-            directory: "blob",
+            directory: "root",
             rights: [ "rw*" ],
             path: "/root",
         },
@@ -55,7 +55,7 @@
     ],
     expose: [
         {
-            directory: "blob",
+            directory: "root",
             from: "self",
         },
         {

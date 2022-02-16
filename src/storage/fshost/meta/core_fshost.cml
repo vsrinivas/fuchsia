@@ -133,8 +133,9 @@
             from: "self",
         },
         {
-            directory: "blob",
+            directory: "root",
             from: "#blobfs",
+            as: "blob",
         },
         {
             directory: "minfs",
