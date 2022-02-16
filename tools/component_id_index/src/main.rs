@@ -82,7 +82,7 @@ fn run(opts: CommandLineOpts) -> anyhow::Result<()> {
 
     let mut merged_index_fidl: fcomponent_internal::ComponentIdIndex = merged_index.try_into()?;
     let serialized_output_fidl = encode_persistent_with_context(
-        &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+        &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
         &mut merged_index_fidl,
     )
     .context("Could not fidl-encode merged index")?;
