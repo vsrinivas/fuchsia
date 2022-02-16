@@ -11,6 +11,7 @@
 #include <object/executor.h>
 #include <object/memory_watchdog.h>
 #include <platform/halt_helper.h>
+#include <platform/halt_token.h>
 #include <vm/scanner.h>
 
 namespace {
@@ -33,7 +34,7 @@ const char* PressureLevelToString(MemoryWatchdog::PressureLevel level) {
 }
 
 void HandleOnOomReboot() {
-  if (!TakeHaltToken()) {
+  if (!HaltToken::Get().Take()) {
     // We failed to acquire the token.  Someone else must have it.  That's OK.  We'll rely on them
     // to halt/reboot.  Nothing left for us to do but wait.
     printf("memory-pressure: halt/reboot already in progress; sleeping forever\n");
@@ -48,11 +49,40 @@ void HandleOnOomReboot() {
   ScopedMemoryAllocationDisabled allocation_disabled;
 
   printf("memory-pressure: pausing for %ums after OOM mem signal\n", gBootOptions->oom_timeout_ms);
-  zx_status_t status = Thread::Current::SleepRelative(ZX_MSEC(gBootOptions->oom_timeout_ms));
-  if (status != ZX_OK) {
-    printf("memory-pressure: sleep after OOM failed: %d\n", status);
+  zx_status_t status =
+      HaltToken::Get().WaitForAck(Deadline::after(ZX_MSEC(gBootOptions->oom_timeout_ms)));
+
+  switch (status) {
+    case ZX_OK:
+      printf("memory-pressure: rebooting due to OOM. received user-mode acknowledgement.\n");
+      break;
+
+    case ZX_ERR_TIMED_OUT:
+      // TODO(fxb/91704): Update this comment once the referenced bug/work-item
+      // is fixed.
+      //
+      // Note: While in general, a timeout while waiting for acknowledgement
+      // from user mode would be an indication of something bad going on (such
+      // as a bug preventing the ack, or simply not enough time to allow user
+      // mode to shut down), it is currently expected behavior as the change to
+      // cause user-mode to acknowledge a kernel initiated OOM reboot has not
+      // landed yet.
+      //
+      // See http://fxb/91704 for details.
+      //
+      printf(
+          "memory-pressure: rebooting due to OOM. timed out after waiting %ums for user-mode "
+          "ack.\n",
+          gBootOptions->oom_timeout_ms);
+      break;
+
+    default:
+      printf(
+          "memory-pressure: rebooting due to OOM. unexpected error while waiting for user-mode "
+          "acknowledgement (status %d).\n",
+          status);
+      break;
   }
-  printf("memory-pressure: rebooting due to OOM\n");
 
   // Tell the oom_tests host test that we are about to generate an OOM
   // crashlog to keep it happy.  Without these messages present in a
@@ -109,8 +139,8 @@ void MemoryWatchdog::AvailableStateUpdatedCallback(void* context, uint8_t idx) {
 }
 
 void MemoryWatchdog::AvailableStateUpdate(uint8_t idx) {
-  MemoryWatchdog::mem_event_idx_ = PressureLevel(idx);
-  MemoryWatchdog::mem_state_signal_.Signal();
+  mem_event_idx_ = PressureLevel(idx);
+  mem_state_signal_.Signal();
 }
 
 void MemoryWatchdog::EvictionTriggerCallback(Timer* timer, zx_time_t now, void* arg) {

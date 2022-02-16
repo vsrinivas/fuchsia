@@ -16,6 +16,7 @@
 #include <ktl/array.h>
 #include <object/root_job_observer.h>
 #include <platform/halt_helper.h>
+#include <platform/halt_token.h>
 
 namespace {
 
@@ -26,7 +27,7 @@ zx_koid_t gCriticalProcessKoid __TA_GUARDED(CriticalProcessNameLock::Get()) = ZX
 // May or may not return.
 void Halt() {
   const char* notice = gBootOptions->root_job_notice.data();
-  if (!TakeHaltToken()) {
+  if (!HaltToken::Get().Take()) {
     printf("root-job: halt/reboot already in progress; returning\n");
     return;
   }

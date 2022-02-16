@@ -9,14 +9,14 @@
 
 #include <kernel/mp.h>
 #include <platform/halt_helper.h>
+#include <platform/halt_token.h>
 
-ktl::atomic<bool> gHaltInProgress = false;
-
-bool TakeHaltToken() { return !gHaltInProgress.exchange(true); }
+// Storage for the global halt token singleton
+HaltToken HaltToken::g_instance;
 
 void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_reason_t reason,
                                    zx_time_t panic_deadline) {
-  if (!TakeHaltToken()) {
+  if (!HaltToken::Get().Take()) {
     printf("platform_graceful_halt_helper: halt/reboot already in progress; sleeping forever\n");
     Thread::Current::Sleep(ZX_TIME_INFINITE);
   }
