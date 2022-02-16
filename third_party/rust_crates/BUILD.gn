@@ -118,10 +118,8 @@ group("bytes") {
   deps = [ ":bytes-v0_5_4" ]
 }
 
-if (!(current_os == "fuchsia")) {
-  group("camino") {
-    deps = [ ":camino-v1_0_5" ]
-  }
+group("camino") {
+  deps = [ ":camino-v1_0_5" ]
 }
 
 if (!(current_os == "fuchsia")) {

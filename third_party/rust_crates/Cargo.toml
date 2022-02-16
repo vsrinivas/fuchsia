@@ -44,6 +44,7 @@ blocking = "1.0.2"
 bumpalo = "3.2.1"
 byteorder = { version = "1", features = ["i128"] }
 bytes = "0.5.4"
+camino = "1.0.5"
 # NB: morally we'd like to default-features = false here, but we have
 # transitive dependencies on this crate that *do* enable default features.
 # Cargo does something called "feature unification"
@@ -251,7 +252,6 @@ async-executor = "1.4.1"
 async-fs = "1.5"
 async-io = "1.4.1"
 async-net = "1.6.0"
-camino = "1.0.5"
 cargo_metadata = "0.14.1"
 crossterm = "0.19"
 concurrent-queue = "1.2.2"
