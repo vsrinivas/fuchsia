@@ -60,9 +60,9 @@ std::unique_ptr<PlatformHandle> ZirconPlatformPciDevice::GetBusTransactionInitia
 
 std::unique_ptr<PlatformInterrupt> ZirconPlatformPciDevice::RegisterInterrupt() {
   pci_irq_mode_t mode = {};
-  zx_status_t status = pci_configure_irq_mode(&pci(), /*irq count*/ 1, /*mode=*/&mode);
+  zx_status_t status = pci_configure_interrupt_mode(&pci(), /*irq count*/ 1, /*mode=*/&mode);
   if (status != ZX_OK) {
-    return DRETP(nullptr, "configure_irq_mode failed (%d)", status);
+    return DRETP(nullptr, "configure_interrupt_mode failed (%d)", status);
   }
 
   zx_handle_t interrupt_handle;

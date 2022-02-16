@@ -42,7 +42,7 @@ zx_status_t PciBackend::Bind() {
     return st;
   }
 
-  if ((st = ConfigureIrqMode()) != ZX_OK) {
+  if ((st = ConfigureInterruptMode()) != ZX_OK) {
     zxlogf(ERROR, "%s: cannot configure IRQs %d", tag(), st);
     return st;
   }
@@ -58,8 +58,8 @@ zx_status_t PciBackend::Bind() {
 // worker in the backends at this time it's not that important that we allocate
 // a vector per ring, so for now the ideal is roughly two vectors, one being for
 // config changes and the other for rings.
-zx_status_t PciBackend::ConfigureIrqMode() {
-  // This looks a lot like something ConfigureIrqMode was designed for, but
+zx_status_t PciBackend::ConfigureInterruptMode() {
+  // This looks a lot like something ConfigureInterruptMode was designed for, but
   // since we have a specific requirement to use MSI-X if and only if we have 2
   // vectors it means rolling it by hand.
   uint32_t irq_cnt = 0;

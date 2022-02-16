@@ -241,7 +241,7 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
 
   // Configure our IRQ mode and map our IRQ handle.
   ddk::Pci pci(pci_);
-  zx_status_t res = pci.ConfigureIrqMode(1, &irq_mode_);
+  zx_status_t res = pci.ConfigureInterruptMode(1, &irq_mode_);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to set IRQ mode (%d)!", res);
     return res;

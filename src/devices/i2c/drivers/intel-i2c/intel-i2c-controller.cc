@@ -115,7 +115,7 @@ zx_status_t IntelI2cController::Init() {
 
   regs_ = reinterpret_cast<MMIO_PTR I2cRegs*>(mmio_->get());
 
-  status = pci_.ConfigureIrqMode(1, &irq_mode_);
+  status = pci_.ConfigureInterruptMode(1, &irq_mode_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "i2c: failed to set irq mode: %d", status);
     return status;

@@ -35,7 +35,7 @@ static zx_status_t pci_sdhci_get_interrupt(void* ctx, zx_handle_t* handle_out) {
   pci_sdhci_device_t* dev = ctx;
   // select irq mode
   pci_irq_mode_t mode = PCI_IRQ_MODE_DISABLED;
-  zx_status_t status = pci_configure_irq_mode(&dev->pci, 1, &mode);
+  zx_status_t status = pci_configure_interrupt_mode(&dev->pci, 1, &mode);
   if (status != ZX_OK) {
     zxlogf(ERROR, "error setting irq mode: %s", zx_status_get_string(status));
     return status;

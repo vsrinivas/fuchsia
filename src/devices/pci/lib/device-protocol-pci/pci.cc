@@ -5,8 +5,8 @@
 #include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio.h>
 
-zx_status_t pci_configure_irq_mode(const pci_protocol_t* pci, uint32_t requested_irq_count,
-                                   pci_irq_mode_t* out_mode) {
+zx_status_t pci_configure_interrupt_mode(const pci_protocol_t* pci, uint32_t requested_irq_count,
+                                         pci_irq_mode_t* out_mode) {
   pci_irq_mode_t modes[] = {PCI_IRQ_MODE_MSI_X, PCI_IRQ_MODE_MSI, PCI_IRQ_MODE_LEGACY};
   for (pci_irq_mode_t mode : modes) {
     uint32_t irq_cnt = 0;
@@ -69,10 +69,10 @@ zx_status_t Pci::MapMmio(uint32_t index, uint32_t cache_policy, std::optional<Mm
   return MmioBuffer::Create(0, vmo_size, std::move(vmo), cache_policy, mmio);
 }
 
-zx_status_t Pci::ConfigureIrqMode(uint32_t requested_irq_count, pci_irq_mode_t* out_mode) {
+zx_status_t Pci::ConfigureInterruptMode(uint32_t requested_irq_count, pci_irq_mode_t* out_mode) {
   pci_protocol_t proto{};
   GetProto(&proto);
-  return pci_configure_irq_mode(&proto, requested_irq_count, out_mode);
+  return pci_configure_interrupt_mode(&proto, requested_irq_count, out_mode);
 }
 
 }  // namespace ddk

@@ -40,9 +40,9 @@ zx_status_t GspiDevice::Create(void* ctx, zx_device_t* parent) {
   }
 
   zx::interrupt irq;
-  status = pci.ConfigureIrqMode(1, nullptr);
+  status = pci.ConfigureInterruptMode(1, nullptr);
   if (status != ZX_OK) {
-    zxlogf(WARNING, "Failed to ConfigureIrqMode: %s", zx_status_get_string(status));
+    zxlogf(WARNING, "Failed to ConfigureInterruptMode: %s", zx_status_get_string(status));
   } else {
     status = pci.MapInterrupt(0, &irq);
     if (status != ZX_OK) {

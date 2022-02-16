@@ -1626,7 +1626,7 @@ zx_status_t UsbXhci::InitPci() {
   mode_irq_max = std::min(mode_irq_max, UINT16_MAX);
   irq_count_ = std::min(irq_count_, static_cast<uint16_t>(mode_irq_max));
   pci_irq_mode_t irq_mode;
-  status = pci_.ConfigureIrqMode(irq_count_, &irq_mode);
+  status = pci_.ConfigureInterruptMode(irq_count_, &irq_mode);
   if (status != ZX_OK) {
     return status;
   }

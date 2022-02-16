@@ -12,8 +12,8 @@
 
 __BEGIN_CDECLS
 
-zx_status_t pci_configure_irq_mode(const pci_protocol_t* pci, uint32_t requested_irq_count,
-                                   pci_irq_mode_t* out_mode);
+zx_status_t pci_configure_interrupt_mode(const pci_protocol_t* pci, uint32_t requested_irq_count,
+                                         pci_irq_mode_t* out_mode);
 zx_status_t pci_map_bar_buffer(const pci_protocol_t* pci, uint32_t bar_id, uint32_t cache_policy,
                                mmio_buffer_t* buffer);
 
@@ -45,7 +45,7 @@ class Pci : public ddk::PciProtocolClient {
 
   ~Pci() = default;
 
-  zx_status_t ConfigureIrqMode(uint32_t requested_irq_count, pci_irq_mode_t* out_mode);
+  zx_status_t ConfigureInterruptMode(uint32_t requested_irq_count, pci_irq_mode_t* out_mode);
   zx_status_t MapMmio(uint32_t bar_id, uint32_t cache_policy, std::optional<MmioBuffer>* mmio);
 };
 

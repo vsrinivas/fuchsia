@@ -360,7 +360,7 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
     goto fail;
   }
 
-  res = pci_configure_irq_mode(&edev->pci, 1, &edev->irq_mode);
+  res = pci_configure_interrupt_mode(&edev->pci, 1, &edev->irq_mode);
   if (res != ZX_OK) {
     zxlogf(ERROR, "rtl8111: failed to configure irqs");
     res = ZX_ERR_INTERNAL;

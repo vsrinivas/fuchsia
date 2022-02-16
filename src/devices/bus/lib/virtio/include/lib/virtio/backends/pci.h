@@ -23,7 +23,7 @@ class PciBackend : public Backend {
   virtual zx_status_t Init() = 0;
   const char* tag() { return tag_; }
 
-  zx_status_t ConfigureIrqMode();
+  zx_status_t ConfigureInterruptMode();
   zx::status<uint32_t> WaitForInterrupt() final;
   void InterruptAck(uint32_t key) final;
 
