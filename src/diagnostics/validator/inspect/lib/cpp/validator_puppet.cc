@@ -38,7 +38,8 @@ using Value =
                    inspect::BoolProperty, inspect::IntArray, inspect::UintArray,
                    inspect::DoubleArray, inspect::LinearIntHistogram, inspect::LinearUintHistogram,
                    inspect::LinearDoubleHistogram, inspect::ExponentialIntHistogram,
-                   inspect::ExponentialUintHistogram, inspect::ExponentialDoubleHistogram>;
+                   inspect::ExponentialUintHistogram, inspect::ExponentialDoubleHistogram,
+                   inspect::StringArray>;
 
 class Actor {
  public:
@@ -350,6 +351,9 @@ class Actor {
       case ValueType::DOUBLE:
         value_map_.emplace(action.id, parent->CreateDoubleArray(action.name, action.slots));
         break;
+      case ValueType::STRING:
+        value_map_.emplace(action.id, parent->CreateStringArray(action.name, action.slots));
+        break;
       default:
         return TestResult::UNIMPLEMENTED;
     };
@@ -357,8 +361,38 @@ class Actor {
     return TestResult::OK;
   }
 
-  // Helpful macro for deduplicating the 3 operations for arrays (Set, Add, and Subtract).
-#define CREATE_ARRAY_HANDLER(OP_NAME, TYPE_FUNC)                          \
+  TestResult HandleArraySet(const Action& raw_action) {
+    auto& action = raw_action.array_set();
+
+    if (action.value.is_int_t()) {
+      if (auto* val = GetFromValueMap<inspect::IntArray>(action.id)) {
+        val->Set(action.index, action.value.int_t());
+        return TestResult::OK;
+      }
+    } else if (action.value.is_uint_t()) {
+      if (auto* val = GetFromValueMap<inspect::UintArray>(action.id)) {
+        val->Set(action.index, action.value.uint_t());
+        return TestResult::OK;
+      }
+    } else if (action.value.is_double_t()) {
+      if (auto* val = GetFromValueMap<inspect::DoubleArray>(action.id)) {
+        val->Set(action.index, action.value.double_t());
+        return TestResult::OK;
+      }
+    } else if (action.value.is_string_t()) {
+      if (auto* val = GetFromValueMap<inspect::StringArray>(action.id)) {
+        val->Set(action.index, action.value.string_t());
+        return TestResult::OK;
+      }
+    } else {
+      return TestResult::UNIMPLEMENTED;
+    }
+
+    return TestResult::FAILED;
+  }
+
+  // Helpful macro for deduplicating the operations for numeric arrays (Add and Subtract).
+#define CREATE_NUMERIC_ARRAY_HANDLER(OP_NAME, TYPE_FUNC)                  \
   TestResult HandleArray##OP_NAME(const Action& raw_action) {             \
     auto& action = raw_action.TYPE_FUNC();                                \
                                                                           \
@@ -384,9 +418,8 @@ class Actor {
     return TestResult::FAILED;                                            \
   }
 
-  CREATE_ARRAY_HANDLER(Set, array_set)
-  CREATE_ARRAY_HANDLER(Add, array_add)
-  CREATE_ARRAY_HANDLER(Subtract, array_subtract)
+  CREATE_NUMERIC_ARRAY_HANDLER(Add, array_add)
+  CREATE_NUMERIC_ARRAY_HANDLER(Subtract, array_subtract)
 
   TestResult HandleCreateLinearHistogram(const Action& raw_action) {
     auto& action = raw_action.create_linear_histogram();
