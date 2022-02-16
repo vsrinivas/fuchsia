@@ -140,6 +140,9 @@ type RunCommand struct {
 
 	// Whether to enable experimental ffx features.
 	ffxExperimental bool
+
+	// The level of experimental ffx features to enable.
+	ffxExperimentLevel int
 }
 
 // targetInfo is the schema for a JSON object used to communicate target
@@ -192,6 +195,7 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.localRepo, "local-repo", "", "path to a local package repository; the repo and blobs flags are ignored when this is set")
 	f.StringVar(&r.ffxPath, "ffx", "", "Path to the ffx tool.")
 	f.BoolVar(&r.ffxExperimental, "ffx-experimental", false, "Whether to enable experimental ffx features. If -ffx is not set, this will have no effect.")
+	f.IntVar(&r.ffxExperimentLevel, "ffx-experiment-level", 0, "The level of experimental features to enable. If -ffx is not set, this will have no effect.")
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
@@ -249,6 +253,11 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		defer ffx.Stop()
 	}
 
+	// TODO(ihuh): Remove ffxExperimental flag once we're only using ffx-experiment-level.
+	if r.ffxExperimental {
+		r.ffxExperimentLevel = 2
+	}
+
 	for _, t := range targetSlice {
 		// Start serial servers for all targets. Will no-op for targets that
 		// already have serial servers.
@@ -259,7 +268,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		// config and daemon, but run commands against its own specified target.
 		if ffx != nil {
 			ffxForTarget := ffxutil.FFXInstanceWithConfig(r.ffxPath, "", ffx.Config.Env(), t.Nodename(), ffx.ConfigPath)
-			t.SetFFX(&targets.FFXInstance{ffxForTarget, r.ffxExperimental}, ffx.Config.Env())
+			t.SetFFX(&targets.FFXInstance{ffxForTarget, r.ffxExperimentLevel}, ffx.Config.Env())
 		}
 	}
 
@@ -448,7 +457,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target, args []stri
 	}
 	if t.UseFFX() {
 		subprocessEnv[constants.FFXPathEnvKey] = r.ffxPath
-		subprocessEnv[constants.FFXExperimentalEnvKey] = strconv.FormatBool(r.ffxExperimental)
+		subprocessEnv[constants.FFXExperimentLevelEnvKey] = strconv.Itoa(r.ffxExperimentLevel)
 		subprocessEnv[constants.FFXConfigPathEnvKey] = t.FFXConfigPath()
 	}
 

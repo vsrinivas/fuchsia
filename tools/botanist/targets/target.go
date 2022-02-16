@@ -38,8 +38,9 @@ const (
 // determine how botanist uses ffx.
 type FFXInstance struct {
 	*ffxutil.FFXInstance
-	// Experimental enables running experimental ffx features.
-	Experimental bool
+	// ExperimentLevel specifies what level of experimental ffx features
+	// to enable.
+	ExperimentLevel int
 }
 
 // target is a generic Fuchsia instance.
@@ -90,10 +91,10 @@ func (t *target) UseFFX() bool {
 }
 
 // UseFFXExperimental returns true if there is an FFXInstance associated with
-// this target and we're running in experimental mode.
+// this target and we're running with an experiment level >= the provided level.
 // Use to enable experimental ffx features.
-func (t *target) UseFFXExperimental() bool {
-	return t.UseFFX() && t.ffx.Experimental
+func (t *target) UseFFXExperimental(level int) bool {
+	return t.UseFFX() && t.ffx.ExperimentLevel >= level
 }
 
 // FFXConfigPath returns the path to the ffx config.

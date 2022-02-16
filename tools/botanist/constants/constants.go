@@ -24,7 +24,7 @@ const (
 	PkgSrvPortKey       = "FUCHSIA_PACKAGE_SERVER_PORT"
 	TestbedConfigEnvKey = "FUCHSIA_TESTBED_CONFIG"
 
-	FFXPathEnvKey         = "FUCHSIA_FFX_PATH"
-	FFXExperimentalEnvKey = "FUCHSIA_FFX_EXPERIMENTAL"
-	FFXConfigPathEnvKey   = "FUCHSIA_FFX_CONFIG_PATH"
+	FFXPathEnvKey            = "FUCHSIA_FFX_PATH"
+	FFXExperimentLevelEnvKey = "FUCHSIA_FFX_EXPERIMENT_LEVEL"
+	FFXConfigPathEnvKey      = "FUCHSIA_FFX_CONFIG_PATH"
 )

@@ -296,7 +296,7 @@ func getImgByName(imgs []*bootserver.Image, name string) string {
 
 func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) error {
 	// TODO(fxbug.dev/91352): Remove experimental condition once stable.
-	if t.UseFFXExperimental() {
+	if t.UseFFXExperimental(2) {
 		t.ffx.TargetWait(ctx)
 		zbi := getImgByName(images, "zbi_zircon-a")
 		vbmeta := getImgByName(images, "vbmeta_zircon-a")
@@ -337,7 +337,7 @@ func (t *DeviceTarget) flash(ctx context.Context, images []*bootserver.Image) er
 	}
 
 	// TODO(fxbug.dev/91040): Remove experimental condition once stable.
-	if pubkey != "" && t.UseFFXExperimental() {
+	if pubkey != "" && t.UseFFXExperimental(2) {
 		flashManifest := getImgByName(images, "manifest_flash-manifest")
 		if flashManifest == "" {
 			return errors.New("flash manifest not found")

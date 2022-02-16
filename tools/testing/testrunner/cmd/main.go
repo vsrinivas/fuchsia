@@ -75,8 +75,8 @@ type testrunnerFlags struct {
 	// The path to the ffx tool.
 	ffxPath string
 
-	// Whether to enable experimental ffx features.
-	ffxExperimental bool
+	// The level of experimental ffx features to enable.
+	ffxExperimentLevel int
 }
 
 func usage() {
@@ -102,7 +102,7 @@ func main() {
 	flag.StringVar(&flags.snapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
 	flag.Var(&flags.logLevel, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
 	flag.StringVar(&flags.ffxPath, "ffx", "", "Path to the ffx tool.")
-	flag.BoolVar(&flags.ffxExperimental, "ffx-experimental", false, "Whether to enable experimental ffx features. If -ffx is not set, this will have no effect.")
+	flag.IntVar(&flags.ffxExperimentLevel, "ffx-experiment-level", 0, "The level of experimental features to enable. If -ffx is not set, this will have no effect.")
 
 	flag.Usage = usage
 	flag.Parse()
@@ -321,11 +321,11 @@ func execute(
 				// specified by test name.
 				// Remove the ffx test out dirs which would now only contain empty directories
 				// and summary.jsons that don't point to real paths anymore.
-				ffxExperimental, err := strconv.ParseBool(os.Getenv(botanistconstants.FFXExperimentalEnvKey))
+				ffxExperimentLevel, err := strconv.Atoi(os.Getenv(botanistconstants.FFXExperimentLevelEnvKey))
 				if err != nil {
-					ffxExperimental = flags.ffxExperimental
+					ffxExperimentLevel = flags.ffxExperimentLevel
 				}
-				if ffxExperimental {
+				if ffxExperimentLevel >= 2 {
 					// Leave the summary.jsons for debugging.
 					err = ffxTester.RemoveAllEmptyOutputDirs()
 				} else {
