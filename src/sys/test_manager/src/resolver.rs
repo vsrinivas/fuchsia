@@ -25,7 +25,6 @@ fn get_global_allowlist() -> HashSet<String> {
         "battery-manager".to_string(),
         "fuzz-registry".to_string(),
         "test_manager".to_string(),
-        "component_hub_integration_test".to_string(),
         "example-tests".to_string(),
     }
 }

@@ -9,7 +9,7 @@
     children: [
         {
             name: "foo",
-            url: "fuchsia-pkg://fuchsia.com/component_hub_integration_test#meta/foo.cml",
+            url: "#meta/foo.cm",
         },
     ],
     capabilities: [

@@ -5,7 +5,7 @@
 use {
     component_hub::io::Directory,
     component_hub::{list, select, show},
-    moniker::AbsoluteMonikerBase,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::path::PathBuf,
 };
 
@@ -31,7 +31,7 @@ async fn list() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn show() {
     let hub_path = PathBuf::from("/hub");
-    let hub_dir = Directory::from_namespace(hub_path).unwrap();
+    let hub_dir = Directory::from_namespace(&hub_path).unwrap();
 
     let components = show::find_components("test.cm".to_string(), hub_dir).await.unwrap();
 
@@ -71,6 +71,16 @@ async fn show() {
     // We do not verify the contents of the execution, because they are largely dependent on
     // the Rust Test Runner
     assert!(component.execution.is_some());
+
+    let hub_dir = Directory::from_namespace(&hub_path).unwrap();
+    let components = show::find_components("foo.cm".to_string(), hub_dir).await.unwrap();
+    assert_eq!(components.len(), 1);
+    let component = &components[0];
+    assert_eq!(component.moniker, AbsoluteMoniker::parse_str("/foo").unwrap());
+    assert_eq!(component.url, "#meta/foo.cm");
+    assert_eq!(component.component_type, "CML static component");
+    assert!(component.resolved.is_none());
+    assert!(component.execution.is_none());
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
