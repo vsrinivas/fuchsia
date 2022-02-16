@@ -10,6 +10,7 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 
@@ -62,18 +63,23 @@ zx_status_t PciBackend::ConfigureInterruptMode() {
   // This looks a lot like something ConfigureInterruptMode was designed for, but
   // since we have a specific requirement to use MSI-X if and only if we have 2
   // vectors it means rolling it by hand.
-  uint32_t irq_cnt = 0;
-  pci_irq_mode_t mode = PCI_IRQ_MODE_MSI_X;
-  zx_status_t st = pci().QueryIrqMode(mode, &irq_cnt);
-  irq_cnt = std::min(2u, irq_cnt);
-  if ((st != ZX_OK || irq_cnt < 2) || (st = pci().SetInterruptMode(mode, irq_cnt)) != ZX_OK) {
-    mode = PCI_IRQ_MODE_LEGACY;
-    zx_status_t intx_st = pci().QueryIrqMode(mode, &irq_cnt);
-    if (intx_st != ZX_OK || (intx_st = pci().SetInterruptMode(mode, irq_cnt)) != ZX_OK) {
-      zxlogf(ERROR, "Failed to configure a virtio IRQ mode (MSI-X: %s, INTx: %s)",
-             zx_status_get_string(st), zx_status_get_string(intx_st));
-      return intx_st;
-    }
+  pci_interrupt_modes_t modes{};
+  pci().GetInterruptModes(&modes);
+  pci_irq_mode_t mode = PCI_IRQ_MODE_LEGACY;
+  uint32_t irq_cnt = 1;
+
+  if (modes.msix >= 2) {
+    mode = PCI_IRQ_MODE_MSI_X;
+    irq_cnt = 2;
+  } else if (modes.legacy == 0) {
+    zxlogf(ERROR, "No interrupt support found for device!");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t st = pci().SetInterruptMode(mode, irq_cnt);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "Failed to configure a virtio IRQ mode: %s", zx_status_get_string(st));
+    return st;
   }
 
   // Legacy only supports 1 IRQ, but for MSI-X we only need 2
