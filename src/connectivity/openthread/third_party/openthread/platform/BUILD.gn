@@ -12,6 +12,8 @@ source_set("platform") {
     "bootstrap_fidl_impl.h",
     "entropy.cc",
     "fuchsia_platform_alarm.cc",
+    "infra_if.cc",
+    "infra_if.h",
     "logging.cc",
     "main.cc",
     "misc.cc",
