@@ -166,7 +166,7 @@ template("clang_toolchain") {
     forward_variables_from(invoker, [ "use_strip" ])
     if (use_strip) {
       if (invoker.toolchain_os == "mac") {
-        strip = "xcrun strip -Sx"
+        strip = "${prefix}/llvm-strip"
       } else {
         strip = "${prefix}/llvm-objcopy"
         buildidtool = rebase_path(
@@ -392,7 +392,7 @@ template("clang_toolchain") {
       }
       if (use_strip) {
         if (invoker.toolchain_os == "mac") {
-          command += " && $strip \"{{UNSTRIPPED_OUTFILE}}\" -o \"$outfile\""
+          command += " && $strip -Sx \"{{UNSTRIPPED_OUTFILE}}\" -o \"$outfile\""
         } else {
           command +=
               " && $strip --strip-all \"{{UNSTRIPPED_OUTFILE}}\" \"$outfile\""
@@ -647,7 +647,7 @@ template("clang_toolchain") {
       }
       if (use_strip) {
         if (invoker.toolchain_os == "mac") {
-          command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
+          command += " && $strip -Sx \"$unstripped_outfile\" -o \"$outfile\""
         } else {
           command +=
               " && $strip {{STRIP_ARGS}} \"$unstripped_outfile\" \"$outfile\""
