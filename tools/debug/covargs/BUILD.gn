@@ -74,5 +74,5 @@ go_test("covargs_tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":covargs_tests" ]
+  deps = [ ":covargs_tests($host_toolchain)" ]
 }
