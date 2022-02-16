@@ -145,6 +145,7 @@ go_library("lib") {
     "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
     "//sdk/fidl/fuchsia.net.interfaces($go_toolchain)",
     "//sdk/fidl/fuchsia.net.interfaces.admin($go_toolchain)",
+    "//sdk/fidl/fuchsia.net.multicast.admin($go_toolchain)",
     "//sdk/fidl/fuchsia.net.name($go_toolchain)",
     "//sdk/fidl/fuchsia.net.neighbor($go_toolchain)",
     "//sdk/fidl/fuchsia.net.routes($go_toolchain)",

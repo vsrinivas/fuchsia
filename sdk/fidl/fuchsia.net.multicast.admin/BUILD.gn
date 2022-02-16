@@ -1,0 +1,23 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.net.multicast.admin") {
+  # Note that types in this library use strict to enjoy type safety. The strict
+  # types should be changed to flexible if/when this library is included in the
+  # SDK.
+  sdk_category = "internal"
+
+  sources = [
+    "common.fidl",
+    "ipv4.fidl",
+    "ipv6.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.net",
+    "//zircon/vdso/zx",
+  ]
+}

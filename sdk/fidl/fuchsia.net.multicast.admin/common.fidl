@@ -1,0 +1,87 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.multicast.admin;
+
+using zx;
+using fuchsia.net;
+
+type Empty = struct {};
+
+/// The maximum number of multicast-capable interfaces.
+///
+/// This value was obtained from the Linux multicast routing socket
+/// implementation's `MAXVIFS` (for IPv4)/`MAXMIFS` (for IPv6) value which are
+/// both 32:
+/// https://github.com/torvalds/linux/blob/5bfc75d92efd494db37f5c4c173d3639d4772966/include/uapi/linux/mroute.h#L44
+/// https://github.com/torvalds/linux/blob/5bfc75d92efd494db37f5c4c173d3639d4772966/include/uapi/linux/mroute6.h#L47
+const MAX_MULTICAST_INTERFACES uint8 = 32;
+
+/// A multicast route.
+type Route = table {
+    /// The expected input interface for a multicast packet using this route.
+    ///
+    /// Required.
+    1: expected_input_interface fuchsia.net.interface_id;
+
+    /// The action to take for the route.
+    ///
+    /// Required.
+    2: action strict union {
+        /// Send multicast packets through a set of output interfaces if the
+        /// multicast packet meets a minimum TTL (IPv4) or HopLimit (IPv6)
+        /// requirement for the interface.
+        1: outgoing_interfaces vector< struct {
+            /// The ID for the outgoing interface.
+            id fuchsia.net.interface_id;
+
+            /// The minumum TTL/HopLimit a multicast packet must have to be sent
+            /// through the interface.
+            ///
+            /// Note: a value of 0 naturally allows all packets to be forwarded.
+            min_ttl uint8;
+        }>:MAX_MULTICAST_INTERFACES;
+    };
+};
+
+/// A snapshot of statistics for a multicast route.
+type RouteStats = table {
+    /// The last time the route was used to route a packet.
+    ///
+    /// The value is obtained from the system’s monotonic clock.
+    ///
+    /// Required.
+    1: last_used zx.time;
+};
+
+/// An event that can occur during multicast routing.
+type RoutingEvent = strict union {
+    /// An event for a multicast packet that did not match any route.
+    ///
+    /// The packet that triggered this event may be queued so that the
+    /// packet may be transmitted once a route is installed. Note that
+    /// the packet may be dropped as per the server's GC/eviction
+    /// configurations/policies.
+    1: missing_route Empty;
+
+    /// An event for a packet that arrived at an interface different
+    /// from what a route expected.
+    ///
+    /// This may be an indication of a routing loop. The packet that
+    /// triggered this event will be dropped without being forwarded.
+    2: wrong_input_interface table {
+        /// The interface the multicast packet was expected to arrive at.
+        1: expected_input_interface fuchsia.net.interface_id;
+    };
+};
+
+/// The reason for closing a multicast table controller.
+type TableControllerCloseReason = strict enum {
+    /// Indicates that a client already holds the controller for a table.
+    ALREADY_IN_USE = 1;
+
+    /// Indicates that the client made a request to a hanging get method while a
+    /// request was already in-flight.
+    HANGING_GET_ERROR = 2;
+};

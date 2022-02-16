@@ -1,0 +1,115 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.multicast.admin;
+
+using fuchsia.net;
+
+/// The properties used to lookup IPv4 multicast routes.
+type Ipv4UnicastSourceAndMulticastDestination = struct {
+    /// A unicast source address found in a multicast packet.
+    unicast_source fuchsia.net.Ipv4Address;
+
+    /// A multicast destination address found in a multicast packet.
+    multicast_destination fuchsia.net.Ipv4Address;
+};
+
+/// The IPv4 multicast routing controller.
+///
+/// Closing the client-end of the controller will disable multicast routing and
+/// clear the multicast routing table.
+@discoverable
+protocol Ipv4RoutingTableController {
+    /// Adds a route such that packets matching the addresses will be forwarded
+    /// accordingly.
+    ///
+    /// If a packet arrives at an interface different from the expected input
+    /// interface set in the route, the packet will not be forwarded and a
+    /// [`RoutingEvent.wrong_input_interface`] event will be sent to the client.
+    /// See [`WatchRoutingEvents`] for more details.
+    ///
+    /// + request `addresses` the addresses used to identify a route.
+    /// + request `route` the multicast route.
+    AddRoute(struct {
+        addresses Ipv4UnicastSourceAndMulticastDestination;
+        route Route;
+    }) -> (struct {}) error strict enum {
+        /// Indicates that the address is invalid (not a unicast source address
+        /// or not a multicast destination address).
+        INVALID_ADDRESS = 1;
+
+        /// Indicates that the route is missing fields that are required.
+        REQUIRED_ROUTE_FIELDS_MISSING = 2;
+
+        /// Indicates that an interface was not found.
+        INTERFACE_NOT_FOUND = 3;
+
+        /// Indicates that the route's set of output interfaces contains the
+        /// input interface.
+        INPUT_CANNOT_BE_OUTPUT = 4;
+    };
+
+    /// Delete a route.
+    ///
+    /// + request `addresses` the addresses used to identify a route.
+    DelRoute(struct {
+        addresses Ipv4UnicastSourceAndMulticastDestination;
+    }) -> (struct {}) error strict enum {
+        /// Indicates that the address is invalid (not a unicast source address
+        /// or not a multicast destination address).
+        INVALID_ADDRESS = 1;
+
+        /// Indicates that the route was not found.
+        NOT_FOUND = 2;
+    };
+
+    /// Get a snapshot of statistics about a specific route.
+    ///
+    /// + request `addresses` the addresses used to identify a route.
+    GetRouteStats(struct {
+        addresses Ipv4UnicastSourceAndMulticastDestination;
+    }) -> (struct {
+        stats RouteStats;
+    }) error strict enum {
+        /// Indicates that the address is invalid (not a unicast source address
+        /// or not a multicast destination address).
+        INVALID_ADDRESS = 1;
+
+        /// Indicates that the route was not found.
+        NOT_FOUND = 2;
+    };
+
+    /// Watch for events triggered by multicast packets.
+    ///
+    /// The server will queue events to return when this method is called. If no
+    /// events are ready, the call will block until an event is ready. The
+    /// server will drop new events if the client is not consuming them fast
+    /// enough and return the number of events dropped in-between events.
+    ///
+    /// It is invalid to call this method while a previous call is pending.
+    /// Doing so will cause the server end of the protocol to be closed.
+    ///
+    /// - response `dropped_events` the number of events that were dropped
+    ///   _immediately before_ the returned event was queued.
+    ///   returned event.
+    /// - response `addresses` the addresses in the multicast packet triggerring
+    ///   the event.
+    /// - response `input_interface` the interface the multicast packet
+    ///   triggerring the event arrived at.
+    /// - response `event` the event.
+    WatchRoutingEvents() -> (struct {
+        dropped_events uint64;
+        addresses Ipv4UnicastSourceAndMulticastDestination;
+        input_interface fuchsia.net.interface_id;
+        event RoutingEvent;
+    });
+
+    /// Terminal event. Immediately precedes the closure of the server end of
+    /// the protocol.
+    ///
+    /// - response `error` the removal reason.
+    -> OnClose(struct {
+        error TableControllerCloseReason;
+    });
+};
