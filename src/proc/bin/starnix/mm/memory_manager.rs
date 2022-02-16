@@ -940,6 +940,7 @@ impl MemoryManager {
             zx::Status::NOT_SUPPORTED => errno!(ENODEV),
             zx::Status::NO_MEMORY => errno!(ENOMEM),
             zx::Status::OUT_OF_RANGE => errno!(ENOMEM),
+            zx::Status::ALREADY_EXISTS => errno!(EEXIST),
             _ => impossible_error(status),
         }
     }

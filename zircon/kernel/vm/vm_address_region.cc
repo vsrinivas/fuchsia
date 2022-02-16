@@ -156,7 +156,7 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
         return OverwriteVmMappingLocked(new_base, size, vmar_flags, vmo, vmo_offset, arch_mmu_flags,
                                         out);
       }
-      return ZX_ERR_NO_MEMORY;
+      return ZX_ERR_ALREADY_EXISTS;
     }
   } else {
     // If we're not mapping to a specific place, search for an opening.

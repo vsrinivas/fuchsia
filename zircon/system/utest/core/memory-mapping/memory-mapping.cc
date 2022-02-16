@@ -66,7 +66,7 @@ TEST(MemoryMappingTest, AddressSpaceLimitsTest) {
   // something that was in use, which could cause problems later.
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
                        offset, vmo, 0, page_size, &addr);
-  EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "vm_map");
+  EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, status, "vm_map");
 
   // Clean up.
   EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), addr, page_size));

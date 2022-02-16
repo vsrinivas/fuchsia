@@ -151,9 +151,6 @@ pub fn sys_mmap(
     let addr = match try_map(addr, zx_flags) {
         Err(errno) if zx_flags.contains(zx::VmarFlags::SPECIFIC) => {
             if flags & MAP_FIXED_NOREPLACE != 0 {
-                if errno == ENOMEM {
-                    return error!(EEXIST);
-                }
                 return Err(errno);
             }
             if flags & MAP_FIXED != 0 {

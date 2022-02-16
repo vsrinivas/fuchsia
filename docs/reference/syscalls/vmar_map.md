@@ -102,12 +102,16 @@ and non-zero.  In the event of failure, a negative error value is returned.
 
 **ZX_ERR_BAD_STATE**  *handle* refers to a destroyed VMAR.
 
-**ZX_ERR_INVALID_ARGS** *mapped_addr* or *options* are not valid, *vmar_offset* is
-non-zero when neither **ZX_VM_SPECIFIC** nor
-**ZX_VM_SPECIFIC_OVERWRITE** are given,
-**ZX_VM_SPECIFIC_OVERWRITE** and **ZX_VM_MAP_RANGE** are both given,
-*vmar_offset* and *len* describe an unsatisfiable allocation due to exceeding the region bounds,
-*vmar_offset* or *vmo_offset* or *len* are not page-aligned.
+**ZX_ERR_INVALID_ARGS** for any of the following:
+ - *mapped_addr* or *options* is not valid.
+ - *vmar_offset* is non-zero when neither **ZX_VM_SPECIFIC** nor **ZX_VM_SPECIFIC_OVERWRITE** is
+   specified.
+ - **ZX_VM_SPECIFIC_OVERWRITE** and **ZX_VM_MAP_RANGE** are both specified.
+ - *vmar_offset* and *len* describe an unsatisfiable allocation due to exceeding the region bounds.
+ - *vmar_offset* or *vmo_offset* or *len* is not page-aligned.
+
+**ZX_ERR_ALREADY_EXISTS**  **ZX_VM_SPECIFIC** has been specified without
+**ZX_VM_SPECIFIC_OVERWRITE**, and the requested range overlaps with another mapping.
 
 **ZX_ERR_ACCESS_DENIED**  Insufficient privileges to make the requested mapping.
 
@@ -120,10 +124,6 @@ of the VMO but **ZX_VM_ALLOW_FAULTS** is not set.
 **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 There is no good way for userspace to handle this (unlikely) error.
 In a future build this error will no longer occur.
-
-**ZX_ERR_NO_MEMORY**  **ZX_VM_SPECIFIC** has been specified,
-**ZX_VM_SPECIFIC_OVERWRITE** has not been specified,
-and the requested range overlaps with another mapping.
 
 **ZX_ERR_OUT_OF_RANGE** `vmo_offset + ROUNDUP(len, PAGE_SIZE)` overflows.
 

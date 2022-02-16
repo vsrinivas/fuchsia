@@ -688,25 +688,25 @@ TEST(Vmar, OvermappingTest) {
   EXPECT_EQ(zx_vmar_map(region[0], ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
                         map_addr[0] - region_addr[0], vmo2, 0, 2 * zx_system_get_page_size(),
                         &map_addr[1]),
-            ZX_ERR_NO_MEMORY);
+            ZX_ERR_ALREADY_EXISTS);
 
   // Attempt a partial overmapping
   EXPECT_EQ(
       zx_vmar_map(region[0], ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
                   map_addr[0] - region_addr[0], vmo2, 0, zx_system_get_page_size(), &map_addr[1]),
-      ZX_ERR_NO_MEMORY);
+      ZX_ERR_ALREADY_EXISTS);
 
   // Attempt an overmapping that is larger than the original mapping
   EXPECT_EQ(zx_vmar_map(region[0], ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
                         map_addr[0] - region_addr[0], vmo2, 0, 4 * zx_system_get_page_size(),
                         &map_addr[1]),
-            ZX_ERR_NO_MEMORY);
+            ZX_ERR_ALREADY_EXISTS);
 
   // Attempt to allocate a region on top
   EXPECT_EQ(zx_vmar_allocate(region[0], ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC,
                              map_addr[0] - region_addr[0], zx_system_get_page_size(), &region[1],
                              &region_addr[1]),
-            ZX_ERR_NO_MEMORY);
+            ZX_ERR_ALREADY_EXISTS);
 
   // Unmap the mapping
   ASSERT_EQ(zx_vmar_unmap(region[0], map_addr[0], 2 * zx_system_get_page_size()), ZX_OK);
@@ -721,25 +721,25 @@ TEST(Vmar, OvermappingTest) {
   EXPECT_EQ(zx_vmar_map(region[0], ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
                         region_addr[1] - region_addr[0], vmo2, 0, 2 * zx_system_get_page_size(),
                         &map_addr[1]),
-            ZX_ERR_NO_MEMORY);
+            ZX_ERR_ALREADY_EXISTS);
 
   // Attempt a partial overmapping
   EXPECT_EQ(zx_vmar_map(region[0], ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
                         region_addr[1] - region_addr[0], vmo2, 0, zx_system_get_page_size(),
                         &map_addr[1]),
-            ZX_ERR_NO_MEMORY);
+            ZX_ERR_ALREADY_EXISTS);
 
   // Attempt an overmapping that is larger than the original region
   EXPECT_EQ(zx_vmar_map(region[0], ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
                         region_addr[1] - region_addr[0], vmo2, 0, 4 * zx_system_get_page_size(),
                         &map_addr[1]),
-            ZX_ERR_NO_MEMORY);
+            ZX_ERR_ALREADY_EXISTS);
 
   // Attempt to allocate a region on top
   EXPECT_EQ(zx_vmar_allocate(region[0], ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC,
                              region_addr[1] - region_addr[0], zx_system_get_page_size(), &region[2],
                              &region_addr[2]),
-            ZX_ERR_NO_MEMORY);
+            ZX_ERR_ALREADY_EXISTS);
 
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmo2), ZX_OK);
@@ -1538,7 +1538,7 @@ TEST(Vmar, MapSpecificOverwriteTest) {
   // Try over mapping with SPECIFIC but not SPECIFIC_OVERWRITE
   EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
                         zx_system_get_page_size(), vmo2, 0, mapping_size, &mapping_addr[1]),
-            ZX_ERR_NO_MEMORY);
+            ZX_ERR_ALREADY_EXISTS);
   // Try again with SPECIFIC_OVERWRITE
   EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC_OVERWRITE,
                         zx_system_get_page_size(), vmo2, 0, mapping_size, &mapping_addr[1]),
