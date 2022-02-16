@@ -1611,22 +1611,13 @@ zx_status_t UsbXhci::InitPci() {
   }
   mmio_ = std::move(*buffer);
   irq_count_ = static_cast<uint16_t>(HCSPARAMS1::Get().ReadFrom(&mmio_.value()).MaxIntrs());
+
   // Make sure irq_count_ doesn't exceed supported max PCI IRQs.
-  std::array<pci_irq_mode_t, 2> modes{PCI_IRQ_MODE_MSI_X, PCI_IRQ_MODE_MSI};
-  uint32_t mode_irq_max = 0;
-  for (auto& mode : modes) {
-    uint32_t mode_count = 0;
-    status = pci_.QueryIrqMode(mode, &mode_count);
-    if (status == ZX_OK) {
-      mode_irq_max = std::max(mode_irq_max, mode_count);
-    } else {
-      zxlogf(DEBUG, "Unable to query PciIrqMode %u", mode);
-    }
-  }
-  mode_irq_max = std::min(mode_irq_max, UINT16_MAX);
+  pci_interrupt_modes_t modes{};
+  pci_.GetInterruptModes(&modes);
+  uint32_t mode_irq_max = std::max(modes.msi, modes.msix);
   irq_count_ = std::min(irq_count_, static_cast<uint16_t>(mode_irq_max));
-  pci_irq_mode_t irq_mode;
-  status = pci_.ConfigureInterruptMode(irq_count_, &irq_mode);
+  status = pci_.ConfigureInterruptMode(irq_count_, /*out_mode=*/nullptr);
   if (status != ZX_OK) {
     return status;
   }
@@ -1636,9 +1627,6 @@ zx_status_t UsbXhci::InitPci() {
     return ZX_ERR_NO_MEMORY;
   }
   for (uint16_t i = 0; i < irq_count_; i++) {
-    if (irq_mode == PCI_IRQ_MODE_LEGACY) {
-      interrupter(i).set_pci(pci_);
-    }
     status = pci_.MapInterrupt(i, &interrupter(i).GetIrq());
     if (status != ZX_OK) {
       return status;
