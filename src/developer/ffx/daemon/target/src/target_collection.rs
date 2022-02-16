@@ -14,7 +14,7 @@ use {
     std::cell::RefCell,
     std::collections::HashMap,
     std::fmt::Debug,
-    std::net::{IpAddr, SocketAddr},
+    std::net::IpAddr,
     std::rc::Rc,
 };
 
@@ -324,25 +324,37 @@ impl From<String> for TargetQuery {
     /// If the string can be parsed as some kind of IP address, will attempt to
     /// match based on that, else fall back to the nodename or serial matches.
     fn from(s: String) -> Self {
-        // TODO(raggi): add support for named scopes in the strings
         if s == "" {
             return Self::First;
         }
-
-        if let Ok(saddr) = s.parse::<SocketAddr>() {
-            if saddr.port() == 0 {
-                return Self::Addr(saddr.into());
-            } else {
-                let port = saddr.port();
-                return Self::AddrPort((saddr.into(), port));
+        let (addr, scope, port) = match netext::parse_address_parts(s.as_str()) {
+            Ok(r) => r,
+            Err(e) => {
+                log::trace!("Failed to parse address. Interpreting as nodename: {:?}", e);
+                return Self::NodenameOrSerial(s);
             }
-        }
-
-        let s_ip = if s.starts_with('[') && s.ends_with(']') { &s[..s.len() - 1][1..] } else { &s };
-
-        match s_ip.parse::<IpAddr>() {
-            Ok(a) => Self::Addr(TargetAddr::from((a, 0))),
-            Err(_) => Self::NodenameOrSerial(s),
+        };
+        let scope = scope
+            .map(|s| {
+                // If this ends up being a number and is a valid scope ID, then this will return
+                // the name. If not it will return the index number as a string (so something like
+                // "3"). When running name_to_scope_id, using the index as a string will fail,
+                // causing that function to return zero, which is the desired effect.
+                //
+                // Returning 0 from this closure will set the TargetAddr scope_id to 0 as well,
+                // which is the same as not including a scope_id in the query. This will still
+                // match a target later if the scope has gone down (manually or otherwise), which
+                // is why it is not included as an error for searching. This does mean it might
+                // be possible to include arbitrary inaccurate scope names for looking up a target,
+                // however, like `fe80::1%nonsense`.
+                let s =
+                    s.parse::<u32>().map(|i| netext::scope_id_to_name(i)).unwrap_or(s.to_owned());
+                netext::name_to_scope_id(s.as_str())
+            })
+            .unwrap_or(0);
+        match port {
+            Some(p) => Self::AddrPort((TargetAddr::from((addr, scope)), p)),
+            None => Self::Addr(TargetAddr::from((addr, scope))),
         }
     }
 }

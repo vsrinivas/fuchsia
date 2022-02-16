@@ -4,11 +4,12 @@
 
 use {
     anyhow::Result,
+    errors::ffx_error,
     ffx_core::ffx_plugin,
     ffx_target_add_args::AddCommand,
     fidl_fuchsia_developer_bridge::{self as bridge, TargetCollectionProxy},
     fidl_fuchsia_net as net,
-    regex::Regex,
+    netext::parse_address_parts,
     std::net::IpAddr,
 };
 
@@ -17,28 +18,9 @@ use std::ffi::CString;
 
 #[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn add(target_collection_proxy: TargetCollectionProxy, cmd: AddCommand) -> Result<()> {
-    let v6bracket = Regex::new(r"^\[([^\]]+)\](:\d+)?$")?;
-    let v4port = Regex::new(r"^(\d+\.\d+\.\d+\.\d+)(:\d+)?$")?;
-    let with_scope = Regex::new(r"^(.*)%(.*)$")?;
-
-    let (addr, port) = if let Some(caps) =
-        v6bracket.captures(cmd.addr.as_str()).or_else(|| v4port.captures(cmd.addr.as_str()))
-    {
-        (caps.get(1).map(|x| x.as_str()).unwrap(), caps.get(2).map(|x| x.as_str()))
-    } else {
-        (cmd.addr.as_str(), None)
-    };
-
-    let port = if let Some(port) = port { Some(port[1..].parse::<u16>()?) } else { None };
-
-    let (addr, scope) = if let Some(caps) = with_scope.captures(addr) {
-        (caps.get(1).map(|x| x.as_str()).unwrap(), Some(caps.get(2).map(|x| x.as_str()).unwrap()))
-    } else {
-        (addr, None)
-    };
-
-    let addr = addr.parse::<IpAddr>()?;
-
+    let (addr, scope, port) =
+        parse_address_parts(cmd.addr.as_str()).map_err(|e| ffx_error!("{}", e))?;
+    // TODO(fxbug.dev/93511): Check if the scope ID is an index.
     #[cfg(not(test))]
     let scope_id = if let Some(scope) = scope {
         unsafe {

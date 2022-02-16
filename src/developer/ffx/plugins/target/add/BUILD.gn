@@ -14,7 +14,7 @@ ffx_plugin("ffx_target_add") {
   sources = [ "src/lib.rs" ]
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//src/developer/ffx/lib/netext:lib",
     "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:regex",
   ]
 }

@@ -13,9 +13,12 @@ if (is_host) {
 
     deps = [
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:http",
       "//third_party/rust_crates:itertools",
+      "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:libc",
       "//third_party/rust_crates:nix",
+      "//third_party/rust_crates:regex",
     ]
 
     sources = [ "src/lib.rs" ]

@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use anyhow::{Context as _, Result};
+use anyhow::{anyhow, Context as _, Result};
 use itertools::Itertools;
 use libc;
 use nix::{
@@ -9,6 +9,8 @@ use nix::{
     net::if_::InterfaceFlags,
     sys::socket::SockAddr,
 };
+use regex::Regex;
+use std::ffi::CString;
 use std::net::SocketAddr;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
@@ -159,7 +161,78 @@ pub fn scope_id_to_name(scope_id: u32) -> String {
     }
 }
 
-// select_mcast_interfaces iterates over a set of IterfaceAddresses,
+/// Attempts to look up a scope_id's index. If an index could not be found, or the
+/// string `name` is not a compatible CString (containing an interior null byte),
+/// will return 0.
+pub fn name_to_scope_id(name: &str) -> u32 {
+    match CString::new(name) {
+        Ok(s) => unsafe { libc::if_nametoindex(s.as_ptr()) },
+        Err(_) => 0,
+    }
+}
+
+/// Takes a string and attempts to parse it into the relevant parts of an address.
+///
+/// Examples:
+///
+/// example with a scoped link local address:
+/// ```rust
+/// let (addr, scope, port) = parse_address_parts("fe80::1%eno1");
+/// assert_eq!(addr, Some("fe80::1".parse::<IpAddr>().unwrap()));
+/// assert_eq!(scope, Some("eno1"));
+/// assert_eq!(port, None);
+/// ```
+///
+/// example with a scoped link local address and port:
+/// ```rust
+/// let (addr, scope, port) = parse_address_parts("[fe80::1%eno1]:1234");
+/// assert_eq!(addr, Some("fe80::1".parse::<IpAddr>().unwrap()));
+/// assert_eq!(scope, Some("eno1"));
+/// assert_eq!(port, Some(1234));
+/// ```
+///
+/// Works with both IPv6 and IPv4 addresses.
+///
+/// Returns:
+///
+/// If the `Option<IpAddr>` is `None`, then none of the response should be considered valid (all
+/// other values will be set to `None` as well.
+///
+/// Returned values should not be considered correct and should be verified. For example,
+/// `"[::1%foobar]:9898"` would parse, but there is no scope for the loopback device, and
+/// furthermore "foobar" may not even exist as a scope, and should be verified.
+///
+/// The returned scope could also be a stringified integer, and should be verified.
+pub fn parse_address_parts(addr_str: &str) -> Result<(IpAddr, Option<&str>, Option<u16>)> {
+    lazy_static::lazy_static! {
+        static ref V6_BRACKET: Regex = Regex::new(r"^\[([^\]]+?[:]{1,2}[^\]]+)\](:\d+)?$").unwrap();
+        static ref V4_PORT: Regex = Regex::new(r"^(\d+\.\d+\.\d+\.\d+)(:\d+)?$").unwrap();
+        static ref WITH_SCOPE: Regex = Regex::new(r"^([^%]+)%([0-9a-zA-Z]+)$").unwrap();
+    }
+    let (addr, port) =
+        if let Some(caps) = V6_BRACKET.captures(addr_str).or_else(|| V4_PORT.captures(addr_str)) {
+            (caps.get(1).map(|x| x.as_str()).unwrap(), caps.get(2).map(|x| x.as_str()))
+        } else {
+            (addr_str, None)
+        };
+
+    let port = if let Some(port) = port { port[1..].parse::<u16>().ok() } else { None };
+
+    let (addr, scope) = if let Some(caps) = WITH_SCOPE.captures(addr) {
+        (caps.get(1).map(|x| x.as_str()).unwrap(), Some(caps.get(2).map(|x| x.as_str()).unwrap()))
+    } else {
+        (addr, None)
+    };
+
+    let addr = addr
+        .parse::<IpAddr>()
+        .map_err(|_| anyhow!("Could not parse '{}'. Invalid address", addr))?;
+    // Successfully parsing the address is the most important part. If this doesn't work,
+    // then everything else is no longer valid.
+    Ok((addr, scope, port))
+}
+
+// select_mcast_interfaces iterates over a set of InterfaceAddresses,
 // selecting only those that meet the McastInterface criteria (see
 // McastInterface), and returns them in a McastInterface representation.
 fn select_mcast_interfaces(
@@ -424,5 +497,80 @@ mod tests {
         assert!(!is_not_apple_touchbar(&touchbar));
         #[cfg(not(target_os = "macos"))]
         assert!(is_not_apple_touchbar(&touchbar));
+    }
+
+    #[test]
+    fn test_parse_address_parts_scoped_no_port() {
+        let (addr, scope, port) = parse_address_parts("fe80::1%eno1").unwrap();
+        assert_eq!(addr, "fe80::1".parse::<IpAddr>().unwrap());
+        assert_eq!(scope, Some("eno1"));
+        assert_eq!(port, None);
+    }
+
+    #[test]
+    fn test_parse_address_parts_scoped_with_port() {
+        let (addr, scope, port) = parse_address_parts("[fe80::1%eno1]:1234").unwrap();
+        assert_eq!(addr, "fe80::1".parse::<IpAddr>().unwrap());
+        assert_eq!(scope, Some("eno1"));
+        assert_eq!(port, Some(1234));
+    }
+
+    #[test]
+    fn test_parse_address_parts_ipv6_addr_only() {
+        let (addr, scope, port) = parse_address_parts("fe80::1").unwrap();
+        assert_eq!(addr, "fe80::1".parse::<IpAddr>().unwrap());
+        assert_eq!(scope, None);
+        assert_eq!(port, None);
+    }
+
+    #[test]
+    fn test_parse_address_parts_ipv4_with_port() {
+        let (addr, scope, port) = parse_address_parts("192.168.1.2:1234").unwrap();
+        assert_eq!(addr, "192.168.1.2".parse::<IpAddr>().unwrap());
+        assert_eq!(scope, None);
+        assert_eq!(port, Some(1234));
+    }
+
+    #[test]
+    fn test_parse_address_parts_ipv4_no_port() {
+        let (addr, scope, port) = parse_address_parts("8.8.8.8").unwrap();
+        assert_eq!(addr, "8.8.8.8".parse::<IpAddr>().unwrap());
+        assert_eq!(scope, None);
+        assert_eq!(port, None);
+    }
+
+    #[test]
+    fn test_parse_address_parts_ipv4_in_brackets() {
+        assert!(parse_address_parts("[8.8.8.8%eno1]:1234").is_err());
+    }
+
+    #[test]
+    fn test_parse_address_parts_ipv6_no_scope_in_brackets() {
+        let (addr, scope, port) = parse_address_parts("[::1]:1234").unwrap();
+        assert_eq!(addr, "::1".parse::<IpAddr>().unwrap());
+        assert_eq!(scope, None);
+        assert_eq!(port, Some(1234));
+    }
+
+    #[test]
+    fn test_parse_address_parts_embedded_ipv4_address() {
+        // https://www.rfc-editor.org/rfc/rfc6052#section-2
+        let (addr, scope, port) = parse_address_parts("[64:ff9b::192.0.2.33%foober]:999").unwrap();
+        assert_eq!(addr, "64:ff9b::192.0.2.33".parse::<IpAddr>().unwrap());
+        assert_eq!(scope, Some("foober"));
+        assert_eq!(port, Some(999));
+    }
+
+    #[test]
+    fn test_parse_address_parts_loopback() {
+        let (addr, scope, port) = parse_address_parts("[::1%eno1]:1234").unwrap();
+        assert_eq!(addr, "::1".parse::<IpAddr>().unwrap());
+        assert_eq!(scope, Some("eno1"));
+        assert_eq!(port, Some(1234));
+    }
+
+    #[test]
+    fn test_parse_address_parts_too_many_percents() {
+        assert!(parse_address_parts("64:ff9b::192.0.2.33%fo%ober").is_err());
     }
 }
