@@ -32,15 +32,15 @@ The default target is marked with a '*' next to the node name. The table
 has the following columns:
 
     NAME = The name of the target.
-    TYPE = The product type of the target, currently always 'Unknown'.
-    STATE = The high-level state of the target, currently always 'Unknown'.
-    AGE = Shows the last time the daemon was able to discover the target.
+    SERIAL = The serial number of the target.
+    TYPE = The product type of the target.
+    STATE = The high-level state of the target.
     ADDRS/IP = The discovered and known addresses of the target.
     RCS = Indicates if the Remote Control Service is running on the target.
 
 The NAME column shows the target's advertised name. When the target is
-in early boot state such as fastboot, shows 'FastbootDevice' with the
-`product` and `serial` attributes instead.
+in early boot state such as fastboot, the NAME column may be `<unknown>` with
+a STATE being `fastboot` and a SERIAL attribute.
 
 By default, the `list` command outputs in a tabular format. To override
 the format, pass `--format` and can take the following options: 'simple'
