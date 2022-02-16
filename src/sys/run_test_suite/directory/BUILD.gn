@@ -12,6 +12,7 @@ rustc_library("directory") {
 
   sources = [
     "src/lib.rs",
+    "src/macros.rs",
     "src/testing.rs",
   ]
 

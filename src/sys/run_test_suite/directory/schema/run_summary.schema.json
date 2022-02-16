@@ -11,7 +11,8 @@
                         "STDERR",
                         "CUSTOM",
                         "RESTRICTED_LOG",
-                        "REPORT"
+                        "REPORT",
+                        "DEBUG"
                     ]
                 },
                 "component_moniker": {
