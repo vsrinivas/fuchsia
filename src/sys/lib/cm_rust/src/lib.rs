@@ -1529,10 +1529,15 @@ pub enum DictionaryValue {
 
 impl FidlIntoNative<DictionaryValue> for Option<Box<fdata::DictionaryValue>> {
     fn fidl_into_native(self) -> DictionaryValue {
+        // Temporarily allow unreachable patterns while fuchsia.data.DictionaryValue
+        // is migrated from `strict` to `flexible`.
+        // TODO(https://fxbug.dev/92247): Remove this.
+        #[allow(unreachable_patterns)]
         match self {
             Some(v) => match *v {
                 fdata::DictionaryValue::Str(s) => DictionaryValue::Str(s),
                 fdata::DictionaryValue::StrVec(ss) => DictionaryValue::StrVec(ss),
+                _ => DictionaryValue::Null,
             },
             None => DictionaryValue::Null,
         }

@@ -170,6 +170,10 @@ pub fn get_program_args(
 }
 
 pub fn get_environ(dict: &fdata::Dictionary) -> Result<Option<Vec<String>>, StartInfoProgramError> {
+    // Temporarily allow unreachable patterns while fuchsia.data.DictionaryValue
+    // is migrated from `strict` to `flexible`.
+    // TODO(https://fxbug.dev/92247): Remove this.
+    #[allow(unreachable_patterns)]
     match get_value(dict, ENVIRON_KEY) {
         Some(fdata::DictionaryValue::StrVec(values)) => {
             if values.is_empty() {
@@ -192,6 +196,11 @@ pub fn get_environ(dict: &fdata::Dictionary) -> Result<Option<Vec<String>>, Star
             ENVIRON_KEY.to_owned(),
             "vector of string".to_owned(),
             "string".to_owned(),
+        )),
+        Some(other) => Err(StartInfoProgramError::InvalidValue(
+            ENVIRON_KEY.to_owned(),
+            "vector of string".to_owned(),
+            format!("{:?}", other),
         )),
         None => Ok(None),
     }
