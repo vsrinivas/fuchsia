@@ -62,7 +62,7 @@ pub fn compile(
         fs::OpenOptions::new().create(true).truncate(true).write(true).open(output)?;
     let mut out_data = cml::compile(&document, config_package_path)?;
     out_file.write(&encode_persistent_with_context(
-        &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+        &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
         &mut out_data,
     )?)?;
 
