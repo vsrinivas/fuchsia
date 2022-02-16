@@ -15,6 +15,7 @@ __BEGIN_CDECLS
 
 // Forward declarations
 
+
 typedef uint32_t first_primitive_t;
 
 
@@ -29,6 +30,7 @@ struct some_struct {
     const uint8_t* vector_alias_list;
     size_t vector_alias_count;
     uint8_t array_alias[32];
+    char string_alias[128];
     uint8_t nested_alias[32][32];
 };
 

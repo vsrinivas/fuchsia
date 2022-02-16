@@ -6,6 +6,7 @@ library banjo.examples.alias;
 alias FirstPrimitive = uint32;
 alias VectorAlias = bytes:32;
 alias ArrayAlias = array<uint8, 32>;
+alias StringAlias = string:128;
 alias NestedArrayAlias = array<ArrayAlias, 32>;
 
 type SomeStruct = struct {
@@ -14,6 +15,7 @@ type SomeStruct = struct {
     primitive FirstPrimitive;
     vector_alias VectorAlias;
     array_alias ArrayAlias;
+    string_alias StringAlias;
     nested_alias NestedArrayAlias;
 };
 

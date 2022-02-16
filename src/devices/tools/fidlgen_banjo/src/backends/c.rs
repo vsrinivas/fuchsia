@@ -928,8 +928,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
 
     fn codegen_alias_decl(&self, data: &TypeAlias, _ir: &FidlIr) -> Result<String, Error> {
         match data.partial_type_ctor.name.as_str() {
-            "array" => Ok("".to_string()),
-            "vector" => Ok("".to_string()),
+            "array" | "string" | "vector" => Ok("".to_string()),
             _ => Ok(format!(
                 "typedef {from}_t {to}_t;",
                 to = to_c_name(&data.name.get_name()),

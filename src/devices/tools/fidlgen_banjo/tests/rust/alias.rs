@@ -19,6 +19,7 @@ pub struct SomeStruct {
     pub vector_alias_list: *const u8,
     pub vector_alias_count: usize,
     pub array_alias: [u8; 32 as usize],
+    pub string_alias: [u8; 128 as usize],
     pub nested_alias: [[u8; 32 as usize]; 32 as usize],
 }
 
