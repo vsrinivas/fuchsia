@@ -50,6 +50,7 @@ config("compiler") {
   configs = [ "//build/config:cpu_baseline" ]
 
   compiler_flags = []
+  cflags_cc = []
   defines = []
   ldflags = []
 
@@ -62,7 +63,7 @@ config("compiler") {
     zircon_toolchain = {
       target_tuple = ""
       version_string = ""
-      include_dirs = []
+      include_dirs_cc = []
       lib_dirs = []
     }
   }
@@ -151,8 +152,8 @@ config("compiler") {
 
   # The toolchain-supplied headers come after include_dirs from targets and
   # configs but before libc.
-  foreach(dir, zircon_toolchain.include_dirs) {
-    compiler_flags += [
+  foreach(dir, zircon_toolchain.include_dirs_cc) {
+    cflags_cc += [
       "-isystem",
       rebase_path(dir, root_build_dir),
     ]

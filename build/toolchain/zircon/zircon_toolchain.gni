@@ -268,7 +268,7 @@ template("zircon_toolchain") {
         tool_dir = gcc_tool_dir
         tool_prefix = "${tc_cpu}-elf-"
         version_string = gcc_version_string
-        include_dirs = rebase_path(
+        include_dirs_cc = rebase_path(
                 [
                   exec_script(
                       "/usr/bin/env",
@@ -303,7 +303,7 @@ template("zircon_toolchain") {
       # TODO(fxbug.dev/27328): The MSVC target in the clang driver never uses the
       # -stdlib=libc++ switch or the toolchain's own libc++ include path.
       if (invoker.os == "win") {
-        include_dirs = rebase_path(
+        include_dirs_cc = rebase_path(
                 [
                   exec_script(
                       "/usr/bin/env",
@@ -673,15 +673,15 @@ template("zircon_toolchain") {
       #   link_output_suffix: [string] Suffix to append to linkable binaries
       #     with debug information.
       #
-      #   include_dirs: [list of paths]
-      #     Supported to add an `-isystem <dir>` parameter per list item during
-      #     the build, but never used by Zircon environments. In practice
-      #     only set above (see definition of `tc` scope) for Win32 toolchains.
+      #   include_dirs_cc: [list of paths]
+      #     Supported to add `-isystem <dir>` switches to C++ compilations.
+      #     This locates C++ toolchain headers when the compiler driver doesn't
+      #     use them by default (GCC and EFI).
       #
       #   lib_dirs: [list of paths]
-      #     Library paths added to the "compiler" configuration, This is used
-      #     to append the path of libc++.a's directory when gcc is used as
-      #     a compiler.
+      #     Supported to add standard library search directories.  This locates
+      #     C++ toolchain libraries when the compiler driver doesn't use them
+      #     by default (GCC).
       #
       zircon_toolchain = {
       }
@@ -700,8 +700,8 @@ template("zircon_toolchain") {
           link_output_suffix = ""
         }
 
-        if (!defined(include_dirs)) {
-          include_dirs = []
+        if (!defined(include_dirs_cc)) {
+          include_dirs_cc = []
         }
 
         if (!defined(lib_dirs)) {
