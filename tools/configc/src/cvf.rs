@@ -49,7 +49,7 @@ impl GenerateValueFile {
             .context("populating config values")?;
         let mut values_data = values_data.native_into_fidl();
         let encoded_output = encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut values_data,
         )
         .context("encoding value file")?;
