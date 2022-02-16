@@ -113,6 +113,12 @@ type PciIrqMode = strict enum : uint8 {
     COUNT = 5;
 };
 
+type PciInterruptModes = struct {
+    legacy uint32;
+    msi uint32;
+    msix uint32;
+};
+
 /// fxbug.dev/33713: Remove the zx_pcie types and implement them here
 @transport("Banjo")
 @banjo_layout("ddk-protocol")
@@ -145,6 +151,9 @@ protocol Pci {
     }) -> (struct {
         s zx.status;
         max_irqs uint32;
+    });
+    GetInterruptModes() -> (struct {
+        modes PciInterruptModes;
     });
     SetInterruptMode(struct {
         mode fuchsia.hardware.syscalls.pci.PciIrqMode;

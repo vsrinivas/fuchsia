@@ -11,6 +11,7 @@ protocol/member fuchsia.hardware.pci/Pci.GetBti(uint32 index) -> (int32 s,zx/han
 protocol/member fuchsia.hardware.pci/Pci.GetDeviceInfo() -> (int32 s,fuchsia.hardware.syscalls.pci/PcieDeviceInfo info)
 protocol/member fuchsia.hardware.pci/Pci.GetFirstCapability(uint8 id) -> (int32 s,uint8 offset)
 protocol/member fuchsia.hardware.pci/Pci.GetFirstExtendedCapability(uint16 id) -> (int32 s,uint16 offset)
+protocol/member fuchsia.hardware.pci/Pci.GetInterruptModes() -> (fuchsia.hardware.pci/PciInterruptModes modes)
 protocol/member fuchsia.hardware.pci/Pci.GetNextCapability(uint8 id,uint8 offset) -> (int32 s,uint8 offset)
 protocol/member fuchsia.hardware.pci/Pci.GetNextExtendedCapability(uint16 id,uint16 offset) -> (int32 s,uint16 offset)
 protocol/member fuchsia.hardware.pci/Pci.MapInterrupt(uint32 which_irq) -> (int32 s,zx/handle:INTERRUPT handle)
@@ -110,6 +111,10 @@ enum/member fuchsia.hardware.pci/PciExtCapId.VF_RESIZABLE_BAR 36
 enum/member fuchsia.hardware.pci/PciExtCapId.VIRTUAL_CHANNEL 9
 enum/member fuchsia.hardware.pci/PciExtCapId.VIRTUAL_CHANNEL_NO_MFVC 2
 strict enum fuchsia.hardware.pci/PciExtCapId uint16
+struct/member fuchsia.hardware.pci/PciInterruptModes.legacy uint32
+struct/member fuchsia.hardware.pci/PciInterruptModes.msi uint32
+struct/member fuchsia.hardware.pci/PciInterruptModes.msix uint32
+struct fuchsia.hardware.pci/PciInterruptModes
 enum/member fuchsia.hardware.pci/PciIrqMode.COUNT 5
 enum/member fuchsia.hardware.pci/PciIrqMode.DISABLED 0
 enum/member fuchsia.hardware.pci/PciIrqMode.LEGACY 1

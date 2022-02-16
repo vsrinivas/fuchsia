@@ -33,6 +33,7 @@
 #include <bind/fuchsia/pci/cpp/fidl.h>
 #include <ddktl/device.h>
 
+#include "fuchsia/hardware/syscalls/pci/c/banjo.h"
 #include "src/devices/bus/drivers/pci/pci_bind.h"
 #include "src/devices/bus/drivers/pci/proxy_rpc.h"
 
@@ -193,6 +194,13 @@ zx_status_t KernelPci::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_ha
 
 zx_status_t KernelPci::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
   return zx_pci_query_irq_mode(device_.handle, mode, out_max_irqs);
+}
+
+void KernelPci::PciGetInterruptModes(pci_interrupt_modes_t* out_modes) {
+  pci_interrupt_modes_t modes;
+  zx_pci_query_irq_mode(device_.handle, PCI_IRQ_MODE_LEGACY, &modes.legacy);
+  zx_pci_query_irq_mode(device_.handle, PCI_IRQ_MODE_MSI, &modes.msi);
+  zx_pci_query_irq_mode(device_.handle, PCI_IRQ_MODE_MSI_X, &modes.msix);
 }
 
 zx_status_t KernelPci::PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {

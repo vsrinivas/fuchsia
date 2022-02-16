@@ -249,6 +249,8 @@ zx_status_t Device::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs)
   return LOG_STATUS(DEBUG, result.status_value(), "%u", mode);
 }
 
+void Device::PciGetInterruptModes(pci_interrupt_modes_t* modes) { *modes = GetInterruptModes(); }
+
 zx_status_t Device::PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
   zx_status_t status = SetIrqMode(mode, requested_irq_count);
   return LOG_STATUS(DEBUG, status, "%u, %u", mode, requested_irq_count);

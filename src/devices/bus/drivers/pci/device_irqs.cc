@@ -47,6 +47,25 @@ zx::status<uint32_t> Device::QueryIrqMode(pci_irq_mode_t mode) {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
+pci_interrupt_modes_t Device::GetInterruptModes() {
+  fbl::AutoLock dev_lock(&dev_lock_);
+  pci_interrupt_modes_t modes{};
+
+  if (cfg_->Read(Config::kInterruptLine) != 0) {
+    modes.legacy = 1;
+  }
+  if (caps_.msi) {
+    modes.msi = caps_.msi->vectors_avail();
+  }
+#ifdef ENABLE_MSIX
+  if (caps_.msix) {
+    modes.msix = caps_.msix->table_size();
+  }
+#endif
+
+  return modes;
+}
+
 zx_status_t Device::SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) {
   if (mode >= PCI_IRQ_MODE_COUNT) {
     return ZX_ERR_NOT_SUPPORTED;

@@ -26,7 +26,6 @@
 #include <fbl/ref_ptr.h>
 #include <region-alloc/region-alloc.h>
 
-#include "fuchsia/hardware/pci/c/banjo.h"
 #include "src/devices/bus/drivers/pci/allocation.h"
 #include "src/devices/bus/drivers/pci/bar_info.h"
 #include "src/devices/bus/drivers/pci/bus_device_interface.h"
@@ -153,6 +152,7 @@ class Device : public PciDeviceType,
   zx_status_t PciAckInterrupt();
   zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle);
   zx_status_t PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs);
+  void PciGetInterruptModes(pci_interrupt_modes_t* out_modes);
   zx_status_t PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count);
   zx_status_t PciGetDeviceInfo(pcie_device_info_t* out_info);
   zx_status_t PciConfigRead8(uint16_t offset, uint8_t* out_value);
@@ -277,6 +277,7 @@ class Device : public PciDeviceType,
   // PciProtocol methods, though they may be used to disable IRQs on
   // initialization as well.
   zx::status<uint32_t> QueryIrqMode(pci_irq_mode_t mode) __TA_EXCLUDES(dev_lock_);
+  pci_interrupt_modes_t GetInterruptModes() __TA_EXCLUDES(dev_lock_);
   zx_status_t SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) __TA_EXCLUDES(dev_lock_);
   zx::status<zx::interrupt> MapInterrupt(uint32_t which_irq) __TA_EXCLUDES(dev_lock_);
   zx_status_t DisableInterrupts() __TA_REQUIRES(dev_lock_);

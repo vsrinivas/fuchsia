@@ -488,6 +488,21 @@ TEST_F(PciProtocolTests, QueryAndSetInterruptMode) {
   ASSERT_OK(pci().SetInterruptMode(PCI_IRQ_MODE_DISABLED, 0));
 }
 
+TEST_F(PciProtocolTests, GetInterruptModes) {
+  pci::MsiControlReg msi_ctrl = {
+      .value = *reinterpret_cast<uint16_t*>(
+          &kFakeQuadroDeviceConfig[kFakeQuadroMsiCapabilityOffset + 2]),
+  };
+
+  pci_interrupt_modes_t modes;
+  pci().GetInterruptModes(&modes);
+  EXPECT_EQ(modes.legacy, PCI_LEGACY_INT_COUNT);
+  EXPECT_EQ(modes.msi, pci::MsiCapability::MmcToCount(msi_ctrl.mm_capable()));
+#ifdef ENABLE_MSIX
+  EXPECT_EQ(modes.msix, kFakeQuadroMsiXIrqCnt);
+#endif
+}
+
 // TODO(fxbug.dev/61631): Without USERSPACE_PCI defined in proxy it presently
 // will always return the kernel implementation which avoids the channel call
 // and returns ZX_OK. This needs to be re-enabled after the migration.

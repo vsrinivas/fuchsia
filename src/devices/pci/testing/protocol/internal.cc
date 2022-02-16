@@ -102,6 +102,23 @@ zx_status_t FakePciProtocolInternal::PciQueryIrqMode(pci_irq_mode_t mode, uint32
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+void FakePciProtocolInternal::PciGetInterruptModes(pci_interrupt_modes* out_modes) {
+  pci_interrupt_modes_t modes{};
+  if (legacy_interrupt_) {
+    modes.legacy = 1;
+  }
+  if (!msi_interrupts_.empty()) {
+    // MSI interrupts are only supported in powers of 2.
+    modes.msi = static_cast<uint32_t>((msi_interrupts_.size() <= 1)
+                                          ? msi_interrupts_.size()
+                                          : fbl::round_down(msi_interrupts_.size(), 2u));
+  }
+  if (!msix_interrupts_.empty()) {
+    modes.msix = static_cast<uint32_t>(msix_interrupts_.size());
+  }
+  *out_modes = modes;
+}
+
 zx_status_t FakePciProtocolInternal::PciSetInterruptMode(pci_irq_mode_t mode,
                                                          uint32_t requested_irq_count) {
   if (!AllMappedInterruptsFreed()) {
