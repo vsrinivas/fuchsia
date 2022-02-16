@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Result},
     async_fs::File,
-    async_lock::Mutex,
+    async_lock::{Mutex, MutexGuard},
     async_trait::async_trait,
     fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_tracing_controller as trace,
     fuchsia_async::Task,
@@ -187,7 +187,7 @@ impl TraceTask {
         let trace_shutdown_complete = Rc::new(Mutex::new(false));
         let trace_shutdown_complete_clone = trace_shutdown_complete.clone();
         Ok(Self {
-            target_info,
+            target_info: target_info.clone(),
             config,
             proxy,
             options,
@@ -239,7 +239,13 @@ impl TraceTask {
                 };
 
                 if let Some(map) = map.upgrade() {
-                    let _ = map.lock().await.remove(&output_file);
+                    let mut map = map.lock().await;
+                    let _ = map.output_file_to_nodename.remove(&output_file);
+                    let _ =
+                        map.nodename_to_task.remove(&target_info.nodename.unwrap_or_else(|| {
+                            log::warn!("trace writing to '{}' has no target nodename", output_file);
+                            String::new()
+                        }));
                 }
             }),
         })
@@ -272,8 +278,11 @@ impl TraceTask {
     }
 }
 
-/// This maps a target id to a trace task.
-type TraceMap = HashMap<String, TraceTask>;
+#[derive(Default)]
+struct TraceMap {
+    nodename_to_task: HashMap<String, TraceTask>,
+    output_file_to_nodename: HashMap<String, String>,
+}
 
 #[ffx_protocol]
 #[derive(Default)]
@@ -295,6 +304,36 @@ async fn get_controller_proxy(
     Ok((target, proxy))
 }
 
+impl TracingProtocol {
+    async fn remove_output_file_or_find_target_nodename(
+        &self,
+        cx: &Context,
+        tasks: &mut MutexGuard<'_, TraceMap>,
+        output_file: &String,
+    ) -> Result<String, bridge::RecordingError> {
+        match tasks.output_file_to_nodename.remove(output_file) {
+            Some(n) => Ok(n),
+            None => cx
+                .get_target_collection()
+                .await
+                .map_err(|e| {
+                    log::warn!("unable to get target collection: {:?}", e);
+                    bridge::RecordingError::RecordingStop
+                })?
+                .get(output_file.as_str())
+                .ok_or_else(|| {
+                    log::warn!("target query '{}' matches no targets", output_file);
+                    bridge::RecordingError::NoSuchTarget
+                })?
+                .nodename()
+                .ok_or_else(|| {
+                    log::warn!("target query '{}' matches target with no nodename", output_file);
+                    bridge::RecordingError::DisconnectedTarget
+                }),
+        }
+    }
+}
+
 #[async_trait(?Send)]
 impl FidlProtocol for TracingProtocol {
     type Protocol = bridge::TracingMarker;
@@ -310,6 +349,7 @@ impl FidlProtocol for TracingProtocol {
                 responder,
             } => {
                 let mut tasks = self.tasks.lock().await;
+                let target_query = target_query.string_matcher;
                 let (target_info, proxy) =
                     match get_controller_proxy(target_query.as_ref(), cx).await {
                         Ok(p) => p,
@@ -320,7 +360,22 @@ impl FidlProtocol for TracingProtocol {
                                 .map_err(Into::into);
                         }
                     };
-                match tasks.entry(output_file.clone()) {
+                // This should functionally never happen (a target whose nodename isn't
+                // known after having been identified for service discovery would be a
+                // critical error).
+                let nodename = match target_info.nodename {
+                    Some(ref n) => n.clone(),
+                    None => {
+                        log::warn!(
+                            "query does not match a valid target with nodename: {:?}",
+                            target_query
+                        );
+                        return responder
+                            .send(&mut Err(bridge::RecordingError::TargetProxyOpen))
+                            .map_err(Into::into);
+                    }
+                };
+                match tasks.output_file_to_nodename.entry(output_file.clone()) {
                     Entry::Occupied(_) => {
                         return responder
                             .send(&mut Err(bridge::RecordingError::DuplicateTraceFile))
@@ -330,7 +385,7 @@ impl FidlProtocol for TracingProtocol {
                         let task = match TraceTask::new(
                             Rc::downgrade(&self.tasks),
                             target_info.clone(),
-                            output_file,
+                            output_file.clone(),
                             options,
                             target_config,
                             proxy,
@@ -358,19 +413,27 @@ impl FidlProtocol for TracingProtocol {
                                 return responder.send(&mut res).map_err(Into::into);
                             }
                         };
-                        e.insert(task);
+                        e.insert(nodename.clone());
+                        tasks.nodename_to_task.insert(nodename, task);
                     }
                 }
                 responder.send(&mut Ok(target_info)).map_err(Into::into)
             }
-            bridge::TracingRequest::StopRecording { output_file, responder } => {
+            bridge::TracingRequest::StopRecording { name, responder } => {
                 let task = {
                     let mut tasks = self.tasks.lock().await;
-                    if let Some(task) = tasks.remove(&output_file) {
+                    let nodename = match self
+                        .remove_output_file_or_find_target_nodename(cx, &mut tasks, &name)
+                        .await
+                    {
+                        Ok(n) => n,
+                        Err(e) => return responder.send(&mut Err(e)).map_err(Into::into),
+                    };
+                    if let Some(task) = tasks.nodename_to_task.remove(&nodename) {
                         task
                     } else {
                         // TODO(fxbug.dev/86410)
-                        log::warn!("no task associated with trace file '{}'", output_file);
+                        log::warn!("no task associated with trace file '{}'", name);
                         return responder
                             .send(&mut Err(bridge::RecordingError::NoSuchTraceFile))
                             .map_err(Into::into);
@@ -386,6 +449,7 @@ impl FidlProtocol for TracingProtocol {
                     .tasks
                     .lock()
                     .await
+                    .nodename_to_task
                     .values()
                     .map(|t| bridge::TraceInfo {
                         target: Some(t.target_info.clone()),
@@ -424,8 +488,11 @@ impl FidlProtocol for TracingProtocol {
     }
 
     async fn stop(&mut self, _cx: &Context) -> Result<()> {
-        let tasks =
-            { self.tasks.lock().await.drain().map(|(_, v)| v.shutdown()).collect::<Vec<_>>() };
+        let tasks = {
+            let mut tasks = self.tasks.lock().await;
+            tasks.output_file_to_nodename.clear();
+            tasks.nodename_to_task.drain().map(|(_, v)| v.shutdown()).collect::<Vec<_>>()
+        };
         futures::future::join_all(tasks).await;
         Ok(())
     }
@@ -483,12 +550,24 @@ mod tests {
         let daemon = FakeDaemonBuilder::new()
             .register_fidl_protocol::<FakeController>()
             .register_fidl_protocol::<TracingProtocol>()
+            .target(bridge::Target {
+                nodename: Some("foobar".to_string()),
+                ..bridge::Target::EMPTY
+            })
             .build();
         let proxy = daemon.open_proxy::<bridge::TracingMarker>().await;
         let temp_dir = tempfile::TempDir::new().unwrap();
         let output = temp_dir.path().join("trace-test.fxt").into_os_string().into_string().unwrap();
         proxy
-            .start_recording(None, &output, bridge::TraceOptions::EMPTY, trace::TraceConfig::EMPTY)
+            .start_recording(
+                bridge::TargetQuery {
+                    string_matcher: Some("foobar".to_owned()),
+                    ..bridge::TargetQuery::EMPTY
+                },
+                &output,
+                bridge::TraceOptions::EMPTY,
+                trace::TraceConfig::EMPTY,
+            )
             .await
             .unwrap()
             .unwrap();
@@ -505,20 +584,34 @@ mod tests {
         let daemon = FakeDaemonBuilder::new()
             .register_fidl_protocol::<FakeController>()
             .register_fidl_protocol::<TracingProtocol>()
+            .target(bridge::Target {
+                nodename: Some("foobar".to_string()),
+                ..bridge::Target::EMPTY
+            })
             .build();
         let proxy = daemon.open_proxy::<bridge::TracingMarker>().await;
         let temp_dir = tempfile::TempDir::new().unwrap();
         let output = temp_dir.path().join("trace-test.fxt").into_os_string().into_string().unwrap();
         proxy
-            .start_recording(None, &output, bridge::TraceOptions::EMPTY, trace::TraceConfig::EMPTY)
+            .start_recording(
+                bridge::TargetQuery {
+                    string_matcher: Some("foobar".to_owned()),
+                    ..bridge::TargetQuery::EMPTY
+                },
+                &output,
+                bridge::TraceOptions::EMPTY,
+                trace::TraceConfig::EMPTY,
+            )
             .await
             .unwrap()
             .unwrap();
+        // The target query needs to be empty here in order to fall back to checking
+        // the trace file.
         assert_eq!(
             Err(bridge::RecordingError::DuplicateTraceFile),
             proxy
                 .start_recording(
-                    None,
+                    bridge::TargetQuery::EMPTY,
                     &output,
                     bridge::TraceOptions::EMPTY,
                     trace::TraceConfig::EMPTY
@@ -539,6 +632,10 @@ mod tests {
                     .map_err(Into::into),
                 r => panic!("unexpecte request: {:#?}", r),
             })
+            .target(bridge::Target {
+                nodename: Some("foobar".to_string()),
+                ..bridge::Target::EMPTY
+            })
             .build();
         let proxy = daemon.open_proxy::<bridge::TracingMarker>().await;
         let temp_dir = tempfile::TempDir::new().unwrap();
@@ -547,7 +644,10 @@ mod tests {
             Err(bridge::RecordingError::RecordingAlreadyStarted),
             proxy
                 .start_recording(
-                    None,
+                    bridge::TargetQuery {
+                        string_matcher: Some("foobar".to_owned()),
+                        ..bridge::TargetQuery::EMPTY
+                    },
                     &output,
                     bridge::TraceOptions::EMPTY,
                     trace::TraceConfig::EMPTY
@@ -568,6 +668,10 @@ mod tests {
                     .map_err(Into::into),
                 r => panic!("unexpecte request: {:#?}", r),
             })
+            .target(bridge::Target {
+                nodename: Some("foobar".to_string()),
+                ..bridge::Target::EMPTY
+            })
             .build();
         let proxy = daemon.open_proxy::<bridge::TracingMarker>().await;
         let temp_dir = tempfile::TempDir::new().unwrap();
@@ -576,7 +680,10 @@ mod tests {
             Err(bridge::RecordingError::RecordingStart),
             proxy
                 .start_recording(
-                    None,
+                    bridge::TargetQuery {
+                        string_matcher: Some("foobar".to_owned()),
+                        ..bridge::TargetQuery::EMPTY
+                    },
                     &output,
                     bridge::TraceOptions::EMPTY,
                     trace::TraceConfig::EMPTY
@@ -593,21 +700,27 @@ mod tests {
         let temp_dir = tempfile::TempDir::new().unwrap();
         let output = temp_dir.path().join("trace-test.fxt").into_os_string().into_string().unwrap();
         assert_eq!(
-            bridge::RecordingError::NoSuchTraceFile,
+            bridge::RecordingError::NoSuchTarget,
             proxy.stop_recording(&output).await.unwrap().unwrap_err()
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_trace_duration_override() {
-        let daemon = FakeDaemonBuilder::new().register_fidl_protocol::<FakeController>().build();
+    async fn test_trace_duration_shutdown_via_output_file() {
+        let daemon = FakeDaemonBuilder::new()
+            .register_fidl_protocol::<FakeController>()
+            .target(bridge::Target { nodename: Some("foobar".to_owned()), ..bridge::Target::EMPTY })
+            .build();
         let protocol = Rc::new(RefCell::new(TracingProtocol::default()));
         let (proxy, _task) = protocols::testing::create_proxy(protocol.clone(), &daemon).await;
         let temp_dir = tempfile::TempDir::new().unwrap();
         let output = temp_dir.path().join("trace-test.fxt").into_os_string().into_string().unwrap();
         proxy
             .start_recording(
-                None,
+                bridge::TargetQuery {
+                    string_matcher: Some("foobar".to_owned()),
+                    ..bridge::TargetQuery::EMPTY
+                },
                 &output,
                 bridge::TraceOptions { duration: Some(500000.0), ..bridge::TraceOptions::EMPTY },
                 trace::TraceConfig::EMPTY,
@@ -622,7 +735,43 @@ mod tests {
         f.read_to_string(&mut res).await.unwrap();
         assert_eq!(res, FAKE_CONTROLLER_TRACE_OUTPUT.to_string());
         let tasks = protocol.borrow().tasks.clone();
-        assert!(tasks.lock().await.is_empty());
+        assert!(tasks.lock().await.nodename_to_task.is_empty());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_trace_duration_shutdown_via_nodename() {
+        let daemon = FakeDaemonBuilder::new()
+            .register_fidl_protocol::<FakeController>()
+            .target(bridge::Target {
+                nodename: Some("foobar".to_string()),
+                ..bridge::Target::EMPTY
+            })
+            .build();
+        let protocol = Rc::new(RefCell::new(TracingProtocol::default()));
+        let (proxy, _task) = protocols::testing::create_proxy(protocol.clone(), &daemon).await;
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let output = temp_dir.path().join("trace-test.fxt").into_os_string().into_string().unwrap();
+        proxy
+            .start_recording(
+                bridge::TargetQuery {
+                    string_matcher: Some("foobar".to_owned()),
+                    ..bridge::TargetQuery::EMPTY
+                },
+                &output,
+                bridge::TraceOptions { duration: Some(500000.0), ..bridge::TraceOptions::EMPTY },
+                trace::TraceConfig::EMPTY,
+            )
+            .await
+            .unwrap()
+            .unwrap();
+        proxy.stop_recording("foobar").await.unwrap().unwrap();
+
+        let mut f = File::open(std::path::PathBuf::from(output)).await.unwrap();
+        let mut res = String::new();
+        f.read_to_string(&mut res).await.unwrap();
+        assert_eq!(res, FAKE_CONTROLLER_TRACE_OUTPUT.to_string());
+        let tasks = protocol.borrow().tasks.clone();
+        assert!(tasks.lock().await.nodename_to_task.is_empty());
     }
 
     fn spawn_fake_alert_watcher(alert: &'static str) -> trace::ControllerProxy {

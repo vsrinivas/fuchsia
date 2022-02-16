@@ -127,6 +127,7 @@ pub async fn trace(
     #[ffx(machine = TraceOutput)] writer: Writer,
     cmd: TraceCommand,
 ) -> Result<()> {
+    let default_target: Option<String> = ffx_config::get("target.default").await?;
     match cmd.sub_cmd {
         TraceSubCommand::ListCategories(_) => {
             let categories = handle_fidl_error(controller.get_known_categories().await)?;
@@ -175,8 +176,8 @@ pub async fn trace(
             }
         }
         TraceSubCommand::Start(opts) => {
-            let default: Option<String> = ffx_config::get("target.default").await.ok();
-            let default = default.as_ref().and_then(|s| Some(s.as_str()));
+            let string_matcher: Option<String> = ffx_config::get("target.default").await.ok();
+            let default = bridge::TargetQuery { string_matcher, ..bridge::TargetQuery::EMPTY };
             let triggers = if opts.trigger.is_empty() { None } else { Some(opts.trigger) };
             if triggers.is_some() && !opts.background {
                 ffx_bail!(
@@ -232,7 +233,10 @@ pub async fn trace(
             stop_tracing(&proxy, output, writer).await?;
         }
         TraceSubCommand::Stop(opts) => {
-            let output = canonical_path(opts.output)?;
+            let output = match opts.output {
+                Some(o) => canonical_path(o)?,
+                None => default_target.unwrap_or("".to_owned()),
+            };
             stop_tracing(&proxy, output, writer).await?;
         }
         TraceSubCommand::Status(_opts) => status(&proxy, writer).await?,
@@ -364,6 +368,18 @@ package is missing from the device's system image.",
             }
             RecordingError::NoSuchTraceFile => {
                 ffx_bail!("Could not stop trace. No active traces for {}.", output);
+            }
+            RecordingError::NoSuchTarget => {
+                ffx_bail!(
+                    "The string '{}' didn't match a trace output file, or any valid targets.",
+                    default.as_deref().unwrap_or("")
+                );
+            }
+            RecordingError::DisconnectedTarget => {
+                ffx_bail!(
+                    "The string '{}' didn't match a valid target connected to the ffx daemon.",
+                    default.as_deref().unwrap_or("")
+                );
             }
         },
     }
@@ -769,7 +785,9 @@ Current tracing status:
     async fn test_stop() {
         let writer = Writer::new_test(None);
         run_trace_test(
-            TraceCommand { sub_cmd: TraceSubCommand::Stop(Stop { output: "foo.txt".to_string() }) },
+            TraceCommand {
+                sub_cmd: TraceSubCommand::Stop(Stop { output: Some("foo.txt".to_string()) }),
+            },
             writer.clone(),
         )
         .await;

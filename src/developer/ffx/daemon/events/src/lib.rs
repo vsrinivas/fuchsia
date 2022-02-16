@@ -30,6 +30,10 @@ pub struct TargetInfo {
     pub serial: Option<String>,
     pub ssh_port: Option<u16>,
     pub fastboot_interface: Option<FastbootInterface>,
+    // So far this is only used in testing. It's unclear what the reasoning is
+    // for the SSH host address being stored as a string rather than a struct
+    // elsewhere in the code, so this is being done for the sake of congruity.
+    pub ssh_host_address: Option<String>,
 }
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]

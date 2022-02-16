@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 library fuchsia.developer.bridge;
 
-using fuchsia.device;
 using fuchsia.tracing.controller;
 
 /// This covers erorr from using the `Tracing` protocol below (specifically
@@ -29,8 +28,15 @@ type RecordingError = strict enum {
     DUPLICATE_TRACE_FILE = 4;
 
     /// When attempting to stop a trace, there were no active traces found for
-    /// the given file.
+    /// the given lookup name.
     NO_SUCH_TRACE_FILE = 5;
+
+    /// No targets were found matching the query.
+    NO_SUCH_TARGET = 6;
+
+    /// The query matched a target that is not connected to the Daemon's FIDL
+    /// channels.
+    DISCONNECTED_TARGET = 7;
 };
 
 /// An action to be preformed on this trace. Used as part of a Trigger.
@@ -73,7 +79,7 @@ protocol Tracing {
     ///
     /// On success, returns the target on which the trace is running.
     StartRecording(struct {
-        target_query string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
+        target_query TargetQuery;
         output_file string:255;
         options TraceOptions;
         target_config fuchsia.tracing.controller.TraceConfig;
@@ -84,10 +90,33 @@ protocol Tracing {
     /// Stops the trace recording, flushing the remaining contents to the output
     /// file.
     ///
+    /// Parameters:
+    /// - name: A string that is first used to look up a target under which the
+    ///         trace is running. It is used the same way as
+    ///         `TargetQuery.string_matcher`. If no target can be found
+    ///         associated with a trace, this will fall back to being
+    ///         interpreted as a file name.
+    ///
     /// Returns:
     /// - the resolved target for which the trace was running.
+    ///
+    /// Examples:
+    ///
+    /// ```
+    /// proxy.start_recording(
+    ///     target_query: TargetQuery { string_matcher: "foo"},
+    ///     output_file: "output_file.fxt",
+    ///     ...
+    /// );
+    ///
+    /// // Can be stopped via this invocation (preferred).
+    /// proxy.stop_recording("foo");
+    ///
+    /// // Can also be stopped via this invocation.
+    /// proxy.stop_recording("output_file.fxt");
+    /// ```
     StopRecording(struct {
-        output_file string:255;
+        name string:255;
     }) -> (struct {
         target Target;
     }) error RecordingError;

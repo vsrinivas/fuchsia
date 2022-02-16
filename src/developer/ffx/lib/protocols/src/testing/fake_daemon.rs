@@ -9,6 +9,8 @@ use {
     },
     anyhow::{anyhow, bail, Context as _, Result},
     async_trait::async_trait,
+    ffx_daemon_events::TargetInfo,
+    ffx_daemon_target::target::Target,
     ffx_daemon_target::target_collection::TargetCollection,
     fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker, Proxy, Request, RequestStream},
     fidl::server::ServeInner,
@@ -112,7 +114,6 @@ where
 #[derive(Clone)]
 pub struct FakeDaemon {
     register: Option<ProtocolRegister>,
-    target: bridge::Target,
     target_collection: Rc<TargetCollection>,
     rcs_handler: Option<Arc<dyn Fn(rcs::RemoteControlRequest, Option<String>)>>,
 }
@@ -140,7 +141,6 @@ impl Default for FakeDaemon {
     fn default() -> Self {
         FakeDaemon {
             register: Default::default(),
-            target: bridge::Target::EMPTY,
             target_collection: Default::default(),
             rcs_handler: Default::default(),
         }
@@ -196,7 +196,7 @@ impl DaemonProtocolProvider for FakeDaemon {
 
     async fn open_target_proxy_with_info(
         &self,
-        _target_identifier: Option<String>,
+        target_identifier: Option<String>,
         protocol_selector: diagnostics::Selector,
     ) -> Result<(bridge::Target, fidl::Channel)> {
         // TODO(awdavies): This is likely very fragile. Explore more edge cases
@@ -210,7 +210,20 @@ impl DaemonProtocolProvider for FakeDaemon {
                 },
                 _ => bail!("invalid selector"),
             };
-        Ok((self.target.clone(), self.open_protocol(protocol_name).await?))
+        // This could cause some issues if we're building tests that expect targets that
+        // are or aren't supposed to be connected. That would require using the
+        // `get_connected` function here. For the time being there seems to be the
+        // assumption that any target being added is going to be looked up later for
+        // a test.
+        Ok((
+            bridge::Target::from(
+                &*self
+                    .target_collection
+                    .get(target_identifier.clone())
+                    .ok_or(anyhow!("couldn't find target for query: {:?}", target_identifier))?,
+            ),
+            self.open_protocol(protocol_name).await?,
+        ))
     }
 
     async fn get_target_collection(&self) -> Result<Rc<TargetCollection>> {
@@ -220,7 +233,7 @@ impl DaemonProtocolProvider for FakeDaemon {
 
 pub struct FakeDaemonBuilder {
     map: NameToStreamHandlerMap,
-    target: bridge::Target,
+    target_collection: Rc<TargetCollection>,
     rcs_handler: Option<Arc<dyn Fn(rcs::RemoteControlRequest, Option<String>)>>,
 }
 
@@ -229,13 +242,17 @@ impl FakeDaemonBuilder {
         Self::default()
     }
 
-    pub fn nodename(mut self, nodename: String) -> Self {
-        self.target.nodename = Some(nodename);
-        self
-    }
-
-    pub fn target(mut self, target: bridge::Target) -> Self {
-        self.target = target;
+    pub fn target(self, target: bridge::Target) -> Self {
+        let t = TargetInfo {
+            nodename: target.nodename,
+            addresses: target
+                .addresses
+                .map(|a| a.into_iter().map(Into::into).collect())
+                .unwrap_or(Vec::new()),
+            ssh_host_address: target.ssh_host_address.map(|a| a.address),
+            ..Default::default()
+        };
+        let _ = self.target_collection.merge_insert(Target::from_target_info(t.into()));
         self
     }
 
@@ -296,8 +313,8 @@ impl FakeDaemonBuilder {
     pub fn build(self) -> FakeDaemon {
         FakeDaemon {
             register: Some(ProtocolRegister::new(self.map)),
-            target: self.target,
             rcs_handler: self.rcs_handler,
+            target_collection: self.target_collection,
             ..Default::default()
         }
     }
@@ -307,8 +324,8 @@ impl Default for FakeDaemonBuilder {
     fn default() -> Self {
         Self {
             map: Default::default(),
-            target: bridge::Target::EMPTY,
             rcs_handler: Default::default(),
+            target_collection: Default::default(),
         }
     }
 }

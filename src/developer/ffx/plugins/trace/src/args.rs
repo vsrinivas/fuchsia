@@ -81,9 +81,11 @@ pub struct Status {}
 /// Stops an active running trace.
 #[argh(subcommand, name = "stop")]
 pub struct Stop {
-    /// name of output trace file.  Defaults to trace.fxt.
-    #[argh(option, default = "String::from(\"trace.fxt\")")]
-    pub output: String,
+    /// name of output trace file. Relative or absolute paths are both supported.
+    /// If this is not supplied (the default), then the default target will be
+    /// used as the method to stop the trace.
+    #[argh(option)]
+    pub output: Option<String>,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]

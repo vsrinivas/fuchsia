@@ -283,7 +283,10 @@ impl Target {
         if let Some(s) = t.serial {
             Self::new_with_serial(&s)
         } else {
-            Self::new_with_addrs(t.nodename.take(), t.addresses.drain(..).collect())
+            let res = Self::new_with_addrs(t.nodename.take(), t.addresses.drain(..).collect());
+            *res.ssh_host_address.borrow_mut() =
+                t.ssh_host_address.take().map(|a| HostAddr::from(a));
+            res
         }
     }
 
@@ -306,6 +309,7 @@ impl Target {
             serial: self.serial(),
             ssh_port: self.ssh_port(),
             fastboot_interface: self.fastboot_interface(),
+            ssh_host_address: self.ssh_host_address.borrow().as_ref().map(|h| h.to_string()),
         }
     }
 
