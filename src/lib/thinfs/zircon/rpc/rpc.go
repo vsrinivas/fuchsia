@@ -186,6 +186,23 @@ func (d *directoryWrapper) Describe(fidl.Context) (io.NodeInfo, error) {
 	return info, nil
 }
 
+func (*directoryWrapper) Describe2(_ fidl.Context, query io.ConnectionInfoQuery) (io.ConnectionInfo, error) {
+	var connectionInfo io.ConnectionInfo
+	if query&io.ConnectionInfoQueryRepresentation != 0 {
+		connectionInfo.SetRepresentation(io.RepresentationWithDirectory(io.DirectoryInfo{}))
+	}
+	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
+	rights := io.RwStarDir
+	if query&io.ConnectionInfoQueryRights != 0 {
+		connectionInfo.SetRights(rights)
+	}
+	if query&io.ConnectionInfoQueryAvailableOperations != 0 {
+		abilities := io.OperationsGetAttributes | io.OperationsUpdateAttributes | io.OperationsEnumerate | io.OperationsTraverse | io.OperationsModifyDirectory
+		connectionInfo.SetAvailableOperations(abilities & rights)
+	}
+	return connectionInfo, nil
+}
+
 func (d *directoryWrapper) SyncDeprecated(fidl.Context) (int32, error) {
 	return int32(errorToZx(d.dir.Sync())), nil
 }
@@ -489,6 +506,23 @@ func (f *fileWrapper) Describe(fidl.Context) (io.NodeInfo, error) {
 		Event: zx.Event(zx.HandleInvalid),
 	})
 	return info, nil
+}
+
+func (*fileWrapper) Describe2(_ fidl.Context, query io.ConnectionInfoQuery) (io.ConnectionInfo, error) {
+	var connectionInfo io.ConnectionInfo
+	if query&io.ConnectionInfoQueryRepresentation != 0 {
+		connectionInfo.SetRepresentation(io.RepresentationWithFile(io.FileInfo{}))
+	}
+	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
+	rights := io.RwStarDir
+	if query&io.ConnectionInfoQueryRights != 0 {
+		connectionInfo.SetRights(rights)
+	}
+	if query&io.ConnectionInfoQueryAvailableOperations != 0 {
+		abilities := io.OperationsReadBytes | io.OperationsWriteBytes | io.OperationsGetAttributes | io.OperationsUpdateAttributes
+		connectionInfo.SetAvailableOperations(abilities & rights)
+	}
+	return connectionInfo, nil
 }
 
 func (f *fileWrapper) SyncDeprecated(fidl.Context) (int32, error) {

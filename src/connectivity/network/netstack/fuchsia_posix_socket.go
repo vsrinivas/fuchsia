@@ -1147,6 +1147,7 @@ type endpointWithEvent struct {
 }
 
 func (epe *endpointWithEvent) describe() (zx.Handle, error) {
+	// TODO(https://fxbug.dev/77623): The rights on this handle should be capped at the connection's.
 	event, err := epe.peer.Duplicate(zx.RightTransfer | zx.RightWait)
 	_ = syslog.DebugTf("Describe", "%p: err=%v", epe, err)
 	return event, err
@@ -1323,6 +1324,13 @@ func (eps *endpointWithSocket) startReadWriteLoops() {
 			go m.fn(ch)
 		}
 	}
+}
+
+func (eps *endpointWithSocket) describe() (zx.Handle, error) {
+	// TODO(https://fxbug.dev/77623): The rights on this handle should be capped at the connection's.
+	socket, err := eps.peer.Handle().Duplicate(zx.RightTransfer | zx.RightsIO | zx.RightWait | zx.RightInspect)
+	_ = syslog.DebugTf("Describe", "%p: err=%v", eps, err)
+	return socket, err
 }
 
 func (eps *endpointWithSocket) Connect(_ fidl.Context, address fidlnet.SocketAddress) (socket.BaseNetworkSocketConnectResult, error) {
@@ -1740,6 +1748,29 @@ func (s *datagramSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	return fidlio.NodeInfoWithDatagramSocket(fidlio.DatagramSocket{Event: event}), nil
 }
 
+func (s *datagramSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfoQuery) (fidlio.ConnectionInfo, error) {
+	var connectionInfo fidlio.ConnectionInfo
+	if query&fidlio.ConnectionInfoQueryRepresentation != 0 {
+		event, err := s.describe()
+		if err != nil {
+			return connectionInfo, err
+		}
+		var datagramSocket fidlio.DatagramSocketInfo
+		datagramSocket.SetEvent(event)
+		connectionInfo.SetRepresentation(fidlio.RepresentationWithDatagramSocket(datagramSocket))
+	}
+	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
+	rights := fidlio.RStarDir
+	if query&fidlio.ConnectionInfoQueryRights != 0 {
+		connectionInfo.SetRights(rights)
+	}
+	if query&fidlio.ConnectionInfoQueryAvailableOperations != 0 {
+		abilities := fidlio.OperationsReadBytes | fidlio.OperationsWriteBytes | fidlio.OperationsGetAttributes
+		connectionInfo.SetAvailableOperations(abilities & rights)
+	}
+	return connectionInfo, nil
+}
+
 func (s *datagramSocket) socketControlMessagesToFIDL(cmsg tcpip.ControlMessages) socket.SocketRecvControlData {
 	s.mu.RLock()
 	sockOptTimestamp := s.endpoint.mu.sockOptTimestamp
@@ -2121,14 +2152,34 @@ func (s *streamSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.N
 }
 
 func (s *streamSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
-	var info fidlio.NodeInfo
-	h, err := s.endpointWithSocket.peer.Handle().Duplicate(zx.RightTransfer | zx.RightsIO | zx.RightWait | zx.RightInspect)
-	_ = syslog.DebugTf("Describe", "%p: err=%v", s.endpointWithSocket, err)
+	socket, err := s.describe()
 	if err != nil {
-		return info, err
+		return fidlio.NodeInfo{}, err
 	}
-	info.SetStreamSocket(fidlio.StreamSocket{Socket: zx.Socket(h)})
-	return info, nil
+	return fidlio.NodeInfoWithStreamSocket(fidlio.StreamSocket{Socket: zx.Socket(socket)}), nil
+}
+
+func (s *streamSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfoQuery) (fidlio.ConnectionInfo, error) {
+	var connectionInfo fidlio.ConnectionInfo
+	if query&fidlio.ConnectionInfoQueryRepresentation != 0 {
+		socket, err := s.describe()
+		if err != nil {
+			return connectionInfo, err
+		}
+		var streamSocket fidlio.StreamSocketInfo
+		streamSocket.SetSocket(zx.Socket(socket))
+		connectionInfo.SetRepresentation(fidlio.RepresentationWithStreamSocket(streamSocket))
+	}
+	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
+	rights := fidlio.RStarDir
+	if query&fidlio.ConnectionInfoQueryRights != 0 {
+		connectionInfo.SetRights(rights)
+	}
+	if query&fidlio.ConnectionInfoQueryAvailableOperations != 0 {
+		abilities := fidlio.OperationsReadBytes | fidlio.OperationsWriteBytes | fidlio.OperationsGetAttributes
+		connectionInfo.SetAvailableOperations(abilities & rights)
+	}
+	return connectionInfo, nil
 }
 
 func (s *streamSocketImpl) Accept(_ fidl.Context, wantAddr bool) (socket.StreamSocketAcceptResult, error) {
@@ -2772,6 +2823,29 @@ func (s *rawSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	return fidlio.NodeInfoWithRawSocket(fidlio.RawSocket{Event: event}), nil
 }
 
+func (s *rawSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfoQuery) (fidlio.ConnectionInfo, error) {
+	var connectionInfo fidlio.ConnectionInfo
+	if query&fidlio.ConnectionInfoQueryRepresentation != 0 {
+		event, err := s.describe()
+		if err != nil {
+			return connectionInfo, err
+		}
+		var rawSocket fidlio.RawSocketInfo
+		rawSocket.SetEvent(event)
+		connectionInfo.SetRepresentation(fidlio.RepresentationWithRawSocket(rawSocket))
+	}
+	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
+	rights := fidlio.RStarDir
+	if query&fidlio.ConnectionInfoQueryRights != 0 {
+		connectionInfo.SetRights(rights)
+	}
+	if query&fidlio.ConnectionInfoQueryAvailableOperations != 0 {
+		abilities := fidlio.OperationsReadBytes | fidlio.OperationsWriteBytes | fidlio.OperationsGetAttributes
+		connectionInfo.SetAvailableOperations(abilities & rights)
+	}
+	return connectionInfo, nil
+}
+
 func (s *rawSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
 	{
 		sCopy := *s
@@ -3093,6 +3167,29 @@ func (s *packetSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 		return fidlio.NodeInfo{}, err
 	}
 	return fidlio.NodeInfoWithPacketSocket(fidlio.PacketSocket{Event: event}), nil
+}
+
+func (s *packetSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfoQuery) (fidlio.ConnectionInfo, error) {
+	var connectionInfo fidlio.ConnectionInfo
+	if query&fidlio.ConnectionInfoQueryRepresentation != 0 {
+		event, err := s.describe()
+		if err != nil {
+			return connectionInfo, err
+		}
+		var packetSocket fidlio.PacketSocketInfo
+		packetSocket.SetEvent(event)
+		connectionInfo.SetRepresentation(fidlio.RepresentationWithPacketSocket(packetSocket))
+	}
+	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
+	rights := fidlio.RStarDir
+	if query&fidlio.ConnectionInfoQueryRights != 0 {
+		connectionInfo.SetRights(rights)
+	}
+	if query&fidlio.ConnectionInfoQueryAvailableOperations != 0 {
+		abilities := fidlio.OperationsReadBytes | fidlio.OperationsWriteBytes | fidlio.OperationsGetAttributes
+		connectionInfo.SetAvailableOperations(abilities & rights)
+	}
+	return connectionInfo, nil
 }
 
 func (s *packetSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {

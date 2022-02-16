@@ -150,6 +150,14 @@ type ConnectionInfo = resource table {
        10: raw_socket @generated_name("RawSocketInfo") resource table {
             1: event zx.handle:EVENTPAIR;
         };
+
+        /// The connection composes [`fuchsia.posix.socket.packet/Socket`].
+        ///
+        /// See [`NodeProtocols.PACKET_SOCKET`].
+       11: packet_socket @generated_name("PacketSocketInfo") resource table {
+            /// See [`fuchsia.posix.socket.packet.Socket`] for details.
+            1: event zx.handle:EVENTPAIR;
+        };
     };
 
     /// Information about the rights possessed by the current connection.

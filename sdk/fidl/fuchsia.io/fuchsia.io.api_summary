@@ -455,6 +455,7 @@ bits/member fuchsia.io/NodeProtocols.DEVICE 268435456
 bits/member fuchsia.io/NodeProtocols.DIRECTORY 2
 bits/member fuchsia.io/NodeProtocols.FILE 4
 bits/member fuchsia.io/NodeProtocols.MEMORY 8
+bits/member fuchsia.io/NodeProtocols.PACKET_SOCKET 256
 bits/member fuchsia.io/NodeProtocols.PIPE 16
 bits/member fuchsia.io/NodeProtocols.RAW_SOCKET 128
 bits/member fuchsia.io/NodeProtocols.STREAM_SOCKET 64
@@ -493,6 +494,8 @@ bits/member fuchsia.io/Operations.WRITE_BYTES 4
 strict bits fuchsia.io/Operations uint64
 struct/member fuchsia.io/PacketSocket.event zx/handle:<EVENTPAIR,zx.TRANSFER,zx.WAIT>
 resource struct fuchsia.io/PacketSocket
+table/member fuchsia.io/PacketSocketInfo.event zx/handle:EVENTPAIR
+resource table fuchsia.io/PacketSocketInfo
 table/member fuchsia.io/PipeInfo.socket zx/handle:SOCKET
 resource table fuchsia.io/PipeInfo
 struct/member fuchsia.io/PipeObject.socket zx/handle:SOCKET
@@ -510,6 +513,7 @@ union/member fuchsia.io/Representation.device fuchsia.io/DeviceInfo
 union/member fuchsia.io/Representation.directory fuchsia.io/DirectoryInfo
 union/member fuchsia.io/Representation.file fuchsia.io/FileInfo
 union/member fuchsia.io/Representation.memory fuchsia.io/MemoryInfo
+union/member fuchsia.io/Representation.packet_socket fuchsia.io/PacketSocketInfo
 union/member fuchsia.io/Representation.pipe fuchsia.io/PipeInfo
 union/member fuchsia.io/Representation.raw_socket fuchsia.io/RawSocketInfo
 union/member fuchsia.io/Representation.stream_socket fuchsia.io/StreamSocketInfo

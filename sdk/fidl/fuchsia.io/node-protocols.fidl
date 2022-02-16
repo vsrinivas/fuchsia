@@ -56,6 +56,10 @@ type NodeProtocols = strict bits : uint64 {
     /// The connection will speak the [`fuchsia.posix.socket.raw/Socket`] protocol.
     RAW_SOCKET = 0x80;
 
+    /// The packet socket representation of a node.
+    /// The connection will speak the [`fuchsia.posix.socket.packet/Socket`] protocol.
+    PACKET_SOCKET = 0x100;
+
     @deprecated("devices will be services in the future")
     DEVICE = 0x10000000;
 
