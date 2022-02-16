@@ -143,7 +143,7 @@ function main {
   readonly exe_path="${FX_CACHE_DIR}/fx-set"
   readonly revision_file="${FX_CACHE_DIR}/fx-set-revision"
   local current_revision
-  current_revision="$(git -C "$FUCHSIA_DIR" rev-parse HEAD)"
+  current_revision="$(git --no-optional-locks -C "$FUCHSIA_DIR" rev-parse HEAD)"
 
   # Determine whether we need to rebuild the fx-set executable. We'll only
   # rebuild if the --dev flag is set, or if the cached version of fx-set was

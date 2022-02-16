@@ -29,6 +29,8 @@ INTEGRATION="${INTEGRATION%/}"
 
 # Set the following options to make the output as stable as possible:
 # - GIT_CONFIG_NOSYSTEM=1   - Don't check /etc/gitconfig
+# - --no-optional-locks     - Do not update the git index during read-only operations
+#                             (see https://fxbug.dev/93875).
 # - --date=iso-strict-local - Format date as a strict ISO 8601-format timestamp
 # - TZ=UTC                  - Set the local timezone to UTC; when paired with the
 #                             "-local" suffix to "iso-strict", which tells Git to
@@ -36,8 +38,8 @@ INTEGRATION="${INTEGRATION%/}"
 #                             formatting the time in the UTC timezone
 # - --format=%cd            - Print the CommitDate field only, respecting the
 #                             formatting given by the --date flag
-LATEST_OUTPUT=$(GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --git-dir="$INTEGRATION"/.git log --date=iso-strict-local --format=%cd -n 1)
-LATEST_UNIX_OUTPUT=$(GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --git-dir="$INTEGRATION"/.git log --date=unix --format=%cd -n 1)
+LATEST_OUTPUT=$(GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --no-optional-locks --git-dir="$INTEGRATION"/.git log --date=iso-strict-local --format=%cd -n 1)
+LATEST_UNIX_OUTPUT=$(GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --no-optional-locks --git-dir="$INTEGRATION"/.git log --date=unix --format=%cd -n 1)
 # Only produce output if it's changed
 if [[ ! -r "$OUTPUT_FILE" ]] || [[ "$(<"$OUTPUT_FILE")" != "$LATEST_OUTPUT" ]]; then
   echo "${LATEST_OUTPUT}" > "${OUTPUT_FILE}"

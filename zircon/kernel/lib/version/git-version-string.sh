@@ -12,9 +12,11 @@ readonly CHECKOUT_DIR="$2"
 
 set -e
 
-GIT_REV="git-$(git -C "$CHECKOUT_DIR" rev-parse HEAD 2>/dev/null)"
+# The --no-optional-locks option ensures git read-only operations do
+# not refresh the index (https://fxbug.dev/93875)
+GIT_REV="git-$(git --no-optional-locks -C "$CHECKOUT_DIR" rev-parse HEAD 2>/dev/null)"
 
-if [ -n "$(git -C "$CHECKOUT_DIR" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
+if [ -n "$(git --no-optional-locks -C "$CHECKOUT_DIR" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
   GIT_REV+="-dirty"
 fi
 

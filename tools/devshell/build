@@ -90,10 +90,10 @@ function main {
       echo
       echo "------ GIT QUICK INFO ------"
       echo "$ git status"
-      git --git-dir="${FUCHSIA_DIR}/.git" status
+      git --no-optional-locks --git-dir="${FUCHSIA_DIR}/.git" status
       echo
       echo "$ git rev-parse JIRI_HEAD"
-      git --git-dir="${FUCHSIA_DIR}/.git" rev-parse JIRI_HEAD
+      git --no-optional-locks --git-dir="${FUCHSIA_DIR}/.git" rev-parse JIRI_HEAD
       echo
       echo "------ CONTENTS OF args.gn ------"
       echo "$ cat ${FUCHSIA_BUILD_DIR}/args.gn"

@@ -46,6 +46,9 @@ class GitStatusChecker {
   Future<ProcessResult> checkStatus() async {
     var fuchsiaGitDir = '${Platform.environment['FUCHSIA_DIR']}/.git';
     return Process.run('git', [
+      '--no-optional-locks',
+
+      /// https://fxbug.dev/93875
       '--git-dir=$fuchsiaGitDir',
       'rev-parse',
       'HEAD',
