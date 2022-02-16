@@ -1,5 +1,11 @@
 [
     {
+        "element_manager_name": "fuchsia.element.Manager-chrome",
+        "icon": "images/Chromium-icon-2x.png",
+        "title": "Chromium",
+        "url": "fuchsia-pkg://fuchsia.com/chrome#meta/chrome.cm"
+    },
+    {
         "icon": "images/SimpleBrowser-icon-2x.png",
         "title": "Simple Browser",
         "url": "fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx"
