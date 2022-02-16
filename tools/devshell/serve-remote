@@ -238,7 +238,7 @@ if "${serve}"; then
     # remote server already running and kill it, this prevents most cases where
     # signal propagation seems to sometimes not make it to "pm".
     # TODO(drees) This can be combined with the serve-updates call later to reduce ssh calls.
-    if ssh "${host}" "${ssh_base_args[@]}" 'ss -ln | grep :${package_server_port}' > /dev/null; then
+    if ssh "${host}" "${ssh_base_args[@]}" "ss -ln | grep :${package_server_port}" > /dev/null; then
       ssh "${ssh_base_args[@]}" "${host}" 'pkill -x -u $USER pm'
     fi
   else
