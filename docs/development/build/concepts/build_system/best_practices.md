@@ -549,6 +549,29 @@ message = "My favorite output is $output"
 # GN won't let you subscript an rvalue.
 ```
 
+### Checking if type is string
+
+Though GN doesn't allow for comprehensive type checking, you can check that a variable
+is a string, and only a string, by writing the following line:
+
+```gn
+if (var == "$var") {
+  # Execute code conditional on `var` type being string
+}
+```
+
+### Check if var is a singleton list
+
+Similarly, you can check if a variable is a singleton list like this:
+
+```gn
+if (var == [var[0]]) {
+  # Execute code conditional on `var` type being a singleton list
+}
+```
+
+Though note, that this will crash if the type is *not* a list or is empty.
+
 ### Set operations {#set-operations}
 
 GN offers lists and scopes as aggregate data types, but not associative
