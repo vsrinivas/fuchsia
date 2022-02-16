@@ -98,6 +98,7 @@ group("base_packages") {
   visibility = [ "//build/images/*" ]
   public_deps = [
     ":driver-manager-base-config",
+    "fuchsia:core_realm",
     "//:additional_base_driver_packages",
     "//:additional_base_packages",
   ]

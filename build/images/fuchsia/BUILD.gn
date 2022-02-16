@@ -7,6 +7,7 @@ import("//build/images/vboot/vboot.gni")
 import("//build/security.gni")
 
 assert(current_toolchain == target_toolchain)
+import("//src/sys/core/build/core.gni")
 
 ##################################################
 # Shared parameters across assemblies in this file
@@ -39,6 +40,7 @@ fuchsia_base = {
     "//:additional_base_packages",
     "//build/images:driver-manager-base-config",
     "//src/sys/component_index",
+    ":core_realm",
   ]
 
   # Include the meta package labels, but remove any config-data or
@@ -104,6 +106,12 @@ fuchsia_base = {
     zbi_signing_args = vboot_action.args
     deps = vboot_action.deps
   }
+}
+
+core_realm("core_realm") {
+  package_name = core_realm_package_name
+  deps = core_realm_shards + board_core_realm_shards
+  restrict_persistent_storage = core_realm_restrict_persistent_storage
 }
 
 ##################################################
