@@ -1,0 +1,12 @@
+{
+    include: [
+        "//src/lib/vulkan/vulkan-test.shard.cml",
+        "//src/sys/test_runners/elf/default.shard.cml",
+        "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/cmd-buf-benchmark",
+        args: [ "-offscreen" ],
+    },
+}

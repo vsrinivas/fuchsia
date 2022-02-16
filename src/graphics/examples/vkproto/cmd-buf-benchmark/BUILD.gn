@@ -23,7 +23,7 @@ packaged_shared_library("libvulkan") {
 fuchsia_component("cmd-buf-benchmark-component") {
   testonly = true
   component_name = "cmd-buf-benchmark"
-  manifest = "meta/cmd-buf-benchmark.cmx"
+  manifest = "meta/cmd-buf-benchmark.cml"
   deps = [
     ":bin",
     ":libvulkan",
