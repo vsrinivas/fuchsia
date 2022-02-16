@@ -354,6 +354,10 @@ class _FileConnection extends File {
   Future<NodeInfo> describe() async => file.describe();
 
   @override
+  Future<ConnectionInfo> describe2(ConnectionInfoQuery query) async =>
+      file.describe2(query);
+
+  @override
   Future<File$GetAttr$Response> getAttr() async {
     return File$GetAttr$Response(
         ZX.OK,
