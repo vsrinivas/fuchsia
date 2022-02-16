@@ -38,7 +38,7 @@ var (
 )
 
 const (
-	ffxConfigServerModeKey string = "fserve.server-mode"
+	ffxConfigServerModeKey string = "repository.server.mode"
 
 	defaultServerMode string = "pm"
 )

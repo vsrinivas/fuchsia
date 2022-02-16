@@ -111,6 +111,13 @@ log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [serve-updates] $@"
 }
 
+# Determine which server we are using.
+server_mode="$(package-server-mode)"
+err=$?
+if [[ "${err}" -ne 0 ]]; then
+  exit 1
+fi
+
 # In any multi-homing scenario (two target interfaces, or two host interfaces),
 # the resolve process can return different results at different times. As such
 # we pin the address here, and let the ssh check loop below perform a clear
@@ -119,7 +126,7 @@ log() {
 serve_updates_target_addr=""
 target-addr() {
   if [[ -z "${serve_updates_target_addr}" ]]; then
-    if use-legacy-package-server; then
+    if [[ "${server_mode}" = "pm" ]]; then
       serve_updates_target_addr="$(get-device-addr-resource)"
 
       if [[ -n "${serve_updates_target_addr}" && -n "$(get-fuchsia-device-port)" ]]; then
@@ -130,8 +137,8 @@ target-addr() {
     fi
   fi
 
-  if [[ -n "$serve_updates_target_addr" ]]; then
-    echo "$serve_updates_target_addr"
+  if [[ -n "${serve_updates_target_addr}" ]]; then
+    echo "${serve_updates_target_addr}"
     return 0
   fi
 
@@ -181,7 +188,7 @@ if is_feature_enabled "incremental"; then
   # only show output of prepare_publish if it fails
   out="$(fx-command-run build build/images:prepare_publish 2>&1)"
   if [[ $? -ne 0 ]]; then
-    echo >&2 "$out"
+    echo >&2 "${out}"
     exit $?
   fi
   $verbose && echo >&2 "done"
@@ -192,7 +199,7 @@ else
   fi
 fi
 
-if use-legacy-package-server; then
+if [[ "${server_mode}" = "pm" ]]; then
   # Default the port to 8083 if it is unset.
   if [[ -z "${port}" ]]; then
     port="8083"
@@ -210,12 +217,13 @@ else
     fx-error "See http://fxbug.dev/79636 for more details."
     exit 1
   fi
+fi
 
-  ffx-repository-check-server-address "" "$port"
-  err=$?
-  if [[ $err -ne 0 ]]; then
-    exit "$err"
-  fi
+# Error out if we can't start a package server.
+check-if-we-can-start-package-server "" "${port}"
+err=$?
+if [[ "${err}" -ne 0 ]]; then
+  exit 1
 fi
 
 if [[ "${auto_config}" == false ]]; then
@@ -223,7 +231,7 @@ if [[ "${auto_config}" == false ]]; then
   log "Use 'fx -d DEVICE add-update-source --port ${port}' to reconfigure devices as needed, since it is not persistent accross reboots."
   log "Serving packages on port ${port}..."
 
-  if use-legacy-package-server; then
+  if [[ "${server_mode}" = "pm" ]]; then
     fx-command-exec host-tool pm "${pm_serve_args[@]}"
   else
     log "Repository is being served in the background by ffx"
@@ -231,7 +239,7 @@ if [[ "${auto_config}" == false ]]; then
   fi
 fi
 
-if use-legacy-package-server; then
+if [[ "${server_mode}" = "pm" ]]; then
   fx-command-exec host-tool pm "${pm_serve_args[@]}" &
   background_pid=$!
 
@@ -241,8 +249,12 @@ if use-legacy-package-server; then
     err=$?
     fx-error "Server died"
     fx-error "If the server exited with 'address already in use', pm may be colliding with"
-    fx-error "the ffx repository server. To disable the ffx repository server, run:"
-    fx-error "$ ffx config set repository.server.listen \"\" && ffx doctor --restart-daemon"
+    fx-error "another 'pm serve', or the ffx repository server."
+    fx-error ""
+    fx-error "To disable the ffx repository server, run:"
+    fx-error ""
+    fx-error "$ ffx config set repository.server.mode pm"
+    fx-error "$ ffx doctor --restart-daemon"
     wait
     exit $err
   fi
@@ -272,23 +284,23 @@ while true; do
     fi
   fi
 
-  if [[ "$state" == "discover" ]]; then
+  if [[ "${state}" == "discover" ]]; then
     # While we're still trying to connect to the device, clear the target
     # address state so we re-resolve.
     clear-target-addr
     with-pinned-target fx-command-run shell exit 2>/dev/null
     ping_result=$?
 
-    if [[ "$ping_result" == 0 ]]; then
+    if [[ "${ping_result}" == 0 ]]; then
       log "Device up"
       reported_discovery_failed=0
       state="config"
-    elif [[ "$reported_discovery_failed" == 0 ]]; then
+    elif [[ "${reported_discovery_failed}" == 0 ]]; then
       reported_discovery_failed=1
 
       # Log if we don't know the device's address yet, or if we don't have a device configured.
       device_addr="$(get-fuchsia-device-addr 2>/dev/null)"
-      if [[ -z "$device_addr" ]]; then
+      if [[ -z "${device_addr}" ]]; then
         device_name="$(get-device-name 2>/dev/null)"
         if [[ -n "${device_name}" ]]; then
           log "Trying to resolve '${device_name}'..."
@@ -304,7 +316,7 @@ while true; do
     ping_result=$?
   fi
 
-  if [[ "$state" == "config" ]]; then
+  if [[ "${state}" == "config" ]]; then
     log "Registering devhost as update source"
 
     add_update_source_args=( "${persist}" --port "${port}" )
@@ -328,8 +340,8 @@ while true; do
     fi
   fi
 
-  if [[ "$state" == "ready" ]]; then
-    if [[ "$ping_result" != 0 ]]; then
+  if [[ "${state}" == "ready" ]]; then
+    if [[ "${ping_result}" != 0 ]]; then
       log "Device lost"
       state="discover"
     else

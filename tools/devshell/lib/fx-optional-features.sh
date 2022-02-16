@@ -6,8 +6,7 @@
 function list_optional_features {
   echo \
     "incremental" \
-    "legacy_fastboot" \
-    "legacy_serve"
+    "legacy_fastboot"
 }
 
 # Return 0 (true) if the default of the given feature is enabled, 1 (false) otherwise.
@@ -15,7 +14,6 @@ function is_feature_enabled_by_default {
   case "$1" in
   "incremental") return 1 ;;
   "legacy_fastboot") return 1 ;;
-  "legacy_serve") return 0 ;;
   esac
 
   # global default is enabled
@@ -35,11 +33,6 @@ function help_optional_feature {
   "legacy_fastboot")
     h=(
       "Device provisioning based on legacy fastboot instead of ffx."
-      )
-    ;;
-  "legacy_serve")
-    h=(
-      "Serve packages using the legacy 'pm' package server."
       )
     ;;
   esac

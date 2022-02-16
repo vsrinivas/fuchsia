@@ -47,7 +47,16 @@ BT_SET_UP() {
   } >> "${BT_TEMP_DIR}/tools/devshell/lib/verify-default-keys.sh"
 
   ffx="$(btf::make_installed_hosttools_mock ffx)"
-  echo "127.0.0.1" > "${ffx}.mock_stdout"
+  cat > "${ffx}.mock_side_effects" << "EOF"
+echo "$@" 1>&2
+if [[ "$@" == "config get repository.server.mode" ]]; then
+  echo "\"ffx\""
+elif [[ "$@" == "config get repository.server.listen" ]]; then
+  echo "\"[::]:8083\""
+else
+  echo "127.0.0.1"
+fi
+EOF
 }
 
 # test if the host/dir info is correctly stored in the cache file

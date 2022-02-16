@@ -44,7 +44,13 @@ function main {
     shift
   done
 
-  if use-legacy-package-server; then
+  local server_mode="$(package-server-mode)"
+  local err=$?
+  if [[ "${err}" -ne 0 ]]; then
+    exit 1
+  fi
+
+  if [[ "${server_mode}" = "pm" ]]; then
     if [[ -z "${repo_name}" ]]; then
       repo_name="devhost"
     fi

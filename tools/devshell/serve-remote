@@ -100,7 +100,7 @@ while [[ $# -ne 0 ]]; do
   shift
 done
 
-if cached=( $(load_remote_info "$host") ); then
+if cached=( $(load_remote_info "${host}") ); then
   host="${cached[0]}"
   dir="${cached[1]}"
 fi
@@ -113,7 +113,7 @@ fi
 
 if "${serve}"; then
   if [[ -z "${dir}" ]]; then
-    if ssh "$host" ls \~/fuchsia/.jiri_root/bin/fx > /dev/null; then
+    if ssh "${host}" ls \~/fuchsia/.jiri_root/bin/fx > /dev/null; then
       dir="~/fuchsia"
     else
       fx-error "failed to find ~/fuchsia on $host, please specify REMOTE-DIR"
@@ -123,7 +123,7 @@ if "${serve}"; then
   fi
 fi
 
-save_remote_info "$host" "$dir"
+save_remote_info "${host}" "${dir}"
 
 fx-export-device-address
 if [[ $? -ne 0 || -z "${FX_DEVICE_ADDR}" ]]; then
@@ -227,7 +227,13 @@ until ssh -q -O check ${ssh_base_args[@]} "${host}"; do
 done
 
 if "${serve}"; then
-  if use-legacy-package-server; then
+  server_mode="$(package-server-mode)"
+  err=$?
+  if [[ "${err}" -ne 0 ]]; then
+    exit 1
+  fi
+
+  if [[ "${server_mode}" = "pm" ]]; then
     # If the user requested serving, then we'll check to see if there's a
     # remote server already running and kill it, this prevents most cases where
     # signal propagation seems to sometimes not make it to "pm".
@@ -245,28 +251,30 @@ if "${serve}"; then
     # repository servers are trying to use the same port.
     local_addr=$(fx-command-run ffx config get repository.server.listen)
     err=$?
-    if [[ $"err" -ne 0 ]]; then
+    if [[ "${err}" -ne 0 ]]; then
       fx-error "Unable to get the local configured repository server address."
-      exit "$err"
+      exit "${err}"
     fi
 
     remote_addr=$(ssh "${host}" "${ssh_base_args[@]}" "cd ${dir} && ./.jiri_root/bin/ffx config get repository.server.listen")
     err=$?
-    if [[ "$err" -ne 0 ]]; then
+    if [[ "${err}" -ne 0 ]]; then
       fx-error "Unable to get the remote configured repository server address."
-      exit "$err"
+      exit "${err}"
     fi
 
     # If the local server is running, error out if we're using the same port as the remote server.
-    if [[ "$local_addr" != "null" && "$local_addr" = "$remote_addr" ]]; then
+    if [[ "${local_addr}" != "null" && "${local_addr}" = "${remote_addr}" ]]; then
       fx-error "The local and remote ffx repository servers cannot both be $local_addr."
-      fx-error "Either change the repository port with:"
+      fx-error "Either change the ffx repository port with:"
       fx-error ""
-      fx-error "$ ffx config set repository.server.listen \"[::]:\$SOME_OTHER_PORT\" && ffx doctor --restart-daemon"
+      fx-error "$ ffx config set repository.server.listen \"[::]:\$SOME_OTHER_PORT\""
+      fx-error "$ ffx doctor --restart-daemon"
       fx-error ""
-      fx-error "Or disable the repository server with:"
+      fx-error "Or disable the ffx repository server with:"
       fx-error ""
-      fx-error "$ ffx config set repository.server.listen null && ffx doctor --restart-daemon"
+      fx-error "$ ffx config set repository.server.mode pm"
+      fx-error "$ ffx doctor --restart-daemon"
       fx-error ""
       fx-error "See http://fxbug.dev/82788 for more details."
       exit 1

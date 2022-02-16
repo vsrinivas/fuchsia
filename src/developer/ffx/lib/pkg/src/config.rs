@@ -16,6 +16,15 @@ const CONFIG_KEY_REGISTRATIONS: &str = "repository.registrations";
 const CONFIG_KEY_DEFAULT_REPOSITORY: &str = "repository.default";
 const ESCAPE_SET: &AsciiSet = &CONTROLS.add(b'%').add(b'.');
 
+/// Return if the repository server is enabled.
+pub async fn repository_server_enabled() -> Result<bool> {
+    if let Some(mode) = ffx_config::get::<Option<String>, _>("repository.server.mode").await? {
+        Ok(mode == "ffx")
+    } else {
+        Ok(false)
+    }
+}
+
 /// Return the repository server address.
 pub async fn repository_listen_addr() -> Result<Option<std::net::SocketAddr>> {
     if let Some(address) = ffx_config::get::<Option<String>, _>("repository.server.listen").await? {
