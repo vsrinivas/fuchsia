@@ -7,8 +7,8 @@ use {
     crate::{
         client::types as client_types,
         config_management::{
-            connection_quality::SignalData, Credential, NetworkConfig, NetworkConfigError,
-            NetworkIdentifier, SavedNetworksManagerApi, ScanResultType,
+            Credential, NetworkConfig, NetworkConfigError, NetworkIdentifier,
+            SavedNetworksManagerApi, ScanResultType,
         },
     },
     async_trait::async_trait,
@@ -27,7 +27,6 @@ pub struct FakeSavedNetworksManager {
     pub fail_all_stores: bool,
     pub active_scan_result_recorded: Arc<Mutex<bool>>,
     pub passive_scan_result_recorded: Arc<Mutex<bool>>,
-    record_connection_quality_channel: Mutex<mpsc::UnboundedReceiver<Option<SignalData>>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -41,14 +40,12 @@ pub struct DisconnectRecord {
 
 impl FakeSavedNetworksManager {
     pub fn new() -> Self {
-        let (_sender, receiver) = mpsc::unbounded();
         Self {
             saved_networks: Mutex::new(HashMap::new()),
             disconnects_recorded: Mutex::new(vec![]),
             fail_all_stores: false,
             active_scan_result_recorded: Arc::new(Mutex::new(false)),
             passive_scan_result_recorded: Arc::new(Mutex::new(false)),
-            record_connection_quality_channel: Mutex::new(receiver),
         }
     }
     /// Create FakeSavedNetworksManager, saving some network configs at init.
@@ -60,34 +57,13 @@ impl FakeSavedNetworksManager {
             })
             .collect::<HashMap<NetworkIdentifier, Vec<NetworkConfig>>>();
 
-        let (_sender, receiver) = mpsc::unbounded();
         Self {
             saved_networks: Mutex::new(saved_networks),
             disconnects_recorded: Mutex::new(vec![]),
             fail_all_stores: false,
             active_scan_result_recorded: Arc::new(Mutex::new(false)),
             passive_scan_result_recorded: Arc::new(Mutex::new(false)),
-            record_connection_quality_channel: Mutex::new(receiver),
         }
-    }
-
-    /// For tests that use record_connection_quality_data, use this to create a
-    /// FakeSavedNetworksManager with a channel to tell the fake how the function should return.
-    /// The desired return values must be sent to the channel before the SavedNetworksManager
-    /// function is called.
-    pub fn new_with_channel() -> (Self, mpsc::UnboundedSender<Option<SignalData>>) {
-        let (sender, receiver) = mpsc::unbounded();
-        (
-            Self {
-                saved_networks: Mutex::new(HashMap::new()),
-                disconnects_recorded: Mutex::new(vec![]),
-                fail_all_stores: false,
-                active_scan_result_recorded: Arc::new(Mutex::new(false)),
-                passive_scan_result_recorded: Arc::new(Mutex::new(false)),
-                record_connection_quality_channel: Mutex::new(receiver),
-            },
-            sender,
-        )
     }
 
     pub fn drain_recorded_disconnects(&self) -> Vec<DisconnectRecord> {
@@ -225,22 +201,6 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
             .map(|cfgs| cfgs.clone())
             .flatten()
             .collect()
-    }
-
-    async fn record_connection_quality_data(
-        &self,
-        _id: &NetworkIdentifier,
-        _credential: &Credential,
-        _bssid: client_types::Bssid,
-        _connection_data: fidl_fuchsia_wlan_internal::SignalReportIndication,
-    ) -> Option<SignalData> {
-        // The mutex allows us to use the receiver mutably even though self is borrowed immutably.
-        self.record_connection_quality_channel
-            .lock()
-            .await
-            .try_next()
-            .expect("Failed to get next return value from channel")
-            .expect("Failed to get a return value from the channel")
     }
 }
 

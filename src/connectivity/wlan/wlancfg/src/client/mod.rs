@@ -27,6 +27,7 @@ use {
     std::{convert::TryFrom, sync::Arc},
 };
 
+pub mod connection_quality;
 pub mod network_selection;
 pub mod scan;
 pub mod state_machine;

@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    super::connection_quality::{PastConnectionData, SignalData},
-    crate::client::types as client_types,
+    crate::client::{
+        connection_quality::{PastConnectionData, SignalData},
+        types as client_types,
+    },
     arbitrary::Arbitrary,
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon as zx,
     std::{

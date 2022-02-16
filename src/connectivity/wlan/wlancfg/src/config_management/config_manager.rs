@@ -4,7 +4,6 @@
 
 use {
     super::{
-        connection_quality::{SignalData, EWMA_SMOOTHING_FACTOR},
         network_config::{
             Credential, FailureReason, HiddenProbEvent, NetworkConfig, NetworkConfigError,
             NetworkIdentifier, SecurityType,
@@ -15,8 +14,7 @@ use {
     anyhow::format_err,
     async_trait::async_trait,
     fidl_fuchsia_wlan_common::ScanType,
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -134,18 +132,6 @@ pub trait SavedNetworksManagerApi: Send + Sync {
 
     // Return a list of every network config that has been saved.
     async fn get_networks(&self) -> Vec<NetworkConfig>;
-
-    // Updates connection quality information for a given network id. Runs filtering and
-    // calculations, stores the values, and returns them.
-    // TODO(fxbug.dev/84867): Replace connection_data (f32), which is currently just rssi, with
-    // struct when integrating connection quality retrieval.
-    async fn record_connection_quality_data(
-        &self,
-        id: &NetworkIdentifier,
-        credential: &Credential,
-        bssid: types::Bssid,
-        connection_data: fidl_internal::SignalReportIndication,
-    ) -> Option<SignalData>;
 }
 
 impl SavedNetworksManager {
@@ -514,54 +500,6 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
             .flatten()
             .collect()
     }
-
-    async fn record_connection_quality_data(
-        &self,
-        id: &NetworkIdentifier,
-        credential: &Credential,
-        bssid: types::Bssid,
-        connection_data: fidl_internal::SignalReportIndication,
-    ) -> Option<SignalData> {
-        // Find saved networks matching network id.
-        let mut saved_networks = self.saved_networks.lock().await;
-        let networks = match saved_networks.get_mut(&id) {
-            Some(networks) => networks,
-            None => {
-                error!("Failed to find network to record connection quality data.");
-                return None;
-            }
-        };
-        // Find network matching credential
-        for network in networks.iter_mut() {
-            if &network.credential == credential {
-                match network.perf_stats.rssi_data_by_bssid.get_mut(&bssid) {
-                    // Update connection data for BSS
-                    Some(signal_data) => {
-                        signal_data.update_with_new_measurement(
-                            connection_data.rssi_dbm,
-                            connection_data.snr_db,
-                        );
-                        return Some(signal_data.clone());
-                    }
-                    // Add connection quality data for BSS
-                    None => {
-                        let signal_data = SignalData::new(
-                            connection_data.rssi_dbm,
-                            connection_data.snr_db,
-                            EWMA_SMOOTHING_FACTOR,
-                        );
-                        let _ = network
-                            .perf_stats
-                            .rssi_data_by_bssid
-                            .insert(bssid, signal_data.clone());
-                        return Some(signal_data);
-                    }
-                };
-            }
-        }
-        error!("Failed to find matching network to record connection quality data.");
-        return None;
-    }
 }
 
 /// Returns a subset of potentially hidden saved networks, filtering probabilistically based
@@ -704,7 +642,6 @@ mod tests {
         std::{convert::TryFrom, io::Write},
         tempfile::TempDir,
         test_case::test_case,
-        test_util::{assert_gt, assert_lt},
         wlan_common::assert_variant,
     };
 
@@ -1996,79 +1933,6 @@ mod tests {
 
         // Check that a config was not saved for the identifier that was not saved before.
         assert!(saved_networks.lookup(id_3).await.is_empty());
-    }
-
-    #[fuchsia::test]
-    async fn test_record_connection_quality_data() {
-        let saved_networks = SavedNetworksManager::new_for_test()
-            .await
-            .expect("Failed to create SavedNetworksManager");
-        let net_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
-        let net_id_also_valid = NetworkIdentifier::try_from("foo", SecurityType::Wpa).unwrap();
-        let credential = Credential::Password(b"some_password".to_vec());
-        let bssid = types::Bssid([2; 6]);
-
-        // Save the network.
-        assert!(saved_networks
-            .store(net_id.clone(), credential.clone())
-            .await
-            .expect("Failed save network")
-            .is_none());
-        assert!(saved_networks
-            .store(net_id_also_valid.clone(), credential.clone())
-            .await
-            .expect("Failed save network")
-            .is_none());
-
-        // Record connection quality data
-        let signal_ind =
-            fidl_fuchsia_wlan_internal::SignalReportIndication { rssi_dbm: -50, snr_db: 35 };
-        let response = saved_networks
-            .record_connection_quality_data(&net_id, &credential, bssid, signal_ind)
-            .await
-            .expect("failed to get RSSI data response.");
-
-        // Verify connection quality data we recorded. Values should be the initial
-        // values, since its the first recording.
-        let saved_config = saved_networks
-            .lookup(net_id.clone())
-            .await
-            .pop()
-            .expect("Failed to get saved network config");
-        let signal_data = saved_config
-            .perf_stats
-            .rssi_data_by_bssid
-            .get(&bssid)
-            .expect("failed to get rssi data.");
-        assert_eq!(response, *signal_data);
-        assert_eq!(signal_data.ewma_rssi.get(), -50);
-        assert_eq!(signal_data.ewma_snr.get(), 35);
-        assert_eq!(signal_data.rssi_velocity, 0);
-
-        // Record second quality connection data
-        let signal_ind =
-            fidl_fuchsia_wlan_internal::SignalReportIndication { rssi_dbm: -80, snr_db: 20 };
-        let response = saved_networks
-            .record_connection_quality_data(&net_id, &credential, bssid, signal_ind)
-            .await
-            .expect("failed to get RSSI data response.");
-
-        // Verify connection quality data was updated. This is non-determinstic and depends on the
-        // weighting parameters. But the RSSI should be smoothed to between the two values, and the
-        // velocity should be negative.
-        let saved_config =
-            saved_networks.lookup(net_id).await.pop().expect("Failed to get saved network config");
-        let signal_data = saved_config
-            .perf_stats
-            .rssi_data_by_bssid
-            .get(&bssid)
-            .expect("failed to get rssi data.");
-        assert_eq!(response, *signal_data);
-        assert_lt!(signal_data.ewma_rssi.get(), -50);
-        assert_gt!(signal_data.ewma_rssi.get(), -80);
-        assert_lt!(signal_data.ewma_snr.get(), 35);
-        assert_gt!(signal_data.ewma_snr.get(), 20);
-        assert_lt!(signal_data.rssi_velocity, 0);
     }
 
     fn fake_successful_connect_result() -> fidl_sme::ConnectResult {
