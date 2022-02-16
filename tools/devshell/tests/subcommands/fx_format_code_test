@@ -94,6 +94,14 @@ TEST_fx-format-code-unknown-extension() {
   local out="${BT_TEMP_DIR}/_fx_format_code_output"
   BT_ASSERT_FAIL "${fx}" format-code --files="${TESTDATA}/unknown-extension.blah" 2> "${out}"
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "Unsupported extension"
+  local files=(
+    "${TESTDATA}/cplusplus.cc"
+    "${TESTDATA}/unknown-extension.blah"
+  )
+  local csfiles
+  printf -v csfiles ",%s" "${files[@]}"
+  BT_EXPECT "${fx}" format-code --verbose --files="${csfiles:1}" > "${out}"
+  BT_EXPECT grep -q -E '"clang-format.*cplusplus.cc"' "${out}"
 }
 
 BT_RUN_TESTS "$@"

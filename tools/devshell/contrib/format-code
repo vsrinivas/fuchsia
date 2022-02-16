@@ -187,15 +187,19 @@ while [ $# -gt 0 ]; do
     --files=*)
       FILES_SPECIFIED=true
       GET_FILES=:
-      FILES=$(canonicalize "${PWD}" $(zap-commas "${ARG#--files=}"))
+      FILES=( \
+        $(canonicalize "${PWD}" $(zap-commas "${ARG#--files=}")) \
+      )
       ;;
     --target=*)
       GET_FILES=:
-      FILES=$(canonicalize "${FUCHSIA_DIR}" \
-        $(fx-gn desc \
-            "${FUCHSIA_BUILD_DIR}" "${ARG#--target=}" sources)) &&
-        RUST_ENTRY_POINT=$(canonicalize "${FUCHSIA_DIR}" \
-            $(fx rustfmt --print-sources ${ARG#--target=})) ;;
+      FILES=( \
+        $(canonicalize "${FUCHSIA_DIR}" \
+          $(fx-gn desc "${FUCHSIA_BUILD_DIR}" "${ARG#--target=}" sources)) \
+      ) \
+      && RUST_ENTRY_POINT=$(canonicalize "${FUCHSIA_DIR}" \
+          $(fx rustfmt --print-sources ${ARG#--target=}))
+      ;;
     --) break ;;
     *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
   esac
@@ -211,12 +215,16 @@ GIT_FILTER=(
 )
 
 get_git_files() {
-  FILES=$(canonicalize $(git rev-parse --show-toplevel) \
-    $(git diff --name-only $(get-diff-base) "${GIT_FILTER[@]}"))
+  FILES=( \
+    $(canonicalize $(git rev-parse --show-toplevel) \
+      $(git diff --name-only $(get-diff-base) "${GIT_FILTER[@]}")) \
+  )
 }
 
 get_all_files() {
-  FILES=$(canonicalize "${PWD}" $(git ls-files "${GIT_FILTER[@]}"))
+  FILES=( \
+    $(canonicalize "${PWD}" $(git ls-files "${GIT_FILTER[@]}")) \
+  )
 }
 
 # Print lines changed in the given file.
@@ -246,7 +254,9 @@ NO_FORMAT=(
 )
 
 for to_remove in "${NO_FORMAT[@]}"; do
-  FILES=("${FILES[@]//$to_remove}")
+  FILES=( \
+    "${FILES[@]//$to_remove}" \
+  )
 done
 
 if [[ -n "${VERBOSE}" ]]; then
@@ -294,7 +304,7 @@ done
 [[ -n "${RUST_ENTRY_POINT}" ]] && ${RUST_ENTRY_POINT_FMT_CMD} "${RUST_ENTRY_POINT}"
 
 # Format files.
-for file in ${FILES[@]}; do
+for file in "${FILES[@]}"; do
   # Git reports deleted files, which we don't want to try to format
   if [[ ! -f "${file}" ]]; then
     if [[ ALL_FILES -ne 1 ]]; then
@@ -310,7 +320,7 @@ done
 # If a Markdown change is present (including a deletion of a markdown file),
 # check the entire project.
 declare HAS_MARKDOWN=
-for file in ${FILES[@]}; do
+for file in "${FILES[@]}"; do
   if [[ ${file} == *.md ]]; then
     HAS_MARKDOWN="1";
   fi
