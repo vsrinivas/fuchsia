@@ -28,6 +28,6 @@ RUSTC_LOG=error "$@" -Cpanic=abort -Zpanic_abort_tests -Zno_codegen \
 result=$?
 
 if [[ $result != 0 && $fail ]]; then
-    "$jq" -sr '.[] | select(.level == "error") | .rendered' "$output" &1>2
+    "$jq" -sr '.[] | select(.level == "error") | .rendered' "$output"
     exit $result
 fi
