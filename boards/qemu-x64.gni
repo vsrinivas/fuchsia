@@ -22,6 +22,7 @@ _bootfs_deps =
       "//src/graphics/display/drivers/simple:simple.intel",
       "//src/graphics/display/drivers/simple:simple.vmware",
       "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec",
+      "//zircon/third_party/dev/ethernet/e1000",
     ]
 
 board_bootfs_labels += _bootfs_deps
