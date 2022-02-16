@@ -829,4 +829,83 @@ void main(List<String> args) {
 
     expect(results[0].values[0], _closeTo(50.55131708739538));
   });
+
+  test('Trace slicing smoke test', () async {
+    final model = _getTestModel();
+    final slicedModel = model.slice(
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697800000)),
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(698600000)),
+    );
+    expect(getAllEvents(slicedModel).length, 2);
+
+    final tailModel = model.slice(
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697800000)),
+      null,
+    );
+    expect(getAllEvents(tailModel).length, 4);
+
+    final headModel = model.slice(
+      null,
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(698600000)),
+    );
+    expect(getAllEvents(headModel).length, 5);
+
+    // Slicing with a doubly-infinite inteval should result in an identical
+    // model.
+    final copiedModel = model.slice(null, null);
+    _checkModelsEqual(model, copiedModel);
+  });
+
+  test('Trace slice has no references to old model', () async {
+    // Use a full-featured trace to get coverage of all the event types.
+    final baseModel = await _modelFromPath('runtime_deps/flutter_app.json');
+    final slicedModel = baseModel.slice(
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(1120000000)),
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(1130000000)),
+    );
+
+    expect(getAllEvents(slicedModel).length, greaterThan(0));
+
+    // d7fece is the beginning of the output of
+    //
+    // echo 'OLD_MODEL_SENTINEL' | md5sum
+    //
+    // It has no meaning other than to make it less likely that it matches a
+    // real trace event in the case that the base trace is changed.
+    const sentinelName = 'OLD_MODEL_SENTINEL_d7fece';
+
+    for (final event in getAllEvents(baseModel)) {
+      event.name = sentinelName;
+    }
+
+    for (final event in getAllEvents(slicedModel)) {
+      if (event is DurationEvent) {
+        for (final child in event.childDurations) {
+          expect(child, isNotNull);
+          expect(child.name, isNot(sentinelName));
+        }
+        for (final flow in event.childFlows) {
+          expect(flow, isNotNull);
+          expect(flow.name, isNot(sentinelName));
+        }
+      } else if (event is FlowEvent) {
+        expect(event.previousFlow?.name, isNot(sentinelName));
+        expect(event.nextFlow?.name, isNot(sentinelName));
+      }
+    }
+  });
+
+  test('Sliced trace FPS metric', () async {
+    final baseModel = await _modelFromPath('runtime_deps/flutter_app.json');
+    final slicedModel = baseModel.slice(
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(1114600000)),
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(1130000000)),
+    );
+    final results =
+        drmFpsMetricsProcessor(slicedModel, {'flutterAppName': 'flutter_app'});
+    expect(computeMean(results[0].values), _closeTo(57.67083287297894));
+    expect(results[1].values[0], _closeTo(59.95398508263344));
+    expect(results[2].values[0], _closeTo(59.9981988540704));
+    expect(results[3].values[0], _closeTo(60.03445978045461));
+  });
 }

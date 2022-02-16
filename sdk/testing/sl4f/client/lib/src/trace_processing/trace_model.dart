@@ -11,6 +11,137 @@ import 'time_point.dart';
 /// The root of the trace model.
 class Model {
   List<Process> processes = [];
+
+  /// Extract a sub-Model defined by a time interval.
+  ///
+  /// The returned [Model] will act similarly to as if we actually started
+  /// tracing at [start] and stopped tracing at [end]. Only trace events that
+  /// begin at or after [start] and end at or before [end] will be included.
+  ///
+  /// If [start] or [end] is null, then the time interval to select is infinite
+  /// in that direction.
+  Model slice(TimePoint start, TimePoint end) {
+    final result = Model();
+
+    // The various event types have references to other events, which we will
+    // need to update so that all the relations in the new model stay within the
+    // new model. This map tracks for each event of the old model, which event
+    // in the new model it corresponds to.
+    final correspondingEvent = {};
+
+    // Step 1: Populate the model with new event objects. These events will have
+    // references into the old model.
+    for (final process in processes) {
+      final newProcess = Process()
+        ..pid = process.pid
+        ..name = process.name;
+      result.processes.add(newProcess);
+      for (final thread in process.threads) {
+        final newThread = Thread()
+          ..tid = thread.tid
+          ..name = thread.name;
+        newProcess.threads.add(newThread);
+        for (final event in thread.events) {
+          // Exclude any event that starts or ends outside of the specified range.
+          if ((start != null && event.start < start) ||
+              (end != null && event.start > end)) {
+            continue;
+          }
+          Event newEvent;
+          if (event is InstantEvent) {
+            newEvent = InstantEvent()
+              ..category = event.category
+              ..name = event.name
+              ..start = event.start
+              ..pid = event.pid
+              ..tid = event.tid
+              ..args = Map.from(event.args)
+              ..scope = event.scope;
+          } else if (event is CounterEvent) {
+            newEvent = CounterEvent()
+              ..category = event.category
+              ..name = event.name
+              ..start = event.start
+              ..pid = event.pid
+              ..tid = event.tid
+              ..args = Map.from(event.args)
+              ..id = event.id;
+          } else if (event is DurationEvent) {
+            if (end != null && event.duration > end - event.start) {
+              continue;
+            }
+            newEvent = DurationEvent()
+              ..category = event.category
+              ..name = event.name
+              ..start = event.start
+              ..pid = event.pid
+              ..tid = event.tid
+              ..args = Map.from(event.args)
+              ..duration = event.duration
+              ..parent = event.parent
+              ..childDurations = event.childDurations
+              ..childFlows = event.childFlows;
+          } else if (event is AsyncEvent) {
+            if (end != null && event.duration > end - event.start) {
+              continue;
+            }
+            newEvent = AsyncEvent()
+              ..category = event.category
+              ..name = event.name
+              ..start = event.start
+              ..pid = event.pid
+              ..tid = event.tid
+              ..args = Map.from(event.args)
+              ..id = event.id
+              ..duration = event.duration;
+          } else if (event is FlowEvent) {
+            newEvent = FlowEvent()
+              ..category = event.category
+              ..name = event.name
+              ..start = event.start
+              ..pid = event.pid
+              ..tid = event.tid
+              ..args = Map.from(event.args)
+              ..id = event.id
+              ..phase = event.phase
+              ..enclosingDuration = event.enclosingDuration
+              ..previousFlow = event.previousFlow
+              ..nextFlow = event.nextFlow;
+          }
+          newThread.events.add(newEvent);
+          correspondingEvent[event] = newEvent;
+        }
+      }
+    }
+
+    // Step 2: Replace all referenced events by their corresponding ones in the
+    // new model.
+    for (final process in result.processes) {
+      for (final thread in process.threads) {
+        for (final event in thread.events) {
+          if (event is DurationEvent) {
+            event
+              ..parent = correspondingEvent[event.parent] as DurationEvent
+              ..childDurations = event.childDurations
+                  .map((e) => correspondingEvent[e] as DurationEvent)
+                  .toList()
+              ..childFlows = event.childFlows
+                  .map((e) => correspondingEvent[e] as FlowEvent)
+                  .toList();
+          } else if (event is FlowEvent) {
+            event
+              ..enclosingDuration =
+                  correspondingEvent[event.enclosingDuration] as DurationEvent
+              ..previousFlow =
+                  correspondingEvent[event.previousFlow] as FlowEvent
+              ..nextFlow = correspondingEvent[event.nextFlow] as FlowEvent;
+          }
+        }
+      }
+    }
+
+    return result;
+  }
 }
 
 /// Represents a Process in the trace model.
@@ -27,7 +158,7 @@ class Process {
 
 /// Represents a Thread in the trace model.
 class Thread {
-  /// The thread if of this [Thread].
+  /// The thread id of this [Thread].
   int tid;
 
   /// The thread name of this [Thread].
