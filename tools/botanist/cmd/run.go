@@ -138,9 +138,6 @@ type RunCommand struct {
 	// The path to the ffx tool.
 	ffxPath string
 
-	// Whether to enable experimental ffx features.
-	ffxExperimental bool
-
 	// The level of experimental ffx features to enable.
 	ffxExperimentLevel int
 }
@@ -194,7 +191,6 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.blobURL, "blobs", "", "URL at which to serve a package repository's blobs; if the placeholder of \"localhost\" will be resolved and scoped as appropriate")
 	f.StringVar(&r.localRepo, "local-repo", "", "path to a local package repository; the repo and blobs flags are ignored when this is set")
 	f.StringVar(&r.ffxPath, "ffx", "", "Path to the ffx tool.")
-	f.BoolVar(&r.ffxExperimental, "ffx-experimental", false, "Whether to enable experimental ffx features. If -ffx is not set, this will have no effect.")
 	f.IntVar(&r.ffxExperimentLevel, "ffx-experiment-level", 0, "The level of experimental features to enable. If -ffx is not set, this will have no effect.")
 }
 
@@ -251,11 +247,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 	if ffx != nil {
 		defer ffx.Stop()
-	}
-
-	// TODO(ihuh): Remove ffxExperimental flag once we're only using ffx-experiment-level.
-	if r.ffxExperimental {
-		r.ffxExperimentLevel = 2
 	}
 
 	for _, t := range targetSlice {
