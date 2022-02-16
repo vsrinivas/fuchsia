@@ -193,6 +193,11 @@ pub(crate) async fn load_from_program(
         })
         .with_context(|| format!("`{}` missing in program", NETWORK_CONFIG_PROPERTY_NAME))?
         .context("missing value for network configuration property")?;
+
+    // Temporarily allow unreachable patterns while fuchsia.data.DictionaryValue
+    // is migrated from `strict` to `flexible`.
+    // TODO(https://fxbug.dev/92247): Remove this.
+    #[allow(unreachable_patterns)]
     let network_config_path = match *network_config {
         fdata::DictionaryValue::Str(path) => Ok(path),
         fdata::DictionaryValue::StrVec(vec) => Err(anyhow!(
@@ -200,6 +205,7 @@ pub(crate) async fn load_from_program(
             NETWORK_CONFIG_PROPERTY_NAME,
             vec
         )),
+        other => Err(anyhow::anyhow!("encountered unknown DictionaryValue variant: {:?}", other)),
     }?;
 
     let file = io_util::open_file(
