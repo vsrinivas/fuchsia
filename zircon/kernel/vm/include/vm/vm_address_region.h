@@ -530,15 +530,8 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   };
 
   // Apply |op| to VMO mappings in the specified range of pages.
-  zx_status_t RangeOp(RangeOpType op, size_t offset, size_t len, user_inout_ptr<void> buffer,
+  zx_status_t RangeOp(RangeOpType op, vaddr_t base, size_t len, user_inout_ptr<void> buffer,
                       size_t buffer_size);
-
-  // Helper function used by RangeOp. Returns ZX_ERR_SHOULD_WAIT if a page needs to be faulted in
-  // from a pager, indicating that the caller needs to wait on the |page_request|. If that happens,
-  // |next_offset| will contain the faulting offset, i.e. the offset that RangeOp should resume from
-  // after the wait.
-  zx_status_t RangeOpInternal(RangeOpType op, vaddr_t base, size_t size,
-                              LazyPageRequest* page_request, vaddr_t* next_offset);
 
   // Unmap a subset of the region of memory in the containing address space,
   // returning it to this region to allocate.  If a subregion is entirely in
@@ -824,15 +817,12 @@ class VmMapping final : public VmAddressRegionOrMapping,
   // offset modification and locking.
   zx_status_t DecommitRange(size_t offset, size_t len) TA_EXCL(lock());
 
-  // Map in pages from the underlying vm object, optionally committing pages as it goes
-  zx_status_t MapRange(size_t offset, size_t len, bool commit) TA_EXCL(lock());
-  // Locked version of MapRange. Takes an additional argument |ignore_existing| which controls
-  // whether existing hardware mappings in the specified range should be ignored or treated as an
-  // error. MapRange calls into this function with |ignore_existing| always set to false; only VMAR
-  // internal usages should ever need to ignore existing entries in certain scenarios, all external
-  // usages (which come in through MapRange) should treat existing entries as an error.
-  zx_status_t MapRangeLocked(size_t offset, size_t len, bool commit, bool ignore_existing)
-      TA_REQ(lock());
+  // Map in pages from the underlying vm object, optionally committing pages as it goes.
+  // |ignore_existing| controls whether existing hardware mappings in the specified range should be
+  // ignored or treated as an error. Only VMAR internal usages of this function should set
+  // |ignore_existing| to anything other than false.
+  zx_status_t MapRange(size_t offset, size_t len, bool commit, bool ignore_existing = false)
+      TA_EXCL(lock());
 
   // Unmap a subset of the region of memory in the containing address space,
   // returning it to the parent region to allocate.  If all of the memory is unmapped,

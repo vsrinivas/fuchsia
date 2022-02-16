@@ -2389,9 +2389,11 @@ TEST(Vmar, RangeOpCommit) {
   EXPECT_EQ(kVmoSize, info.committed_bytes);
 
   // Map a single page as read-only and try to commit it. The commit should fail.
+  zx::vmo readonly_vmo;
+  ASSERT_EQ(vmo.duplicate(ZX_RIGHT_MAP | ZX_RIGHT_READ, &readonly_vmo), ZX_OK);
   zx_vaddr_t addr;
-  ASSERT_OK(vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ, kVmarSize - zx_system_get_page_size(), vmo,
-                     0, zx_system_get_page_size(), &addr));
+  ASSERT_OK(vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ, kVmarSize - zx_system_get_page_size(),
+                     readonly_vmo, 0, zx_system_get_page_size(), &addr));
   ASSERT_EQ(base_addr + kVmarSize - zx_system_get_page_size(), addr);
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
             vmar.op_range(ZX_VMAR_OP_COMMIT, addr, zx_system_get_page_size(), nullptr, 0));

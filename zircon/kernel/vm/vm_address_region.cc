@@ -556,16 +556,22 @@ void VmAddressRegion::Activate() {
   parent_->subregions_.InsertRegion(fbl::RefPtr<VmAddressRegionOrMapping>(this));
 }
 
-zx_status_t VmAddressRegion::RangeOp(RangeOpType op, size_t offset, size_t len,
+zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t len,
                                      user_inout_ptr<void> buffer, size_t buffer_size) {
   canary_.Assert();
   if (buffer || buffer_size) {
     return ZX_ERR_INVALID_ARGS;
   }
   len = ROUNDUP(len, PAGE_SIZE);
-  if (len == 0 || !IS_PAGE_ALIGNED(offset)) {
+  if (len == 0 || !IS_PAGE_ALIGNED(base)) {
     return ZX_ERR_INVALID_ARGS;
   }
+
+  if (!is_in_range(base, len)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  const vaddr_t last_addr = base + len;
 
   if (op == RangeOpType::AlwaysNeed) {
     // TODO(fxb/85056): For the moment marking any part of the address space as always need causes
@@ -573,261 +579,115 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, size_t offset, size_t len,
     aspace_->MarkAsLatencySensitive();
   }
 
-  zx_status_t status;
-  // Might need to fault in absent pages in a mapping.
-  //
-  // TODO(fxbug.dev/84616): Waiting on page requests needs to take place with the address space lock
-  // dropped, which means not all VMAR ops will be able to complete with the lock held. We
-  // make the choice to only drop the lock when necessary, i.e. when required to wait on page
-  // requests, instead of *always* dropping the lock for *all* VMAR ops before calling the
-  // underlying VMO functions. While this can make the behavior of VMAR ops inconsistent, it
-  // minimizes possible race conditions due to simultaneous modifications on the address space while
-  // the lock was dropped. See the linked bug for a discussion around this design choice.
-  __UNINITIALIZED LazyPageRequest page_request;
-  while (len > 0) {
-    vaddr_t next_offset;
-    status = RangeOpInternal(op, offset, len, &page_request, &next_offset);
-    // Break from the loop unless told to wait.
-    if (status != ZX_ERR_SHOULD_WAIT) {
-      break;
-    }
-
-    // We should have been asked to wait on an address that is page-aligned and in range.
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(next_offset));
-    DEBUG_ASSERT(next_offset >= offset);
-    DEBUG_ASSERT(next_offset < offset + len);
-
-    status = page_request->Wait();
-    if (status != ZX_OK) {
-      if (op != RangeOpType::AlwaysNeed && op != RangeOpType::DontNeed) {
-        break;
-      }
-      // Ignore any failures returned from Wait() for hinting ops, which are best effort, and simply
-      // proceed to the next page.
-      next_offset += PAGE_SIZE;
-    }
-
-    // Update the range.
-    len -= (next_offset - offset);
-    offset = next_offset;
-  }
-
-  return status;
-}
-
-zx_status_t VmAddressRegion::RangeOpInternal(RangeOpType op, vaddr_t base, size_t size,
-                                             LazyPageRequest* page_request, vaddr_t* next_offset) {
   Guard<Mutex> guard{aspace_->lock()};
-  if (state_ != LifeCycleState::ALIVE) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  if (!is_in_range(base, size)) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  const vaddr_t last_addr = base + size;
-
-  if (subregions_.IsEmpty()) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  // Don't allow any operations on the vDSO code mapping.
-  if (aspace_->IntersectsVdsoCode(base, size)) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
-
-  // Helper that wraps EnumerateChildren and will automatically fail if a gap is found in the range.
-  // Also determines the potential subset of the mapping that our range is for and passes it to the
-  // callback.
-  auto process_range = [base, last_addr, this](auto mapping_callback)
-                           TA_REQ(lock()) -> zx_status_t {
-    vaddr_t expected = base;
-    zx_status_t result = ZX_OK;
-    EnumerateChildrenInternalLocked(
-        base, last_addr, [](VmAddressRegion* vmar, uint depth) { return true; },
-        [&expected, &result, &mapping_callback, last_addr](VmMapping* map, VmAddressRegion* vmar,
-                                                           uint depth) {
-          // It's possible base is less than expected if the first mapping is not precisely aligned
-          // to the start of our range. After that base should always be expected, and if it's
-          // greater then there is a gap and this is considered an error.
-          if (map->base() > expected) {
-            result = ZX_ERR_BAD_STATE;
-            return false;
-          }
-          // We should only have been called if we were at least partially in range.
-          DEBUG_ASSERT(map->is_in_range(expected, 1));
-          const size_t mapping_offset = expected - map->base();
-
-          // Should only have been called for a non-zero range.
-          DEBUG_ASSERT(last_addr > expected);
-
-          const size_t total_remain = last_addr - expected;
-          DEBUG_ASSERT(map->size() > mapping_offset);
-          const size_t max_in_mapping = map->size() - mapping_offset;
-
-          const size_t size = ktl::min(total_remain, max_in_mapping);
-
-          result = mapping_callback(map, mapping_offset, size);
-          if (result != ZX_OK) {
-            return false;
-          }
-
-          expected += size;
-          return true;
-        });
-    // Unless we are already returning an error, check if there was a gap right at the end of the
-    // range.
-    if (result == ZX_OK && expected < last_addr) {
+  // Capture the validation that we need to do whenever the lock is acquired.
+  auto validate = [this, base, len]() -> zx_status_t {
+    if (state_ != LifeCycleState::ALIVE) {
       return ZX_ERR_BAD_STATE;
     }
-    return result;
+
+    // Don't allow any operations on the vDSO code mapping.
+    if (aspace_->IntersectsVdsoCode(base, len)) {
+      return ZX_ERR_ACCESS_DENIED;
+    }
+    return ZX_OK;
   };
-
-  // TODO(fxbug.dev/84616): See the linked bug for a discussion around dropping the address space
-  // lock before addding a new op.
-  switch (op) {
-    case RangeOpType::Commit:
-      return process_range(
-          [page_request, next_offset](VmMapping* mapping, size_t mapping_offset, size_t size) {
-            AssertHeld(mapping->lock_ref());
-            vaddr_t start_offset = mapping->base() + mapping_offset;
-            vaddr_t end_offset = start_offset + size;
-            while (start_offset < end_offset) {
-              // Simulate a write fault to commit the page.
-              zx_status_t status = mapping->PageFault(
-                  start_offset, VMM_PF_FLAG_SW_FAULT | VMM_PF_FLAG_WRITE, page_request);
-
-              if (status == ZX_ERR_SHOULD_WAIT) {
-                // Return from RangeOpInternal so that the caller can wait on the page request with
-                // the aspace lock dropped. We will continue from the stashed start_offset when we
-                // resume after dropping the aspace lock, instead of restarting traversal from the
-                // top gain, so we risk missing any mappings for smaller addresses that might have
-                // been created in the interim. Modifying the aspace while an op is in progress is
-                // not defined. We make the choice to continue where we left off to allow forward
-                // progress without the risk of livelock.
-                *next_offset = start_offset;
-              }
-
-              if (status != ZX_OK) {
-                return status;
-              }
-
-              // Move on to the next page.
-              start_offset += PAGE_SIZE;
-            }
-            return ZX_OK;
-          });
-    case RangeOpType::Decommit:
-      return process_range([](VmMapping* mapping, size_t mapping_offset, size_t size) {
-        AssertHeld(mapping->lock_ref());
-        // Decommit zeroes pages of the VMO, equivalent to writing to it.
-        // the mapping is currently writable, or could be made writable.
-        if (!mapping->is_valid_mapping_flags(ARCH_MMU_FLAG_PERM_WRITE)) {
-          return ZX_ERR_ACCESS_DENIED;
-        }
-        // Convert the mapping offset into a vmo offset.
-        const size_t vmo_offset = mapping->object_offset_locked() + mapping_offset;
-        return mapping->vmo_locked()->DecommitRange(vmo_offset, size);
-      });
-    case RangeOpType::MapRange:
-      return process_range([](VmMapping* mapping, size_t mapping_offset, size_t size) {
-        AssertHeld(mapping->lock_ref());
-        const auto result = mapping->MapRangeLocked(mapping_offset, size, /*commit=*/false,
-                                                    /*ignore_existing=*/true);
-        if (result != ZX_OK) {
-          // TODO(fxbug.dev/46881): ZX_ERR_INTERNAL is not meaningful to userspace.
-          // For now, translate to ZX_ERR_NOT_FOUND.
-          return result == ZX_ERR_INTERNAL ? ZX_ERR_NOT_FOUND : result;
-        }
-        return ZX_OK;
-      });
-    case RangeOpType::DontNeed:
-      return process_range([](VmMapping* mapping, size_t mapping_offset, size_t size) {
-        AssertHeld(mapping->lock_ref());
-        // Return early if this doesn't map a pager backed VMO.
-        if (!mapping->vmo_locked()->is_user_pager_backed()) {
-          return ZX_OK;
-        }
-        // Convert the mapping offset into a vmo offset.
-        const size_t vmo_offset = mapping->object_offset_locked() + mapping_offset;
-        return mapping->vmo_locked()->HintRange(vmo_offset, size, VmObject::EvictionHint::DontNeed);
-      });
-    case RangeOpType::AlwaysNeed:
-      return process_range(
-          [page_request, next_offset](VmMapping* mapping, size_t mapping_offset, size_t size) {
-            AssertHeld(mapping->lock_ref());
-            VmObjectPaged* vmop = static_cast<VmObjectPaged*>(mapping->vmo_locked().get());
-            // Return early if this doesn't map a user pager backed VMO.
-            if (!vmop->is_user_pager_backed()) {
-              return ZX_OK;
-            }
-
-            vaddr_t start_offset = mapping->base() + mapping_offset;
-            vaddr_t orig_start_offset = start_offset;
-            vaddr_t end_offset = start_offset + size;
-            auto map_range = fit::defer([mapping, orig_start_offset, &start_offset] {
-              uint64_t size = start_offset - orig_start_offset;
-              if (size == 0) {
-                return;
-              }
-              AssertHeld(mapping->aspace_->lock_);
-              // Ignore any failure.  If the pages aren't already present, don't try to force them
-              // to be present, since we'd then need to pass page_request to MapRangeLocked(); We
-              // can avoid that by leaning on hints being best effort.
-              mapping->MapRangeLocked(
-                  mapping->object_offset_locked() + (orig_start_offset - mapping->base()), size,
-                  /*commit=*/false, /*ignore_existing=*/true);
-            });
-            {  // scope guard
-              Guard<Mutex> guard{vmop->lock()};
-              // AlwaysNeed isn't particularly performance sensitive, so we can process one page at
-              // a time for now.
-              for (; start_offset < end_offset; start_offset += PAGE_SIZE) {
-                __UNINITIALIZED VmObject::LookupInfo lookup_info;
-                zx_status_t status = vmop->LookupPagesLocked(
-                    mapping->object_offset_locked() + (start_offset - mapping->base()),
-                    VMM_PF_FLAG_SW_FAULT, VmObject::DirtyTrackingAction::None,
-                    /*max_out_pages=*/1, nullptr, page_request, &lookup_info);
-                if (status == ZX_ERR_SHOULD_WAIT) {
-                  // Return from RangeOpInternal so that the caller can wait on the page request
-                  // with the aspace lock dropped. We will continue from the stashed start_offset
-                  // when we resume after dropping the aspace lock, instead of restarting traversal
-                  // from the top again, so we risk missing any mappings for smaller addresses that
-                  // might have been created in the interim. This is fine as we don't provide strong
-                  // semantics with hinting, and so the behavior with concurrent aspace modification
-                  // is not defined. Presumably any pages the user wanted to apply hints to would
-                  // have been created prior to calling op_range anyway, so perhaps it's okay to
-                  // miss these racing maps in practice. We make the choice to continue where we
-                  // left off to allow forward progress without the risk of livelock.
-                  *next_offset = start_offset;
-                  // ~map_range maps before returning
-                  return status;
-                }
-                if (status != ZX_OK) {
-                  // Can't really do anything in case an error is encountered while faulting the
-                  // page. Simply ignore it and move on to the next page. Hints are best effort
-                  // anyway.
-                  continue;
-                }
-                DEBUG_ASSERT(lookup_info.num_pages == 1);
-                vm_page_t* page = paddr_to_vm_page(lookup_info.paddrs[0]);
-                DEBUG_ASSERT(page);
-                // We know the page hasn't been evicted since being brought in by LookupPagesLocked
-                // because we've been holding the vmop->lock() continuously.  So it's safe to hint
-                // on this page.  After the hint has been set, it's fine if the page gets evicted or
-                // replaced before mapping->MapRangeLocked, since MapRangeLocked will look up again,
-                // and will be ok with a different or missing page (and won't try to commit the page
-                // again).
-                vmop->HintAlwaysNeedLocked(page);
-              }
-            }  // ~guard
-            // ~map_range maps before returning
-            return ZX_OK;
-          });
-
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
+  if (zx_status_t s = validate(); s != ZX_OK) {
+    return s;
   }
+
+  VmAddressRegionEnumerator<VmAddressRegionEnumeratorType::PausableMapping> enumerator(*this, base,
+                                                                                       last_addr);
+  AssertHeld(enumerator.lock_ref());
+  vaddr_t expected = base;
+  while (auto map = enumerator.next()) {
+    VmMapping* mapping = map->region_or_mapping;
+    AssertHeld(mapping->lock_ref());
+
+    // It's possible base is less than expected if the first mapping is not precisely aligned
+    // to the start of our range. After that base should always be expected, and if it's
+    // greater then there is a gap and this is considered an error.
+    if (mapping->base() > expected) {
+      return ZX_ERR_BAD_STATE;
+    }
+    // We should only have been called if we were at least partially in range.
+    DEBUG_ASSERT(mapping->is_in_range(expected, 1));
+    const size_t mapping_offset = expected - mapping->base();
+    const size_t vmo_offset = mapping->object_offset_locked() + mapping_offset;
+
+    // Should only have been called for a non-zero range.
+    DEBUG_ASSERT(last_addr > expected);
+
+    const size_t total_remain = last_addr - expected;
+    DEBUG_ASSERT(mapping->size() > mapping_offset);
+    const size_t max_in_mapping = mapping->size() - mapping_offset;
+
+    const size_t size = ktl::min(total_remain, max_in_mapping);
+
+    fbl::RefPtr<VmObject> vmo = mapping->vmo_locked();
+
+    zx_status_t result = ZX_OK;
+    enumerator.pause();
+    guard.CallUnlocked([&result, &vmo, &mapping, op, mapping_offset, vmo_offset, size] {
+      switch (op) {
+        case RangeOpType::Commit:
+          if (!mapping->is_valid_mapping_flags(ARCH_MMU_FLAG_PERM_WRITE)) {
+            result = ZX_ERR_ACCESS_DENIED;
+          } else {
+            result = vmo->CommitRange(vmo_offset, size);
+            if (result == ZX_OK) {
+              result = mapping->MapRange(mapping_offset, size, /*commit=*/false,
+                                         /*ignore_existing=*/true);
+            }
+          }
+          break;
+        case RangeOpType::Decommit:
+          // Decommit zeroes pages of the VMO, equivalent to writing to it.
+          // the mapping is currently writable, or could be made writable.
+          if (!mapping->is_valid_mapping_flags(ARCH_MMU_FLAG_PERM_WRITE)) {
+            result = ZX_ERR_ACCESS_DENIED;
+          } else {
+            result = vmo->DecommitRange(vmo_offset, size);
+          }
+          break;
+        case RangeOpType::MapRange:
+          result = mapping->MapRange(mapping_offset, size, /*commit=*/false,
+                                     /*ignore_existing=*/true);
+          break;
+        case RangeOpType::AlwaysNeed:
+          result = vmo->HintRange(vmo_offset, size, VmObject::EvictionHint::AlwaysNeed);
+          if (result == ZX_OK) {
+            result = mapping->MapRange(mapping_offset, size, /*commit=*/false,
+                                       /*ignore_existing=*/true);
+          }
+          break;
+        case RangeOpType::DontNeed:
+          result = vmo->HintRange(vmo_offset, size, VmObject::EvictionHint::DontNeed);
+          break;
+        default:
+          result = ZX_ERR_NOT_SUPPORTED;
+          break;
+      }
+    });
+    // Since the lock was dropped we must re-validate before doing anything else.
+    if (zx_status_t s = validate(); s != ZX_OK) {
+      return s;
+    }
+    enumerator.resume();
+
+    if (result != ZX_OK) {
+      // TODO(fxbug.dev/46881): ZX_ERR_INTERNAL is not meaningful to userspace.
+      // For now, translate to ZX_ERR_NOT_FOUND.
+      return result == ZX_ERR_INTERNAL ? ZX_ERR_NOT_FOUND : result;
+    }
+    expected += size;
+  }
+
+  // Check if there was a gap right at the end of the range.
+  if (expected < last_addr) {
+    return ZX_ERR_BAD_STATE;
+  }
+  return ZX_OK;
 }
 
 zx_status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
