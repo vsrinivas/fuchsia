@@ -177,6 +177,15 @@ bool MemoryWatchdog::IsEvictionRequired(PressureLevel idx) const {
 
 void MemoryWatchdog::WorkerThread() {
   while (true) {
+    // First, check to see if the PMM has failed any allocations.  If the PMM has ever failed to
+    // allocate because it was out of memory, then trigger an OOM response immediately.  The idea
+    // here is that usermode processes may not be able to handle allocation failure and therefore
+    // could have become wedged in some way.
+    if (gBootOptions->oom_trigger_on_alloc_failure && pmm_has_alloc_failed_no_mem()) {
+      printf("memory-pressure: pmm failed one or more alloc calls, taking action...\n");
+      OnOom();
+    }
+
     // If we've hit OOM level perform some immediate synchronous eviction to attempt to avoid OOM.
     if (mem_event_idx_ == PressureLevel::kOutOfMemory) {
       printf("memory-pressure: free memory is %zuMB, evicting pages to prevent OOM...\n",

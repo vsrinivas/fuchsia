@@ -143,6 +143,12 @@ func TestOOMHard(t *testing.T) {
 	testOOMCommon(t, cmdlineCommon, "k pmm oom hard")
 }
 
+// See that failing to allocate will trigger an OOM reboot.
+func TestOOMDip(t *testing.T) {
+	cmdline := append(cmdlineCommon, "kernel.oom.trigger-on-alloc-failure=true")
+	testOOMCommon(t, cmdline, "k pmm oom dip")
+}
+
 func execDir(t *testing.T) string {
 	ex, err := os.Executable()
 	if err != nil {

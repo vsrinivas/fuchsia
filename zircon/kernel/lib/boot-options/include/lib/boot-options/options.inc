@@ -292,6 +292,12 @@ is set to 20, an imminent-out-of-memory event will be signaled at 70MB (i.e. 50M
 free memory, while out-of-memory will be signaled at 50MB free memory.
 )""")
 
+DEFINE_OPTION("kernel.oom.trigger-on-alloc-failure", bool, oom_trigger_on_alloc_failure, {false},
+R"""(
+This option controls whether potentially user-visible PMM allocation failures due to running out of
+memory trigger an OOM response.
+)""")
+
 DEFINE_OPTION("kernel.phys.verbose", bool, phys_verbose, {true}, R"""(
 This controls the degree of logging to the serial console in the kernel's early
 boot phase; if false, only error-related logging will take place.

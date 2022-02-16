@@ -39,11 +39,9 @@ namespace {
 
 void noop_callback(void* context, uint8_t idx) {}
 
-// Helper function that increments a counter and returns |status|.
-zx_status_t fail_with(zx_status_t status) {
-  kcounter_add(pmm_alloc_failed, 1);
-  return status;
-}
+// Indicates whether a PMM alloc call has ever failed with ZX_ERR_NO_MEMORY.  Used to trigger an OOM
+// response.  See |MemoryWatchdog::WorkerThread|.
+ktl::atomic<bool> alloc_failed_no_mem;
 
 }  // namespace
 
@@ -268,7 +266,7 @@ zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* 
   if (unlikely(InOomStateLocked())) {
     if (alloc_flags & PMM_ALLOC_DELAY_OK) {
       // TODO(stevensd): Differentiate 'cannot allocate now' from 'can never allocate'
-      return fail_with(ZX_ERR_NO_MEMORY);
+      return ZX_ERR_NO_MEMORY;
     }
   }
 
@@ -276,30 +274,28 @@ zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* 
   // PMM_ALLOC_FLAG_CAN_BORROW.
   DEBUG_ASSERT(
       !((alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW) && !(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW)));
-  bool can_borrow = pmm_physical_page_borrowing_config()->is_any_borrowing_enabled() &&
-                    !!(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW);
-  bool must_borrow = can_borrow && !!(alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW);
-
-  list_node* which_list;
-
-  if (can_borrow && (!list_is_empty(&free_loaned_list_) || must_borrow)) {
-    which_list = &free_loaned_list_;
-  } else {
-    which_list = &free_list_;
-  }
+  const bool can_borrow = pmm_physical_page_borrowing_config()->is_any_borrowing_enabled() &&
+                          !!(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW);
+  const bool must_borrow = can_borrow && !!(alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW);
+  const bool use_loaned_list = can_borrow && (!list_is_empty(&free_loaned_list_) || must_borrow);
+  list_node* const which_list = use_loaned_list ? &free_loaned_list_ : &free_list_;
 
   vm_page* page = list_remove_head_type(which_list, vm_page, queue_node);
   if (!page) {
-    return fail_with(ZX_ERR_NO_MEMORY);
+    if (!must_borrow) {
+      // Allocation failures from the regular free list are likely to become user-visible.
+      ReportAllocFailure();
+    }
+    return ZX_ERR_NO_MEMORY;
   }
 
   DEBUG_ASSERT(can_borrow || !page->is_loaned());
   AllocPageHelperLocked(page);
 
-  if (which_list == &free_list_) {
-    DecrementFreeCountLocked(1);
-  } else {
+  if (use_loaned_list) {
     DecrementFreeLoanedCountLocked(1);
+  } else {
+    DecrementFreeCountLocked(1);
   }
 
   if (pa_out) {
@@ -333,9 +329,9 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
 
   DEBUG_ASSERT(
       !((alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW) && !(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW)));
-  bool can_borrow = pmm_physical_page_borrowing_config()->is_any_borrowing_enabled() &&
-                    !!(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW);
-  bool must_borrow = can_borrow && !!(alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW);
+  const bool can_borrow = pmm_physical_page_borrowing_config()->is_any_borrowing_enabled() &&
+                          !!(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW);
+  const bool must_borrow = can_borrow && !!(alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW);
 
   AutoPreemptDisabler preempt_disable;
   Guard<Mutex> guard{&lock_};
@@ -353,7 +349,11 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
     available_count += free_loaned_count;
   }
   if (unlikely(count > available_count)) {
-    return fail_with(ZX_ERR_NO_MEMORY);
+    if (!must_borrow) {
+      // Allocation failures from the regular free list are likely to become user-visible.
+      ReportAllocFailure();
+    }
+    return ZX_ERR_NO_MEMORY;
   }
   // Prefer to allocate from loaned, if allowed by this allocation.  If loaned is not allowed by
   // this allocation, free_loaned_count will be zero here.
@@ -368,7 +368,7 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
     if (alloc_flags & PMM_ALLOC_DELAY_OK) {
       IncrementFreeCountLocked(from_free);
       // TODO(stevensd): Differentiate 'cannot allocate now' from 'can never allocate'
-      return fail_with(ZX_ERR_NO_MEMORY);
+      return ZX_ERR_NO_MEMORY;
     }
   }
 
@@ -468,7 +468,7 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
   if (allocated != count) {
     // we were not able to allocate the entire run, free these pages
     FreeListLocked(list);
-    return fail_with(ZX_ERR_NOT_FOUND);
+    return ZX_ERR_NOT_FOUND;
   }
 
   return ZX_OK;
@@ -525,7 +525,7 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
   // We could potentially move contents of non-pinned pages out of the way for critical contiguous
   // allocations, but for now...
   LTRACEF("couldn't find run\n");
-  return fail_with(ZX_ERR_NOT_FOUND);
+  return ZX_ERR_NOT_FOUND;
 }
 
 void PmmNode::FreePageHelperLocked(vm_page* page) {
@@ -851,6 +851,10 @@ void PmmNode::DebugMemAvailStateCallback(uint8_t mem_state_idx) const {
 
 int64_t PmmNode::get_alloc_failed_count() { return pmm_alloc_failed.Value(); }
 
+bool PmmNode::has_alloc_failed_no_mem() {
+  return alloc_failed_no_mem.load(ktl::memory_order_relaxed);
+}
+
 void PmmNode::BeginLoan(list_node* page_list) {
   DEBUG_ASSERT(page_list);
   AutoPreemptDisabler preempt_disable;
@@ -1030,4 +1034,20 @@ void PmmNode::ForPagesInPhysRangeLocked(paddr_t start, size_t count, F func) {
     }
   }
   DEBUG_ASSERT(page_addr == end);
+}
+
+void PmmNode::ReportAllocFailure() {
+  kcounter_add(pmm_alloc_failed, 1);
+
+  // Update before signaling the MemoryWatchdog to ensure it observes the update.
+  //
+  // |alloc_failed_no_mem| latches so only need to invoke the callback once.  We could call it on
+  // every failure, but that's wasteful and we don't want to spam any underlying Event (or the
+  // thread lock or the MemoryWatchdog).
+  const bool first_time = !alloc_failed_no_mem.exchange(true, ktl::memory_order_relaxed);
+  if (first_time) {
+    // Note, the |cur_state| value passed to the callback doesn't really matter because all we're
+    // trying to do here is signal and unblock the MemoryWatchdog's worker thread.
+    mem_avail_state_callback_(mem_avail_state_context_, mem_avail_state_cur_index_);
+  }
 }

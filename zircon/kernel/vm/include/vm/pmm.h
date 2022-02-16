@@ -200,6 +200,9 @@ void pmm_asan_poison_all_free_pages();
 
 int64_t pmm_get_alloc_failed_count();
 
+// Returns true if the PMM has ever failed an allocation with ZX_ERR_NO_MEMORY.
+bool pmm_has_alloc_failed_no_mem();
+
 void pmm_print_physical_page_borrowing_stats();
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PMM_H_

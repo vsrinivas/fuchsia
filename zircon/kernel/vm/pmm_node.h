@@ -125,6 +125,9 @@ class PmmNode {
 
   static int64_t get_alloc_failed_count();
 
+  // See |pmm_has_alloc_failed_no_mem|.
+  static bool has_alloc_failed_no_mem();
+
   Evictor* GetEvictor() { return &evictor_; }
 
  private:
@@ -184,6 +187,10 @@ class PmmNode {
 
   template <typename F>
   void ForPagesInPhysRangeLocked(paddr_t start, size_t count, F func) TA_REQ(lock_);
+
+  // This method should be called when the PMM fails to allocate in a user-visible way and will
+  // (optionally) trigger an asynchronous OOM response.
+  void ReportAllocFailure() TA_REQ(lock_);
 
   fbl::Canary<fbl::magic("PNOD")> canary_;
 

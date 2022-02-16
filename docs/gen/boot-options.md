@@ -299,6 +299,12 @@ For example, if `kernel.oom.outofmemory-mb` is set to 50 and `kernel.oom.imminen
 is set to 20, an imminent-out-of-memory event will be signaled at 70MB (i.e. 50MB + 20MB)
 free memory, while out-of-memory will be signaled at 50MB free memory.
 
+### kernel.oom.trigger-on-alloc-failure=\<bool>
+**Default:** `false`
+
+This option controls whether potentially user-visible PMM allocation failures due to running out of
+memory trigger an OOM response.
+
 ### kernel.phys.verbose=\<bool>
 **Default:** `true`
 
