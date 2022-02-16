@@ -19,7 +19,6 @@ executable("kernel-boot-stats") {
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
-    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/perftest",
   ]
 }

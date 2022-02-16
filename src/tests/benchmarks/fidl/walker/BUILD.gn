@@ -22,7 +22,6 @@ foreach(suite, benchmark_suites) {
       "//sdk/lib/fidl/cpp",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
-      "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/fidl",
       "//zircon/system/ulib/perftest",
     ]
@@ -42,7 +41,6 @@ executable("bin") {
   ]
   deps = [
            "//src/zircon/lib/zircon",
-           "//zircon/system/ulib/fbl",
            "//zircon/system/ulib/fidl",
            "//zircon/system/ulib/zx",
            "//zircon/system/ulib/perftest",
