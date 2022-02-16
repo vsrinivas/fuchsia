@@ -61,7 +61,7 @@ fn get_rules_string_value(component: &cm_rust::ComponentDecl, key: &str) -> Opti
                 fidl_fuchsia_data::DictionaryValue::Str(s) => {
                     return Some(s.to_string());
                 }
-                fidl_fuchsia_data::DictionaryValue::StrVec(_) => {
+                _ => {
                     return None;
                 }
             }
