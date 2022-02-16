@@ -1,0 +1,31 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_component_storage") {
+  version = "0.1.0"
+  edition = "2018"
+
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/developer/ffx/lib/errors:lib",
+    "//src/lib/component_hub",
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:tempfile",
+  ]
+
+  args_sources = [ "src/args.rs" ]
+
+  sources = [
+    "src/copy.rs",
+    "src/lib.rs",
+    "src/list.rs",
+    "src/make_directory.rs",
+  ]
+}

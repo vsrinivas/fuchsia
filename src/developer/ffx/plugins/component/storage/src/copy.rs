@@ -7,7 +7,7 @@ use {
     anyhow::Result,
     component_hub::io::Directory,
     errors::{ffx_bail, ffx_error},
-    ffx_component_data_args::CopyArgs,
+    ffx_component_storage_args::CopyArgs,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::StorageAdminProxy,

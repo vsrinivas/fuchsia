@@ -4,7 +4,7 @@
 
 use {
     crate::RemotePath, anyhow::Result, component_hub::io::Directory, errors::ffx_error,
-    ffx_component_data_args::ListArgs, fidl::endpoints::create_proxy, fidl_fuchsia_io as fio,
+    ffx_component_storage_args::ListArgs, fidl::endpoints::create_proxy, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::StorageAdminProxy,
 };
 
