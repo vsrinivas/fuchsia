@@ -9,7 +9,7 @@ pub mod include_target {
 
     pub(crate) async fn test_list() -> Result<()> {
         let target_nodename = get_target_nodename().await?;
-        let isolate = Isolate::new("component-list")?;
+        let isolate = Isolate::new("component-list").await?;
 
         let out = isolate.ffx(&["--target", &target_nodename, "component", "list"]).await?;
 

@@ -27,7 +27,7 @@ pub async fn get_target_nodename() -> Result<String> {
         return Ok(nodename);
     }
 
-    let isolate = Isolate::new("initial-target-discovery")?;
+    let isolate = Isolate::new("initial-target-discovery").await?;
 
     // ensure a daemon is spun up first, so we have a moment to discover targets.
     let start = Instant::now();

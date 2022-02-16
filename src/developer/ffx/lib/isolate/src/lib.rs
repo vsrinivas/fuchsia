@@ -32,6 +32,7 @@ pub struct Isolate {
     home_dir: PathBuf,
     xdg_config_home: PathBuf,
     pub ascendd_path: PathBuf,
+    ssh_key: PathBuf,
 }
 
 impl Isolate {
@@ -41,7 +42,7 @@ impl Isolate {
     /// directory. The isolated environment is torn down when the Isolate is
     /// dropped, which will attempt to terminate any running daemon and then
     /// remove all isolate files.
-    pub fn new(name: &str) -> Result<Isolate> {
+    pub async fn new(name: &str) -> Result<Isolate> {
         let tmpdir = tempfile::Builder::new().prefix(name).tempdir()?;
         let home_dir = tmpdir.path().join("user-home");
         let tmp_dir = tmpdir.path().join("tmp");
@@ -89,9 +90,11 @@ impl Isolate {
             ))?,
         )?;
 
+        let ssh_key = ffx_config::get::<String, _>("ssh.priv").await?.into();
+
         let own_path = Isolate::get_own_path();
 
-        Ok(Isolate { _tmpdir: tmpdir, own_path, home_dir, xdg_config_home, ascendd_path })
+        Ok(Isolate { _tmpdir: tmpdir, own_path, home_dir, xdg_config_home, ascendd_path, ssh_key })
     }
 
     fn get_own_path() -> PathBuf {
@@ -100,7 +103,7 @@ impl Isolate {
         std::fs::canonicalize(ffx_path).expect("could not canonicalize own path")
     }
 
-    fn ffx_cmd(&self, args: &[&str]) -> std::process::Command {
+    pub fn ffx_cmd(&self, args: &[&str]) -> std::process::Command {
         let mut cmd = Command::new(&self.own_path);
         cmd.args(args);
         cmd.env_clear();
@@ -118,6 +121,15 @@ impl Isolate {
         cmd.env("HOME", &*self.home_dir);
         cmd.env("XDG_CONFIG_HOME", &*self.xdg_config_home);
         cmd.env("ASCENDD", &*self.ascendd_path);
+
+        // On developer systems, FUCHSIA_SSH_KEY is normally not set, and so ffx
+        // looks up an ssh key via a $HOME heuristic, however that is broken by
+        // isolation. ffx also however respects the FUCHSIA_SSH_KEY environment
+        // variable natively, so, fetching the ssh key path from the config, and
+        // then passing that expanded path along explicitly is sufficient to
+        // ensure that the isolate has a viable key path.
+        cmd.env("FUCHSIA_SSH_KEY", self.ssh_key.to_string_lossy().to_string());
+
         cmd
     }
 
@@ -127,21 +139,8 @@ impl Isolate {
         Ok(child)
     }
 
-    pub async fn ffx_cmd_with_ssh_key(&self, args: &[&str]) -> Result<Command> {
-        let mut cmd = self.ffx_cmd(args);
-
-        // On developer systems, FUCHSIA_SSH_KEY is normally not set, and so ffx
-        // looks up an ssh key via a $HOME heuristic, however that is broken by
-        // isolation. ffx also however respects the FUCHSIA_SSH_KEY environment
-        // variable natively, so, fetching the ssh key path from the config, and
-        // then passing that expanded path along explicitly is sufficient to
-        // ensure that the isolate has a viable key path.
-        cmd.env("FUCHSIA_SSH_KEY", ffx_config::get::<String, _>("ssh.priv").await?);
-        Ok(cmd)
-    }
-
     pub async fn ffx(&self, args: &[&str]) -> Result<CommandOutput> {
-        let mut cmd = self.ffx_cmd_with_ssh_key(args).await?;
+        let mut cmd = self.ffx_cmd(args);
 
         fuchsia_async::unblock(move || {
             let out = cmd.output().context("failed to execute")?;

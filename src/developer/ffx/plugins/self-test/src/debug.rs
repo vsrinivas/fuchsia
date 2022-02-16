@@ -56,14 +56,14 @@ pub mod include_target {
 
         let target = get_target_nodename().await?;
         let sdk = ffx_config::get_sdk().await?;
-        let isolate = Isolate::new("target-debug-run-crasher")?;
+        let isolate = Isolate::new("target-debug-run-crasher").await?;
         let mut config = "sdk.root=".to_owned();
         config.push_str(sdk.get_path_prefix().to_str().unwrap());
         if sdk.get_version() == &ffx_config::sdk::SdkVersion::InTree {
             config.push_str(",sdk.type=in-tree");
         }
         let mut child = isolate
-            .ffx_cmd_with_ssh_key(&[
+            .ffx_cmd(&[
                 "--target",
                 &target,
                 "--config",
@@ -74,7 +74,6 @@ pub mod include_target {
                 "--run",
                 "/boot/bin/crasher",
             ])
-            .await?
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
