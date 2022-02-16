@@ -15,6 +15,7 @@
 #include "src/media/audio/audio_core/effects_stage_v1.h"
 #include "src/media/audio/audio_core/mix_stage.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
+#include "src/media/audio/audio_core/ring_buffer.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/volume_curve.h"
@@ -28,8 +29,8 @@ class OutputPipeline : public ReadableStream {
   explicit OutputPipeline(Format format) : ReadableStream(format) {}
   ~OutputPipeline() override = default;
 
-  // Returns the loopback |ReadableStream| for this pipeline.
-  virtual std::shared_ptr<ReadableStream> loopback() const = 0;
+  // Returns a dup of the loopback stream for this pipeline, or nullptr if there is no loopback.
+  virtual std::shared_ptr<ReadableRingBuffer> dup_loopback() const = 0;
 
   // Adds |stream| as an input to be mixed. The given |usage| will indicate where in the pipeline
   // this stream will be routed.
@@ -72,7 +73,12 @@ class OutputPipelineImpl : public OutputPipeline {
   ~OutputPipelineImpl() override = default;
 
   // |media::audio::OutputPipeline|
-  std::shared_ptr<ReadableStream> loopback() const override { return state_.loopback; }
+  std::shared_ptr<ReadableRingBuffer> dup_loopback() const override {
+    if (state_.loopback) {
+      return state_.loopback->Dup();
+    }
+    return nullptr;
+  }
   std::shared_ptr<Mixer> AddInput(
       std::shared_ptr<ReadableStream> stream, const StreamUsage& usage,
       std::optional<float> initial_dest_gain_db = std::nullopt,
@@ -125,7 +131,7 @@ class OutputPipelineImpl : public OutputPipeline {
     // to actually get mixed.
     std::shared_ptr<ReadableStream> stream;
 
-    std::shared_ptr<ReadableStream> loopback;
+    std::shared_ptr<ReadableRingBuffer> loopback;
 
     AudioClock& audio_clock;
   };

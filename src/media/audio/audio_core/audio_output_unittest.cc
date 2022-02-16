@@ -55,7 +55,7 @@ class TestOutputPipeline : public OutputPipeline {
   AudioClock& reference_clock() override { return *audio_clock_; }
 
   // |media::audio::OutputPipeline|
-  std::shared_ptr<ReadableStream> loopback() const override { return nullptr; }
+  std::shared_ptr<ReadableRingBuffer> dup_loopback() const override { return nullptr; }
   std::shared_ptr<Mixer> AddInput(
       std::shared_ptr<ReadableStream> stream, const StreamUsage& usage,
       std::optional<float> initial_dest_gain_db = std::nullopt,

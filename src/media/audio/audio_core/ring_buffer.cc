@@ -155,7 +155,7 @@ BaseRingBuffer::BaseRingBuffer(
     fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
     AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, int64_t frame_count)
     : vmo_mapper_(std::move(vmo_mapper)),
-      frames_(frame_count),
+      frame_count_(frame_count),
       ref_time_to_frac_presentation_frame_(std::move(ref_time_to_frac_presentation_frame)),
       audio_clock_(audio_clock) {
   FX_CHECK(vmo_mapper_->start() != nullptr);
@@ -292,6 +292,12 @@ std::optional<ReadableStream::Buffer> ReadableRingBuffer::ReadLock(ReadLockConte
                                                                    int64_t frame_count) {
   return LockBuffer<ReadableRingBuffer>(this, &safe_read_frame_, nullptr, frame.Floor(),
                                         frame_count, true);
+}
+
+std::shared_ptr<ReadableRingBuffer> ReadableRingBuffer::Dup() const {
+  return std::make_shared<ReadableRingBuffer>(format(), ref_time_to_frac_presentation_frame_,
+                                              audio_clock_, vmo_mapper_, frame_count_,
+                                              /* copy, don't move */ safe_read_frame_);
 }
 
 std::optional<WritableStream::Buffer> WritableRingBuffer::WriteLock(int64_t frame,

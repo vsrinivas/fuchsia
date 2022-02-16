@@ -322,7 +322,8 @@ TEST_F(OutputPipelineTest, Loopback) {
 
   // Present frames ahead of now to stay ahead of the safe_write_frame.
   auto ref_start = device_clock_->Read();
-  auto transform = pipeline->loopback()->ref_time_to_frac_presentation_frame();
+  auto loopback = pipeline->dup_loopback();
+  auto transform = loopback->ref_time_to_frac_presentation_frame();
   auto loopback_frame = Fixed::FromRaw(transform.timeline_function.Apply(ref_start.get())).Floor();
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
@@ -339,7 +340,7 @@ TEST_F(OutputPipelineTest, Loopback) {
 
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
-  auto loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), 48);
+  auto loopback_buf = loopback->ReadLock(rlctx, Fixed(loopback_frame), 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
   ASSERT_LE(loopback_buf->length(), 48);
@@ -351,7 +352,7 @@ TEST_F(OutputPipelineTest, Loopback) {
     // remaining frames instantly.
     loopback_frame += loopback_buf->length();
     auto frames_remaining = 48 - loopback_buf->length();
-    loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), frames_remaining);
+    loopback_buf = loopback->ReadLock(rlctx, Fixed(loopback_frame), frames_remaining);
     ASSERT_TRUE(loopback_buf);
     ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
     ASSERT_EQ(loopback_buf->length(), frames_remaining);
@@ -416,7 +417,8 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
 
   // Present frames ahead of now to stay ahead of the safe_write_frame.
   auto ref_start = device_clock_->Read();
-  auto transform = pipeline->loopback()->ref_time_to_frac_presentation_frame();
+  auto loopback = pipeline->dup_loopback();
+  auto transform = loopback->ref_time_to_frac_presentation_frame();
   auto loopback_frame = Fixed::FromRaw(transform.timeline_function.Apply(ref_start.get())).Floor();
 
   // Verify our stream from the pipeline has the effects applied (we have no input streams so we
@@ -432,7 +434,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
   context().clock_factory()->AdvanceMonoTimeBy(zx::msec(1));
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
-  auto loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), 48);
+  auto loopback_buf = loopback->ReadLock(rlctx, Fixed(loopback_frame), 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
   ASSERT_LE(loopback_buf->length(), 48);
@@ -444,7 +446,7 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
     // remaining frames instantly.
     loopback_frame += loopback_buf->length();
     auto frames_remaining = 48 - loopback_buf->length();
-    loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), frames_remaining);
+    loopback_buf = loopback->ReadLock(rlctx, Fixed(loopback_frame), frames_remaining);
     ASSERT_TRUE(loopback_buf);
     ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
     ASSERT_EQ(loopback_buf->length(), frames_remaining);
@@ -700,6 +702,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   }
 
   {
+    SCOPED_TRACE("Read1");
     auto buf = pipeline->ReadLock(rlctx, Fixed(0), kFramesPerRead);
     RunLoopUntilIdle();
 
@@ -714,6 +717,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   }
 
   {
+    SCOPED_TRACE("Read2");
     auto buf = pipeline->ReadLock(rlctx, Fixed(kFramesPerRead), kFramesPerRead);
     RunLoopUntilIdle();
 
@@ -729,6 +733,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   }
 
   {
+    SCOPED_TRACE("Read3");
     auto buf = pipeline->ReadLock(rlctx, Fixed(kFramesPerRead * 2), kFramesPerRead);
     RunLoopUntilIdle();
 
@@ -853,7 +858,7 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
   clock::testing::VerifyAdvances(pipeline->reference_clock(), context().clock_factory());
   clock::testing::VerifyCannotBeRateAdjusted(pipeline->reference_clock());
 
-  auto& loopback_clock = pipeline->loopback()->reference_clock();
+  auto& loopback_clock = pipeline->dup_loopback()->reference_clock();
   clock::testing::VerifyReadOnlyRights(loopback_clock);
   clock::testing::VerifyAdvances(loopback_clock, context().clock_factory());
   clock::testing::VerifyCannotBeRateAdjusted(loopback_clock);
@@ -928,7 +933,8 @@ TEST_F(OutputPipelineTest, PipelineWithEffectsV2) {
 
   // Present frames ahead of now to stay ahead of the safe_write_frame.
   auto ref_start = device_clock_->Read();
-  auto transform = pipeline->loopback()->ref_time_to_frac_presentation_frame();
+  auto loopback = pipeline->dup_loopback();
+  auto transform = loopback->ref_time_to_frac_presentation_frame();
   auto loopback_frame = Fixed::FromRaw(transform.timeline_function.Apply(ref_start.get())).Floor();
 
   // Read 1ms worth of frames and verify the effects have been applied. The fake input
@@ -958,7 +964,7 @@ TEST_F(OutputPipelineTest, PipelineWithEffectsV2) {
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
   {
     SCOPED_TRACE("loopback->ReadLock");
-    auto loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), 48);
+    auto loopback_buf = loopback->ReadLock(rlctx, Fixed(loopback_frame), 48);
     ASSERT_TRUE(loopback_buf);
     ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
     ASSERT_LE(loopback_buf->length(), 48);
@@ -971,7 +977,7 @@ TEST_F(OutputPipelineTest, PipelineWithEffectsV2) {
       // remaining frames instantly.
       loopback_frame += loopback_buf->length();
       auto frames_remaining = 48 - loopback_buf->length();
-      loopback_buf = pipeline->loopback()->ReadLock(rlctx, Fixed(loopback_frame), frames_remaining);
+      loopback_buf = loopback->ReadLock(rlctx, Fixed(loopback_frame), frames_remaining);
       ASSERT_TRUE(loopback_buf);
       ASSERT_EQ(loopback_buf->start().Floor(), loopback_frame);
       ASSERT_EQ(loopback_buf->length(), frames_remaining);

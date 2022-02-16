@@ -25,7 +25,7 @@ class BaseRingBuffer {
   // A function that computes the safe read/write frame number for the current time.
   // For ReadableRingBuffers, the safe range is [safe_read_frame-frame_count+1, safe_read_frame].
   // For WritableRingBuffers, the safe range is [safe_write_frame, safe_write_frame+frame_count-1].
-  using SafeReadWriteFrameFn = fit::function<int64_t()>;
+  using SafeReadWriteFrameFn = std::function<int64_t()>;
 
   // Creates a ring buffer buffer backed by the given |vmo|.
   //
@@ -62,8 +62,8 @@ class BaseRingBuffer {
       fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
       AudioClock& audio_clock, int64_t frame_count, SafeReadWriteFrameFn safe_write_frame);
 
-  uint64_t size() const { return vmo_mapper_->size(); }
-  uint32_t frames() const { return frames_; }
+  int64_t size() const { return static_cast<int64_t>(vmo_mapper_->size()); }
+  int64_t frames() const { return frame_count_; }
   uint8_t* virt() const { return reinterpret_cast<uint8_t*>(vmo_mapper_->start()); }
 
  protected:
@@ -76,7 +76,7 @@ class BaseRingBuffer {
   BaseStream::TimelineFunctionSnapshot ReferenceClockToFixedImpl() const;
 
   const fbl::RefPtr<RefCountedVmoMapper> vmo_mapper_;
-  const uint32_t frames_ = 0;
+  const int64_t frame_count_ = 0;
   const fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame_;
   AudioClock& audio_clock_;
 };
@@ -89,6 +89,10 @@ class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
                      fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
                      AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
                      int64_t frame_count, SafeReadWriteFrameFn safe_read_frame);
+
+  // Return a duplicate handle that reads from the same underlying ring buffer but resets
+  // all stream-specific state.
+  std::shared_ptr<ReadableRingBuffer> Dup() const;
 
   // |media::audio::ReadableStream|
   BaseStream::TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;

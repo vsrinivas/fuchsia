@@ -175,6 +175,29 @@ TEST_F(InputRingBufferTest, ReadNegativeFrame) {
   EXPECT_EQ(buffer->length(), 10u);
 }
 
+TEST_F(InputRingBufferTest, ReadFromDup) {
+  // After 1ms we expect 48 frames to be available to read at the start of the buffer.
+  Advance(zx::time(0) + zx::msec(1));
+  {
+    auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(0), 48);
+    ASSERT_TRUE(buffer);
+    EXPECT_EQ(buffer->start().Floor(), 0);
+    EXPECT_EQ(buffer->length(), 48);
+  }
+
+  // After trimming, we can no longer read those frames from the stream.
+  ring_buffer()->Trim(Fixed(48));
+
+  // However, we should be able to read those frames from a dup.
+  auto dup = ring_buffer()->Dup();
+  {
+    auto buffer = dup->ReadLock(rlctx, Fixed(0), 48);
+    ASSERT_TRUE(buffer);
+    EXPECT_EQ(buffer->start().Floor(), 0);
+    EXPECT_EQ(buffer->length(), 48);
+  }
+}
+
 TEST_F(OutputRingBufferTest, WriteEmptyRing) {
   Advance(zx::time(0));
   auto buffer = ring_buffer()->WriteLock(0, 1);

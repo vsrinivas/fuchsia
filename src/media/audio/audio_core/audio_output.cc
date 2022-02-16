@@ -197,7 +197,10 @@ fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioOutput::Init
   if (!pipeline_) {
     return fpromise::error(ZX_ERR_BAD_STATE);
   }
-  return fpromise::ok(pipeline_->loopback());
+  // Ring buffers can be read concurrently by multiple streams, while each ReadableRingBuffer
+  // object contains state for a single stream. Hence, create a duplicate object for each
+  // destination link.
+  return fpromise::ok(pipeline_->dup_loopback());
 }
 
 std::unique_ptr<OutputPipeline> AudioOutput::CreateOutputPipeline(
