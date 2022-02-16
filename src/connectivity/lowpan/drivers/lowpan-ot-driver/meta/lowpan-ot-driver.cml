@@ -1,0 +1,41 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/lowpan_ot_driver",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.factory.lowpan.FactoryRegister",
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+                "fuchsia.lowpan.device.Register",
+                "fuchsia.net.interfaces.admin.Installer",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.net.tun.Control",
+                "fuchsia.posix.socket.Provider",
+            ],
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+        {
+            directory: "dev-class-ot-radio",
+            rights: [ "r*" ],
+            path: "/dev/class/ot-radio",
+        },
+    ],
+}

@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 rustc_binary("bin") {
   output_name = "lowpan_ot_driver"
@@ -82,9 +83,23 @@ rustc_binary("bin") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
-fuchsia_package_with_single_component("lowpan-ot-driver") {
+fuchsia_component("lowpan-ot-driver-cv2") {
+  component_name = "lowpan-ot-driver"
+  deps = [ ":bin" ]
+  manifest = "meta/lowpan-ot-driver.cml"
+}
+
+fuchsia_component("lowpan-ot-driver-cv1") {
+  component_name = "lowpan-ot-driver"
   deps = [ ":bin" ]
   manifest = "meta/lowpan-ot-driver.cmx"
+}
+
+fuchsia_package("lowpan-ot-driver") {
+  deps = [
+    ":lowpan-ot-driver-cv1",
+    ":lowpan-ot-driver-cv2",
+  ]
 }
 
 fuchsia_unittest_package("lowpan-ot-driver-test") {
@@ -111,4 +126,8 @@ config_data("config-default") {
 group("tests") {
   testonly = true
   deps = [ ":lowpan-ot-driver-test" ]
+}
+
+core_shard("lowpan_ot_driver_core_shard") {
+  shard_file = "meta/lowpan-ot-driver.core_shard.cml"
 }
