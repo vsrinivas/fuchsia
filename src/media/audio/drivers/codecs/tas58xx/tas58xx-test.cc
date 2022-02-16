@@ -19,6 +19,8 @@
 
 namespace audio {
 
+namespace audio_fidl = ::fuchsia::hardware::audio;
+
 struct Tas58xxCodec : public Tas58xx {
   explicit Tas58xxCodec(zx_device_t* parent, const ddk::I2cChannel& i2c) : Tas58xx(parent, i2c) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
@@ -430,17 +432,17 @@ TEST(Tas58xxTest, GetTopologySignalProcessing) {
   ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
   ddk::CodecProtocolClient proto_client;
   ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  fuchsia::hardware::audio::CodecSyncPtr codec_client;
+  audio_fidl::CodecSyncPtr codec_client;
   codec_client.Bind(std::move(channel_local));
 
-  fidl::InterfaceHandle<fuchsia::hardware::audio::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing> signal_processing_request =
+  fidl::InterfaceHandle<audio_fidl::SignalProcessing> signal_processing_handle;
+  fidl::InterfaceRequest<audio_fidl::SignalProcessing> signal_processing_request =
       signal_processing_handle.NewRequest();
   ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get one topology with an AGL processing element.
-  fuchsia::hardware::audio::SignalProcessing_GetTopologies_Result result;
+  audio_fidl::SignalProcessing_GetTopologies_Result result;
   ASSERT_OK(signal_processing_client->GetTopologies(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().topologies.size(), 1);
@@ -456,12 +458,12 @@ TEST(Tas58xxTest, GetTopologySignalProcessing) {
       codec->GetAglPeId());
 
   // Set the only topology must work.
-  fuchsia::hardware::audio::SignalProcessing_SetTopology_Result result2;
+  audio_fidl::SignalProcessing_SetTopology_Result result2;
   ASSERT_OK(signal_processing_client->SetTopology(codec->GetTopologyId(), &result2));
   ASSERT_FALSE(result2.is_err());
 
   // Set the an incorrect topology id must fail.
-  fuchsia::hardware::audio::SignalProcessing_SetTopology_Result result3;
+  audio_fidl::SignalProcessing_SetTopology_Result result3;
   ASSERT_OK(signal_processing_client->SetTopology(codec->GetTopologyId() + 1, &result3));
   ASSERT_TRUE(result3.is_err());
 
@@ -486,29 +488,238 @@ TEST(Tas58xxTest, SignalProcessingConnectTooManyConnections) {
   ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
   ddk::CodecProtocolClient proto_client;
   ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  fuchsia::hardware::audio::CodecSyncPtr codec_client;
+  audio_fidl::CodecSyncPtr codec_client;
   codec_client.Bind(std::move(channel_local));
 
   // First connection succeeds in making a 2-way call.
-  fidl::InterfaceHandle<fuchsia::hardware::audio::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing> signal_processing_request =
+  fidl::InterfaceHandle<audio_fidl::SignalProcessing> signal_processing_handle;
+  fidl::InterfaceRequest<audio_fidl::SignalProcessing> signal_processing_request =
       signal_processing_handle.NewRequest();
   ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
-  fuchsia::hardware::audio::SignalProcessing_GetTopologies_Result result;
+  audio_fidl::SignalProcessing_GetTopologies_Result result;
   ASSERT_OK(signal_processing_client->GetTopologies(&result));
   ASSERT_FALSE(result.is_err());
 
   // Second connection fails to make a 2-way call.
-  fidl::InterfaceHandle<fuchsia::hardware::audio::SignalProcessing> signal_processing_handle2;
-  fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing> signal_processing_request2 =
+  fidl::InterfaceHandle<audio_fidl::SignalProcessing> signal_processing_handle2;
+  fidl::InterfaceRequest<audio_fidl::SignalProcessing> signal_processing_request2 =
       signal_processing_handle2.NewRequest();
   ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request2)));
   fidl::SynchronousInterfacePtr signal_processing_client2 = signal_processing_handle2.BindSync();
-  fuchsia::hardware::audio::SignalProcessing_GetTopologies_Result result2;
+  audio_fidl::SignalProcessing_GetTopologies_Result result2;
   ASSERT_EQ(signal_processing_client2->GetTopologies(&result2), ZX_ERR_PEER_CLOSED);
 
   mock_i2c.VerifyAndClear();
+}
+
+TEST(Tas58xxTest, WatchAgl) {
+  auto fake_parent = MockDevice::FakeRootParent();
+  mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+
+  metadata::ti::TasConfig metadata = {};
+  metadata.bridged = true;
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+
+  ASSERT_OK(
+      SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(), mock_i2c.GetProto()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
+  auto codec_proto = codec->GetProto();
+
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  zx::channel channel_remote, channel_local;
+  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
+  ddk::CodecProtocolClient proto_client;
+  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
+  audio_fidl::CodecSyncPtr codec_client;
+  codec_client.Bind(std::move(channel_local));
+
+  fidl::InterfaceHandle<audio_fidl::SignalProcessing> signal_processing_handle;
+  fidl::InterfaceRequest<audio_fidl::SignalProcessing> signal_processing_request =
+      signal_processing_handle.NewRequest();
+  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
+  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
+
+  // We should get one AGL PE.
+  audio_fidl::SignalProcessing_GetProcessingElements_Result result;
+  ASSERT_OK(signal_processing_client->GetProcessingElements(&result));
+  ASSERT_FALSE(result.is_err());
+  ASSERT_EQ(result.response().processing_elements.size(), 1);
+  ASSERT_EQ(result.response().processing_elements[0].type(),
+            audio_fidl::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);
+
+  // AGL enabled.
+  {
+    mock_i2c
+        .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
+        .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
+        .ExpectWriteStop({0x68, 0xc0, 0x00, 0x00, 0x00})  // Enable AGL.
+        .ExpectWriteStop({0x00, 0x00})                    // page 0.
+        .ExpectWriteStop({0x7f, 0x00});                   // book 0.
+
+    // Control with enabled = true.
+    audio_fidl::SignalProcessing_SetProcessingElementState_Result state_result;
+    audio_fidl::ProcessingElementState state;
+    state.set_enabled(true);
+    ASSERT_OK(signal_processing_client->SetProcessingElementState(
+        result.response().processing_elements[0].id(), std::move(state), &state_result));
+    ASSERT_FALSE(state_result.is_err());
+
+    audio_fidl::ProcessingElementState state_received;
+    signal_processing_client->WatchProcessingElementState(
+        result.response().processing_elements[0].id(), &state_received);
+    ASSERT_TRUE(state_received.has_enabled());
+    ASSERT_TRUE(state_received.enabled());
+  }
+
+  // AGL disabled.
+  {
+    mock_i2c
+        .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
+        .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
+        .ExpectWriteStop({0x68, 0x40, 0x00, 0x00, 0x00})  // Disable AGL.
+        .ExpectWriteStop({0x00, 0x00})                    // page 0.
+        .ExpectWriteStop({0x7f, 0x00});                   // book 0.
+
+    // Control with enabled = false.
+    audio_fidl::SignalProcessing_SetProcessingElementState_Result state_result;
+    audio_fidl::ProcessingElementState state;
+    state.set_enabled(false);
+    ASSERT_OK(signal_processing_client->SetProcessingElementState(
+        result.response().processing_elements[0].id(), std::move(state), &state_result));
+    ASSERT_FALSE(state_result.is_err());
+
+    audio_fidl::ProcessingElementState state_received;
+    signal_processing_client->WatchProcessingElementState(
+        result.response().processing_elements[0].id(), &state_received);
+    ASSERT_TRUE(state_received.has_enabled());
+    ASSERT_FALSE(state_received.enabled());
+  }
+}
+
+TEST(Tas58xxTest, WatchAglUpdates) {
+  auto fake_parent = MockDevice::FakeRootParent();
+  mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+
+  metadata::ti::TasConfig metadata = {};
+  metadata.bridged = true;
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+
+  ASSERT_OK(
+      SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(), mock_i2c.GetProto()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
+  auto codec_proto = codec->GetProto();
+
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  zx::channel channel_remote, channel_local;
+  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
+  ddk::CodecProtocolClient proto_client;
+  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
+  audio_fidl::CodecSyncPtr codec_client;
+  codec_client.Bind(std::move(channel_local));
+
+  fidl::InterfaceHandle<audio_fidl::SignalProcessing> signal_processing_handle;
+  fidl::InterfaceRequest<audio_fidl::SignalProcessing> signal_processing_request =
+      signal_processing_handle.NewRequest();
+  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
+  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
+
+  // We should get one AGL PE.
+  audio_fidl::SignalProcessing_GetProcessingElements_Result result;
+  ASSERT_OK(signal_processing_client->GetProcessingElements(&result));
+  ASSERT_FALSE(result.is_err());
+  ASSERT_EQ(result.response().processing_elements.size(), 1);
+  ASSERT_EQ(result.response().processing_elements[0].type(),
+            audio_fidl::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);
+
+  // A Watch after a SetPE disable must reply since the PE state changed.
+  {
+    mock_i2c
+        .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
+        .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
+        .ExpectWriteStop({0x68, 0xc0, 0x00, 0x00, 0x00})  // Enable AGL.
+        .ExpectWriteStop({0x00, 0x00})                    // page 0.
+        .ExpectWriteStop({0x7f, 0x00});                   // book 0.
+
+    // Control with enabled = true.
+    audio_fidl::SignalProcessing_SetProcessingElementState_Result state_result;
+    audio_fidl::ProcessingElementState state;
+    state.set_enabled(true);
+    ASSERT_OK(signal_processing_client->SetProcessingElementState(
+        result.response().processing_elements[0].id(), std::move(state), &state_result));
+    ASSERT_FALSE(state_result.is_err());
+
+    audio_fidl::ProcessingElementState state_received;
+    signal_processing_client->WatchProcessingElementState(
+        result.response().processing_elements[0].id(), &state_received);
+    ASSERT_TRUE(state_received.has_enabled());
+    ASSERT_TRUE(state_received.enabled());
+  }
+
+  // A Watch potentially before a SetPE disable must reply since the PE state changed.
+  {
+    mock_i2c
+        .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
+        .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
+        .ExpectWriteStop({0x68, 0x40, 0x00, 0x00, 0x00})  // Disable AGL.
+        .ExpectWriteStop({0x00, 0x00})                    // page 0.
+        .ExpectWriteStop({0x7f, 0x00});                   // book 0.
+
+    std::thread th([&]() {
+      audio_fidl::ProcessingElementState state_received;
+      signal_processing_client->WatchProcessingElementState(
+          result.response().processing_elements[0].id(), &state_received);
+      ASSERT_TRUE(state_received.has_enabled());
+      ASSERT_FALSE(state_received.enabled());
+    });
+
+    // Not required for the test to pass, but rather makes it likely for the watch to start before
+    // the SetPE, either way the test is valid.
+    zx::nanosleep(zx::deadline_after(zx::msec(10)));
+
+    // Control with enabled = false.
+    audio_fidl::SignalProcessing_SetProcessingElementState_Result state_result;
+    audio_fidl::ProcessingElementState state;
+    state.set_enabled(false);
+    ASSERT_OK(signal_processing_client->SetProcessingElementState(
+        result.response().processing_elements[0].id(), std::move(state), &state_result));
+    ASSERT_FALSE(state_result.is_err());
+
+    th.join();
+  }
+
+  // A Watch after a previous watch with a reply triggered by SetPE must reply if we change the
+  // PE state with a new SetPE.
+  {
+    mock_i2c
+        .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
+        .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
+        .ExpectWriteStop({0x68, 0xc0, 0x00, 0x00, 0x00})  // Enable AGL.
+        .ExpectWriteStop({0x00, 0x00})                    // page 0.
+        .ExpectWriteStop({0x7f, 0x00});                   // book 0.
+
+    // Control with enabled = true.
+    audio_fidl::SignalProcessing_SetProcessingElementState_Result state_result;
+    audio_fidl::ProcessingElementState state;
+    state.set_enabled(true);
+    ASSERT_OK(signal_processing_client->SetProcessingElementState(
+        result.response().processing_elements[0].id(), std::move(state), &state_result));
+    ASSERT_FALSE(state_result.is_err());
+
+    audio_fidl::ProcessingElementState state_received;
+    signal_processing_client->WatchProcessingElementState(
+        result.response().processing_elements[0].id(), &state_received);
+    ASSERT_TRUE(state_received.has_enabled());
+    ASSERT_TRUE(state_received.enabled());
+  }
 }
 
 TEST(Tas58xxTest, Reset) {

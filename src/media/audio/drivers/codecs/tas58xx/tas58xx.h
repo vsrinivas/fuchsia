@@ -54,9 +54,7 @@ class Tas58xx : public SimpleCodecServer, public fuchsia::hardware::audio::Signa
   void WatchProcessingElementState(
       uint64_t processing_element_id,
       fuchsia::hardware::audio::SignalProcessing::WatchProcessingElementStateCallback callback)
-      override {
-    // TODO(64877): Implement for the signal processing support of this driver.
-  }
+      override;
   void GetTopologies(
       fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) override;
   void SetTopology(
@@ -80,14 +78,16 @@ class Tas58xx : public SimpleCodecServer, public fuchsia::hardware::audio::Signa
   zx_status_t WriteRegs(uint8_t* regs, size_t count) TA_REQ(lock_);
   zx_status_t ReadReg(uint8_t reg, uint8_t* value) TA_REQ(lock_);
   zx_status_t UpdateReg(uint8_t reg, uint8_t mask, uint8_t value) TA_REQ(lock_);
-
   ddk::I2cChannel i2c_ TA_GUARDED(lock_);
   GainState gain_state_ TA_GUARDED(lock_) = {};
   fbl::Mutex lock_;
   metadata::ti::TasConfig metadata_ = {};
   bool last_agl_ TA_GUARDED(lock_) = false;
+  std::optional<bool> last_reported_agl_ TA_GUARDED(lock_);
   std::optional<fidl::Binding<fuchsia::hardware::audio::SignalProcessing>>
       signal_processing_binding_;
+  std::optional<fuchsia::hardware::audio::SignalProcessing::WatchProcessingElementStateCallback>
+      agl_callback_;
 };
 }  // namespace audio
 

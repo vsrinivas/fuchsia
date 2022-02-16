@@ -53,6 +53,8 @@ constexpr uint8_t kRegAglEnableBitByte0 = 0x80;
 
 namespace audio {
 
+namespace audio_fidl = ::fuchsia::hardware::audio;
+
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
 static const std::vector<uint32_t> kSupportedDaiNumberOfChannels = {2, 4};
 static const std::vector<SampleFormat> kSupportedDaiSampleFormats = {SampleFormat::PCM_SIGNED};
@@ -211,7 +213,7 @@ Info Tas58xx::GetInfo() {
 zx_status_t Tas58xx::Shutdown() { return ZX_OK; }
 
 void Tas58xx::SignalProcessingConnect(
-    fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing> signal_processing) {
+    fidl::InterfaceRequest<audio_fidl::SignalProcessing> signal_processing) {
   if (signal_processing_binding_.has_value()) {
     signal_processing.Close(ZX_ERR_ALREADY_BOUND);
     return;
@@ -220,33 +222,31 @@ void Tas58xx::SignalProcessingConnect(
 }
 
 void Tas58xx::GetProcessingElements(
-    fuchsia::hardware::audio::SignalProcessing::GetProcessingElementsCallback callback) {
-  fuchsia::hardware::audio::ProcessingElement pe;
+    audio_fidl::SignalProcessing::GetProcessingElementsCallback callback) {
+  audio_fidl::ProcessingElement pe;
   pe.set_id(kAglPeId);
-  pe.set_type(fuchsia::hardware::audio::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);
+  pe.set_type(audio_fidl::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);
 
-  std::vector<fuchsia::hardware::audio::ProcessingElement> pes;
+  std::vector<audio_fidl::ProcessingElement> pes;
   pes.emplace_back(std::move(pe));
-  fuchsia::hardware::audio::SignalProcessing_GetProcessingElements_Response response(
-      std::move(pes));
-  fuchsia::hardware::audio::SignalProcessing_GetProcessingElements_Result result;
+  audio_fidl::SignalProcessing_GetProcessingElements_Response response(std::move(pes));
+  audio_fidl::SignalProcessing_GetProcessingElements_Result result;
   result.set_response(std::move(response));
   callback(std::move(result));
 }
 
 void Tas58xx::SetProcessingElementState(
-    uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementState state,
-    fuchsia::hardware::audio::SignalProcessing::SetProcessingElementStateCallback callback) {
+    uint64_t processing_element_id, audio_fidl::ProcessingElementState state,
+    audio_fidl::SignalProcessing::SetProcessingElementStateCallback callback) {
   // If enabled is not present, then perform no operation, we keep the current state.
   if (!state.has_enabled()) {
-    callback(
-        fuchsia::hardware::audio::SignalProcessing_SetProcessingElementState_Result::WithResponse(
-            fuchsia::hardware::audio::SignalProcessing_SetProcessingElementState_Response()));
+    callback(audio_fidl::SignalProcessing_SetProcessingElementState_Result::WithResponse(
+        audio_fidl::SignalProcessing_SetProcessingElementState_Response()));
     return;
   }
 
   if (processing_element_id != kAglPeId) {
-    callback(fuchsia::hardware::audio::SignalProcessing_SetProcessingElementState_Result::WithErr(
+    callback(audio_fidl::SignalProcessing_SetProcessingElementState_Result::WithErr(
         ZX_ERR_INVALID_ARGS));
     return;
   }
@@ -305,49 +305,77 @@ void Tas58xx::SetProcessingElementState(
         },
         &completion);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
+
+    audio_fidl::ProcessingElementState state;
+    state.set_enabled(enable_agl);
+    if (agl_callback_.has_value()) {
+      (*agl_callback_)(std::move(state));
+      agl_callback_.reset();
+      last_reported_agl_.emplace(enable_agl);
+    }
     last_agl_ = enable_agl;
   }
   // Report the time at which AGL was enabled. This along with the brownout protection driver trace
   // will let us calculate the total latency.
   TRACE_DURATION_END("tas58xx", "SetAgl", "timestamp", zx::clock::get_monotonic().get());
 
-  callback(
-      fuchsia::hardware::audio::SignalProcessing_SetProcessingElementState_Result::WithResponse(
-          fuchsia::hardware::audio::SignalProcessing_SetProcessingElementState_Response()));
+  callback(audio_fidl::SignalProcessing_SetProcessingElementState_Result::WithResponse(
+      audio_fidl::SignalProcessing_SetProcessingElementState_Response()));
 }
 
-void Tas58xx::GetTopologies(
-    fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) {
-  fuchsia::hardware::audio::EdgePair edge;
+void Tas58xx::WatchProcessingElementState(
+    uint64_t processing_element_id,
+    audio_fidl::SignalProcessing::WatchProcessingElementStateCallback callback) {
+  if (processing_element_id != kAglPeId) {
+    zxlogf(ERROR, "Unknown process element id (%lu) for watch", processing_element_id);
+    return;
+  }
+
+  fbl::AutoLock lock(&lock_);
+  if (!last_reported_agl_.has_value() || last_reported_agl_.value() != last_agl_) {
+    audio_fidl::ProcessingElementState state;
+    state.set_enabled(last_agl_);
+    callback(std::move(state));
+    last_reported_agl_.emplace(last_agl_);
+  } else {
+    if (agl_callback_.has_value()) {
+      zxlogf(WARNING, "Watch request for process element id (%lu) when watch is still in progress",
+             processing_element_id);
+    } else {
+      agl_callback_.emplace(std::move(callback));
+    }
+  }
+}
+
+void Tas58xx::GetTopologies(audio_fidl::SignalProcessing::GetTopologiesCallback callback) {
+  audio_fidl::EdgePair edge;
   edge.processing_element_id_from = kAglPeId;
   edge.processing_element_id_to = kAglPeId;
 
-  std::vector<fuchsia::hardware::audio::EdgePair> edges;
+  std::vector<audio_fidl::EdgePair> edges;
   edges.emplace_back(edge);
 
-  fuchsia::hardware::audio::Topology topology;
+  audio_fidl::Topology topology;
   topology.set_id(kTopologyId);
   topology.set_processing_elements_edge_pairs(edges);
 
-  std::vector<fuchsia::hardware::audio::Topology> topologies;
+  std::vector<audio_fidl::Topology> topologies;
   topologies.emplace_back(std::move(topology));
 
-  fuchsia::hardware::audio::SignalProcessing_GetTopologies_Response response(std::move(topologies));
-  fuchsia::hardware::audio::SignalProcessing_GetTopologies_Result result;
+  audio_fidl::SignalProcessing_GetTopologies_Response response(std::move(topologies));
+  audio_fidl::SignalProcessing_GetTopologies_Result result;
   result.set_response(std::move(response));
   callback(std::move(result));
 }
 
-void Tas58xx::SetTopology(
-    uint64_t topology_id,
-    fuchsia::hardware::audio::SignalProcessing::SetTopologyCallback callback) {
+void Tas58xx::SetTopology(uint64_t topology_id,
+                          audio_fidl::SignalProcessing::SetTopologyCallback callback) {
   if (topology_id != kTopologyId) {
-    callback(fuchsia::hardware::audio::SignalProcessing_SetTopology_Result::WithErr(
-        ZX_ERR_INVALID_ARGS));
+    callback(audio_fidl::SignalProcessing_SetTopology_Result::WithErr(ZX_ERR_INVALID_ARGS));
     return;
   }
-  callback(fuchsia::hardware::audio::SignalProcessing_SetTopology_Result::WithResponse(
-      fuchsia::hardware::audio::SignalProcessing_SetTopology_Response()));
+  callback(audio_fidl::SignalProcessing_SetTopology_Result::WithResponse(
+      audio_fidl::SignalProcessing_SetTopology_Response()));
 }
 
 DaiSupportedFormats Tas58xx::GetDaiFormats() { return kSupportedDaiDaiFormats; }
