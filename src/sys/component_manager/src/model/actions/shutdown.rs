@@ -11,15 +11,16 @@ use {
     async_trait::async_trait,
     cm_moniker::InstancedChildMoniker,
     cm_rust::{
-        CapabilityDecl, CapabilityName, ChildRef, ComponentDecl, DependencyType, OfferDecl,
-        OfferDeclCommon, OfferDirectoryDecl, OfferProtocolDecl, OfferResolverDecl, OfferRunnerDecl,
-        OfferServiceDecl, OfferSource, OfferStorageDecl, OfferTarget, RegistrationDeclCommon,
-        RegistrationSource, SourceName, StorageDirectorySource, UseDecl, UseDirectoryDecl,
-        UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource,
+        CapabilityDecl, CapabilityName, ChildRef, CollectionDecl, DependencyType, EnvironmentDecl,
+        ExposeDecl, OfferDecl, OfferDeclCommon, OfferDirectoryDecl, OfferProtocolDecl,
+        OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl, OfferSource, OfferStorageDecl,
+        OfferTarget, RegistrationDeclCommon, RegistrationSource, SourceName,
+        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
+        UseServiceDecl, UseSource,
     },
     futures::future::select_all,
     maplit::hashset,
-    moniker::{ChildMoniker, ChildMonikerBase},
+    moniker::ChildMonikerBase,
     std::collections::{HashMap, HashSet},
     std::fmt,
     std::sync::Arc,
@@ -144,7 +145,7 @@ impl ShutdownJob {
         // or more children that may exist in collections and one or more
         // instances with a matching ChildMoniker that may exist.
         // `dependency_map` maps server => clients (aka provider => consumers, or source => targets)
-        let dependency_map = process_component_dependencies(state.decl());
+        let dependency_map = process_component_dependencies(state);
         let mut source_to_targets: HashMap<ParentOrChildMoniker, ShutdownInfo> = HashMap::new();
 
         for (source, targets) in dependency_map {
@@ -340,30 +341,93 @@ impl fmt::Debug for ShutdownInfo {
     }
 }
 
+/// Trait exposing all component state necessary to compute shutdown order.
+///
+/// This trait largely mirrors `ComponentDecl`, but will reflect changes made to
+/// the component's state at runtime (e.g., dynamically created children,
+/// dynamic offers).
+///
+/// In production, this will probably only be implemented for
+/// `ResolvedInstanceState`, but exposing this trait allows for easier testing.
+pub trait Component {
+    /// Current view of this component's `uses` declarations.
+    fn uses(&self) -> Vec<UseDecl>;
+
+    /// Current view of this component's `exposes` declarations.
+    fn exposes(&self) -> Vec<ExposeDecl>;
+
+    /// Current view of this component's `offers` declarations.
+    fn offers(&self) -> Vec<OfferDecl>;
+
+    /// Current view of this component's `capabilities` declarations.
+    fn capabilities(&self) -> Vec<CapabilityDecl>;
+
+    /// Current view of this component's `collections` declarations.
+    fn collections(&self) -> Vec<CollectionDecl>;
+
+    /// Current view of this component's `environments` declarations.
+    fn environments(&self) -> Vec<EnvironmentDecl>;
+
+    /// Returns metadata about each child of this component.
+    fn children(&self) -> Vec<Child>;
+
+    /// Filters `offers()` down to remove any runtime-created dynamic offers.
+    fn static_offers(&self) -> Vec<OfferDecl> {
+        self.offers()
+            .into_iter()
+            .filter(|o| {
+                !matches!(o.target(), OfferTarget::Child(ChildRef { name: _, collection: Some(_) }))
+            })
+            .collect()
+    }
+
+    /// Filters `children()` down to remove any runtime-created dynamic children
+    /// (i.e., children in collections).
+    fn static_children(&self) -> Vec<Child> {
+        self.children().into_iter().filter(|o| o.moniker.collection().is_none()).collect()
+    }
+}
+
+/// Child metadata necessary to compute shutdown order.
+///
+/// A `Component` returns information about its children by returning a vector
+/// of these.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Child {
+    /// The moniker identifying the name of the child, complete with
+    /// `instance_id`.
+    pub moniker: InstancedChildMoniker,
+
+    /// Name of the environment associated with this child, if any.
+    pub environment_name: Option<String>,
+
+    /// True if this child is static, or dynamic and "live". False if this is a
+    /// dynamic component that is being deleted, but has not yet been purged.
+    pub is_live: bool,
+}
+
 /// Given a set of DependencyNodes, find all the matching ParentOrChildMonikers in the supplied
 /// Component.
 fn get_shutdown_monikers(
     nodes: &HashSet<DependencyNode>,
-    component_state: &ResolvedInstanceState,
+    component_state: &impl Component,
 ) -> HashSet<ParentOrChildMoniker> {
     let mut deps: HashSet<ParentOrChildMoniker> = HashSet::new();
-    let all_children = component_state.all_children();
+    let all_children = component_state.children();
 
     for node in nodes {
         match node {
             DependencyNode::Child(name) => {
-                let dep_moniker = ChildMoniker::new(name.to_string(), None);
-                let matching_children = component_state.get_all_child_monikers(&dep_moniker);
-                for m in matching_children {
-                    deps.insert(ParentOrChildMoniker::ChildMoniker(m));
-                }
+                deps.insert(ParentOrChildMoniker::ChildMoniker(
+                    InstancedChildMoniker::static_child(name.clone()),
+                ));
             }
             DependencyNode::Collection(name) => {
-                for moniker in all_children.keys() {
-                    match moniker.collection() {
+                for c in &all_children {
+                    match c.moniker.collection() {
                         Some(m) => {
                             if m == name {
-                                deps.insert(ParentOrChildMoniker::ChildMoniker(moniker.clone()));
+                                deps.insert(ParentOrChildMoniker::ChildMoniker(c.moniker.clone()));
                             }
                         }
                         None => {}
@@ -381,40 +445,43 @@ fn get_shutdown_monikers(
 /// Maps a dependency node (parent, child or collection) to the nodes that depend on it.
 pub type DependencyMap = HashMap<DependencyNode, HashSet<DependencyNode>>;
 
-/// For a given ComponentDecl, parse it, identify capability dependencies
-/// between children and collections in the ComponentDecl. A map is returned
-/// which maps from a child to a set of other children to which that child
-/// provides capabilities. The siblings to which the child offers capabilities
-/// must be shut down before that child. This function panics if there is a
-/// capability routing where either the source or target is not present in this
+/// For a given Component, identify capability dependencies between static
+/// children and collections in the ComponentDecl. A map is returned which maps
+/// from a child to a set of other children to which that child provides
+/// capabilities. The siblings to which the child offers capabilities must be
+/// shut down before that child. This function panics if there is a capability
+/// routing where either the source or target is not present in this
 /// ComponentDecl. Panics are not expected because ComponentDecls should be
 /// validated before this function is called.
-pub fn process_component_dependencies(decl: &ComponentDecl) -> DependencyMap {
-    let mut dependency_map: DependencyMap = decl
-        .children
+///
+/// TODO(fxbug.dev/84678): This function ignores dynamic children and offers.
+pub fn process_component_dependencies(instance: &impl Component) -> DependencyMap {
+    let mut dependency_map: DependencyMap = instance
+        .static_children()
         .iter()
-        .map(|c| (DependencyNode::Child(c.name.clone()), HashSet::new()))
+        .map(|c| (DependencyNode::Child(c.moniker.name().to_string()), HashSet::new()))
         .collect();
     dependency_map.extend(
-        decl.collections
+        instance
+            .collections()
             .iter()
             .map(|c| (DependencyNode::Collection(c.name.clone()), HashSet::new())),
     );
     dependency_map.insert(DependencyNode::Parent, HashSet::new());
 
-    get_dependencies_from_offers(decl, &mut dependency_map);
-    get_dependencies_from_environments(decl, &mut dependency_map);
-    get_dependencies_from_uses(decl, &mut dependency_map);
+    get_dependencies_from_offers(instance, &mut dependency_map);
+    get_dependencies_from_environments(instance, &mut dependency_map);
+    get_dependencies_from_uses(instance, &mut dependency_map);
     dependency_map
 }
 
 /// Loops through all the use declarations to determine if parents depend on child capabilities,
 /// and vice-versa.
-fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut DependencyMap) {
+fn get_dependencies_from_uses(instance: &impl Component, dependency_map: &mut DependencyMap) {
     // First, find all the children that the parent has a strong dependency on and add them to our
     // dependency map
     let mut children_the_parent_depends_on = HashSet::new();
-    for use_ in &decl.uses {
+    for use_ in &instance.uses() {
         let child_name = match use_ {
             UseDecl::Service(UseServiceDecl { source: UseSource::Child(name), .. })
             | UseDecl::Protocol(UseProtocolDecl { source: UseSource::Child(name), .. })
@@ -472,7 +539,7 @@ fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut Depende
     let mut last_loop_added_dependencies = true;
     while last_loop_added_dependencies {
         last_loop_added_dependencies = false;
-        for offer in &decl.offers {
+        for offer in &instance.static_offers() {
             match offer {
                 OfferDecl::Protocol(OfferProtocolDecl { dependency_type, .. })
                 | OfferDecl::Directory(OfferDirectoryDecl { dependency_type, .. })
@@ -513,7 +580,7 @@ fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut Depende
                         // The only valid use for an OfferSource::Capability today is for a storage
                         // capability declaration, and its presence should be enforced by manifest
                         // validation.
-                        if let Some(s) = find_storage_source(decl, name) {
+                        if let Some(s) = find_storage_source(instance, name) {
                             s
                         } else {
                             continue;
@@ -531,7 +598,7 @@ fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut Depende
                         continue;
                     }
                     OfferSource::Self_ => {
-                        if let Some(s) = find_storage_source(decl, offer.source_name()) {
+                        if let Some(s) = find_storage_source(instance, offer.source_name()) {
                             s
                         } else {
                             // If the `offer` was not for storage, it should be impossible to get
@@ -564,8 +631,14 @@ fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut Depende
     dependency_map.insert(DependencyNode::Parent, parent_dependents);
 }
 
-fn find_storage_source(decl: &ComponentDecl, name: &CapabilityName) -> Option<DependencyNode> {
-    decl.find_storage_source(name)
+fn find_storage_source(instance: &impl Component, name: &CapabilityName) -> Option<DependencyNode> {
+    instance
+        .capabilities()
+        .into_iter()
+        .find_map(|c| match c {
+            CapabilityDecl::Storage(s) if &s.name == name => Some(s),
+            _ => None,
+        })
         .map(|s| match &s.source {
             StorageDirectorySource::Parent => {
                 // See comment for OfferSource::Parent
@@ -582,11 +655,12 @@ fn find_storage_source(decl: &ComponentDecl, name: &CapabilityName) -> Option<De
 
 /// Loops through all the offer declarations to determine which siblings
 /// provide capabilities to other siblings.
-fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut DependencyMap) {
-    for dep in &decl.offers {
+fn get_dependencies_from_offers(instance: &impl Component, dependency_map: &mut DependencyMap) {
+    for dep in &instance.static_offers() {
         // Identify the source and target of the offer, if this offer is
         // actually relevant to shutdown order.
-        if let Some((capability_provider, capability_target)) = get_dependency_from_offer(decl, dep)
+        if let Some((capability_provider, capability_target)) =
+            get_dependency_from_offer(instance, dep)
         {
             if !dependency_map.contains_key(&capability_target) {
                 panic!(
@@ -608,10 +682,10 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
 
 /// Extracts a (capability_provider, capability_target) pair from a single
 /// `OfferDecl`, or returns `None` if the offer has no impact on shutdown
-/// ordering. The `ComponentDecl` provides context that may be necessary to
+/// ordering. The `Component` provides context that may be necessary to
 /// understand the `OfferDecl`.
 fn get_dependency_from_offer(
-    component_decl: &ComponentDecl,
+    instance: &impl Component,
     offer_decl: &OfferDecl,
 ) -> Option<(DependencyNode, DependencyNode)> {
     // We only care about dependencies where the provider of the dependency is
@@ -689,7 +763,7 @@ fn get_dependency_from_offer(
             source_name,
             target,
             ..
-        }) => find_storage_provider(&component_decl.capabilities, &source_name).map(
+        }) => find_storage_provider(&instance.capabilities(), &source_name).map(
             |storage_source_child_name| {
                 (
                     DependencyNode::Child(storage_source_child_name),
@@ -725,7 +799,7 @@ fn get_dependency_from_offer(
     }
 }
 
-/// Add the provider of an environmment registration to the map of environments
+/// Add the provider of an environment registration to the map of environments
 /// to components that provide something to the environment.
 fn add_env_provider<T>(
     decls: &Vec<T>,
@@ -746,10 +820,14 @@ fn add_env_provider<T>(
 
 /// Loops through all the child and collection declarations to determine what siblings provide
 /// capabilities to other siblings through an environment.
-fn get_dependencies_from_environments(decl: &ComponentDecl, dependency_map: &mut DependencyMap) {
+fn get_dependencies_from_environments(
+    instance: &impl Component,
+    dependency_map: &mut DependencyMap,
+) {
     let mut env_source_children = HashMap::new();
 
-    for env in &decl.environments {
+    let environments = instance.environments();
+    for env in &environments {
         env_source_children.insert(&env.name, vec![]);
         for source in env.get_dependency_sources() {
             match source {
@@ -772,20 +850,21 @@ fn get_dependencies_from_environments(decl: &ComponentDecl, dependency_map: &mut
         }
     }
 
-    for dest_child in &decl.children {
-        if let Some(env_name) = dest_child.environment.as_ref() {
+    for dest_child in &instance.static_children() {
+        if let Some(env_name) = dest_child.environment_name.as_ref() {
             for source_child in env_source_children.get(env_name).expect(&format!(
                 "environment `{}` from child `{}` is not a valid environment",
-                env_name, dest_child.name,
+                env_name,
+                dest_child.moniker.name(),
             )) {
                 dependency_map
                     .entry(DependencyNode::Child((*source_child).clone()))
                     .or_insert(HashSet::new())
-                    .insert(DependencyNode::Child(dest_child.name.clone()));
+                    .insert(DependencyNode::Child(dest_child.moniker.name().to_string()));
             }
         }
     }
-    for dest_collection in &decl.collections {
+    for dest_collection in &instance.collections() {
         if let Some(env_name) = dest_collection.environment.as_ref() {
             for source_child in env_source_children.get(env_name).expect(&format!(
                 "environment `{}` from collection `{}` is not a valid environment",
@@ -823,7 +902,7 @@ mod tests {
         async_trait::async_trait,
         cm_moniker::InstancedAbsoluteMoniker,
         cm_rust::{
-            CapabilityName, CapabilityPath, ChildDecl, DependencyType, ExposeDecl,
+            CapabilityName, CapabilityPath, ChildDecl, ComponentDecl, DependencyType, ExposeDecl,
             ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl,
             OfferResolverDecl, OfferSource, OfferStorageDecl, OfferTarget, ProtocolDecl,
             StorageDecl, StorageDirectorySource, UseDecl, UseSource,
@@ -837,6 +916,60 @@ mod tests {
         std::{convert::TryFrom, sync::Weak},
         test_case::test_case,
     };
+
+    /// Implementation of `super::Component` based on a `ComponentDecl` and
+    /// minimal information about runtime state.
+    struct FakeComponent {
+        decl: ComponentDecl,
+        dynamic_children: Vec<Child>,
+        dynamic_offers: Vec<OfferDecl>,
+    }
+
+    impl FakeComponent {
+        /// Returns a `FakeComponent` with no dynamic children or offers.
+        fn from_decl(decl: ComponentDecl) -> Self {
+            Self { decl, dynamic_children: vec![], dynamic_offers: vec![] }
+        }
+    }
+
+    impl Component for FakeComponent {
+        fn uses(&self) -> Vec<UseDecl> {
+            self.decl.uses.clone()
+        }
+
+        fn exposes(&self) -> Vec<ExposeDecl> {
+            self.decl.exposes.clone()
+        }
+
+        fn offers(&self) -> Vec<OfferDecl> {
+            self.decl.offers.iter().cloned().chain(self.dynamic_offers.iter().cloned()).collect()
+        }
+
+        fn capabilities(&self) -> Vec<CapabilityDecl> {
+            self.decl.capabilities.clone()
+        }
+
+        fn collections(&self) -> Vec<cm_rust::CollectionDecl> {
+            self.decl.collections.clone()
+        }
+
+        fn environments(&self) -> Vec<cm_rust::EnvironmentDecl> {
+            self.decl.environments.clone()
+        }
+
+        fn children(&self) -> Vec<Child> {
+            self.decl
+                .children
+                .iter()
+                .map(|c| Child {
+                    moniker: InstancedChildMoniker::static_child(c.name.clone()),
+                    environment_name: c.environment.clone(),
+                    is_live: true,
+                })
+                .chain(self.dynamic_children.iter().cloned())
+                .collect()
+        }
+    }
 
     // TODO(jmatt) Add tests for all capability types
 
@@ -883,7 +1016,7 @@ mod tests {
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
         expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childA".to_string())]));
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test_case(DependencyType::Weak)]
@@ -910,7 +1043,7 @@ mod tests {
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
         expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childA".to_string())]));
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -935,7 +1068,7 @@ mod tests {
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
         expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childA".to_string())]));
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -989,7 +1122,7 @@ mod tests {
         ));
         expected.sort_unstable();
 
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1020,7 +1153,7 @@ mod tests {
         ));
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
         expected.push((DependencyNode::Child("childB".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1054,7 +1187,7 @@ mod tests {
             vec![DependencyNode::Child("childB".to_string())],
         ));
         expected.push((DependencyNode::Child("childB".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1085,7 +1218,7 @@ mod tests {
             vec![DependencyNode::Collection("coll".to_string())],
         ));
         expected.push((DependencyNode::Collection("coll".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1135,7 +1268,7 @@ mod tests {
             vec![DependencyNode::Child("childC".to_string())],
         ));
         expected.push((DependencyNode::Child("childC".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1182,7 +1315,7 @@ mod tests {
             vec![DependencyNode::Child("childC".to_string())],
         ));
         expected.push((DependencyNode::Child("childC".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1212,7 +1345,7 @@ mod tests {
         ));
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
         expected.push((DependencyNode::Child("childB".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1245,7 +1378,7 @@ mod tests {
             vec![DependencyNode::Child("childB".to_string())],
         ));
         expected.push((DependencyNode::Child("childB".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     // add test where B depends on A via environment and C depends on B via environment
@@ -1296,7 +1429,7 @@ mod tests {
             vec![DependencyNode::Child("childC".to_string())],
         ));
         expected.push((DependencyNode::Child("childC".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1340,7 +1473,7 @@ mod tests {
             vec![DependencyNode::Child("childC".to_string())],
         ));
         expected.push((DependencyNode::Child("childC".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1374,7 +1507,7 @@ mod tests {
             vec![DependencyNode::Collection("coll".to_string())],
         ));
         expected.push((DependencyNode::Collection("coll".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test_case(DependencyType::Weak)]
@@ -1427,7 +1560,7 @@ mod tests {
         expected.push((DependencyNode::Child(child_a.name.clone()), vec![]));
         expected.sort_unstable();
 
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1488,7 +1621,7 @@ mod tests {
         ));
         expected.sort_unstable();
 
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1554,7 +1687,7 @@ mod tests {
         expected.push((DependencyNode::Child(child_a.name.clone()), vec![]));
         expected.push((DependencyNode::Child(child_c.name.clone()), vec![]));
         expected.sort_unstable();
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test_case(DependencyType::Weak)]
@@ -1629,7 +1762,7 @@ mod tests {
         expected.push((DependencyNode::Child(child_c.name.clone()), vec![]));
         expected.sort_unstable();
 
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1695,7 +1828,7 @@ mod tests {
         ));
         expected.push((DependencyNode::Child(child_c.name.clone()), vec![]));
         expected.sort_unstable();
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     /// Tests a graph that looks like the below, tildes indicate a
@@ -1824,7 +1957,7 @@ mod tests {
         expected.push((DependencyNode::Child(child_d.name.clone()), vec![]));
         expected.push((DependencyNode::Child(child_e.name.clone()), vec![]));
         expected.sort_unstable();
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1850,7 +1983,7 @@ mod tests {
             ..default_component_decl()
         };
 
-        process_component_dependencies(&decl);
+        process_component_dependencies(&FakeComponent::from_decl(decl));
     }
 
     #[test]
@@ -1876,7 +2009,7 @@ mod tests {
             ..default_component_decl()
         };
 
-        process_component_dependencies(&decl);
+        process_component_dependencies(&FakeComponent::from_decl(decl));
     }
 
     #[test]
@@ -1908,7 +2041,7 @@ mod tests {
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
         expected.push((DependencyNode::Parent, vec![]));
         expected.push((DependencyNode::Child("childA".to_string()), vec![DependencyNode::Parent]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -1952,7 +2085,7 @@ mod tests {
         expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childB".to_string())]));
         expected.push((DependencyNode::Child("childA".to_string()), vec![DependencyNode::Parent]));
         expected.push((DependencyNode::Child("childB".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -2020,7 +2153,7 @@ mod tests {
             DependencyNode::Child("childB".to_string()),
             vec![DependencyNode::Child("childA".to_string())],
         ));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -2052,7 +2185,7 @@ mod tests {
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
         expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childA".to_string())]));
         expected.push((DependencyNode::Child("childA".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -2103,7 +2236,7 @@ mod tests {
         expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childB".to_string())]));
         expected.push((DependencyNode::Child("childA".to_string()), vec![DependencyNode::Parent]));
         expected.push((DependencyNode::Child("childB".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[test]
@@ -2148,7 +2281,7 @@ mod tests {
             (DependencyNode::Child(child_b.name.clone()), vec![]),
         ];
         expected.sort_unstable();
-        validate_results(expected, process_component_dependencies(&decl));
+        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
     }
 
     #[fuchsia::test]

@@ -56,7 +56,7 @@ mod discover;
 mod purge;
 mod purge_child;
 mod resolve;
-mod shutdown;
+pub mod shutdown;
 pub mod start;
 mod stop;
 

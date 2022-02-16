@@ -29,8 +29,8 @@ pub type InstanceId = u32;
 impl ChildMonikerBase for InstancedChildMoniker {
     /// Parses an `ChildMoniker` from a string.
     ///
-    /// Input strings should be of the format `<name>(:<collection>)?:<instance_id>`, e.g. `foo:42`
-    /// or `biz:foo:42`.
+    /// Input strings should be of the format `(<collection>:)?<name>:<instance_id>`, e.g. `foo:42`
+    /// or `coll:foo:42`.
     fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError> {
         let rep = rep.as_ref();
         let parts: Vec<_> = rep.split(":").collect();
@@ -97,6 +97,15 @@ impl InstancedChildMoniker {
             format!("{}:{}", name, instance)
         };
         Self { name, collection, instance, rep }
+    }
+
+    /// Returns a moniker for a static child.
+    ///
+    /// The returned value will have no `collection`, and will have an `instance_id` of 0.
+    ///
+    /// TODO(fxbug.dev/77563): This does not currently validate the String inputs.
+    pub fn static_child(name: String) -> Self {
+        Self::new(name, None, 0)
     }
 
     /// Converts this child moniker into an instanced moniker.

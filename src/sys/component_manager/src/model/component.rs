@@ -5,8 +5,8 @@
 use {
     crate::model::{
         actions::{
-            start, ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction, ResolveAction,
-            StartAction, StopAction,
+            shutdown, start, ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction,
+            ResolveAction, StartAction, StopAction,
         },
         context::{ModelContext, WeakModelContext},
         environment::Environment,
@@ -1240,6 +1240,55 @@ impl fmt::Debug for InstanceState {
     }
 }
 
+/// Expose instance state in the format in which the `shutdown` action expects
+/// to see it.
+///
+/// Largely shares its implementation with `ResolvedInstanceInterface`.
+impl shutdown::Component for ResolvedInstanceState {
+    fn uses(&self) -> Vec<UseDecl> {
+        <Self as ResolvedInstanceInterface>::uses(self)
+    }
+
+    fn exposes(&self) -> Vec<cm_rust::ExposeDecl> {
+        <Self as ResolvedInstanceInterface>::exposes(self)
+    }
+
+    fn offers(&self) -> Vec<cm_rust::OfferDecl> {
+        // Includes both static and dynamic offers.
+        <Self as ResolvedInstanceInterface>::offers(self)
+    }
+
+    fn capabilities(&self) -> Vec<cm_rust::CapabilityDecl> {
+        <Self as ResolvedInstanceInterface>::capabilities(self)
+    }
+
+    fn collections(&self) -> Vec<cm_rust::CollectionDecl> {
+        <Self as ResolvedInstanceInterface>::collections(self)
+    }
+
+    fn environments(&self) -> Vec<cm_rust::EnvironmentDecl> {
+        self.decl.environments.clone()
+    }
+
+    fn children(&self) -> Vec<shutdown::Child> {
+        // Includes both static and dynamic children.
+        ResolvedInstanceState::all_children(self)
+            .iter()
+            .map(|(moniker, instance)| shutdown::Child {
+                moniker: moniker.clone(),
+                environment_name: instance.environment().name().map(|n| n.to_string()),
+                // Component is live if `live_children` contains its partial
+                // moniker, and the `instance_id` of the live child matches.
+                is_live: self
+                    .live_children
+                    .get(&moniker.to_child_moniker())
+                    .map(|(live_instance_id, _)| *live_instance_id)
+                    == Some(moniker.instance()),
+            })
+            .collect()
+    }
+}
+
 /// The mutable state of a resolved component instance.
 pub struct ResolvedInstanceState {
     /// The ExecutionScope for this component. Pseudo directories should be hosted with this
@@ -1876,8 +1925,14 @@ pub mod tests {
             },
         },
         assert_matches::assert_matches,
-        cm_rust::EventMode,
-        cm_rust_testing::ComponentDeclBuilder,
+        cm_rust::{
+            CapabilityDecl, CapabilityPath, ChildRef, DependencyType, EventMode, ExposeDecl,
+            ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl, OfferDirectoryDecl,
+            OfferProtocolDecl, OfferSource, OfferTarget, ProtocolDecl, UseProtocolDecl, UseSource,
+        },
+        cm_rust_testing::{
+            ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
+        },
         component_id_index::gen_instance_id,
         fidl::endpoints,
         fuchsia_async as fasync,
@@ -2541,5 +2596,403 @@ pub mod tests {
             fsys::StartResult::AlreadyStarted,
             root_realm.start(&StartReason::Root).await.unwrap()
         );
+    }
+
+    #[fuchsia::test]
+    async fn shutdown_component_interface_no_dynamic() {
+        let example_offer = OfferDecl::Directory(OfferDirectoryDecl {
+            source: OfferSource::static_child("a".to_string()),
+            target: OfferTarget::static_child("b".to_string()),
+            source_name: "foo".into(),
+            target_name: "foo".into(),
+            dependency_type: DependencyType::Strong,
+            rights: None,
+            subdir: None,
+        });
+        let example_capability = ProtocolDecl { name: "bar".into(), source_path: None };
+        let example_expose = ExposeDecl::Protocol(ExposeProtocolDecl {
+            source: ExposeSource::Self_,
+            target: ExposeTarget::Parent,
+            source_name: "bar".into(),
+            target_name: "bar".into(),
+        });
+        let example_use = UseDecl::Protocol(UseProtocolDecl {
+            source: UseSource::Parent,
+            source_name: "baz".into(),
+            target_path: CapabilityPath::try_from("/svc/baz").expect("parsing"),
+            dependency_type: DependencyType::Strong,
+        });
+
+        let env_a = EnvironmentDeclBuilder::new()
+            .name("env_a")
+            .extends(fdecl::EnvironmentExtends::Realm)
+            .build();
+        let env_b = EnvironmentDeclBuilder::new()
+            .name("env_b")
+            .extends(fdecl::EnvironmentExtends::Realm)
+            .build();
+
+        let root_decl = ComponentDeclBuilder::new()
+            .add_environment(env_a.clone())
+            .add_environment(env_b.clone())
+            .add_child(ChildDeclBuilder::new().name("a").environment("env_a").build())
+            .add_child(ChildDeclBuilder::new().name("b").environment("env_b").build())
+            .add_lazy_child("c")
+            .add_transient_collection("coll")
+            .offer(example_offer.clone())
+            .expose(example_expose.clone())
+            .protocol(example_capability.clone())
+            .use_(example_use.clone())
+            .build();
+        let components = vec![
+            ("root", root_decl.clone()),
+            ("a", component_decl_with_test_runner()),
+            ("b", component_decl_with_test_runner()),
+            ("c", component_decl_with_test_runner()),
+        ];
+
+        let test = RoutingTestBuilder::new("root", components).build().await;
+
+        let root_component =
+            test.model.start_instance(&AbsoluteMoniker::root(), &StartReason::Root).await.unwrap();
+
+        let root_resolved = root_component.lock_resolved_state().await.expect("resolve failed");
+
+        assert_eq!(
+            vec![CapabilityDecl::Protocol(example_capability)],
+            shutdown::Component::capabilities(&*root_resolved)
+        );
+        assert_eq!(vec![example_use], shutdown::Component::uses(&*root_resolved));
+        assert_eq!(vec![example_offer], shutdown::Component::offers(&*root_resolved));
+        assert_eq!(vec![example_expose], shutdown::Component::exposes(&*root_resolved));
+        assert_eq!(
+            vec![root_decl.collections[0].clone()],
+            shutdown::Component::collections(&*root_resolved)
+        );
+        assert_eq!(vec![env_a, env_b], shutdown::Component::environments(&*root_resolved));
+
+        let mut children = shutdown::Component::children(&*root_resolved);
+        children.sort();
+        assert_eq!(
+            vec![
+                shutdown::Child {
+                    moniker: "a:0".into(),
+                    environment_name: Some("env_a".to_string()),
+                    is_live: true
+                },
+                shutdown::Child {
+                    moniker: "b:0".into(),
+                    environment_name: Some("env_b".to_string()),
+                    is_live: true
+                },
+                shutdown::Child { moniker: "c:0".into(), environment_name: None, is_live: true },
+            ],
+            children
+        );
+    }
+
+    #[fuchsia::test]
+    async fn shutdown_component_interface_dynamic_children_and_offers() {
+        let example_offer = OfferDecl::Directory(OfferDirectoryDecl {
+            source: OfferSource::static_child("a".to_string()),
+            target: OfferTarget::static_child("b".to_string()),
+            source_name: "foo".into(),
+            target_name: "foo".into(),
+            dependency_type: DependencyType::Strong,
+            rights: None,
+            subdir: None,
+        });
+
+        let components = vec![
+            (
+                "root",
+                ComponentDeclBuilder::new()
+                    .add_environment(
+                        EnvironmentDeclBuilder::new()
+                            .name("env_a")
+                            .extends(fdecl::EnvironmentExtends::Realm)
+                            .build(),
+                    )
+                    .add_environment(
+                        EnvironmentDeclBuilder::new()
+                            .name("env_b")
+                            .extends(fdecl::EnvironmentExtends::Realm)
+                            .build(),
+                    )
+                    .add_child(ChildDeclBuilder::new().name("a").environment("env_a").build())
+                    .add_lazy_child("b")
+                    .add_collection(
+                        CollectionDeclBuilder::new_transient_collection("coll_1")
+                            .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
+                            .build(),
+                    )
+                    .add_collection(
+                        CollectionDeclBuilder::new_transient_collection("coll_2")
+                            .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
+                            .environment("env_b")
+                            .build(),
+                    )
+                    .offer(example_offer.clone())
+                    .build(),
+            ),
+            ("a", component_decl_with_test_runner()),
+            ("b", component_decl_with_test_runner()),
+        ];
+
+        let test = ActionsTest::new("root", components, Some(vec![].into())).await;
+
+        test.create_dynamic_child("coll_1", "a").await;
+        test.create_dynamic_child_with_args(
+            "coll_1",
+            "b",
+            fcomponent::CreateChildArgs {
+                dynamic_offers: Some(vec![fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                    source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                        name: "a".to_string(),
+                        collection: Some("coll_1".to_string()),
+                    })),
+                    source_name: Some("dyn_offer_source_name".to_string()),
+                    target_name: Some("dyn_offer_target_name".to_string()),
+                    dependency_type: Some(fdecl::DependencyType::Strong),
+                    ..fdecl::OfferProtocol::EMPTY
+                })]),
+                ..fcomponent::CreateChildArgs::EMPTY
+            },
+        )
+        .await;
+        test.create_dynamic_child("coll_2", "a").await;
+
+        let example_dynamic_offer = OfferDecl::Protocol(OfferProtocolDecl {
+            source: OfferSource::Child(ChildRef {
+                name: "a".to_string(),
+                collection: Some("coll_1".to_string()),
+            }),
+            target: OfferTarget::Child(ChildRef {
+                name: "b".to_string(),
+                collection: Some("coll_1".to_string()),
+            }),
+            source_name: "dyn_offer_source_name".into(),
+            target_name: "dyn_offer_target_name".into(),
+            dependency_type: DependencyType::Strong,
+        });
+
+        let root_component = test.look_up(vec![].into()).await;
+
+        {
+            let root_resolved = root_component.lock_resolved_state().await.expect("resolving");
+
+            let mut children = shutdown::Component::children(&*root_resolved);
+            children.sort();
+            pretty_assertions::assert_eq!(
+                vec![
+                    shutdown::Child {
+                        moniker: "a:0".into(),
+                        environment_name: Some("env_a".to_string()),
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "b:0".into(),
+                        environment_name: None,
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "coll_1:a:1".into(),
+                        environment_name: None,
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "coll_1:b:2".into(),
+                        environment_name: None,
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "coll_2:a:3".into(),
+                        environment_name: Some("env_b".to_string()),
+                        is_live: true
+                    },
+                ],
+                children
+            );
+            pretty_assertions::assert_eq!(
+                vec![example_offer.clone(), example_dynamic_offer.clone()],
+                shutdown::Component::offers(&*root_resolved)
+            )
+        }
+
+        // Destroy `coll_1:b`. It should still be listed, but shouldn't be live.
+        // The dynamic offer should be deleted.
+        ActionSet::register(root_component.clone(), DestroyChildAction::new("coll_1:b".into()))
+            .await
+            .expect("destroy failed");
+
+        {
+            let root_resolved = root_component.lock_resolved_state().await.expect("resolving");
+
+            let mut children = shutdown::Component::children(&*root_resolved);
+            children.sort();
+            pretty_assertions::assert_eq!(
+                vec![
+                    shutdown::Child {
+                        moniker: "a:0".into(),
+                        environment_name: Some("env_a".to_string()),
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "b:0".into(),
+                        environment_name: None,
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "coll_1:a:1".into(),
+                        environment_name: None,
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "coll_1:b:2".into(),
+                        environment_name: None,
+                        is_live: false
+                    },
+                    shutdown::Child {
+                        moniker: "coll_2:a:3".into(),
+                        environment_name: Some("env_b".to_string()),
+                        is_live: true
+                    },
+                ],
+                children
+            );
+
+            pretty_assertions::assert_eq!(
+                vec![example_offer.clone()],
+                shutdown::Component::offers(&*root_resolved)
+            )
+        }
+
+        // Recreate `coll_1:b`, this time with a dynamic offer from `a` in the other
+        // collection. Both versions should be listed.
+        test.create_dynamic_child_with_args(
+            "coll_1",
+            "b",
+            fcomponent::CreateChildArgs {
+                dynamic_offers: Some(vec![fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                    source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                        name: "a".to_string(),
+                        collection: Some("coll_2".to_string()),
+                    })),
+                    source_name: Some("dyn_offer2_source_name".to_string()),
+                    target_name: Some("dyn_offer2_target_name".to_string()),
+                    dependency_type: Some(fdecl::DependencyType::Strong),
+                    ..fdecl::OfferProtocol::EMPTY
+                })]),
+                ..fcomponent::CreateChildArgs::EMPTY
+            },
+        )
+        .await;
+
+        let example_dynamic_offer2 = OfferDecl::Protocol(OfferProtocolDecl {
+            source: OfferSource::Child(ChildRef {
+                name: "a".to_string(),
+                collection: Some("coll_2".to_string()),
+            }),
+            target: OfferTarget::Child(ChildRef {
+                name: "b".to_string(),
+                collection: Some("coll_1".to_string()),
+            }),
+            source_name: "dyn_offer2_source_name".into(),
+            target_name: "dyn_offer2_target_name".into(),
+            dependency_type: DependencyType::Strong,
+        });
+
+        {
+            let root_resolved = root_component.lock_resolved_state().await.expect("resolving");
+
+            let mut children = shutdown::Component::children(&*root_resolved);
+            children.sort();
+            pretty_assertions::assert_eq!(
+                vec![
+                    shutdown::Child {
+                        moniker: "a:0".into(),
+                        environment_name: Some("env_a".to_string()),
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "b:0".into(),
+                        environment_name: None,
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "coll_1:a:1".into(),
+                        environment_name: None,
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "coll_1:b:2".into(),
+                        environment_name: None,
+                        is_live: false
+                    },
+                    shutdown::Child {
+                        moniker: "coll_1:b:4".into(),
+                        environment_name: None,
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "coll_2:a:3".into(),
+                        environment_name: Some("env_b".to_string()),
+                        is_live: true
+                    },
+                ],
+                children
+            );
+
+            pretty_assertions::assert_eq!(
+                vec![example_offer.clone(), example_dynamic_offer2.clone()],
+                shutdown::Component::offers(&*root_resolved)
+            )
+        }
+
+        // Finish destroying the original `coll_1:b`.
+        ActionSet::register(root_component.clone(), PurgeChildAction::new("coll_1:b:2".into()))
+            .await
+            .expect("purge failed");
+
+        {
+            let root_resolved = root_component.lock_resolved_state().await.expect("resolving");
+
+            let mut children = shutdown::Component::children(&*root_resolved);
+            children.sort();
+            pretty_assertions::assert_eq!(
+                vec![
+                    shutdown::Child {
+                        moniker: "a:0".into(),
+                        environment_name: Some("env_a".to_string()),
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "b:0".into(),
+                        environment_name: None,
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "coll_1:a:1".into(),
+                        environment_name: None,
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "coll_1:b:4".into(),
+                        environment_name: None,
+                        is_live: true
+                    },
+                    shutdown::Child {
+                        moniker: "coll_2:a:3".into(),
+                        environment_name: Some("env_b".to_string()),
+                        is_live: true
+                    },
+                ],
+                children
+            );
+            pretty_assertions::assert_eq!(
+                vec![example_offer.clone(), example_dynamic_offer2.clone()],
+                shutdown::Component::offers(&*root_resolved)
+            )
+        }
     }
 }

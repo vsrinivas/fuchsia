@@ -472,8 +472,20 @@ impl ActionsTest {
     }
 
     /// Add a dynamic child to the given collection, with the given name to the
-    /// component that our proxy member variable corresponds to.
+    /// component that our proxy member variable corresponds to. Passes no
+    /// `CreateChildArgs`.
     pub async fn create_dynamic_child(&self, coll: &str, name: &str) {
+        self.create_dynamic_child_with_args(coll, name, fcomponent::CreateChildArgs::EMPTY).await
+    }
+
+    /// Add a dynamic child to the given collection, with the given name to the
+    /// component that our proxy member variable corresponds to.
+    pub async fn create_dynamic_child_with_args(
+        &self,
+        coll: &str,
+        name: &str,
+        args: fcomponent::CreateChildArgs,
+    ) {
         let mut collection_ref = fdecl::CollectionRef { name: coll.to_string() };
         let child_decl = ChildDecl {
             name: name.to_string(),
@@ -487,7 +499,7 @@ impl ActionsTest {
             .realm_proxy
             .as_ref()
             .expect("realm service not started")
-            .create_child(&mut collection_ref, child_decl, fcomponent::CreateChildArgs::EMPTY)
+            .create_child(&mut collection_ref, child_decl, args)
             .await;
         res.expect("failed to create child").expect("failed to create child");
     }
