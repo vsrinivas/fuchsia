@@ -89,7 +89,7 @@ TEST(BootsvcIntegrationTest, Loader) {
   dlclose(ptr);
 }
 
-// Make sure that bootsvc gave us a namespace with only /boot and /svc.
+// Make sure that bootsvc gave us a namespace with only /boot.
 TEST(BootsvcIntegrationTest, Namespace) {
   fdio_flat_namespace_t* ns;
   ASSERT_EQ(fdio_ns_export_root(&ns), ZX_OK);
@@ -99,9 +99,8 @@ TEST(BootsvcIntegrationTest, Namespace) {
     zx_handle_close(ns->handle[i]);
   }
 
-  ASSERT_EQ(ns->count, 2);
+  ASSERT_EQ(ns->count, 1);
   EXPECT_STREQ(ns->path[0], "/boot");
-  EXPECT_STREQ(ns->path[1], "/svc");
   free(ns);
 
   // /boot should be RX and /svc should be RW. The call to fdio_open_fd should fail if that is not
@@ -112,11 +111,6 @@ TEST(BootsvcIntegrationTest, Namespace) {
                          fd.reset_and_get_address()));
   EXPECT_EQ(fd_get_flags(std::move(fd)),
             fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable);
-  EXPECT_EQ(ZX_OK,
-            fdio_open_fd("/svc", fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
-                         fd.reset_and_get_address()));
-  EXPECT_EQ(fd_get_flags(std::move(fd)),
-            fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable);
 }
 
 // We simply check here whether files can be opened with OPEN_RIGHT_EXECUTABLE or not.

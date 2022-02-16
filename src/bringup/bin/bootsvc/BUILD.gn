@@ -38,8 +38,6 @@ source_set("lib") {
     "bootfs-loader-service.h",
     "bootfs-service.cc",
     "bootfs-service.h",
-    "svcfs-service.cc",
-    "svcfs-service.h",
   ]
   public_deps = [
     ":util",

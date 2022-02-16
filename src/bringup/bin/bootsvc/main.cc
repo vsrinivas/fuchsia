@@ -35,7 +35,6 @@
 
 #include "bootfs-loader-service.h"
 #include "bootfs-service.h"
-#include "svcfs-service.h"
 #include "util.h"
 
 namespace {
@@ -141,24 +140,20 @@ zx_status_t ExtractBootArgsFromImage(const zx::vmo& image_vmo, bootsvc::ItemMap*
 // It will receive:
 // - stdout & stderr wired up to a debuglog handle
 // - A namespace containing:
-//   - A /boot directory, connected to the bootfs service hosted by bootsvc
-//   - A /svc directory, containing other services hosted by bootsvc, including:
-//     - fuchsia.boot.FactoryItems, to access factory-related ZBI items
-//     - fuchsia.boot.Items, to access ZBI items including bootloader files
+//   - (Optionally) A /boot directory, connected to the bootfs service hosted by bootsvc. If
+//       --host_bootfs is passed to component manager, it will host bootfs instead.
 // - A loader that can load libraries from /boot, hosted by bootsvc
 //
 // If the next process terminates, bootsvc will quit.
 void LaunchNextProcess(const std::vector<std::string>& args,
                        fbl::RefPtr<bootsvc::BootfsService> bootfs,
-                       fbl::RefPtr<bootsvc::SvcfsService> svcfs,
                        std::shared_ptr<bootsvc::BootfsLoaderService> loader_svc,
                        Resources& resources, Vmos& vmos, const zx::debuglog& log,
                        async::Loop& loop) {
   ZX_DEBUG_ASSERT(!args.empty());
 
-  // Maximum of two handles (bootfs and svcfs), but only svcfs will be set when
-  // --host_bootfs is used.
-  const char* nametable[2] = {};
+  // The nametable will contain bootfs only if --host_bootfs is not used.
+  const char* nametable[1] = {};
   uint32_t count = 0;
 
   zx_status_t status;
@@ -217,12 +212,6 @@ void LaunchNextProcess(const std::vector<std::string>& args,
       launchpad_add_handle(lp, vmos.kernel_files[i].release(), PA_HND(PA_VMO_KERNEL_FILE, i));
     }
   }
-
-  zx::channel svcfs_conn;
-  status = svcfs->CreateRootConnection(&svcfs_conn);
-  ZX_ASSERT_MSG(status == ZX_OK, "svcfs conn creation failed: %s\n", zx_status_get_string(status));
-  launchpad_add_handle(lp, svcfs_conn.release(), PA_HND(PA_NS_DIR, count));
-  nametable[count++] = "/svc";
 
   // Pass on resources to the next process.
   launchpad_add_handle(lp, vmos.zbi.release(), PA_HND(PA_VMO_BOOTDATA, 0));
@@ -462,15 +451,11 @@ int main(int argc, char** argv) {
     ZX_ASSERT_MSG(loader_svc != nullptr, "Failed to create bootfs loader service\n");
   }
 
-  // Set up the svcfs service
-  printf("bootsvc: Creating svcfs service...\n");
-  fbl::RefPtr<bootsvc::SvcfsService> svcfs_svc = bootsvc::SvcfsService::Create(loop.dispatcher());
-
   // Launch the next process in the chain.  This must be in a thread, since
   // it may issue requests to the loader, which runs in the async loop that
   // starts running after this.
   printf("bootsvc: Launching next process...\n");
-  std::thread(LaunchNextProcess, next_args, bootfs_svc, svcfs_svc, loader_svc, std::ref(resources),
+  std::thread(LaunchNextProcess, next_args, bootfs_svc, loader_svc, std::ref(resources),
               std::ref(vmos), std::cref(log), std::ref(loop))
       .detach();
 
