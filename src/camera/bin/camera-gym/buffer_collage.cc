@@ -208,7 +208,7 @@ fpromise::promise<uint32_t> BufferCollage::AddCollection(
         view.collection->SetConstraints(true, {.usage{
                                                    .cpu = fuchsia::sysmem::cpuUsageRead,
                                                },
-                                               .min_buffer_count_for_camping = 1,
+                                               .min_buffer_count_for_camping = 0,
                                                .has_buffer_memory_constraints = true,
                                                .buffer_memory_constraints{
                                                    .ram_domain_supported = true,
