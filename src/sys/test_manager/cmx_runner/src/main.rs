@@ -87,14 +87,18 @@ fn get_urls(
         .find(|e| e.key == LEGACY_URL_KEY)
         .ok_or(StartupInfoError::NoLegacyUrl(resolved_url.into()))?;
 
-    match legacy_url_entry
+    let legacy_url = legacy_url_entry
         .value
         .as_ref()
         .ok_or(StartupInfoError::LegacyUrlNoValue(resolved_url.into()))?
-        .as_ref()
-    {
+        .as_ref();
+    match legacy_url {
         fdata::DictionaryValue::Str(url) => Ok((resolved_url.clone(), url.clone())),
-        fdata::DictionaryValue::StrVec(_) => {
+        _ => {
+            warn!(
+                "received invalid legacy url type. Expected string, but received: {:?}",
+                legacy_url
+            );
             return Err(StartupInfoError::InvalidLegacyUrl(resolved_url.into()));
         }
     }

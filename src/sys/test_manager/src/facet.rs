@@ -43,6 +43,10 @@ fn get_suite_collection(decl: &fdecl::Component) -> Result<&'static str, FacetEr
             if entry.key == TEST_TYPE_FACET_KEY {
                 let test_type =
                     entry.value.as_ref().ok_or(FacetError::NullFacet(TEST_TYPE_FACET_KEY))?;
+                // Temporarily allow unreachable patterns while fuchsia.data.DictionaryValue
+                // is migrated from `strict` to `flexible`.
+                // TODO(https://fxbug.dev/92247): Remove this.
+                #[allow(unreachable_patterns)]
                 match test_type.as_ref() {
                     fdata::DictionaryValue::Str(s) => {
                         if TEST_TYPE_REALM_MAP.contains_key(s.as_str()) {
@@ -65,6 +69,20 @@ fn get_suite_collection(decl: &fdecl::Component) -> Result<&'static str, FacetEr
                         return Err(FacetError::InvalidFacetValue(
                             TEST_TYPE_FACET_KEY,
                             format!("{:?}", s),
+                            format!(
+                                "one of {}",
+                                TEST_TYPE_REALM_MAP
+                                    .keys()
+                                    .map(|k| k.to_string())
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            ),
+                        ));
+                    }
+                    _ => {
+                        return Err(FacetError::InvalidFacetValue(
+                            TEST_TYPE_FACET_KEY,
+                            format!("{:?}", test_type),
                             format!(
                                 "one of {}",
                                 TEST_TYPE_REALM_MAP
