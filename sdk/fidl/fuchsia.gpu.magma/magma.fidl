@@ -126,6 +126,8 @@ type MapFlags = flexible bits : uint64 {
     READ = 0x1;
     WRITE = 0x2;
     EXECUTE = 0x4;
+    /// Uncommitted pages may be comitted on fault by the GPU. If this flag is not set, access
+    /// faults should cause an error.
     GROWABLE = 0x8;
 
     /// Vendor specific definitions start here
