@@ -209,6 +209,9 @@ if [[ -n $VNC ]]; then
     ARGS+=" -vnc $VNC"
 fi
 
+# Always use virtio as the rng source
+ARGS+=" -device virtio-rng-pci"
+
 if (( !$GRAPHICS  )); then
     ARGS+=" -nographic"
 else
@@ -333,7 +336,6 @@ fi
 # start a few extra harmless virtio devices that can be ignored
 if (( $VIRTIO )); then
     ARGS+=" -device virtio-serial-pci"
-    ARGS+=" -device virtio-rng-pci"
     ARGS+=" -device virtio-mouse-pci"
     ARGS+=" -device virtio-keyboard-pci"
 fi
