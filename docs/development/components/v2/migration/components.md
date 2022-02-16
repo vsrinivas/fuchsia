@@ -496,6 +496,136 @@ your v1 component instead of using the new capabilities routed to it through
 }
 ```
 
+## Considerations for out-of-tree components
+
+This section covers the tactical considerations of performing a soft migration
+from using sysmgr configs to core shards when products defined outside
+fuchsia.git ("out-of-tree" or "OOT") use your component. This type of migration
+requires special consideration because it is not possible to change both
+repositories simulateneously. Some of this section duplicates some other content
+in this guide to avoid needing to jump back and forth. Follow the five steps
+below to complete the soft migration.
+
+1. Define an empty core shard
+
+   Define an empty core shard by creating a file with an empty object. Note this
+   means that the file itself is not empty.
+
+   ```json5
+    // font_provider/meta/component.core_shard.cml
+    { }
+   ```
+
+   Then define this as a core shard build target.
+
+   ```gn
+   # font_provider/BUILD.gn
+
+   import("//src/sys/core/build/core_shard.gni")
+
+   core_shard("font_provider_shard") {
+       shard_file = "meta/component.core_shard.cml"
+   }
+   ```
+
+1. Update OOT products to depend on new shard
+
+   In the OOT repository, update the product definitions to depend on the new
+   shard in fuchsia.git.
+
+   ```gn
+   # //vendor/products/product.gni
+   core_realm_shards += [ "//path/to/font_provider:font_provider_shard" ]
+   ```
+
+1. Populate the core shard and empty out the sysmgr config
+
+   This step is effectively the swap operation where products will start to use
+   the v2 component and stop using the v1 component.
+
+   First, populate the core shard created in the first step.
+
+   ```json5
+   // font_provider/meta/component.core_shard.cml
+   {
+       children: [
+           {
+               name: "font_provider",
+               url: "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cm",
+           },
+       ],
+       // if appmgr components use this protocol
+       use: [
+           {
+               protocol: "fuchsia.fonts.Provider",
+               from: "#font_provider",
+           },
+       ],
+       offer: [
+           {
+               protocol: "fuchsia.logger.LogSink",
+               from: "parent",
+               to: [ "#font_provider" ],
+           },
+           {
+               protocol: "fuchsia.fonts.Provider",
+               from: "#font_provider",
+               to: [ "#session-manager" ],
+           },
+       ],
+   }
+   ```
+
+   Now remove any entries from sysmgr config files where the v1 component
+   appeared. If your component had its own sysmgr config this means the config
+   file will now contain an empty JSON object.
+
+   ```json
+   // font_provider/config/services.config
+   { }
+   ```
+
+   Update any fuchsia.git products so they depend on the core shard. The
+   procedure is the same as for OOT products, except make the changes to the
+   product definitions in fuchsia.git.
+
+   If your component's sysmgr config was specific to your component, remove any
+   dependencies that fuchsia.git products have on that sysmgr config. If the
+   sysmgr config has a build target called
+   `//path/to/font_provider:sysmgr_config` then an effective way to locate these
+   dependencies is searching the codebase for "font_provider:sysmgr_config"
+   using [CodeSearch][sysmgr-gn-config-search].
+
+1. Remove OOT dependencies on the v1 sysmgr config
+
+   If your component's sysmgr service config was part of a larger sysmgr config
+   file you can skip this section. Otherwise, remove the dependencies on your
+   component's dedicated v1 sysmgr config. This dependency is expressed as an
+   addition to the `base_package_labels` in a product's .gni. If the sysmgr
+   config has a build target called `//path/to/font_provider:sysmgr_config` then
+   an effective way to locate these dependencies is searching the codebase for
+   "font_provider:sysmgr_config" using [CodeSearch][sysmgr-gn-config-search].
+
+1. Remove any empty sysmgr config files and build targets
+
+   If the sysmgr config file that contained your component's entry or entries is
+   empty, delete the build target for the config file. The build target might
+   look something like the following.
+
+   ```gn
+   # //path/to/font_provider/BUILD.gn
+   {
+       ...
+       config_data("sysmgr_config") {
+       sources = [ "config/services.config" ]
+       for_pkg = "sysmgr"
+       ...
+   }
+   ```
+
+   In the same change, delete the sysmgr config file itself, for example
+   `//path/to/font_provider/config/services.config`.
+
 ## Migrate component features {#features}
 
 Explore the following sections for additional migration guidance on
@@ -555,4 +685,5 @@ correctly, try following the advice in
 [manifests-use]: https://fuchsia.dev/reference/cml#use
 [sysmgr-config]: /docs/concepts/components/v1/sysmgr.md
 [sysmgr-config-search]: https://cs.opensource.google/search?q=fuchsia-pkg:%2F%2Ffuchsia.com%2F.*%23meta%2Fmy_component.cmx%20-f:.*.cmx$%20%5C%22services%5C%22&ss=fuchsia
+[sysmgr-gn-config-search]: https://cs.opensource.google/search?q=-f:.*.gn%20"font_provider:sysmgr_config"&ss=fuchsia
 [troubleshooting-components]: /docs/development/components/troubleshooting.md
