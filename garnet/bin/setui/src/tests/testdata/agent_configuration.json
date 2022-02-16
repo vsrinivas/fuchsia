@@ -6,6 +6,9 @@
         "Restore",
         "Inspect",
         "InspectPolicy",
-        "InspectSettingData"
+        "InspectSettingData",
+        "InspectPolicyValues",
+        "InspectSettingProxy",
+        "InspectSettingValues"
     ]
 }

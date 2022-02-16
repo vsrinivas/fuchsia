@@ -58,6 +58,7 @@ pub enum AgentType {
     MediaButtons,
     /// Responsible for initializing all of the controllers.
     Restore,
+    // TODO(fxb/93577): Remove transition code.
     /// Responsible for logging to Inspect.
     Inspect,
     /// Responsible for recording internal state of messages sent on the message
@@ -66,6 +67,14 @@ pub enum AgentType {
     /// Responsible for logging all settings values of messages between the
     /// proxy and setting handlers to Inspect.
     InspectSettingData,
+    /// Responsible for recording internal state of messages sent on the message
+    /// hub to policy proxies handlers.
+    InspectPolicyValues,
+    /// Responsible for logging all settings values of messages between the
+    /// proxy and setting handlers to Inspect.
+    InspectSettingProxy,
+    /// Responsible for logging the setting values in the setting proxy to inspect.
+    InspectSettingValues,
 }
 
 impl AgentType {
@@ -102,6 +111,16 @@ impl AgentType {
                     .initialize::<crate::agent::inspect_setting_data::InspectSettingAgent>()
                     .await
             }
+            AgentType::InspectSettingProxy => storage_factory
+                .initialize::<crate::agent::inspect_mod::setting_proxy::SettingProxyInspectAgent>()
+                .await,
+            AgentType::InspectPolicyValues => storage_factory
+                .initialize::<crate::agent::inspect_mod::policy_values::PolicyValuesInspectAgent>()
+                .await,
+            AgentType::InspectSettingValues => storage_factory
+                .initialize::<crate::agent::inspect_mod::setting_values::SettingValuesInspectAgent>(
+                )
+                .await,
         }
     }
 }
@@ -121,6 +140,15 @@ impl From<AgentType> for BlueprintHandle {
             AgentType::InspectPolicy => crate::agent::inspect_policy::blueprint::create(),
             AgentType::InspectSettingData => {
                 crate::agent::inspect_setting_data::blueprint::create()
+            }
+            AgentType::InspectSettingProxy => {
+                crate::agent::inspect_mod::setting_proxy::blueprint::create()
+            }
+            AgentType::InspectPolicyValues => {
+                crate::agent::inspect_mod::policy_values::blueprint::create()
+            }
+            AgentType::InspectSettingValues => {
+                crate::agent::inspect_mod::setting_values::blueprint::create()
             }
         }
     }

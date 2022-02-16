@@ -22,7 +22,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::handler::setting_handler::persist::UpdateState;
-use crate::handler::stash_inspect_logger::StashInspectLogger;
+use crate::inspect::stash_logger::StashInspectLogger;
 
 const SETTINGS_PREFIX: &str = "settings";
 
@@ -590,7 +590,7 @@ pub(crate) mod testing {
     use futures::lock::Mutex;
     use futures::prelude::*;
 
-    use crate::handler::stash_inspect_logger::StashInspectLoggerHandle;
+    use crate::inspect::stash_logger::StashInspectLoggerHandle;
 
     use super::*;
 
@@ -797,7 +797,7 @@ mod tests {
 
     use testing::*;
 
-    use crate::handler::stash_inspect_logger::StashInspectLoggerHandle;
+    use crate::inspect::stash_logger::StashInspectLoggerHandle;
     use crate::tests::helpers::move_executor_forward_and_get;
 
     use super::*;

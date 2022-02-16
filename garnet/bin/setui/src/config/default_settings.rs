@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 use crate::config;
 use crate::config::base::ConfigLoadInfo;
-use crate::config::inspect_logger::{InspectConfigLogger, InspectConfigLoggerHandle};
+use crate::inspect::config_logger::{InspectConfigLogger, InspectConfigLoggerHandle};
 
 pub struct DefaultSetting<T, P>
 where
@@ -25,7 +25,7 @@ where
     default_value: Option<T>,
     config_file_path: P,
     cached_value: Option<Option<T>>,
-    config_inspect_logger: Arc<Mutex<InspectConfigLogger>>,
+    config_logger: Arc<Mutex<InspectConfigLogger>>,
 }
 
 impl<T, P> DefaultSetting<T, P>
@@ -39,7 +39,7 @@ where
             default_value,
             config_file_path,
             cached_value: None,
-            config_inspect_logger: inspect_config_logger_handle.logger,
+            config_logger: inspect_config_logger_handle.logger,
         }
     }
 
@@ -116,12 +116,11 @@ where
         load_result
     }
 
-    /// Attempts to write the config load to inspect. Requires a provided `config_inspect_logger`
-    /// when calling new().
+    /// Attempts to write the config load to inspect.
     fn write_config_load_to_inspect(&mut self, config_load_info: config::base::ConfigLoadInfo) {
-        let config_inspect_logger = self.config_inspect_logger.clone();
+        let config_logger = self.config_logger.clone();
         fasync::Task::spawn(async move {
-            config_inspect_logger.lock().await.write_config_load_to_inspect(config_load_info);
+            config_logger.lock().await.write_config_load_to_inspect(config_load_info);
         })
         .detach();
     }
@@ -132,7 +131,7 @@ pub(crate) mod testing {
     use super::*;
 
     use crate::clock;
-    use crate::config::inspect_logger::InspectConfigLoggerHandle;
+    use crate::inspect::config_logger::InspectConfigLoggerHandle;
     use crate::tests::helpers::move_executor_forward_and_get;
 
     use assert_matches::assert_matches;

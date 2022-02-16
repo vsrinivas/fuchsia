@@ -36,7 +36,8 @@ struct StashInspectInfo {
 }
 
 lazy_static! {
-    pub(crate) static ref STASH_INSPECT_LOGGER: Arc<Mutex<StashInspectLogger>> =
+    // TODO(fxb/93842): replace with a dependency injected value instead of a static.
+    pub(crate) static ref STASH_LOGGER: Arc<Mutex<StashInspectLogger>> =
         Arc::new(Mutex::new(StashInspectLogger::new()));
 }
 
@@ -71,6 +72,6 @@ pub struct StashInspectLoggerHandle {
 
 impl StashInspectLoggerHandle {
     pub fn new() -> Self {
-        Self { logger: Arc::clone(&STASH_INSPECT_LOGGER) }
+        Self { logger: Arc::clone(&STASH_LOGGER) }
     }
 }

@@ -80,8 +80,8 @@ pub mod task;
 pub use audio::policy::AudioPolicyConfig;
 pub use display::display_configuration::DisplayConfiguration;
 pub use display::LightSensorConfig;
-pub use handler::inspect_setting_proxy::InspectSettingProxy;
 pub use input::input_device_configuration::InputConfiguration;
+pub use inspect::utils::setting_proxy_node::SettingProxyNode;
 pub use light::light_hardware_configuration::LightHardwareConfiguration;
 pub use service::{Address, Payload, Role};
 
@@ -91,6 +91,7 @@ pub mod config;
 pub mod fidl_common;
 pub mod handler;
 pub mod ingress;
+pub mod inspect;
 pub mod message;
 pub mod monitor;
 pub mod service_context;
