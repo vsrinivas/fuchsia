@@ -5,6 +5,7 @@ use {anyhow::Error, argh::FromArgs, fuchsia_async as fasync};
 
 mod balloon;
 mod launch;
+mod list;
 mod services;
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -152,6 +153,11 @@ async fn main() -> Result<(), Error> {
             )
             .await?;
             let output = balloon::handle_balloon_stats(balloon_controller).await?;
+            println!("{}", output);
+        }
+        SubCommands::Five(..) => {
+            let manager = services::connect_to_manager()?;
+            let output = list::handle_list(manager).await?;
             println!("{}", output);
         }
         _ => unimplemented!(), // TODO(fxbug.dev/89427): Implement guest tool

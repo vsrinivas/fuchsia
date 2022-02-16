@@ -38,6 +38,7 @@ rustc_binary("bin") {
   sources = [
     "src/balloon.rs",
     "src/launch.rs",
+    "src/list.rs",
     "src/main.rs",
     "src/services.rs",
   ]
