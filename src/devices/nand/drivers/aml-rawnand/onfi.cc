@@ -46,7 +46,7 @@ static struct nand_chip_table nand_chip_table[] = {
      0,
      0,
      0},
-    /* TODO: This works. but doublecheck Toshiba nand_timings from datasheet */
+    // TODO(fxbug.dev/93912): This works. but doublecheck Toshiba nand_timings from datasheet
     {0x98,
      0xDC,
      "Toshiba",
