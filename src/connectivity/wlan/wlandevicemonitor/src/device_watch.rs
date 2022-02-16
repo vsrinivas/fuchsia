@@ -217,6 +217,35 @@ mod tests {
             bands: vec![create_2_4_ghz_band_info()],
             name: String::from("devwatchtap"),
             quiet: false,
+            discovery_support: fidl_wlan_common::DiscoverySupport {
+                scan_offload: fidl_wlan_common::ScanOffloadExtension { supported: false },
+                probe_response_offload: fidl_wlan_common::ProbeResponseOffloadExtension {
+                    supported: false,
+                },
+            },
+            mac_sublayer_support: fidl_wlan_common::MacSublayerSupport {
+                rate_selection_offload: fidl_wlan_common::RateSelectionOffloadExtension {
+                    supported: false,
+                },
+                data_plane: fidl_wlan_common::DataPlaneExtension {
+                    data_plane_type: fidl_wlan_common::DataPlaneType::EthernetDevice,
+                },
+                device: fidl_wlan_common::DeviceExtension {
+                    is_synthetic: false,
+                    mac_implementation_type: fidl_wlan_common::MacImplementationType::Softmac,
+                    tx_status_report_supported: false,
+                },
+            },
+            security_support: fidl_wlan_common::SecuritySupport {
+                sae: fidl_wlan_common::SaeFeature {
+                    supported: false,
+                    handler: fidl_wlan_common::SaeHandler::Sme,
+                },
+                mfp: fidl_wlan_common::MfpFeature { supported: false },
+            },
+            spectrum_management_support: fidl_wlan_common::SpectrumManagementSupport {
+                dfs: fidl_wlan_common::DfsFeature { supported: false },
+            },
         }
     }
 

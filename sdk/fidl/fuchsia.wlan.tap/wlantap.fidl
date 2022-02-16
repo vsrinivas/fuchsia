@@ -21,6 +21,10 @@ type WlantapPhyConfig = struct {
     bands vector<fuchsia.wlan.device.BandInfo>:8;
     name string:32; // Arbitrary maximum size of 32 chosen to satisfy FidlLint
     quiet bool;
+    discovery_support fuchsia.wlan.common.DiscoverySupport;
+    mac_sublayer_support fuchsia.wlan.common.MacSublayerSupport;
+    security_support fuchsia.wlan.common.SecuritySupport;
+    spectrum_management_support fuchsia.wlan.common.SpectrumManagementSupport;
 };
 
 /// Instruct the wlantap-ctl device to creates a fake wlantap-phy device based on the

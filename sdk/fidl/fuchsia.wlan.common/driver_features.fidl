@@ -4,6 +4,29 @@
 
 library fuchsia.wlan.common;
 
+/// Indicates where and how scan logic is orchestrated.
+/// See IEEE 802.11-2016 11.1.4.2 and 11.1.4.3.
+/// This is a discovery extension, expected to be used for softmac only.
+type ScanOffloadExtension = struct {
+    /// If true, driver orchestrates scans; otherwise MLME must do so.
+    supported bool;
+};
+
+/// Indicates where and how probe responses are to be handled.
+/// See IEEE 802.11-2016 11.1.4.3.
+/// This is a discovery extension, expected to be used for softmac only.
+type ProbeResponseOffloadExtension = struct {
+    /// If true, driver responds to probe requests; otherwise MLME must respond.
+    supported bool;
+};
+
+/// Features related to discovery of potential BSSs.
+/// See IEEE 802.11-2016 11.1.4.2 and 11.1.4.3.
+type DiscoverySupport = struct {
+    scan_offload ScanOffloadExtension;
+    probe_response_offload ProbeResponseOffloadExtension;
+};
+
 /// Indicates where and how rate selection logic is orchestrated.
 /// See IEEE 802.11-2016 10.7.
 /// This is a MAC sublayer extension, expected to be used for softmac only.
@@ -21,8 +44,31 @@ type DataPlaneType = strict enum : uint8 {
 /// Indicates where the data plane is implemented.
 /// This is a MAC sublayer extension, usable for fullmac or softmac. This
 /// extension is not part of the 802.11-2016 spec.
+// TODO(fxbug.dev/92660) Move/remove extension, it's not a real feature.
 type DataPlaneExtension = struct {
     data_plane_type DataPlaneType;
+};
+
+/// Indicates where MAC layer is implemented.
+type MacImplementationType = strict enum : uint8 {
+    SOFTMAC = 1;
+    // Other implementations (e.g. FULLMAC) may be added in the future.
+};
+
+/// Feature-like information specific to the device.
+/// This is a MAC sublayer extension. This extension is not part of the
+/// 802.11-2016 spec.
+// TODO(fxbug.dev/92660) Move/remove extension, it's not a real feature.
+type DeviceExtension = struct {
+    /// Indicates that device is not a real hardware device. This extension only
+    /// exists to support the SYNTH value in
+    /// fuchsia.hardware.ethernet/EthernetFeature.
+    // TODO(fxbug.dev/93516) Adjust/adapt for GND DeviceClass.
+    is_synthetic bool;
+    /// Indicates where MAC layer is implemented.
+    mac_implementation_type MacImplementationType;
+    /// Indicates whether device supports transmission reports.
+    tx_status_report_supported bool;
 };
 
 /// Features related to the MAC sublayer (below MLME).
@@ -30,6 +76,7 @@ type DataPlaneExtension = struct {
 type MacSublayerSupport = struct {
     rate_selection_offload RateSelectionOffloadExtension;
     data_plane DataPlaneExtension;
+    device DeviceExtension;
 };
 
 /// Indicates where simultaneous authentication of equals (SAE) is handled.

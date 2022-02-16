@@ -192,7 +192,9 @@ zx_status_t Device::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
   memset(info, 0, sizeof(*info));
   memcpy(info->mac, wlan_softmac_info_.sta_addr, ETH_MAC_SIZE);
   info->features = ETHERNET_FEATURE_WLAN;
-  if (wlan_softmac_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
+  mac_sublayer_support_t mac_sublayer;
+  wlan_softmac_proxy_.QueryMacSublayerSupport(&mac_sublayer);
+  if (mac_sublayer.device.is_synthetic) {
     info->features |= ETHERNET_FEATURE_SYNTH;
   }
   info->mtu = 1500;

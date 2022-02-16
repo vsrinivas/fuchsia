@@ -50,6 +50,7 @@
 
 #include <fidl/fuchsia.wlan.ieee80211/cpp/wire.h>
 #include <fuchsia/hardware/wlan/softmac/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -165,8 +166,16 @@ zx_status_t mac_query(void* ctx, wlan_softmac_info_t* info) {
 
   memcpy(info->sta_addr, nvm_data->hw_addr, sizeof(info->sta_addr));
   info->mac_role = mvmvif->mac_role;
-  // TODO(43517): Better handling of driver features bits/flags
-  info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_INFO_DRIVER_FEATURE_MFP;
+  discovery_support_t discovery_support;
+  mac_query_discovery_support(&discovery_support);
+  if (discovery_support.scan_offload.supported) {
+    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
+  }
+  security_support_t security_support;
+  mac_query_security_support(&security_support);
+  if (security_support.mfp.supported) {
+    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_MFP;
+  }
 
   // Fill out a minimal set of wlan device capabilities
   size_t count = 0;
@@ -189,6 +198,29 @@ zx_status_t mac_query(void* ctx, wlan_softmac_info_t* info) {
   fill_band_cap_list(nvm_data, bands, info->band_cap_count, info->band_cap_list);
 
   return ZX_OK;
+}
+
+void mac_query_discovery_support(discovery_support_t* out_resp) {
+  memset(out_resp, 0, sizeof(*out_resp));
+  // TODO(fxbug.dev/43517): Better handling of driver features
+  out_resp->scan_offload.supported = true;
+}
+
+void mac_query_mac_sublayer_support(mac_sublayer_support_t* out_resp) {
+  memset(out_resp, 0, sizeof(*out_resp));
+  out_resp->data_plane.data_plane_type = DATA_PLANE_TYPE_ETHERNET_DEVICE;
+  out_resp->device.mac_implementation_type = MAC_IMPLEMENTATION_TYPE_SOFTMAC;
+}
+
+void mac_query_security_support(security_support_t* out_resp) {
+  memset(out_resp, 0, sizeof(*out_resp));
+  // TODO(43517): Better handling of driver features
+  out_resp->mfp.supported = true;
+}
+
+void mac_query_spectrum_management_support(spectrum_management_support_t* out_resp) {
+  memset(out_resp, 0, sizeof(*out_resp));
+  // This driver does not set any spectrum management features at this time.
 }
 
 zx_status_t mac_start(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,

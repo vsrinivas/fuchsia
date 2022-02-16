@@ -26,6 +26,22 @@ static wlan_softmac_protocol_ops_t wlan_softmac_test_protocol_ops = {
     .query = [](void* ctx, wlan_softmac_info_t* info) -> zx_status_t {
       return DEV(ctx)->Query(info);
     },
+    .query_discovery_support =
+        [](void* ctx, discovery_support_t* support) {
+          return DEV(ctx)->QueryDiscoverySupport(support);
+        },
+    .query_mac_sublayer_support =
+        [](void* ctx, mac_sublayer_support_t* support) {
+          return DEV(ctx)->QueryMacSublayerSupport(support);
+        },
+    .query_security_support =
+        [](void* ctx, security_support_t* support) {
+          return DEV(ctx)->QuerySecuritySupport(support);
+        },
+    .query_spectrum_management_support =
+        [](void* ctx, spectrum_management_support_t* support) {
+          return DEV(ctx)->QuerySpectrumManagementSupport(support);
+        },
     .start = [](void* ctx, const wlan_softmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel)
         -> zx_status_t { return DEV(ctx)->Start(ifc, out_mlme_channel); },
     .stop = [](void* ctx) { DEV(ctx)->Stop(); },
@@ -84,7 +100,7 @@ void IfaceDevice::Release() {
 
 zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
   zxlogf(INFO, "wlan::testing::IfaceDevice::Query()");
-  memset(info, 0, sizeof(*info));
+  *info = {};
 
   static uint8_t mac[fuchsia_wlan_ieee80211_MAC_ADDR_LEN] = {0x02, 0x02, 0x02, 0x03, 0x03, 0x03};
   std::memcpy(info->sta_addr, mac, fuchsia_wlan_ieee80211_MAC_ADDR_LEN);
@@ -99,7 +115,11 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
   }
   info->supported_phys_count = count;
 
-  info->driver_features = WLAN_INFO_DRIVER_FEATURE_SYNTH;
+  mac_sublayer_support_t mac_sublayer;
+  QueryMacSublayerSupport(&mac_sublayer);
+  if (mac_sublayer.device.is_synthetic) {
+    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_SYNTH;
+  }
   info->mac_role = role_;
   info->caps = 0;
   info->band_cap_count = 2;
@@ -135,6 +155,26 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
   // clang-format on
 
   return ZX_OK;
+}
+
+void IfaceDevice::QueryDiscoverySupport(discovery_support_t* out_support) {
+  *out_support = {};
+  // This test device does not set any discovery features.
+}
+
+void IfaceDevice::QueryMacSublayerSupport(mac_sublayer_support_t* out_support) {
+  *out_support = {};
+  out_support->device.is_synthetic = true;
+}
+
+void IfaceDevice::QuerySecuritySupport(security_support_t* out_support) {
+  *out_support = {};
+  // This test device does not set any security features.
+}
+
+void IfaceDevice::QuerySpectrumManagementSupport(spectrum_management_support_t* out_support) {
+  *out_support = {};
+  // This test device does not set any spectrum management features.
 }
 
 void IfaceDevice::Stop() {

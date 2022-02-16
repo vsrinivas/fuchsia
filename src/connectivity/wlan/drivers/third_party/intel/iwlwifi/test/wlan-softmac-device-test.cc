@@ -202,6 +202,38 @@ TEST_F(WlanSoftmacDeviceTest, Query) {
   EXPECT_EQ(8, info.band_cap_list[1].basic_rate_count);
   EXPECT_EQ(expected_rate(4), info.band_cap_list[1].basic_rate_list[0]);  // 6 Mbps
   EXPECT_EQ(165, info.band_cap_list[1].supported_channels.channels[24]);
+  EXPECT_EQ(info.driver_features & WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD,
+            WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD);
+  EXPECT_EQ(info.driver_features & WLAN_INFO_DRIVER_FEATURE_MFP, WLAN_INFO_DRIVER_FEATURE_MFP);
+}
+
+TEST_F(WlanSoftmacDeviceTest, DiscoveryFeatureQuery) {
+  discovery_support_t support;
+  device_->WlanSoftmacQueryDiscoverySupport(&support);
+  EXPECT_TRUE(support.scan_offload.supported);
+  EXPECT_FALSE(support.probe_response_offload.supported);
+}
+
+TEST_F(WlanSoftmacDeviceTest, MacSublayerFeatureQuery) {
+  mac_sublayer_support_t support;
+  device_->WlanSoftmacQueryMacSublayerSupport(&support);
+  EXPECT_FALSE(support.rate_selection_offload.supported);
+  EXPECT_EQ(support.device.mac_implementation_type, MAC_IMPLEMENTATION_TYPE_SOFTMAC);
+  EXPECT_FALSE(support.device.is_synthetic);
+  EXPECT_EQ(support.data_plane.data_plane_type, DATA_PLANE_TYPE_ETHERNET_DEVICE);
+}
+
+TEST_F(WlanSoftmacDeviceTest, SecurityFeatureQuery) {
+  security_support_t support;
+  device_->WlanSoftmacQuerySecuritySupport(&support);
+  EXPECT_TRUE(support.mfp.supported);
+  EXPECT_FALSE(support.sae.supported);
+}
+
+TEST_F(WlanSoftmacDeviceTest, SpectrumManagementFeatureQuery) {
+  spectrum_management_support_t support;
+  device_->WlanSoftmacQuerySpectrumManagementSupport(&support);
+  EXPECT_FALSE(support.dfs.supported);
 }
 
 TEST_F(WlanSoftmacDeviceTest, MacStart) {

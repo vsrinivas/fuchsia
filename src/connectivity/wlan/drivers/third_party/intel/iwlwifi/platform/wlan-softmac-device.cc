@@ -33,6 +33,23 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacQuery(wlan_softmac_info_t* out_info) {
   return mac_query(mvmvif_, out_info);
 }
 
+void WlanSoftmacDevice::WlanSoftmacQueryDiscoverySupport(discovery_support_t* out_resp) {
+  mac_query_discovery_support(out_resp);
+}
+
+void WlanSoftmacDevice::WlanSoftmacQueryMacSublayerSupport(mac_sublayer_support_t* out_resp) {
+  mac_query_mac_sublayer_support(out_resp);
+}
+
+void WlanSoftmacDevice::WlanSoftmacQuerySecuritySupport(security_support_t* out_resp) {
+  mac_query_security_support(out_resp);
+}
+
+void WlanSoftmacDevice::WlanSoftmacQuerySpectrumManagementSupport(
+    spectrum_management_support_t* out_resp) {
+  mac_query_spectrum_management_support(out_resp);
+}
+
 zx_status_t WlanSoftmacDevice::WlanSoftmacStart(const wlan_softmac_ifc_protocol_t* ifc,
                                                 zx::channel* out_mlme_channel) {
   return mac_start(mvmvif_, ifc, (zx_handle_t*)out_mlme_channel);

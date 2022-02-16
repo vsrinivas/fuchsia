@@ -10,8 +10,15 @@ struct fuchsia.wlan.common/DataPlaneExtension
 enum/member fuchsia.wlan.common/DataPlaneType.ETHERNET_DEVICE 1
 enum/member fuchsia.wlan.common/DataPlaneType.GENERIC_NETWORK_DEVICE 2
 strict enum fuchsia.wlan.common/DataPlaneType uint8
+struct/member fuchsia.wlan.common/DeviceExtension.is_synthetic bool
+struct/member fuchsia.wlan.common/DeviceExtension.mac_implementation_type fuchsia.wlan.common/MacImplementationType
+struct/member fuchsia.wlan.common/DeviceExtension.tx_status_report_supported bool
+struct fuchsia.wlan.common/DeviceExtension
 struct/member fuchsia.wlan.common/DfsFeature.supported bool
 struct fuchsia.wlan.common/DfsFeature
+struct/member fuchsia.wlan.common/DiscoverySupport.probe_response_offload fuchsia.wlan.common/ProbeResponseOffloadExtension
+struct/member fuchsia.wlan.common/DiscoverySupport.scan_offload fuchsia.wlan.common/ScanOffloadExtension
+struct fuchsia.wlan.common/DiscoverySupport
 enum/member fuchsia.wlan.common/DriverFeature.DFS 4
 enum/member fuchsia.wlan.common/DriverFeature.MFP 8
 enum/member fuchsia.wlan.common/DriverFeature.PROBE_RESP_OFFLOAD 5
@@ -28,7 +35,10 @@ enum/member fuchsia.wlan.common/GuardInterval.SHORT_GI 2
 strict enum fuchsia.wlan.common/GuardInterval uint8
 const fuchsia.wlan.common/MAX_SUPPORTED_MAC_ROLES uint8 16
 const fuchsia.wlan.common/MAX_SUPPORTED_PHY_TYPES uint8 64
+enum/member fuchsia.wlan.common/MacImplementationType.SOFTMAC 1
+strict enum fuchsia.wlan.common/MacImplementationType uint8
 struct/member fuchsia.wlan.common/MacSublayerSupport.data_plane fuchsia.wlan.common/DataPlaneExtension
+struct/member fuchsia.wlan.common/MacSublayerSupport.device fuchsia.wlan.common/DeviceExtension
 struct/member fuchsia.wlan.common/MacSublayerSupport.rate_selection_offload fuchsia.wlan.common/RateSelectionOffloadExtension
 struct fuchsia.wlan.common/MacSublayerSupport
 struct/member fuchsia.wlan.common/MfpFeature.supported bool
@@ -37,6 +47,8 @@ enum/member fuchsia.wlan.common/PowerSaveType.FAST_PS_MODE 1
 enum/member fuchsia.wlan.common/PowerSaveType.PS_MODE_OFF 0
 enum/member fuchsia.wlan.common/PowerSaveType.PS_POLL_MODE 2
 strict enum fuchsia.wlan.common/PowerSaveType uint32
+struct/member fuchsia.wlan.common/ProbeResponseOffloadExtension.supported bool
+struct fuchsia.wlan.common/ProbeResponseOffloadExtension
 struct/member fuchsia.wlan.common/RateSelectionOffloadExtension.supported bool
 struct fuchsia.wlan.common/RateSelectionOffloadExtension
 enum/member fuchsia.wlan.common/RequestStatus.ACKNOWLEDGED 0
@@ -51,6 +63,8 @@ struct fuchsia.wlan.common/SaeFeature
 enum/member fuchsia.wlan.common/SaeHandler.DRIVER 1
 enum/member fuchsia.wlan.common/SaeHandler.SME 2
 strict enum fuchsia.wlan.common/SaeHandler uint8
+struct/member fuchsia.wlan.common/ScanOffloadExtension.supported bool
+struct fuchsia.wlan.common/ScanOffloadExtension
 enum/member fuchsia.wlan.common/ScanType.ACTIVE 1
 enum/member fuchsia.wlan.common/ScanType.PASSIVE 2
 strict enum fuchsia.wlan.common/ScanType uint32

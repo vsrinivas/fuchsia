@@ -36,6 +36,10 @@ class WlanSoftmacDevice
 
   // WlanSoftmac interface implementation.
   zx_status_t WlanSoftmacQuery(wlan_softmac_info_t* out_info);
+  void WlanSoftmacQueryDiscoverySupport(discovery_support_t* out_resp);
+  void WlanSoftmacQueryMacSublayerSupport(mac_sublayer_support_t* out_resp);
+  void WlanSoftmacQuerySecuritySupport(security_support_t* out_resp);
+  void WlanSoftmacQuerySpectrumManagementSupport(spectrum_management_support_t* out_resp);
   zx_status_t WlanSoftmacStart(const wlan_softmac_ifc_protocol_t* ifc,
                                zx::channel* out_mlme_channel);
   void WlanSoftmacStop();

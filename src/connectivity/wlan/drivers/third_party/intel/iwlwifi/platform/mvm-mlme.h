@@ -47,6 +47,11 @@ void phy_create_iface_undo(struct iwl_trans* iwl_trans, uint16_t idx);
 
 // Mac protocol helpers
 zx_status_t mac_query(void* ctx, wlan_softmac_info_t* info);
+void mac_query_discovery_support(discovery_support_t* out_resp);
+void mac_query_mac_sublayer_support(mac_sublayer_support_t* out_resp);
+void mac_query_security_support(security_support_t* out_resp);
+void mac_query_spectrum_management_support(spectrum_management_support_t* out_resp);
+
 zx_status_t mac_start(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,
                       zx_handle_t* out_mlme_channel);
 void mac_stop(struct iwl_mvm_vif* mvmvif);

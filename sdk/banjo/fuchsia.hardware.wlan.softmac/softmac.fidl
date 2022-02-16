@@ -321,6 +321,19 @@ protocol WlanSoftmac {
         info WlanSoftmacInfo;
     });
 
+    QueryDiscoverySupport() -> (struct {
+        resp fuchsia.wlan.common.DiscoverySupport;
+    });
+    QueryMacSublayerSupport() -> (struct {
+        resp fuchsia.wlan.common.MacSublayerSupport;
+    });
+    QuerySecuritySupport() -> (struct {
+        resp fuchsia.wlan.common.SecuritySupport;
+    });
+    QuerySpectrumManagementSupport() -> (struct {
+        resp fuchsia.wlan.common.SpectrumManagementSupport;
+    });
+
     /// Start softmac running with ifc_virt
     /// Callbacks on ifc may be invoked from now until stop() is called
     Start(resource struct {

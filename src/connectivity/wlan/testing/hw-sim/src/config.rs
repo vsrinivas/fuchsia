@@ -33,12 +33,38 @@ pub(crate) fn create_wlantap_config(
             DriverFeature::Synth,
             DriverFeature::TxStatusReport,
             DriverFeature::Mfp,
+            DriverFeature::TempSoftmac,
         ],
         mac_role: mac_role,
         caps: vec![],
         bands: vec![create_2_4_ghz_band_info()],
         name,
         quiet: false,
+        discovery_support: fidl_common::DiscoverySupport {
+            scan_offload: fidl_common::ScanOffloadExtension { supported: false },
+            probe_response_offload: fidl_common::ProbeResponseOffloadExtension { supported: false },
+        },
+        mac_sublayer_support: fidl_common::MacSublayerSupport {
+            rate_selection_offload: fidl_common::RateSelectionOffloadExtension { supported: false },
+            data_plane: fidl_common::DataPlaneExtension {
+                data_plane_type: fidl_common::DataPlaneType::EthernetDevice,
+            },
+            device: fidl_common::DeviceExtension {
+                is_synthetic: true,
+                mac_implementation_type: fidl_common::MacImplementationType::Softmac,
+                tx_status_report_supported: true,
+            },
+        },
+        security_support: fidl_common::SecuritySupport {
+            sae: fidl_common::SaeFeature {
+                supported: false,
+                handler: fidl_common::SaeHandler::Sme,
+            },
+            mfp: fidl_common::MfpFeature { supported: true },
+        },
+        spectrum_management_support: fidl_common::SpectrumManagementSupport {
+            dfs: fidl_common::DfsFeature { supported: false },
+        },
     }
 }
 

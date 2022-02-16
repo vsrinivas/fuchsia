@@ -8,6 +8,8 @@
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/softmac/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
+#include <fuchsia/wlan/common/cpp/fidl.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <lib/ddk/debug.h>
@@ -193,6 +195,66 @@ zx_status_t ConvertTapPhyConfig(
   }
   *supported_mac_roles_count = 1;
   return ZX_OK;
+}
+
+discovery_support_t ConvertDiscoverySupport(const wlan_common::DiscoverySupport& in) {
+  discovery_support_t support;
+  support.scan_offload.supported = in.scan_offload.supported;
+  support.probe_response_offload.supported = in.probe_response_offload.supported;
+  return support;
+}
+
+mac_sublayer_support_t ConvertMacSublayerSupport(const wlan_common::MacSublayerSupport& in) {
+  mac_sublayer_support_t support;
+  support.rate_selection_offload.supported = in.rate_selection_offload.supported;
+  support.device.is_synthetic = in.device.is_synthetic;
+  switch (in.device.mac_implementation_type) {
+    case wlan_common::MacImplementationType::SOFTMAC:
+      support.device.mac_implementation_type = MAC_IMPLEMENTATION_TYPE_SOFTMAC;
+      break;
+    default:
+      zxlogf(ERROR, "MAC implementation type %hhu not supported",
+             in.device.mac_implementation_type);
+      break;
+  }
+  support.device.tx_status_report_supported = in.device.tx_status_report_supported;
+  switch (in.data_plane.data_plane_type) {
+    case wlan_common::DataPlaneType::ETHERNET_DEVICE:
+      support.data_plane.data_plane_type = DATA_PLANE_TYPE_ETHERNET_DEVICE;
+      break;
+    case wlan_common::DataPlaneType::GENERIC_NETWORK_DEVICE:
+      support.data_plane.data_plane_type = DATA_PLANE_TYPE_GENERIC_NETWORK_DEVICE;
+      break;
+    default:
+      zxlogf(ERROR, "Data plane type %hhu not supported", in.data_plane.data_plane_type);
+      break;
+  }
+  return support;
+}
+
+security_support_t ConvertSecuritySupport(const wlan_common::SecuritySupport& in) {
+  security_support_t support;
+  support.mfp.supported = in.mfp.supported;
+  support.sae.supported = in.sae.supported;
+  switch (in.sae.handler) {
+    case wlan_common::SaeHandler::DRIVER:
+      support.sae.handler = SAE_HANDLER_DRIVER;
+      break;
+    case wlan_common::SaeHandler::SME:
+      support.sae.handler = SAE_HANDLER_SME;
+      break;
+    default:
+      zxlogf(ERROR, "SAE handler %hhu not supported", in.sae.handler);
+      break;
+  }
+  return support;
+}
+
+spectrum_management_support_t ConvertSpectrumManagementSupport(
+    const wlan_common::SpectrumManagementSupport& in) {
+  spectrum_management_support_t support;
+  support.dfs.supported = in.dfs.supported;
+  return support;
 }
 
 wlan_tx_status_t ConvertTxStatus(const wlan_common::WlanTxStatus& in) {

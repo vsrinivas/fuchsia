@@ -28,6 +28,7 @@ namespace wlan_device = ::fuchsia::wlan::device;
 
 namespace {
 
+// TODO(fxbug.dev/93459) Prune unnecessary fields from phy_config
 struct WlantapMacImpl : WlantapMac {
   WlantapMacImpl(zx_device_t* phy_device, uint16_t id, wlan_common::WlanMacRole role,
                  const wlantap::WlantapPhyConfig* phy_config, Listener* listener,
@@ -51,6 +52,27 @@ struct WlantapMacImpl : WlantapMac {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     ConvertTapPhyConfig(mac_info, *self.phy_config_);
     return ZX_OK;
+  }
+
+  static void WlanSoftmacQueryDiscoverySupport(void* ctx, discovery_support_t* support) {
+    auto& self = *static_cast<WlantapMacImpl*>(ctx);
+    *support = ConvertDiscoverySupport(self.phy_config_->discovery_support);
+  }
+
+  static void WlanSoftmacQueryMacSublayerSupport(void* ctx, mac_sublayer_support_t* support) {
+    auto& self = *static_cast<WlantapMacImpl*>(ctx);
+    *support = ConvertMacSublayerSupport(self.phy_config_->mac_sublayer_support);
+  }
+
+  static void WlanSoftmacQuerySecuritySupport(void* ctx, security_support_t* support) {
+    auto& self = *static_cast<WlantapMacImpl*>(ctx);
+    *support = ConvertSecuritySupport(self.phy_config_->security_support);
+  }
+
+  static void WlanSoftmacQuerySpectrumManagementSupport(void* ctx,
+                                                        spectrum_management_support_t* support) {
+    auto& self = *static_cast<WlantapMacImpl*>(ctx);
+    *support = ConvertSpectrumManagementSupport(self.phy_config_->spectrum_management_support);
   }
 
   static zx_status_t WlanSoftmacStart(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,
@@ -212,6 +234,11 @@ zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const wlan_common::WlanMac
                                             .release = &WlantapMacImpl::DdkRelease};
   static wlan_softmac_protocol_ops_t proto_ops = {
       .query = &WlantapMacImpl::WlanSoftmacQuery,
+      .query_discovery_support = &WlantapMacImpl::WlanSoftmacQueryDiscoverySupport,
+      .query_mac_sublayer_support = &WlantapMacImpl::WlanSoftmacQueryMacSublayerSupport,
+      .query_security_support = &WlantapMacImpl::WlanSoftmacQuerySecuritySupport,
+      .query_spectrum_management_support =
+          &WlantapMacImpl::WlanSoftmacQuerySpectrumManagementSupport,
       .start = &WlantapMacImpl::WlanSoftmacStart,
       .stop = &WlantapMacImpl::WlanSoftmacStop,
       .queue_tx = &WlantapMacImpl::WlanSoftmacQueueTx,

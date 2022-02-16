@@ -3132,6 +3132,42 @@ void ath10k_pci_fill_wlanphy_impl_supported_mac_roles(
   *out_supported_mac_roles_count = 1;
 }
 
+static void ath10k_pci_mac_query_discovery_support(void* ctx, discovery_support_t* support) {
+  struct ath10k* ar = ctx;
+  ZX_DEBUG_ASSERT(BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED));
+
+  memset(support, 0, sizeof(*support));
+  // TODO(fxbug.dev/29557) active scan needs more work to be robust.
+  support->scan_offload.supported = true;
+  support->probe_response_offload.supported = true;
+}
+
+static void ath10k_pci_mac_query_mac_sublayer_support(void* ctx, mac_sublayer_support_t* support) {
+  struct ath10k* ar = ctx;
+  ZX_DEBUG_ASSERT(BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED));
+
+  memset(support, 0, sizeof(*support));
+  support->rate_selection_offload.supported = true;
+  support->device.mac_implementation_type = MAC_IMPLEMENTATION_TYPE_SOFTMAC;
+}
+
+static void ath10k_pci_mac_query_security_support(void* ctx, security_support_t* support) {
+  struct ath10k* ar = ctx;
+  ZX_DEBUG_ASSERT(BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED));
+
+  memset(support, 0, sizeof(*support));
+  // This driver does not currently set any security features.
+}
+
+static void ath10k_pci_mac_query_spectrum_management_support(
+    void* ctx, spectrum_management_support_t* support) {
+  struct ath10k* ar = ctx;
+  ZX_DEBUG_ASSERT(BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED));
+
+  memset(support, 0, sizeof(*support));
+  // This driver does not currently set any spectrum management features.
+}
+
 void ath10k_pci_fill_wlan_softmac_info(struct ath10k* ar, wlan_softmac_info_t* mac_info) {
   // eth_info
   ZX_DEBUG_ASSERT(ETH_ALEN == fuchsia_wlan_ieee80211_MAC_ADDR_LEN);
@@ -3156,9 +3192,19 @@ void ath10k_pci_fill_wlan_softmac_info(struct ath10k* ar, wlan_softmac_info_t* m
   mac_info->supported_phys_count = count;
 
   // driver_features
-  mac_info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD |
-                              WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION |
-                              WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD;
+  discovery_support_t discovery_support;
+  ath10k_pci_mac_query_discovery_support(ar, &discovery_support);
+  if (discovery_support.scan_offload.supported) {
+    mac_info->driver_features |= WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
+  }
+  if (discovery_support.probe_response_offload.supported) {
+    mac_info->driver_features |= WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD;
+  }
+  mac_sublayer_support_t mac_sublayer_support;
+  ath10k_pci_mac_query_mac_sublayer_support(ar, &mac_sublayer_support);
+  if (mac_sublayer_support.rate_selection_offload.supported) {
+    mac_info->driver_features |= WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION;
+  }
 
   // caps
   mac_info->caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
@@ -3360,6 +3406,10 @@ static zx_status_t ath10k_pci_start_hw_scan_active(
 
 wlan_softmac_protocol_ops_t wlan_softmac_ops = {
     .query = ath10k_pci_mac_query,
+    .query_discovery_support = ath10k_pci_mac_query_discovery_support,
+    .query_mac_sublayer_support = ath10k_pci_mac_query_mac_sublayer_support,
+    .query_security_support = ath10k_pci_mac_query_security_support,
+    .query_spectrum_management_support = ath10k_pci_mac_query_spectrum_management_support,
     .start = ath10k_pci_start,
     .stop = ath10k_pci_stop,
     .queue_tx = ath10k_pci_queue_tx,
