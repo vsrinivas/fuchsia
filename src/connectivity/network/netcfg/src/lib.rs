@@ -164,11 +164,13 @@ struct Opt {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DnsConfig {
     pub servers: Vec<std::net::IpAddr>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FilterConfig {
     pub rules: Vec<String>,
     pub nat_rules: Vec<String>,
@@ -176,7 +178,7 @@ pub struct FilterConfig {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(deny_unknown_fields, rename_all = "lowercase")]
 enum InterfaceType {
     Ethernet,
     Wlan,
@@ -184,6 +186,7 @@ enum InterfaceType {
 
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct InterfaceMetrics {
     #[serde(default)]
     pub wlan_metric: Metric,
@@ -192,7 +195,7 @@ pub struct InterfaceMetrics {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(deny_unknown_fields, rename_all = "lowercase")]
 pub enum DeviceClass {
     Virtual,
     Ethernet,
@@ -2589,6 +2592,93 @@ mod tests {
         assert_eq!(err.line(), 3);
         // Ensure the error is complaining about unknown field.
         assert!(format!("{:?}", err).contains("foobar"));
+    }
+
+    #[test]
+    fn test_config_denies_unknown_fields_nested() {
+        let bad_configs = vec![
+            r#"
+{
+  "dns_config": { "speling": [] },
+  "filter_config": {
+    "rules": [],
+    "nat_rules": [],
+    "rdr_rules": []
+  },
+  "filter_enabled_interface_types": []
+}
+"#,
+            r#"
+{
+  "dns_config": { "servers": [] },
+  "filter_config": {
+    "speling": [],
+    "nat_rules": [],
+    "rdr_rules": []
+  },
+  "filter_enabled_interface_types": []
+}
+"#,
+            r#"
+{
+  "dns_config": { "servers": [] },
+  "filter_config": {
+    "rules": [],
+    "nat_rules": [],
+    "rdr_rules": []
+  },
+  "filter_enabled_interface_types": ["speling"]
+}
+"#,
+            r#"
+{
+  "dns_config": { "servers": [] },
+  "filter_config": {
+    "rules": [],
+    "nat_rules": [],
+    "rdr_rules": []
+  },
+  "interface_metrics": {
+    "eth_metric": 1,
+    "wlan_metric": 2,
+    "speling": 3,
+  },
+  "filter_enabled_interface_types": []
+}
+"#,
+            r#"
+{
+  "dns_config": { "servers": [] },
+  "filter_config": {
+    "rules": [],
+    "nat_rules": [],
+    "rdr_rules": []
+  },
+  "filter_enabled_interface_types": ["speling"]
+}
+"#,
+            r#"
+{
+  "dns_config": { "servers": [] },
+  "filter_config": {
+    "rules": [],
+    "nat_rules": [],
+    "rdr_rules": []
+  },
+  "filter_enabled_interface_types": [],
+  "allowed_upstream_device_classes": ["speling"]
+}
+"#,
+        ];
+
+        for config_str in bad_configs {
+            let err =
+                Config::load_str(config_str).expect_err("config shouldn't accept unknown fields");
+            let err = err.downcast::<serde_json::Error>().expect("downcast error");
+            assert_eq!(err.classify(), serde_json::error::Category::Data);
+            // Ensure the error is complaining about unknown field.
+            assert!(format!("{:?}", err).contains("speling"));
+        }
     }
 
     #[test]
