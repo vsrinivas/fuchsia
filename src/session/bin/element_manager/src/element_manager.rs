@@ -15,6 +15,7 @@ use {
     fidl,
     fidl::endpoints::{create_request_stream, ClientEnd, Proxy, ServerEnd},
     fidl::AsHandleRef,
+    fidl_connector::Connect,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
     fidl_fuchsia_sys as fsys, fidl_fuchsia_ui_app as fuiapp,
     fuchsia_async::{self as fasync, DurationExt},
@@ -183,6 +184,9 @@ struct AdditionalServices {
     pub host_directory: zx::Channel,
 }
 
+pub type GraphicalPresenterConnector =
+    Box<dyn Connect<Proxy = felement::GraphicalPresenterProxy> + Send + Sync>;
+
 /// Manages the elements associated with a session.
 pub struct ElementManager {
     /// The realm which this element manager uses to create components.
@@ -191,7 +195,7 @@ pub struct ElementManager {
     /// The presenter that will make launched elements visible to the user.
     ///
     /// This is typically provided by the system shell, or other similar configurable component.
-    graphical_presenter: Option<felement::GraphicalPresenterProxy>,
+    graphical_presenter_connector: Option<GraphicalPresenterConnector>,
 
     /// A proxy to the `fuchsia::sys::Launcher` protocol used to create CFv1 components.
     sys_launcher: fsys::LauncherProxy,
@@ -213,14 +217,14 @@ pub struct ElementManager {
 impl ElementManager {
     pub fn new(
         realm: fcomponent::RealmProxy,
-        graphical_presenter: Option<felement::GraphicalPresenterProxy>,
+        graphical_presenter_connector: Option<GraphicalPresenterConnector>,
         sys_launcher: fsys::LauncherProxy,
         collection: &str,
         scenic_uses_flatland: bool,
     ) -> ElementManager {
         ElementManager {
             realm,
-            graphical_presenter,
+            graphical_presenter_connector,
             sys_launcher,
             collection: collection.to_string(),
             scenic_uses_flatland,
@@ -472,8 +476,9 @@ impl ElementManager {
         let (view_controller_proxy, server_end) =
             fidl::endpoints::create_proxy::<felement::ViewControllerMarker>()?;
 
-        if let Some(graphical_presenter) = &self.graphical_presenter {
-            graphical_presenter
+        if let Some(graphical_presenter_connector) = &self.graphical_presenter_connector {
+            graphical_presenter_connector
+                .connect()?
                 .present_view(view_spec, annotation_controller, Some(server_end))
                 .await?
                 .map_err(|err| format_err!("Failed to present element: {:?}", err))?;

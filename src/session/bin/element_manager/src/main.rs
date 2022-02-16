@@ -19,6 +19,7 @@ mod element_manager;
 use {
     crate::element_manager::ElementManager,
     anyhow::Error,
+    fidl_connector::ServiceReconnector,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
     fidl_fuchsia_sys as fsys,
     fidl_fuchsia_ui_scenic::ScenicMarker,
@@ -43,10 +44,10 @@ const NUM_CONCURRENT_REQUESTS: usize = 5;
 async fn main() -> Result<(), Error> {
     let realm = connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("Failed to connect to Realm service");
-    let graphical_presenter = connect_to_protocol::<felement::GraphicalPresenterMarker>()
-        .expect("Failed to connect to GraphicalPresenter service");
     let sys_launcher = connect_to_protocol::<fsys::LauncherMarker>()
         .expect("Failed to connect to fuchsia.sys.Launcher service");
+    let graphical_presenter =
+        Box::new(ServiceReconnector::<felement::GraphicalPresenterMarker>::new());
 
     // TODO(fxbug.dev/64206): Remove after Flatland migration is completed.
     let scenic_uses_flatland = fuchsia_component::client::connect_to_protocol::<ScenicMarker>()
@@ -88,8 +89,9 @@ mod tests {
     use {
         super::ELEMENT_COLLECTION_NAME,
         crate::element_manager::ElementManager,
-        fidl::endpoints::ProtocolMarker,
         fidl::endpoints::{create_proxy_and_stream, spawn_stream_handler},
+        fidl::endpoints::{ProtocolMarker, Proxy},
+        fidl_connector::Connect,
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
         fidl_fuchsia_io as fio, fuchsia_async as fasync,
         lazy_static::lazy_static,
@@ -117,6 +119,24 @@ mod tests {
         .detach();
 
         proxy
+    }
+
+    struct MockConnector<T: Proxy> {
+        proxy: Option<T>,
+    }
+
+    impl<T: Proxy + Clone> MockConnector<T> {
+        fn new(proxy: T) -> Self {
+            Self { proxy: Some(proxy) }
+        }
+    }
+
+    impl<T: Proxy + Clone> Connect for MockConnector<T> {
+        type Proxy = T;
+
+        fn connect(&self) -> Result<Self::Proxy, anyhow::Error> {
+            self.proxy.clone().ok_or(anyhow::anyhow!("no proxy available"))
+        }
     }
 
     /// Tests that ProposeElement launches the element as a child in a realm.
@@ -175,6 +195,7 @@ mod tests {
                 }
             })
             .unwrap();
+        let graphical_presenter_connector = Box::new(MockConnector::new(graphical_presenter));
 
         let launcher = spawn_stream_handler(move |_launcher_request| async move {
             panic!("Launcher should not receive any requests as it's only used for v1 components");
@@ -183,7 +204,7 @@ mod tests {
 
         let element_manager = Box::new(ElementManager::new(
             realm,
-            Some(graphical_presenter),
+            Some(graphical_presenter_connector),
             launcher,
             ELEMENT_COLLECTION_NAME,
             false,
