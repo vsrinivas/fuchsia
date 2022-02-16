@@ -69,6 +69,17 @@ async::Task timeout_task([](async_dispatcher_t* dispatcher, async::Task* task, z
   }
 });
 
+void kick_timeout_task(const transport_info_t& transport_info) {
+  if (transport_info.timeout_ms == 0) {
+    return;
+  }
+  zx_status_t status = timeout_task.Cancel();
+  ZX_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_NOT_FOUND, "failed to cancel timeout task %s",
+                zx_status_get_string(status));
+  status = timeout_task.PostDelayed(transport_info.dispatcher, zx::msec(transport_info.timeout_ms));
+  ZX_ASSERT_MSG(status == ZX_OK, "failed to schedule timeout %s", zx_status_get_string(status));
+}
+
 ssize_t file_open_read(const char* filename, uint8_t session_timeout_secs, void* cookie) {
   auto* file_api = reinterpret_cast<netsvc::FileApiInterface*>(cookie);
   return file_api->OpenRead(filename, zx::sec(session_timeout_secs));
@@ -96,8 +107,8 @@ void file_close(void* cookie) {
 }
 
 tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
-  transport_info_t* transport_info = reinterpret_cast<transport_info_t*>(transport_cookie);
-  zx_status_t status = udp6_send(data, len, &transport_info->dest_addr, transport_info->dest_port,
+  transport_info_t& transport_info = *reinterpret_cast<transport_info_t*>(transport_cookie);
+  zx_status_t status = udp6_send(data, len, &transport_info.dest_addr, transport_info.dest_port,
                                  NB_TFTP_OUTGOING_PORT, true);
   if (status != ZX_OK) {
     return TFTP_ERR_IO;
@@ -105,20 +116,14 @@ tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
 
   // The timeout is relative to sending instead of receiving a packet, since there are some
   // received packets we want to ignore (duplicate ACKs).
-  if (transport_info->timeout_ms != 0) {
-    status = timeout_task.Cancel();
-    ZX_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_NOT_FOUND, "failed to cancel timeout task %s",
-                  zx_status_get_string(status));
-    status =
-        timeout_task.PostDelayed(transport_info->dispatcher, zx::msec(transport_info->timeout_ms));
-    ZX_ASSERT_MSG(status == ZX_OK, "failed to schedule timeout %s", zx_status_get_string(status));
-  }
+  kick_timeout_task(transport_info);
   return TFTP_NO_ERROR;
 }
 
 int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) {
-  transport_info_t* transport_info = reinterpret_cast<transport_info_t*>(transport_cookie);
-  transport_info->timeout_ms = timeout_ms;
+  transport_info_t& transport_info = *reinterpret_cast<transport_info_t*>(transport_cookie);
+  transport_info.timeout_ms = timeout_ms;
+  kick_timeout_task(transport_info);
   return 0;
 }
 
