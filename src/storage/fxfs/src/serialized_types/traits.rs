@@ -14,11 +14,12 @@ use {
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Version {
     /// Major version indicates structural layout/encoding changes.
-    pub major: u16,
+    /// Note that this is encoded as a u24.
+    pub major: u32,
     /// Minor version indicates forwards compatible changes.
     /// e.g. The addition of a layer-file index, bloom filters, file attributes or posix
     /// features where reversion to a previous minor will simply lead to loss of these features.
-    pub minor: u16,
+    pub minor: u8,
 }
 impl std::fmt::Display for Version {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -30,17 +31,14 @@ impl Version {
     where
         R: std::io::Read,
     {
-        Ok(Version {
-            major: reader.read_u16::<LittleEndian>()?,
-            minor: reader.read_u16::<LittleEndian>()?,
-        })
+        Ok(Version { major: reader.read_u24::<LittleEndian>()?, minor: reader.read_u8()? })
     }
     pub fn serialize_into<W>(&self, writer: &mut W) -> anyhow::Result<()>
     where
         W: std::io::Write,
     {
-        writer.write_u16::<LittleEndian>(self.major)?;
-        writer.write_u16::<LittleEndian>(self.minor)?;
+        writer.write_u24::<LittleEndian>(self.major)?;
+        writer.write_u8(self.minor)?;
         Ok(())
     }
 }

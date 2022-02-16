@@ -18,8 +18,8 @@ struct PatOpenVersionRange {
     pub dots: syn::token::Dot2,
 }
 impl PatOpenVersionRange {
-    pub fn lo_value(&self) -> u16 {
-        self.lo.base10_parse::<u16>().unwrap_or(0)
+    pub fn lo_value(&self) -> u32 {
+        self.lo.base10_parse::<u32>().unwrap_or(0)
     }
 }
 impl std::cmp::PartialEq for PatOpenVersionRange {
@@ -87,7 +87,7 @@ impl Parse for Input {
 pub fn versioned_type(input: TokenStream) -> TokenStream {
     let arms = parse_macro_input!(input as Input).arms;
 
-    let versions: BTreeMap<u16, syn::Ident> =
+    let versions: BTreeMap<u32, syn::Ident> =
         arms.iter().map(|x| (x.pat.lo_value(), x.ident.clone())).collect();
     assert_eq!(arms.len(), versions.len(), "Duplicate version range found.");
 
@@ -108,7 +108,7 @@ pub fn versioned_type(input: TokenStream) -> TokenStream {
                 where R: std::io::Read, Self: Sized {
                     assert!(#major <= LATEST_VERSION.major,
                         "Found version > LATEST_VERSION for {}.", stringify!(#ident));
-                    const future_ver : u16 = LATEST_VERSION.major + 1;
+                    const future_ver : u32 = LATEST_VERSION.major + 1;
                     match version.major {
                         future_ver.. => anyhow::bail!(format!(
                                 "Invalid future version {} > {} deserializing {}.",
