@@ -101,8 +101,7 @@ pub async fn find_install_source(
                 candidate = Ok(*device);
             } else {
                 return Err(anyhow!(
-                    "Found more than one possible installation source. Please check you only \
-                        have one installation disk plugged in!"
+                    "Please check you only have one installation disk plugged in!"
                 ));
             }
         }

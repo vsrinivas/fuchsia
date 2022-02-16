@@ -5,7 +5,7 @@
 const CONST_SELECT_INSTALL_HEADLINE: &'static str = "Select Installation Method";
 const CONST_SELECT_DISK_HEADLINE: &'static str = "Select Disk you would like to install Fuchsia to";
 const CONST_WARNING_HEADLINE: &'static str = "WARNING: ";
-const CONST_PROGRESS_MSG: &'static str = "Installing Fuchsia";
+const CONST_PROGRESS_MSG: &'static str = "Installing Fuchsia, Please Wait";
 
 const CONST_ERR_HEADLINE: &'static str = "ERROR Cannot install Fuchsia:";
 const CONST_ERR_USER_DECLINE: &'static str = "User declined";

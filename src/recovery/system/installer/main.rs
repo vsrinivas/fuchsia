@@ -456,16 +456,17 @@ fn menu_builder(
             );
         }
         MenuState::Progress => {
-            text_size = target_size.width.min(target_size.height) / 33.0;
-            let error_facet = TextFacet::with_options(
+            // progress message
+            text_size = target_size.width.min(target_size.height) / 25.0;
+            let progress_facet = TextFacet::with_options(
                 face.clone(),
                 &menu_state_machine.get_error_msg(),
                 text_size,
                 text_options,
             );
-            let err_msg_y = subheading_location.y + (subheading_size * 2.0);
-            let err_msg_location = point2(subheading_x, err_msg_y);
-            builder.facet_at_location(error_facet, err_msg_location);
+            let progress_msg_y = subheading_location.y + (text_size * 5.0);
+            let progress_msg_location = point2(subheading_x, progress_msg_y);
+            builder.facet_at_location(progress_facet, progress_msg_location);
         }
         MenuState::Error => {
             // Render body
@@ -666,14 +667,17 @@ async fn do_install(
         .await
         .context("Getting source partitions")?;
 
+    let num_partitions = to_install.len();
+    let mut current_partition = 1;
     for part in to_install {
         app_sender.clone().queue_message(
             MessageTarget::View(view_key),
             make_message(InstallerMessages::ProgressUpdate(String::from(format!(
-                "paving: {:?}",
-                part
+                "paving partition {} of {}",
+                current_partition, num_partitions
             )))),
         );
+        current_partition += 1;
 
         print!("{:?}... ", part);
         io::stdout().flush()?;
