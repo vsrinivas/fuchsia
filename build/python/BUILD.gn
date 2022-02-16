@@ -18,15 +18,25 @@ if (is_host) {
       pip_exe_src,
     ]
   }
+
+  group("host_tests") {
+    testonly = true
+    deps = [
+      "tests/bin",
+      "tests/depfile:tests",
+      "tests/host_test:py_host_test_with_lib",
+      "tests/lib",
+      "tests/serialization:tests",
+    ]
+  }
 }
 
 # These tests exercise the build rules we want to test.
 group("tests") {
   testonly = true
   deps = [
+    ":host_tests($host_toolchain)",
     "tests/bin",
-    "tests/depfile:tests($host_toolchain)",
-    "tests/host_test:py_host_test_with_lib($host_toolchain)",
     "tests/lib",
   ]
 }

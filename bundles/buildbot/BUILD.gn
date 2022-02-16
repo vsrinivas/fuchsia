@@ -105,7 +105,10 @@ group("workstation") {
 group("host-tests_no_e2e") {
   testonly = true
   assert_no_deps = e2e_test_libs
-  deps = [ "//src/lib/assembly:host_tests($host_toolchain)" ]
+  deps = [
+    "//build/python:host_tests($host_toolchain)",
+    "//src/lib/assembly:host_tests($host_toolchain)",
+  ]
 }
 
 # TODO(https://fxbug.dev/93763) use an underscore to match source code layout guidelines

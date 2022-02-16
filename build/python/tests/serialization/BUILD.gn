@@ -1,0 +1,15 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_host_test.gni")
+
+python_host_test("python_module_serialization_test") {
+  main_source = "serialization_test.py"
+  libraries = [ "//build/python/modules/serialization" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":python_module_serialization_test" ]
+}

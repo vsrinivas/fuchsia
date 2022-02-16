@@ -84,19 +84,22 @@ Which can then be used as the object that it is:
 
 to print:
 
-    a child like toys and games
+    a child likes toys and games
 
 """
 
+import functools
 import inspect
 import json
 
-from typing import Any, Dict, Iterable, List, Set, Type, TypeVar, Union
+from typing import (
+    Any, Callable, Dict, List, Optional, Type, TypeVar, Union, get_type_hints)
 import typing
 
 __all__ = [
     'instance_from_dict', 'instance_to_dict', 'json_dump', 'json_dumps',
-    'json_load', 'json_loads'
+    'json_load', 'json_loads', 'serialize_dict', 'serialize_json',
+    'serialize_fields_as'
 ]
 
 # The placeholder for the Class of the object that's being serialized or
@@ -267,8 +270,8 @@ def make_dict_value_for(obj: Any) -> Union[Dict, List, str, int]:
         return instance_to_dict(obj)
 
     else:
-        # It doesn't support type hints, so pass it through to the dict,
-        # and let the receiver attempt to do the right thing with it.
+        # It doesn't support type hints, so just use it as-is, and hope for the
+        # best.
         return obj
 
 
@@ -292,8 +295,16 @@ def instance_to_dict(instance: Any) -> Dict[str, Any]:
     for name in field_types.keys():
         # First get the value of each field.
         value = getattr(instance, name)
-        if value:
-            result[name] = make_dict_value_for(value)
+        if value is not None:
+            # If a serializer fn was added via metadata, use that. Otherwise use
+            # the "default" handler
+            metadata: Optional[Dict] = getattr(
+                instance.__class__, '__SERIALIZE_AS__', None)
+            if metadata and name in metadata:
+                serializer: Callable = metadata.get(name)
+            else:
+                serializer = make_dict_value_for
+            result[name] = serializer(value)
 
     return result
 
@@ -365,3 +376,152 @@ def json_dumps(instance: Any, **kwargs) -> str:
             some_other_field: Optional[str]
     """
     return json.dumps(instance_to_dict(instance), **kwargs)
+
+
+C = TypeVar('C')
+
+
+def _bind_class_fn(cls: Type[C], fn: Callable, name: str = None):
+    """Creates a class-fn for a class by binding the passed-in class as the first
+    param of the passed-in function, and then adding it as a callable attribute
+    to the class.
+    """
+    if name is None:
+        name = fn.__name__
+    setattr(cls, name, functools.partial(fn, cls))
+
+
+def _bind_instance_fn(cls: Type[C], fn: Callable, name: str = None):
+    """Creates an instance-fn for a class by adding it as a callable attribute
+    of the class.
+    """
+    if name is None:
+        name = fn.__name__
+    setattr(cls, name, fn)
+
+
+def serialize_dict(cls: Type[C]) -> Type[C]:
+    """A decorator that adds dictionary-based serialization and deserialization
+    fns to the class, which operate using the type annotations for the class's
+    members and the params of the __init__() fn.
+
+    Examines PEP 526 __annotations__ to determine how to serialize/deserialize
+    the given class.
+
+    Example:
+    ```
+    @dataclass
+    @serialize_dict
+    class MyClass:
+        some_field: int
+        another_field: string
+    ```
+
+    This decorator adds the following functions to the class definition:
+    ```
+    @classfunction
+    def from_dict(cls: Type[Self], value: Dict) -> Self:
+      return serialization.instance_from_dict(cls, value)
+
+    def to_dict(self) -> Dict:
+      return serialization.instance_to_dict(self)
+    ```
+    """
+
+    def wrap(cls: Type[C]) -> Type[C]:
+        _bind_class_fn(cls, instance_from_dict, "from_dict")
+        _bind_instance_fn(cls, instance_to_dict, "to_dict")
+        return cls
+
+    return wrap(cls)
+
+
+def serialize_json(cls: Type[C]) -> Type[C]:
+    """A decorator that adds JSON serialization and deserialization fns to the
+    class, which follow the [`json.load()`], [`json.dumps()`], etc. functions.
+    They operate using the type annotations for the class's members and the
+    params of the __init__() fn.
+
+    Examines PEP 526 __annotations__ to determine how to serialize/deserialize
+    the given class.
+
+    Example:
+    ```
+    @dataclass
+    @serialize_json
+    class MyClass:
+        some_field: int
+        another_field: string
+    ```
+
+    This decorator adds the following functions to the class definition:
+    ```
+    @classfunction
+    def json_loads(cls: Type[Self], value: str) -> Self:
+      return serialization.json_loads(cls, value)
+
+    @classfunction
+    def json_load(cls: Type[Self], fp: SupportsRead) -> Self:
+      return serialization.json_load(cls, fp)
+
+    def json_dumps(self, **kwargs) -> str:
+      return serialization.json_dumps(self, **kwargs)
+
+    def json_dump(self, fp: SupportsWrite, **kwargs) -> str:
+      return serialization.json_dump(self, fp, **kwargs)
+    ```
+    """
+
+    def wrap(cls: Type[C]) -> Type[C]:
+        _bind_class_fn(cls, json_load)
+        _bind_class_fn(cls, json_loads)
+        _bind_instance_fn(cls, json_dump)
+        _bind_instance_fn(cls, json_dumps)
+        return cls
+
+    return wrap(cls)
+
+
+def _process_metadata(cls: Type[C], **kwargs) -> Type[C]:
+    for name in kwargs.keys():
+        if not hasattr(cls, name):
+            annotations = get_type_hints(cls)
+            if name not in annotations:
+                raise ValueError(f'{cls} does not have a field named: {name}:')
+    if kwargs:
+        setattr(cls, "__SERIALIZE_AS__", kwargs)
+    return cls
+
+
+def serialize_fields_as(**kwargs) -> Callable[[Type[C]], Type[C]]:
+    """Adds serialization metadata to the class, which is used to augment the
+    PEP 526 __annotations__ to determine how to serialize the fields of the
+    given class.
+
+    Each is provided as a `fieldname=class` pair, or a `fieldname=fn` pair,
+    which is called when serializing the field with that name.
+
+    Example:
+    ```
+    def some_func(value: str) -> str:
+        return f'serialized {value}.'
+
+    @dataclass
+    @serialize_json
+    @serialize_fields_as(my_int_field=str,my_other_field=some_func)
+    class MyClass:
+        my_int_field: int
+        my_other_field: str
+
+    instance = MyClass(45, "hello")
+    assertEqual(
+        instance.json_dumps(),
+        '{"my_int_field":"45","my_other_field":"serialized hello"}'
+    )
+    ```
+    """
+
+    def wrap(cls: Type[C]) -> Type[C]:
+        return _process_metadata(cls, **kwargs)
+
+    return wrap
