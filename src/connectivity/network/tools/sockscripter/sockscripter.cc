@@ -9,6 +9,7 @@
 #include <net/if.h>
 #include <unistd.h>
 
+#include <cstring>
 #include <iomanip>
 #include <optional>
 
@@ -162,6 +163,7 @@ const struct Command {
      &SockScripter::Drop6},
     {"listen", nullptr, "listen on TCP socket", &SockScripter::Listen},
     {"accept", nullptr, "accept on TCP socket", &SockScripter::Accept},
+    {"close-listener", nullptr, "close listening TCP socket", &SockScripter::CloseListener},
     {"sendto", "<send-to-ip>:<send-to-port>", "sendto(send_buf, ip, port)", &SockScripter::SendTo},
     {"send", nullptr, "send send_buf on a connected socket", &SockScripter::Send},
     {"recvfrom", nullptr, "recvfrom()", &SockScripter::RecvFrom},
@@ -404,15 +406,38 @@ bool SockScripter::Open(int domain, int type, int proto) {
 }
 
 bool SockScripter::Close(char* arg) {
-  if (sockfd_ >= 0) {
-    api_->close(sockfd_);
-    LOG(INFO) << "Closed socket-fd:" << sockfd_;
-    sockfd_ = -1;
+  if (sockfd_ < 0) {
+    LOG(ERROR) << "No socket to close";
+    return false;
   }
-  if (prev_sock_fd_ >= 0) {
-    sockfd_ = prev_sock_fd_;
-    prev_sock_fd_ = -1;
+
+  if (auto err = api_->close(sockfd_); err != 0) {
+    LOG(ERROR) << "Failed to close fd=" << sockfd_ << ": " << std::strerror(err);
+    return false;
   }
+
+  LOG(INFO) << "Closed socket-fd:" << sockfd_;
+  sockfd_ = -1;
+
+  if (tcp_listen_socket_fd_ >= 0) {
+    sockfd_ = tcp_listen_socket_fd_;
+    tcp_listen_socket_fd_ = -1;
+  }
+  return true;
+}
+
+bool SockScripter::CloseListener(char* arg) {
+  if (tcp_listen_socket_fd_ < 0) {
+    LOG(ERROR) << "No listening TCP socket to close";
+    return false;
+  }
+
+  if (auto err = api_->close(tcp_listen_socket_fd_); err != 0) {
+    LOG(ERROR) << "Failed to close fd=" << tcp_listen_socket_fd_ << ": " << std::strerror(err);
+    return false;
+  }
+  LOG(INFO) << "Closed socket-fd:" << tcp_listen_socket_fd_;
+  tcp_listen_socket_fd_ = -1;
   return true;
 }
 
@@ -898,7 +923,7 @@ bool SockScripter::Accept(char* arg) {
             << "(fd:" << fd << ") from " << Format(addr);
 
   // Switch to the newly created connection, remember the previous one.
-  prev_sock_fd_ = sockfd_;
+  tcp_listen_socket_fd_ = sockfd_;
   sockfd_ = fd;
   return true;
 }

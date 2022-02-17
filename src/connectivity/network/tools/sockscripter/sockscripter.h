@@ -45,6 +45,7 @@ class SockScripter {
   struct sockaddr* GetSockAddrStorage();
   bool Open(int domain, int type, int proto);
   bool Close(char* arg);
+  bool CloseListener(char* arg);
   bool SetBroadcast(char* arg);
   bool LogBroadcast(char* arg);
   bool SetReuseaddr(char* arg);
@@ -97,8 +98,9 @@ class SockScripter {
   bool SetSendBufText(char* arg);
   bool Sleep(char* arg);
 
+ private:
   int sockfd_ = -1;
-  int prev_sock_fd_ = -1;
+  int tcp_listen_socket_fd_ = -1;
   int snd_flags_ = 0;
   int recv_flags_ = 0;
   SendBufferGenerator snd_buf_gen_;

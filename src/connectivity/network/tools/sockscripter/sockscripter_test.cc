@@ -247,6 +247,77 @@ TEST(CommandLine, TcpBindConnectSendRecv) {
   EXPECT_EQ(test.RunCommandLine("tcp bind 0.0.0.0:0 connect 192.168.0.1:2021 send recv close"), 0);
 }
 
+TEST(CommandLine, TcpBindListenAcceptCloseListenerSend) {
+  testing::StrictMock<TestApi> test;
+  testing::InSequence s;
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, bind(kSockFd, testing::_, testing::_))
+      .WillOnce([](testing::Unused, const struct sockaddr* addr, socklen_t addrlen) {
+        const struct sockaddr_in expected_addr = {
+            .sin_family = AF_INET,
+            .sin_addr =
+                {
+                    .s_addr = htonl(INADDR_ANY),
+                },
+        };
+        EXPECT_GE(addrlen, sizeof(expected_addr));
+        const auto& addr_in = *reinterpret_cast<const struct sockaddr_in*>(addr);
+        EXPECT_EQ(addr_in.sin_family, expected_addr.sin_family);
+        EXPECT_EQ(addr_in.sin_port, expected_addr.sin_port);
+        EXPECT_EQ(addr_in.sin_addr.s_addr, expected_addr.sin_addr.s_addr);
+        return 0;
+      });
+  EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
+  EXPECT_CALL(test, listen(kSockFd, testing::_)).WillOnce(testing::Return(0));
+  const int kAcceptedFd = kSockFd + 1;
+  EXPECT_CALL(test, accept(kSockFd, testing::_, testing::_))
+      .WillOnce([](testing::Unused, struct sockaddr* addr, socklen_t* addrlen) {
+        EXPECT_THAT(addrlen, testing::Pointee(
+                                 testing::Ge(static_cast<socklen_t>(sizeof(struct sockaddr_in)))));
+        EXPECT_THAT(addr, testing::NotNull());
+        auto& addr_in = *reinterpret_cast<struct sockaddr_in*>(addr);
+        addr_in = {
+            .sin_family = AF_INET,
+            .sin_port = htons(2021),
+            .sin_addr =
+                {
+                    .s_addr = htonl(0x7F001),
+                },
+        };
+        return kAcceptedFd;
+      })
+      .RetiresOnSaturation();
+  EXPECT_CALL(test, close(kSockFd)).WillOnce(testing::Return(0));
+  EXPECT_CALL(test, send(kAcceptedFd, testing::_, testing::_, testing::_))
+      .WillOnce([](testing::Unused, const void* buf, size_t len, testing::Unused) { return len; });
+  EXPECT_EQ(test.RunCommandLine("tcp bind 0.0.0.0:0 listen accept close-listener send"), 0);
+}
+
+TEST(CommandLine, CloseListenerTwice) {
+  testing::StrictMock<TestApi> test;
+  testing::InSequence s;
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)).WillOnce(testing::Return(kSockFd));
+  const int kAcceptedFd = kSockFd + 1;
+  EXPECT_CALL(test, accept(kSockFd, testing::_, testing::_))
+      .WillOnce([](testing::Unused, struct sockaddr* addr, socklen_t* addrlen) {
+        EXPECT_THAT(addrlen, testing::Pointee(
+                                 testing::Ge(static_cast<socklen_t>(sizeof(struct sockaddr_in)))));
+        EXPECT_THAT(addr, testing::NotNull());
+        auto& addr_in = *reinterpret_cast<struct sockaddr_in*>(addr);
+        addr_in = {
+            .sin_family = AF_INET,
+            .sin_port = htons(2021),
+            .sin_addr =
+                {
+                    .s_addr = htonl(0x7F001),
+                },
+        };
+        return kAcceptedFd;
+      });
+  EXPECT_CALL(test, close(kSockFd)).WillOnce(testing::Return(0));
+  EXPECT_EQ(test.RunCommandLine("tcp accept close-listener close-listener"), -1);
+}
+
 TEST(CommandLine, TcpShutdown) {
   testing::StrictMock<TestApi> test;
   testing::InSequence s;
