@@ -11,59 +11,91 @@ use {
     futures::StreamExt,
 };
 
-/// Registers as a focus chain listener and dispatches focus chain updates to IME
-/// and shortcut manager.
-pub async fn handle_focus_changes() -> Result<(), Error> {
-    let ime = connect_to_protocol::<fidl_focus::ControllerMarker>()?;
-    let shortcut_manager = connect_to_protocol::<fidl_ui_shortcut::ManagerMarker>()?;
+/// FocusListener listens to focus change and notify to related input modules.
+pub struct FocusListener {
+    /// The FIDL proxy to text_manager.
+    text_manager: fidl_focus::ControllerProxy,
 
-    let (focus_chain_listener_client_end, focus_chain_listener) =
-        fidl::endpoints::create_request_stream::<focus::FocusChainListenerMarker>()?;
+    /// The FIDL proxy to shortcut manager.
+    shortcut_manager: fidl_ui_shortcut::ManagerProxy,
 
-    let focus_chain_listener_registry: focus::FocusChainListenerRegistryProxy =
-        connect_to_protocol::<focus::FocusChainListenerRegistryMarker>()?;
-    focus_chain_listener_registry
-        .register(focus_chain_listener_client_end)
-        .context("Failed to register focus chain listener.")?;
-
-    dispatch_focus_changes(ime, shortcut_manager, focus_chain_listener).await
+    /// A channel that receives focus chain updates.
+    focus_chain_listener: focus::FocusChainListenerRequestStream,
 }
 
-/// Dispatches focus chain updates from `focus_chain_listener` to
-/// `focus_ctl` and `shortcut_manager`.
-///
-/// # Parameters
-/// `focus_ctl`: A proxy to the focus controller.
-/// `shortcut_manager`: A proxy to the shortcut manager service.
-/// `focus_chain_listener`: A channel that receives focus chain updates.
-async fn dispatch_focus_changes(
-    focus_ctl: fidl_focus::ControllerProxy,
-    shortcut_manager: fidl_ui_shortcut::ManagerProxy,
-    mut focus_chain_listener: focus::FocusChainListenerRequestStream,
-) -> Result<(), Error> {
-    while let Some(focus_change) = focus_chain_listener.next().await {
-        match focus_change {
-            Ok(focus::FocusChainListenerRequest::OnFocusChange {
-                focus_chain, responder, ..
-            }) => {
-                // Dispatch to IME.
-                if let Some(ref focus_chain) = focus_chain.focus_chain {
-                    if let Some(ref view_ref) = focus_chain.last() {
-                        let mut view_ref_dup = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
-                        focus_ctl.notify(&mut view_ref_dup).await?;
-                    }
-                };
+impl FocusListener {
+    /// Creates a new focus listener that holds proxy to text manager and shortcut manager.
+    /// The caller is expected to spawn a task to continually listen to focus change event.
+    /// Example:
+    /// let mut listener = FocusListener::new();
+    /// fuchsia_async::Task::local(async move {
+    ///     let _ = listener.dispatch_focus_changes().await;
+    /// }).detach();
+    ///
+    /// # Errors
+    /// If unable to connect to text_manager, shortcut manager or protocols.
+    pub fn new() -> Result<Self, Error> {
+        let text_manager = connect_to_protocol::<fidl_focus::ControllerMarker>()?;
+        let shortcut_manager = connect_to_protocol::<fidl_ui_shortcut::ManagerMarker>()?;
 
-                // Dispatch to shortcut manager.
-                shortcut_manager.handle_focus_change(focus_chain).await?;
+        let (focus_chain_listener_client_end, focus_chain_listener) =
+            fidl::endpoints::create_request_stream::<focus::FocusChainListenerMarker>()?;
 
-                responder.send()?;
-            }
-            Err(e) => fx_log_err!("FocusChainListenerRequest has error: {}.", e),
-        }
+        let focus_chain_listener_registry: focus::FocusChainListenerRegistryProxy =
+            connect_to_protocol::<focus::FocusChainListenerRegistryMarker>()?;
+        focus_chain_listener_registry
+            .register(focus_chain_listener_client_end)
+            .context("Failed to register focus chain listener.")?;
+
+        Ok(Self::new_listener(text_manager, shortcut_manager, focus_chain_listener))
     }
 
-    Err(format_err!("Stopped dispatching focus changes."))
+    /// Creates a new focus listener that holds proxy to text and shortcut manager.
+    /// The caller is expected to spawn a task to continually listen to focus change event.
+    ///
+    /// # Parameters
+    /// - `text_manager`: A proxy to the text manager service.
+    /// - `shortcut_manager`: A proxy to the shortcut manager service.
+    /// - `focus_chain_listener`: A channel that receives focus chain updates.
+    ///
+    /// # Errors
+    /// If unable to connect to text_manager, shortcut manager or protocols.
+    fn new_listener(
+        text_manager: fidl_focus::ControllerProxy,
+        shortcut_manager: fidl_ui_shortcut::ManagerProxy,
+        focus_chain_listener: focus::FocusChainListenerRequestStream,
+    ) -> Self {
+        Self { text_manager, shortcut_manager, focus_chain_listener }
+    }
+
+    /// Dispatches focus chain updates from `focus_chain_listener` to `text_manager` and `shortcut_manager`.
+    pub async fn dispatch_focus_changes(&mut self) -> Result<(), Error> {
+        while let Some(focus_change) = self.focus_chain_listener.next().await {
+            match focus_change {
+                Ok(focus::FocusChainListenerRequest::OnFocusChange {
+                    focus_chain,
+                    responder,
+                    ..
+                }) => {
+                    // Dispatch to text manager.
+                    if let Some(ref focus_chain) = focus_chain.focus_chain {
+                        if let Some(ref view_ref) = focus_chain.last() {
+                            let mut view_ref_dup = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
+                            self.text_manager.notify(&mut view_ref_dup).await?;
+                        }
+                    };
+
+                    // Dispatch to shortcut manager.
+                    self.shortcut_manager.handle_focus_change(focus_chain).await?;
+
+                    responder.send()?;
+                }
+                Err(e) => fx_log_err!("FocusChainListenerRequest has error: {}.", e),
+            }
+        }
+
+        Err(format_err!("Stopped dispatching focus changes."))
+    }
 }
 
 #[cfg(test)]
@@ -90,7 +122,7 @@ mod tests {
                 let _ = responder.send();
                 view_ref
             }
-            _ => panic!("Error expecting IME focus change."),
+            _ => panic!("Error expecting text_manager focus change."),
         }
     }
 
@@ -118,7 +150,7 @@ mod tests {
         }
     }
 
-    /// Tests focused view routing from FocusChainListener to IME service and shortcut manager.
+    /// Tests focused view routing from FocusChainListener to text_manager service and shortcut manager.
     #[fuchsia_async::run_until_stalled(test)]
     async fn dispatch_focus() -> Result<(), Error> {
         let (focus_proxy, focus_request_stream) =
@@ -129,10 +161,11 @@ mod tests {
         let (focus_chain_listener_client_end, focus_chain_listener) =
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_focus::FocusChainListenerMarker>()?;
 
-        fuchsia_async::Task::spawn(async move {
-            let _ =
-                dispatch_focus_changes(focus_proxy, shortcut_manager_proxy, focus_chain_listener)
-                    .await;
+        let mut listener =
+            FocusListener::new_listener(focus_proxy, shortcut_manager_proxy, focus_chain_listener);
+
+        fuchsia_async::Task::local(async move {
+            let _ = listener.dispatch_focus_changes().await;
         })
         .detach();
 
