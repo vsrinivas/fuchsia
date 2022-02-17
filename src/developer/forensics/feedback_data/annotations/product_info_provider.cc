@@ -94,7 +94,7 @@ void ProductInfoProvider::GetInfo() {
 
       const std::string locale_list = std::accumulate(
           std::next(begin), end, begin->id,
-          [](auto& acc, const auto& locale) { return acc.append(", ").append(locale.id); });
+          [](auto acc, const auto& locale) { return acc.append(", ").append(locale.id); });
       annotations.insert_or_assign(kAnnotationHardwareProductLocaleList, locale_list);
     }
 
