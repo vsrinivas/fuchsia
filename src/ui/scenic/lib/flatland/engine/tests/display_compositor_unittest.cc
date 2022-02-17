@@ -173,8 +173,7 @@ INSTANTIATE_TEST_SUITE_P(BufferCollectionImportModes, ParameterizedDisplayCompos
                          ::testing::Values(BufferCollectionImportMode::EnforceDisplayConstraints,
                                            BufferCollectionImportMode::AttemptDisplayConstraints));
 
-// TODO(https://fxbug.dev/94017): Re-enable
-TEST_F(DisplayCompositorTest, DISABLED_ClientDropSysmemToken) {
+TEST_F(DisplayCompositorTest, ClientDropSysmemToken) {
   auto mock = mock_display_controller_.get();
   // Set the mock display controller functions and wait for messages.
   std::thread server([&mock]() mutable {
@@ -192,16 +191,18 @@ TEST_F(DisplayCompositorTest, DISABLED_ClientDropSysmemToken) {
     auto token = CreateToken();
     auto sync_token = token.BindSync();
     sync_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, dup_token.NewRequest());
+    sync_token->Sync();
   }
 
   // Save token to avoid early token failure in Renderer import.
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token_ref;
-  EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
-      .WillOnce([&token_ref](allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
-                             fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-        token_ref = std::move(token);
-        return true;
-      });
+  ON_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
+      .WillByDefault(
+          [&token_ref](allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
+                       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+            token_ref = std::move(token);
+            return true;
+          });
   EXPECT_FALSE(display_compositor_->ImportBufferCollection(
       kGlobalBufferCollectionId, sysmem_allocator_.get(), std::move(dup_token)));
 
