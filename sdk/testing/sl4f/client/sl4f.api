@@ -1017,6 +1017,99 @@
           "returnType": "Iterable<T>",
           "type": "FunctionDeclarationImpl"
         },
+        "getEventToVsyncLatencyValues": {
+          "SimpleFormalParameterImpl": {
+            "delta": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "delta",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "null"
+            },
+            "model": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "model",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "Model"
+            },
+            "startEvent": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "startEvent",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "null"
+            },
+            "startEventCategory": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "startEventCategory",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "String"
+            },
+            "startEventName": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "startEventName",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "String"
+            },
+            "vsyncEvent": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "vsyncEvent",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "null"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "getEventToVsyncLatencyValues",
+          "returnType": "List<double>",
+          "type": "FunctionDeclarationImpl"
+        },
         "getFollowingEvents": {
           "SimpleFormalParameterImpl": {
             "a": {
@@ -2268,6 +2361,72 @@
         }
       },
       "name": "feedback_data_provider.dart",
+      "type": "file"
+    },
+    "flatland_latency.dart": {
+      "FunctionDeclarationImpl": {
+        "flatlandLatencyMetricsProcessor": {
+          "SimpleFormalParameterImpl": {
+            "extraArgs": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "extraArgs",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "Map<String, dynamic>"
+            },
+            "model": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "model",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "Model"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "flatlandLatencyMetricsProcessor",
+          "returnType": "List<TestCaseResults>",
+          "type": "FunctionDeclarationImpl"
+        },
+        "flatlandLatencyReport": {
+          "SimpleFormalParameterImpl": {
+            "model": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "model",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "Model"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "flatlandLatencyReport",
+          "returnType": "String",
+          "type": "FunctionDeclarationImpl"
+        }
+      },
+      "name": "flatland_latency.dart",
       "type": "file"
     },
     "flutter_frame_stats.dart": {
@@ -4839,10 +4998,22 @@
                 "this._sl4f": {
                   "name": "this._sl4f",
                   "type": "FieldFormalParameterImpl"
-                },
-                "this.proxyPorts": {
-                  "name": "this.proxyPorts",
-                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "SimpleFormalParameterImpl": {
+                "proxyPorts": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "proxyPorts",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<int>"
                 }
               },
               "name": "TcpProxyController",
@@ -4928,350 +5099,6 @@
         }
       },
       "name": "proxy.dart",
-      "type": "file"
-    },
-    "repository_manager.dart": {
-      "ClassDeclarationImpl": {
-        "KeyConfig": {
-          "ConstructorDeclarationImpl": {
-            "KeyConfig": {
-              "FieldFormalParameterImpl": {
-                "this.type": {
-                  "name": "this.type",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.value": {
-                  "name": "this.value",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "name": "KeyConfig",
-              "type": "ConstructorDeclarationImpl"
-            },
-            "KeyConfig.fromJson": {
-              "SimpleFormalParameterImpl": {
-                "json": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "json",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                }
-              },
-              "name": "KeyConfig.fromJson",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
-          "MethodDeclarationImpl": {
-            "toJson": {
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "toJson",
-              "returnType": "dynamic",
-              "type": "MethodDeclarationImpl"
-            }
-          },
-          "VariableDeclarationImpl": {
-            "type": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "type",
-              "type": "VariableDeclarationImpl",
-              "varType": "String"
-            },
-            "value": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "value",
-              "type": "VariableDeclarationImpl",
-              "varType": "String"
-            }
-          },
-          "name": "KeyConfig",
-          "type": "ClassDeclarationImpl"
-        },
-        "MirrorConfig": {
-          "ConstructorDeclarationImpl": {
-            "MirrorConfig": {
-              "FieldFormalParameterImpl": {
-                "@required this.subscribe": {
-                  "name": "@required this.subscribe",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.mirrorUrl": {
-                  "name": "this.mirrorUrl",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "name": "MirrorConfig",
-              "type": "ConstructorDeclarationImpl"
-            },
-            "MirrorConfig.fromJson": {
-              "SimpleFormalParameterImpl": {
-                "json": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "json",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                }
-              },
-              "name": "MirrorConfig.fromJson",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
-          "MethodDeclarationImpl": {
-            "toJson": {
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "toJson",
-              "returnType": "dynamic",
-              "type": "MethodDeclarationImpl"
-            }
-          },
-          "VariableDeclarationImpl": {
-            "blobMirrorUrl": {
-              "isConst": false,
-              "isFinal": false,
-              "isLate": false,
-              "name": "blobMirrorUrl",
-              "type": "VariableDeclarationImpl",
-              "varType": "String"
-            },
-            "mirrorUrl": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "mirrorUrl",
-              "type": "VariableDeclarationImpl",
-              "varType": "String"
-            },
-            "subscribe": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "subscribe",
-              "type": "VariableDeclarationImpl",
-              "varType": "bool"
-            }
-          },
-          "name": "MirrorConfig",
-          "type": "ClassDeclarationImpl"
-        },
-        "RepositoryConfig": {
-          "ConstructorDeclarationImpl": {
-            "RepositoryConfig": {
-              "FieldFormalParameterImpl": {
-                "this.mirrors": {
-                  "name": "this.mirrors",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.repoUrl": {
-                  "name": "this.repoUrl",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "this.rootKeys": {
-                  "name": "this.rootKeys",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "name": "RepositoryConfig",
-              "type": "ConstructorDeclarationImpl"
-            },
-            "RepositoryConfig.fromJson": {
-              "SimpleFormalParameterImpl": {
-                "json": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "json",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "Map<String, dynamic>"
-                }
-              },
-              "name": "RepositoryConfig.fromJson",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
-          "MethodDeclarationImpl": {
-            "toJson": {
-              "SimpleFormalParameterImpl": {
-                "k": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "k",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "m": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "m",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "toJson",
-              "returnType": "dynamic",
-              "type": "MethodDeclarationImpl"
-            }
-          },
-          "VariableDeclarationImpl": {
-            "mirrors": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "mirrors",
-              "type": "VariableDeclarationImpl",
-              "varType": "List<MirrorConfig>"
-            },
-            "repoUrl": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "repoUrl",
-              "type": "VariableDeclarationImpl",
-              "varType": "String"
-            },
-            "rootKeys": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "rootKeys",
-              "type": "VariableDeclarationImpl",
-              "varType": "List<KeyConfig>"
-            },
-            "rootThreshold": {
-              "isConst": false,
-              "isFinal": false,
-              "isLate": false,
-              "name": "rootThreshold",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
-            "rootVersion": {
-              "isConst": false,
-              "isFinal": false,
-              "isLate": false,
-              "name": "rootVersion",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
-            "updatePackageUrl": {
-              "isConst": false,
-              "isFinal": false,
-              "isLate": false,
-              "name": "updatePackageUrl",
-              "type": "VariableDeclarationImpl",
-              "varType": "String"
-            }
-          },
-          "name": "RepositoryConfig",
-          "type": "ClassDeclarationImpl"
-        },
-        "RepositoryManager": {
-          "ConstructorDeclarationImpl": {
-            "RepositoryManager": {
-              "FieldFormalParameterImpl": {
-                "this._sl4f": {
-                  "name": "this._sl4f",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "name": "RepositoryManager",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
-          "MethodDeclarationImpl": {
-            "add": {
-              "SimpleFormalParameterImpl": {
-                "config": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "config",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "RepositoryConfig"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "add",
-              "returnType": "Future<void>",
-              "type": "MethodDeclarationImpl"
-            },
-            "list": {
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "list",
-              "returnType": "Future<List<dynamic>>",
-              "type": "MethodDeclarationImpl"
-            }
-          },
-          "name": "RepositoryManager",
-          "type": "ClassDeclarationImpl"
-        }
-      },
-      "name": "repository_manager.dart",
       "type": "file"
     },
     "scenic.dart": {
@@ -5760,10 +5587,6 @@
           "name": "src/proxy.dart",
           "type": "ExportDirectiveImpl"
         },
-        "src/repository_manager.dart": {
-          "name": "src/repository_manager.dart",
-          "type": "ExportDirectiveImpl"
-        },
         "src/scenic.dart": {
           "name": "src/scenic.dart",
           "type": "ExportDirectiveImpl"
@@ -5798,10 +5621,6 @@
         },
         "src/trace_processing/metrics_spec.dart": {
           "name": "src/trace_processing/metrics_spec.dart",
-          "type": "ExportDirectiveImpl"
-        },
-        "src/update.dart": {
-          "name": "src/update.dart",
           "type": "ExportDirectiveImpl"
         },
         "src/virtual_camera.dart": {
@@ -7321,6 +7140,16 @@
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
+            "startFlatland": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "startFlatland",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
             "stop": {
               "isAbstract": false,
               "isGetter": false,
@@ -8528,6 +8357,62 @@
           "type": "ClassDeclarationImpl"
         },
         "Model": {
+          "MethodDeclarationImpl": {
+            "slice": {
+              "SimpleFormalParameterImpl": {
+                "e": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "e",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                },
+                "end": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "end",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "TimePoint"
+                },
+                "start": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "start",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "TimePoint"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "slice",
+              "returnType": "Model",
+              "type": "MethodDeclarationImpl"
+            }
+          },
           "VariableDeclarationImpl": {
             "processes": {
               "isConst": false,
@@ -8661,6 +8546,10 @@
           "name": "src/trace_processing/metrics/drm_fps.dart",
           "type": "ExportDirectiveImpl"
         },
+        "src/trace_processing/metrics/flatland_latency.dart": {
+          "name": "src/trace_processing/metrics/flatland_latency.dart",
+          "type": "ExportDirectiveImpl"
+        },
         "src/trace_processing/metrics/flutter_frame_stats.dart": {
           "name": "src/trace_processing/metrics/flutter_frame_stats.dart",
           "type": "ExportDirectiveImpl"
@@ -8715,154 +8604,6 @@
         }
       },
       "name": "trace_processing.dart",
-      "type": "file"
-    },
-    "update.dart": {
-      "ClassDeclarationImpl": {
-        "Update": {
-          "ConstructorDeclarationImpl": {
-            "Update": {
-              "FieldFormalParameterImpl": {
-                "this._sl4f": {
-                  "name": "this._sl4f",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "name": "Update",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
-          "MethodDeclarationImpl": {
-            "checkNow": {
-              "SimpleFormalParameterImpl": {
-                "e": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "e",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
-                "serviceInitiated": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": true,
-                  "isOptionalNamed": true,
-                  "isOptionalPositional": false,
-                  "isPositional": false,
-                  "isRequired": false,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": false,
-                  "name": "serviceInitiated",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "bool"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "checkNow",
-              "returnType": "Future<CheckStartedResult>",
-              "type": "MethodDeclarationImpl"
-            },
-            "getChannelList": {
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "getChannelList",
-              "returnType": "Future<List<String>>",
-              "type": "MethodDeclarationImpl"
-            },
-            "getCurrentChannel": {
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "getCurrentChannel",
-              "returnType": "Future<String>",
-              "type": "MethodDeclarationImpl"
-            },
-            "getTargetChannel": {
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "getTargetChannel",
-              "returnType": "Future<String>",
-              "type": "MethodDeclarationImpl"
-            },
-            "setTargetChannel": {
-              "SimpleFormalParameterImpl": {
-                "channel": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "channel",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "String"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "setTargetChannel",
-              "returnType": "Future<void>",
-              "type": "MethodDeclarationImpl"
-            }
-          },
-          "name": "Update",
-          "type": "ClassDeclarationImpl"
-        }
-      },
-      "EnumDeclarationImpl": {
-        "CheckStartedResult": {
-          "EnumConstantDeclarationImpl": {
-            "alreadyInProgress": {
-              "name": "alreadyInProgress",
-              "type": "EnumConstantDeclarationImpl"
-            },
-            "internal": {
-              "name": "internal",
-              "type": "EnumConstantDeclarationImpl"
-            },
-            "invalidOptions": {
-              "name": "invalidOptions",
-              "type": "EnumConstantDeclarationImpl"
-            },
-            "started": {
-              "name": "started",
-              "type": "EnumConstantDeclarationImpl"
-            },
-            "throttled": {
-              "name": "throttled",
-              "type": "EnumConstantDeclarationImpl"
-            }
-          },
-          "name": "CheckStartedResult",
-          "type": "EnumDeclarationImpl"
-        }
-      },
-      "name": "update.dart",
       "type": "file"
     },
     "virtual_camera.dart": {
@@ -9207,6 +8948,172 @@
           "name": "ProcessHelper",
           "type": "ClassDeclarationImpl"
         },
+        "SingleWebDriverConnector": {
+          "ConstructorDeclarationImpl": {
+            "SingleWebDriverConnector": {
+              "SimpleFormalParameterImpl": {
+                "chromeDriverUri": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "chromeDriverUri",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Uri"
+                },
+                "portForwarder": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "portForwarder",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "PortForwarder"
+                },
+                "sl4f": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "sl4f",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Sl4f"
+                },
+                "webDriverHelper": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "webDriverHelper",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "WebDriverHelper"
+                }
+              },
+              "name": "SingleWebDriverConnector",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "initialize": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "initialize",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "portForwarder": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "portForwarder",
+              "returnType": "PortForwarder",
+              "type": "MethodDeclarationImpl"
+            },
+            "tearDown": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "tearDown",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "webDriverForHosts": {
+              "SimpleFormalParameterImpl": {
+                "hosts": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "hosts",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<String>"
+                },
+                "url": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "url",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "webDriverForHosts",
+              "returnType": "Future<async_core.WebDriver>",
+              "type": "MethodDeclarationImpl"
+            },
+            "webDriverForUrl": {
+              "SimpleFormalParameterImpl": {
+                "urlMatcher": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "urlMatcher",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool Function(String)"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "webDriverForUrl",
+              "returnType": "Future<async_core.WebDriver>",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "SingleWebDriverConnector",
+          "type": "ClassDeclarationImpl"
+        },
         "SshPortForwarder": {
           "ConstructorDeclarationImpl": {
             "SshPortForwarder": {
@@ -9311,6 +9218,34 @@
           "ConstructorDeclarationImpl": {
             "TcpPortForwarder": {
               "SimpleFormalParameterImpl": {
+                "hostPort": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "hostPort",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "proxyPort": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "proxyPort",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
                 "sl4f": {
                   "isConst": false,
                   "isFinal": false,
@@ -9324,6 +9259,20 @@
                   "name": "sl4f",
                   "type": "SimpleFormalParameterImpl",
                   "varType": "Sl4f"
+                },
+                "targetHost": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "targetHost",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
                 }
               },
               "name": "TcpPortForwarder",
@@ -9412,6 +9361,16 @@
               "name": "tearDown",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "proxyControl": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "proxyControl",
+              "type": "VariableDeclarationImpl",
+              "varType": "TcpProxyController"
             }
           },
           "name": "TcpPortForwarder",
@@ -9648,7 +9607,7 @@
               "isSetter": false,
               "isStatic": false,
               "name": "webDriversForHost",
-              "returnType": "Future<List<WebDriver>>",
+              "returnType": "Future<List<sync_core.WebDriver>>",
               "type": "MethodDeclarationImpl"
             },
             "webSocketDebuggerUrlsForHost": {
@@ -9712,11 +9671,81 @@
         "WebDriverHelper": {
           "ConstructorDeclarationImpl": {
             "WebDriverHelper": {
+              "SimpleFormalParameterImpl": {
+                "httpClient": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "httpClient",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "io.HttpClient"
+                }
+              },
               "name": "WebDriverHelper",
               "type": "ConstructorDeclarationImpl"
             }
           },
           "MethodDeclarationImpl": {
+            "createAsyncDriver": {
+              "SimpleFormalParameterImpl": {
+                "chromedriverUri": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "chromedriverUri",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Uri"
+                },
+                "debuggerAddress": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "debuggerAddress",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "HostAndPort"
+                },
+                "prefix": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "prefix",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "createAsyncDriver",
+              "returnType": "Future<async_core.WebDriver>",
+              "type": "MethodDeclarationImpl"
+            },
             "createDriver": {
               "SimpleFormalParameterImpl": {
                 "chromedriverPort": {
@@ -9754,7 +9783,7 @@
               "isSetter": false,
               "isStatic": false,
               "name": "createDriver",
-              "returnType": "Future<WebDriver>",
+              "returnType": "Future<sync_core.WebDriver>",
               "type": "MethodDeclarationImpl"
             }
           },
@@ -9793,7 +9822,7 @@
               "isLate": false,
               "name": "webDriver",
               "type": "VariableDeclarationImpl",
-              "varType": "WebDriver"
+              "varType": "sync_core.WebDriver"
             }
           },
           "name": "WebDriverSession",

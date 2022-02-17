@@ -620,22 +620,6 @@
               "type": "VariableDeclarationImpl",
               "varType": "int"
             },
-            "CLOCK_THREAD": {
-              "isConst": true,
-              "isFinal": false,
-              "isLate": false,
-              "name": "CLOCK_THREAD",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
-            "CLOCK_UTC": {
-              "isConst": true,
-              "isFinal": false,
-              "isLate": false,
-              "name": "CLOCK_UTC",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
             "CPRNG_ADD_ENTROPY_MAX_LEN": {
               "isConst": true,
               "isFinal": false,
@@ -1668,19 +1652,11 @@
               "type": "VariableDeclarationImpl",
               "varType": "int"
             },
-            "OBJ_TYPE_MSI_ALLOCATION": {
+            "OBJ_TYPE_MSI": {
               "isConst": true,
               "isFinal": false,
               "isLate": false,
-              "name": "OBJ_TYPE_MSI_ALLOCATION",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
-            "OBJ_TYPE_MSI_INTERRUPT": {
-              "isConst": true,
-              "isFinal": false,
-              "isLate": false,
-              "name": "OBJ_TYPE_MSI_INTERRUPT",
+              "name": "OBJ_TYPE_MSI",
               "type": "VariableDeclarationImpl",
               "varType": "int"
             },
@@ -2153,30 +2129,6 @@
               "isFinal": false,
               "isLate": false,
               "name": "SOCKET_READ_THRESHOLD",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
-            "SOCKET_SHUTDOWN_MASK": {
-              "isConst": true,
-              "isFinal": false,
-              "isLate": false,
-              "name": "SOCKET_SHUTDOWN_MASK",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
-            "SOCKET_SHUTDOWN_READ": {
-              "isConst": true,
-              "isFinal": false,
-              "isLate": false,
-              "name": "SOCKET_SHUTDOWN_READ",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
-            "SOCKET_SHUTDOWN_WRITE": {
-              "isConst": true,
-              "isFinal": false,
-              "isLate": false,
-              "name": "SOCKET_SHUTDOWN_WRITE",
               "type": "VariableDeclarationImpl",
               "varType": "int"
             },
@@ -3751,6 +3703,22 @@
               "type": "VariableDeclarationImpl",
               "varType": "int"
             },
+            "DISPOSITION_WRITE_DISABLED": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "DISPOSITION_WRITE_DISABLED",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            },
+            "DISPOSITION_WRITE_ENABLED": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "DISPOSITION_WRITE_ENABLED",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            },
             "PEER_CLOSED": {
               "isConst": true,
               "isFinal": false,
@@ -3772,22 +3740,6 @@
               "isFinal": false,
               "isLate": false,
               "name": "READABLE",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
-            "SHUTDOWN_READ": {
-              "isConst": true,
-              "isFinal": false,
-              "isLate": false,
-              "name": "SHUTDOWN_READ",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
-            "SHUTDOWN_WRITE": {
-              "isConst": true,
-              "isFinal": false,
-              "isLate": false,
-              "name": "SHUTDOWN_WRITE",
               "type": "VariableDeclarationImpl",
               "varType": "int"
             },

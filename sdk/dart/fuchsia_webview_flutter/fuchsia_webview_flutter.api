@@ -36,100 +36,6 @@
               "returnType": "void",
               "type": "MethodDeclarationImpl"
             },
-            "evaluateJavascript": {
-              "SimpleFormalParameterImpl": {
-                "origins": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "origins",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "List<String>"
-                },
-                "script": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "script",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "String"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "evaluateJavascript",
-              "returnType": "Future<String>",
-              "type": "MethodDeclarationImpl"
-            },
-            "evaluateJavascriptBeforeLoad": {
-              "SimpleFormalParameterImpl": {
-                "id": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "id",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
-                },
-                "origins": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "origins",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "List<String>"
-                },
-                "script": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "script",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "String"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "evaluateJavascriptBeforeLoad",
-              "returnType": "Future<void>",
-              "type": "MethodDeclarationImpl"
-            },
             "frame": {
               "isAbstract": false,
               "isGetter": true,
@@ -202,6 +108,140 @@
               "isStatic": false,
               "name": "postMessage",
               "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "runJavascript": {
+              "SimpleFormalParameterImpl": {
+                "origins": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "origins",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<String>"
+                },
+                "script": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "script",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "runJavascript",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "runJavascriptBeforeLoad": {
+              "SimpleFormalParameterImpl": {
+                "id": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "id",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "origins": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "origins",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<String>"
+                },
+                "script": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "script",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "runJavascriptBeforeLoad",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "runJavascriptReturningResult": {
+              "SimpleFormalParameterImpl": {
+                "origins": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "origins",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<String>"
+                },
+                "script": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "script",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "runJavascriptReturningResult",
+              "returnType": "Future<String>",
               "type": "MethodDeclarationImpl"
             },
             "setJavaScriptLogLevel": {
@@ -606,32 +646,6 @@
               "returnType": "void",
               "type": "MethodDeclarationImpl"
             },
-            "evaluateJavascript": {
-              "SimpleFormalParameterImpl": {
-                "javascriptString": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "javascriptString",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "String"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "evaluateJavascript",
-              "returnType": "Future<String>",
-              "type": "MethodDeclarationImpl"
-            },
             "fuchsiaWebServices": {
               "isAbstract": false,
               "isGetter": true,
@@ -774,6 +788,58 @@
               "isStatic": false,
               "name": "removeJavascriptChannels",
               "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "runJavascript": {
+              "SimpleFormalParameterImpl": {
+                "javascriptString": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "javascriptString",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "runJavascript",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "runJavascriptReturningResult": {
+              "SimpleFormalParameterImpl": {
+                "javascriptString": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "javascriptString",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "runJavascriptReturningResult",
+              "returnType": "Future<String>",
               "type": "MethodDeclarationImpl"
             },
             "updateSettings": {

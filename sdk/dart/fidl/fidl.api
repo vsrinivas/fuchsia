@@ -75,6 +75,16 @@
               "name": "hashCode",
               "returnType": "int",
               "type": "MethodDeclarationImpl"
+            },
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
             }
           },
           "name": "Bits",
@@ -140,17 +150,47 @@
             }
           },
           "MethodDeclarationImpl": {
-            "claimHandle": {
+            "checkPadding": {
+              "SimpleFormalParameterImpl": {
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "padding": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "padding",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
               "isAbstract": false,
               "isGetter": false,
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "claimHandle",
-              "returnType": "HandleInfo",
+              "name": "checkPadding",
+              "returnType": "void",
               "type": "MethodDeclarationImpl"
             },
-            "claimMemory": {
+            "claimBytes": {
               "SimpleFormalParameterImpl": {
                 "nextOutOfLineDepth": {
                   "isConst": false,
@@ -186,8 +226,18 @@
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "claimMemory",
+              "name": "claimBytes",
               "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "claimHandle": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "claimHandle",
+              "returnType": "HandleInfo",
               "type": "MethodDeclarationImpl"
             },
             "countClaimedHandles": {
@@ -197,6 +247,16 @@
               "isSetter": false,
               "isStatic": false,
               "name": "countClaimedHandles",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "countUnclaimedBytes": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "countUnclaimedBytes",
               "returnType": "int",
               "type": "MethodDeclarationImpl"
             },
@@ -1149,48 +1209,36 @@
           "type": "ClassDeclarationImpl"
         }
       },
+      "FunctionDeclarationImpl": {
+        "align": {
+          "SimpleFormalParameterImpl": {
+            "size": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "size",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "int"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "align",
+          "returnType": "int",
+          "type": "FunctionDeclarationImpl"
+        }
+      },
       "name": "codec.dart",
       "type": "file"
     },
     "codegen_common.dart": {
       "FunctionDeclarationImpl": {
-        "handleCtrlError": {
-          "SimpleFormalParameterImpl": {
-            "ctrl": {
-              "isConst": false,
-              "isFinal": false,
-              "isOptional": false,
-              "isOptionalNamed": false,
-              "isOptionalPositional": false,
-              "isPositional": true,
-              "isRequired": true,
-              "isRequiredNamed": false,
-              "isRequiredPositional": true,
-              "name": "ctrl",
-              "type": "SimpleFormalParameterImpl",
-              "varType": "dynamic"
-            },
-            "message": {
-              "isConst": false,
-              "isFinal": false,
-              "isOptional": false,
-              "isOptionalNamed": false,
-              "isOptionalPositional": false,
-              "isPositional": true,
-              "isRequired": true,
-              "isRequiredNamed": false,
-              "isRequiredPositional": true,
-              "name": "message",
-              "type": "SimpleFormalParameterImpl",
-              "varType": "String"
-            }
-          },
-          "isGetter": false,
-          "isSetter": false,
-          "name": "handleCtrlError",
-          "returnType": "void",
-          "type": "FunctionDeclarationImpl"
-        },
         "handleException": {
           "SimpleFormalParameterImpl": {
             "close": {
@@ -1390,6 +1438,16 @@
               "isStatic": false,
               "name": "isUnknown",
               "returnType": "bool",
+              "type": "MethodDeclarationImpl"
+            },
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
               "type": "MethodDeclarationImpl"
             }
           },
@@ -1608,6 +1666,10 @@
       "EnumDeclarationImpl": {
         "FidlErrorCode": {
           "EnumConstantDeclarationImpl": {
+            "fidlCountExceedsLimit": {
+              "name": "fidlCountExceedsLimit",
+              "type": "EnumConstantDeclarationImpl"
+            },
             "fidlExceededMaxOutOfLineDepth": {
               "name": "fidlExceededMaxOutOfLineDepth",
               "type": "EnumConstantDeclarationImpl"
@@ -1622,6 +1684,10 @@
             },
             "fidlInvalidBit": {
               "name": "fidlInvalidBit",
+              "type": "EnumConstantDeclarationImpl"
+            },
+            "fidlInvalidBoolean": {
+              "name": "fidlInvalidBoolean",
               "type": "EnumConstantDeclarationImpl"
             },
             "fidlInvalidEnumValue": {
@@ -1644,6 +1710,10 @@
               "name": "fidlInvalidNumHandlesInEnvelope",
               "type": "EnumConstantDeclarationImpl"
             },
+            "fidlInvalidPaddingByte": {
+              "name": "fidlInvalidPaddingByte",
+              "type": "EnumConstantDeclarationImpl"
+            },
             "fidlInvalidPresenceIndicator": {
               "name": "fidlInvalidPresenceIndicator",
               "type": "EnumConstantDeclarationImpl"
@@ -1656,6 +1726,10 @@
               "name": "fidlNonEmptyStringWithNullBody",
               "type": "EnumConstantDeclarationImpl"
             },
+            "fidlNonEmptyVectorWithNullBody": {
+              "name": "fidlNonEmptyVectorWithNullBody",
+              "type": "EnumConstantDeclarationImpl"
+            },
             "fidlNonNullableTypeWithNullValue": {
               "name": "fidlNonNullableTypeWithNullValue",
               "type": "EnumConstantDeclarationImpl"
@@ -1664,16 +1738,24 @@
               "name": "fidlNonResourceHandle",
               "type": "EnumConstantDeclarationImpl"
             },
-            "fidlStrictXUnionUnknownField": {
-              "name": "fidlStrictXUnionUnknownField",
+            "fidlStrictUnionUnknownField": {
+              "name": "fidlStrictUnionUnknownField",
               "type": "EnumConstantDeclarationImpl"
             },
             "fidlStringTooLong": {
               "name": "fidlStringTooLong",
               "type": "EnumConstantDeclarationImpl"
             },
+            "fidlTooFewBytes": {
+              "name": "fidlTooFewBytes",
+              "type": "EnumConstantDeclarationImpl"
+            },
             "fidlTooFewHandles": {
               "name": "fidlTooFewHandles",
+              "type": "EnumConstantDeclarationImpl"
+            },
+            "fidlTooManyBytes": {
+              "name": "fidlTooManyBytes",
               "type": "EnumConstantDeclarationImpl"
             },
             "fidlTooManyHandles": {
@@ -1742,16 +1824,16 @@
           "name": "src/types.dart",
           "type": "ExportDirectiveImpl"
         },
+        "src/union.dart": {
+          "name": "src/union.dart",
+          "type": "ExportDirectiveImpl"
+        },
         "src/unknown_data.dart": {
           "name": "src/unknown_data.dart",
           "type": "ExportDirectiveImpl"
         },
         "src/wire_format.dart": {
           "name": "src/wire_format.dart",
-          "type": "ExportDirectiveImpl"
-        },
-        "src/xunion.dart": {
-          "name": "src/xunion.dart",
           "type": "ExportDirectiveImpl"
         }
       },
@@ -3462,6 +3544,20 @@
       "FunctionDeclarationImpl": {
         "decodeMessage": {
           "SimpleFormalParameterImpl": {
+            "decoder": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "decoder",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "Decoder"
+            },
             "inlineSize": {
               "isConst": false,
               "isFinal": false,
@@ -3885,6 +3981,16 @@
               "name": "hashCode",
               "returnType": "int",
               "type": "MethodDeclarationImpl"
+            },
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
             }
           },
           "name": "Struct",
@@ -3996,6 +4102,16 @@
               "isStatic": false,
               "name": "hashCode",
               "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
               "type": "MethodDeclarationImpl"
             }
           },
@@ -5164,6 +5280,74 @@
               "isStatic": false,
               "name": "decodeArray",
               "returnType": "I",
+              "type": "MethodDeclarationImpl"
+            },
+            "decodeObject": {
+              "SimpleFormalParameterImpl": {
+                "decoder": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "decoder",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Decoder"
+                },
+                "depth": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "depth",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "inlineSize": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "inlineSize",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "decodeObject",
+              "returnType": "T",
               "type": "MethodDeclarationImpl"
             },
             "encode": {
@@ -8510,14 +8694,14 @@
             }
           },
           "TypeParameterListImpl": {
-            "<T extends XUnion>": {
+            "<T extends Union>": {
               "TypeParameterImpl": {
-                "T extends XUnion": {
-                  "name": "T extends XUnion",
+                "T extends Union": {
+                  "name": "T extends Union",
                   "type": "TypeParameterImpl"
                 }
               },
-              "name": "<T extends XUnion>",
+              "name": "<T extends Union>",
               "type": "TypeParameterListImpl"
             }
           },
@@ -8528,7 +8712,7 @@
               "isLate": false,
               "name": "ctor",
               "type": "VariableDeclarationImpl",
-              "varType": "XUnionFactory<T>"
+              "varType": "UnionFactory<T>"
             },
             "flexible": {
               "isConst": false,
@@ -10990,14 +11174,14 @@
             }
           },
           "TypeParameterListImpl": {
-            "<T extends XUnion>": {
+            "<T extends Union>": {
               "TypeParameterImpl": {
-                "T extends XUnion": {
-                  "name": "T extends XUnion",
+                "T extends Union": {
+                  "name": "T extends Union",
                   "type": "TypeParameterImpl"
                 }
               },
-              "name": "<T extends XUnion>",
+              "name": "<T extends Union>",
               "type": "TypeParameterListImpl"
             }
           },
@@ -11008,7 +11192,7 @@
               "isLate": false,
               "name": "ctor",
               "type": "VariableDeclarationImpl",
-              "varType": "XUnionFactory<T>"
+              "varType": "UnionFactory<T>"
             },
             "flexible": {
               "isConst": false,
@@ -11600,9 +11784,121 @@
           "name": "kHandlePresent",
           "type": "VariableDeclarationImpl",
           "varType": "int"
+        },
+        "kInlineEnvelopeContentSize": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "kInlineEnvelopeContentSize",
+          "type": "VariableDeclarationImpl",
+          "varType": "null"
+        },
+        "kMaxCount": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "kMaxCount",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
         }
       },
       "name": "types.dart",
+      "type": "file"
+    },
+    "union.dart": {
+      "ClassDeclarationImpl": {
+        "Union": {
+          "ConstructorDeclarationImpl": {
+            "Union": {
+              "name": "Union",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "$data": {
+              "isAbstract": true,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "$data",
+              "returnType": "Object",
+              "type": "MethodDeclarationImpl"
+            },
+            "$ordinal": {
+              "isAbstract": true,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "$ordinal",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "==": {
+              "SimpleFormalParameterImpl": {
+                "other": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "other",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "dynamic"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": true,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "==",
+              "returnType": "bool",
+              "type": "MethodDeclarationImpl"
+            },
+            "hashCode": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "hashCode",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "Union",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "TypeParameterListImpl": {
+        "<T>": {
+          "TypeParameterImpl": {
+            "T": {
+              "name": "T",
+              "type": "TypeParameterImpl"
+            }
+          },
+          "name": "<T>",
+          "type": "TypeParameterListImpl"
+        }
+      },
+      "name": "union.dart",
       "type": "file"
     },
     "unknown_data.dart": {
@@ -11751,92 +12047,6 @@
         }
       },
       "name": "wire_format.dart",
-      "type": "file"
-    },
-    "xunion.dart": {
-      "ClassDeclarationImpl": {
-        "XUnion": {
-          "ConstructorDeclarationImpl": {
-            "XUnion": {
-              "name": "XUnion",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
-          "MethodDeclarationImpl": {
-            "$data": {
-              "isAbstract": true,
-              "isGetter": true,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "$data",
-              "returnType": "Object",
-              "type": "MethodDeclarationImpl"
-            },
-            "$ordinal": {
-              "isAbstract": true,
-              "isGetter": true,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "$ordinal",
-              "returnType": "int",
-              "type": "MethodDeclarationImpl"
-            },
-            "==": {
-              "SimpleFormalParameterImpl": {
-                "other": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "other",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "dynamic"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": true,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "==",
-              "returnType": "bool",
-              "type": "MethodDeclarationImpl"
-            },
-            "hashCode": {
-              "isAbstract": false,
-              "isGetter": true,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "hashCode",
-              "returnType": "int",
-              "type": "MethodDeclarationImpl"
-            }
-          },
-          "name": "XUnion",
-          "type": "ClassDeclarationImpl"
-        }
-      },
-      "TypeParameterListImpl": {
-        "<T>": {
-          "TypeParameterImpl": {
-            "T": {
-              "name": "T",
-              "type": "TypeParameterImpl"
-            }
-          },
-          "name": "<T>",
-          "type": "TypeParameterListImpl"
-        }
-      },
-      "name": "xunion.dart",
       "type": "file"
     }
   },

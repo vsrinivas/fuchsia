@@ -101,7 +101,7 @@ class DetectChangesVisitor<R> extends RecursiveAstVisitor<R> {
   @override
   R visitExtendsClause(ExtendsClause node) {
     SplayTreeMap<String, dynamic> map = SplayTreeMap();
-    map['name'] = node.superclass.name.name;
+    map['name'] = node.superclass2.name.name;
     map['type'] = 'extends';
     stack.first['ExtendsClause'] = map;
     node.visitChildren(this);
@@ -115,7 +115,7 @@ class DetectChangesVisitor<R> extends RecursiveAstVisitor<R> {
       stack.first[type] = SplayTreeMap<String, dynamic>();
     }
 
-    for (var interfaceType in node.interfaces) {
+    for (var interfaceType in node.interfaces2) {
       String name = interfaceType.name.name;
       SplayTreeMap<String, dynamic> map = SplayTreeMap();
       map['name'] = name;
@@ -134,7 +134,7 @@ class DetectChangesVisitor<R> extends RecursiveAstVisitor<R> {
       stack.first[type] = SplayTreeMap<String, dynamic>();
     }
 
-    for (var mixinType in node.mixinTypes) {
+    for (var mixinType in node.mixinTypes2) {
       String name = mixinType.name.name;
       SplayTreeMap<String, dynamic> map = SplayTreeMap();
       map['name'] = name;

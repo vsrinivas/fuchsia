@@ -52,6 +52,19 @@
       "name": "component_context.dart",
       "type": "file"
     },
+    "dart_vm.dart": {
+      "FunctionDeclarationImpl": {
+        "getVmServicePort": {
+          "isGetter": false,
+          "isSetter": false,
+          "name": "getVmServicePort",
+          "returnType": "String?",
+          "type": "FunctionDeclarationImpl"
+        }
+      },
+      "name": "dart_vm.dart",
+      "type": "file"
+    },
     "incoming.dart": {
       "ClassDeclarationImpl": {
         "Incoming": {
@@ -83,7 +96,7 @@
               "isSetter": false,
               "isStatic": false,
               "name": "close",
-              "returnType": "Future<int>",
+              "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
             "connectToService": {

@@ -852,6 +852,224 @@
       "name": "pseudo_vmo_file.dart",
       "type": "file"
     },
+    "remote_dir.dart": {
+      "ClassDeclarationImpl": {
+        "RemoteDir": {
+          "ConstructorDeclarationImpl": {
+            "RemoteDir": {
+              "SimpleFormalParameterImpl": {
+                "channel": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "channel",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Channel"
+                }
+              },
+              "name": "RemoteDir",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "Vnode",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "close": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "close",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "connect": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "mode": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "mode",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "parentFlags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "parentFlags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "request": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "request",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "connect",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "inodeNumber": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "inodeNumber",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            },
+            "open": {
+              "SimpleFormalParameterImpl": {
+                "flags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "flags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "mode": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "mode",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "parentFlags": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": true,
+                  "isPositional": true,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "parentFlags",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "path": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "path",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
+                "request": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "request",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "InterfaceRequest<Node>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "open",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "type": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "type",
+              "returnType": "int",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "RemoteDir",
+          "type": "ClassDeclarationImpl"
+        }
+      },
+      "name": "remote_dir.dart",
+      "type": "file"
+    },
     "service.dart": {
       "ClassDeclarationImpl": {
         "Service": {
@@ -1018,6 +1236,10 @@
         },
         "src/pseudo_vmo_file.dart": {
           "name": "src/pseudo_vmo_file.dart",
+          "type": "ExportDirectiveImpl"
+        },
+        "src/remote_dir.dart": {
+          "name": "src/remote_dir.dart",
           "type": "ExportDirectiveImpl"
         },
         "src/service.dart": {

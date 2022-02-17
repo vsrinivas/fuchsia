@@ -46,6 +46,32 @@
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
+            "requestFocusById": {
+              "SimpleFormalParameterImpl": {
+                "viewId": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "viewId",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "requestFocusById",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
             "stream": {
               "SimpleFormalParameterImpl": {
                 "state": {
@@ -180,6 +206,10 @@
           "ConstructorDeclarationImpl": {
             "FuchsiaViewConnection": {
               "FieldFormalParameterImpl": {
+                "this.useFlatland": {
+                  "name": "this.useFlatland",
+                  "type": "FieldFormalParameterImpl"
+                },
                 "this.usePointerInjection": {
                   "name": "this.usePointerInjection",
                   "type": "FieldFormalParameterImpl"
@@ -242,6 +272,10 @@
             },
             "FuchsiaViewConnection.flatland": {
               "FieldFormalParameterImpl": {
+                "this.useFlatland": {
+                  "name": "this.useFlatland",
+                  "type": "FieldFormalParameterImpl"
+                },
                 "this.usePointerInjection": {
                   "name": "this.usePointerInjection",
                   "type": "FieldFormalParameterImpl"
@@ -350,6 +384,14 @@
             }
           },
           "VariableDeclarationImpl": {
+            "useFlatland": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "useFlatland",
+              "type": "VariableDeclarationImpl",
+              "varType": "bool"
+            },
             "usePointerInjection": {
               "isConst": false,
               "isFinal": true,
@@ -575,6 +617,32 @@
               "isSetter": false,
               "isStatic": false,
               "name": "requestFocus",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "requestFocusById": {
+              "SimpleFormalParameterImpl": {
+                "viewId": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "viewId",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "requestFocusById",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },

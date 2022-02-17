@@ -18,7 +18,7 @@ declare_args() {
   disable_dart_strict_deps = false
 
   # Detect dart API changes
-  enable_api_diff = false
+  enable_api_diff = true
 }
 
 # Defines a Dart library
@@ -559,17 +559,35 @@ if (current_toolchain == dart_toolchain) {
       detect_target_name = "${target_name}_detect_action"
       verify_target_name = "${target_name}_verify"
       detect_target_file = "$target_gen_dir/$package_name.api"
+      _target_dir = get_label_info(":$target_name", "dir")
+      pubspec_target_file = _target_dir + "/pubspec.yaml"
+
+      _detect_snapshot_label = "//build/dart/sdk/detect_api_changes:detect_api_changes_snapshot($dart_toolchain)"
+      _detect_snapshot_path =
+          get_label_info(_detect_snapshot_label, "target_gen_dir") +
+          "/detect_api_changes.snapshot"
 
       action(detect_target_name) {
         runner_label = "//build/dart/sdk/detect_api_changes($dart_toolchain)"
         runner_out_dir = get_label_info(runner_label, "root_out_dir")
         script = "$runner_out_dir/dart-tools/detect_api_changes"
         output_file = detect_target_file
+        depfile = "${target_out_dir}/${detect_target_name}.d"
 
         inputs = [
+          pubspec_target_file,
+          "//analysis_options.yaml",
+          _detect_snapshot_path,
           _packages_path,
           source_file,
-        ]
+        ]  # the gen directory, which triggers an "unexpected file access"
+           # error.
+           # Explicitly add that file to the inputs here.
+
+        # The zircon dart library also copies over the pubspec.yaml file into
+        if (string_replace(target_name, "zircon", "") != target_name) {
+          inputs += [ "$target_gen_dir/zircon/pubspec.yaml" ]
+        }
 
         outputs = [ output_file ]
 
@@ -584,6 +602,12 @@ if (current_toolchain == dart_toolchain) {
           rebase_path("$detect_target_file", root_build_dir),
           "--golden-api",
           rebase_path("$package_name.api", root_build_dir),
+          "--fuchsia-root",
+          rebase_path("//"),
+          "--fuchsia-build-root",
+          rebase_path(root_build_dir),
+          "--depfile",
+          rebase_path(depfile, root_build_dir),
 
           # Uncomment to force updating the .api files
           #"--overwrite",
@@ -592,6 +616,7 @@ if (current_toolchain == dart_toolchain) {
         deps = dart_sdk_deps + [
                  runner_label,
                  ":$_dart_package_config_target_name",
+                 _detect_snapshot_label,
                ]
         forward_variables_from(invoker, [ "testonly" ])
       }
