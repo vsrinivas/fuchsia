@@ -123,8 +123,8 @@ mod tests {
     use fuchsia_inspect::assert_data_tree;
     use fuchsia_inspect_derive::WithInspect;
 
-    #[test]
-    fn sco_state_inspect_tree() {
+    #[fuchsia::test]
+    async fn sco_state_inspect_tree() {
         let inspect = inspect::Inspector::new();
 
         let mut state =
@@ -162,8 +162,11 @@ mod tests {
             path: Some(bredr::DataPath::Offload),
             ..bredr::ScoConnectionParameters::EMPTY
         };
+        let (sco_proxy, _sco_stream) =
+            fidl::endpoints::create_proxy_and_stream::<bredr::ScoConnectionMarker>()
+                .expect("ScoConnection proxy and stream");
         let vigil = Vigil::new(ScoActive {
-            sco_connection: ScoConnection::build(params),
+            sco_connection: ScoConnection::build(params, sco_proxy),
             _pause_token: None,
         });
         state.iset(ScoState::Active(vigil));

@@ -4,7 +4,6 @@
 library fuchsia.bluetooth.bredr;
 
 using fuchsia.hardware.audio;
-using zx;
 
 type ScoErrorCode = strict enum {
     FAILURE = 1;
@@ -38,10 +37,11 @@ type CodingFormat = strict enum : uint8 {
 /// Indicates the audio transport that should be used for the data on a synchronous
 /// connection.
 type DataPath = strict enum : uint8 {
-    /// The HCI transport.
+    /// The HCI transport. Data will be sent/received through the ScoConnection protocol.
     HOST = 1;
 
     /// Transport audio data directly between the controller and the audio hardware.
+    /// The ScoConnection protocol will not be used to send/receive data.
     // TODO(fxbug.dev/62161): Document how offloading is configured.
     OFFLOAD = 2;
 
@@ -91,22 +91,51 @@ type ScoConnectionParameters = table {
     /// The data transport.
     /// Required.
     9: path DataPath;
+
+    /// Indicates the maximum data buffer size that may be sent.
+    /// Optional. Only present after a connection has successfully been connected. Ignored when
+    /// requesting a connection.
+   10: max_tx_data_size uint16;
 };
 
-type ScoConnection = resource table {
-    /// Socket for transmitting/receiving data over the synchronous connection.
-    /// Closing the socket will close the connection.
-    /// If audio is offloaded, data written to the socket will be dropped and reads will fail.
-    1: socket zx.handle:SOCKET;
+/// Inbound SCO data has a RxPacketStatus that indicates possible data loss or corruption.
+type RxPacketStatus = strict enum : uint8 {
+    /// The controller marked all data as "good data".
+    CORRECTLY_RECEIVED_DATA = 0x0;
+    /// Some of the data may have errors.
+    POSSIBLY_INVALID_DATA = 0x1;
+    /// All data was lost. The payload will be empty.
+    NO_DATA_RECEIVED = 0x2;
+    /// Some of the data was lost, and the lost regions of data will be set to 0.
+    DATA_PARTIALLY_LOST = 0x3;
+};
+
+protocol ScoConnection {
+    // Read the next inbound SCO payload.
+    // Hangs until new data is received.
+    // Only one Read request may be pending at a time. Additional requests will result in protocol
+    // closure.
+    Read() -> (struct {
+        status_flag RxPacketStatus;
+        data bytes:MAX;
+    });
+
+    // Write `data` to the SCO connection.
+    // If Write tries to send more data than `max_tx_data_size`, the protocol will be closed.
+    // Only one Write request may be pending at a time. Additional requests will result in protocol
+    // closure.
+    Write(struct {
+        data bytes:MAX;
+    }) -> ();
 };
 
 /// Represents an active synchronous connection request by a profile.
 /// Either `Connected()` or `Error()` will be called and then server will close the protocol.
 protocol ScoConnectionReceiver {
-    /// Called upon successful connection establishment. `params` contains the
-    /// parameters that were used to establish the connection.
+    /// Called upon successful connection establishment.
+    /// `params` contains the parameters that were used to establish the connection.
     Connected(resource struct {
-        connection ScoConnection;
+        connection client_end:ScoConnection;
         params ScoConnectionParameters;
     });
 

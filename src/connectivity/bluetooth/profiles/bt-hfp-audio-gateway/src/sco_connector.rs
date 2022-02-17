@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::AsHandleRef;
+use fidl::endpoints::Proxy;
 use fidl_fuchsia_bluetooth_bredr as bredr;
-use fuchsia_async as fasync;
 use fuchsia_bluetooth::{profile::ValidScoConnectionParameters, types::PeerId};
 use fuchsia_inspect_derive::Unit;
-use fuchsia_zircon as zx;
 use futures::{Future, FutureExt, StreamExt};
 use std::convert::TryInto;
 use tracing::info;
@@ -21,8 +19,8 @@ use crate::features::CodecId;
 pub struct ScoConnection {
     /// The parameters that this connection was set up with.
     pub params: ValidScoConnectionParameters,
-    /// Socket which holds the connection open. Held so when this is dropped the connection closes.
-    socket: zx::Socket,
+    /// Protocol which holds the connection open. Held so when this is dropped the connection closes.
+    proxy: bredr::ScoConnectionProxy,
 }
 
 impl Unit for ScoConnection {
@@ -38,24 +36,16 @@ impl Unit for ScoConnection {
 
 impl ScoConnection {
     pub fn on_closed(&self) -> impl Future<Output = ()> + 'static {
-        fasync::OnSignals::new(&self.socket, zx::Signals::SOCKET_PEER_CLOSED)
-            .extend_lifetime()
-            .map(|_| ())
+        self.proxy.on_closed().extend_lifetime().map(|_| ())
     }
 
     pub fn is_closed(&self) -> bool {
-        self.socket
-            .as_handle_ref()
-            .wait(zx::Signals::SOCKET_PEER_CLOSED, zx::Time::after(zx::Duration::from_nanos(0)))
-            .is_ok()
+        self.proxy.is_closed()
     }
 
     #[cfg(test)]
-    pub fn build(params: bredr::ScoConnectionParameters) -> Self {
-        ScoConnection {
-            params: params.try_into().unwrap(),
-            socket: zx::Socket::create(zx::SocketOpts::empty()).unwrap().0,
-        }
+    pub fn build(params: bredr::ScoConnectionParameters, proxy: bredr::ScoConnectionProxy) -> Self {
+        ScoConnection { params: params.try_into().unwrap(), proxy }
     }
 }
 
@@ -107,20 +97,18 @@ impl ScoConnector {
         Self { proxy }
     }
 
-    async fn await_sco_socket(
+    async fn await_sco_connection(
         requests: &mut bredr::ScoConnectionReceiverRequestStream,
     ) -> Result<ScoConnection, ScoConnectError> {
-        let socket = match requests.next().await {
+        let connection = match requests.next().await {
             Some(Ok(bredr::ScoConnectionReceiverRequest::Connected {
                 connection,
                 params,
                 control_handle: _,
             })) => {
                 let params = params.try_into().map_err(|_| ScoConnectError::ScoInvalidArguments)?;
-                connection
-                    .socket
-                    .map(|socket| ScoConnection { socket, params })
-                    .ok_or(ScoConnectError::MissingSocket)?
+                let proxy = connection.into_proxy().map_err(|_| ScoConnectError::ScoFailed)?;
+                ScoConnection { params, proxy }
             }
             Some(Ok(bredr::ScoConnectionReceiverRequest::Error { error, .. })) => {
                 return Err(error.into())
@@ -128,7 +116,7 @@ impl ScoConnector {
             Some(Err(e)) => return Err(e.into()),
             None => return Err(ScoConnectError::ScoCanceled),
         };
-        Ok(socket)
+        Ok(connection)
     }
 
     pub async fn connect(
@@ -151,8 +139,8 @@ impl ScoConnector {
                 &mut vec![param].into_iter(),
                 client,
             )?;
-            result = Self::await_sco_socket(&mut requests).await;
-            info!("Result of awaitng sco socket: {:?}", result);
+            result = Self::await_sco_connection(&mut requests).await;
+            info!("Result of awaiting sco socket: {:?}", result);
             if result.is_ok() {
                 break;
             }
@@ -178,6 +166,6 @@ impl ScoConnector {
             &mut params.into_iter(),
             client,
         )?;
-        Self::await_sco_socket(&mut requests).await
+        Self::await_sco_connection(&mut requests).await
     }
 }

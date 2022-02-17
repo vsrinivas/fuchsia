@@ -908,7 +908,6 @@ mod tests {
         },
         proptest::prelude::*,
         std::convert::TryFrom,
-        zx::AsHandleRef,
     };
 
     use crate::{
@@ -1397,7 +1396,7 @@ mod tests {
             run_while(&mut exec, run_fut, expect_sco_connection(&mut profile, true, Ok(())));
         info!("transfers_change_sco_state: Setting up SCO connection--pausing audio.");
         while let None = exec.run_one_step(&mut run_fut) {}
-        let sco = sco.expect("SCO Connection.");
+        let mut sco = sco.unwrap();
 
         // Call is transferred to AG by AG and SCO is torn down.
         info!("transfers_change_sco_state: Getting WatchState for transferring call to AG by AG part 1.");
@@ -1413,10 +1412,8 @@ mod tests {
         info!("transfers_change_sco_state: Transferring call to AG by AG--unpausing audio.");
         while let None = exec.run_one_step(&mut run_fut) {}
         info!("transfers_change_sco_state: Checking if SCO is closed.");
-        let sco_is_closed = sco
-            .as_handle_ref()
-            .wait(zx::Signals::SOCKET_PEER_CLOSED, zx::Time::after(zx::Duration::from_nanos(0)));
-        assert!(sco_is_closed.is_ok());
+        let (sco_result, run_fut) = run_while(&mut exec, run_fut, &mut sco.next());
+        assert_matches!(sco_result, None);
 
         // Call is transferred to HF by AG and SCO is set up.
         let state_responder = match request {
@@ -1842,7 +1839,7 @@ mod tests {
         profile_requests: &mut ProfileRequestStream,
         expected_initiator: bool,
         result: Result<(), ScoErrorCode>,
-    ) -> Option<zx::Socket> {
+    ) -> Option<bredr::ScoConnectionRequestStream> {
         // Sometimes dropping the SCO connection accept future doesn't cancel the
         // existing request before we want to connect a new one.  In this case, we
         // may get *two* requests for a SCO connection, and we want the second one,
@@ -1864,7 +1861,9 @@ mod tests {
             };
             match result {
                 Ok(()) => {
-                    let (local, remote) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+                    let (client, request_stream) =
+                        fidl::endpoints::create_request_stream::<bredr::ScoConnectionMarker>()
+                            .expect("request stream");
                     let default_params = bredr::ScoConnectionParameters {
                         parameter_set: Some(bredr::HfpParameterSet::CvsdD1),
                         air_coding_format: Some(bredr::CodingFormat::Cvsd),
@@ -1878,10 +1877,8 @@ mod tests {
                         path: Some(bredr::DataPath::Offload),
                         ..bredr::ScoConnectionParameters::EMPTY
                     };
-                    let connection =
-                        bredr::ScoConnection { socket: Some(local), ..bredr::ScoConnection::EMPTY };
-                    proxy.connected(connection, default_params).unwrap();
-                    return Some(remote);
+                    proxy.connected(client, default_params).unwrap();
+                    return Some(request_stream);
                 }
                 Err(code) => {
                     proxy.error(code).unwrap();
@@ -1899,7 +1896,7 @@ mod tests {
         exec: &mut fasync::TestExecutor,
         peer: &mut PeerTask,
         profile_requests: &mut ProfileRequestStream,
-    ) -> fidl::Socket {
+    ) -> bredr::ScoConnectionRequestStream {
         let codecs = peer.connection.get_selected_codec().map_or(vec![CodecId::CVSD], |c| vec![c]);
         let sco_connector = peer.sco_connector.clone();
         let audio_connection_fut = sco_connector.connect(peer.id.clone(), codecs).fuse();

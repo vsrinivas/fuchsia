@@ -58,8 +58,6 @@ pub enum CallError {
 /// A failure occurred connecting SCO to a peer.
 #[derive(Debug, Error)]
 pub enum ScoConnectError {
-    #[error("No socket was provided when expected")]
-    MissingSocket,
     #[error("SCO connection failed")]
     ScoFailed,
     #[error("SCO connection canceled by new connection request or server")]
