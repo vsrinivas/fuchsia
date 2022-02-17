@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_bluetooth_avrcp::{PeerManagerMarker, PeerManagerRequest, TargetHandlerProxy},
     fidl_fuchsia_bluetooth_component::{LifecycleMarker, LifecycleProxy, LifecycleState},
     fidl_fuchsia_media_sessions2::{DiscoveryMarker, DiscoveryRequest, SessionsWatcherProxy},
+    fidl_fuchsia_power::{BatteryManagerMarker, BatteryManagerRequest},
     fuchsia_async as fasync,
     fuchsia_component_test::new::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
@@ -33,6 +34,8 @@ enum Event {
     Media(Option<SessionsWatcherProxy>),
     /// Bluetooth Lifecycle event.
     Lifecycle(Option<LifecycleProxy>),
+    /// Battery Manager service connection.
+    BatteryManager(Option<BatteryManagerRequest>),
 }
 
 impl From<DiscoveryRequest> for Event {
@@ -59,6 +62,14 @@ impl From<PeerManagerRequest> for Event {
             }
             r => panic!("Expected RegisterTargetHandler but got: {:?}", r),
         }
+    }
+}
+
+impl From<BatteryManagerRequest> for Event {
+    fn from(src: BatteryManagerRequest) -> Self {
+        // BatteryManager requests don't need to be handled since the component-under-test is
+        // resilient to unavailability.
+        Self::BatteryManager(Some(src))
     }
 }
 
@@ -95,6 +106,7 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
     let (sender, mut receiver) = mpsc::channel(2);
     let avrcp_tx = sender.clone();
     let media_tx = sender.clone();
+    let battery_manager_tx = sender.clone();
     let fake_client_tx = sender.clone();
 
     let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
@@ -127,6 +139,18 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
         )
         .await
         .expect("Failed adding media session mock to topology");
+    // Mock BatteryManager component to receive BatteryManager requests.
+    let fake_battery_manager = builder
+        .add_local_child(
+            "fake-battery-manager",
+            move |handles: LocalComponentHandles| {
+                let sender = battery_manager_tx.clone();
+                Box::pin(mock_component::<BatteryManagerMarker, _>(sender, handles))
+            },
+            ChildOptions::new(),
+        )
+        .await
+        .expect("Failed adding battery manager mock to topology");
     // Mock AVRCP-Target client that will request the Lifecycle service.
     let fake_avrcp_target_client = builder
         .add_local_child(
@@ -162,6 +186,15 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
     builder
         .add_route(
             Route::new()
+                .capability(Capability::protocol::<BatteryManagerMarker>())
+                .from(&fake_battery_manager)
+                .to(&avrcp_target),
+        )
+        .await
+        .expect("Failed adding route for Discovery service");
+    builder
+        .add_route(
+            Route::new()
                 .capability(Capability::protocol::<LifecycleMarker>())
                 .from(&avrcp_target)
                 .to(&fake_avrcp_target_client),
@@ -175,6 +208,7 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
                 .from(Ref::parent())
                 .to(&avrcp_target)
                 .to(&fake_avrcp)
+                .to(&fake_battery_manager)
                 .to(&fake_media_session)
                 .to(&fake_avrcp_target_client),
         )
@@ -182,19 +216,28 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
         .expect("Failed adding LogSink route to test components");
     let _test_topology = builder.build().await.unwrap();
 
-    // If the routing is correctly configured, we expect three events: `bt-avrcp-target` connecting
-    // to the PeerManager and Discovery services and the fake client connecting to the Lifecycle
-    // service that is provided by bt-avrcp-target.
+    // If the routing is correctly configured, we expect four events: `bt-avrcp-target` connecting
+    // to the PeerManager, Discovery, & BatteryManager services and the fake client connecting to
+    // the Lifecycle service that is provided by `bt-avrcp-target`.
     let mut events = Vec::new();
-    events.push(receiver.next().await.expect("Unexpected error waiting for 1st response"));
-    events.push(receiver.next().await.expect("Unexpected error waiting for 2nd response"));
-    events.push(receiver.next().await.expect("Unexpected error waiting for 3rd response"));
+    let expected_number_of_events = 4;
+    for i in 0..expected_number_of_events {
+        let msg = format!("Unexpected error waiting for {:?} event", i);
+        events.push(receiver.next().await.expect(&msg));
+    }
+    assert_eq!(events.len(), expected_number_of_events);
+
     let discriminants: HashSet<_> = HashSet::from_iter(events.iter().map(std::mem::discriminant));
     // Expect one request of each.
     let expected: HashSet<_> = HashSet::from_iter(
-        vec![Event::Avrcp(None), Event::Media(None), Event::Lifecycle(None)]
-            .iter()
-            .map(std::mem::discriminant),
+        vec![
+            Event::Avrcp(None),
+            Event::Media(None),
+            Event::BatteryManager(None),
+            Event::Lifecycle(None),
+        ]
+        .iter()
+        .map(std::mem::discriminant),
     );
     assert_eq!(discriminants, expected);
 

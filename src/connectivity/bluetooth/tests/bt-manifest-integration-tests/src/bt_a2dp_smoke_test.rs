@@ -18,6 +18,7 @@ use {
         DiscoveryMarker, DiscoveryRequestStream, PublisherMarker, PublisherRequestStream,
     },
     fidl_fuchsia_mediacodec::{CodecFactoryMarker, CodecFactoryRequestStream},
+    fidl_fuchsia_power::{BatteryManagerMarker, BatteryManagerRequestStream},
     fidl_fuchsia_settings::{AudioMarker, AudioRequestStream},
     fidl_fuchsia_sysmem::{AllocatorMarker, AllocatorRequestStream},
     fidl_fuchsia_tracing_provider::{RegistryMarker, RegistryRequestStream},
@@ -53,6 +54,7 @@ enum Event {
     MediaPublisher(Option<PublisherRequestStream>),
     AudioDevice(Option<AudioDeviceEnumeratorRequestStream>),
     Allocator(Option<AllocatorRequestStream>),
+    BatteryManager(Option<BatteryManagerRequestStream>),
 }
 
 impl From<ProfileRequestStream> for Event {
@@ -121,6 +123,12 @@ impl From<AllocatorRequestStream> for Event {
     }
 }
 
+impl From<BatteryManagerRequestStream> for Event {
+    fn from(src: BatteryManagerRequestStream) -> Self {
+        Self::BatteryManager(Some(src))
+    }
+}
+
 /// Represents a fake A2DP client that requests the `avdtp.PeerManager` and `a2dp.AudioMode` services.
 async fn mock_a2dp_client(
     mut sender: mpsc::Sender<Event>,
@@ -157,7 +165,8 @@ async fn mock_component(
     add_fidl_service_handler::<AudioMarker, _>(&mut fs, sender.clone());
     add_fidl_service_handler::<AllocatorMarker, _>(&mut fs, sender.clone());
     add_fidl_service_handler::<RegistryMarker, _>(&mut fs, sender.clone());
-    add_fidl_service_handler::<DiscoveryMarker, _>(&mut fs, sender);
+    add_fidl_service_handler::<DiscoveryMarker, _>(&mut fs, sender.clone());
+    add_fidl_service_handler::<BatteryManagerMarker, _>(&mut fs, sender);
 
     let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
@@ -255,6 +264,7 @@ async fn a2dp_v2_component_topology() {
     add_a2dp_dependency_route::<AudioMarker>(&builder).await;
     add_a2dp_dependency_route::<AllocatorMarker>(&builder).await;
     add_a2dp_dependency_route::<RegistryMarker>(&builder).await;
+    add_a2dp_dependency_route::<BatteryManagerMarker>(&builder).await;
     // Capability used by AVRCP Target, a child of A2DP. Route this service to A2DP to be
     // transitively routed to it.
     add_a2dp_dependency_route::<DiscoveryMarker>(&builder).await;
@@ -273,14 +283,14 @@ async fn a2dp_v2_component_topology() {
         .expect("Failed adding LogSink route to test components");
     let _test_topology = builder.build().await.unwrap();
 
-    // If the routing is correctly configured, we expect 15 events:
-    //   - `bt-a2dp` connecting to the 10 services specified in its manifest.
-    //   - `bt-avrcp-target` (a child of bt-a2dp) connecting to the `avrcp.PeerManager` and
-    //     `Discovery` services.
+    // If the routing is correctly configured, we expect 17 events:
+    //   - `bt-a2dp` connecting to the 11 services specified in its manifest.
+    //   - `bt-avrcp-target` (a child of bt-a2dp) connecting to the 3 services specified in its
+    //     manifest.
     //   - `fake-a2dp-client` connecting to the `avdtp.PeerManager`, `AudioMode`, & `Controller`
     //     services which are provided by `bt-a2dp`.
     let mut events = Vec::new();
-    let expected_number_of_events = 15;
+    let expected_number_of_events = 17;
     for i in 0..expected_number_of_events {
         let msg = format!("Unexpected error waiting for {:?} event", i);
         events.push(receiver.next().await.expect(&msg));
@@ -289,15 +299,21 @@ async fn a2dp_v2_component_topology() {
 
     let discriminants: Vec<_> = events.iter().map(std::mem::discriminant).collect();
 
-    // We expect two avrcp.PeerManager events since both bt-a2dp and bt-avrcp-target use it.
+    // We expect two `avrcp.PeerManager` and `BatteryManager` events since both components use it.
     assert_eq!(
         discriminants.iter().filter(|&&d| d == std::mem::discriminant(&Event::Avrcp(None))).count(),
         2
     );
-    // There should be only one duplicate service request (avrcp.PeerManager), the rest
-    // should be unique requests (14 in total).
+    assert_eq!(
+        discriminants
+            .iter()
+            .filter(|&&d| d == std::mem::discriminant(&Event::BatteryManager(None)))
+            .count(),
+        2
+    );
+    // Total unique requests = Total requests minus the two duplicate requests.
     let discriminant_set: HashSet<_> = HashSet::from_iter(discriminants.iter());
-    assert_eq!(discriminant_set.len(), 14);
+    assert_eq!(discriminant_set.len(), 15);
 
     info!("Finished A2DP smoke test");
 }

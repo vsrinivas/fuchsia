@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_bluetooth_hfp_test::{HfpTestMarker, HfpTestProxy},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, AudioDeviceEnumeratorRequestStream},
+    fidl_fuchsia_power::{BatteryManagerMarker, BatteryManagerRequestStream},
     fuchsia_audio_dai::test::mock_dai_dev_with_io_devices,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::new::{
@@ -16,6 +17,7 @@ use {
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     realmbuilder_mock_helpers::{add_fidl_service_handler, mock_component, mock_dev},
+    std::{collections::HashSet, iter::FromIterator},
     tracing::info,
 };
 
@@ -27,8 +29,8 @@ const HFP_AG_URL: &str =
 const HFP_MONIKER: &str = "hfp";
 /// Local name of the mock that is providing the `bredr.Profile` service.
 const FAKE_PROFILE_MONIKER: &str = "fake-profile";
-/// Local name of the mock that is providing the AudioDeviceEnumerator service.
-const FAKE_AUDIO_DEVICE_MONIKER: &str = "fake-audio-device-provider";
+/// Local name of the mock that is providing services used by HFP.
+const FAKE_CAPABILITY_PROVIDER_MONIKER: &str = "fake-audio-device-provider";
 const MOCK_DEV_MONIKER: &str = "mock-dev";
 /// Local name of the fake HFP client that is connecting to `HFP_MONIKER`s services.
 const HFP_CLIENT_MONIKER: &str = "fake-hfp-client";
@@ -43,6 +45,8 @@ enum Event {
     Hfp(Option<HfpProxy>),
     /// HFP Test service client connection.
     HfpTest(Option<HfpTestProxy>),
+    /// Battery Manager service connection.
+    BatteryManager(Option<BatteryManagerRequestStream>),
     /// AudioDeviceEnumerator service connection.
     AudioDevice(Option<AudioDeviceEnumeratorRequestStream>),
 }
@@ -53,18 +57,25 @@ impl From<ProfileRequest> for Event {
     }
 }
 
+impl From<BatteryManagerRequestStream> for Event {
+    fn from(src: BatteryManagerRequestStream) -> Self {
+        Self::BatteryManager(Some(src))
+    }
+}
+
 impl From<AudioDeviceEnumeratorRequestStream> for Event {
     fn from(src: AudioDeviceEnumeratorRequestStream) -> Self {
         Self::AudioDevice(Some(src))
     }
 }
 
-async fn mock_audio_device_provider(
+async fn mock_capability_provider(
     sender: mpsc::Sender<Event>,
     handles: LocalComponentHandles,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     add_fidl_service_handler::<AudioDeviceEnumeratorMarker, _>(&mut fs, sender.clone());
+    add_fidl_service_handler::<BatteryManagerMarker, _>(&mut fs, sender.clone());
     let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
@@ -109,18 +120,18 @@ async fn hfp_audio_gateway_v2_capability_routing() {
         )
         .await
         .expect("Failed adding profile mock to topology");
-    // Mock AudioDeviceEnumerator component to receiver requests.
+    // Mock component to handle HFP capability requests.
     let sender_clone = sender.clone();
-    let fake_audio_device = builder
+    let fake_capability_provider = builder
         .add_local_child(
-            FAKE_AUDIO_DEVICE_MONIKER,
+            FAKE_CAPABILITY_PROVIDER_MONIKER,
             move |handles: LocalComponentHandles| {
-                Box::pin(mock_audio_device_provider(sender_clone.clone(), handles))
+                Box::pin(mock_capability_provider(sender_clone.clone(), handles))
             },
             ChildOptions::new(),
         )
         .await
-        .expect("Failed adding AudioDevice mock to topology");
+        .expect("Failed adding capability provider mock to topology");
 
     let mock_dev = builder
         .add_local_child(
@@ -173,11 +184,20 @@ async fn hfp_audio_gateway_v2_capability_routing() {
         .add_route(
             Route::new()
                 .capability(Capability::protocol::<AudioDeviceEnumeratorMarker>())
-                .from(&fake_audio_device)
+                .from(&fake_capability_provider)
                 .to(&hfp),
         )
         .await
         .expect("Failed adding route for AudioDeviceEnumerator service");
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<BatteryManagerMarker>())
+                .from(&fake_capability_provider)
+                .to(&hfp),
+        )
+        .await
+        .expect("Failed adding route for BatteryManager service");
     builder
         .add_route(
             Route::new()
@@ -198,7 +218,7 @@ async fn hfp_audio_gateway_v2_capability_routing() {
                 .from(Ref::parent())
                 .to(&hfp)
                 .to(&fake_profile)
-                .to(&fake_audio_device)
+                .to(&fake_capability_provider)
                 .to(&hfp_client),
         )
         .await
@@ -206,50 +226,43 @@ async fn hfp_audio_gateway_v2_capability_routing() {
     let mut test_topology = builder.build().await.unwrap();
     let realm_destroyed = test_topology.root.take_destroy_waiter();
 
-    // If the routing is correctly configured, we expect 5 events:
-    //   1. `hfp-audio-gateway` connecting to the Profile service.
-    //     a. Making a request to Advertise.
-    //     b. Making a request to Search.
-    //   2. `hfp-audio-gateway` connecting to the AudioDeviceEnumerator service.
-    //   3/4. `fake-hfp-client` connecting to the Hfp & HfpTest services which are provided by
+    // If the routing is correctly configured, we expect 6 events:
+    //   1. `hfp-audio-gateway` connecting to the Profile service to Advertise.
+    //   2. `hfp-audio-gateway` connecting to the Profile service to Search.
+    //   3. `hfp-audio-gateway` connecting to the AudioDeviceEnumerator service.
+    //   4. `hfp-audio-gateway` connecting to the BatteryManager service.
+    //   5/6. `fake-hfp-client` connecting to the Hfp & HfpTest services which are provided by
     //      `hfp-audio-gateway`.
     let mut events = Vec::new();
-    let expected_number_of_events = 5;
+    let expected_number_of_events = 6;
     for i in 0..expected_number_of_events {
         let msg = format!("Unexpected error waiting for {:?} event", i);
         events.push(receiver.next().await.expect(&msg));
     }
     assert_eq!(events.len(), expected_number_of_events);
+    let discriminants: HashSet<_> = HashSet::from_iter(events.iter().map(std::mem::discriminant));
 
+    // Expect all events.
+    let expected: HashSet<_> = HashSet::from_iter(
+        vec![
+            Event::Profile(None),
+            Event::Hfp(None),
+            Event::HfpTest(None),
+            Event::AudioDevice(None),
+            Event::BatteryManager(None),
+        ]
+        .iter()
+        .map(std::mem::discriminant),
+    );
+    assert_eq!(discriminants, expected);
+
+    // Expect two `Profile` events.
     assert_eq!(
         events
             .iter()
             .filter(|&d| std::mem::discriminant(d) == std::mem::discriminant(&Event::Profile(None)))
             .count(),
         2
-    );
-    assert_eq!(
-        events
-            .iter()
-            .filter(|&d| std::mem::discriminant(d) == std::mem::discriminant(&Event::Hfp(None)))
-            .count(),
-        1
-    );
-    assert_eq!(
-        events
-            .iter()
-            .filter(|&d| std::mem::discriminant(d) == std::mem::discriminant(&Event::HfpTest(None)))
-            .count(),
-        1
-    );
-    assert_eq!(
-        events
-            .iter()
-            .filter(
-                |&d| std::mem::discriminant(d) == std::mem::discriminant(&Event::AudioDevice(None))
-            )
-            .count(),
-        1
     );
 
     // Ensure realm components terminate before the local executor stops mocked components. Prevents

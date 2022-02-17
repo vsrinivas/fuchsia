@@ -14,6 +14,7 @@ use {
     fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, SessionAudioConsumerFactoryMarker},
     fidl_fuchsia_media_sessions2::PublisherMarker,
     fidl_fuchsia_mediacodec::CodecFactoryMarker,
+    fidl_fuchsia_power::BatteryManagerMarker,
     fidl_fuchsia_settings::AudioMarker,
     fidl_fuchsia_sysmem::AllocatorMarker,
     fidl_fuchsia_tracing_provider::RegistryMarker,
@@ -72,6 +73,7 @@ async fn main() -> Result<(), Error> {
     let _audio_svc = connect_to_protocol::<AudioMarker>()?;
     let _allocator_svc = connect_to_protocol::<AllocatorMarker>()?;
     let _tracing_svc = connect_to_protocol::<RegistryMarker>()?;
+    let _battery_manager_svc = connect_to_protocol::<BatteryManagerMarker>()?;
     // A2DP also relies on the Lifecycle service which is provided by its child `bt-avrcp-target`.
     let _lifecycle_svc = connect_to_protocol::<LifecycleMarker>()?;
 
