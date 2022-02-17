@@ -69,7 +69,6 @@ function check-if-we-can-start-package-server {
     fi
 
     # Something is using the port. Try to determine if it's another pm server, or ffx.
-    local is_pm_running=$(check-for-pm-package-server)
     if [[ "${is_pm_running}" -eq 0 ]]; then
       fx-warn "It looks like serve-updates may be running."
       fx-warn "You probably need to stop that one and start a new one here with \"fx serve\""
@@ -93,7 +92,6 @@ function check-if-we-can-start-package-server {
     # Even though everything looks good to run the ffx repository server,
     # warn if we see a pm server, which could block the ffx package server
     # from listening on the specified port.
-    local is_pm_running=$(check-for-pm-package-server)
     if [[ "${is_pm_running}" -eq 0 ]]; then
       local ffx_addr=$(ffx-repository-server-address)
       fx-warn "Even though we are configured to use the ffx package server, it appears"
