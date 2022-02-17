@@ -438,7 +438,10 @@ TEST_F(WebSemanticsTest, HitTesting) {
   // but fuchsia has not, which could result in a false hit test miss.
   RunLoopUntil([this] {
     auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
-    return node->has_transform() && node->transform().matrix[0] != 1.f;
+    // TODO(fxb.dev/93943): Remove accommodation for transform field.
+    return (node->has_transform() && node->transform().matrix[0] != 1.f) ||
+           (node->has_node_to_container_transform() &&
+            node->node_to_container_transform().matrix[0] != 1.f);
   });
 
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
@@ -462,13 +465,15 @@ TEST_F(WebSemanticsTest, HitTesting) {
   ASSERT_EQ(*hit_node, node->node_id());
 }
 
-// BUG(fxb.dev/60002): Disable this test until the flakes are resolved.
 TEST_F(WebSemanticsTest, ScrollToMakeVisible) {
   LoadHtml(kOffscreenNodeHtml);
 
   RunLoopUntil([this] {
     auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
-    return node->has_transform() && node->transform().matrix[0] != 1.f;
+    // TODO(fxb.dev/93943): Remove accommodation for transform field.
+    return (node->has_transform() && node->transform().matrix[0] != 1.f) ||
+           (node->has_node_to_container_transform() &&
+            node->node_to_container_transform().matrix[0] != 1.f);
   });
 
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
