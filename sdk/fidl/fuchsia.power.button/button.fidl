@@ -11,6 +11,13 @@ type Action = flexible enum {
     SHUTDOWN = 1;
 };
 
+type PowerButtonEvent = flexible enum {
+    /// Button Pressed.
+    PRESS = 0;
+    /// Button Released.
+    RELEASE = 1;
+};
+
 /// Protocol to manage the power button monitor.
 /// This protocol allows applications to configure the action performed when the
 /// power button is pressed.
@@ -29,4 +36,9 @@ protocol Monitor {
     SetAction(struct {
         action Action;
     }) -> ();
+
+    /// Send a message to the client when the power button is pressed or released.
+    -> OnButtonEvent(struct {
+        event PowerButtonEvent;
+    });
 };

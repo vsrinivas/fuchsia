@@ -33,6 +33,18 @@ zx_status_t PowerButtonMonitor::DoAction() {
   }
 }
 
+zx_status_t PowerButtonMonitor::SendButtonEvent(
+    fidl::ServerBindingRef<fuchsia_power_button::Monitor>& binding, ButtonEvent event) {
+  auto result = fidl::WireSendEvent(binding)->OnButtonEvent(
+      fuchsia_power_button::wire::PowerButtonEvent(event));
+  if (!result.ok()) {
+    printf("pwrbtn-monitor: input-watcher: failed to send button event.\n");
+    return result.status();
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t PowerButtonMonitor::SendPoweroff() {
   auto connect_result = service::Connect<statecontrol_fidl::Admin>();
   if (connect_result.is_error()) {

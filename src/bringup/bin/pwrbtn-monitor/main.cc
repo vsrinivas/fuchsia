@@ -21,6 +21,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <unordered_map>
 #include <utility>
 
 #include <fbl/alloc_checker.h>
@@ -198,11 +199,27 @@ int main(int argc, char** argv) {
 
   pwrbtn::PowerButtonMonitor monitor;
   async_dispatcher_t* dispatcher = loop.dispatcher();
+  std::unordered_map<size_t, fidl::ServerBindingRef<fuchsia_power_button::Monitor>> bindings;
+  size_t n_bindings = 0;
   status = outgoing.svc_dir()->AddEntry(
       fidl::DiscoverableProtocolName<fuchsia_power_button::Monitor>,
       fbl::MakeRefCounted<fs::Service>(
-          [&monitor, dispatcher](fidl::ServerEnd<fuchsia_power_button::Monitor> request) mutable {
-            fidl::BindServer(dispatcher, std::move(request), &monitor);
+          [&monitor, dispatcher, &bindings,
+           &n_bindings](fidl::ServerEnd<fuchsia_power_button::Monitor> request) mutable {
+            fidl::OnUnboundFn<pwrbtn::PowerButtonMonitor> unbound_handler =
+                [&bindings, n_bindings](pwrbtn::PowerButtonMonitor* /*unused*/,
+                                        fidl::UnbindInfo info,
+                                        fidl::ServerEnd<fuchsia_power_button::Monitor> /*unused*/) {
+                  if (info.is_peer_closed()) {
+                    bindings.erase(n_bindings);
+                  }
+                };
+
+            auto binding = fidl::BindServer(dispatcher, std::move(request), &monitor,
+                                            std::move(unbound_handler));
+            bindings.emplace(n_bindings, std::move(binding));
+            ++n_bindings;
+
             return ZX_OK;
           }));
   if (status != ZX_OK) {
@@ -210,6 +227,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  bool was_pressed = false;
   async::Wait pwrbtn_waiter(
       report_event.get(), ZX_USER_SIGNAL_0, 0,
       [&](async_dispatcher_t*, async::Wait*, zx_status_t status, const zx_packet_signal_t*) {
@@ -238,10 +256,26 @@ int main(int argc, char** argv) {
         // Check if the power button is pressed, and request a poweroff if so.
         const size_t byte_index = info.has_report_id_byte + info.bit_offset / 8;
         if (report[byte_index] & (1u << (info.bit_offset % 8))) {
+          was_pressed = true;
+          for (auto& binding : bindings) {
+            monitor.SendButtonEvent(binding.second,
+                                    fuchsia_power_button::wire::PowerButtonEvent::kPress);
+          }
+
           auto status = monitor.DoAction();
           if (status != ZX_OK) {
             printf("pwrbtn-monitor: input-watcher: failed to handle press.\n");
             return;
+          }
+        } else {
+          // Check if the button has just been released, and send a message to clients if so.
+          if (was_pressed) {
+            was_pressed = false;
+
+            for (auto& binding : bindings) {
+              monitor.SendButtonEvent(binding.second,
+                                      fuchsia_power_button::wire::PowerButtonEvent::kRelease);
+            }
           }
         }
 
