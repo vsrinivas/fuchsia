@@ -227,19 +227,19 @@ until ssh -q -O check ${ssh_base_args[@]} "${host}"; do
 done
 
 if "${serve}"; then
-  server_mode="$(package-server-mode)"
-  err=$?
+  remote_server_mode=$(ssh "${host}" "${ssh_base_args[@]}" "cd ${dir} && ./.jiri_root/bin/ffx config get repository.server.mode") || err=$?
   if [[ "${err}" -ne 0 ]]; then
-    exit 1
+    fx-error "Unable to get the remote configured repository server mode."
+    exit "${err}"
   fi
 
-  if [[ "${server_mode}" = "pm" ]]; then
+  if [[ "${remote_server_mode}" == \"pm\" ]]; then
     # If the user requested serving, then we'll check to see if there's a
     # remote server already running and kill it, this prevents most cases where
     # signal propagation seems to sometimes not make it to "pm".
     # TODO(drees) This can be combined with the serve-updates call later to reduce ssh calls.
     if ssh "${host}" "${ssh_base_args[@]}" "ss -ln | grep :${package_server_port}" > /dev/null; then
-      ssh "${ssh_base_args[@]}" "${host}" 'pkill -x -u $USER pm'
+      ssh "${ssh_base_args[@]}" "${host}" 'pkill -x -u $USER pm' || true
     fi
   else
     # FIXME(http://fxbug.dev/82788): Currently ffx will log, but otherwise
@@ -249,15 +249,13 @@ if "${serve}"; then
     #
     # To work around this, we will error out if both the local and remote ffx
     # repository servers are trying to use the same port.
-    local_addr=$(fx-command-run ffx config get repository.server.listen)
-    err=$?
+    local_addr=$(fx-command-run ffx config get repository.server.listen) || err=$?
     if [[ "${err}" -ne 0 ]]; then
       fx-error "Unable to get the local configured repository server address."
       exit "${err}"
     fi
 
-    remote_addr=$(ssh "${host}" "${ssh_base_args[@]}" "cd ${dir} && ./.jiri_root/bin/ffx config get repository.server.listen")
-    err=$?
+    remote_addr=$(ssh "${host}" "${ssh_base_args[@]}" "cd ${dir} && ./.jiri_root/bin/ffx config get repository.server.listen") || err=$?
     if [[ "${err}" -ne 0 ]]; then
       fx-error "Unable to get the remote configured repository server address."
       exit "${err}"
