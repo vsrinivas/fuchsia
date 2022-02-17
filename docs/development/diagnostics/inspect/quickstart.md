@@ -494,7 +494,7 @@ a value. The callback function is invoked when the property value is read.
     version = "1.0"
   ```
 
-### String references
+### String references {#string-reference}
 
 * {C++}
 
@@ -657,7 +657,8 @@ root:
     UIntProperty | A metric containing an unsigned 64-bit integer. | Not supported in Dart
     DoubleProperty | A metric containing a double floating-point number. | All Languages
     BoolProperty | A metric containing a double floating-point number. | All Languages
-    {Int,Double,UInt}Array | An array of metric types, includes typed wrappers for various histograms. | Same language support as base metric type
+    {Int,Double,Uint}Array | An array of metric types, includes typed wrappers for various histograms. | Same language support as base metric type
+    StringArray | An array of strings. Represented as a [StringReference](#string-reference). | Not supported in Dart.
     StringProperty | A property with a UTF-8 string value. | All Languages
     ByteVectorProperty | A property with an arbitrary byte value. | All Languages
     Node | A node under which metrics, properties, and more nodes may be nested. | All Languages

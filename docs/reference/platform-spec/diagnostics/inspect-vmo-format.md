@@ -468,18 +468,23 @@ They are the start of a linked list of `EXTENT`s, meaning that their values are 
 O = Order
 R = Reserved, must be 0
 Type = 11
-T = Type of the stored values {4,5,6}
+T = Type of the stored values {4,5,6,14}
 F = Display format {0,1,2}
 Count = Count of stored values
 Payload = array of size |count|
 ```
 
-`ARRAY_VALUE` blocks contain an array of specifically 64-bit numeric
-values.  The **Stored Value Type** field is interpreted exactly like
-the **Type** field, but may only indicate `INT_VALUE`, `UINT_VALUE`, or
-`DOUBLE_VALUE`.
+The format of an `ARRAY_VALUE` block `Payload` depends on the **Stored Value Type** `T`,
+interpreted exactly like the **Type** field. Where `T ∊ {4, 5, 6}`, the `Payload` shall be 64-bit
+numeric values packed on byte boundaries. Where `T ∊ {14}`, the `Payload` shall be composed of
+32-bit values, representing the 24-bit index of a block of type `T`, packed together along byte
+boundaries. In this case, only `F = 0`, a flat array, is allowed.
 
-Exactly **Count** entries of the given **Stored Value Type** appear in
+When `F = 0`, `ARRAY_VALUE`s shall be default instantiated. In the numeric case, this shall be the
+associated zero value. In the string case, this shall be the empty string, indicated by the special
+value `0`.
+
+Exactly **Count** entries of the given **Stored Value Type** (or indexes thereof) appear in
 the bytes at offset 16 into the block.
 
 The **Display Format** field is used to affect how the array should be
