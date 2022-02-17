@@ -64,6 +64,7 @@ group("tests") {
     "chromium_tests:tests",
     "diagnostics_tests:tests",
     "test_data:debug-data-test",
+    "tier_2_tests:tests",
     "//examples/tests:example-tests",
     "//src/sys/test_manager",
     "//src/sys/test_runners/gtest/test_data:gtest-runner-example-tests",

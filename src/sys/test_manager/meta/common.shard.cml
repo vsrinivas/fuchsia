@@ -82,6 +82,11 @@
             durability: "transient",
         },
         {
+            name: "tier-2-tests",
+            environment: "#test-env",
+            durability: "transient",
+        },
+        {
             name: "system-tests",
             environment: "#test-env",
             durability: "transient",
@@ -159,6 +164,7 @@
             to: [
                 "#system-tests",
                 "#tests",
+                "#tier-2-tests",
             ],
         },
         {
@@ -299,6 +305,7 @@
                 "#starnix_unit_test_runner",
                 "#system-tests",
                 "#tests",
+                "#tier-2-tests",
             ],
         },
         {
@@ -328,6 +335,7 @@
             to: [
                 "#system-tests",
                 "#tests",
+                "#tier-2-tests",
             ],
         },
         {
@@ -336,6 +344,7 @@
             to: [
                 "#system-tests",
                 "#tests",
+                "#tier-2-tests",
             ],
         },
         {
@@ -344,6 +353,7 @@
             to: [
                 "#system-tests",
                 "#tests",
+                "#tier-2-tests",
             ],
         },
 
@@ -357,6 +367,7 @@
             to: [
                 "#system-tests",
                 "#tests",
+                "#tier-2-tests",
             ],
         },
 

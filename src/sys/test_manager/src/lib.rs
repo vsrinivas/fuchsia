@@ -85,6 +85,7 @@ const HERMETIC_RESOLVER_REALM_NAME: &'static str = "hermetic_resolver";
 const HERMETIC_RESOLVER_CAPABILITY_NAME: &'static str = "hermetic_resolver";
 const HERMETIC_ENVIRONMENT_NAME: &'static str = "hermetic";
 const HERMETIC_TESTS_COLLECTION: &'static str = "tests";
+const HERMETIC_TIER_2_TESTS_COLLECTION: &'static str = "tier-2-tests";
 const SYSTEM_TESTS_COLLECTION: &'static str = "system-tests";
 const CTS_TESTS_COLLECTION: &'static str = "cts-tests";
 const VULKAN_TESTS_COLLECTION: &'static str = "vulkan-tests";
@@ -93,6 +94,7 @@ const CHROMIUM_TESTS_COLLECTION: &'static str = "chromium-tests";
 lazy_static! {
     static ref TEST_TYPE_REALM_MAP: HashMap<&'static str, &'static str> = [
         ("hermetic", HERMETIC_TESTS_COLLECTION),
+        ("hermetic-tier-2", HERMETIC_TIER_2_TESTS_COLLECTION),
         ("system", SYSTEM_TESTS_COLLECTION),
         ("cts", CTS_TESTS_COLLECTION),
         ("vulkan", VULKAN_TESTS_COLLECTION),

@@ -1,0 +1,28 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+fuchsia_test_component("echo_test") {
+  component_name = "echo_test"
+  deps =
+      [ "//src/sys/test_runners/legacy_test/test_data/echo_test:echo_test_bin" ]
+  manifest = "meta/echo_test.cml"
+}
+
+fuchsia_test_package("tier_2_test") {
+  test_components = [ ":echo_test" ]
+}
+
+fuchsia_package("tier_2_echo_server") {
+  deps = [ "//examples/components/routing/echo_server:echo_server_component" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":tier_2_echo_server",
+    ":tier_2_test",
+  ]
+}
