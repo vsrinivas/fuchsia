@@ -13,7 +13,7 @@
 
 #include <audio-proto-utils/format-utils.h>
 
-#include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/lib/format/driver_format.h"
 
 namespace media::audio {
@@ -456,9 +456,10 @@ zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
 
     zx_status_t fidl_status;
     zx::profile res_profile;
-    res = provider.GetDeadlineProfile(ThreadingModel::kMixProfileCapacity.get(),
-                                      ThreadingModel::kMixProfileDeadline.get(),
-                                      ThreadingModel::kMixProfilePeriod.get(),
+    // TODO(fxbug.dev/94012): Start using `mix_profile` in `audio_core_config.json` instead.
+    res = provider.GetDeadlineProfile(MixProfileConfig::kDefaultCapacity.get(),
+                                      MixProfileConfig::kDefaultDeadline.get(),
+                                      MixProfileConfig::kDefaultPeriod.get(),
                                       "src/media/audio/audio_core", &fidl_status, &res_profile);
     if (res != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to create profile, res=" << res;

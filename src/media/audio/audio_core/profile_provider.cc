@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {
@@ -24,7 +24,8 @@ void ProfileProvider::RegisterHandlerWithCapacity(zx::thread thread_handle, std:
   if (!profile_provider_) {
     profile_provider_ = context_.svc()->Connect<fuchsia::scheduler::ProfileProvider>();
   }
-  zx::duration interval = period ? zx::duration(period) : ThreadingModel::kMixProfilePeriod;
+  // TODO(fxbug.dev/94012): Start using `mix_profile` in `audio_core_config.json` instead.
+  zx::duration interval = period ? zx::duration(period) : MixProfileConfig::kDefaultPeriod;
   zx::duration capacity(interval.to_nsecs() * capacity_weight);
   profile_provider_->GetDeadlineProfile(
       capacity.get(), interval.get(), interval.get(), name,

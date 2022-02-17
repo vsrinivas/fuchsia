@@ -12,6 +12,7 @@
 
 #include "fuchsia/media/cpp/fidl.h"
 #include "src/media/audio/audio_core/audio_admin.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
@@ -22,36 +23,36 @@ namespace media::audio {
 namespace {
 
 // Log volume changes, incoming gain/mute requests, or the subsequent gain/mute actions taken.
-static constexpr bool kLogUsageVolumeGainActions = true;
-static constexpr bool kLogSetGainMuteRampCalls = false;
-static constexpr bool kLogSetGainMuteRampActions = false;
+constexpr bool kLogUsageVolumeGainActions = true;
+constexpr bool kLogSetGainMuteRampCalls = false;
+constexpr bool kLogSetGainMuteRampActions = false;
 
 // For debugging purposes, log all incoming calls to Play(including timestamps) and Pause().
-static constexpr bool kLogPlayCalls = false;
-static constexpr bool kLogPauseCalls = false;
-static constexpr bool kLogDtorCalls = false;
+constexpr bool kLogPlayCalls = false;
+constexpr bool kLogPauseCalls = false;
+constexpr bool kLogDtorCalls = false;
 
 // Constants used when using dropout checks
-static constexpr bool kEnableDropoutChecks = false;
-static constexpr bool kDisplayPacketOnDropout = false;
+constexpr bool kEnableDropoutChecks = false;
+constexpr bool kDisplayPacketOnDropout = false;
 
 // Dropout checkers are currently limited to float32 data only.
-static constexpr fuchsia::media::AudioSampleFormat kDropoutChecksFormat =
+constexpr fuchsia::media::AudioSampleFormat kDropoutChecksFormat =
     fuchsia::media::AudioSampleFormat::FLOAT;
 // Only enable the dropout checks if the renderer also fits these other dimensions.
-static constexpr int32_t kDropoutChecksChannelCount = 2;
-static constexpr int32_t kDropoutChecksFrameRate = 44100;
+constexpr int32_t kDropoutChecksChannelCount = 2;
+constexpr int32_t kDropoutChecksFrameRate = 44100;
 
 // Const values used by PowerChecker to analyze the RMS power of incoming packets.
 // Adjust the window size and min RMS level as needed, for the test content being used.
 // Set channel count, frame rate and sample_format so that only the client of interest is analyzed.
 // Current values were used for a stereo float 44.1k source stream containing ampl-0.5 white noise.
-static constexpr int64_t kRmsWindowInFrames = 512;
-static constexpr double kRmsLevelMin = 0.065;  // 0.16;
+constexpr int64_t kRmsWindowInFrames = 512;
+constexpr double kRmsLevelMin = 0.065;  // 0.16;
 
 // With the controlled content (sine|const|ramp|noise at full-scale amplitude) that is
 // commonly used with this dropout checker, consecutive silent frames should not occur.
-static constexpr int64_t kConsecutiveSilenceFramesAllowed = 1;
+constexpr int64_t kConsecutiveSilenceFramesAllowed = 1;
 
 }  // namespace
 
@@ -363,7 +364,8 @@ void AudioRenderer::PauseInternal(PauseCallback callback) {
   // Before restoring the original gain, wait for a mix to reflect the rampdown. Gain is calculated
   // at the start of each mix. Unless we wait for the next one, our SetGain cancels any ongoing
   // rampdowns, leading to the discontinuities these ramp-downs intend to eliminate.
-  const zx::duration delay = ThreadingModel::kMixProfilePeriod + kRampDownOnPauseDuration;
+  // TODO(fxbug.dev/94012): Start using `mix_profile` in `audio_core_config.json` instead.
+  const zx::duration delay = MixProfileConfig::kDefaultPeriod + kRampDownOnPauseDuration;
   context().threading_model().FidlDomain().PostDelayedTask(std::move(finish_pause_ramp), delay);
 }
 

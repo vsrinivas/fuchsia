@@ -240,6 +240,15 @@
   },
   "type": "object",
   "properties": {
+    "mix_profile": {
+      "type": "object",
+      "properties" : {
+        "capacity_usec": { "type": "integer", "minimum": 1 },
+        "deadline_usec": { "type": "integer", "minimum": 1 },
+        "period_usec": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
     "volume_curve": {
       "type": "array",
       "items": { "$ref": "#/definitions/volume_mapping" }

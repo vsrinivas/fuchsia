@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/process_config_loader.h"
 
+#include <lib/zx/time.h>
+
 #include <iostream>
 
 #include <gtest/gtest.h>
@@ -59,6 +61,38 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithMutedVolumeCurve) {
   auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
   ASSERT_TRUE(result.is_ok()) << result.error();
   const auto config = result.take_value();
+  EXPECT_FLOAT_EQ(config.default_volume_curve().VolumeToDb(0.0), -160.0);
+  EXPECT_FLOAT_EQ(config.default_volume_curve().VolumeToDb(1.0), 0.0);
+}
+
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithMixProfile) {
+  static const std::string kConfigWithMixProfile =
+      R"JSON({
+    "mix_profile": {
+        "capacity_usec": 1000,
+        "deadline_usec": 2000,
+        "period_usec": 3000
+    },
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ]
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithMixProfile.data(),
+                               kConfigWithMixProfile.size()));
+
+  auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(result.is_ok()) << result.error();
+  const auto config = result.take_value();
+  EXPECT_EQ(config.mix_profile_config().capacity.to_usecs(), 1000);
+  EXPECT_EQ(config.mix_profile_config().deadline.to_usecs(), 2000);
+  EXPECT_EQ(config.mix_profile_config().period.to_usecs(), 3000);
   EXPECT_FLOAT_EQ(config.default_volume_curve().VolumeToDb(0.0), -160.0);
   EXPECT_FLOAT_EQ(config.default_volume_curve().VolumeToDb(1.0), 0.0);
 }

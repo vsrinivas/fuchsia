@@ -5,6 +5,7 @@
 #include "src/media/audio/audio_core/process_config_loader.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 
 #include <sstream>
 #include <string_view>
@@ -15,6 +16,7 @@
 
 #include "rapidjson/prettywriter.h"
 #include "src/lib/files/file.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 
 #include "src/media/audio/audio_core/schema/audio_core_config_schema.inl"
@@ -23,38 +25,42 @@ namespace media::audio {
 
 namespace {
 
-static constexpr char kJsonKeyVolumeCurve[] = "volume_curve";
-static constexpr char kJsonKeyPipeline[] = "pipeline";
-static constexpr char kJsonKeyLib[] = "lib";
-static constexpr char kJsonKeyName[] = "name";
-static constexpr char kJsonKeyRate[] = "rate";
-static constexpr char kJsonKeyEffect[] = "effect";
-static constexpr char kJsonKeyConfig[] = "config";
-static constexpr char kJsonKeyStreams[] = "streams";
-static constexpr char kJsonKeyInputs[] = "inputs";
-static constexpr char kJsonKeyEffects[] = "effects";
-static constexpr char kJsonKeyEffectOverFidl[] = "effect_over_fidl";
-static constexpr char kJsonKeyLoopback[] = "loopback";
-static constexpr char kJsonKeyDeviceId[] = "device_id";
-static constexpr char kJsonKeyOutputRate[] = "output_rate";
-static constexpr char kJsonKeyOutputChannels[] = "output_channels";
-static constexpr char kJsonKeyInputDevices[] = "input_devices";
-static constexpr char kJsonKeyOutputDevices[] = "output_devices";
-static constexpr char kJsonKeySupportedStreamTypes[] = "supported_stream_types";
-static constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_stream_types";
-static constexpr char kJsonKeyEligibleForLoopback[] = "eligible_for_loopback";
-static constexpr char kJsonKeyIndependentVolumeControl[] = "independent_volume_control";
-static constexpr char kJsonKeyDriverGainDb[] = "driver_gain_db";
-static constexpr char kJsonKeySoftwareGainDb[] = "software_gain_db";
-static constexpr char kJsonKeyThermalPolicy[] = "thermal_policy";
-static constexpr char kJsonKeyTargetName[] = "target_name";
-static constexpr char kJsonKeyTripPoint[] = "trip_point";
-static constexpr char kJsonKeyTripPointDeactivateBelow[] = "deactivate_below";
-static constexpr char kJsonKeyTripPointActivateAt[] = "activate_at";
-static constexpr char kJsonKeyStateTransitions[] = "state_transitions";
-static constexpr char kJsonKeyMinGainDb[] = "min_gain_db";
-static constexpr char kJsonKeyMaxGainDb[] = "max_gain_db";
-static constexpr char kJsonKeyNominalConfig[] = "nominal_config";
+constexpr char kJsonKeyMixProfile[] = "mix_profile";
+constexpr char kJsonKeyMixProfileCapacityUsec[] = "capacity_usec";
+constexpr char kJsonKeyMixProfileDeadlineUsec[] = "deadline_usec";
+constexpr char kJsonKeyMixProfilePeriodUsec[] = "period_usec";
+constexpr char kJsonKeyVolumeCurve[] = "volume_curve";
+constexpr char kJsonKeyPipeline[] = "pipeline";
+constexpr char kJsonKeyLib[] = "lib";
+constexpr char kJsonKeyName[] = "name";
+constexpr char kJsonKeyRate[] = "rate";
+constexpr char kJsonKeyEffect[] = "effect";
+constexpr char kJsonKeyConfig[] = "config";
+constexpr char kJsonKeyStreams[] = "streams";
+constexpr char kJsonKeyInputs[] = "inputs";
+constexpr char kJsonKeyEffects[] = "effects";
+constexpr char kJsonKeyEffectOverFidl[] = "effect_over_fidl";
+constexpr char kJsonKeyLoopback[] = "loopback";
+constexpr char kJsonKeyDeviceId[] = "device_id";
+constexpr char kJsonKeyOutputRate[] = "output_rate";
+constexpr char kJsonKeyOutputChannels[] = "output_channels";
+constexpr char kJsonKeyInputDevices[] = "input_devices";
+constexpr char kJsonKeyOutputDevices[] = "output_devices";
+constexpr char kJsonKeySupportedStreamTypes[] = "supported_stream_types";
+constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_stream_types";
+constexpr char kJsonKeyEligibleForLoopback[] = "eligible_for_loopback";
+constexpr char kJsonKeyIndependentVolumeControl[] = "independent_volume_control";
+constexpr char kJsonKeyDriverGainDb[] = "driver_gain_db";
+constexpr char kJsonKeySoftwareGainDb[] = "software_gain_db";
+constexpr char kJsonKeyThermalPolicy[] = "thermal_policy";
+constexpr char kJsonKeyTargetName[] = "target_name";
+constexpr char kJsonKeyTripPoint[] = "trip_point";
+constexpr char kJsonKeyTripPointDeactivateBelow[] = "deactivate_below";
+constexpr char kJsonKeyTripPointActivateAt[] = "activate_at";
+constexpr char kJsonKeyStateTransitions[] = "state_transitions";
+constexpr char kJsonKeyMinGainDb[] = "min_gain_db";
+constexpr char kJsonKeyMaxGainDb[] = "max_gain_db";
+constexpr char kJsonKeyNominalConfig[] = "nominal_config";
 
 void CountLoopbackStages(const PipelineConfig::MixGroup& mix_group, uint32_t* count) {
   if (mix_group.loopback) {
@@ -81,6 +87,24 @@ fpromise::result<rapidjson::SchemaDocument, std::string> LoadProcessConfigSchema
     return fpromise::error(oss.str());
   }
   return fpromise::ok(rapidjson::SchemaDocument(schema_doc));
+}
+
+MixProfileConfig ParseMixProfileFromJsonObject(const rapidjson::Value& value) {
+  FX_CHECK(value.IsObject());
+  MixProfileConfig mix_profile_config;
+  if (const auto it = value.FindMember(kJsonKeyMixProfileCapacityUsec); it != value.MemberEnd()) {
+    FX_CHECK(it->value.IsUint());
+    mix_profile_config.capacity = zx::usec(it->value.GetUint());
+  }
+  if (const auto it = value.FindMember(kJsonKeyMixProfileDeadlineUsec); it != value.MemberEnd()) {
+    FX_CHECK(it->value.IsUint());
+    mix_profile_config.deadline = zx::usec(it->value.GetUint());
+  }
+  if (const auto it = value.FindMember(kJsonKeyMixProfilePeriodUsec); it != value.MemberEnd()) {
+    FX_CHECK(it->value.IsUint());
+    mix_profile_config.period = zx::usec(it->value.GetUint());
+  }
+  return mix_profile_config;
 }
 
 fpromise::result<VolumeCurve, std::string> ParseVolumeCurveFromJsonObject(
@@ -664,6 +688,11 @@ fpromise::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessCo
 
   auto config_builder = ProcessConfig::Builder();
   config_builder.SetDefaultVolumeCurve(curve_result.take_value());
+
+  auto mix_profile_it = doc.FindMember(kJsonKeyMixProfile);
+  if (mix_profile_it != doc.MemberEnd()) {
+    config_builder.SetMixProfile(ParseMixProfileFromJsonObject(mix_profile_it->value));
+  }
 
   auto output_devices_it = doc.FindMember(kJsonKeyOutputDevices);
   if (output_devices_it != doc.MemberEnd()) {

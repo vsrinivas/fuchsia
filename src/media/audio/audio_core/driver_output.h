@@ -11,6 +11,7 @@
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/channel_attributes.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/analysis/dropout.h"
@@ -31,13 +32,14 @@ class DriverOutput : public AudioOutput {
   // timer to awaken when the amount of unread audio reaches the "low-water" amount, then requests
   // enough mixed data from its upstream pipeline to fill the ring buffer to the "high-water" level.
   // Because it can take as long as an entire mix profile period for the thread to be scheduled and
-  // mix the needed audio into the ring buffer, kDefaultLowWaterDuration is equal to
-  // kMixProfilePeriod.
+  // mix the needed audio into the ring buffer, `kDefaultLowWaterDuration` is equal to
+  // `MixProfileConfig::kDefaultPeriod`.
   //
   // The output pipeline's total latency will currently be 20 ms + fifo depth + external delay.
-  static constexpr zx::duration kDefaultLowWaterDuration = ThreadingModel::kMixProfilePeriod;
+  // TODO(fxbug.dev/94012): Start using `mix_profile` in `audio_core_config.json` instead.
+  static constexpr zx::duration kDefaultLowWaterDuration = MixProfileConfig::kDefaultPeriod;
   static constexpr zx::duration kDefaultHighWaterDuration =
-      kDefaultLowWaterDuration + ThreadingModel::kMixProfilePeriod;
+      kDefaultLowWaterDuration + MixProfileConfig::kDefaultPeriod;
 
   DriverOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
                fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,

@@ -7,11 +7,15 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <memory>
 #include <optional>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/thermal_config.h"
 #include "src/media/audio/audio_core/volume_curve.h"
@@ -31,6 +35,7 @@ class ProcessConfigBuilder {
       std::pair<std::optional<std::vector<audio_stream_unique_id_t>>,
                 DeviceConfig::InputDeviceProfile>
           keyed_profile);
+  ProcessConfigBuilder& SetMixProfile(MixProfileConfig mix_profile_config);
   ProcessConfigBuilder& AddThermalPolicyEntry(ThermalConfig::Entry thermal_policy_entry);
   ProcessConfigBuilder& AddThermalNominalState(ThermalConfig::StateTransition nominal_state);
   ProcessConfig Build();
@@ -48,6 +53,7 @@ class ProcessConfigBuilder {
   std::vector<std::pair<std::vector<audio_stream_unique_id_t>, DeviceConfig::InputDeviceProfile>>
       input_device_profiles_;
   std::optional<DeviceConfig::InputDeviceProfile> default_input_device_profile_;
+  MixProfileConfig mix_profile_config_;
   std::vector<ThermalConfig::Entry> thermal_config_entries_;
   std::vector<ThermalConfig::StateTransition> thermal_nominal_states_;
 };
@@ -87,15 +93,18 @@ class ProcessConfig {
   }
 
   using Builder = ProcessConfigBuilder;
-  ProcessConfig(VolumeCurve curve, DeviceConfig device_config, ThermalConfig thermal_config)
+  ProcessConfig(VolumeCurve curve, DeviceConfig device_config, MixProfileConfig mix_profile_config,
+                ThermalConfig thermal_config)
       : default_volume_curve_(std::move(curve)),
         default_loudness_transform_(
             std::make_shared<MappedLoudnessTransform>(default_volume_curve_)),
         device_config_(std::move(device_config)),
+        mix_profile_config_(mix_profile_config),
         thermal_config_(std::move(thermal_config)) {}
 
   const VolumeCurve& default_volume_curve() const { return default_volume_curve_; }
   const DeviceConfig& device_config() const { return device_config_; }
+  const MixProfileConfig& mix_profile_config() const { return mix_profile_config_; }
   const ThermalConfig& thermal_config() const { return thermal_config_; }
   const std::shared_ptr<LoudnessTransform>& default_loudness_transform() const {
     return default_loudness_transform_;
@@ -107,6 +116,7 @@ class ProcessConfig {
   VolumeCurve default_volume_curve_;
   std::shared_ptr<LoudnessTransform> default_loudness_transform_;
   DeviceConfig device_config_;
+  MixProfileConfig mix_profile_config_;
   ThermalConfig thermal_config_;
 };
 

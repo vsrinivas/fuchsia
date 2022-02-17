@@ -99,6 +99,7 @@ source_set("audio_core_lib") {
     "link_matrix.h",
     "loudness_transform.cc",
     "loudness_transform.h",
+    "mix_profile_config.h",
     "mix_stage.cc",
     "mix_stage.h",
     "output_pipeline.cc",

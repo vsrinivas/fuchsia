@@ -120,15 +120,6 @@ enum class MixStrategy {
 
 class ThreadingModel {
  public:
-  // Parameters which control the deadline profile used for mixing threads.
-  //
-  // Our deadline and period is 10 mSec and our capacity is 4.4 mSec. This means that we will
-  // receive 4.4 mSec of CPU time every 10mSec, and that 4.4 mSec may be scheduled at any point
-  // during that 10 mSec window.
-  static constexpr zx::duration kMixProfileCapacity = zx::usec(4'400);
-  static constexpr zx::duration kMixProfileDeadline = zx::usec(10'000);
-  static constexpr zx::duration kMixProfilePeriod = zx::usec(10'000);
-
   // Creates a |ThreadingModel| with a provided |MixStrategy|, which configures the behavior of
   // |AcquireMixDomain|.
   //

@@ -6,7 +6,7 @@
 
 #include <fbl/algorithm.h>
 
-#include "src/media/audio/audio_core/threading_model.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/lib/effects_loader/effects_loader_v1.h"
 #include "src/media/audio/lib/effects_loader/effects_processor_v1.h"
 
@@ -101,8 +101,9 @@ EffectsStageV1::RingoutBuffer EffectsStageV1::RingoutBuffer::Create(const Format
   std::vector<float> buffer;
   if (ringout_frames) {
     // Target our ringout buffer as no larger than a single mix job of frames.
+    // TODO(fxbug.dev/94012): Start using `mix_profile` in `audio_core_config.json` instead.
     const uint32_t kTargetRingoutBufferFrames =
-        format.frames_per_ns().Scale(ThreadingModel::kMixProfilePeriod.to_nsecs());
+        format.frames_per_ns().Scale(MixProfileConfig::kDefaultPeriod.to_nsecs());
 
     // If the ringout frames is less than our target buffer size, we'll lower it to our ringout
     // frames. Also ensure we do not exceed the max batch size for the effect.

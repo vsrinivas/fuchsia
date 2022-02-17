@@ -11,13 +11,13 @@
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/pin_executable_memory.h"
 #include "src/media/audio/audio_core/stream_usage.h"
-#include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/tools/output_pipeline_benchmark/output_pipeline_benchmark.h"
 
+using media::audio::MixProfileConfig;
 using media::audio::OutputPipelineBenchmark;
-using media::audio::ThreadingModel;
 
 namespace {
 
@@ -152,9 +152,10 @@ void RegisterDeadlineProfile(sys::ComponentContext& context, const std::string& 
     FX_PLOGS(FATAL, status) << "could not dup thread handle";
   }
 
-  int64_t want_period = ThreadingModel::kMixProfilePeriod.get();
-  float want_capacity = static_cast<float>(ThreadingModel::kMixProfileCapacity.get()) /
-                        static_cast<float>(ThreadingModel::kMixProfilePeriod.get());
+  // TODO(fxbug.dev/94012): Start using `mix_profile` in `audio_core_config.json` instead.
+  int64_t want_period = MixProfileConfig::kDefaultPeriod.get();
+  float want_capacity = static_cast<float>(MixProfileConfig::kDefaultCapacity.get()) /
+                        static_cast<float>(MixProfileConfig::kDefaultPeriod.get());
   int64_t got_period;
   int64_t got_capacity;
   auto status = profile_provider->RegisterHandlerWithCapacity(
