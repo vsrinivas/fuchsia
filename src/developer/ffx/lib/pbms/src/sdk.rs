@@ -121,25 +121,6 @@ pub(crate) async fn local_entries(version: &str) -> Result<Entries> {
             .with_context(|| format!("Open file \"{}\".", path.display()))?;
         entries.add_json(&mut container)?;
     }
-    // TODO(fxbug.dev/93799): Remove this while loop. This is a workaround for
-    // missing data in the virtual device specification in the pb container.
-    // FYI: the while dir read is repeated so that these entries take precedence
-    //      over entries in pb container files.
-    let mut dir = async_fs::read_dir(&pb_path).await?;
-    while let Some(entry) = dir.try_next().await? {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-        let path = path.join("images/gen/build/images/virtual_device.json");
-        if !path.is_file() {
-            continue;
-        }
-        let mut container = File::open(&path)
-            .map(BufReader::new)
-            .with_context(|| format!("Open file \"{}\".", path.display()))?;
-        entries.add_json(&mut container)?;
-    }
     Ok(entries)
 }
 
