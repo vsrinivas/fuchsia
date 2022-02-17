@@ -7,12 +7,8 @@ import("//build/fidl/fidl.gni")
 import("//build/testing/host_test.gni")
 
 # This can be built as a Fuchsia executable or as a host executable.
-# The latter allows running some of the benchmarks on Linux for
+# The latter allows running some of the benchmarks on Linux or Mac for
 # comparison against Fuchsia.
-#
-# In principle this could be built for Mac too, but it may require
-# changes to build successfully on Mac.  For example, mutex.cc depends
-# on the C11 <threads.h>, which is not provided by the Mac toolchain.
 executable("bin") {
   output_name = "fuchsia_microbenchmarks"
   testonly = true
@@ -24,7 +20,6 @@ executable("bin") {
     "main.cc",
     "malloc.cc",
     "memcpy.cc",
-    "mutex.cc",
     "null.cc",
     "pthreads.cc",
     "random_memcpy.cc",
@@ -45,6 +40,7 @@ executable("bin") {
       "lazy_dir.cc",
       "mem_alloc.cc",
       "mmu.cc",
+      "mutex.cc",
       "object_wait.cc",
       "ports.cc",
       "prng.cc",
@@ -181,7 +177,7 @@ fuchsia_shell_package("fuchsia_microbenchmarks_perftestmode") {
   ]
 }
 
-if (is_linux) {
+if (is_host) {
   host_test("fuchsia_microbenchmarks_host_unittestmode") {
     binary_path = "$root_out_dir/fuchsia_microbenchmarks"
     deps = [ ":bin" ]
@@ -193,12 +189,10 @@ if (is_linux) {
 group("tests") {
   testonly = true
   deps = [
+    ":fuchsia_microbenchmarks_host_unittestmode($host_toolchain)",
     ":fuchsia_microbenchmarks_perftestmode",
     ":fuchsia_microbenchmarks_unittestmode",
   ]
-  if (host_os == "linux") {
-    deps += [ ":fuchsia_microbenchmarks_host_unittestmode($host_toolchain)" ]
-  }
 }
 
 # Convenience target so that one can pass "--with //src/tests/microbenchmarks"
