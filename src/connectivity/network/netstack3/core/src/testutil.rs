@@ -81,6 +81,8 @@ pub(crate) mod benchmarks {
     }
 }
 
+pub(crate) type DummyCtx = Ctx<DummyEventDispatcher>;
+
 /// A wrapper which implements `RngCore` and `CryptoRng` for any `RngCore`.
 ///
 /// This is used to satisfy [`EventDispatcher`]'s requirement that the
@@ -218,7 +220,7 @@ pub(crate) fn set_logger_for_test() {
 ///
 /// Returns the `TimerId` if a timer was triggered, `None` if there were no
 /// timers waiting to be triggered.
-pub(crate) fn trigger_next_timer(ctx: &mut Ctx<DummyEventDispatcher>) -> Option<TimerId> {
+pub(crate) fn trigger_next_timer(ctx: &mut DummyCtx) -> Option<TimerId> {
     match ctx.dispatcher.timer_events.pop() {
         Some(InstantAndData(t, id)) => {
             ctx.dispatcher.current_time = t;
@@ -233,7 +235,7 @@ pub(crate) fn trigger_next_timer(ctx: &mut Ctx<DummyEventDispatcher>) -> Option<
 /// then, inclusive.
 ///
 /// Returns the `TimerId` of the timer events triggered.
-pub(crate) fn run_for(ctx: &mut Ctx<DummyEventDispatcher>, duration: Duration) -> Vec<TimerId> {
+pub(crate) fn run_for(ctx: &mut DummyCtx, duration: Duration) -> Vec<TimerId> {
     let end_time = ctx.dispatcher.now() + duration;
     let mut timer_ids = Vec::new();
 
@@ -264,10 +266,7 @@ pub(crate) fn run_for(ctx: &mut Ctx<DummyEventDispatcher>, duration: Duration) -
 /// Please note, the caller is expected to pass in an `f` which could return
 /// true to exit `trigger_timer_until`. 1,000,000 limit is set to avoid an
 /// endless loop.
-pub(crate) fn trigger_timers_until<F: Fn(&TimerId) -> bool>(
-    ctx: &mut Ctx<DummyEventDispatcher>,
-    f: F,
-) {
+pub(crate) fn trigger_timers_until<F: Fn(&TimerId) -> bool>(ctx: &mut DummyCtx, f: F) {
     for _ in 0..1_000_000 {
         let InstantAndData(t, id) = if let Some(t) = ctx.dispatcher.timer_events.pop() {
             t
@@ -284,7 +283,7 @@ pub(crate) fn trigger_timers_until<F: Fn(&TimerId) -> bool>(
 }
 
 /// Get the counter value for a `key`.
-pub(crate) fn get_counter_val(ctx: &Ctx<DummyEventDispatcher>, key: &str) -> usize {
+pub(crate) fn get_counter_val(ctx: &DummyCtx, key: &str) -> usize {
     *ctx.state.test_counters.borrow().get(key)
 }
 
@@ -492,23 +491,20 @@ impl DummyEventDispatcherBuilder {
         self.ndp_table_entries.push((device, ip, mac));
     }
 
-    /// Build a `Ctx` from the present configuration with a default
-    /// dispatcher, and stack state set to disable NDP's Duplicate Address
-    /// Detection by default.
-    pub(crate) fn build<D: EventDispatcher + Default>(self) -> Ctx<D> {
+    /// Build a `Ctx` from the present configuration with a default dispatcher,
+    /// and stack state set to disable NDP's Duplicate Address Detection by
+    /// default.
+    pub(crate) fn build(self) -> DummyCtx {
         self.build_with_modifications(|_| {})
     }
 
     /// `build_with_modifications` is equivalent to `build`, except that after
     /// the `StackStateBuilder` is initialized, it is passed to `f` for further
     /// modification before the `Ctx` is constructed.
-    pub(crate) fn build_with_modifications<
-        D: EventDispatcher + Default,
-        F: FnOnce(&mut StackStateBuilder),
-    >(
+    pub(crate) fn build_with_modifications<F: FnOnce(&mut StackStateBuilder)>(
         self,
         f: F,
-    ) -> Ctx<D> {
+    ) -> DummyCtx {
         let mut stack_builder = StackStateBuilder::default();
 
         // Most tests do not need NDP's DAD or router solicitation so disable it
@@ -521,7 +517,7 @@ impl DummyEventDispatcherBuilder {
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
 
         f(&mut stack_builder);
-        self.build_with(stack_builder, D::default())
+        self.build_with(stack_builder, Default::default())
     }
 
     /// Build a `Ctx` from the present configuration with a caller-provided
@@ -828,7 +824,7 @@ pub(crate) struct DummyNetwork<
     N: Eq + Hash + Clone,
     F: Fn(&N, DeviceId) -> Vec<(N, DeviceId, Option<Duration>)>,
 > {
-    contexts: HashMap<N, Ctx<DummyEventDispatcher>>,
+    contexts: HashMap<N, DummyCtx>,
     mapper: F,
     current_time: DummyInstant,
     pending_frames: BinaryHeap<PendingFrame<N>>,
@@ -894,10 +890,7 @@ where
     /// already attached to them, because `DummyNetwork` maintains all the
     /// internal timers in dispatchers in sync to enable synchronous simulation
     /// steps.
-    pub(crate) fn new<I: Iterator<Item = (N, Ctx<DummyEventDispatcher>)>>(
-        contexts: I,
-        mapper: F,
-    ) -> Self {
+    pub(crate) fn new<I: Iterator<Item = (N, DummyCtx)>>(contexts: I, mapper: F) -> Self {
         let mut ret = Self {
             contexts: contexts.collect(),
             mapper,
@@ -921,7 +914,7 @@ where
     }
 
     /// Retrieves a `Ctx` named `context`.
-    pub(crate) fn context<K: Into<N>>(&mut self, context: K) -> &mut Ctx<DummyEventDispatcher> {
+    pub(crate) fn context<K: Into<N>>(&mut self, context: K) -> &mut DummyCtx {
         self.contexts.get_mut(&context.into()).unwrap()
     }
 
@@ -1454,7 +1447,7 @@ mod tests {
     fn test_send_to_many<I: Ip + TestIpExt>() {
         #[specialize_ip_address]
         fn send_packet<A: IpAddress>(
-            ctx: &mut Ctx<DummyEventDispatcher>,
+            ctx: &mut DummyCtx,
             src_ip: SpecifiedAddr<A>,
             dst_ip: SpecifiedAddr<A>,
             device: DeviceId,

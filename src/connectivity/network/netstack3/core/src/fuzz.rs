@@ -22,7 +22,10 @@ use packet_formats::{
     ipv6::Ipv6PacketBuilder, tcp::TcpSegmentBuilder, udp::UdpPacketBuilder,
 };
 
-use crate::{testutil::DummyEventDispatcher, Ctx, DeviceId, TimerId};
+use crate::{
+    testutil::{DummyCtx, DummyEventDispatcher},
+    Ctx, DeviceId, TimerId,
+};
 
 mod print_on_panic {
     use core::fmt::{self, Display, Formatter};
@@ -303,7 +306,7 @@ fn arbitrary_packet<B: NestedPacketBuilder + core::fmt::Debug>(
     Ok((bytes, description))
 }
 
-fn dispatch(ctx: &mut Ctx<DummyEventDispatcher>, device_id: DeviceId, action: FuzzAction) {
+fn dispatch(ctx: &mut DummyCtx, device_id: DeviceId, action: FuzzAction) {
     use FuzzAction::*;
     match action {
         ReceiveFrame(ArbitraryFrame { frame_type: _, buf, description: _ }) => {

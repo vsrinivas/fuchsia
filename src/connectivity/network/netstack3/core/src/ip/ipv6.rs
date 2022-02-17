@@ -214,14 +214,13 @@ mod tests {
     };
 
     use super::*;
-    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V6};
+    use crate::testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG_V6};
 
     #[test]
     fn test_no_extension_headers() {
         // Test that if we have no extension headers, we continue
 
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
-            .build::<DummyEventDispatcher>();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
         let builder = Ipv6PacketBuilder::new(
             DUMMY_CONFIG_V6.remote_ip,
             DUMMY_CONFIG_V6.local_ip,

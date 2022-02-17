@@ -66,17 +66,14 @@ mod tests {
         device::DeviceId,
         error::NotFoundError,
         ip::device::state::{AssignedAddress, IpDeviceState, IpDeviceStateIpExt},
-        testutil::{
-            DummyEventDispatcher, DummyEventDispatcherBuilder, DummyEventDispatcherConfig,
-            TestIpExt,
-        },
+        testutil::{DummyCtx, DummyEventDispatcherBuilder, DummyEventDispatcherConfig, TestIpExt},
         Ctx, EventDispatcher,
     };
 
     #[test]
     fn test_loopback_methods() {
         const MTU: u32 = 66;
-        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_loopback_device(MTU).expect("error adding loopback device");
         crate::device::initialize_device(&mut ctx, device);
 
@@ -130,15 +127,7 @@ mod tests {
             assert_eq!(crate::device::del_ip_addr(ctx, device, &addr,), Err(NotFoundError));
         }
 
-        test::<Ipv4, _>(
-            &mut ctx,
-            device,
-            crate::ip::device::get_ipv4_device_state::<Ctx<DummyEventDispatcher>>,
-        );
-        test::<Ipv6, _>(
-            &mut ctx,
-            device,
-            crate::ip::device::get_ipv6_device_state::<Ctx<DummyEventDispatcher>>,
-        );
+        test::<Ipv4, _>(&mut ctx, device, crate::ip::device::get_ipv4_device_state::<DummyCtx>);
+        test::<Ipv6, _>(&mut ctx, device, crate::ip::device::get_ipv6_device_state::<DummyCtx>);
     }
 }

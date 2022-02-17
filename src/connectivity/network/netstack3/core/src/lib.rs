@@ -562,11 +562,11 @@ mod tests {
     };
 
     use super::*;
-    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt};
+    use crate::testutil::{DummyEventDispatcherBuilder, TestIpExt};
 
     fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 

@@ -529,13 +529,13 @@ mod tests {
     };
 
     use super::*;
-    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt as _};
+    use crate::testutil::{DummyEventDispatcherBuilder, TestIpExt as _};
 
     /// Test that `get_ipv6_addr_subnet` only returns non-local IPv6 addresses.
     #[test]
     fn test_get_ipv6_addr_subnet() {
         let config = Ipv6::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
 
         // `initialize_device` adds the MAC-derived link-local IPv6 address.

@@ -1229,15 +1229,14 @@ pub(crate) mod testutil {
 mod tests {
     use super::*;
     use crate::testutil::{
-        DummyEventDispatcher, DummyEventDispatcherBuilder, DummyEventDispatcherConfig,
-        DUMMY_CONFIG_V4,
+        DummyCtx, DummyEventDispatcherBuilder, DummyEventDispatcherConfig, DUMMY_CONFIG_V4,
     };
 
     #[test]
     fn test_iter_devices() {
-        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build();
 
-        fn check(ctx: &Ctx<DummyEventDispatcher>, expected: &[DeviceId]) {
+        fn check(ctx: &DummyCtx, expected: &[DeviceId]) {
             assert_eq!(IpDeviceContext::<Ipv4>::iter_devices(ctx).collect::<Vec<_>>(), expected);
             assert_eq!(IpDeviceContext::<Ipv6>::iter_devices(ctx).collect::<Vec<_>>(), expected);
         }

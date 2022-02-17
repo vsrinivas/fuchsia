@@ -1293,11 +1293,11 @@ mod tests {
 
         let DummyEventDispatcherConfig { local_ip, remote_ip, subnet, local_mac: _, remote_mac: _ } =
             cfg;
-        let mut ctx = DummyEventDispatcherBuilder::from_config(cfg).build::<DummyEventDispatcher>();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(cfg).build();
         let NewSocketTestCase { local_ip_type, remote_ip_type, expected_result } = test_case;
 
         #[ipv4]
-        let remove_all_local_addrs = |ctx: &mut Ctx<DummyEventDispatcher>| {
+        let remove_all_local_addrs = |ctx: &mut crate::testutil::DummyCtx| {
             let mut devices = crate::ip::device::iter_ipv4_devices(ctx);
             let (device, _state) = devices.next().unwrap();
             assert_matches::assert_matches!(devices.next(), None);
@@ -1311,7 +1311,7 @@ mod tests {
         };
 
         #[ipv6]
-        let remove_all_local_addrs = |ctx: &mut Ctx<DummyEventDispatcher>| {
+        let remove_all_local_addrs = |ctx: &mut crate::testutil::DummyCtx| {
             let mut devices = crate::ip::device::iter_ipv6_devices(ctx);
             let (device, _state) = devices.next().unwrap();
             assert_matches::assert_matches!(devices.next(), None);
@@ -1582,7 +1582,7 @@ mod tests {
 
         let mut builder = DummyEventDispatcherBuilder::default();
         let device_id = DeviceId::new_ethernet(builder.add_device(local_mac));
-        let mut ctx = builder.build::<DummyEventDispatcher>();
+        let mut ctx = builder.build();
         crate::device::add_ip_addr_subnet(
             &mut ctx,
             device_id,
@@ -1699,8 +1699,7 @@ mod tests {
             subnet: _,
         } = cfg;
 
-        let mut ctx =
-            DummyEventDispatcherBuilder::from_config(cfg.clone()).build::<DummyEventDispatcher>();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
 
         // Create a normal, routable socket.
         let mut sock = IpSocketHandler::<I>::new_ip_socket(

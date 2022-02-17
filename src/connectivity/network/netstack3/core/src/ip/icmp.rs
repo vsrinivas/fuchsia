@@ -2131,8 +2131,7 @@ mod tests {
             socket::testutil::DummyIpSocketCtx, DummyDeviceId,
         },
         testutil::{
-            get_counter_val, DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4,
-            DUMMY_CONFIG_V6,
+            get_counter_val, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
         },
         transport::udp::UdpStateBuilder,
         StackStateBuilder,
@@ -2246,7 +2245,7 @@ mod tests {
         let buffer = Buf::new(body, ..).encapsulate(pb).serialize_vec_outer().unwrap();
 
         let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG)
-            .build_with_modifications::<DummyEventDispatcher, _>(modify_stack_state_builder);
+            .build_with_modifications(modify_stack_state_builder);
 
         let device = DeviceId::new_ethernet(0);
         set_routing_enabled::<_, I>(&mut ctx, device, true).expect("error setting routing enabled");
