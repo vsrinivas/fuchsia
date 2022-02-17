@@ -70,7 +70,23 @@ fuchsia_driver("iwlwifi_driver-driver") {
 fuchsia_driver_component("iwlwifi_driver") {
   info = "iwlwifi_driver-info.json"
   component_name = "iwlwifi"
-  deps = [ ":iwlwifi_driver-driver" ]
+  deps = [
+    ":iwlwifi_driver-driver",
+    "platform:fuchsia_bind",
+  ]
+  visibility = []
+  visibility = [ "*" ]
+  colocate = true
+}
+
+# TODO(fxbug.dev/93333: Remove this when DFv2 has stabilised.
+fuchsia_driver_component("iwlwifi_driver_dfv2") {
+  info = "iwlwifi_driver-info.json"
+  component_name = "iwlwifi"
+  deps = [
+    ":iwlwifi_driver-driver",
+    "platform:fuchsia_bind_dfv2",
+  ]
   visibility = []
   visibility = [ "*" ]
   colocate = true

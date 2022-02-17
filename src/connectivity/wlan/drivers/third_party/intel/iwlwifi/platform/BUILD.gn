@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/drivers/arguments.gni")
 
 visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
 
@@ -83,8 +84,15 @@ source_set("rcu_manager") {
 
 driver_bind_rules("fuchsia_bind") {
   rules = "iwlwifi.bind"
-  header_output = "iwlwifi-bind.h"
   tests = "iwlwifi-bind-tests.json"
+  header_output = "iwlwifi-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
+
+# TODO(fxbug.dev/93333: Remove this when DFv2 has stabilised.
+driver_bind_rules("fuchsia_bind_dfv2") {
+  rules = "iwlwifi_dfv2.bind"
+  header_output = "iwlwifi-dfv2-bind.h"
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }
 
@@ -106,7 +114,7 @@ source_set("fuchsia_device") {
   ]
   deps = [
     ":driver_inspector",
-    ":fuchsia_bind",
+    ":fuchsia_bind_header",
     ":platform",
     ":rcu_manager",
     "//sdk/banjo/fuchsia.hardware.wlan.phyinfo:fuchsia.hardware.wlan.phyinfo_banjo_cpp",
