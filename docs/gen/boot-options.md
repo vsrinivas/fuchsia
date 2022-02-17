@@ -300,7 +300,7 @@ is set to 20, an imminent-out-of-memory event will be signaled at 70MB (i.e. 50M
 free memory, while out-of-memory will be signaled at 50MB free memory.
 
 ### kernel.oom.trigger-on-alloc-failure=\<bool>
-**Default:** `false`
+**Default:** `true`
 
 This option controls whether potentially user-visible PMM allocation failures due to running out of
 memory trigger an OOM response.
