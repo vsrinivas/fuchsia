@@ -1,0 +1,28 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.text;
+
+type TextEditServerError = flexible enum : uint32 {
+    /// The given text field is already registered with the text edit server.
+    ALREADY_REGISTERED = 1;
+};
+
+type TextFieldError = flexible enum : uint32 {
+    /// An internal error that likely wasn't caused by the client.
+    INTERNAL_ERROR = 1;
+    /// The operation failed because the current state does not allow it (e.g. attempting a
+    /// non-composition action during an ongoing composition).
+    BAD_STATE = 2;
+    /// The server passed a revision ID that is stale or invalid.
+    BAD_REVISION_ID = 3;
+    /// The server passed a transaction ID that doesn't match the ongoing transaction.
+    BAD_TRANSACTION_ID = 4;
+    /// The server attempted to insert text that the text field does not allow.
+    INVALID_CONTENT = 5;
+    /// The server attempted to change the selection to an invalid range.
+    INVALID_SELECTION = 6;
+    /// Another argument with an invalid value, not covered by the specific cases above.
+    INVALID_ARGUMENT = 7;
+};

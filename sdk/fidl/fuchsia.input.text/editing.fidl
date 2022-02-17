@@ -1,0 +1,279 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.text;
+
+// TODO(fxbug.dev/94006): Pick and justify limits.
+const MAX_STRING_LENGTH uint32 = 65536;
+const MAX_COMPOSITION_SEGMENTS uint32 = 8;
+
+/// The read-only methods of a text-field.
+protocol ReadableTextField {
+    /// Retrieves part of the contents of the text field.
+    ///
+    /// A text field's contents may be much larger than can transported in a single FIDL message
+    /// (imagine a PhD thesis or an EULA), so this method allows the text server to retrieve just
+    /// the immediately relevant chunks).
+    ///
+    /// TODO(fxbug.dev/94007): Should we allow retrieving the full text contents as a read-only VMO
+    /// containing UTF-8 data?
+    GetText(struct {
+        range Range;
+    }) -> (struct {
+        contents string:MAX_STRING_LENGTH;
+    }) error TextFieldError;
+};
+
+protocol WritableTextField {
+    /// Begins an atomic transaction on the text field state. This is how the edit server sends one
+    /// or more edit requests to the client.
+    ///
+    /// The cumulative text change applied by a single transaction usually corresponds to a single
+    /// "undoable" action in clients that offer undo history.
+    ///
+    /// Returns: A `TransactionId` that the text server must send in subsequent commands during this
+    /// transaction.
+    BeginTransaction(struct {
+        args BeginTransactionArgs;
+    }) -> (struct {
+        transaction_id TransactionId;
+    }) error TextFieldError;
+
+    /// Updates the current selection.
+    ///
+    /// This must be done inside a transaction.
+    SetSelection(struct {
+        transaction_id TransactionId;
+        selection Selection;
+    }) -> (struct {}) error TextFieldError;
+
+    /// Replaces or inserts `new_text` at `old_range`. After the text change, the caret moves to the
+    /// position immediately after the end of the edit location.
+    ///
+    /// Note that `old_range` is required and supersedes any previous text _selection_.
+    ///
+    /// This must be done inside a transaction.
+    SetText(struct {
+        transaction_id TransactionId;
+        old_range Range;
+        new_text string:MAX_STRING_LENGTH;
+    }) -> (struct {}) error TextFieldError;
+
+    /// Commits the changes made so far in the transaction and ends the transaction. The active
+    /// transaction ID becomes invalid.
+    ///
+    /// This must be done inside a transaction.
+    CommitTransaction(struct {
+        transaction_id TransactionId;
+    }) -> (struct {
+        state TextFieldState;
+    }) error TextFieldError;
+
+    /// Cancels the ongoing transaction and reverts any changes within it. The active transaction ID
+    /// becomes invalid.
+    ///
+    /// This must be done inside a transaction.
+    CancelTransaction(struct {
+        transaction_id TransactionId;
+    }) -> (struct {
+        state TextFieldState;
+    }) error TextFieldError;
+
+    /// Begins a composition session on the text field state.
+    ///
+    /// This is how the edit server handles composable "dead keys" (e.g. for typing diacritics) or
+    /// connects an IME (e.g. for typing Pinyin to generate Chinese text).
+    ///
+    /// A composition session groups together multiple text edit transactions and
+    /// `CompositionUpdate`s. If the user or the client cancels a composition, all edit transactions
+    /// within it should be reverted.
+    BeginComposition(struct {
+        args BeginCompositionArgs;
+    }) -> (struct {}) error TextFieldError;
+
+    /// Commits the changes made so far in the transaction, updates the composition metdata, and
+    /// ends the transaction. The active transaction ID becomes invalid.
+    ///
+    /// This must be done inside a transaction, during a composition.
+    CommitTransactionInComposition(struct {
+        args CommitCompositionInTransactionArgs;
+    }) -> (struct {
+        state TextFieldState;
+    }) error TextFieldError;
+
+    /// Completes the composition, accepting any currently active composition segments into the
+    /// text stream. When the text field completes the composition, any visible composition-related
+    /// UI (such as underlined or highlighted composition segments) should be hidden.
+    ///
+    /// There must not be an outstanding transaction at this point.
+    CompleteComposition() -> (struct {
+        state TextFieldState;
+    }) error TextFieldError;
+
+    /// Cancels the composition, reverting the text field to its state before the composition began.
+    ///
+    /// This also cancels the outstanding transaction, if any.
+    CancelComposition() -> (struct {
+        state TextFieldState;
+    }) error TextFieldError;
+};
+
+type BeginTransactionArgs = table {
+    /// The revision ID that the server believes to be current for the text field. Required.
+    ///
+    /// If this ID is out of date, then the server's view of the text field state is stale, so
+    /// the transaction must fail.
+    1: revision_id RevisionId;
+};
+
+type BeginCompositionArgs = table {
+    /// The revision ID that server believes to be current for the text field.
+    ///
+    /// If this ID is out of date, then the server's view of the text field state is stale, so
+    /// the composition must fail.
+    1: revision_id RevisionId;
+};
+
+type CommitCompositionInTransactionArgs = table {
+    /// Required.
+    1: transaction_id TransactionId;
+    2: composition_update CompositionUpdate;
+};
+
+/// `TextField` represents an editable (usually) text widget inside a client application.
+protocol TextField {
+    compose ReadableTextField;
+    compose WritableTextField;
+};
+
+/// Represents the system's text edit server, as exposed to client applications with text fields.
+@discoverable
+protocol TextEditServer {
+    /// Registers a `TextField` hosted by the client application and creates `EditServerSession`
+    /// that serves as the text field's connection to the `TextEditServer`.
+    ///
+    /// The server keeps track of the client and the session. All subsequent requests from the
+    /// client to server take place via the `EditServerSession` protocol, while all requests from
+    /// the server to the client run through the `TextField` protocol.
+    RegisterFocusedTextField(resource struct {
+        text_field client_end:TextField;
+        server_session server_end:TextEditServerSession;
+        options TextFieldOptions;
+    }) -> (struct {}) error TextEditServerError;
+};
+
+/// An opaque type representing an `TextField`'s revision ID.
+///
+/// This is modified whenever the content, selection, or other state of the `TextField` changes.
+type RevisionId = struct {
+    id uint64;
+};
+
+/// An opaque type identifying a `TextField` transaction.
+type TransactionId = struct {
+    id uint64;
+};
+
+/// A compact representation of the current state of an `TextField`.
+///
+/// Note that this does not include the _contents_ of the `TextField`, as that string may be large
+/// and should be retrieved piecemeal.
+type TextFieldState = table {
+    1: revision_id RevisionId;
+    /// A range representing the entire editable contents of the TextField.
+    2: contents_range Range;
+    /// The current selection or the caret position.
+    3: selection Selection;
+};
+
+/// Represents an editing session for a single `TextField` and `TextEditServer` pair.
+///
+/// Note that to conserve resources, the `TextEditServer` may occasionally drop unfocused sessions.
+/// In this case, the channel will appear closed, so the client should recreate the session using
+/// `RegisterFocusedTextField` the next time that the field regains focus.
+protocol TextEditServerSession {
+    /// Notify the server that the state of the text field has changed.
+    NotifyStateChanged(struct {
+        state TextFieldState;
+    }) -> (struct {}) error TextEditServerError;
+
+    /// Notifies the server that the text field has regained focus within its parent view.
+    NotifyFocusGained() -> (struct {}) error TextEditServerError;
+
+    /// Notifies the server that the text field has lost focus (either to some other field within
+    /// the same client view, or because the client has lost focus).
+    NotifyFocusLost() -> (struct {}) error TextEditServerError;
+
+    /// Notifies the server that the text field options have changed.
+    ///
+    /// For example, a user might toggle the visibility of characters in a password field.
+    UpdateTextFieldOptions(struct {
+        options TextFieldOptions;
+    }) -> (struct {}) error TextEditServerError;
+};
+
+/// Describes composition-specific metadata that can be updated in a text field, outside of changes
+/// to the actual text contents.
+type CompositionUpdate = table {
+    /// The list of text segments that are being modified during this composition.
+    1: composition_segments vector<CompositionSegment>:MAX_COMPOSITION_SEGMENTS;
+    /// Optionally, the index of the composition segment that should be highlighted as currently
+    /// active.
+    2: highlighted_segment uint8;
+};
+
+/// During a composition session, a `CompositionSegment` identifies segments of the text that the
+/// user can individually focus and choose suggestions for. Some IMEs may use just a single
+/// `CompositionSegment`; others may allow multiple segments in one composition segment, and
+/// highlight the currently active one (see `CompositionUpdate`).
+///
+/// (In the current design, the suggestion list and UI are managed by an IME, so they are not
+/// stored here.)
+type CompositionSegment = table {
+    /// The code point range within the overall text stream that is covered by the segment.
+    1: range Range;
+    /// The raw, user-input string that is being composed.
+    ///
+    /// During a composition, this preserves the unconverted text, while the text content visible in
+    /// the text field has already been replaced by an IME.
+    2: raw_input_text string:MAX_STRING_LENGTH;
+};
+
+/// Represents a half-open range of code points within a stream of text. Can be used to describe a
+/// contiguous text selection, or if the width of the range is 0, a caret position.
+///
+/// For example, in the stream "abcdклмн":
+///
+/// Range  | Selection  | Note
+/// ------ | ---------- | ----
+/// [0, 0) | |abcdклмн  | Caret at the beginning of the stream
+/// [0, 3) | [ab]cdклмн | First two code points selected
+/// [5, 8) | abcdк[лмн] | Last three code points selected
+/// [4, 4) | abcd|клмн  | Caret after the 4th code point in the stream
+///
+type Range = struct {
+    /// The index of the first code point in the range.
+    start uint32;
+    /// The index _after_ the last code point in the range.
+    end uint32;
+};
+
+/// Represents a selection of code points within a stream of text.
+type Selection = struct {
+    /// The start of the selection, and the position of the caret.
+    base uint32;
+    /// The end of the selection, changed when the user adjusts the selection with arrow keys.
+    /// This can be less than, greater than, or equal to the base. (Base and extent are equal if
+    /// the selection is empty.)
+    extent uint32;
+    /// When the selection is empty and the caret can be drawn at one of two possible locations
+    /// (e.g. at the end of one line or at the beginning of the next one), this determines which to
+    /// use.
+    affinity TextAffinity;
+};
+
+type TextAffinity = strict enum {
+    DOWNSTREAM = 1;
+    UPSTREAM = 2;
+};

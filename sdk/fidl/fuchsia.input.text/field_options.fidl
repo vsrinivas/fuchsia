@@ -1,0 +1,41 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.text;
+
+/// Describes different input field types.
+///
+/// These can serve as hints for which keyboard layout (plain text, phone number, numeric,
+/// etc.) should be displayed.
+///
+/// See also:
+///
+/// * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types
+/// * https://api.flutter.dev/flutter/services/TextInputType-class.html#constants
+/// * https://developer.android.com/reference/android/text/InputType
+///
+/// TODO(fxbug.dev/94008): Date, time, password
+/// TODO(fxbug.dev/94008): Allow specifying number range, precision.
+type InputType = flexible enum : uint8 {
+    /// Free-form text.
+    TEXT = 1;
+    /// A number.
+    NUMBER = 2;
+    /// A phone number.
+    PHONE = 3;
+    /// A URL.
+    URL = 4;
+    /// An email address.
+    EMAIL_ADDRESS = 5;
+};
+
+/// Settings related to the text field that are important for the edit server to be aware of.
+///
+/// TODO(fxbug.dev/94008): Autocorrect options
+/// TODO(fxbug.dev/94008): Privacy options
+type TextFieldOptions = table {
+    /// The type of content expected in the text box. This may affect the appearance and behavior of
+    /// on-screen keyboards.
+    1: input_type InputType;
+};
