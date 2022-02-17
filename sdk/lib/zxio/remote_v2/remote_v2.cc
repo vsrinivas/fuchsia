@@ -85,10 +85,15 @@ zx_status_t zxio_remote_v2_close(zxio_t* io) {
   zx_status_t status = [&]() {
     const fidl::WireResult result =
         fidl::WireCall(fidl::UnownedClientEnd<fio::Node2>(rio.control()))->Close();
-    // TODO(yifeit): The |Node.Close| method is one-way. In order to catch
-    // any server-side error during close, we should wait for an epitaph.
     if (!result.ok()) {
       return result.status();
+    }
+    const fidl::WireResponse response = result.value();
+    switch (response.result.Which()) {
+      case fio::wire::Node2CloseResult::Tag::kErr:
+        return response.result.err();
+      case fio::wire::Node2CloseResult::Tag::kResponse:
+        return ZX_OK;
     }
     return rio.control()->wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
   }();
