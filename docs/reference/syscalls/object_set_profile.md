@@ -4,7 +4,7 @@
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
-Apply a scheduling profile to an object.
+Apply a scheduling profile to a thread.
 
 ## SYNOPSIS
 
@@ -13,7 +13,7 @@ Apply a scheduling profile to an object.
 ```c
 #include <zircon/syscalls.h>
 
-zx_status_t zx_object_set_profile(zx_handle_t target,
+zx_status_t zx_object_set_profile(zx_handle_t handle,
                                   zx_handle_t profile,
                                   uint32_t options);
 ```
@@ -36,7 +36,7 @@ supported in the future.
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
-*target* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_MANAGE_THREAD**.
+*handle* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_MANAGE_THREAD**.
 
 *profile* must be of type **ZX_OBJ_TYPE_PROFILE** and have **ZX_RIGHT_APPLY_PROFILE**.
 

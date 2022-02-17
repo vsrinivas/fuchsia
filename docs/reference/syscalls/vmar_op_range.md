@@ -103,6 +103,7 @@ address range specified by *handle*.
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
+[`zx_pager_create_vmo()`]: pager_create_vmo.md
 [`zx_vmar_map()`]: vmar_map.md
 [`zx_vmar_unmap()`]: vmar_unmap.md
 [`zx_vmo_op_range()`]: vmo_op_range.md

@@ -199,6 +199,7 @@ contents that were read in by the pager for the pages being committed are corrup
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
+[`zx_pager_create_vmo()`]: pager_create_vmo.md
 [`zx_vmo_create()`]: vmo_create.md
 [`zx_vmo_create_child()`]: vmo_create_child.md
 [`zx_vmo_get_size()`]: vmo_get_size.md

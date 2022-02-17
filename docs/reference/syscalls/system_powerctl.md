@@ -46,7 +46,7 @@ given value:
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
-*resource* must have resource kind **ZX_RSRC_KIND_ROOT**.
+*resource* must have resource kind **ZX_RSRC_KIND_SYSTEM** with base **ZX_RSRC_SYSTEM_POWER_BASE**.
 
 ## RETURN VALUE
 

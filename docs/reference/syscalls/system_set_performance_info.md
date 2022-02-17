@@ -79,5 +79,10 @@ negative error value is returned.
 ## SEE ALSO
 
 - [RFC 0123: CPU performance info syscalls](/docs/contribute/governance/rfcs/0123_cpu_performance_info.md)
-- [`zx_system_get_performance_info()`]
  
+
+ - [`zx_system_get_performance_info()`]
+
+<!-- References updated by update-docs-from-fidl, do not edit. -->
+
+[`zx_system_get_performance_info()`]: system_get_performance_info.md

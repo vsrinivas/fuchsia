@@ -59,10 +59,9 @@ was an invalid pointer.
 
  - [`fuchsia.boot.WriteOnlyLog`](https://fuchsia.dev/reference/fidl/fuchsia.boot#WriteOnlyLog)
 
+ - [`zx_debug_write()`]
  - [`zx_debuglog_create()`]
  - [`zx_debuglog_read()`]
-
- - [`zx_debug_write()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 

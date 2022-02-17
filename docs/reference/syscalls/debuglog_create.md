@@ -53,7 +53,6 @@ In the event of failure, a negative error value is returned.
 ## SEE ALSO
 
  - [`zx_debuglog_read()`]
-
  - [`zx_debuglog_write()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->

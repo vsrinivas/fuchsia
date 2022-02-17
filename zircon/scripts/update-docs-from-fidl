@@ -166,7 +166,14 @@ def match_sentence_form(sentence, arg_names):
             'Every', 'entry', 'of', 'ARG', 'must', 'have', 'a',
             'WAITITEMMEMBER', 'field', 'with', 'RIGHT', '.'
         ],
-
+        [
+            'If', 'ARG1', 'is', 'VALUE1', ',', 'ARG2', 'must', 'have',
+            'resource', 'kind', 'RSRC', 'with', 'base', 'VALUE2', '.'
+        ],
+        [
+            'ARG', 'must', 'have', 'resource', 'kind', 'RSRC', 'with', 'base',
+            'VALUE', '.'
+        ],
         # TODO(fxbug.dev/32253) TODO(scottmg): This is a hack specifically for
         # zx_channel_call_args_t. Trying to make a pseudo-generic case (that
         # handles the length from wr_num_handles, etc.) for this doesn't seem
@@ -240,6 +247,7 @@ def match_sentence_form(sentence, arg_names):
         'ZX_RSRC_KIND_ROOT',
         'ZX_RSRC_KIND_VMEX',
         'ZX_RSRC_KIND_SMC',
+        'ZX_RSRC_KIND_SYSTEM',
     ])
 
     # There's only two structs in zircon/types.h, so hardcoding this here is

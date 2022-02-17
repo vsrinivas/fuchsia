@@ -106,13 +106,14 @@ not page aligned, or *op* is **ZX_PAGER_OP_FAIL** and *data* is not one of **ZX_
 
  - [`zx_pager_create_vmo()`]
  - [`zx_pager_detach_vmo()`]
- - [`zx_pager_supply_pages()`]
  - [`zx_pager_query_dirty_ranges()`]
+ - [`zx_pager_supply_pages()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_pager_create_vmo()`]: pager_create_vmo.md
 [`zx_pager_detach_vmo()`]: pager_detach_vmo.md
+[`zx_pager_query_dirty_ranges()`]: pager_query_dirty_ranges.md
 [`zx_pager_supply_pages()`]: pager_supply_pages.md
 [`zx_vmo_op_range()`]: vmo_op_range.md
 [`zx_vmo_read()`]: vmo_read.md
