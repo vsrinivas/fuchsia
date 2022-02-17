@@ -102,7 +102,7 @@ class SockScripter {
   int snd_flags_ = 0;
   int recv_flags_ = 0;
   SendBufferGenerator snd_buf_gen_;
-  uint8_t recv_buf_[1024]{};
+  char recv_buf_[1024]{};
   ApiAbstraction* api_;
 };
 

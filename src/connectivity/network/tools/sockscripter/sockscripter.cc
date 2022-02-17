@@ -9,6 +9,7 @@
 #include <net/if.h>
 #include <unistd.h>
 
+#include <iomanip>
 #include <optional>
 
 #include "addr.h"
@@ -266,6 +267,22 @@ int usage(const char* name) {
           "\n\n",
           name, socket_types_str.str().c_str(), cmds_str.str().c_str(), name, name);
   return 99;
+}
+
+struct Escaped {
+  explicit Escaped(const std::string_view contents) : contents(contents) {}
+  std::string_view contents;
+};
+
+std::ostream& operator<<(std::ostream& out, const Escaped& logged) {
+  for (unsigned char c : logged.contents) {
+    if (std::isprint(c)) {
+      out << c;
+    } else {
+      out << "\\x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(c);
+    }
+  }
+  return out;
 }
 
 int SockScripter::Execute(int argc, char* const argv[]) {
@@ -894,7 +911,7 @@ bool SockScripter::SendTo(char* arg) {
 
   auto snd_buf = snd_buf_gen_.GetSndStr();
 
-  LOG(INFO) << "Sending [" << snd_buf.length() << "]='" << snd_buf << "' on fd:" << sockfd_
+  LOG(INFO) << "Sending [" << snd_buf.length() << "]='" << Escaped(snd_buf) << "' on fd:" << sockfd_
             << " to " << Format(addr.value());
 
   ssize_t sent = api_->sendto(sockfd_, snd_buf.c_str(), snd_buf.length(), snd_flags_,
@@ -911,7 +928,8 @@ bool SockScripter::SendTo(char* arg) {
 bool SockScripter::Send(char* arg) {
   auto snd_buf = snd_buf_gen_.GetSndStr();
 
-  LOG(INFO) << "Sending [" << snd_buf.length() << "]='" << snd_buf << "' on fd:" << sockfd_;
+  LOG(INFO) << "Sending [" << snd_buf.length() << "]='" << Escaped(snd_buf)
+            << "' on fd:" << sockfd_;
 
   ssize_t sent = api_->send(sockfd_, snd_buf.c_str(), snd_buf.length(), snd_flags_);
   if (sent < 0) {
@@ -942,7 +960,8 @@ bool SockScripter::RecvFromInternal(bool ping) {
     return false;
   }
 
-  LOG(INFO) << "  received(fd:" << sockfd_ << ") [" << recvd << "]'" << recv_buf_ << "' "
+  std::string_view received(&recv_buf_[0], recvd);
+  LOG(INFO) << "  received(fd:" << sockfd_ << ") [" << recvd << "]'" << Escaped(received) << "' "
             << "from " << Format(addr);
   if (ping) {
     if (api_->sendto(sockfd_, recv_buf_, recvd, snd_flags_, reinterpret_cast<sockaddr*>(&addr),
