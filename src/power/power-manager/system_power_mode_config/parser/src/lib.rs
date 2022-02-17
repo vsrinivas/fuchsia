@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::{bail, ensure, Context as _, Error};
-use fidl_fuchsia_power_clientlevel::ClientType;
-use fidl_fuchsia_power_systemmode::{ClientConfig, ModeMatch, SystemMode};
+pub use fidl_fuchsia_power_clientlevel::ClientType;
+pub use fidl_fuchsia_power_systemmode::{ClientConfig, ModeMatch, SystemMode};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
@@ -130,7 +130,8 @@ impl SystemPowerModeConfig {
     pub fn validate(&self) -> Result<(), Error> {
         // Iterate and validate each underlying `ClientConfig` instance
         for (client_name, client_config) in self.clients.iter() {
-            validate_client_config(client_config)
+            client_config
+                .validate()
                 .context(format!("Validation failed for client {:?}", client_name))?;
         }
 
@@ -140,6 +141,10 @@ impl SystemPowerModeConfig {
     /// Gets the `ClientConfig` instance for the specified client.
     pub fn get_client_config(&self, client_type: ClientType) -> Option<&ClientConfig> {
         self.clients.get(&client_type)
+    }
+
+    pub fn into_iter(self) -> impl Iterator<Item = (ClientType, ClientConfig)> {
+        self.clients.into_iter()
     }
 }
 
@@ -170,7 +175,7 @@ fn str_to_system_mode(s: &str) -> Result<SystemMode, Error> {
 ///
 /// This trait and its methods are not marked `cfg(test)` so that they may be used outside of this
 /// crate.
-trait SystemPowerModeConfigTestExt {
+pub trait SystemPowerModeConfigTestExt {
     fn new() -> Self;
     fn add_client_config(self, client_type: ClientType, config: ClientConfig) -> Self;
 }
@@ -192,7 +197,7 @@ impl SystemPowerModeConfigTestExt for SystemPowerModeConfig {
 ///
 /// This trait and its methods are not marked `cfg(test)` so that they may be used outside of this
 /// crate.
-trait ClientConfigTestExt {
+pub trait ClientConfigTestExt {
     fn new(default_level: u64) -> Self;
     fn append_mode_match(self, mode: SystemMode, level: u64) -> Self;
 }
@@ -211,25 +216,31 @@ impl ClientConfigTestExt for ClientConfig {
     }
 }
 
-/// Validates a `ClientConfig` instance.
-///
-/// Performs a series of validations to check if the configuration defined by the `ClientConfig`
-/// instance is valid. The instance is valid if:
-///   1) a given `SystemMode` is not repeating in multiple `ModeMatch` entries
-fn validate_client_config(client_config: &ClientConfig) -> Result<(), Error> {
-    // Ensure a given `SystemMode` is not repeating in multiple `ModeMatch` entries
-    {
-        let mut modes_set = HashSet::new();
-        for mode in client_config.mode_matches.iter().map(|mode_match| mode_match.mode) {
-            ensure!(
-                modes_set.insert(mode),
-                "A given mode may only be specified once (violated by {:?})",
-                mode
-            );
-        }
-    }
+pub trait ClientConfigExt {
+    fn validate(&self) -> Result<(), Error>;
+}
 
-    Ok(())
+impl ClientConfigExt for ClientConfig {
+    /// Validates a `ClientConfig` instance.
+    ///
+    /// Performs a series of validations to check if the configuration defined by the `ClientConfig`
+    /// instance is valid. The instance is valid if:
+    ///   1) a given `SystemMode` is not repeating in multiple `ModeMatch` entries
+    fn validate(&self) -> Result<(), Error> {
+        // Ensure a given `SystemMode` is not repeating in multiple `ModeMatch` entries
+        {
+            let mut modes_set = HashSet::new();
+            for mode in self.mode_matches.iter().map(|mode_match| mode_match.mode) {
+                ensure!(
+                    modes_set.insert(mode),
+                    "A given mode may only be specified once (violated by {:?})",
+                    mode
+                );
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

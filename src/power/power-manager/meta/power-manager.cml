@@ -13,8 +13,11 @@
             protocol: [
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+                "fuchsia.power.clientlevel.Watcher",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.power.profile.Watcher",
+                "fuchsia.power.systemmode.ClientConfigurator",
+                "fuchsia.power.systemmode.Requester",
                 "fuchsia.thermal.ClientStateConnector",
                 "fuchsia.thermal.Controller",
             ],
@@ -40,8 +43,11 @@
             protocol: [
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+                "fuchsia.power.clientlevel.Watcher",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.power.profile.Watcher",
+                "fuchsia.power.systemmode.ClientConfigurator",
+                "fuchsia.power.systemmode.Requester",
                 "fuchsia.thermal.ClientStateConnector",
                 "fuchsia.thermal.Controller",
             ],

@@ -839,6 +839,21 @@
       },
       {
         "properties": {
+            "type": {
+                "pattern": "SystemPowerModeHandler"
+            },
+            "name": {
+                "type": "string"
+            }
+        },
+        "additionalProperties": false,
+        "required": [
+            "type",
+            "name"
+        ]
+      },
+      {
+        "properties": {
           "type": {
             "pattern": "ThermalStateHandler"
           },

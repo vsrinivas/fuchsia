@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::error::PowerManagerError;
-use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::ThermalLoad;
@@ -369,6 +368,8 @@ fn spawn_watcher_handler(
 /// A structure to own and track Inspect data for a single `ClientState` instance.
 struct ClientStateInspect {
     thermal_state: inspect::UintProperty,
+
+    // TODO(fxbug.dev/93970): track # of active connections instead of just connect count
     connect_count: inspect::UintProperty,
     _client_node: inspect::Node,
 }
@@ -400,8 +401,13 @@ type ClientStateSubscriber = hanging_get::Subscriber<ThermalState, WatchResponde
 /// actually changed in order to properly implement the hanging-get behavior.
 fn new_state_broker() -> ClientStateBroker {
     let notify_fn: StateChangeFn = Box::new(|state, responder| {
-        log_if_err!(responder.send(state.0 as u64), "Failed to send thermal state to client");
-        true // indicates that the client was successfully updated
+        match responder.send(state.0 as u64) {
+            Ok(()) => true, // indicates that the client was successfully updated
+            Err(e) => {
+                error!("Failed to send thermal state to client: {}", e);
+                false
+            }
+        }
     });
     hanging_get::HangingGet::new(ThermalState(0), notify_fn)
 }
@@ -433,11 +439,7 @@ impl ThermalStateHandler {
         self: Rc<Self>,
         mut stream: fthermal::ClientStateConnectorRequestStream,
     ) {
-        fuchsia_trace::instant!(
-            "power_manager",
-            "ThermalStateHandler::spawn_connector_handler",
-            fuchsia_trace::Scope::Thread
-        );
+        fuchsia_trace::duration!("power_manager", "ThermalStateHandler::spawn_connector_handler");
 
         fasync::Task::local(
             async move {

@@ -25,6 +25,7 @@ mod lid_shutdown;
 mod platform_metrics;
 mod shutdown_watcher;
 mod syscall_handler;
+mod system_power_mode_handler;
 mod system_profile_handler;
 mod system_shutdown_handler;
 mod temperature_handler;
