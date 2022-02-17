@@ -77,10 +77,20 @@ fx shell camera-gym-ctl --capture-frame=0
 fx shell ls /data/r/sys/r/session-0/fuchsia.com:camera-gym:0#meta:camera-gym-manual.cmx/.
 
 #### Copy out frames that were captured
-cd /my_dest_dir/.
-fx scp "[$(fx get-device-addr)]:"/data/r/sys/r/session-0/fuchsia.com:camera-gym:0#meta:camera-gym-manual.cmx/image_\* .
+mkdir -p /tmp/my_dest_dir
+fx scp "[$(fx get-device-addr)]:"/data/r/sys/r/session-0/fuchsia.com:camera-gym:0#meta:camera-gym-manual.cmx/image_\* /tmp/my_dest_dir/.
 
 #### Post process NV12 raw dumps to PNG and view the PNG images
+cd /tmp/my_dest_dir
 ls -1 image*.nv12 | sed -e 's@\(.*_\)\([0-9][0-9]*x[0-9][0-9]*\)\(.*\).nv12@ffmpeg -f rawvideo -pixel_format nv12 -video_size \2 -i \1\2\3.nv12 \1\2\3.png@' > CONVERT.SH
 . CONVERT.SH
+
+#### Visually review converted PNG images (if on same system)
+
+eog *.png
+
+#### Visually review converted PNG images (if on another system)
+
+rsync -av remote.system.somewhere.com:/tmp/my_dest_dir /tmp/.
+cd /tmp/my_dest_dir
 eog *.png
