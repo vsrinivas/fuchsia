@@ -43,9 +43,10 @@ fuchsia_unittest_package("bind-test-v2") {
 driver_bind_rules("bind-v2") {
   rules = "bind-test-v2.bind"
   header_output = "bind-test-v2-bind.h"
-  disable_autobind = true
-  disable_new_bytecode = false
-  deps = [ "//src/devices/bind/fuchsia.test" ]
+  deps = [
+    "//src/devices/bind/fuchsia.compat",
+    "//src/devices/bind/fuchsia.test",
+  ]
 }
 
 fuchsia_driver("bind-test-driver-v2-driver") {

@@ -157,8 +157,11 @@ const std::vector<MatchedDriver> DriverLoader::MatchDeviceDriverIndex(
   fidl::Arena allocator;
   auto& props = dev->props();
   auto& str_props = dev->str_props();
-  fidl::VectorView<fdf::wire::NodeProperty> fidl_props(allocator,
-                                                       props.size() + str_props.size() + 2);
+  size_t size = props.size() + str_props.size() + 2;
+  if (!autobind) {
+    size += 1;
+  }
+  fidl::VectorView<fdf::wire::NodeProperty> fidl_props(allocator, size);
 
   size_t index = 0;
   fidl_props[index++] =
@@ -169,6 +172,16 @@ const std::vector<MatchedDriver> DriverLoader::MatchDeviceDriverIndex(
       fdf::wire::NodeProperty(allocator)
           .set_key(allocator, fdf::wire::NodePropertyKey::WithIntValue(BIND_AUTOBIND))
           .set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(autobind));
+  // If we are looking for a specific driver, we add a property to the device with the
+  // name of the driver we are looking for. Drivers can then bind to this.
+  if (!autobind) {
+    fidl_props[index++] =
+        fdf::wire::NodeProperty(allocator)
+            .set_key(allocator, fdf::wire::NodePropertyKey::WithStringValue(
+                                    allocator, allocator, "fuchsia.compat.LIBNAME"))
+            .set_value(allocator, fdf::wire::NodePropertyValue::WithStringValue(
+                                      allocator, allocator, config.libname));
+  }
 
   for (size_t i = 0; i < props.size(); i++) {
     fidl_props[index++] =

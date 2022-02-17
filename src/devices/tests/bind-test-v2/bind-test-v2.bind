@@ -3,5 +3,7 @@
 // found in the LICENSE file.
 
 using fuchsia.test;
+using fuchsia.compat;
 
 fuchsia.BIND_PROTOCOL == fuchsia.test.BIND_PROTOCOL.DEVICE;
+fuchsia.compat.LIBNAME == "/boot/driver/bind-test-v2-driver.so";
