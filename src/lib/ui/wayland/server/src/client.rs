@@ -210,14 +210,12 @@ impl Client {
     /// Looks up an object in the map and returns a downcasted reference to
     /// the implementation.
     pub fn get_object<T: Any>(&self, id: wl::ObjectId) -> Result<&T, ObjectLookupError> {
-        // Enable this to debug object lookup errors.
-        //
-        // let v = self.objects.get::<T>(id);
-        // if !v.is_ok() {
-        //     panic!("Invalid object: {:?}", id);
-        // }
-
-        self.objects.get(id)
+        let result = self.objects.get(id);
+        #[cfg(feature = "fatal_object_lookup_failures")]
+        if !result.is_ok() {
+            panic!("Invalid object: {:?}", id);
+        }
+        result
     }
 
     /// Looks up an object in the map and returns a downcasted reference to
@@ -232,14 +230,12 @@ impl Client {
         &mut self,
         id: wl::ObjectId,
     ) -> Result<&mut T, ObjectLookupError> {
-        // Enable this to debug object lookup errors.
-        //
-        // let v = self.objects.get_mut::<T>(id);
-        // if !v.is_ok() {
-        //     panic!("Invalid object: {:?}", id);
-        // }
-
-        self.objects.get_mut(id)
+        let result = self.objects.get_mut(id);
+        #[cfg(feature = "fatal_object_lookup_failures")]
+        if !result.is_ok() {
+            panic!("Invalid object: {:?}", id);
+        }
+        result
     }
 
     /// Looks up an object in the map and returns a downcasted mutable

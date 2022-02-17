@@ -7,6 +7,11 @@ import("//build/dist/resource.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
+declare_args() {
+  # Enable this to make object lookup failures fatal for debugging.
+  wayland_server_fatal_object_lookup_failures = false
+}
+
 resource("keymap") {
   sources = [ "assets/keymap.xkb" ]
   outputs = [ "data/keymap.xkb" ]
@@ -84,6 +89,9 @@ rustc_library("lib") {
   features = []
   if (board_name == "chromebook-x64") {
     features += [ "i915" ]
+  }
+  if (wayland_server_fatal_object_lookup_failures) {
+    features += [ "fatal_object_lookup_failures" ]
   }
 }
 
