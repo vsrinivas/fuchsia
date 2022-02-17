@@ -759,10 +759,9 @@ void AudioDriver::ShutdownSelf(const char* reason, zx_status_t status) {
     return;
   }
 
-  if (reason != nullptr && status != ZX_ERR_PEER_CLOSED) {
-    FX_PLOGS(INFO, status) << (owner_->is_input() ? " Input" : "Output") << " shutting down '"
-                           << reason << "'";
-  }
+  // Always log: this should occur rarely, hence it should not spam.
+  FX_PLOGS(INFO, status) << (owner_->is_input() ? " Input" : "Output") << " shutting down '"
+                         << reason << "'";
 
   // Our owner will call our Cleanup function within this call.
   owner_->ShutdownSelf();
