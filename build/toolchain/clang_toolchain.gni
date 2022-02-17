@@ -119,7 +119,7 @@ template("clang_toolchain") {
         # Compare local vs. remote build.
         # Allow caching.
         # Use local concurrency.
-        _rewrapper_flags = " --compare --fsatrace --exec_strategy-remote"
+        _rewrapper_flags = " --compare --fsatrace --exec_strategy=remote"
       } else if (check_rustc_determinism) {
         # Determinism check is run locally, and doesn't use RBE,
         # even though it uses the same wrapper script.
