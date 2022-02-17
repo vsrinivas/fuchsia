@@ -142,6 +142,18 @@ impl TryFrom<ConfigValue> for u64 {
     }
 }
 
+impl ValueStrategy for Option<u64> {}
+
+impl TryFrom<ConfigValue> for Option<u64> {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        Ok(value.0.and_then(|v| {
+            v.as_u64().or_else(|| if let Value::String(s) = v { s.parse().ok() } else { None })
+        }))
+    }
+}
+
 impl ValueStrategy for u16 {}
 
 impl TryFrom<ConfigValue> for u16 {

@@ -155,6 +155,7 @@ impl<'a> quote::ToTokens for FfxConfigField<'a> {
 enum ConfigValueType {
     StringType,
     FloatType,
+    IntegerType,
 }
 
 impl quote::ToTokens for ConfigValueType {
@@ -162,6 +163,7 @@ impl quote::ToTokens for ConfigValueType {
         match self {
             ConfigValueType::StringType => tokens.extend(quote! { String }),
             ConfigValueType::FloatType => tokens.extend(quote! { f64 }),
+            ConfigValueType::IntegerType => tokens.extend(quote! { u64 }),
         }
     }
 }
@@ -173,6 +175,7 @@ impl TryFrom<&syn::Ident> for ConfigValueType {
         Ok(match value {
             n if n == "String" => ConfigValueType::StringType,
             n if n == "f64" => ConfigValueType::FloatType,
+            n if n == "u64" => ConfigValueType::IntegerType,
             _ => bail!("unsupported type: {}", value),
         })
     }

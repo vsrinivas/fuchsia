@@ -120,8 +120,8 @@ pub struct StartCommand {
     /// to the user. A value of 0 will skip the check entirely. Default is 60 seconds. This
     /// can be overridden with `ffx config set emu.start.timeout <seconds>`.
     #[argh(option, short = 's')]
-    #[ffx_config_default(key = "emu.start.timeout", default = "60.0")]
-    pub startup_timeout: Option<f64>,
+    #[ffx_config_default(key = "emu.start.timeout", default = "60")]
+    pub startup_timeout: Option<u64>,
 
     /// enables extra logging for debugging.
     #[argh(switch, short = 'V')]
