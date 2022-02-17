@@ -211,7 +211,7 @@ pub(crate) async fn discovery_loop(config: DiscoveryConfig) {
 fn make_target<B: ByteSlice + Clone>(
     src: SocketAddr,
     msg: dns::Message<B>,
-) -> Option<(bridge::Target, u32)> {
+) -> Option<(bridge::TargetInfo, u32)> {
     let mut nodename = String::new();
     let mut ttl = 0u32;
     let src = bridge::TargetAddrInfo::Ip(bridge::TargetIp {
@@ -242,12 +242,12 @@ fn make_target<B: ByteSlice + Clone>(
         return None;
     }
     Some((
-        bridge::Target {
+        bridge::TargetInfo {
             nodename: Some(nodename),
             addresses: Some(vec![src]),
             target_state: fastboot_interface.map(|_| bridge::TargetState::Fastboot),
             fastboot_interface,
-            ..bridge::Target::EMPTY
+            ..bridge::TargetInfo::EMPTY
         },
         ttl,
     ))

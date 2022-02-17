@@ -170,7 +170,7 @@ impl DaemonProtocolProvider for Daemon {
         &self,
         target_identifier: Option<String>,
         protocol_selector: fidl_fuchsia_diagnostics::Selector,
-    ) -> Result<(bridge::Target, fidl::Channel)> {
+    ) -> Result<(bridge::TargetInfo, fidl::Channel)> {
         let target = self.get_rcs_ready_target(target_identifier).await?;
         let rcs = target
             .rcs()

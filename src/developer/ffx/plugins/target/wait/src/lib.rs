@@ -7,17 +7,17 @@ use {
     errors::FfxError,
     ffx_core::ffx_plugin,
     ffx_wait_args::WaitCommand,
-    fidl_fuchsia_developer_bridge::{DaemonError, TargetHandleProxy},
+    fidl_fuchsia_developer_bridge::{DaemonError, TargetProxy},
     std::time::Duration,
     timeout::timeout,
 };
 
 #[ffx_plugin()]
-pub async fn get_ssh_address(target_proxy: TargetHandleProxy, cmd: WaitCommand) -> Result<()> {
+pub async fn get_ssh_address(target_proxy: TargetProxy, cmd: WaitCommand) -> Result<()> {
     wait_for_device(target_proxy, cmd).await
 }
 
-async fn wait_for_device(target_proxy: TargetHandleProxy, cmd: WaitCommand) -> Result<()> {
+async fn wait_for_device(target_proxy: TargetProxy, cmd: WaitCommand) -> Result<()> {
     let mut elapsed_seconds = 0;
     let ffx: ffx_lib_args::Ffx = argh::from_env();
     let is_default_target = ffx.target.is_none();

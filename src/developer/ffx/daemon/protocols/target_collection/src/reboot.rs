@@ -12,7 +12,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl::Error,
     fidl_fuchsia_developer_bridge::{
-        self as bridge, RebootListenerRequest, TargetHandleRebootResponder, TargetRebootError,
+        self as bridge, RebootListenerRequest, TargetRebootError, TargetRebootResponder,
         TargetRebootState,
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
@@ -99,7 +99,7 @@ impl RebootController {
     pub(crate) async fn reboot(
         &self,
         state: TargetRebootState,
-        responder: TargetHandleRebootResponder,
+        responder: TargetRebootResponder,
     ) -> Result<()> {
         match self.target.get_connection_state() {
             TargetConnectionState::Fastboot(_) => match state {
@@ -209,10 +209,7 @@ impl RebootController {
     }
 }
 
-pub(crate) fn handle_fidl_connection_err(
-    e: Error,
-    responder: TargetHandleRebootResponder,
-) -> Result<()> {
+pub(crate) fn handle_fidl_connection_err(e: Error, responder: TargetRebootResponder) -> Result<()> {
     match e {
         Error::ClientChannelClosed { .. } => {
             log::warn!(
@@ -236,8 +233,8 @@ mod tests {
         anyhow::anyhow,
         fidl::endpoints::{create_proxy_and_stream, RequestStream},
         fidl_fuchsia_developer_bridge::{
-            FastbootMarker, FastbootProxy, FastbootRequest, TargetHandleMarker, TargetHandleProxy,
-            TargetHandleRequest,
+            FastbootMarker, FastbootProxy, FastbootRequest, TargetMarker, TargetProxy,
+            TargetRequest,
         },
         fidl_fuchsia_developer_remotecontrol::{
             RemoteControlMarker, RemoteControlRequest, ServiceMatch,
@@ -313,7 +310,7 @@ mod tests {
         proxy
     }
 
-    async fn setup() -> (Rc<Target>, TargetHandleProxy) {
+    async fn setup() -> (Rc<Target>, TargetProxy) {
         let target = Target::new_named("scooby-dooby-doo");
         let fastboot_proxy = Once::new();
         let _ = fastboot_proxy.get_or_init(setup_fastboot()).await;
@@ -327,11 +324,11 @@ mod tests {
             admin_proxy,
             tasks: Default::default(),
         };
-        let (proxy, mut stream) = create_proxy_and_stream::<TargetHandleMarker>().unwrap();
+        let (proxy, mut stream) = create_proxy_and_stream::<TargetMarker>().unwrap();
         fuchsia_async::Task::local(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    TargetHandleRequest::Reboot { state, responder } => {
+                    TargetRequest::Reboot { state, responder } => {
                         rc.reboot(state, responder).await.unwrap();
                     }
                     r => panic!("received unexpected request {:?}", r),

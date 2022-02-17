@@ -46,7 +46,7 @@ pub async fn remove_target(proxy: &bridge::TargetCollectionProxy, target_id: &st
 /// will not hang indefinitely. If the caller expects the response to take longer (such as during
 /// Fuchsia bootup), it's safe to call the function repeatedly with a longer local timeout.
 pub async fn is_active(collection_proxy: &bridge::TargetCollectionProxy, name: &str) -> bool {
-    let (_proxy, handle) = fidl::endpoints::create_proxy::<bridge::TargetHandleMarker>().unwrap();
+    let (_proxy, handle) = fidl::endpoints::create_proxy::<bridge::TargetMarker>().unwrap();
     let target = Some(name.to_string());
     let res = timeout(Duration::from_secs(1), async {
         collection_proxy

@@ -175,7 +175,7 @@ impl FidlProtocol for Diagnostics {
                     let tc_proxy = self.open_target_collection_proxy(cx).await?;
                     // cx.open_proxy::<bridge::TargetCollectionMarker>().await?;
                     let (target_handle, th_server_end) =
-                        fidl::endpoints::create_proxy::<bridge::TargetHandleMarker>()?;
+                        fidl::endpoints::create_proxy::<bridge::TargetMarker>()?;
                     // TODO(awdavies): Document that there needs to be a timeout handler on the client side, or just handle
                     // a timeout in here.
                     match tc_proxy
@@ -322,7 +322,7 @@ mod test {
                         fuchsia_async::Task::local(async move {
                             while let Ok(Some(req)) = stream.try_next().await {
                                 match req {
-                                    bridge::TargetHandleRequest::StreamActiveDiagnostics {
+                                    bridge::TargetRequest::StreamActiveDiagnostics {
                                         responder,
                                         ..
                                     } => responder.send(&mut Ok(bridge::LogSession::EMPTY)).unwrap(),

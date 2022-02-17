@@ -57,7 +57,7 @@ type FastbootInterface = strict enum {
     TCP = 2;
 };
 
-type Target = table {
+type TargetInfo = table {
     1: nodename string:fuchsia.device.DEVICE_NAME_MAX;
     2: addresses vector<TargetAddrInfo>:256;
     3: age_ms uint64;
@@ -118,7 +118,7 @@ protocol TargetControl {
 /// will be sent as the last call to `Next`.
 protocol TargetCollectionReader {
     Next(struct {
-        entry vector<Target>:MAX;
+        entry vector<TargetInfo>:MAX;
     }) -> ();
 };
 
@@ -171,7 +171,7 @@ protocol TargetCollection {
     /// responsibility to time out if this call takes too long.
     OpenTarget(resource struct {
         query TargetQuery;
-        target_handle server_end:TargetHandle;
+        target_handle server_end:Target;
     }) -> (struct {}) error OpenTargetError;
 
     /// Manually adds a target that cannot be discovered via mDNS.
@@ -194,11 +194,11 @@ protocol TargetCollection {
 /// Not to be confused with the `TargetControl` protocol. This is exclusively
 /// for use with the target collection service.
 @discoverable
-protocol TargetHandle {
+protocol Target {
     /// Returns:
     /// * As much information identifying the target as is currently available.
     Identity() -> (struct {
-        target_info Target;
+        target_info TargetInfo;
     });
 
     /// Waits for an SSH address to become available on the target.

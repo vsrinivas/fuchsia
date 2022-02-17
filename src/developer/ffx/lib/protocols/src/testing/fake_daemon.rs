@@ -198,7 +198,7 @@ impl DaemonProtocolProvider for FakeDaemon {
         &self,
         target_identifier: Option<String>,
         protocol_selector: diagnostics::Selector,
-    ) -> Result<(bridge::Target, fidl::Channel)> {
+    ) -> Result<(bridge::TargetInfo, fidl::Channel)> {
         // TODO(awdavies): This is likely very fragile. Explore more edge cases
         // to make sure tests don't panic unnecessarily.
         let protocol_name: String =
@@ -216,7 +216,7 @@ impl DaemonProtocolProvider for FakeDaemon {
         // assumption that any target being added is going to be looked up later for
         // a test.
         Ok((
-            bridge::Target::from(
+            bridge::TargetInfo::from(
                 &*self
                     .target_collection
                     .get(target_identifier.clone())
@@ -242,7 +242,7 @@ impl FakeDaemonBuilder {
         Self::default()
     }
 
-    pub fn target(self, target: bridge::Target) -> Self {
+    pub fn target(self, target: bridge::TargetInfo) -> Self {
         let t = TargetInfo {
             nodename: target.nodename,
             addresses: target

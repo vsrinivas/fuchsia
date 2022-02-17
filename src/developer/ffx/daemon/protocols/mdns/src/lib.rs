@@ -25,18 +25,18 @@ pub(crate) const MDNS_TTL: u32 = 255;
 
 #[derive(Debug)]
 struct CachedTarget {
-    target: bridge::Target,
+    target: bridge::TargetInfo,
     // TODO(fxbug.dev/84729)
     #[allow(unused)]
     eviction_task: Option<Task<()>>,
 }
 
 impl CachedTarget {
-    fn new(target: bridge::Target) -> Self {
+    fn new(target: bridge::TargetInfo) -> Self {
         Self { target, eviction_task: None }
     }
 
-    fn new_with_task(target: bridge::Target, eviction_task: Task<()>) -> Self {
+    fn new_with_task(target: bridge::TargetInfo, eviction_task: Task<()>) -> Self {
         Self { target, eviction_task: Some(eviction_task) }
     }
 }
@@ -62,7 +62,7 @@ pub(crate) struct MdnsProtocolInner {
 }
 
 impl MdnsProtocolInner {
-    async fn handle_target(self: &Rc<Self>, t: bridge::Target, ttl: u32) {
+    async fn handle_target(self: &Rc<Self>, t: bridge::TargetInfo, ttl: u32) {
         let weak = Rc::downgrade(self);
         let t_clone = t.clone();
         let eviction_task = Task::local(async move {
@@ -84,7 +84,7 @@ impl MdnsProtocolInner {
         }
     }
 
-    async fn evict_target(&self, t: bridge::Target) {
+    async fn evict_target(&self, t: bridge::TargetInfo) {
         if self.target_cache.borrow_mut().remove(&CachedTarget::new(t.clone())) {
             self.publish_event(bridge::MdnsEventType::TargetExpired(t)).await
         }
@@ -94,7 +94,7 @@ impl MdnsProtocolInner {
         let _ = self.events_out.send(event).await;
     }
 
-    fn target_cache(&self) -> Vec<bridge::Target> {
+    fn target_cache(&self) -> Vec<bridge::TargetInfo> {
         self.target_cache.borrow().iter().map(|c| c.target.clone()).collect()
     }
 }
@@ -421,7 +421,10 @@ mod tests {
         let _ = wait_for_port_binds(&proxy).await;
         svc_inner
             .handle_target(
-                bridge::Target { nodename: Some(nodename.clone()), ..bridge::Target::EMPTY },
+                bridge::TargetInfo {
+                    nodename: Some(nodename.clone()),
+                    ..bridge::TargetInfo::EMPTY
+                },
                 5000,
             )
             .await;
@@ -435,7 +438,10 @@ mod tests {
         );
         svc_inner
             .handle_target(
-                bridge::Target { nodename: Some(nodename.clone()), ..bridge::Target::EMPTY },
+                bridge::TargetInfo {
+                    nodename: Some(nodename.clone()),
+                    ..bridge::TargetInfo::EMPTY
+                },
                 5000,
             )
             .await;
@@ -460,7 +466,10 @@ mod tests {
         let _ = wait_for_port_binds(&proxy).await;
         svc_inner
             .handle_target(
-                bridge::Target { nodename: Some(nodename.clone()), ..bridge::Target::EMPTY },
+                bridge::TargetInfo {
+                    nodename: Some(nodename.clone()),
+                    ..bridge::TargetInfo::EMPTY
+                },
                 1,
             )
             .await;
@@ -493,7 +502,10 @@ mod tests {
         let _ = wait_for_port_binds(&proxy).await;
         svc_inner
             .handle_target(
-                bridge::Target { nodename: Some(nodename.clone()), ..bridge::Target::EMPTY },
+                bridge::TargetInfo {
+                    nodename: Some(nodename.clone()),
+                    ..bridge::TargetInfo::EMPTY
+                },
                 50000,
             )
             .await;
@@ -508,7 +520,10 @@ mod tests {
         }
         svc_inner
             .handle_target(
-                bridge::Target { nodename: Some(nodename.clone()), ..bridge::Target::EMPTY },
+                bridge::TargetInfo {
+                    nodename: Some(nodename.clone()),
+                    ..bridge::TargetInfo::EMPTY
+                },
                 1,
             )
             .await;

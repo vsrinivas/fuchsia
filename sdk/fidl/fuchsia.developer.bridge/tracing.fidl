@@ -84,7 +84,7 @@ protocol Tracing {
         options TraceOptions;
         target_config fuchsia.tracing.controller.TraceConfig;
     }) -> (struct {
-        target Target;
+        target TargetInfo;
     }) error RecordingError;
 
     /// Stops the trace recording, flushing the remaining contents to the output
@@ -118,7 +118,7 @@ protocol Tracing {
     StopRecording(struct {
         name string:255;
     }) -> (struct {
-        target Target;
+        target TargetInfo;
     }) error RecordingError;
 
     /// Reports the current status of all running traces.
@@ -129,7 +129,7 @@ protocol Tracing {
 
 type TraceInfo = table {
     /// The target on which the trace is running.
-    1: target Target;
+    1: target TargetInfo;
 
     /// Path to the output file.
     2: output_file string:255;

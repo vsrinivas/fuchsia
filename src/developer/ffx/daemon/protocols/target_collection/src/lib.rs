@@ -96,7 +96,7 @@ impl FidlProtocol for TargetCollectionProtocol {
                         .filter_map(
                             |t| if t.is_connected() { Some(t.as_ref().into()) } else { None },
                         )
-                        .collect::<Vec<bridge::Target>>(),
+                        .collect::<Vec<bridge::TargetInfo>>(),
                     q => match target_collection.get_connected(q) {
                         Some(t) => vec![t.as_ref().into()],
                         None => vec![],
@@ -232,7 +232,7 @@ fn handle_fastboot_target(tc: &Rc<TargetCollection>, target: bridge::FastbootTar
     });
 }
 
-fn handle_mdns_event(tc: &Rc<TargetCollection>, t: bridge::Target) {
+fn handle_mdns_event(tc: &Rc<TargetCollection>, t: bridge::TargetInfo) {
     let t = TargetInfo {
         nodename: t.nodename,
         addresses: t
@@ -299,7 +299,10 @@ mod tests {
 
         handle_mdns_event(
             &tc,
-            bridge::Target { nodename: Some(t.nodename().unwrap()), ..bridge::Target::EMPTY },
+            bridge::TargetInfo {
+                nodename: Some(t.nodename().unwrap()),
+                ..bridge::TargetInfo::EMPTY
+            },
         );
         assert!(t.is_host_pipe_running());
         assert_matches!(t.get_connection_state(), TargetConnectionState::Mdns(t) if t > before_update);
@@ -314,11 +317,11 @@ mod tests {
 
         handle_mdns_event(
             &tc,
-            bridge::Target {
+            bridge::TargetInfo {
                 nodename: Some(t.nodename().unwrap()),
                 target_state: Some(bridge::TargetState::Fastboot),
                 fastboot_interface: Some(bridge::FastbootInterface::Tcp),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             },
         );
         assert!(!t.is_host_pipe_running());
@@ -358,7 +361,7 @@ mod tests {
     async fn list_targets(
         query: Option<&str>,
         tc: &bridge::TargetCollectionProxy,
-    ) -> Vec<bridge::Target> {
+    ) -> Vec<bridge::TargetInfo> {
         let (reader, server) =
             fidl::endpoints::create_endpoints::<bridge::TargetCollectionReaderMarker>().unwrap();
         tc.list_targets(
@@ -423,23 +426,23 @@ mod tests {
         assert_eq!(res.len(), 0);
         call_started_receiver.recv().await.unwrap();
         target_sender
-            .send(bridge::MdnsEventType::TargetFound(bridge::Target {
+            .send(bridge::MdnsEventType::TargetFound(bridge::TargetInfo {
                 nodename: Some(NAME.to_owned()),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             }))
             .await
             .unwrap();
         target_sender
-            .send(bridge::MdnsEventType::TargetFound(bridge::Target {
+            .send(bridge::MdnsEventType::TargetFound(bridge::TargetInfo {
                 nodename: Some(NAME2.to_owned()),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             }))
             .await
             .unwrap();
         target_sender
-            .send(bridge::MdnsEventType::TargetFound(bridge::Target {
+            .send(bridge::MdnsEventType::TargetFound(bridge::TargetInfo {
                 nodename: Some(NAME3.to_owned()),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             }))
             .await
             .unwrap();

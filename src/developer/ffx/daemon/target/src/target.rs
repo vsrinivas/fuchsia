@@ -900,7 +900,7 @@ impl Target {
     }
 }
 
-impl From<&Target> for bridge::Target {
+impl From<&Target> for bridge::TargetInfo {
     fn from(target: &Target) -> Self {
         let (product_config, board_config) = target
             .build_config()
@@ -940,7 +940,7 @@ impl From<&Target> for bridge::Target {
             // TODO(awdavies): Gather more information here when possible.
             target_type: Some(bridge::TargetType::Unknown),
             ssh_host_address: target.ssh_host_address_info(),
-            ..bridge::Target::EMPTY
+            ..bridge::TargetInfo::EMPTY
         }
     }
 }
@@ -1214,7 +1214,7 @@ mod test {
         t.addrs_insert((a1, 1).into());
         t.addrs_insert((a2, 1).into());
 
-        let t_conv: bridge::Target = t.as_ref().into();
+        let t_conv: bridge::TargetInfo = t.as_ref().into();
         assert_eq!(t.nodename().unwrap(), t_conv.nodename.unwrap().to_string());
         let addrs = t.addrs();
         let conv_addrs = t_conv.addresses.unwrap();

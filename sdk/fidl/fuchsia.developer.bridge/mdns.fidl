@@ -12,15 +12,15 @@ type MdnsEventType = strict union {
     /// Sent to subscribers when a new target is found on the network. This
     /// is only propagated when the target is either seen for the first time,
     /// or if the target has previously expired.
-    1: target_found Target;
+    1: target_found TargetInfo;
     /// Sent to subscribers when a target has been discovered after having
     /// alreaady been stored in the cache. This can often be treated the same
     /// as `target_found`.
-    2: target_rediscovered Target;
+    2: target_rediscovered TargetInfo;
     /// Sent to subscribers when a target has expired (the target has not been
     /// rediscovered after the TTL has been reached). The target can be
     /// rediscovered later. If this happens a `target_found` event will be sent.
-    3: target_expired Target;
+    3: target_expired TargetInfo;
     /// An event propagated when the multicast listener is bound. Primarily
     /// for testing.
     4: socket_bound MdnsBindEvent;
@@ -38,6 +38,6 @@ protocol Mdns {
     /// Gets full cache of targets. It is advised to call this before
     /// `GetNextEvent()`.
     GetTargets() -> (struct {
-        targets vector<Target>:512;
+        targets vector<TargetInfo>:512;
     });
 };

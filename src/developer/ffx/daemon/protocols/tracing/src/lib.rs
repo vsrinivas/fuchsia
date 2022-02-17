@@ -24,7 +24,7 @@ use {
 
 #[derive(Debug)]
 struct TraceTask {
-    target_info: bridge::Target,
+    target_info: bridge::TargetInfo,
     output_file: String,
     config: trace::TraceConfig,
     proxy: trace::ControllerProxy,
@@ -146,7 +146,7 @@ async fn trace_shutdown(proxy: &trace::ControllerProxy) -> Result<(), bridge::Re
 impl TraceTask {
     async fn new(
         map: Weak<Mutex<TraceMap>>,
-        target_info: bridge::Target,
+        target_info: bridge::TargetInfo,
         output_file: String,
         options: bridge::TraceOptions,
         config: trace::TraceConfig,
@@ -294,7 +294,7 @@ pub struct TracingProtocol {
 async fn get_controller_proxy(
     target_query: Option<&String>,
     cx: &Context,
-) -> Result<(bridge::Target, trace::ControllerProxy)> {
+) -> Result<(bridge::TargetInfo, trace::ControllerProxy)> {
     let (target, proxy) = cx
         .open_target_proxy_with_info::<trace::ControllerMarker>(
             target_query.cloned(),
@@ -550,9 +550,9 @@ mod tests {
         let daemon = FakeDaemonBuilder::new()
             .register_fidl_protocol::<FakeController>()
             .register_fidl_protocol::<TracingProtocol>()
-            .target(bridge::Target {
+            .target(bridge::TargetInfo {
                 nodename: Some("foobar".to_string()),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             })
             .build();
         let proxy = daemon.open_proxy::<bridge::TracingMarker>().await;
@@ -584,9 +584,9 @@ mod tests {
         let daemon = FakeDaemonBuilder::new()
             .register_fidl_protocol::<FakeController>()
             .register_fidl_protocol::<TracingProtocol>()
-            .target(bridge::Target {
+            .target(bridge::TargetInfo {
                 nodename: Some("foobar".to_string()),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             })
             .build();
         let proxy = daemon.open_proxy::<bridge::TracingMarker>().await;
@@ -632,9 +632,9 @@ mod tests {
                     .map_err(Into::into),
                 r => panic!("unexpecte request: {:#?}", r),
             })
-            .target(bridge::Target {
+            .target(bridge::TargetInfo {
                 nodename: Some("foobar".to_string()),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             })
             .build();
         let proxy = daemon.open_proxy::<bridge::TracingMarker>().await;
@@ -668,9 +668,9 @@ mod tests {
                     .map_err(Into::into),
                 r => panic!("unexpecte request: {:#?}", r),
             })
-            .target(bridge::Target {
+            .target(bridge::TargetInfo {
                 nodename: Some("foobar".to_string()),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             })
             .build();
         let proxy = daemon.open_proxy::<bridge::TracingMarker>().await;
@@ -709,7 +709,10 @@ mod tests {
     async fn test_trace_duration_shutdown_via_output_file() {
         let daemon = FakeDaemonBuilder::new()
             .register_fidl_protocol::<FakeController>()
-            .target(bridge::Target { nodename: Some("foobar".to_owned()), ..bridge::Target::EMPTY })
+            .target(bridge::TargetInfo {
+                nodename: Some("foobar".to_owned()),
+                ..bridge::TargetInfo::EMPTY
+            })
             .build();
         let protocol = Rc::new(RefCell::new(TracingProtocol::default()));
         let (proxy, _task) = protocols::testing::create_proxy(protocol.clone(), &daemon).await;
@@ -742,9 +745,9 @@ mod tests {
     async fn test_trace_duration_shutdown_via_nodename() {
         let daemon = FakeDaemonBuilder::new()
             .register_fidl_protocol::<FakeController>()
-            .target(bridge::Target {
+            .target(bridge::TargetInfo {
                 nodename: Some("foobar".to_string()),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             })
             .build();
         let protocol = Rc::new(RefCell::new(TracingProtocol::default()));

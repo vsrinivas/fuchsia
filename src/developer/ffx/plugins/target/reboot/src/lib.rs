@@ -7,7 +7,7 @@ use {
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_reboot_args::RebootCommand,
-    fidl_fuchsia_developer_bridge::{TargetHandleProxy, TargetRebootError, TargetRebootState},
+    fidl_fuchsia_developer_bridge::{TargetProxy, TargetRebootError, TargetRebootState},
 };
 
 const NETSVC_NOT_FOUND: &str = "The Fuchsia target's netsvc address could not be determined.\n\
@@ -20,7 +20,7 @@ const COMM_ERR: &str = "There was a communication error with the device. Please 
                         If the problem persists, try running `ffx doctor` for further diagnostics";
 
 #[ffx_plugin()]
-pub async fn reboot(target_proxy: TargetHandleProxy, cmd: RebootCommand) -> Result<()> {
+pub async fn reboot(target_proxy: TargetProxy, cmd: RebootCommand) -> Result<()> {
     let state = reboot_state(&cmd)?;
     let res = target_proxy.reboot(state).await;
     match res {
@@ -55,11 +55,11 @@ fn reboot_state(cmd: &RebootCommand) -> Result<TargetRebootState> {
 // tests
 #[cfg(test)]
 mod test {
-    use {super::*, fidl_fuchsia_developer_bridge::TargetHandleRequest};
+    use {super::*, fidl_fuchsia_developer_bridge::TargetRequest};
 
-    fn setup_fake_target_server(cmd: RebootCommand) -> TargetHandleProxy {
+    fn setup_fake_target_server(cmd: RebootCommand) -> TargetProxy {
         setup_fake_target_proxy(move |req| match req {
-            TargetHandleRequest::Reboot { state: _, responder } => {
+            TargetRequest::Reboot { state: _, responder } => {
                 assert!(!(cmd.bootloader && cmd.recovery));
                 responder.send(&mut Ok(())).unwrap();
             }

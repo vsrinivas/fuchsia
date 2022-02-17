@@ -349,9 +349,9 @@ mod tests {
         let daemon = FakeDaemonBuilder::new()
             .register_instanced_protocol_closure::<ffx_test::NoopMarker, _>(noop_protocol_closure())
             .register_fidl_protocol::<CounterProtocol>()
-            .target(bridge::Target {
+            .target(bridge::TargetInfo {
                 nodename: Some("foobar".to_string()),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             })
             .build();
         let counter_proxy = daemon.open_proxy::<ffx_test::CounterMarker>().await;
@@ -462,9 +462,9 @@ mod tests {
         let daemon = FakeDaemonBuilder::new()
             .register_instanced_protocol_closure::<ffx_test::NoopMarker, _>(noop_protocol_closure())
             .register_fidl_protocol::<SingletonCounterProtocol>()
-            .target(bridge::Target {
+            .target(bridge::TargetInfo {
                 nodename: Some("foobar".to_string()),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             })
             .build();
         let (counter_proxy1, counter_proxy2, counter_proxy3) = futures::join!(

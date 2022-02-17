@@ -23,6 +23,8 @@ pub enum FastbootInterface {
     Tcp,
 }
 
+/// Represents a target that an event has produced. Not to be confused with the FIDL equivalent
+/// under fuchsia.developer.bridge.
 #[derive(Debug, Default, Hash, Clone, PartialEq, Eq)]
 pub struct TargetInfo {
     pub nodename: Option<String>,

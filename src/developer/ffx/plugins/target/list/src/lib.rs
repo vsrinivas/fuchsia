@@ -80,7 +80,7 @@ mod test {
         ffx_list_args::Format,
         fidl_fuchsia_developer_bridge as bridge,
         fidl_fuchsia_developer_bridge::{
-            RemoteControlState, Target as FidlTarget, TargetState, TargetType,
+            RemoteControlState, TargetInfo as FidlTargetInfo, TargetState, TargetType,
         },
         regex::Regex,
         std::net::IpAddr,
@@ -90,17 +90,17 @@ mod test {
         ListCommand { nodename, format: Format::Tabular }
     }
 
-    fn to_fidl_target(nodename: String) -> FidlTarget {
+    fn to_fidl_target(nodename: String) -> FidlTargetInfo {
         let addr: TargetAddr =
             (IpAddr::from([0xfe80, 0x0, 0x0, 0x0, 0xdead, 0xbeef, 0xbeef, 0xbeef]), 3).into();
-        FidlTarget {
+        FidlTargetInfo {
             nodename: Some(nodename),
             addresses: Some(vec![addr.into()]),
             age_ms: Some(101),
             rcs_state: Some(RemoteControlState::Up),
             target_type: Some(TargetType::Unknown),
             target_state: Some(TargetState::Unknown),
-            ..FidlTarget::EMPTY
+            ..FidlTargetInfo::EMPTY
         }
     }
 
@@ -108,7 +108,7 @@ mod test {
         setup_fake_tc_proxy(move |req| match req {
             bridge::TargetCollectionRequest::ListTargets { query, reader, .. } => {
                 let reader = reader.into_proxy().unwrap();
-                let fidl_values: Vec<FidlTarget> =
+                let fidl_values: Vec<FidlTargetInfo> =
                     if query.string_matcher.as_deref().map(|s| s.is_empty()).unwrap_or(true) {
                         (0..num_tests)
                             .map(|i| format!("Test {}", i))

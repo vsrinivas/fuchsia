@@ -18,7 +18,7 @@ use {
     fidl::endpoints::{create_proxy, ProtocolMarker},
     fidl_fuchsia_developer_bridge::{
         DaemonError, DaemonProxy, FastbootMarker, FastbootProxy, TargetCollectionMarker,
-        TargetHandleMarker, TargetHandleProxy, TargetQuery, VersionInfo,
+        TargetMarker, TargetProxy, TargetQuery, VersionInfo,
     },
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async::{futures::select, TimeoutExt},
@@ -57,9 +57,9 @@ fn open_target_with_fut<'a>(
     is_default_target: bool,
     daemon_proxy: DaemonProxy,
     target_timeout: Duration,
-) -> Result<(TargetHandleProxy, impl Future<Output = Result<()>> + 'a)> {
+) -> Result<(TargetProxy, impl Future<Output = Result<()>> + 'a)> {
     let (tc_proxy, tc_server_end) = create_proxy::<TargetCollectionMarker>()?;
-    let (target_proxy, target_server_end) = create_proxy::<TargetHandleMarker>()?;
+    let (target_proxy, target_server_end) = create_proxy::<TargetMarker>()?;
     let t_clone = target.clone();
     let target_collection_fut = async move {
         daemon_proxy
@@ -148,7 +148,7 @@ impl Injection {
         Ok(fastboot_proxy)
     }
 
-    async fn target_factory_inner(&self) -> Result<TargetHandleProxy> {
+    async fn target_factory_inner(&self) -> Result<TargetProxy> {
         let target = self.target().await?;
         let daemon_proxy = self.daemon_factory().await?;
         let (target_proxy, target_proxy_fut) = open_target_with_fut(
@@ -187,7 +187,7 @@ impl Injector for Injection {
         })?
     }
 
-    async fn target_factory(&self) -> Result<TargetHandleProxy> {
+    async fn target_factory(&self) -> Result<TargetProxy> {
         let target = self.target().await?;
         let timeout_error = self.daemon_timeout_error().await?;
         timeout(proxy_timeout().await?, self.target_factory_inner()).await.map_err(|_| {

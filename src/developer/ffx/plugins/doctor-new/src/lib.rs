@@ -17,8 +17,9 @@ use {
     fidl::endpoints::create_proxy,
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_bridge::{
-        Target, TargetCollectionMarker, TargetCollectionProxy, TargetCollectionReaderMarker,
-        TargetCollectionReaderRequest, TargetHandleMarker, TargetQuery, TargetState, VersionInfo,
+        TargetCollectionMarker, TargetCollectionProxy, TargetCollectionReaderMarker,
+        TargetCollectionReaderRequest, TargetInfo, TargetMarker, TargetQuery, TargetState,
+        VersionInfo,
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     futures::TryStreamExt,
@@ -334,7 +335,7 @@ fn get_kernel_name() -> Result<String> {
     Ok(String::from_utf8(Command::new("uname").output()?.stdout)?)
 }
 
-async fn list_targets(query: Option<&str>, tc: &TargetCollectionProxy) -> Result<Vec<Target>> {
+async fn list_targets(query: Option<&str>, tc: &TargetCollectionProxy) -> Result<Vec<TargetInfo>> {
     let (reader, server) = fidl::endpoints::create_endpoints::<TargetCollectionReaderMarker>()?;
 
     tc.list_targets(
@@ -918,7 +919,7 @@ async fn doctor_summary<W: Write>(
             ledger.add_node(&format!("Target: {}", target_name), LedgerMode::Normal)?;
 
         //TODO(fxbug.dev/86523): Offer a fix when we cannot connect to a device via RCS.
-        let (target_proxy, target_server) = fidl::endpoints::create_proxy::<TargetHandleMarker>()?;
+        let (target_proxy, target_server) = fidl::endpoints::create_proxy::<TargetMarker>()?;
         match timeout(
             retry_delay,
             tc_proxy.open_target(
@@ -1042,8 +1043,8 @@ mod test {
         fidl::endpoints::{spawn_local_stream_handler, ProtocolMarker, Request, ServerEnd},
         fidl::Channel,
         fidl_fuchsia_developer_bridge::{
-            DaemonProxy, DaemonRequest, OpenTargetError, RemoteControlState, Target,
-            TargetCollectionRequest, TargetCollectionRequestStream, TargetHandleRequest,
+            DaemonProxy, DaemonRequest, OpenTargetError, RemoteControlState,
+            TargetCollectionRequest, TargetCollectionRequestStream, TargetInfo, TargetRequest,
             TargetState, TargetType,
         },
         fidl_fuchsia_developer_remotecontrol::{
@@ -1402,8 +1403,8 @@ mod test {
         list_closure: F,
         open_targets_closure: F2,
     ) where
-        F: Fn(TargetQuery) -> Vec<Target> + Clone + 'static,
-        F2: Fn(TargetQuery, ServerEnd<TargetHandleMarker>) -> Result<(), OpenTargetError>
+        F: Fn(TargetQuery) -> Vec<TargetInfo> + Clone + 'static,
+        F2: Fn(TargetQuery, ServerEnd<TargetMarker>) -> Result<(), OpenTargetError>
             + Clone
             + 'static,
     {
@@ -1434,9 +1435,9 @@ mod test {
         .detach();
     }
 
-    fn spawn_target_handler<F>(target_handle: ServerEnd<TargetHandleMarker>, handler: F)
+    fn spawn_target_handler<F>(target_handle: ServerEnd<TargetMarker>, handler: F)
     where
-        F: Fn(TargetHandleRequest) -> () + 'static,
+        F: Fn(TargetRequest) -> () + 'static,
     {
         fuchsia_async::Task::local(async move {
             let mut stream = target_handle.into_stream().unwrap();
@@ -1459,7 +1460,7 @@ mod test {
                         |_| vec![],
                         |_query, target_handle| {
                             spawn_target_handler(target_handle, |req| match req {
-                                TargetHandleRequest::OpenRemoteControl {
+                                TargetRequest::OpenRemoteControl {
                                     responder,
                                     remote_control: _,
                                 } => {
@@ -1524,22 +1525,19 @@ mod test {
                     spawn_target_collection(
                         server_end,
                         |_| {
-                            vec![Target {
+                            vec![TargetInfo {
                                 nodename: Some(FASTBOOT_NODENAME.to_string()),
                                 addresses: Some(vec![]),
                                 age_ms: Some(0),
                                 rcs_state: Some(RemoteControlState::Unknown),
                                 target_type: Some(TargetType::Unknown),
                                 target_state: Some(TargetState::Fastboot),
-                                ..Target::EMPTY
+                                ..TargetInfo::EMPTY
                             }]
                         },
                         |_query, target_handle| {
                             spawn_target_handler(target_handle, |req| match req {
-                                TargetHandleRequest::OpenRemoteControl {
-                                    responder,
-                                    remote_control,
-                                } => {
+                                TargetRequest::OpenRemoteControl { responder, remote_control } => {
                                     serve_responsive_rcs(remote_control);
                                     responder.send().unwrap();
                                 }
@@ -1583,34 +1581,34 @@ mod test {
                                 {
                                     vec![]
                                 } else if query == NODENAME {
-                                    vec![Target {
+                                    vec![TargetInfo {
                                         nodename: nodename.clone(),
                                         addresses: Some(vec![]),
                                         age_ms: Some(0),
                                         rcs_state: Some(RemoteControlState::Unknown),
                                         target_type: Some(TargetType::Unknown),
                                         target_state: Some(TargetState::Unknown),
-                                        ..Target::EMPTY
+                                        ..TargetInfo::EMPTY
                                     }]
                                 } else {
                                     vec![
-                                        Target {
+                                        TargetInfo {
                                             nodename: nodename.clone(),
                                             addresses: Some(vec![]),
                                             age_ms: Some(0),
                                             rcs_state: Some(RemoteControlState::Unknown),
                                             target_type: Some(TargetType::Unknown),
                                             target_state: Some(TargetState::Unknown),
-                                            ..Target::EMPTY
+                                            ..TargetInfo::EMPTY
                                         },
-                                        Target {
+                                        TargetInfo {
                                             nodename: Some(UNRESPONSIVE_NODENAME.to_string()),
                                             addresses: Some(vec![]),
                                             age_ms: Some(0),
                                             rcs_state: Some(RemoteControlState::Unknown),
                                             target_type: Some(TargetType::Unknown),
                                             target_state: Some(TargetState::Unknown),
-                                            ..Target::EMPTY
+                                            ..TargetInfo::EMPTY
                                         },
                                     ]
                                 }
@@ -1618,7 +1616,7 @@ mod test {
                             move |query, target_handle| {
                                 let waiter = waiter.clone();
                                 spawn_target_handler(target_handle, move |req| match req {
-                                    TargetHandleRequest::OpenRemoteControl {
+                                    TargetRequest::OpenRemoteControl {
                                         responder,
                                         remote_control,
                                     } => {

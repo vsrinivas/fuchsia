@@ -1638,12 +1638,12 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::Target {
+                .target(bridge::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
                     ssh_host_address: Some(bridge::SshHostAddrInfo {
                         address: HOST_ADDR.to_string(),
                     }),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 })
                 .build();
 
@@ -1764,12 +1764,12 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::Target {
+                .target(bridge::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
                     ssh_host_address: Some(bridge::SshHostAddrInfo {
                         address: HOST_ADDR.to_string(),
                     }),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 })
                 .build();
 
@@ -1883,12 +1883,12 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::Target {
+                .target(bridge::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
                     ssh_host_address: Some(bridge::SshHostAddrInfo {
                         address: HOST_ADDR.to_string(),
                     }),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 })
                 .build();
 
@@ -2023,10 +2023,10 @@ mod tests {
             )
             .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
             .inject_fidl_protocol(Rc::clone(&repo))
-            .target(bridge::Target {
+            .target(bridge::TargetInfo {
                 nodename: Some(TARGET_NODENAME.to_string()),
                 ssh_host_address: Some(bridge::SshHostAddrInfo { address: ssh_host_addr.clone() }),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             })
             .build();
 
@@ -2082,12 +2082,12 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::Target {
+                .target(bridge::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
                     ssh_host_address: Some(bridge::SshHostAddrInfo {
                         address: HOST_ADDR.to_string(),
                     }),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 })
                 .build();
 
@@ -2190,12 +2190,12 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .register_fidl_protocol::<Repo<TestEventHandlerProvider>>()
-                .target(bridge::Target {
+                .target(bridge::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
                     ssh_host_address: Some(bridge::SshHostAddrInfo {
                         address: HOST_ADDR.to_string(),
                     }),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 })
                 .build();
 
@@ -2253,12 +2253,12 @@ mod tests {
                     fake_repo_manager_closure,
                 )
                 .register_fidl_protocol::<Repo<TestEventHandlerProvider>>()
-                .target(bridge::Target {
+                .target(bridge::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
                     ssh_host_address: Some(bridge::SshHostAddrInfo {
                         address: HOST_ADDR.to_string(),
                     }),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 })
                 .build();
 
@@ -2298,12 +2298,12 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::Target {
+                .target(bridge::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
                     ssh_host_address: Some(bridge::SshHostAddrInfo {
                         address: HOST_ADDR.to_string(),
                     }),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 })
                 .build();
 
@@ -2346,12 +2346,12 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::Target {
+                .target(bridge::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
                     ssh_host_address: Some(bridge::SshHostAddrInfo {
                         address: HOST_ADDR.to_string(),
                     }),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 })
                 .build();
 
@@ -2413,12 +2413,12 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::Target {
+                .target(bridge::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
                     ssh_host_address: Some(bridge::SshHostAddrInfo {
                         address: HOST_ADDR.to_string(),
                     }),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 })
                 .build();
 
@@ -2473,12 +2473,12 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::Target {
+                .target(bridge::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
                     ssh_host_address: Some(bridge::SshHostAddrInfo {
                         address: HOST_ADDR.to_string(),
                     }),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 })
                 .build();
 
@@ -2534,12 +2534,12 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::Target {
+                .target(bridge::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
                     ssh_host_address: Some(bridge::SshHostAddrInfo {
                         address: HOST_ADDR.to_string(),
                     }),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 })
                 .build();
 
@@ -2579,12 +2579,12 @@ mod tests {
                 )
                 .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::Target {
+                .target(bridge::TargetInfo {
                     nodename: Some(TARGET_NODENAME.to_string()),
                     ssh_host_address: Some(bridge::SshHostAddrInfo {
                         address: HOST_ADDR.to_string(),
                     }),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 })
                 .build();
 

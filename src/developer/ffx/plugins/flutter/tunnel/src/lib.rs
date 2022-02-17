@@ -10,7 +10,7 @@ use {
     ffx_flutter_tunnel_args::TunnelCommand,
     ffx_flutter_tunnel_ctrlc::wait_for_kill,
     ffx_inspect_common::DiagnosticsBridgeProvider,
-    fidl_fuchsia_developer_bridge::{DaemonError, TargetAddrInfo, TargetHandleProxy},
+    fidl_fuchsia_developer_bridge::{DaemonError, TargetAddrInfo, TargetProxy},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlProxy, RemoteDiagnosticsBridgeProxy},
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
     iquery::commands::Command as iq_cmd,
@@ -45,7 +45,7 @@ static DEFAULT_SSH_OPTIONS: &'static [&str] = &[
     RemoteDiagnosticsBridgeProxy = "core/remote-diagnostics-bridge:expose:fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge"
 )]
 pub async fn tunnel(
-    target_proxy: TargetHandleProxy,
+    target_proxy: TargetProxy,
     rcs_proxy: RemoteControlProxy,
     diagnostics_proxy: RemoteDiagnosticsBridgeProxy,
     cmd: TunnelCommand,
@@ -54,7 +54,7 @@ pub async fn tunnel(
 }
 
 pub async fn tunnel_impl<W: std::io::Write>(
-    target_proxy: TargetHandleProxy,
+    target_proxy: TargetProxy,
     rcs_proxy: RemoteControlProxy,
     diagnostics_proxy: RemoteDiagnosticsBridgeProxy,
     _cmd: TunnelCommand,

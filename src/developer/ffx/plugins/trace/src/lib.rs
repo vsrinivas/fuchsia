@@ -326,9 +326,9 @@ async fn stop_tracing(proxy: &TracingProxy, output: String, writer: Writer) -> R
 }
 
 async fn handle_recording_result(
-    res: Result<bridge::Target, RecordingError>,
+    res: Result<bridge::TargetInfo, RecordingError>,
     output: &String,
-) -> Result<bridge::Target> {
+) -> Result<bridge::TargetInfo> {
     let default: Option<String> = ffx_config::get("target.default").await.ok();
     match res {
         Ok(t) => Ok(t),
@@ -465,15 +465,15 @@ mod tests {
     fn setup_fake_service() -> TracingProxy {
         setup_fake_proxy(|req| match req {
             bridge::TracingRequest::StartRecording { responder, .. } => responder
-                .send(&mut Ok(bridge::Target {
+                .send(&mut Ok(bridge::TargetInfo {
                     nodename: Some("foo".to_owned()),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 }))
                 .expect("responder err"),
             bridge::TracingRequest::StopRecording { responder, .. } => responder
-                .send(&mut Ok(bridge::Target {
+                .send(&mut Ok(bridge::TargetInfo {
                     nodename: Some("foo".to_owned()),
-                    ..bridge::Target::EMPTY
+                    ..bridge::TargetInfo::EMPTY
                 }))
                 .expect("responder err"),
             bridge::TracingRequest::Status { responder, iterator } => {
@@ -485,9 +485,9 @@ mod tests {
                         .send(
                             &mut vec![
                                 bridge::TraceInfo {
-                                    target: Some(bridge::Target {
+                                    target: Some(bridge::TargetInfo {
                                         nodename: Some("foo".to_string()),
-                                        ..bridge::Target::EMPTY
+                                        ..bridge::TargetInfo::EMPTY
                                     }),
                                     output_file: Some("/foo/bar.fxt".to_string()),
                                     ..bridge::TraceInfo::EMPTY

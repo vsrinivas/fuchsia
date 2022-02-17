@@ -39,7 +39,7 @@ pub trait DaemonProtocolProvider {
         &self,
         target_identifier: Option<String>,
         protocol_selector: diagnostics::Selector,
-    ) -> Result<(bridge::Target, fidl::Channel)>;
+    ) -> Result<(bridge::TargetInfo, fidl::Channel)>;
 
     async fn get_target_event_queue(
         &self,
@@ -87,7 +87,7 @@ impl Context {
         &self,
         target_identifier: Option<String>,
         selector: &'static str,
-    ) -> Result<(bridge::Target, P::Proxy)>
+    ) -> Result<(bridge::TargetInfo, P::Proxy)>
     where
         P: fidl::endpoints::DiscoverableProtocolMarker,
     {

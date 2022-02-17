@@ -34,7 +34,7 @@ impl TargetHandle {
     pub(crate) fn new(
         target: Rc<Target>,
         cx: Context,
-        handle: ServerEnd<bridge::TargetHandleMarker>,
+        handle: ServerEnd<bridge::TargetMarker>,
     ) -> Result<Pin<Box<dyn Future<Output = ()>>>> {
         let reboot_controller = reboot::RebootController::new(target.clone());
         let inner = TargetHandleInner { target, reboot_controller, tasks: TaskManager::default() };
@@ -56,9 +56,9 @@ struct TargetHandleInner {
 }
 
 impl TargetHandleInner {
-    async fn handle(&self, _cx: &Context, req: bridge::TargetHandleRequest) -> Result<()> {
+    async fn handle(&self, _cx: &Context, req: bridge::TargetRequest) -> Result<()> {
         match req {
-            bridge::TargetHandleRequest::GetSshAddress { responder } => {
+            bridge::TargetRequest::GetSshAddress { responder } => {
                 // Product state and manual state are the two states where an
                 // address is guaranteed. If the target is not in that state,
                 // then wait for its state to change.
@@ -89,7 +89,7 @@ impl TargetHandleInner {
                     fuchsia_async::Timer::new(poll_duration).await;
                 }
             }
-            bridge::TargetHandleRequest::OpenRemoteControl { remote_control, responder } => {
+            bridge::TargetRequest::OpenRemoteControl { remote_control, responder } => {
                 self.target.run_host_pipe();
                 let mut rcs = loop {
                     self.target
@@ -108,21 +108,17 @@ impl TargetHandleInner {
                 rcs.copy_to_channel(remote_control.into_channel())?;
                 responder.send().map_err(Into::into)
             }
-            bridge::TargetHandleRequest::OpenFastboot { fastboot, .. } => {
+            bridge::TargetRequest::OpenFastboot { fastboot, .. } => {
                 self.reboot_controller.spawn_fastboot(fastboot).await.map_err(Into::into)
             }
-            bridge::TargetHandleRequest::Reboot { state, responder } => {
+            bridge::TargetRequest::Reboot { state, responder } => {
                 self.reboot_controller.reboot(state, responder).await
             }
-            bridge::TargetHandleRequest::Identity { responder } => {
-                let target_info = bridge::Target::from(&*self.target);
+            bridge::TargetRequest::Identity { responder } => {
+                let target_info = bridge::TargetInfo::from(&*self.target);
                 responder.send(target_info).map_err(Into::into)
             }
-            bridge::TargetHandleRequest::StreamActiveDiagnostics {
-                parameters,
-                iterator,
-                responder,
-            } => {
+            bridge::TargetRequest::StreamActiveDiagnostics { parameters, iterator, responder } => {
                 let target_identifier = self.target.nodename();
                 let stream = self.target.stream_info();
                 match stream
@@ -197,8 +193,7 @@ mod tests {
             .into_iter(),
         );
         target.update_connection_state(|_| TargetConnectionState::Mdns(std::time::Instant::now()));
-        let (proxy, server) =
-            fidl::endpoints::create_proxy::<bridge::TargetHandleMarker>().unwrap();
+        let (proxy, server) = fidl::endpoints::create_proxy::<bridge::TargetMarker>().unwrap();
         let _handle = Task::local(TargetHandle::new(target, cx, server).unwrap());
         let result = proxy.get_ssh_address().await.unwrap();
         if let bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
@@ -334,7 +329,7 @@ mod tests {
         .await
         .unwrap();
         let (target_proxy, server) =
-            fidl::endpoints::create_proxy::<bridge::TargetHandleMarker>().unwrap();
+            fidl::endpoints::create_proxy::<bridge::TargetMarker>().unwrap();
         let _handle = Task::local(TargetHandle::new(target, cx, server).unwrap());
         let (rcs, rcs_server) =
             fidl::endpoints::create_proxy::<fidl_rcs::RemoteControlMarker>().unwrap();

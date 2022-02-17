@@ -251,7 +251,7 @@ mod test {
             &self,
             _target_identifier: Option<String>,
             _protocol_selector: diagnostics::Selector,
-        ) -> Result<(bridge::Target, fidl::Channel)> {
+        ) -> Result<(bridge::TargetInfo, fidl::Channel)> {
             unimplemented!()
         }
     }

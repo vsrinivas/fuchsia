@@ -9,7 +9,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_target_show_args as args,
     fidl_fuchsia_buildinfo::ProviderProxy,
-    fidl_fuchsia_developer_bridge::{TargetAddrInfo, TargetHandleProxy},
+    fidl_fuchsia_developer_bridge::{TargetAddrInfo, TargetProxy},
     fidl_fuchsia_feedback::{DeviceIdProviderProxy, LastRebootInfoProviderProxy},
     fidl_fuchsia_hwinfo::{Architecture, BoardProxy, DeviceProxy, ProductProxy},
     fidl_fuchsia_intl::RegulatoryDomain,
@@ -40,7 +40,7 @@ pub async fn show_cmd(
     build_info_proxy: ProviderProxy,
     device_id_proxy: Option<DeviceIdProviderProxy>,
     last_reboot_info_proxy: LastRebootInfoProviderProxy,
-    target_proxy: TargetHandleProxy,
+    target_proxy: TargetProxy,
     target_show_args: args::TargetShow,
 ) -> Result<()> {
     show_cmd_impl(
@@ -67,7 +67,7 @@ async fn show_cmd_impl<W: Write>(
     build_info_proxy: ProviderProxy,
     device_id_proxy: Option<DeviceIdProviderProxy>,
     last_reboot_info_proxy: LastRebootInfoProviderProxy,
-    target_proxy: TargetHandleProxy,
+    target_proxy: TargetProxy,
     target_show_args: args::TargetShow,
     writer: &mut W,
 ) -> Result<()> {
@@ -104,7 +104,7 @@ async fn show_cmd_impl<W: Write>(
 }
 
 /// Determine target information.
-async fn gather_target_show(target_proxy: TargetHandleProxy) -> Result<ShowEntry> {
+async fn gather_target_show(target_proxy: TargetProxy) -> Result<ShowEntry> {
     let host = target_proxy.identity().await?;
     let name = host.nodename;
     let addr_info = timeout(Duration::from_secs(1), target_proxy.get_ssh_address())
@@ -377,7 +377,7 @@ async fn gather_last_reboot_info_show(
 mod tests {
     use super::*;
     use fidl_fuchsia_buildinfo::{BuildInfo, ProviderRequest};
-    use fidl_fuchsia_developer_bridge::{Target, TargetAddrInfo, TargetHandleRequest, TargetIp};
+    use fidl_fuchsia_developer_bridge::{TargetAddrInfo, TargetInfo, TargetIp, TargetRequest};
     use fidl_fuchsia_feedback::{
         DeviceIdProviderRequest, LastReboot, LastRebootInfoProviderRequest, RebootReason,
     };
@@ -436,9 +436,9 @@ mod tests {
         \n    Uptime (ns): \"65000\"\
         \n";
 
-    fn setup_fake_target_server() -> TargetHandleProxy {
+    fn setup_fake_target_server() -> TargetProxy {
         setup_fake_target_proxy(move |req| match req {
-            TargetHandleRequest::GetSshAddress { responder, .. } => {
+            TargetRequest::GetSshAddress { responder, .. } => {
                 responder
                     .send(&mut TargetAddrInfo::Ip(TargetIp {
                         ip: IpAddress::Ipv4(Ipv4Address { addr: IPV4_ADDR }),
@@ -446,14 +446,14 @@ mod tests {
                     }))
                     .expect("fake ssh address");
             }
-            TargetHandleRequest::Identity { responder, .. } => {
+            TargetRequest::Identity { responder, .. } => {
                 let addrs = vec![TargetAddrInfo::Ip(TargetIp {
                     ip: IpAddress::Ipv4(Ipv4Address { addr: IPV4_ADDR }),
                     scope_id: 1,
                 })];
                 let nodename = Some("fake_fuchsia_device".to_string());
                 responder
-                    .send(Target { nodename, addresses: Some(addrs), ..Target::EMPTY })
+                    .send(TargetInfo { nodename, addresses: Some(addrs), ..TargetInfo::EMPTY })
                     .unwrap();
             }
             _ => assert!(false),

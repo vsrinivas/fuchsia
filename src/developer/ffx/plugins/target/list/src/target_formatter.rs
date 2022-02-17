@@ -63,10 +63,10 @@ pub trait TargetFormatter {
     fn lines(&self, default_nodename: Option<&str>) -> Vec<String>;
 }
 
-impl TryFrom<(Format, Vec<bridge::Target>)> for Box<dyn TargetFormatter> {
+impl TryFrom<(Format, Vec<bridge::TargetInfo>)> for Box<dyn TargetFormatter> {
     type Error = Error;
 
-    fn try_from(tup: (Format, Vec<bridge::Target>)) -> Result<Self> {
+    fn try_from(tup: (Format, Vec<bridge::TargetInfo>)) -> Result<Self> {
         let (format, targets) = tup;
         Ok(match format {
             Format::Tabular => Box::new(TabularTargetFormatter::try_from(targets)?),
@@ -80,10 +80,10 @@ impl TryFrom<(Format, Vec<bridge::Target>)> for Box<dyn TargetFormatter> {
 
 pub struct AddressesTarget(TargetAddr);
 
-impl TryFrom<bridge::Target> for AddressesTarget {
+impl TryFrom<bridge::TargetInfo> for AddressesTarget {
     type Error = Error;
 
-    fn try_from(t: bridge::Target) -> Result<Self> {
+    fn try_from(t: bridge::TargetInfo) -> Result<Self> {
         let addrs = t.addresses.ok_or(anyhow!("must contain an address"))?;
         let addrs = addrs.iter().map(TargetAddr::from).collect::<Vec<_>>();
 
@@ -95,10 +95,10 @@ pub struct AddressesTargetFormatter {
     targets: Vec<AddressesTarget>,
 }
 
-impl TryFrom<Vec<bridge::Target>> for AddressesTargetFormatter {
+impl TryFrom<Vec<bridge::TargetInfo>> for AddressesTargetFormatter {
     type Error = Error;
 
-    fn try_from(targets: Vec<bridge::Target>) -> Result<Self> {
+    fn try_from(targets: Vec<bridge::TargetInfo>) -> Result<Self> {
         let targets = targets.into_iter().flat_map(AddressesTarget::try_from).collect::<Vec<_>>();
         Ok(Self { targets })
     }
@@ -112,10 +112,10 @@ impl TargetFormatter for AddressesTargetFormatter {
 
 pub struct NameOnlyTarget(String);
 
-impl TryFrom<bridge::Target> for NameOnlyTarget {
+impl TryFrom<bridge::TargetInfo> for NameOnlyTarget {
     type Error = Error;
 
-    fn try_from(t: bridge::Target) -> Result<Self> {
+    fn try_from(t: bridge::TargetInfo) -> Result<Self> {
         let name = t.nodename.unwrap_or(UNKNOWN.to_string());
         Ok(Self(name))
     }
@@ -125,10 +125,10 @@ pub struct NameOnlyTargetFormatter {
     targets: Vec<NameOnlyTarget>,
 }
 
-impl TryFrom<Vec<bridge::Target>> for NameOnlyTargetFormatter {
+impl TryFrom<Vec<bridge::TargetInfo>> for NameOnlyTargetFormatter {
     type Error = Error;
 
-    fn try_from(targets: Vec<bridge::Target>) -> Result<Self> {
+    fn try_from(targets: Vec<bridge::TargetInfo>) -> Result<Self> {
         let targets = targets.into_iter().flat_map(NameOnlyTarget::try_from).collect::<Vec<_>>();
         Ok(Self { targets })
     }
@@ -146,10 +146,10 @@ pub struct SimpleTargetFormatter {
     targets: Vec<SimpleTarget>,
 }
 
-impl TryFrom<Vec<bridge::Target>> for SimpleTargetFormatter {
+impl TryFrom<Vec<bridge::TargetInfo>> for SimpleTargetFormatter {
     type Error = Error;
 
-    fn try_from(targets: Vec<bridge::Target>) -> Result<Self> {
+    fn try_from(targets: Vec<bridge::TargetInfo>) -> Result<Self> {
         let targets = targets.into_iter().flat_map(SimpleTarget::try_from).collect::<Vec<_>>();
         Ok(Self { targets })
     }
@@ -161,10 +161,10 @@ impl TargetFormatter for SimpleTargetFormatter {
     }
 }
 
-impl TryFrom<bridge::Target> for SimpleTarget {
+impl TryFrom<bridge::TargetInfo> for SimpleTarget {
     type Error = Error;
 
-    fn try_from(t: bridge::Target) -> Result<Self> {
+    fn try_from(t: bridge::TargetInfo) -> Result<Self> {
         let nodename = t.nodename.unwrap_or("".to_string());
         let addrs = t.addresses.ok_or(anyhow!("must contain an address"))?;
         let addrs = addrs.iter().map(TargetAddr::from).collect::<Vec<_>>();
@@ -177,10 +177,10 @@ pub struct JsonTargetFormatter {
     pub(crate) targets: Vec<JsonTarget>,
 }
 
-impl TryFrom<Vec<bridge::Target>> for JsonTargetFormatter {
+impl TryFrom<Vec<bridge::TargetInfo>> for JsonTargetFormatter {
     type Error = Error;
 
-    fn try_from(targets: Vec<bridge::Target>) -> Result<Self> {
+    fn try_from(targets: Vec<bridge::TargetInfo>) -> Result<Self> {
         let targets = targets.into_iter().flat_map(JsonTarget::try_from).collect::<Vec<_>>();
         Ok(Self { targets })
     }
@@ -399,10 +399,10 @@ impl StringifiedTarget {
     }
 }
 
-impl TryFrom<bridge::Target> for StringifiedTarget {
+impl TryFrom<bridge::TargetInfo> for StringifiedTarget {
     type Error = StringifyError;
 
-    fn try_from(target: bridge::Target) -> Result<Self, Self::Error> {
+    fn try_from(target: bridge::TargetInfo) -> Result<Self, Self::Error> {
         let target_type = StringifiedTarget::from_target_type(
             target.board_config.as_deref(),
             target.product_config.as_deref(),
@@ -426,10 +426,10 @@ impl TryFrom<bridge::Target> for StringifiedTarget {
     }
 }
 
-impl TryFrom<bridge::Target> for JsonTarget {
+impl TryFrom<bridge::TargetInfo> for JsonTarget {
     type Error = StringifyError;
 
-    fn try_from(target: bridge::Target) -> Result<Self, Self::Error> {
+    fn try_from(target: bridge::TargetInfo) -> Result<Self, Self::Error> {
         Ok(Self {
             nodename: json!(target.nodename.unwrap_or(UNKNOWN.to_string())),
             serial: json!(target.serial_number.unwrap_or(UNKNOWN.to_string())),
@@ -469,10 +469,10 @@ impl TargetFormatter for TabularTargetFormatter {
     }
 }
 
-impl TryFrom<Vec<bridge::Target>> for TabularTargetFormatter {
+impl TryFrom<Vec<bridge::TargetInfo>> for TabularTargetFormatter {
     type Error = StringifyError;
 
-    fn try_from(mut targets: Vec<bridge::Target>) -> Result<Self, Self::Error> {
+    fn try_from(mut targets: Vec<bridge::TargetInfo>) -> Result<Self, Self::Error> {
         // First target is the table header in this case, since the formatting
         // for the table header is (for now) identical to the rest of the
         // targets
@@ -543,8 +543,8 @@ mod test {
             include_str!("../test_data/target_formatter_json_build_config_both_missing_golden");
     }
 
-    fn make_valid_target() -> bridge::Target {
-        bridge::Target {
+    fn make_valid_target() -> bridge::TargetInfo {
+        bridge::TargetInfo {
             nodename: Some("fooberdoober".to_string()),
             addresses: Some(vec![
                 bridge::TargetAddrInfo::Ip(bridge::TargetIp {
@@ -561,13 +561,13 @@ mod test {
             rcs_state: Some(bridge::RemoteControlState::Unknown),
             target_type: Some(bridge::TargetType::Unknown),
             target_state: Some(bridge::TargetState::Unknown),
-            ..bridge::Target::EMPTY
+            ..bridge::TargetInfo::EMPTY
         }
     }
 
     #[test]
     fn test_empty_formatter() {
-        let formatter = TabularTargetFormatter::try_from(Vec::<bridge::Target>::new()).unwrap();
+        let formatter = TabularTargetFormatter::try_from(Vec::<bridge::TargetInfo>::new()).unwrap();
         let lines = formatter.lines(None);
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].len(), 50); // Just some manual math.
@@ -578,7 +578,7 @@ mod test {
     async fn test_formatter_one_target() {
         let formatter = TabularTargetFormatter::try_from(vec![
             make_valid_target(),
-            bridge::Target {
+            bridge::TargetInfo {
                 nodename: Some("lorberding".to_string()),
                 addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
                     ip: IpAddress::Ipv6(Ipv6Address {
@@ -589,7 +589,7 @@ mod test {
                 rcs_state: Some(bridge::RemoteControlState::Unknown),
                 target_type: Some(bridge::TargetType::Unknown),
                 target_state: Some(bridge::TargetState::Unknown),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             },
         ])
         .unwrap();
@@ -606,7 +606,7 @@ mod test {
     async fn test_formatter_empty_nodename() {
         let formatter = TabularTargetFormatter::try_from(vec![
             make_valid_target(),
-            bridge::Target {
+            bridge::TargetInfo {
                 nodename: None,
                 addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
                     ip: IpAddress::Ipv6(Ipv6Address {
@@ -618,7 +618,7 @@ mod test {
                 target_type: Some(bridge::TargetType::Unknown),
                 target_state: Some(bridge::TargetState::Unknown),
                 serial_number: Some("cereal".to_owned()),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             },
         ])
         .unwrap();
@@ -635,7 +635,7 @@ mod test {
     async fn test_simple_formatter() {
         let formatter = SimpleTargetFormatter::try_from(vec![
             make_valid_target(),
-            bridge::Target {
+            bridge::TargetInfo {
                 nodename: None,
                 addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
                     ip: IpAddress::Ipv6(Ipv6Address {
@@ -646,7 +646,7 @@ mod test {
                 rcs_state: Some(bridge::RemoteControlState::Unknown),
                 target_type: Some(bridge::TargetType::Unknown),
                 target_state: Some(bridge::TargetState::Unknown),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             },
         ])
         .unwrap();
@@ -684,7 +684,7 @@ mod test {
     async fn test_name_only_formatter() {
         let formatter = NameOnlyTargetFormatter::try_from(vec![
             make_valid_target(),
-            bridge::Target {
+            bridge::TargetInfo {
                 nodename: None,
                 addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
                     ip: IpAddress::Ipv6(Ipv6Address {
@@ -695,7 +695,7 @@ mod test {
                 rcs_state: Some(bridge::RemoteControlState::Unknown),
                 target_type: Some(bridge::TargetType::Unknown),
                 target_state: Some(bridge::TargetState::Unknown),
-                ..bridge::Target::EMPTY
+                ..bridge::TargetInfo::EMPTY
             },
         ])
         .unwrap();
