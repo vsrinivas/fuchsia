@@ -45,6 +45,12 @@ DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "${DEVSHELL_DIR}"/lib/image_build_vars.sh || exit $?
 source "${DEVSHELL_DIR}"/lib/fvm.sh || exit $?
 
+echo
+fx-info "The Fuchsia emulator is improving and will soon be launched in ffx. Want to be an early adopter?"
+fx-info "Please use 'ffx emu' and send us feedback!"
+echo
+sleep 0.3
+
 # Note these match the defaults in `fx qemu` (//zircon/scripts/run-zircon) and the ram value in
 # `fx vdl` (//src/developer/ffx/plugins/emulator/src/vdl_files.rs). This can be overriden by the
 # emulator configs in the infra/recipe repo

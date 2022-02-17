@@ -58,6 +58,15 @@ function get-fuchsia-sdk-data-dir {
   echo "${data_dir}"
 }
 
+# fx-info prints a line to stderr with a blue INFO: prefix.
+function fx-info {
+  if [[ -t 2 ]]; then
+    echo -e >&2 "\033[1;34mINFO:\033[0m $*"
+  else
+    echo -e >&2 "INFO: $*"
+  fi
+}
+
 # fx-warn prints a line to stderr with a yellow WARNING: prefix.
 function fx-warn {
   if [[ -t 2 ]]; then
