@@ -5,6 +5,7 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/components.gni")
+import("//build/cpp/cpp_fuzzer.gni")
 import("//build/test.gni")
 
 if (is_kernel) {
@@ -26,12 +27,13 @@ if (is_kernel) {
 group("tests") {
   testonly = true
   deps = [
-    ":boot-option-test-package",
-    ":boot-option-tests($host_toolchain)",
+    ":boot-options-fuzzers",
+    ":boot-options-tests",
+    ":boot-options-unittests($host_toolchain)",
   ]
 }
 
-test("boot-option-tests") {
+test("boot-options-unittests") {
   sources = [ "user-tests.cc" ]
   deps = [
     "//sdk/lib/fit",
@@ -40,13 +42,18 @@ test("boot-option-tests") {
   ]
 }
 
-fuchsia_component("boot-option-test-component") {
-  testonly = true
-  deps = [ ":boot-option-tests" ]
-  manifest = "meta/boot-option-tests.cmx"
+fuchsia_unittest_package("boot-options-tests") {
+  deps = [ ":boot-options-unittests" ]
+  manifest = "meta/boot-options-tests.cmx"
 }
 
-fuchsia_test_package("boot-option-test-package") {
-  package_name = "boot-option-tests"
-  test_components = [ ":boot-option-test-component" ]
+fuzzer_package("boot-options-fuzzers") {
+  fuzz_host = true
+  cpp_fuzzers = [ ":boot-options-basic-fuzzer" ]
+}
+
+cpp_fuzzer("boot-options-basic-fuzzer") {
+  sources = [ "fuzzer.cc" ]
+  deps = [ "//zircon/kernel/lib/boot-options" ]
+  dictionary = "fuzzer-dictionary.txt"
 }

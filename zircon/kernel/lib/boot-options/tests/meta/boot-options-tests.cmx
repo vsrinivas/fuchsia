@@ -3,7 +3,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/boot-option-tests"
+        "binary": "test/boot-options-unittests"
     },
     "sandbox": {
         "features": [
