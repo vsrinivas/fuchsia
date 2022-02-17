@@ -244,7 +244,7 @@ TEST_F(ReaderInterpreterInputTest, ConsumerControl) {
          fuchsia::input::report::ConsumerControlButton::VOLUME_DOWN,
          fuchsia::input::report::ConsumerControlButton::PAUSE,
          fuchsia::input::report::ConsumerControlButton::MIC_MUTE,
-         fuchsia::input::report::ConsumerControlButton::REBOOT,
+         fuchsia::input::report::ConsumerControlButton::FACTORY_RESET,
          fuchsia::input::report::ConsumerControlButton::CAMERA_DISABLE});
 
     fake_device_->SetDescriptor(std::move(descriptor));
@@ -274,7 +274,7 @@ TEST_F(ReaderInterpreterInputTest, ConsumerControl) {
          fuchsia::input::report::ConsumerControlButton::VOLUME_DOWN,
          fuchsia::input::report::ConsumerControlButton::PAUSE,
          fuchsia::input::report::ConsumerControlButton::MIC_MUTE,
-         fuchsia::input::report::ConsumerControlButton::REBOOT,
+         fuchsia::input::report::ConsumerControlButton::FACTORY_RESET,
          fuchsia::input::report::ConsumerControlButton::CAMERA_DISABLE});
 
     std::vector<fuchsia::input::report::InputReport> reports;

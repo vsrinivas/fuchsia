@@ -543,7 +543,7 @@ TEST_F(PrintInputReport, PrintConsumerControlDescriptor) {
   descriptor->mutable_consumer_control()->mutable_input()->set_buttons(
       {fuchsia::input::report::ConsumerControlButton::VOLUME_UP,
        fuchsia::input::report::ConsumerControlButton::VOLUME_DOWN,
-       fuchsia::input::report::ConsumerControlButton::REBOOT});
+       fuchsia::input::report::ConsumerControlButton::FACTORY_RESET});
 
   fake_device_->SetDescriptor(std::move(descriptor));
 
@@ -554,7 +554,7 @@ TEST_F(PrintInputReport, PrintConsumerControlDescriptor) {
       "Input Report:\n",
       "  Button:        VOLUME_UP\n",
       "  Button:      VOLUME_DOWN\n",
-      "  Button:           REBOOT\n",
+      "  Button:    FACTORY_RESET\n",
   });
 
   print_input_report::PrintInputDescriptor(std::string("test"), &printer, std::move(*client_));
@@ -568,7 +568,7 @@ TEST_F(PrintInputReport, PrintConsumerControlReport) {
   report.mutable_consumer_control()->set_pressed_buttons(
       {fuchsia::input::report::ConsumerControlButton::VOLUME_UP,
        fuchsia::input::report::ConsumerControlButton::VOLUME_DOWN,
-       fuchsia::input::report::ConsumerControlButton::REBOOT});
+       fuchsia::input::report::ConsumerControlButton::FACTORY_RESET});
 
   std::vector<fuchsia::input::report::InputReport> reports;
   reports.push_back(std::move(report));
@@ -580,7 +580,7 @@ TEST_F(PrintInputReport, PrintConsumerControlReport) {
       "ConsumerControl Report\n",
       "  Button:        VOLUME_UP\n",
       "  Button:      VOLUME_DOWN\n",
-      "  Button:           REBOOT\n",
+      "  Button:    FACTORY_RESET\n",
       "\n",
   });
 

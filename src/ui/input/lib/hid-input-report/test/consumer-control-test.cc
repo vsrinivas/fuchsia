@@ -42,7 +42,7 @@ TEST(ConsumerControlTest, HidButtonsTest) {
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[1],
             fuchsia_input_report::wire::ConsumerControlButton::kVolumeDown);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[2],
-            fuchsia_input_report::wire::ConsumerControlButton::kReboot);
+            fuchsia_input_report::wire::ConsumerControlButton::kFactoryReset);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[3],
             fuchsia_input_report::wire::ConsumerControlButton::kCameraDisable);
   EXPECT_EQ(descriptor.consumer_control().input().buttons()[4],
@@ -65,7 +65,7 @@ TEST(ConsumerControlTest, HidButtonsTest) {
   EXPECT_EQ(input_report.consumer_control().pressed_buttons()[0],
             fuchsia_input_report::wire::ConsumerControlButton::kVolumeUp);
   EXPECT_EQ(input_report.consumer_control().pressed_buttons()[1],
-            fuchsia_input_report::wire::ConsumerControlButton::kReboot);
+            fuchsia_input_report::wire::ConsumerControlButton::kFactoryReset);
   EXPECT_EQ(input_report.consumer_control().pressed_buttons()[2],
             fuchsia_input_report::wire::ConsumerControlButton::kMicMute);
 }

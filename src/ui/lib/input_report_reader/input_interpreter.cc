@@ -104,7 +104,7 @@ void InputInterpreter::RegisterConsumerControl(
         case fuchsia::input::report::ConsumerControlButton::PAUSE:
           media_buttons->buttons |= fuchsia::ui::input::kPause;
           break;
-        case fuchsia::input::report::ConsumerControlButton::REBOOT:
+        case fuchsia::input::report::ConsumerControlButton::FACTORY_RESET:
           media_buttons->buttons |= fuchsia::ui::input::kReset;
           break;
         case fuchsia::input::report::ConsumerControlButton::CAMERA_DISABLE:
@@ -282,7 +282,7 @@ void InputInterpreter::DispatchConsumerControlReport(
         case fuchsia::input::report::ConsumerControlButton::PAUSE:
           media_buttons->pause = true;
           break;
-        case fuchsia::input::report::ConsumerControlButton::REBOOT:
+        case fuchsia::input::report::ConsumerControlButton::FACTORY_RESET:
           media_buttons->reset = true;
           break;
         case fuchsia::input::report::ConsumerControlButton::CAMERA_DISABLE:

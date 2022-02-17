@@ -33,7 +33,7 @@ std::optional<fuchsia_input_report::wire::ConsumerControlButton> HidToConsumerCo
       {hid::USAGE(hid::usage::Page::kConsumer, hid::usage::Consumer::kVolumeDown),
        ConsumerControlButton::kVolumeDown},
       {hid::USAGE(hid::usage::Page::kConsumer, hid::usage::Consumer::kReset),
-       ConsumerControlButton::kReboot},
+       ConsumerControlButton::kFactoryReset},
       {hid::USAGE(hid::usage::Page::kConsumer, hid::usage::Consumer::kCameraAccessDisabled),
        ConsumerControlButton::kCameraDisable},
       {hid::USAGE(hid::usage::Page::kTelephony, hid::usage::Telephony::kPhoneMute),
