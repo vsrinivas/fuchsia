@@ -326,6 +326,21 @@ build_termina_image() {
   popd
 }
 
+
+build_extras_image() {
+  local -r extras_dir="$1"
+  local -r image_file="$2"
+
+  declare -r BLOCK_SIZE=4096
+  declare -r ADDITIONAL_BLOCKS=1024
+  declare -r SIZE=$(du -sb ${extras_dir} | grep -o '^[0-9]*')
+  declare -r BLOCKS=$(($((${SIZE}/${BLOCK_SIZE}))+${ADDITIONAL_BLOCKS}))
+
+  rm -f "${image_file}"
+
+  mke2fs -q -d "${extras_dir}" -t ext2 -b ${BLOCK_SIZE} "${image_file}" ${BLOCKS}
+}
+
 main() {
   if [[ $# < 2 ]]; then
     print_usage_and_exit
@@ -399,7 +414,7 @@ main() {
       build_debian_drivers "${work_dir}/debian" "${arch}"
 
       echo "*** Copy debian drivers to chromeos tree"
-      dest_dir=${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files
+      dest_dir=${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/prebuilt-${arch}
       copy_debian_drivers "${work_dir}/debian" "${dest_dir}"
     fi
   fi
@@ -411,7 +426,7 @@ main() {
     # Tael board is 32bit userspace so we can't link in our 64bit libraries
     if [ "${arch}" == "x64" ]; then
       echo "*** Copy ANGLE outputs to chromeos tree"
-      dest_dir=${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files
+      dest_dir=${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files/prebuilt-${arch}
       mkdir -p "${dest_dir}/angle"
       cp -fv "${work_dir}/angle/out/libEGL.so.1" "${dest_dir}/angle"
       cp -fv "${work_dir}/angle/out/libGLESv2.so.2" "${dest_dir}/angle"
@@ -425,6 +440,17 @@ main() {
     echo "*** Copy Termina image"
     cp -av "${work_dir}/cros/chroot/home/${USER}/termina-${board}-image" "${work_dir}"
 
+    echo "*** Build extras image"
+    local -r extras_dir="${work_dir}/extras-${arch}"
+
+    mkdir -p ${extras_dir}
+    cp -av ${work_dir}/cros/chroot/build/${board}/usr/bin/aplay ${extras_dir}
+    cp -av ${work_dir}/cros/chroot/build/${board}/usr/bin/arecord ${extras_dir}
+
+    build_extras_image "${extras_dir}" "${work_dir}/termina-${board}-image/vm_extras.img"
+  fi
+
+  if [[ "${target}" == "all" ]]; then
     options=()
     options+=("create")
     options+=("-in" "${work_dir}/termina-${board}-image")
