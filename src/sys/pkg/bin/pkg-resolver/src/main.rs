@@ -30,6 +30,7 @@ mod cache;
 mod cache_package_index;
 mod clock;
 mod config;
+mod eager_package_manager;
 mod error;
 mod experiment;
 mod font_package_manager;
