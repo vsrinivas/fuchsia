@@ -15,6 +15,7 @@ function HELP {
     echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme, virtio-scsi), default is ahci"
     echo "--diskfmt[=<format>] : disk format (raw, qcow2, etc), default is raw"
     echo "-g                   : use graphical console"
+    echo "-H                   : use HVF (only valid on mac)"
     echo "-I <interface name>  : network interface name, default is qemu."
     echo "-k, --kvm            : use KVM (Linux host only). defaults to true if supported."
     echo "    --no-kvm         : don't use KVM, even if supported."
@@ -78,6 +79,7 @@ DISKTYPE=
 DISKFMT="raw"
 GIC=max
 GRAPHICS=0
+DO_HVF=
 DO_KVM=
 MEMSIZE=$MEMSIZE_DEFAULT
 NET=0
@@ -121,13 +123,20 @@ abspath() {
   esac
 }
 
-while getopts "a:c:dD:gI:km:nNq:s:t::u:Vz:h-:" FLAG; do
+while getopts "a:c:dD:gHI:km:nNq:s:t::u:Vz:h-:" FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
         c) OPT_CMDLINE+="$OPTARG ";;
         d) DISK=1;;
         D) DISKFILE="$(abspath "$OPTARG")";;
         g) GRAPHICS=1;;
+        H)
+            if [[ "$(uname -s)" != "Darwin" ]]; then
+                echo "error: HVF option (-H) is only supported on MacOS"
+                exit 1
+            fi
+            DO_HVF=1
+            ;;
         I) IFNAME=$OPTARG;;
         k)
             if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -367,6 +376,10 @@ case $ARCH in
         if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host"
           GIC=host
+        elif (( $DO_HVF )); then
+          ARGS+=" -machine accel=hvf -cpu host"
+          # at the moment GICv3 appears to not pass through HVF properly
+          GIC=2
         else
           # Ask for all of the features TCG emulates
           ARGS+=" -machine virtualization=true -cpu max"
