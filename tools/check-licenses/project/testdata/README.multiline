@@ -1,0 +1,20 @@
+Name: Test Readme Project
+
+
+
+License File: README.multiline
+
+Description:
+
+This is a test of the multiline description field.
+This text will hopefully be parsed correctly.
+Test Test.
+
+License: Proprietary
+
+
+Local Modifications:
+Added some stuff
+Did some other stuff too
+
+Version: 2.0
