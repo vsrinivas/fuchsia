@@ -54,7 +54,7 @@ fuchsia_test_package("netstack-integration-tests") {
     "//src/connectivity/network/netstack3:component",
 
     # reachability monitor is under test.
-    "//src/connectivity/management/reachability:component-v2",
+    "//src/connectivity/network/reachability:component",
 
     # sampler config is tested as part of inspect integration tests.
     ":sampler-config",

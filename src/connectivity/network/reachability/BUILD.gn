@@ -37,28 +37,13 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_component("component-v2") {
+fuchsia_component("component") {
   component_name = "reachability"
   manifest = "meta/reachability.cml"
   deps = [ ":bin" ]
 }
 
-fuchsia_component("component") {
-  component_name = "reachability"
-  manifest = "meta/reachability.cmx"
-  deps = [ ":bin" ]
-}
-
-fuchsia_package("reachability") {
-  deps = [ ":component" ]
-}
-
 group("tests") {
   testonly = true
   deps = [ "core:tests" ]
-}
-
-config_data("reachability_sysmgr_config") {
-  for_pkg = "sysmgr"
-  sources = [ rebase_path("config/reachability.sysmgr_config") ]
 }

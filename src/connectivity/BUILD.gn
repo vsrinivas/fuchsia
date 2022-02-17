@@ -56,7 +56,6 @@ group("tests_no_e2e") {
     "lib:tests",
     "location:tests",
     "lowpan:tests",
-    "management:tests",
     "network:tests",
     "openthread:tests",
     "overnet:tests_no_e2e",

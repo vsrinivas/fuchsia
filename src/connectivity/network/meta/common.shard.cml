@@ -27,6 +27,11 @@
             url: "#meta/netstack.cm",
             on_terminate: "reboot",
         },
+        {
+            name: "reachability",
+            url: "#meta/reachability.cm",
+            startup: "eager",
+        },
     ],
     offer: [
         {
@@ -44,6 +49,7 @@
                 "#http-client",
                 "#netcfg",
                 "#netstack",
+                "#reachability",
             ],
         },
         {
@@ -91,12 +97,21 @@
                 "fuchsia.net.debug.Interfaces",
                 "fuchsia.net.filter.Filter",
                 "fuchsia.net.interfaces.admin.Installer",
-                "fuchsia.net.interfaces.State",
-                "fuchsia.net.stack.Stack",
                 "fuchsia.netstack.Netstack",
             ],
             from: "#netstack",
             to: [ "#netcfg" ],
+        },
+        {
+            protocol: [
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.stack.Stack",
+            ],
+            from: "#netstack",
+            to: [
+                "#netcfg",
+                "#reachability",
+            ],
         },
         {
             protocol: [ "fuchsia.net.neighbor.Controller" ],
@@ -116,6 +131,7 @@
                 "#dhcpv6-client",
                 "#dns-resolver",
                 "#http-client",
+                "#reachability",
             ],
         },
         {

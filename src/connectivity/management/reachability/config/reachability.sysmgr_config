@@ -1,5 +1,0 @@
-{
-  "apps" : [
-    "fuchsia-pkg://fuchsia.com/reachability#meta/reachability.cmx"
-  ]
-}

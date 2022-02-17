@@ -124,6 +124,7 @@ fuchsia_component("component-advanced") {
 
 # TODO(https://fxbug.dev/89115): rm once management soft-migration is complete.
 group("config-default") {
+  deps = [ ":config-default-tmp" ]
 }
 
 config_data("config-default-tmp") {

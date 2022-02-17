@@ -10,6 +10,7 @@ _common_deps = [
   "dhcpv6/client:component",
   "dns:component",
   "http-client:component",
+  "reachability:component",
 ]
 
 fuchsia_component("component") {
@@ -99,6 +100,7 @@ group("tests") {
     "netcfg:tests",
     "netstack:tests",
     "netstack3:tests",
+    "reachability:tests",
     "testing:tests",
     "tests",
     "tools:tests",
