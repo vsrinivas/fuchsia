@@ -72,8 +72,6 @@ using zxio_packet_socket_t = struct zxio_packet_socket {
   fidl::WireSyncClient<fuchsia_posix_socket_packet::Socket> client;
 };
 
-zx_status_t zxio_is_socket(zxio_t* io, bool* out_is_socket);
-
 // Allocates storage for a zxio_t object of a given type.
 //
 // This function should store a pointer to zxio_storage_t space suitable for an
