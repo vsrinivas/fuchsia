@@ -2272,13 +2272,41 @@ impl ClientState {
         }
     }
 
+    /// Returns the DNS servers advertised by the server.
     fn get_dns_servers(&self) -> Vec<Ipv6Addr> {
         match self {
-            ClientState::InformationReceived(s) => s.dns_servers.clone(),
-            ClientState::InformationRequesting(_)
-            | ClientState::ServerDiscovery(_)
-            | ClientState::Requesting(_)
-            | ClientState::AddressAssigned(_) => Vec::new(),
+            ClientState::InformationReceived(InformationReceived { dns_servers }) => {
+                dns_servers.clone()
+            }
+            ClientState::AddressAssigned(AddressAssigned {
+                client_id: _,
+                addresses: _,
+                server_id: _,
+                t1: _,
+                t2: _,
+                dns_servers,
+                solicit_max_rt: _,
+            }) => dns_servers.clone(),
+            ClientState::InformationRequesting(InformationRequesting { retrans_timeout: _ })
+            | ClientState::ServerDiscovery(ServerDiscovery {
+                client_id: _,
+                configured_addresses: _,
+                first_solicit_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: _,
+                collected_advertise: _,
+                collected_sol_max_rt: _,
+            })
+            | ClientState::Requesting(Requesting {
+                client_id: _,
+                addresses_to_request: _,
+                server_id: _,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt: _,
+            }) => Vec::new(),
         }
     }
 }
@@ -2609,8 +2637,9 @@ pub(crate) mod testutil {
     pub(crate) fn assign_addresses_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         addresses_to_assign: Vec<TestIdentityAssociation>,
+        expected_dns_servers: &[Ipv6Addr],
         rng: R,
-    ) -> ClientStateMachine<R> {
+    ) -> (ClientStateMachine<R>, Actions) {
         let transaction_id = [0, 1, 2];
         let configured_addresses = to_configured_addresses(
             u32::try_from(addresses_to_assign.len()).unwrap(),
@@ -2627,11 +2656,16 @@ pub(crate) mod testutil {
                 )
                 .collect(),
         );
+        let options_to_request = if expected_dns_servers.is_empty() {
+            Vec::new()
+        } else {
+            vec![v6::OptionCode::DnsServers]
+        };
         let mut client = testutil::start_and_assert_server_discovery(
             transaction_id.clone(),
             client_id.clone(),
             configured_addresses.clone(),
-            Vec::new(),
+            options_to_request,
             rng,
         );
 
@@ -2641,6 +2675,9 @@ pub(crate) mod testutil {
             v6::DhcpOption::ServerId(&server_id),
             v6::DhcpOption::Preference(ADVERTISE_MAX_PREFERENCE),
         ];
+        if !expected_dns_servers.is_empty() {
+            options.push(v6::DhcpOption::DnsServers(&expected_dns_servers));
+        }
         let addresses_to_assign: HashMap<v6::IAID, TestIdentityAssociation> =
             (0..).map(v6::IAID::new).zip(addresses_to_assign).collect();
         let mut iaaddr_opts = HashMap::new();
@@ -2700,10 +2737,7 @@ pub(crate) mod testutil {
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        assert_matches!(
-            &client.handle_message_receive(msg)[..],
-            [Action::CancelTimer(ClientTimerType::Retransmission)]
-        );
+        let actions = client.handle_message_receive(msg);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         let expected_addresses =
@@ -2747,10 +2781,10 @@ pub(crate) mod testutil {
             })) if *got_client_id == client_id &&
                    *addresses == expected_addresses &&
                    *got_server_id == server_id &&
-                   *dns_servers == Vec::<Ipv6Addr>::new() &&
+                   dns_servers == expected_dns_servers &&
                    *solicit_max_rt == MAX_SOLICIT_TIMEOUT
         );
-        client
+        (client, actions)
     }
 
     /// Gets the `u32` value inside a `v6::TimeValue`.
@@ -4233,7 +4267,7 @@ mod tests {
     fn assign_addresses() {
         const T1: u32 = 50;
         const T2: u32 = 80;
-        let client = testutil::assign_addresses_and_assert(
+        let (client, actions) = testutil::assign_addresses_and_assert(
             v6::duid_uuid(),
             vec![
                 TestIdentityAssociation {
@@ -4275,6 +4309,7 @@ mod tests {
                     )),
                 },
             ],
+            &[],
             StepRng::new(std::u64::MAX / 2, 0),
         );
 
@@ -4293,6 +4328,44 @@ mod tests {
             })) if *got_t1 == v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(T1).expect("should succeed")) &&
                    *got_t2 == v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(T2).expect("should succeed"))
         );
+        assert_matches!(&actions[..], [Action::CancelTimer(ClientTimerType::Retransmission)]);
+    }
+
+    #[test]
+    fn address_assigned_get_dns_servers() {
+        let dns_servers = [std_ip_v6!("ff01::0102"), std_ip_v6!("ff01::0304")];
+        let (client, actions) = testutil::assign_addresses_and_assert(
+            v6::duid_uuid(),
+            vec![TestIdentityAssociation {
+                address: std_ip_v6!("::ffff:c00a:101"),
+                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(100)
+                        .expect("should succeed for non-zero or u32::MAX values"),
+                )),
+                valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(120)
+                        .expect("should succeed for non-zero or u32::MAX values"),
+                )),
+                t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(60)
+                        .expect("should succeed for non-zero or u32::MAX values"),
+                )),
+                t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(90)
+                        .expect("should succeed for non-zero or u32::MAX values"),
+                )),
+            }],
+            &dns_servers,
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
+        assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::UpdateDnsServers(got_dns_servers)
+            ] if got_dns_servers[..] == dns_servers
+        );
+        assert_eq!(client.get_dns_servers()[..], dns_servers);
     }
 
     #[test]
