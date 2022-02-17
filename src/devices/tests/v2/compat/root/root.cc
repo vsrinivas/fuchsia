@@ -18,7 +18,7 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/intrusive_double_list.h>
 
-#include "src/devices/tests/compat/root/root-bind.h"
+#include "src/devices/tests/v2/compat/root/root-bind.h"
 
 namespace root {
 

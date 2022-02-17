@@ -13,7 +13,7 @@
 
 #include <ddktl/device.h>
 
-#include "src/devices/tests/compat/leaf/leaf-bind.h"
+#include "src/devices/tests/v2/compat/leaf/leaf-bind.h"
 
 namespace leaf {
 

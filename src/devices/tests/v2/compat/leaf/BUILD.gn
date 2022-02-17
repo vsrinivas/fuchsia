@@ -12,21 +12,21 @@ import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("bind") {
-  rules = "root.bind"
-  header_output = "root-bind.h"
-  bind_output = "root.bindbc"
-  deps = [ "//src/devices/bind/fuchsia.test" ]
+  rules = "leaf.bind"
+  header_output = "leaf-bind.h"
+  bind_output = "leaf.bindbc"
+  deps = [ "//src/devices/tests/v2/compat/bind:fuchsia.compat" ]
 }
 
 fuchsia_driver("driver") {
-  output_name = "root"
-  sources = [ "root.cc" ]
+  output_name = "leaf"
+  sources = [ "leaf.cc" ]
   deps = [
     ":bind",
     "//src/devices/lib/driver",
-    "//src/devices/tests/compat:fuchsia.hardware.compat_banjo_cpp",
-    "//src/devices/tests/compat/bind:bind.fuchsia.compat",
-    "//src/lib/ddk",
+    "//src/devices/tests/v2/compat:fuchsia.hardware.compat_banjo_cpp",
+    "//src/devices/tests/v2/compat:fuchsia.hardware.compat_llcpp",
+    "//src/devices/tests/v2/compat/bind:bind.fuchsia.compat",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
@@ -35,7 +35,8 @@ fuchsia_driver("driver") {
 }
 
 fuchsia_driver_component("component") {
-  component_name = "root"
+  component_name = "leaf"
   deps = [ ":driver" ]
-  info = "root-info.json"
+  info = "leaf-info.json"
+  colocate = true
 }

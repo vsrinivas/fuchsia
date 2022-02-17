@@ -8,7 +8,7 @@
 
 #include <bind/fuchsia/test/cpp/fidl.h>
 
-#include "src/devices/tests/interop/v1.bind.h"
+#include "src/devices/tests/v2/interop/v1.bind.h"
 
 namespace {
 
