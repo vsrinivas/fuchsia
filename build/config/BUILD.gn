@@ -1156,7 +1156,7 @@ config("werror") {
 
 config("temporarily_disable_tsan_do_not_use") {
   cflags = [ "-fno-sanitize=thread" ]
-  visibility = [ "*" ]
+  visibility = []
 }
 
 config("temporarily_disable_ubsan_do_not_use") {
