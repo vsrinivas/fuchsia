@@ -78,7 +78,6 @@ use {
         task::{Context, Poll},
         Future,
     },
-    moniker::ChildMoniker,
     std::any::Any,
     std::collections::HashMap,
     std::fmt::Debug,
@@ -106,7 +105,7 @@ pub enum ActionKey {
     Start,
     Stop,
     Shutdown,
-    DestroyChild(ChildMoniker),
+    DestroyChild(InstancedChildMoniker),
     PurgeChild(InstancedChildMoniker),
     Purge,
 }
@@ -424,7 +423,13 @@ pub(crate) mod test_utils {
             InstanceState::Resolved(ref s) => match s.get_child(instanced_moniker) {
                 Some(child) => {
                     let child_execution = child.lock_execution().await;
-                    s.get_live_child(&moniker).is_none() && child_execution.is_shut_down()
+                    match s.get_live_child(&moniker) {
+                        None => child_execution.is_shut_down(),
+                        Some(child) => {
+                            // There's a live child under this name! But is it the same instance?
+                            child.instanced_moniker().path().last() != Some(instanced_moniker)
+                        }
+                    }
                 }
                 None => false,
             },

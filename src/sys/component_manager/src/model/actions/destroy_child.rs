@@ -9,18 +9,20 @@ use {
         error::ModelError,
         hooks::{Event, EventPayload},
     },
+    ::routing::component_instance::ComponentInstanceInterface,
     async_trait::async_trait,
-    moniker::ChildMoniker,
+    cm_moniker::InstancedChildMoniker,
+    moniker::AbsoluteMonikerBase,
     std::sync::Arc,
 };
 
 /// Destroys a child after shutting it down.
 pub struct DestroyChildAction {
-    moniker: ChildMoniker,
+    moniker: InstancedChildMoniker,
 }
 
 impl DestroyChildAction {
-    pub fn new(moniker: ChildMoniker) -> Self {
+    pub fn new(moniker: InstancedChildMoniker) -> Self {
         Self { moniker }
     }
 }
@@ -38,12 +40,14 @@ impl Action for DestroyChildAction {
 
 async fn do_destroyed(
     component: &Arc<ComponentInstance>,
-    moniker: ChildMoniker,
+    moniker: InstancedChildMoniker,
 ) -> Result<(), ModelError> {
     let child = {
         let state = component.lock_state().await;
         match *state {
-            InstanceState::Resolved(ref s) => s.get_live_child(&moniker).map(|r| r.clone()),
+            InstanceState::Resolved(ref s) => {
+                s.get_live_child(&moniker.to_child_moniker()).map(|r| r.clone())
+            }
             InstanceState::Purged => None,
             InstanceState::New | InstanceState::Discovered => {
                 panic!("do_destroyed: not resolved");
@@ -51,6 +55,18 @@ async fn do_destroyed(
         }
     };
     if let Some(child) = child {
+        if child.instanced_moniker().path().last() != Some(&moniker) {
+            // The instance of the child we pulled from our live children does not match the
+            // instance of the child we were asked to delete. This is possible if this
+            // `DestroyChild` action raced with a separate `DestroyChild` action followed by a
+            // `CreateChild` action.
+            //
+            // If there's already a live child with a different instance than what we were asked to
+            // destroy, then surely the instance we wanted to destroy is long gone, and we can
+            // safely return without doing any work.
+            return Ok(());
+        }
+
         // For destruction to behave correctly, the component has to be shut down first.
         ActionSet::register(child.clone(), ShutdownAction::new()).await?;
 
@@ -59,7 +75,7 @@ async fn do_destroyed(
         let mut state = component.lock_state().await;
         match *state {
             InstanceState::Resolved(ref mut s) => {
-                s.mark_child_deleted(&moniker);
+                s.mark_child_deleted(&moniker.to_child_moniker());
             }
             InstanceState::Purged => {}
             InstanceState::New | InstanceState::Discovered => {
@@ -99,7 +115,7 @@ pub mod tests {
 
         // Register `destroyed` action, and wait for it. Component should be destroyed.
         let component_root = test.look_up(vec![].into()).await;
-        ActionSet::register(component_root.clone(), DestroyChildAction::new("a".into()))
+        ActionSet::register(component_root.clone(), DestroyChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
         assert!(is_destroyed(&component_root, &"a:0".into()).await);
@@ -123,7 +139,7 @@ pub mod tests {
         }
 
         // Execute action again, same state and no new events.
-        ActionSet::register(component_root.clone(), DestroyChildAction::new("a".into()))
+        ActionSet::register(component_root.clone(), DestroyChildAction::new("a:0".into()))
             .await
             .expect("destroy failed");
         assert!(is_destroyed(&component_root, &"a:0".into()).await);
@@ -165,14 +181,14 @@ pub mod tests {
 
         // Register `destroyed` action for "a" only.
         let component_root = test.look_up(vec![].into()).await;
-        ActionSet::register(component_root.clone(), DestroyChildAction::new("coll:a".into()))
+        ActionSet::register(component_root.clone(), DestroyChildAction::new("coll:a:1".into()))
             .await
             .expect("destroy failed");
         assert!(is_destroyed(&component_root, &"coll:a:1".into()).await);
         assert!(!is_destroyed(&component_root, &"coll:b:2".into()).await);
 
         // Register `destroyed` action for "b".
-        ActionSet::register(component_root.clone(), DestroyChildAction::new("coll:b".into()))
+        ActionSet::register(component_root.clone(), DestroyChildAction::new("coll:b:2".into()))
             .await
             .expect("destroy failed");
         assert!(is_destroyed(&component_root, &"coll:a:1".into()).await);
@@ -193,6 +209,66 @@ pub mod tests {
                     Lifecycle::Stop(vec!["coll:a:1"].into()),
                     Lifecycle::PreDestroy(vec!["coll:a:1"].into()),
                     Lifecycle::PreDestroy(vec!["coll:b:2"].into())
+                ],
+            );
+        }
+    }
+
+    #[fuchsia::test]
+    async fn destroy_runs_after_new_instance_created() {
+        // We want to demonstrate that running two destroy child actions for the same child
+        // instance, which should be idempotent, works correctly if a new instance of the child
+        // under the same name is created between them.
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
+            ("a", component_decl_with_test_runner()),
+            ("b", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, Some(vec![].into())).await;
+
+        // Create dynamic instance in "coll".
+        test.create_dynamic_child("coll", "a").await;
+
+        // Start the component so we can witness it getting stopped.
+        test.start(vec!["coll:a"].into()).await;
+
+        // We're going to run the destroy action for `a` twice. One after the other finishes, so
+        // the actions semantics don't dedup them to the same work item.
+        let component_root = test.look_up(vec![].into()).await;
+        let destroy_fut_1 =
+            ActionSet::register(component_root.clone(), DestroyChildAction::new("coll:a:1".into()));
+        let destroy_fut_2 =
+            ActionSet::register(component_root.clone(), DestroyChildAction::new("coll:a:1".into()));
+
+        assert!(!is_destroyed(&component_root, &"coll:a:1".into()).await);
+
+        destroy_fut_1.await.expect("destroy failed");
+        assert!(is_destroyed(&component_root, &"coll:a:1".into()).await);
+
+        // Now recreate `a`
+        test.create_dynamic_child("coll", "a").await;
+        test.start(vec!["coll:a"].into()).await;
+
+        // Run the second destroy fut, it should leave the newly created `a` alone
+        destroy_fut_2.await.expect("destroy failed");
+        assert!(is_destroyed(&component_root, &"coll:a:1".into()).await);
+        assert!(!is_destroyed(&component_root, &"coll:a:2".into()).await);
+
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) | Lifecycle::PreDestroy(_) | Lifecycle::Destroy(_) => true,
+                    _ => false,
+                })
+                .collect();
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Stop(vec!["coll:a:1"].into()),
+                    Lifecycle::PreDestroy(vec!["coll:a:1"].into()),
                 ],
             );
         }

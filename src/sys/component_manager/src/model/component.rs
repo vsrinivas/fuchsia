@@ -652,7 +652,7 @@ impl ComponentInstance {
             let (instance, _) = tup;
             let instanced_moniker =
                 InstancedChildMoniker::from_child_moniker(child_moniker, instance);
-            ActionSet::register(self.clone(), DestroyChildAction::new(child_moniker.clone()))
+            ActionSet::register(self.clone(), DestroyChildAction::new(instanced_moniker.clone()))
                 .await?;
             let mut actions = self.lock_actions().await;
             let nf = actions.register_no_wait(self, PurgeChildAction::new(instanced_moniker));
@@ -782,7 +782,7 @@ impl ComponentInstance {
                 fasync::Task::spawn(async move {
                     match ActionSet::register(
                         component.clone(),
-                        DestroyChildAction::new(instanced_moniker.to_child_moniker()),
+                        DestroyChildAction::new(instanced_moniker.clone()),
                     )
                     .await
                     {
@@ -898,11 +898,7 @@ impl ComponentInstance {
             // above.
             if let Some(coll) = m.collection() {
                 if transient_colls.contains(coll) {
-                    ActionSet::register(
-                        self.clone(),
-                        DestroyChildAction::new(m.to_child_moniker()),
-                    )
-                    .await?;
+                    ActionSet::register(self.clone(), DestroyChildAction::new(m.clone())).await?;
                     let nf = ActionSet::register(self.clone(), PurgeChildAction::new(m));
                     futures.push(nf);
                 }
@@ -2821,7 +2817,7 @@ pub mod tests {
 
         // Destroy `coll_1:b`. It should still be listed, but shouldn't be live.
         // The dynamic offer should be deleted.
-        ActionSet::register(root_component.clone(), DestroyChildAction::new("coll_1:b".into()))
+        ActionSet::register(root_component.clone(), DestroyChildAction::new("coll_1:b:2".into()))
             .await
             .expect("destroy failed");
 

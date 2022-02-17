@@ -62,11 +62,8 @@ async fn do_purge(component: &Arc<ComponentInstance>) -> Result<(), ModelError> 
                     let component = component.clone();
                     let m = m.clone();
                     let nf = async move {
-                        ActionSet::register(
-                            component.clone(),
-                            DestroyChildAction::new(m.to_child_moniker()),
-                        )
-                        .await?;
+                        ActionSet::register(component.clone(), DestroyChildAction::new(m.clone()))
+                            .await?;
                         ActionSet::register(component, PurgeChildAction::new(m)).await
                     };
                     nfs.push(nf);
