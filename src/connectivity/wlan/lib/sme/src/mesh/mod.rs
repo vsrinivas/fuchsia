@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::{capabilities::get_device_band_cap, responder::Responder, MlmeRequest, MlmeSink},
+    crate::{responder::Responder, MlmeRequest, MlmeSink},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
     futures::channel::{mpsc, oneshot},
     log::error,
     std::mem,
     wlan_common::{
+        capabilities::get_device_band_cap,
         channel::{Cbw, Channel},
         mac::Aid,
         timer::TimedEvent,

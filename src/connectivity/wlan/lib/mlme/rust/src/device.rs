@@ -567,7 +567,7 @@ impl DeviceInterface {
 #[cfg(test)]
 macro_rules! arr {
     ($slice:expr, $size:expr) => {{
-        assert!($slice.len() < $size);
+        assert!($slice.len() <= $size);
         let mut a = [0; $size];
         a[..$slice.len()].clone_from_slice(&$slice);
         a
@@ -940,13 +940,15 @@ pub(crate) mod test_utils {
     pub fn fake_wlan_softmac_info() -> WlanSoftmacInfo {
         let band_cap_count = 2;
         let mut band_cap_list = [default_band_capability(); WLAN_INFO_MAX_BANDS as usize];
+        let basic_rate_list = arr!(
+            [0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
+            banjo_wlan_internal::MAX_SUPPORTED_BASIC_RATES as usize
+        );
+        let basic_rate_count = basic_rate_list.len() as u8;
         band_cap_list[0] = banjo_wlan_softmac::WlanSoftmacBandCapability {
             band: banjo_common::WlanBand::TWO_GHZ,
-            basic_rate_list: arr!(
-                [0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C],
-                banjo_wlan_internal::MAX_SUPPORTED_BASIC_RATES as usize
-            ),
-            basic_rate_count: 8,
+            basic_rate_list,
+            basic_rate_count,
             supported_channels: WlanInfoChannelList {
                 base_freq: 2407,
                 channels: arr!(
@@ -1072,12 +1074,12 @@ mod tests {
         crate::ddk_converter::{self, cssid_from_ssid_unchecked},
         banjo_ddk_hw_wlan_ieee80211::*,
         banjo_fuchsia_hardware_wlan_phyinfo::*,
-        banjo_fuchsia_wlan_internal as banjo_internal, fidl_fuchsia_wlan_common as fidl_common,
+        banjo_fuchsia_wlan_internal as banjo_internal,
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,
         ieee80211::Bssid,
         ieee80211::Ssid,
         std::convert::TryFrom,
-        wlan_common::assert_variant,
+        wlan_common::{assert_variant, capabilities::StaCapabilities, mac},
     };
 
     fn make_auth_confirm_msg() -> fidl_mlme::AuthenticateConfirm {
@@ -1414,15 +1416,14 @@ mod tests {
         let assoc_ctx = ddk_converter::build_ddk_assoc_ctx(
             Bssid([1, 2, 3, 4, 5, 6]),
             1,
-            fidl_mlme::NegotiatedCapabilities {
-                channel: fidl_common::WlanChannel {
-                    primary: 149,
-                    cbw: fidl_common::ChannelBandwidth::Cbw40,
-                    secondary80: 42,
-                },
-                capability_info: 0,
+            banjo_common::WlanChannel {
+                primary: 149,
+                cbw: banjo_common::ChannelBandwidth::CBW40,
+                secondary80: 42,
+            },
+            StaCapabilities {
+                capability_info: mac::CapabilityInfo(0),
                 rates: vec![],
-                wmm_param: None,
                 ht_cap: None,
                 vht_cap: None,
             },

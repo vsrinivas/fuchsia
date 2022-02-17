@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod capabilities;
 mod event;
 mod inspect;
 mod protection;
@@ -17,7 +16,6 @@ pub mod test_utils;
 
 use {
     self::{
-        capabilities::derive_join_capabilities,
         event::Event,
         protection::Protection,
         rsn::{get_wpa2_rsna, get_wpa3_rsna},
@@ -39,6 +37,7 @@ use {
     wlan_common::{
         self,
         bss::{BssDescription, Protection as BssProtection},
+        capabilities::derive_join_capabilities,
         channel::Channel,
         hasher::WlanHasher,
         ie::{self, rsn::rsne, wsc},

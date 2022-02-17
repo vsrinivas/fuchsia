@@ -6,9 +6,7 @@ mod link_state;
 
 use {
     crate::{
-        capabilities::{intersect_with_ap_as_client, ClientCapabilities},
         client::{
-            capabilities::derive_join_capabilities,
             event::{self, Event},
             internal::Context,
             protection::{build_protection_ie, Protection, ProtectionIe},
@@ -32,6 +30,7 @@ use {
     wep_deprecated,
     wlan_common::{
         bss::BssDescription,
+        capabilities::{derive_join_capabilities, ClientCapabilities},
         format::MacFmt as _,
         ie::{self, rsn::cipher},
         timer::EventId,
@@ -323,38 +322,6 @@ impl Associating {
             });
         let link_state = match conf.result_code {
             fidl_ieee80211::StatusCode::Success => {
-                if let Some(capability_info) = self.capability_info.as_ref() {
-                    let negotiated_cap = intersect_with_ap_as_client(capability_info, &conf.into());
-                    // TODO(eyw): Enable this check once we switch to Rust MLME which populates
-                    // associate confirm with IEs.
-                    if negotiated_cap.rates.is_empty() {
-                        // This is unlikely to happen with any spec-compliant AP. In case the
-                        // user somehow decided to connect to a malicious AP, reject and reset.
-                        // Log at ERROR level to raise visibility of when this event occurs.
-                        let msg = format!(
-                            "Associate terminated because AP's capabilities in association \
-                                 response is different from beacon"
-                        );
-                        error!("{}", msg);
-                        send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
-                        report_connect_finished(
-                            &mut self.cmd.connect_txn_sink,
-                            ConnectResult::Failed(
-                                AssociationFailure {
-                                    bss_protection: self.cmd.bss.protection(),
-                                    code: fidl_ieee80211::StatusCode::RefusedCapabilitiesMismatch,
-                                }
-                                .into(),
-                            ),
-                        );
-                        state_change_ctx.set_msg(msg);
-                        return Err(Idle { cfg: self.cfg });
-                    }
-                    context.mlme_sink.send(MlmeRequest::FinalizeAssociation(
-                        negotiated_cap.to_fidl_negotiated_capabilities(&self.cmd.bss.channel),
-                    ))
-                }
-
                 match LinkState::new(self.cmd.protection, context) {
                     Ok(link_state) => link_state,
                     Err(failure_reason) => {
@@ -1378,8 +1345,8 @@ mod tests {
 
     use crate::client::test_utils::{
         create_assoc_conf, create_auth_conf, create_join_conf, create_on_wmm_status_resp,
-        expect_stream_empty, fake_negotiated_channel_and_capabilities, fake_wmm_param,
-        mock_psk_supplicant, MockSupplicant, MockSupplicantController,
+        expect_stream_empty, fake_wmm_param, mock_psk_supplicant, MockSupplicant,
+        MockSupplicantController,
     };
     use crate::client::{inspect, rsn::Rsna, ConnectTransactionStream, TimeStream};
     use crate::test_utils::make_wpa1_ie;
@@ -1493,10 +1460,6 @@ mod tests {
         // (mlme->sme) Send an AssociateConf
         let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
-        expect_finalize_association_req(
-            &mut h.mlme_stream,
-            fake_negotiated_channel_and_capabilities(),
-        );
 
         assert!(suppl_mock.is_supplicant_started());
 
@@ -1558,10 +1521,6 @@ mod tests {
         // (mlme->sme) Send an AssociateConf
         let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
-        expect_finalize_association_req(
-            &mut h.mlme_stream,
-            fake_negotiated_channel_and_capabilities(),
-        );
 
         assert!(suppl_mock.is_supplicant_started());
 
@@ -1710,10 +1669,6 @@ mod tests {
         // (mlme->sme) Send an AssociateConf
         let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
-        expect_finalize_association_req(
-            &mut h.mlme_stream,
-            fake_negotiated_channel_and_capabilities(),
-        );
 
         assert!(suppl_mock.is_supplicant_started());
 
@@ -2980,16 +2935,6 @@ mod tests {
     fn expect_assoc_req(mlme_stream: &mut MlmeStream, bssid: Bssid) {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Associate(req))) => {
             assert_eq!(bssid.0, req.peer_sta_address);
-        });
-    }
-
-    fn expect_finalize_association_req(
-        mlme_stream: &mut MlmeStream,
-        chan_and_cap: (Channel, ClientCapabilities),
-    ) {
-        let (chan, client_cap) = chan_and_cap;
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::FinalizeAssociation(capability_info))) => {
-            assert_eq!(capability_info, client_cap.0.to_fidl_negotiated_capabilities(&chan));
         });
     }
 

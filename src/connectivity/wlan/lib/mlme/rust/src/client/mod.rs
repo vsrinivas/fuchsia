@@ -38,9 +38,11 @@ use {
         appendable::Appendable,
         bss::BssDescription,
         buffer_writer::BufferWriter,
+        capabilities::{derive_join_capabilities, ClientCapabilities},
+        channel::Channel,
         data_writer,
         ie::{self, parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, Id, Reader},
-        mac::{self, Aid, PowerState},
+        mac::{self, Aid, CapabilityInfo, PowerState},
         mgmt_writer,
         sequence::SequenceManager,
         time::TimeUnit,
@@ -279,12 +281,13 @@ impl ClientMlme {
         })?;
 
         match self.join_device(&bss) {
-            Ok(()) => {
+            Ok(client_capabilities) => {
                 self.sta.replace(Client::new(
                     bss.ssid.clone(),
                     bss.bssid,
                     self.ctx.device.wlan_softmac_info().sta_addr,
                     bss.beacon_period,
+                    client_capabilities,
                     bss.rsne().is_some()
                     // TODO (fxb/61020): Add detection of WPA1 in softmac for testing
                     // purposes only. In particular, connect-to-wpa1-network relies
@@ -313,7 +316,20 @@ impl ClientMlme {
         }
     }
 
-    fn join_device(&mut self, bss: &BssDescription) -> Result<(), Error> {
+    fn join_device(&mut self, bss: &BssDescription) -> Result<ClientCapabilities, Error> {
+        let wlan_softmac_info = self.ctx.device.wlan_softmac_info();
+        let join_caps = derive_join_capabilities(
+            Channel::from(bss.channel),
+            bss.rates(),
+            &crate::ddk_converter::device_info_from_wlan_softmac_info(wlan_softmac_info)?,
+        )
+        .map_err(|e| {
+            Error::Status(
+                format!("Failed to derive join capabilities: {:?}", e),
+                zx::Status::NOT_SUPPORTED,
+            )
+        })?;
+
         let channel = crate::ddk_converter::ddk_channel_from_fidl(bss.channel.into());
         self.set_main_channel(channel)
             .map_err(|status| Error::Status(format!("Error setting device channel"), status))?;
@@ -328,6 +344,7 @@ impl ClientMlme {
         self.ctx
             .device
             .configure_bss(bss_config)
+            .map(|()| join_caps)
             .map_err(|status| Error::Status(format!("Error setting BSS in driver"), status))
     }
 
@@ -452,10 +469,11 @@ impl Client {
         bssid: Bssid,
         iface_mac: MacAddr,
         beacon_period: u16,
+        client_capabilities: ClientCapabilities,
         eapol_required: bool,
     ) -> Self {
         Self {
-            state: Some(States::new_initial()),
+            state: Some(States::new_initial(client_capabilities)),
             ssid,
             bssid,
             iface_mac,
@@ -964,62 +982,27 @@ impl<'a> BoundClient<'a> {
         }
     }
 
-    fn send_associate_conf_success<B: ByteSlice>(
-        &mut self,
-        association_id: mac::Aid,
-        capability_info: mac::CapabilityInfo,
-        elements: B,
-    ) {
+    fn send_associate_conf_success(&mut self, parsed_assoc_resp: ParsedAssociateResp) {
         type HtCapArray = [u8; fidl_internal::HT_CAP_LEN as usize];
         type VhtCapArray = [u8; fidl_internal::VHT_CAP_LEN as usize];
 
         let mut assoc_conf = fidl_mlme::AssociateConfirm {
-            association_id,
-            capability_info: capability_info.raw(),
+            association_id: parsed_assoc_resp.association_id,
+            capability_info: parsed_assoc_resp.capabilities.raw(),
             result_code: fidl_ieee80211::StatusCode::Success,
-            rates: vec![],
+            rates: parsed_assoc_resp.rates.iter().map(|r| r.0).collect(),
             wmm_param: None,
-            ht_cap: None,
-            vht_cap: None,
+            ht_cap: parsed_assoc_resp.ht_cap.map(|ht_cap| {
+                assert_eq_size!(ie::HtCapabilities, HtCapArray);
+                let bytes: HtCapArray = ht_cap.as_bytes().try_into().unwrap();
+                Box::new(fidl_internal::HtCapabilities { bytes })
+            }),
+            vht_cap: parsed_assoc_resp.vht_cap.map(|vht_cap| {
+                assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
+                let bytes: VhtCapArray = vht_cap.as_bytes().try_into().unwrap();
+                Box::new(fidl_internal::VhtCapabilities { bytes })
+            }),
         };
-
-        for (id, body) in Reader::new(elements) {
-            match id {
-                Id::SUPPORTED_RATES => match ie::parse_supported_rates(body) {
-                    Err(e) => error!("invalid Supported Rates: {}", e),
-                    Ok(supported_rates) => {
-                        // safe to unwrap because supported rate is 1-byte long thus always aligned
-                        assoc_conf.rates.extend(supported_rates.iter().map(|r| r.0));
-                    }
-                },
-                Id::EXTENDED_SUPPORTED_RATES => match ie::parse_extended_supported_rates(body) {
-                    Err(e) => error!("invalid Extended Supported Rates: {}", e),
-                    Ok(supported_rates) => {
-                        // safe to unwrap because supported rate is 1-byte long thus always aligned
-                        assoc_conf.rates.extend(supported_rates.iter().map(|r| r.0));
-                    }
-                },
-                Id::HT_CAPABILITIES => match ie::parse_ht_capabilities(body) {
-                    Err(e) => error!("invalid HT Capabilities: {}", e),
-                    Ok(ht_cap) => {
-                        assert_eq_size!(ie::HtCapabilities, HtCapArray);
-                        let bytes: HtCapArray = ht_cap.as_bytes().try_into().unwrap();
-                        assoc_conf.ht_cap = Some(Box::new(fidl_internal::HtCapabilities { bytes }))
-                    }
-                },
-                Id::VHT_CAPABILITIES => match ie::parse_vht_capabilities(body) {
-                    Err(e) => error!("invalid VHT Capabilities: {}", e),
-                    Ok(vht_cap) => {
-                        assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
-                        let bytes: VhtCapArray = vht_cap.as_bytes().try_into().unwrap();
-                        assoc_conf.vht_cap =
-                            Some(Box::new(fidl_internal::VhtCapabilities { bytes }))
-                    }
-                },
-                // TODO(fxbug.dev/43938): parse vendor ID and include WMM param if exists
-                _ => {}
-            }
-        }
 
         let result = self.ctx.device.mlme_control_handle().send_associate_conf(&mut assoc_conf);
         if let Err(e) = result {
@@ -1118,6 +1101,60 @@ impl<'a> BoundClient<'a> {
     }
 }
 
+pub struct ParsedAssociateResp {
+    pub association_id: u16,
+    pub capabilities: CapabilityInfo,
+    pub rates: Vec<ie::SupportedRate>,
+    pub ht_cap: Option<ie::HtCapabilities>,
+    pub vht_cap: Option<ie::VhtCapabilities>,
+}
+
+impl ParsedAssociateResp {
+    pub fn from<B: ByteSlice>(assoc_resp_hdr: &mac::AssocRespHdr, elements: B) -> Self {
+        let mut parsed_assoc_resp = ParsedAssociateResp {
+            association_id: assoc_resp_hdr.aid,
+            capabilities: assoc_resp_hdr.capabilities,
+            rates: vec![],
+            ht_cap: None,
+            vht_cap: None,
+        };
+
+        for (id, body) in Reader::new(elements) {
+            match id {
+                Id::SUPPORTED_RATES => match ie::parse_supported_rates(body) {
+                    Err(e) => warn!("invalid Supported Rates: {}", e),
+                    Ok(supported_rates) => {
+                        // safe to unwrap because supported rate is 1-byte long thus always aligned
+                        parsed_assoc_resp.rates.extend(supported_rates.iter());
+                    }
+                },
+                Id::EXTENDED_SUPPORTED_RATES => match ie::parse_extended_supported_rates(body) {
+                    Err(e) => warn!("invalid Extended Supported Rates: {}", e),
+                    Ok(supported_rates) => {
+                        // safe to unwrap because supported rate is 1-byte long thus always aligned
+                        parsed_assoc_resp.rates.extend(supported_rates.iter());
+                    }
+                },
+                Id::HT_CAPABILITIES => match ie::parse_ht_capabilities(body) {
+                    Err(e) => warn!("invalid HT Capabilities: {}", e),
+                    Ok(ht_cap) => {
+                        parsed_assoc_resp.ht_cap = Some(*ht_cap);
+                    }
+                },
+                Id::VHT_CAPABILITIES => match ie::parse_vht_capabilities(body) {
+                    Err(e) => warn!("invalid VHT Capabilities: {}", e),
+                    Ok(vht_cap) => {
+                        parsed_assoc_resp.vht_cap = Some(*vht_cap);
+                    }
+                },
+                // TODO(fxbug.dev/43938): parse vendor ID and include WMM param if exists
+                _ => {}
+            }
+        }
+        parsed_assoc_resp
+    }
+}
+
 impl<'a> BlockAckTx for BoundClient<'a> {
     /// Sends a BlockAck frame to the associated AP.
     ///
@@ -1185,7 +1222,7 @@ mod tests {
         wlan_common::{
             assert_variant, fake_fidl_bss_description, ie,
             stats::SignalStrengthAverage,
-            test_utils::fake_frames::*,
+            test_utils::{fake_capabilities::fake_sta_capabilities, fake_frames::*},
             timer::{create_timer, TimeStream},
             TimeUnit,
         },
@@ -1273,7 +1310,14 @@ mod tests {
     }
 
     fn make_client_station() -> Client {
-        Client::new(Ssid::empty(), BSSID, IFACE_MAC, TimeUnit::DEFAULT_BEACON_INTERVAL.0, false)
+        Client::new(
+            Ssid::empty(),
+            BSSID,
+            IFACE_MAC,
+            TimeUnit::DEFAULT_BEACON_INTERVAL.0,
+            ClientCapabilities(fake_sta_capabilities()),
+            false,
+        )
     }
 
     impl ClientMlme {
@@ -1303,6 +1347,7 @@ mod tests {
                 States::from(wlan_statemachine::testing::new_state(Associated(Association {
                     aid: 42,
                     controlled_port_open: true,
+                    client_capabilities: ClientCapabilities(fake_sta_capabilities()),
                     ap_ht_op: None,
                     ap_vht_op: None,
                     qos: Qos::Disabled,
@@ -1461,7 +1506,9 @@ mod tests {
             0, 4, // SSID id and length
             115, 115, 105, 100, // SSID
             1, 8, // supp_rates id and length
-            0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C // supp_rates
+            0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // supp_rates
+            50, 4, // extended supported rates id and length
+            0x30, 0x48, 0x60, 0x6c // extended supported rates
         ][..]);
         m.fake_device.wlan_queue.clear();
         assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
@@ -2372,16 +2419,14 @@ mod tests {
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
 
-        let mut ies = vec![];
-        let rates = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-        let rates_writer = ie::RatesWriter::try_new(&rates[..]).expect("Valid rates");
-        // It should work even if ext_supp_rates shows up before supp_rates
-        rates_writer.write_extended_supported_rates(&mut ies);
-        rates_writer.write_supported_rates(&mut ies);
-        ie::write_ht_capabilities(&mut ies, &ie::fake_ht_capabilities()).expect("Valid HT Cap");
-        ie::write_vht_capabilities(&mut ies, &ie::fake_vht_capabilities()).expect("Valid VHT Cap");
-
-        client.send_associate_conf_success(42, mac::CapabilityInfo(0x1234), &ies[..]);
+        let parsed_assoc_resp = ParsedAssociateResp {
+            association_id: 42,
+            capabilities: mac::CapabilityInfo(0x1234),
+            rates: vec![9, 10, 1, 2, 3, 4, 5, 6, 7, 8].into_iter().map(ie::SupportedRate).collect(),
+            ht_cap: Some(ie::fake_ht_capabilities()),
+            vht_cap: Some(ie::fake_vht_capabilities()),
+        };
+        client.send_associate_conf_success(parsed_assoc_resp);
         let associate_conf = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::AssociateConfirm>()

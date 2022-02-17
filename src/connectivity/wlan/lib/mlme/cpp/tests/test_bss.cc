@@ -466,6 +466,9 @@ std::unique_ptr<Packet> CreateAssocRespFrame(const wlan_assoc_ctx_t& ap_assoc_ct
   assoc->status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS);
 
   BufferWriter elem_w(w.RemainingBuffer());
+  RatesWriter rates_writer{kSupportedRates};
+  rates_writer.WriteSupportedRates(&elem_w);
+  rates_writer.WriteExtendedSupportedRates(&elem_w);
   if (ap_assoc_ctx.has_ht_cap) {
     common::WriteHtCapabilities(&elem_w, HtCapabilities::FromDdk(ap_assoc_ctx.ht_cap));
   }

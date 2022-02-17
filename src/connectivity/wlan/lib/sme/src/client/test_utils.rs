@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        capabilities::{ClientCapabilities, StaCapabilities},
-        client::{rsn::Supplicant, ServingApInfo},
-    },
+    crate::client::{rsn::Supplicant, ServingApInfo},
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     futures::channel::mpsc,
@@ -23,10 +20,8 @@ use {
         assert_variant,
         bss::Protection,
         channel,
-        ie::{
-            fake_ies::{fake_ht_cap_bytes, fake_vht_cap_bytes},
-            *,
-        },
+        ie::fake_ies::{fake_ht_cap_bytes, fake_vht_cap_bytes},
+        test_utils::fake_capabilities::fake_capability_info,
     },
     wlan_rsn::{auth, format_rsn_err, psk, rsna::UpdateSink, Error},
 };
@@ -91,32 +86,12 @@ pub fn create_auth_conf(
     }
 }
 
-pub fn fake_negotiated_channel_and_capabilities() -> (channel::Channel, ClientCapabilities) {
-    // Based on fake_bss_description, device_info and create_assoc_conf
-    let mut ht_cap = fake_ht_capabilities();
-    // Fuchsia does not support tx_stbc yet.
-    ht_cap.ht_cap_info = ht_cap.ht_cap_info.with_tx_stbc(false);
-    (
-        channel::Channel { primary: 3, cbw: channel::Cbw::Cbw40 },
-        ClientCapabilities(StaCapabilities {
-            capability_info: crate::test_utils::fake_capability_info(),
-            rates: [0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c]
-                .iter()
-                .cloned()
-                .map(SupportedRate)
-                .collect(),
-            ht_cap: Some(ht_cap),
-            vht_cap: Some(fake_vht_capabilities()),
-        }),
-    )
-}
-
 pub fn create_assoc_conf(result_code: fidl_ieee80211::StatusCode) -> fidl_mlme::MlmeEvent {
     fidl_mlme::MlmeEvent::AssociateConf {
         resp: fidl_mlme::AssociateConfirm {
             result_code,
             association_id: 55,
-            capability_info: crate::test_utils::fake_capability_info().raw(),
+            capability_info: fake_capability_info().raw(),
             rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
             // TODO(fxbug.dev/43938): mock with fake WMM param
             wmm_param: None,

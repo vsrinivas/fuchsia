@@ -327,7 +327,10 @@ mod tests {
     use ieee80211::MacAddr;
     use itertools;
     use std::convert::TryFrom;
-    use wlan_common::{assert_variant, fake_fidl_bss_description, hasher::WlanHasher};
+    use wlan_common::{
+        assert_variant, fake_fidl_bss_description, hasher::WlanHasher,
+        test_utils::fake_capabilities::fake_5ghz_band_capabilities,
+    };
 
     const CLIENT_ADDR: MacAddr = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
@@ -864,10 +867,7 @@ mod tests {
 
     fn device_info_with_channel(channels: Vec<u8>) -> fidl_mlme::DeviceInfo {
         fidl_mlme::DeviceInfo {
-            bands: vec![fidl_mlme::BandCapabilities {
-                channels,
-                ..test_utils::fake_5ghz_band_capabilities()
-            }],
+            bands: vec![fidl_mlme::BandCapabilities { channels, ..fake_5ghz_band_capabilities() }],
             ..test_utils::fake_device_info(CLIENT_ADDR)
         }
     }

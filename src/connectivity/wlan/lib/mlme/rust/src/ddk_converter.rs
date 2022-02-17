@@ -11,12 +11,7 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
     ieee80211::Bssid,
-    wlan_common::{
-        ie::{
-            parse_ht_capabilities, parse_ht_operation, parse_vht_capabilities, parse_vht_operation,
-        },
-        mac::Aid,
-    },
+    wlan_common::{capabilities::StaCapabilities, ie, mac::Aid},
     zerocopy::AsBytes,
 };
 
@@ -35,19 +30,26 @@ pub fn ddk_channel_from_fidl(fc: fidl_common::WlanChannel) -> banjo_common::Wlan
 pub fn build_ddk_assoc_ctx(
     bssid: Bssid,
     aid: Aid,
-    negotiated_capabilities: fidl_mlme::NegotiatedCapabilities,
+    channel: banjo_common::WlanChannel,
+    negotiated_capabilities: StaCapabilities,
     ht_op: Option<[u8; fidl_internal::HT_OP_LEN as usize]>,
     vht_op: Option<[u8; fidl_internal::VHT_OP_LEN as usize]>,
 ) -> banjo_wlan_associnfo::WlanAssocCtx {
     let mut rates = [0; banjo_wlan_associnfo::WLAN_MAC_MAX_RATES as usize];
-    rates[..negotiated_capabilities.rates.len()].clone_from_slice(&negotiated_capabilities.rates);
+    rates[..negotiated_capabilities.rates.len()]
+        .clone_from_slice(negotiated_capabilities.rates.as_bytes());
     let has_ht_cap = negotiated_capabilities.ht_cap.is_some();
     let has_vht_cap = negotiated_capabilities.vht_cap.is_some();
-    let ht_cap_bytes =
-        negotiated_capabilities.ht_cap.map_or([0; fidl_internal::HT_CAP_LEN as usize], |h| h.bytes);
-    let vht_cap_bytes = negotiated_capabilities
-        .vht_cap
-        .map_or([0; fidl_internal::VHT_CAP_LEN as usize], |v| v.bytes);
+    let ht_cap = negotiated_capabilities.ht_cap.map(|cap| cap.into()).unwrap_or(
+        // Safe to unwrap because the size of the byte array follows wire format
+        { *ie::parse_ht_capabilities(&[0; fidl_internal::HT_CAP_LEN as usize][..]).unwrap() }
+            .into(),
+    );
+    let vht_cap = negotiated_capabilities.vht_cap.map(|cap| cap.into()).unwrap_or(
+        // Safe to unwrap because the size of the byte array follows wire format
+        { *ie::parse_vht_capabilities(&[0; fidl_internal::VHT_CAP_LEN as usize][..]).unwrap() }
+            .into(),
+    );
     let ht_op_bytes = ht_op.unwrap_or([0; fidl_internal::HT_OP_LEN as usize]);
     let vht_op_bytes = vht_op.unwrap_or([0; fidl_internal::VHT_OP_LEN as usize]);
     banjo_wlan_associnfo::WlanAssocCtx {
@@ -58,7 +60,7 @@ pub fn build_ddk_assoc_ctx(
         // TODO(fxbug.dev/42217): ath10k disregard this value and hard code it to 1.
         // It is working now but we may need to revisit.
         listen_interval: 0,
-        channel: ddk_channel_from_fidl(negotiated_capabilities.channel),
+        channel,
         // TODO(fxbug.dev/29325): QoS works with Aruba/Ubiquiti for BlockAck session but it may need to be
         // dynamically determined for each outgoing data frame.
         // TODO(fxbug.dev/43938): Derive QoS flag and WMM parameters from device info
@@ -67,16 +69,16 @@ pub fn build_ddk_assoc_ctx(
 
         rates_cnt: negotiated_capabilities.rates.len() as u16, // will not overflow as MAX_RATES_LEN is u8
         rates,
-        capability_info: negotiated_capabilities.capability_info,
+        capability_info: negotiated_capabilities.capability_info.raw(),
         // All the unwrap are safe because the size of the byte array follow wire format.
         has_ht_cap,
-        ht_cap: { *parse_ht_capabilities(&ht_cap_bytes[..]).unwrap() }.into(),
+        ht_cap,
         has_ht_op: ht_op.is_some(),
-        ht_op: { *parse_ht_operation(&ht_op_bytes[..]).unwrap() }.into(),
+        ht_op: { *ie::parse_ht_operation(&ht_op_bytes[..]).unwrap() }.into(),
         has_vht_cap,
-        vht_cap: { *parse_vht_capabilities(&vht_cap_bytes[..]).unwrap() }.into(),
+        vht_cap,
         has_vht_op: vht_op.is_some(),
-        vht_op: { *parse_vht_operation(&vht_op_bytes[..]).unwrap() }.into(),
+        vht_op: { *ie::parse_vht_operation(&vht_op_bytes[..]).unwrap() }.into(),
     }
 }
 
@@ -217,8 +219,11 @@ pub fn cssid_from_ssid_unchecked(ssid: &Vec<u8>) -> banjo_ieee80211::CSsid {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::device::fake_wlan_softmac_info,
-        banjo_ddk_hw_wlan_ieee80211 as banjo_80211, std::convert::TryInto, wlan_common::ie,
+        super::*,
+        crate::device::fake_wlan_softmac_info,
+        banjo_ddk_hw_wlan_ieee80211 as banjo_80211,
+        std::convert::TryInto,
+        wlan_common::{ie, mac},
         zerocopy::AsBytes,
     };
 
@@ -227,21 +232,19 @@ mod tests {
         let ddk = build_ddk_assoc_ctx(
             Bssid([1, 2, 3, 4, 5, 6]),
             42,
-            fidl_mlme::NegotiatedCapabilities {
-                channel: fidl_common::WlanChannel {
-                    primary: 149,
-                    cbw: fidl_common::ChannelBandwidth::Cbw40,
-                    secondary80: 42,
-                },
-                capability_info: 0x1234,
-                rates: vec![111, 112, 113, 114, 115, 116, 117, 118, 119, 120],
-                wmm_param: None,
-                ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
-                    bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap(),
-                })),
-                vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
-                    bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap(),
-                })),
+            banjo_common::WlanChannel {
+                primary: 149,
+                cbw: banjo_common::ChannelBandwidth::CBW40,
+                secondary80: 42,
+            },
+            StaCapabilities {
+                capability_info: mac::CapabilityInfo(0x1234),
+                rates: vec![111, 112, 113, 114, 115, 116, 117, 118, 119, 120]
+                    .into_iter()
+                    .map(ie::SupportedRate)
+                    .collect(),
+                ht_cap: Some(ie::fake_ht_capabilities()),
+                vht_cap: Some(ie::fake_vht_capabilities()),
             },
             Some(ie::fake_ht_operation().as_bytes().try_into().unwrap()),
             Some(ie::fake_vht_operation().as_bytes().try_into().unwrap()),
@@ -351,7 +354,10 @@ mod tests {
         let band0 = convert_ddk_band_cap(&wlan_softmac_info.band_cap_list[0], 10)
             .expect("failed to convert band capability");
         assert_eq!(band0.band, fidl_common::WlanBand::TwoGhz);
-        assert_eq!(band0.basic_rates, vec![0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C]);
+        assert_eq!(
+            band0.basic_rates,
+            vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c]
+        );
         assert_eq!(band0.base_frequency, 2407);
         assert_eq!(band0.channels, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
         assert_eq!(band0.capability_info, 10);

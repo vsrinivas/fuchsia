@@ -14,6 +14,7 @@ pub mod big_endian;
 pub mod bss;
 pub mod buffer_reader;
 pub mod buffer_writer;
+pub mod capabilities;
 pub mod channel;
 pub mod data_writer;
 #[allow(unused)]

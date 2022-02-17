@@ -3,11 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     futures::channel::mpsc,
     ieee80211::MacAddr,
-    std::convert::TryInto,
     wlan_common::{
         ie::{
             rsn::{
@@ -17,11 +15,13 @@ use {
             wpa::WpaIe,
             *,
         },
-        mac::CapabilityInfo,
         organization::Oui,
+        test_utils::fake_capabilities::{
+            fake_2ghz_band_capabilities_vht, fake_5ghz_band_capabilities_ht_cbw,
+            fake_band_capabilities_5ghz_vht,
+        },
     },
     wlan_rsn::key::{gtk::Gtk, ptk::Ptk},
-    zerocopy::AsBytes,
 };
 
 pub fn make_wpa1_ie() -> WpaIe {
@@ -141,91 +141,6 @@ pub fn fake_device_info_vht(chanwidth: ChanWidthSet) -> fidl_mlme::DeviceInfo {
     fidl_mlme::DeviceInfo {
         bands: vec![fake_band_capabilities_5ghz_vht(chanwidth)],
         ..fake_device_info([0; 6])
-    }
-}
-
-pub fn fake_5ghz_band_capabilities_ht_cbw(chanwidth: ChanWidthSet) -> fidl_mlme::BandCapabilities {
-    let bc = fake_5ghz_band_capabilities();
-    fidl_mlme::BandCapabilities {
-        ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
-            bytes: fake_ht_capabilities_cbw(chanwidth).as_bytes().try_into().unwrap(),
-        })),
-        ..bc
-    }
-}
-
-pub fn fake_band_capabilities_5ghz_vht(chanwidth: ChanWidthSet) -> fidl_mlme::BandCapabilities {
-    let bc = fake_5ghz_band_capabilities();
-    fidl_mlme::BandCapabilities {
-        ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
-            bytes: fake_ht_capabilities_cbw(chanwidth).as_bytes().try_into().unwrap(),
-        })),
-        vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
-            bytes: fake_vht_capabilities().as_bytes().try_into().unwrap(),
-        })),
-        ..bc
-    }
-}
-
-pub fn fake_ht_capabilities_cbw(chanwidth: ChanWidthSet) -> HtCapabilities {
-    let mut ht_cap = fake_ht_capabilities();
-    ht_cap.ht_cap_info = ht_cap.ht_cap_info.with_chan_width_set(chanwidth);
-    ht_cap
-}
-
-pub fn fake_capability_info() -> CapabilityInfo {
-    CapabilityInfo(0)
-        .with_ess(false)
-        .with_ibss(false)
-        .with_cf_pollable(false)
-        .with_cf_poll_req(false)
-        .with_privacy(false)
-        .with_short_preamble(true)
-        .with_spectrum_mgmt(false)
-        .with_qos(false)
-        .with_short_slot_time(false)
-        .with_apsd(false)
-        .with_radio_measurement(false)
-        .with_delayed_block_ack(false)
-        .with_immediate_block_ack(false)
-}
-
-pub fn fake_5ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
-    fidl_mlme::BandCapabilities {
-        band: fidl_common::WlanBand::FiveGhz,
-        basic_rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
-        base_frequency: 5000,
-        channels: vec![],
-        capability_info: fake_capability_info().0,
-        ht_cap: None,
-        vht_cap: None,
-    }
-}
-
-pub fn fake_2ghz_band_capabilities_vht() -> fidl_mlme::BandCapabilities {
-    fidl_mlme::BandCapabilities {
-        ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
-            bytes: fake_ht_capabilities_cbw(ChanWidthSet::TWENTY_FORTY)
-                .as_bytes()
-                .try_into()
-                .unwrap(),
-        })),
-        vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
-            bytes: fake_vht_capabilities().as_bytes().try_into().unwrap(),
-        })),
-        ..fake_2ghz_band_capabilities()
-    }
-}
-
-pub fn fake_2ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
-    fidl_mlme::BandCapabilities {
-        band: fidl_common::WlanBand::TwoGhz,
-        basic_rates: vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
-        base_frequency: 2407,
-        channels: vec![],
-        capability_info: fake_capability_info().0,
-        ht_cap: None,
-        vht_cap: None,
     }
 }
 

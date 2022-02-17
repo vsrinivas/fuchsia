@@ -9,17 +9,17 @@
 //! If successful, the capabilities will be extracted and saved.
 
 use {
-    crate::capabilities::{get_device_band_cap, ClientCapabilities, StaCapabilities},
-    anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    wlan_common::{
+    crate::{
         channel::{Cbw, Channel},
         ie::{
-            intersect::*, parse_ht_capabilities, parse_vht_capabilities, HtCapabilities,
+            self, intersect::*, parse_ht_capabilities, parse_vht_capabilities, HtCapabilities,
             SupportedRate, VhtCapabilities,
         },
         mac::CapabilityInfo,
     },
+    anyhow::{format_err, Context as _, Error},
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
 };
 
 /// Capability Info is defined in IEEE Std 802.11-1026 9.4.1.4.
@@ -66,7 +66,7 @@ fn override_capability_info(capability_info: CapabilityInfo) -> CapabilityInfo {
 /// 1. Extract the band capabilities from the iface device based on BSS channel.
 /// 2. Derive/Override capabilities based on iface capabilities, BSS requirements and
 /// user overridable channel bandwidths.
-pub(crate) fn derive_join_capabilities(
+pub fn derive_join_capabilities(
     bss_channel: Channel,
     bss_rates: &[SupportedRate],
     device_info: &fidl_mlme::DeviceInfo,
@@ -127,7 +127,7 @@ fn override_ht_vht(
 fn override_ht_capabilities(mut ht_cap: HtCapabilities, cbw: Cbw) -> HtCapabilities {
     let mut ht_cap_info = ht_cap.ht_cap_info.with_tx_stbc(OVERRIDE_HT_CAP_INFO_TX_STBC);
     match cbw {
-        Cbw::Cbw20 => ht_cap_info.set_chan_width_set(wlan_common::ie::ChanWidthSet::TWENTY_ONLY),
+        Cbw::Cbw20 => ht_cap_info.set_chan_width_set(ie::ChanWidthSet::TWENTY_ONLY),
         _ => (),
     }
     ht_cap.ht_cap_info = ht_cap_info;
@@ -152,9 +152,93 @@ fn override_vht_capabilities(mut vht_cap: VhtCapabilities, cbw: Cbw) -> VhtCapab
     vht_cap
 }
 
+// TODO(fxbug.dev/91038): Using channel number to determine band is incorrect.
+fn get_band(primary_channel: u8) -> fidl_common::WlanBand {
+    if primary_channel <= 14 {
+        fidl_common::WlanBand::TwoGhz
+    } else {
+        fidl_common::WlanBand::FiveGhz
+    }
+}
+
+pub fn get_device_band_cap(
+    device_info: &fidl_mlme::DeviceInfo,
+    channel: u8,
+) -> Option<&fidl_mlme::BandCapabilities> {
+    let target = get_band(channel);
+    device_info.bands.iter().find(|b| b.band == target)
+}
+
+/// Capabilities that takes the iface device's capabilities based on the channel a client is trying
+/// to join, the PHY parameters that is overridden by user's command line input and the BSS the
+/// client are is trying to join.
+/// They are stored in the form of IEs because at some point they will be transmitted in
+/// (Re)Association Request and (Re)Association Response frames.
+#[derive(Debug, PartialEq)]
+pub struct StaCapabilities {
+    pub capability_info: CapabilityInfo,
+    pub rates: Vec<SupportedRate>,
+    pub ht_cap: Option<HtCapabilities>,
+    pub vht_cap: Option<VhtCapabilities>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ClientCapabilities(pub StaCapabilities);
+#[derive(Debug, PartialEq)]
+pub struct ApCapabilities(pub StaCapabilities);
+
+/// Performs capability negotiation with an AP assuming the Fuchsia device is a client.
+pub fn intersect_with_ap_as_client(
+    client: &ClientCapabilities,
+    ap: &ApCapabilities,
+) -> Result<StaCapabilities, Error> {
+    let rates = intersect_rates(ApRates(&ap.0.rates[..]), ClientRates(&client.0.rates[..]))
+        .map_err(|e| format_err!("could not intersect rates: {:?}", e))?;
+    let (capability_info, ht_cap, vht_cap) = intersect(&client.0, &ap.0);
+    Ok(StaCapabilities { rates, capability_info, ht_cap, vht_cap })
+}
+
+/// Performs capability negotiation with a remote client assuming the Fuchsia device is an AP.
+#[allow(unused)]
+pub fn intersect_with_remote_client_as_ap(
+    ap: &ApCapabilities,
+    remote_client: &ClientCapabilities,
+) -> StaCapabilities {
+    // Safe to unwrap. Otherwise we would have rejected the association from this remote client.
+    let rates = intersect_rates(ApRates(&ap.0.rates[..]), ClientRates(&remote_client.0.rates[..]))
+        .unwrap_or(vec![]);
+    let (capability_info, ht_cap, vht_cap) = intersect(&ap.0, &remote_client.0);
+    StaCapabilities { rates, capability_info, ht_cap, vht_cap }
+}
+
+fn intersect(
+    ours: &StaCapabilities,
+    theirs: &StaCapabilities,
+) -> (CapabilityInfo, Option<HtCapabilities>, Option<VhtCapabilities>) {
+    // Every bit is a boolean so bit-wise and is sufficient
+    let capability_info = CapabilityInfo(ours.capability_info.raw() & theirs.capability_info.raw());
+    let ht_cap = match (ours.ht_cap, theirs.ht_cap) {
+        // Intersect is NOT necessarily symmetrical. Our own capabilities prevails.
+        (Some(ours), Some(theirs)) => Some(ours.intersect(&theirs)),
+        _ => None,
+    };
+    let vht_cap = match (ours.vht_cap, theirs.vht_cap) {
+        // Intersect is NOT necessarily symmetrical. Our own capabilities prevails.
+        (Some(ours), Some(theirs)) => Some(ours.intersect(&theirs)),
+        _ => None,
+    };
+    (capability_info, ht_cap, vht_cap)
+}
+
 #[cfg(test)]
 mod tests {
-    use {super::*, wlan_common::ie};
+    use {
+        super::*,
+        crate::{
+            assert_variant, ie, mac,
+            test_utils::fake_capabilities::fake_5ghz_band_capabilities_ht_cbw,
+        },
+    };
 
     #[test]
     fn test_build_cap_info() {
@@ -222,5 +306,95 @@ mod tests {
         channel.cbw = Cbw::Cbw80P80 { secondary80: 42 };
         let vht_cap_info = override_vht_capabilities(vht_cap, channel.cbw).vht_cap_info;
         assert_eq!(vht_cap_info.supported_cbw_set(), 2);
+    }
+
+    #[test]
+    fn band_id() {
+        assert_eq!(fidl_common::WlanBand::TwoGhz, get_band(1));
+        assert_eq!(fidl_common::WlanBand::TwoGhz, get_band(14));
+        assert_eq!(fidl_common::WlanBand::FiveGhz, get_band(36));
+        assert_eq!(fidl_common::WlanBand::FiveGhz, get_band(165));
+    }
+
+    #[test]
+    fn test_get_band() {
+        assert_eq!(fidl_common::WlanBand::TwoGhz, get_band(14));
+        assert_eq!(fidl_common::WlanBand::FiveGhz, get_band(36));
+    }
+
+    #[test]
+    fn test_get_device_band_cap() {
+        let device_info = fidl_mlme::DeviceInfo {
+            sta_addr: [0; 6],
+            role: fidl_common::WlanMacRole::Client,
+            bands: vec![fake_5ghz_band_capabilities_ht_cbw(ie::ChanWidthSet::TWENTY_FORTY)],
+            driver_features: vec![],
+            qos_capable: true,
+        };
+        assert_eq!(
+            fidl_common::WlanBand::FiveGhz,
+            get_device_band_cap(&device_info, 36).unwrap().band
+        );
+    }
+
+    fn fake_client_join_cap() -> ClientCapabilities {
+        ClientCapabilities(StaCapabilities {
+            capability_info: mac::CapabilityInfo(0x1234),
+            rates: [101, 102, 103, 104].iter().cloned().map(SupportedRate).collect(),
+            ht_cap: Some(HtCapabilities {
+                ht_cap_info: ie::HtCapabilityInfo(0).with_rx_stbc(2).with_tx_stbc(false),
+                ..ie::fake_ht_capabilities()
+            }),
+            vht_cap: Some(ie::fake_vht_capabilities()),
+        })
+    }
+
+    fn fake_ap_join_cap() -> ApCapabilities {
+        ApCapabilities(StaCapabilities {
+            capability_info: mac::CapabilityInfo(0x4321),
+            // 101 + 128 turns it into a basic rate
+            rates: [101 + 128, 102, 9].iter().cloned().map(SupportedRate).collect(),
+            ht_cap: Some(HtCapabilities {
+                ht_cap_info: ie::HtCapabilityInfo(0).with_rx_stbc(1).with_tx_stbc(true),
+                ..ie::fake_ht_capabilities()
+            }),
+            vht_cap: Some(ie::fake_vht_capabilities()),
+        })
+    }
+
+    #[test]
+    fn client_intersect_with_ap() {
+        let caps = assert_variant!(
+            intersect_with_ap_as_client(&fake_client_join_cap(), &fake_ap_join_cap()),
+            Ok(caps) => caps
+        );
+        assert_eq!(
+            caps,
+            StaCapabilities {
+                capability_info: mac::CapabilityInfo(0x0220),
+                rates: [229, 102].iter().cloned().map(SupportedRate).collect(),
+                ht_cap: Some(HtCapabilities {
+                    ht_cap_info: ie::HtCapabilityInfo(0).with_rx_stbc(2).with_tx_stbc(false),
+                    ..ie::fake_ht_capabilities()
+                }),
+                ..fake_client_join_cap().0
+            }
+        )
+    }
+
+    #[test]
+    fn ap_intersect_with_remote_client() {
+        assert_eq!(
+            intersect_with_remote_client_as_ap(&fake_ap_join_cap(), &fake_client_join_cap()),
+            StaCapabilities {
+                capability_info: mac::CapabilityInfo(0x0220),
+                rates: [229, 102].iter().cloned().map(SupportedRate).collect(),
+                ht_cap: Some(HtCapabilities {
+                    ht_cap_info: ie::HtCapabilityInfo(0).with_rx_stbc(0).with_tx_stbc(true),
+                    ..ie::fake_ht_capabilities()
+                }),
+                ..fake_ap_join_cap().0
+            }
+        );
     }
 }

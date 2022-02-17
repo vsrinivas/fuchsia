@@ -819,7 +819,9 @@ mod tests {
             0, 3, // SSID id and length
             b'f', b'o', b'o', // SSID
             1, 8, // supp_rates id and length
-            0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C // supp_rates
+            0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // supp_rates
+            50, 4, // extended supported rates id and length
+            0x30, 0x48, 0x60, 0x6c // extended supported rates
         ][..]);
         #[rustfmt::skip]
         assert_eq!(&m.fake_device.wlan_queue[1].0[..], &[
@@ -834,7 +836,9 @@ mod tests {
             0, 3, // SSID id and length
             b'b', b'a', b'r', // SSID
             1, 8, // supp_rates id and length
-            0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C // supp_rates
+            0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // supp_rates
+            50, 4, // extended supported rates id and length
+            0x30, 0x48, 0x60, 0x6c // extended supported rates
         ][..]);
     }
 
@@ -887,7 +891,9 @@ mod tests {
             0, 3, // SSID id and length
             b'f', b'o', b'o', // SSID
             1, 8, // supp_rates id and length
-            0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C // supp_rates
+            0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // supp_rates
+            50, 4, // extended supported rates id and length
+            0x30, 0x48, 0x60, 0x6c // extended supported rates
         ][..]);
         #[rustfmt::skip]
         assert_eq!(&m.fake_device.wlan_queue[1].0[..], &[
@@ -902,7 +908,9 @@ mod tests {
             0, 3, // SSID id and length
             b'b', b'a', b'r', // SSID
             1, 8, // supp_rates id and length
-            0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C // supp_rates
+            0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // supp_rates
+            50, 4, // extended supported rates id and length
+            0x30, 0x48, 0x60, 0x6c // extended supported rates
         ][..]);
     }
 
@@ -1040,7 +1048,10 @@ mod tests {
                     channels: vec![6],
                     ies: vec![ 0x01, // Element ID for Supported Rates
                                0x08, // Length
-                               0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C // Supported Rates
+                               0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // Supported Rates
+                               0x32, // Element ID for Extended Supported Rates
+                               0x04, // Length
+                               0x30, 0x48, 0x60, 0x6c // Extended Supported Rates
                     ]}),
                 None; "single channel")]
     #[test_case(&[1, 2, 3, 4, 5],
@@ -1048,8 +1059,11 @@ mod tests {
                     channels: vec![1, 2, 3, 4, 5],
                     ies: vec![ 0x01, // Element ID for Supported Rates
                                0x08, // Length
-                               0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C // Supported Rates
-                ]}),
+                               0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // Supported Rates
+                               0x32, // Element ID for Extended Supported Rates
+                               0x04, // Length
+                               0x30, 0x48, 0x60, 0x6c // Extended Supported Rates
+                    ]}),
                 None; "multiple channels 2.4GHz band")]
     #[test_case(&[36, 40, 100, 108],
                 None,
@@ -1065,7 +1079,10 @@ mod tests {
                     channels: vec![1, 2, 3, 4, 5],
                     ies: vec![ 0x01, // Element ID for Supported Rates
                                0x08, // Length
-                               0x0C, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6C // Supported Rates
+                               0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // Supported Rates
+                               0x32, // Element ID for Extended Supported Rates
+                               0x04, // Length
+                               0x30, 0x48, 0x60, 0x6c // Extended Supported Rates
                     ]}),
                 Some(ExpectedDynamicActiveScanArgs {
                     channels: vec![36, 40, 100, 108],

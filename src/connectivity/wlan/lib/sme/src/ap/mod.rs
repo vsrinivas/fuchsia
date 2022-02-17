@@ -13,10 +13,7 @@ use event::*;
 use remote_client::*;
 
 use {
-    crate::{
-        capabilities::get_device_band_cap, mlme_event_name, responder::Responder, MlmeRequest,
-        MlmeSink,
-    },
+    crate::{mlme_event_name, responder::Responder, MlmeRequest, MlmeSink},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
@@ -26,6 +23,7 @@ use {
     log::{debug, error, info, warn},
     std::collections::HashMap,
     wlan_common::{
+        capabilities::get_device_band_cap,
         channel::{Cbw, Channel},
         ie::{parse_ht_capabilities, rsn::rsne::Rsne, ChanWidthSet, SupportedRate},
         mac,
@@ -875,7 +873,16 @@ mod tests {
         lazy_static::lazy_static,
         std::convert::TryFrom,
         test_case::test_case,
-        wlan_common::{assert_variant, channel::Cbw, mac::Aid, RadioConfig},
+        wlan_common::{
+            assert_variant,
+            channel::Cbw,
+            mac::Aid,
+            test_utils::fake_capabilities::{
+                fake_2ghz_band_capabilities_vht, fake_5ghz_band_capabilities,
+                fake_5ghz_band_capabilities_ht_cbw,
+            },
+            RadioConfig,
+        },
     };
 
     const AP_ADDR: MacAddr = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];

@@ -678,19 +678,14 @@ mod tests {
     use {
         super::*,
         crate::ddk_converter::build_ddk_assoc_ctx,
-        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
-        fidl_fuchsia_wlan_mlme as fidl_mlme,
         ieee80211::{Bssid, MacAddr},
-        std::{
-            convert::TryInto,
-            sync::{Arc, Mutex},
-        },
+        std::sync::{Arc, Mutex},
         wlan_common::{
-            ie::{ChanWidthSet, HtCapabilityInfo},
-            mac::FrameType,
+            capabilities::StaCapabilities,
+            ie::{self, ChanWidthSet, HtCapabilityInfo},
+            mac::{self, FrameType},
             tx_vector::HT_START_IDX,
         },
-        zerocopy::AsBytes,
     };
 
     struct MockTimerManager {
@@ -722,6 +717,11 @@ mod tests {
         [2, 4, 11, 22, 12 | BASIC_RATE_BIT, 18, 24, 36, 48, 72, 96, 108 | BASIC_RATE_BIT];
 
     fn ht_assoc_ctx() -> banjo_wlan_associnfo::WlanAssocCtx {
+        let channel = banjo_common::WlanChannel {
+            primary: 149,
+            cbw: banjo_common::ChannelBandwidth::CBW40,
+            secondary80: 0,
+        };
         let mut ht_cap = wlan_common::ie::fake_ht_capabilities();
         let mut ht_cap_info = HtCapabilityInfo(0);
         ht_cap_info.set_short_gi_40(true);
@@ -729,21 +729,13 @@ mod tests {
         ht_cap_info.set_chan_width_set(ChanWidthSet::TWENTY_FORTY);
         ht_cap.ht_cap_info = ht_cap_info;
         ht_cap.mcs_set.0 = 0xffff; // Enable MCS 0-15
-        let negotiated_capabilities = fidl_mlme::NegotiatedCapabilities {
-            channel: fidl_common::WlanChannel {
-                primary: 149,
-                cbw: fidl_common::ChannelBandwidth::Cbw40,
-                secondary80: 0,
-            },
-            capability_info: 0,
-            rates: RATES.into(),
-            wmm_param: None,
-            ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
-                bytes: ht_cap.as_bytes().try_into().unwrap(),
-            })),
+        let negotiated_capabilities = StaCapabilities {
+            capability_info: mac::CapabilityInfo(0),
+            rates: RATES.iter().map(|r| ie::SupportedRate(*r)).collect(),
+            ht_cap: Some(ht_cap),
             vht_cap: None,
         };
-        build_ddk_assoc_ctx(Bssid(TEST_MAC_ADDR), 42, negotiated_capabilities, None, None)
+        build_ddk_assoc_ctx(Bssid(TEST_MAC_ADDR), 42, channel, negotiated_capabilities, None, None)
     }
 
     #[test]

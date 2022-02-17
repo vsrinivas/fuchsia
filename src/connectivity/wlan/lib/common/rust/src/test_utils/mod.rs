@@ -9,6 +9,7 @@ use {
     futures::Future,
 };
 
+pub mod fake_capabilities;
 pub mod fake_frames;
 pub mod fake_stas;
 
