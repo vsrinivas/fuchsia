@@ -229,11 +229,6 @@ pub enum Error {
 impl Error {
     /// Returns `true` if the error was sourced by a closed channel.
     pub fn is_closed(&self) -> bool {
-        self.is_closed_impl()
-    }
-
-    #[cfg(target_os = "fuchsia")]
-    fn is_closed_impl(&self) -> bool {
         // The FIDL bindings should never report PEER_CLOSED errors via
         // ClientWrite or ClientRead; it should always be ClientChannelClosed.
         // But we keep these two checks in case old code relies on it.
@@ -246,10 +241,5 @@ impl Error {
             | Error::ServerEpitaphWrite(zx_status::Status::PEER_CLOSED) => true,
             _ => false,
         }
-    }
-
-    #[cfg(not(target_os = "fuchsia"))]
-    fn is_closed_impl(&self) -> bool {
-        false
     }
 }
