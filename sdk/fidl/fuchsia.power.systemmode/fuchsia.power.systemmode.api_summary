@@ -2,7 +2,7 @@ struct/member fuchsia.power.systemmode/ClientConfig.default_level uint64
 struct/member fuchsia.power.systemmode/ClientConfig.mode_matches vector<fuchsia.power.systemmode/ModeMatch>:0
 struct fuchsia.power.systemmode/ClientConfig
 protocol/member fuchsia.power.systemmode/ClientConfigurator.Get(fuchsia.power.clientlevel/ClientType client_type) -> (box<fuchsia.power.systemmode/ClientConfig> config)
-protocol/member fuchsia.power.systemmode/ClientConfigurator.Set(fuchsia.power.clientlevel/ClientType client_type,fuchsia.power.systemmode/ClientConfig config)
+protocol/member fuchsia.power.systemmode/ClientConfigurator.Set(fuchsia.power.clientlevel/ClientType client_type,fuchsia.power.systemmode/ClientConfig config) -> ()
 protocol fuchsia.power.systemmode/ClientConfigurator
 const fuchsia.power.systemmode/MAX_MODE_MATCHES_PER_CLIENT uint32 0
 struct/member fuchsia.power.systemmode/ModeMatch.mode fuchsia.power.systemmode/SystemMode

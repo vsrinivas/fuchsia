@@ -133,10 +133,22 @@ protocol ClientConfigurator {
     /// according to the new configuration. This reevaluation may result in a
     /// new power level being sent to the connected client.
     ///
+    /// The call returns immediately after the new config has been received and
+    /// validated. Actual system changes to be applied as a result of changing a
+    /// client's configuration will occur after the call has returned.
+    /// Therefore, any errors that occur while updating clients according to the
+    /// new system power mode are not propagated back to the caller. Instead,
+    /// client updates are applied on a "best effort" basis.
+    ///
+    /// If the provided `config` is not valid, then no changes will be applied
+    /// and the channel will be closed. Validation will fail if a given
+    /// `SystemMode` is repeated across multiple `mode_match` entries contained
+    /// by the `ClientConfig`.
+    ///
     /// + `client_type` specifies which [`ClientType`]'s [`ClientConfig`] to set
     /// + `config` is the [`ClientConfig`] that will be set for [`client_type`]
     Set(struct {
         client_type fuchsia.power.clientlevel.ClientType;
         config ClientConfig;
-    });
+    }) -> ();
 };
