@@ -5,7 +5,11 @@
 #include <dlfcn.h>
 #include <lib/fake-object/object.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
+
+#include <vector>
 
 #include <fbl/ref_ptr.h>
 
@@ -23,14 +27,17 @@ __EXPORT void* FindRealSyscall(const char* name) {
 }
 
 __EXPORT
-zx::status<zx_handle_t> fake_object_create() {
-  auto obj = fbl::MakeRefCounted<Object>();
+zx::status<zx_handle_t> fake_object_create_typed(zx_obj_type_t type) {
+  auto obj = fbl::MakeRefCounted<Object>(type);
   if (auto res = FakeHandleTable().Add(std::move(obj)); res.is_ok()) {
     return zx::success(res.value());
   } else {
     return res.take_error();
   }
 }
+
+__EXPORT
+zx::status<zx_handle_t> fake_object_create() { return fake_object_create_typed(ZX_OBJ_TYPE_NONE); }
 
 __EXPORT
 zx::status<zx_koid_t> fake_object_get_koid(zx_handle_t handle) {
@@ -247,4 +254,84 @@ zx_status_t zx_object_wait_many(zx_wait_item_t* items, size_t count, zx_time_t d
 
   // No fake handles were passed in so it's safe to call the real syscall.
   return REAL_SYSCALL(zx_object_wait_many)(items, count, deadline);
+}
+
+std::vector<zx_handle_disposition_t> FixHandleDisposition(zx_handle_disposition_t* handles,
+                                                          uint32_t num_handles) {
+  // Fake objects all have type VMO so they will fail any write_etc checks
+  // around type. We can work around this by modifying the disposition array to
+  // not check type, then update the returned results so they look like the
+  // client would expect. We need to copy this because the client may intend to
+  // check that the types and results match in tests.
+  std::vector<zx_handle_disposition_t> filtered_handles;
+  for (uint32_t i = 0; i < num_handles; i++) {
+    filtered_handles.push_back(handles[i]);
+    if (fake_object::HandleTable::IsValidFakeHandle(handles[i].handle)) {
+      filtered_handles[i].type = ZX_OBJ_TYPE_NONE;
+    }
+  }
+  return filtered_handles;
+}
+
+// Fake handles coming from the other side of a channel write will be of type ZX_OBJ_TYPE_VMO
+// and must be adjusted back into their correct fake type before being handed to the caller.
+void FixIncomingHandleTypes(zx_handle_info_t* handles, uint32_t num_handles) {
+  for (uint32_t i = 0; i < num_handles; i++) {
+    if (fake_object::HandleTable::IsValidFakeHandle(handles[i].handle)) {
+      auto object = fake_object::FakeHandleTable().Get(handles[i].handle);
+      handles[i].type = static_cast<zx_obj_type_t>(object->type());
+    }
+  }
+}
+
+__EXPORT
+zx_status_t zx_channel_write_etc(zx_handle_t handle, uint32_t options, const void* bytes,
+                                 uint32_t num_bytes, zx_handle_disposition_t* handles,
+                                 uint32_t num_handles) {
+  auto filtered_handles = FixHandleDisposition(handles, num_handles);
+  zx_status_t status = REAL_SYSCALL(zx_channel_write_etc)(handle, options, bytes, num_bytes,
+                                                          filtered_handles.data(), num_handles);
+  // Copy the results back from the real syscall's results since the client
+  // still expects real results from valid handles.
+  for (uint32_t i = 0; i < num_handles; i++) {
+    handles[i].result = filtered_handles[i].result;
+  }
+  return status;
+}
+
+__EXPORT
+zx_status_t zx_channel_call_etc(zx_handle_t handle, uint32_t options, zx_time_t deadline,
+                                zx_channel_call_etc_args_t* args, uint32_t* actual_bytes,
+                                uint32_t* actual_handles) {
+  zx_channel_call_etc_args_t real_args = *args;
+  auto filtered_handles = FixHandleDisposition(real_args.wr_handles, real_args.wr_num_handles);
+  real_args.wr_handles = filtered_handles.data();
+  zx_status_t status = REAL_SYSCALL(zx_channel_call_etc)(handle, options, deadline, &real_args,
+                                                         actual_bytes, actual_handles);
+  // Copy the results back from the real syscall's results since the client
+  // still expects real results from valid handles.
+  for (uint32_t i = 0; i < real_args.wr_num_handles; i++) {
+    args->wr_handles[i].result = real_args.wr_handles[i].result;
+  }
+
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  FixIncomingHandleTypes(args->rd_handles, args->rd_num_handles);
+  return status;
+}
+
+__EXPORT
+zx_status_t zx_channel_read_etc(zx_handle_t handle, uint32_t options, void* bytes,
+                                zx_handle_info_t* handles, uint32_t num_bytes, uint32_t num_handles,
+                                uint32_t* actual_bytes, uint32_t* actual_handles) {
+  zx_status_t status = REAL_SYSCALL(zx_channel_read_etc)(handle, options, bytes, handles, num_bytes,
+                                                         num_handles, actual_bytes, actual_handles);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  FixIncomingHandleTypes(handles, std::min(num_handles, *actual_handles));
+  return status;
 }

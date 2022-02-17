@@ -44,7 +44,6 @@ class Resource final : public fake_object::Object {
   zx_status_t get_info(zx_handle_t handle, uint32_t topic, void* buffer, size_t buffer_size,
                        size_t* actual_count, size_t* avail_count) override;
 
-  fake_object::HandleType type() const final { return fake_object::HandleType::RESOURCE; }
   zx_paddr_t base() const { return base_; }
   size_t size() const { return size_; }
   zx_rsrc_kind_t kind() const { return kind_; }
@@ -59,7 +58,11 @@ class Resource final : public fake_object::Object {
 
   Resource(zx_paddr_t base, size_t size, zx_rsrc_kind_t kind, zx_rsrc_flags_t flags,
            const char* name, size_t name_len)
-      : base_(base), size_(size), kind_(kind), is_exclusive_(flags & ZX_RSRC_FLAG_EXCLUSIVE) {
+      : fake_object::Object(ZX_OBJ_TYPE_RESOURCE),
+        base_(base),
+        size_(size),
+        kind_(kind),
+        is_exclusive_(flags & ZX_RSRC_FLAG_EXCLUSIVE) {
     ZX_ASSERT_MSG(kind_ != ZX_RSRC_KIND_IRQ && kind_ != ZX_RSRC_KIND_SMC,
                   "fake-resource: unsupported kind: %u\n", kind);
     memcpy(name_.data(), name, name_len);
@@ -76,7 +79,7 @@ bool exclusive_region_overlaps(zx_rsrc_kind_t kind, zx_paddr_t new_rsrc_base,
   bool overlaps = false;
   zx_paddr_t new_rsrc_end = new_rsrc_base + new_rsrc_size;
   fake_object::FakeHandleTable().ForEach(
-      fake_object::HandleType::RESOURCE, [&](fake_object::Object* obj) -> bool {
+      ZX_OBJ_TYPE_RESOURCE, [&](fake_object::Object* obj) -> bool {
         auto* rsrc = static_cast<Resource*>(obj);
         // In the case of exclusive resources we need to ensure the new resource does not
         // overlap with existing exclusive ranges.

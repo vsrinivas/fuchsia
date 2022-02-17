@@ -24,19 +24,18 @@ class FakeMsiTests : public zxtest::Test {};
 // off of it the dtor should assert.
 TEST_F(FakeMsiTests, CleanupTest) {
   zx::interrupt interrupt;
-  ASSERT_DEATH([&interrupt]() {
-#if __has_feature(address_sanitizer) || __has_feature(leak_sanitizer)
-    // Suppress the leaks that come from the fact that the MSI dtor doesn't
-    // finish.
-    __lsan::ScopedDisabler suppress;
-#endif
+  fake_object::Msi::disable_ids_in_use_assert(true);
+  uint64_t out_of_order_count = fake_object::Msi::out_of_scope_while_holding_reservations_count();
+  {
     zx::msi msi;
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, /*options=*/0, &vmo));
     ASSERT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED_DEVICE));
     ASSERT_OK(zx::msi::allocate(*zx::unowned_resource(), 2, &msi));
     ASSERT_OK(zx::msi::create(msi, /*options=*/0, 0, vmo, /*vmo_offset=*/0, &interrupt));
-  });
+  };
+  EXPECT_EQ(out_of_order_count + 1,
+            fake_object::Msi::out_of_scope_while_holding_reservations_count());
 }
 
 TEST_F(FakeMsiTests, CoreTest) {

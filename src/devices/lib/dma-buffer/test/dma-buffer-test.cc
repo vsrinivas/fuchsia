@@ -30,8 +30,7 @@ static bool unpinned = false;
 
 class VmoWrapper : public fake_object::Object {
  public:
-  explicit VmoWrapper(zx::vmo vmo) : vmo_(std::move(vmo)) {}
-  virtual fake_object::HandleType type() const final { return fake_object::HandleType::CUSTOM; }
+  explicit VmoWrapper(zx::vmo vmo) : fake_object::Object(ZX_OBJ_TYPE_VMO), vmo_(std::move(vmo)) {}
   zx::unowned_vmo vmo() { return vmo_.borrow(); }
   VmoMetadata& metadata() { return metadata_; }
 
@@ -158,7 +157,7 @@ TEST(DmaBufferTests, InitWithCacheEnabled) {
       ZX_ASSERT(buffer->phys() == vmo->metadata().start_phys);
       return false;
     };
-    fake_object::FakeHandleTable().ForEach(fake_object::HandleType::CUSTOM, test_f);
+    fake_object::FakeHandleTable().ForEach(ZX_OBJ_TYPE_VMO, test_f);
   }
   ASSERT_TRUE(unpinned);
 }
@@ -179,7 +178,7 @@ TEST(DmaBufferTests, InitWithCacheDisabled) {
       ZX_ASSERT(buffer->phys()[0] == vmo->metadata().start_phys);
       return false;
     };
-    fake_object::FakeHandleTable().ForEach(fake_object::HandleType::CUSTOM, test_f);
+    fake_object::FakeHandleTable().ForEach(ZX_OBJ_TYPE_VMO, test_f);
   }
   ASSERT_TRUE(unpinned);
 }
@@ -201,7 +200,7 @@ TEST(DmaBufferTests, InitCachedMultiPageBuffer) {
       ZX_ASSERT(buffer->phys() == vmo->metadata().start_phys);
       return false;
     };
-    fake_object::FakeHandleTable().ForEach(fake_object::HandleType::CUSTOM, test_f);
+    fake_object::FakeHandleTable().ForEach(ZX_OBJ_TYPE_VMO, test_f);
   }
   ASSERT_TRUE(unpinned);
 }

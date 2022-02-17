@@ -12,9 +12,10 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <vector>
+#include <unordered_map>
 
 #include <fbl/auto_lock.h>
+#include <fbl/canary.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
@@ -31,17 +32,10 @@
 
 namespace fake_object {
 
-enum class HandleType : uint32_t {
-  BASE,  // A non-derived object, used for tests and assertions.
-  BTI,
-  MSI,
-  PMT,
-  RESOURCE,
-  CUSTOM,  // For local tests that are not providing a fake-* lib
-};
-
 class Object : public fbl::RefCounted<Object> {
  public:
+  Object() = delete;
+  explicit Object(zx_obj_type_t type) : type_(type) {}
   // For each object-related syscall we stub out a fake-specific version that
   // can be implemented within the derived fake objects. syscall symbols defined
   // in the fake-object source will route to the fake impl or real impl
@@ -100,7 +94,10 @@ class Object : public fbl::RefCounted<Object> {
 
   // For the purposes of tests we only need to ensure the koid is unique to the object.
   zx_koid_t get_koid() const { return reinterpret_cast<zx_koid_t>(this); }
-  virtual HandleType type() const { return HandleType::BASE; }
+  zx_obj_type_t type() const { return type_; }
+
+ private:
+  zx_obj_type_t type_;
 };
 
 class HandleTable {
@@ -113,19 +110,9 @@ class HandleTable {
   HandleTable(HandleTable&&) = delete;
   HandleTable& operator=(HandleTable&&) = delete;
 
-  // A valid fake handle does not have the reserved bits of a real handle set, and
-  // has a non-zero value after shifting. This ensures that they will not overlap
-  // with real handles, and that ZX_HANDLE_INVALID is not a valid fake handle.
-  static bool IsValidFakeHandle(zx_handle_t handle) {
-    return ((handle & ZX_HANDLE_FIXED_BITS_MASK) == 0) && (handle & ~ZX_HANDLE_FIXED_BITS_MASK);
-  }
+  static bool IsValidFakeHandle(zx_handle_t handle);
 
-  __EXPORT
-  zx::status<fbl::RefPtr<Object>> Get(zx_handle_t handle) __TA_EXCLUDES(lock_) {
-    fbl::AutoLock guard(&lock_);
-    return GetLocked(handle);
-  }
-
+  zx::status<fbl::RefPtr<Object>> Get(zx_handle_t handle) __TA_EXCLUDES(lock_);
   zx::status<> Remove(zx_handle_t handle) __TA_EXCLUDES(lock_);
   zx::status<zx_handle_t> Add(fbl::RefPtr<Object> obj) __TA_EXCLUDES(lock_);
   void Clear() __TA_EXCLUDES(lock_);
@@ -136,11 +123,11 @@ class HandleTable {
   // |cb| must NOT attempt to acquire the lock, so this method is not suitable
   // for internal methods.
   template <typename ObjectCallback>
-  void ForEach(HandleType type, const ObjectCallback cb) __TA_EXCLUDES(lock_) {
+  void ForEach(zx_obj_type_t type, const ObjectCallback cb) __TA_EXCLUDES(lock_) {
     fbl::AutoLock lock(&lock_);
-    for (const auto& obj : handles_) {
-      if (obj && obj->type() == type) {
-        if (!std::forward<const ObjectCallback>(cb)(obj.get())) {
+    for (const auto& e : handles_) {
+      if (e.second->type() == type) {
+        if (!std::forward<const ObjectCallback>(cb)(e.second.get())) {
           break;
         }
       }
@@ -152,56 +139,23 @@ class HandleTable {
   // so to determine the occupied size we have to verify each element.
   size_t size() __TA_EXCLUDES(lock_) {
     fbl::AutoLock lock(&lock_);
-    return size_locked();
+    return handles_.size();
   }
 
  private:
-  __EXPORT
-  zx::status<fbl::RefPtr<Object>> GetLocked(zx_handle_t handle) __TA_REQUIRES(lock_);
-
-  size_t size_locked() __TA_REQUIRES(lock_) {
-    size_t s = 0;
-    for (auto& h : handles_) {
-      if (h) {
-        s++;
-      }
-    }
-    return s;
-  }
-
-  // The first |ZX_HANDLE_FIXED_BITS_MASK| bits of real handle values are
-  // required to be |1|. This requirement is defined both in the public handle
-  // documentation and in ProcessDispatcher's implementation.
-  static constexpr size_t FakeHandleShiftBitsCount() {
-    size_t bits = 0;
-    uint32_t val = ZX_HANDLE_FIXED_BITS_MASK;
-    while (val) {
-      val >>= 1;
-      bits++;
-    }
-    return bits;
-  }
-
-  // Fake handle values start at (1 << 2) which maps to 0 in the handle table.
-  static zx::status<size_t> HandleToIndex(zx_handle_t handle) {
-    if (!IsValidFakeHandle(handle)) {
-      return zx::error(ZX_ERR_BAD_HANDLE);
-    }
-    return zx::ok((handle >> FakeHandleShiftBitsCount()) - 1);
-  }
-
-  static zx_handle_t IndexToHandle(size_t idx) {
-    return static_cast<zx_handle_t>((idx + 1) << FakeHandleShiftBitsCount());
-  }
+  static constexpr const char kFakeObjectPropName[ZX_MAX_NAME_LEN] = "FAKEOBJECT";
 
   fbl::Mutex lock_;
-  std::vector<fbl::RefPtr<Object>> handles_ __TA_GUARDED(lock_);
+  std::unordered_map<zx_handle_t, fbl::RefPtr<Object>> handles_ __TA_GUARDED(lock_);
+  fbl::Canary<fbl::magic("FAKE")> canary_;
 };
 
+// Singleton accessor for tests and any derived fake object type.
 HandleTable& FakeHandleTable();
 
 // Creates a base object for testing handle methods.
 zx::status<zx_handle_t> fake_object_create();
+zx::status<zx_handle_t> fake_object_create_typed(zx_obj_type_t type);
 zx::status<zx_koid_t> fake_object_get_koid(zx_handle_t);
 
 void* FindRealSyscall(const char* name);
