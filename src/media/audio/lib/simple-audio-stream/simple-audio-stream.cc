@@ -230,8 +230,9 @@ void SimpleAudioStream::GetChannel(GetChannelRequestView request,
   // We keep alive all channels in stream_channels_ (protected by channel_lock_).
   stream_channels_.push_back(stream_channel);
   fidl::OnUnboundFn<fidl::WireServer<audio_fidl::StreamConfig>> on_unbound =
-      [this, stream_channel](fidl::WireServer<audio_fidl::StreamConfig>*, fidl::UnbindInfo,
+      [this, stream_channel](fidl::WireServer<audio_fidl::StreamConfig>*, fidl::UnbindInfo info,
                              fidl::ServerEnd<fuchsia_hardware_audio::StreamConfig>) {
+        zxlogf(INFO, "StreamConf channel closing: %s", info.FormatDescription().c_str());
         ScopedToken t(domain_token());
         fbl::AutoLock channel_lock(&channel_lock_);
         this->DeactivateStreamChannel(stream_channel.get());
@@ -403,8 +404,9 @@ void SimpleAudioStream::CreateRingBuffer(
     rb_channel_ = Channel::Create<Channel>();
 
     fidl::OnUnboundFn<fidl::WireServer<audio_fidl::RingBuffer>> on_unbound =
-        [this](fidl::WireServer<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
+        [this](fidl::WireServer<audio_fidl::RingBuffer>*, fidl::UnbindInfo info,
                fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer>) {
+          zxlogf(INFO, "Ring buffer channel closing: %s", info.FormatDescription().c_str());
           ScopedToken t(domain_token());
           fbl::AutoLock channel_lock(&channel_lock_);
           this->DeactivateRingBufferChannel(rb_channel_.get());
