@@ -46,6 +46,31 @@ class BlobEntry:
     size: Optional[int]
     source_path: Optional[FilePath]
 
+    def compare_with(
+            self,
+            other: "BlobEntry",
+            allow_source_path_differences=False) -> List[str]:
+        """Compare this BlobEntry with the other, reporting any differences.
+
+        If 'allow_source_path_differences' is True, then the source_paths of
+        blobs are not compared, just the path, size, and merkle.
+        """
+        errors = []
+        if self.size != other.size:
+            errors.append(
+                f"blob has a different size ({self.size} vs {other.size}) for: {self.path}"
+            )
+        elif self.merkle != other.merkle:
+            errors.append(
+                f"blob has a different merkle ({self.merkle} vs {other.merkle}) for: {self.path}"
+            )
+        elif not allow_source_path_differences:
+            if self.source_path != other.source_path:
+                errors.append(
+                    f"blob has a different source ({self.source_path} vs {other.source_path}) for: {self.path}"
+                )
+        return errors
+
 
 @dataclass
 class PackageManifest:
@@ -56,3 +81,45 @@ class PackageManifest:
 
     def blobs_by_path(self) -> Dict[FilePath, BlobEntry]:
         return {blob.path: blob for blob in self.blobs}
+
+    def compare_with(
+            self,
+            other: "PackageManifest",
+            allow_source_path_differences=False) -> List[str]:
+        """Compare this package manifest with the other, reporting any
+        differences.
+
+        If 'allow_source_path_differences' is True, then the source_paths of
+        blobs are not compared, just the path, size, and merkle.
+        """
+        errors = []
+        if self.package.name != other.package.name:
+            errors.append(
+                f"package publishing names differ: {self.package.name} vs. {other.package.name}"
+            )
+
+        self_blobs_by_path = self.blobs_by_path()
+        other_blobs_by_path = other.blobs_by_path()
+
+        missing_paths = set(self_blobs_by_path.keys()).difference(
+            other_blobs_by_path.keys())
+        extra_paths = set(other_blobs_by_path.keys()).difference(
+            self_blobs_by_path.keys())
+        common_paths = set(self_blobs_by_path.keys()).intersection(
+            other_blobs_by_path.keys())
+
+        for missing_path in missing_paths:
+            errors.append(f"missing a blob for path: {missing_path}")
+
+        for extra_path in extra_paths:
+            errors.append(f"extra blob found at path: {extra_path}")
+
+        for common_path in sorted([str(path) for path in common_paths]):
+            self_blob = self_blobs_by_path[common_path]
+            other_blob = other_blobs_by_path[common_path]
+
+            errors.extend(
+                self_blob.compare_with(
+                    other_blob, allow_source_path_differences))
+
+        return errors

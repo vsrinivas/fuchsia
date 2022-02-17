@@ -5,12 +5,12 @@
 
 import argparse
 import hashlib
-import json
-from struct import pack
 import sys
-from typing import Dict, Iterable, List, Set, TypeVar, Union
+from typing import Dict, Iterable, List, Set, TypeVar
 
-from assembly import FileEntry, FilePath, ImageAssemblyConfig
+from assembly import ImageAssemblyConfig, PackageManifest
+from assembly import FileEntry, FilePath
+from serialization import json_load
 
 PackageName = str
 FileHash = str
@@ -18,39 +18,29 @@ T = TypeVar('T')
 
 
 def compare_pkg_sets(
-        setname: str, first: Iterable[FilePath],
-        second: Iterable[FilePath]) -> List[str]:
+        first: Iterable[FilePath], second: Iterable[FilePath],
+        setname: str) -> List[str]:
     # If the paths are the same, then we can just stop.
     if first == second:
         return []
-    first_map = build_package_name_contents_map(first)
-    second_map = build_package_name_contents_map(second)
+    first_map = build_package_manifest_map(first)
+    second_map = build_package_manifest_map(second)
+
     if first_map == second_map:
         return []
-    return compare_file_hash_maps(
-        first_map, second_map, "{} package".format(setname))
+
+    return compare_packages(first_map, second_map, setname)
 
 
-def compare_file_entry_sets(
-        setname: str, first: Iterable[FileEntry],
-        second: Iterable[FileEntry]) -> List[str]:
-    first_map = build_file_entry_source_hash_map(first)
-    second_map = build_file_entry_source_hash_map(second)
-    if first_map == second_map:
-        return []
-    return compare_file_hash_maps(
-        first_map, second_map, "{} file entry".format(setname))
-
-
-def build_package_name_contents_map(
-        package_paths: Iterable[FilePath]) -> Dict[PackageName, FileHash]:
-    result: Dict[PackageName, FileHash] = {}
+def build_package_manifest_map(
+        package_paths: Iterable[FilePath]) -> Dict[FilePath, PackageManifest]:
+    result: Dict[FilePath, PackageManifest] = {}
     paths_by_name: Dict[PackageName, FilePath] = {}
 
     for path in package_paths:
         with open(path, 'rb') as file:
-            manifest = json.load(file)
-            package_name = manifest["package"]["name"]
+            manifest = json_load(PackageManifest, file)
+            package_name = manifest.package.name
 
             if package_name in paths_by_name:
                 raise ValueError(
@@ -58,23 +48,57 @@ def build_package_name_contents_map(
                         package_name, path, paths_by_name[package_name]))
             paths_by_name[package_name] = path
 
-            merkle = get_package_merkle_from_manifest_json(manifest)
-            if merkle is not None:
-                result[package_name] = merkle
-            else:
-                raise ValueError(
-                    "Could not find a meta.far entry for package manifest: {}".
-                    format(path))
+            result[path] = manifest
 
     return result
 
 
-def get_package_merkle_from_manifest_json(manifest: Dict) -> Union[str, None]:
-    for blob_entry in manifest["blobs"]:
-        if blob_entry["path"] == "meta/":
-            return blob_entry["merkle"]
-    # Not found, return 'None'
-    return None
+def compare_packages(
+        first: Dict[FilePath, PackageManifest],
+        second: Dict[FilePath, PackageManifest], setname: str) -> List[str]:
+    errors: List[str] = []
+
+    first_by_name = {
+        manifest.package.name: (path, manifest)
+        for path, manifest in first.items()
+    }
+    second_by_name = {
+        manifest.package.name: (path, manifest)
+        for path, manifest in second.items()
+    }
+
+    for missing in set(first_by_name.keys()).difference(second_by_name.keys()):
+        errors.append(f"Missing package {setname}): {missing}")
+
+    for extra in set(second_by_name.keys()).difference(first_by_name.keys()):
+        errors.append(f"Extra package ({setname}): {extra}")
+
+    for name in sorted(set(first_by_name.keys()).intersection(
+            second_by_name.keys())):
+        first_path, first_manifest = first_by_name[name]
+        second_path, second_manifest = second_by_name[name]
+
+        pkg_compare_errors = first_manifest.compare_with(
+            second_manifest, allow_source_path_differences=True)
+        if pkg_compare_errors:
+            errors.extend(
+                [
+                    f"package error ({setname}): {name} {error}"
+                    for error in pkg_compare_errors
+                ])
+
+    return errors
+
+
+def compare_file_entry_sets(
+        first: Iterable[FileEntry], second: Iterable[FileEntry],
+        setname: str) -> List[str]:
+    first_map = build_file_entry_source_hash_map(first)
+    second_map = build_file_entry_source_hash_map(second)
+    if first_map == second_map:
+        return []
+    return compare_file_hash_maps(
+        first_map, second_map, "{} file entry".format(setname))
 
 
 def build_file_entry_source_hash_map(
@@ -94,13 +118,12 @@ def hash_file(path: FilePath) -> FileHash:
 
 
 def compare_file_hash_maps(
-        first_map: Dict[Union[PackageName, FilePath], FileHash],
-        second_map: Dict[Union[PackageName, FilePath],
-                         FileHash], item_type: str) -> List[str]:
+        first_map: Dict[FilePath, FileHash],
+        second_map: Dict[FilePath, FileHash], item_type: str) -> List[str]:
     errors: List[str] = []
     for (name, file_hash) in sorted(first_map.items()):
         if name not in second_map:
-            errors.append("{} {} missing from second".format(item_type, name))
+            errors.append(f"missing from second ({item_type}): {name}")
             continue
 
         # Use pop() so only items in second, but not in first, remain after
@@ -108,12 +131,12 @@ def compare_file_hash_maps(
         second_file_hash = second_map.pop(name)
         if file_hash != second_file_hash:
             errors.append(
-                "{} hash mismatch for {}: {} vs {}".format(
-                    item_type, name, file_hash, second_file_hash))
+                f"hash mismatch for {item_type} {name}: {file_hash} vs {second_file_hash}"
+            )
 
     if second_map:
         for name in second_map.keys():
-            errors.append("{} {} missing from first".format(item_type, name))
+            errors.append(f"missing from first ({item_type}): {name}")
 
     return errors
 
@@ -123,12 +146,12 @@ def compare_sets(item_type: str, first: Set[T], second: Set[T]) -> List[str]:
 
     errors.extend(
         [
-            "{} {} missing from first".format(item_type, item)
+            f"missing from first {item_type}: {item}"
             for item in first.difference(second)
         ])
     errors.extend(
         [
-            "{} {} missing from second".format(item_type, item)
+            f"missing from second ({item_type}): {item}"
             for item in second.difference(first)
         ])
 
@@ -159,20 +182,25 @@ def main() -> int:
     second = ImageAssemblyConfig.load(args.second)
 
     errors = []
-    errors.extend(compare_pkg_sets("base", first.base, second.base))
-    errors.extend(compare_pkg_sets("cache", first.cache, second.cache))
-    errors.extend(compare_pkg_sets("system", first.system, second.system))
+    errors.extend(compare_pkg_sets(first.base, second.base, "base"))
+    errors.extend(compare_pkg_sets(first.cache, second.cache, "cache"))
+    errors.extend(compare_pkg_sets(first.system, second.system, "system"))
 
     errors.extend(
         compare_file_entry_sets(
-            "bootfs", first.bootfs_files, second.bootfs_files))
+            first.bootfs_files, second.bootfs_files, "bootfs"))
 
     errors.extend(compare_sets("boot arg", first.boot_args, second.boot_args))
 
-    if hash_file(first.kernel.path) != hash_file(second.kernel.path):
-        errors.append(
-            "kernels are different: {} and {}".format(
-                first.kernel.path, second.kernel.path))
+    if first.kernel.path and not second.kernel.path:
+        errors.append("second is missing a kernel")
+    elif not first.kernel.path and second.kernel.path:
+        errors.append("first is missing a kernel")
+    elif first.kernel.path and second.kernel.path:
+        if hash_file(first.kernel.path) != hash_file(second.kernel.path):
+            errors.append(
+                "kernels are different: {} and {}".format(
+                    first.kernel.path, second.kernel.path))
 
     errors.extend(
         compare_sets("kernel arg", first.kernel.args, second.kernel.args))
@@ -183,6 +211,9 @@ def main() -> int:
                 first.kernel.clock_backstop, second.kernel.clock_backstop))
 
     if errors:
+        print('Errors found comparing image assembly configs:')
+        print(f'  first: {args.first.name}')
+        print(f' second: {args.second.name}')
         for error in errors:
             print(error, file=sys.stderr)
     else:

@@ -28,6 +28,7 @@ python_binary("compare_image_assembly_configs") {
   deps = [
     "//build/python/modules/assembly",
     "//build/python/modules/depfile",
+    "//build/python/modules/serialization",
   ]
 }
 
