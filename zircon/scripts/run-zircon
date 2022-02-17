@@ -384,10 +384,9 @@ case $ARCH in
           # Ask for all of the features TCG emulates
           ARGS+=" -machine virtualization=true -cpu max"
         fi
-        # Ask for a specific virt machine version.
         # TODO(fxbug.dev/54317) add support for high PCIe aperture
-        # Can switch to plain 'virt' once this is fixed.
-        ARGS+=" -machine virt-2.12"
+        # highmem=off disables the high PCIe aperture
+        ARGS+=" -machine virt,highmem=off"
         # append a gic version to the machine specifier
         if [[ $GIC != 0 ]]; then
             ARGS+=",gic-version=${GIC}"
