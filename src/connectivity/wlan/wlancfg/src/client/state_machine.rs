@@ -5,17 +5,16 @@
 use {
     crate::{
         client::{
-            connection_quality::{SignalData, EWMA_SMOOTHING_FACTOR},
+            connection_quality::{BssQualityData, SignalData, EWMA_SMOOTHING_FACTOR},
             network_selection, sme_credential_from_policy, types,
         },
-        config_management::SavedNetworksManagerApi,
+        config_management::{PastConnectionList, SavedNetworksManagerApi},
         telemetry::{DisconnectInfo, TelemetryEvent, TelemetrySender},
         util::{
             listener::{
                 ClientListenerMessageSender, ClientNetworkState, ClientStateUpdate,
                 Message::NotifyListeners,
             },
-            pseudo_energy::EwmaPseudoDecibel,
             state_machine::{self, ExitReason, IntoStateExt},
         },
     },
@@ -194,13 +193,12 @@ struct CommonStateOptions {
 }
 
 /// Data that is periodically gathered for determining whether to roam
-#[derive(Debug, PartialEq)]
 pub struct PeriodicConnectionStats {
     /// ID and BSSID of the current connection, to exclude it when comparing available networks.
     pub id: types::NetworkIdentifier,
     /// Iface ID that the connection is on.
     pub iface_id: u16,
-    pub ewma_rssi: EwmaPseudoDecibel,
+    pub quality_data: BssQualityData,
 }
 
 pub type ConnectionStatsSender = mpsc::UnboundedSender<PeriodicConnectionStats>;
@@ -684,6 +682,15 @@ async fn connected_state(
         options.latest_ap_state.snr_db,
         EWMA_SMOOTHING_FACTOR,
     );
+    let bssid = options.latest_ap_state.bssid;
+    let past_connections = common_options
+        .saved_networks_manager
+        .get_past_connections(
+            &options.currently_fulfilled_request.target.network,
+            &options.currently_fulfilled_request.target.credential,
+            &bssid,
+        )
+        .await;
 
     loop {
         select! {
@@ -735,6 +742,8 @@ async fn connected_state(
                                 current_connection.network.clone(),
                                 &mut signal_data,
                                 ind,
+                                options.latest_ap_state.channel,
+                                past_connections.clone(),
                             ).await;
                             false
                         }
@@ -752,7 +761,7 @@ async fn connected_state(
                         common_options.saved_networks_manager.record_disconnect(
                             &options.currently_fulfilled_request.target.network.clone().into(),
                             &options.currently_fulfilled_request.target.credential,
-                            options.latest_ap_state.bssid,
+                            bssid,
                             uptime,
                             curr_time.into_zx(),
                         ).await;
@@ -861,10 +870,18 @@ async fn handle_connection_stats(
     id: types::NetworkIdentifier,
     signal_data: &mut SignalData,
     ind: fidl_internal::SignalReportIndication,
+    channel: types::WlanChan,
+    past_connections_list: PastConnectionList,
 ) {
     signal_data.update_with_new_measurement(ind.rssi_dbm, ind.snr_db);
-    let connection_stats =
-        PeriodicConnectionStats { id, iface_id, ewma_rssi: signal_data.ewma_rssi.clone() };
+    let quality_data = BssQualityData {
+        signal_data: signal_data.clone(),
+        channel,
+        // Phy rates are not available yet. Use the actual values here once they are available.
+        phy_rates: (0, 0),
+        past_connections_list,
+    };
+    let connection_stats = PeriodicConnectionStats { id, iface_id, quality_data };
     stats_sender.unbounded_send(connection_stats).unwrap_or_else(|e| {
         error!("Failed to send periodic connection stats from the connected state: {}", e);
     });
@@ -886,9 +903,9 @@ mod tests {
             util::{
                 listener,
                 testing::{
-                    create_inspect_persistence_channel, create_mock_cobalt_sender,
-                    create_mock_cobalt_sender_and_receiver, create_wlan_hasher,
-                    generate_disconnect_info, poll_sme_req,
+                    create_fake_connection_data, create_inspect_persistence_channel,
+                    create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
+                    create_wlan_hasher, generate_disconnect_info, poll_sme_req,
                     validate_sme_scan_request_and_send_results, FakeSavedNetworksManager,
                 },
             },
@@ -3755,8 +3772,17 @@ mod tests {
         let init_rssi = -40;
         let init_snr = 30;
         let bss_description = random_bss_description!(Wpa2, ssid: network_ssid.clone(), rssi_dbm: init_rssi, snr_db: init_snr);
+        // Add a PastConnectionData for the connected network to be send in BSS quality data.
+        let mut past_connections = PastConnectionList::new();
+        past_connections
+            .add(create_fake_connection_data(bss_description.bssid, zx::Time::INFINITE));
+        let saved_networks_manager =
+            FakeSavedNetworksManager::new_with_past_connections_response(past_connections.clone());
+        test_values.common_options.saved_networks_manager = Arc::new(saved_networks_manager);
+
+        // Set up the state machine, starting at the connected state.
         let (initial_state, connect_txn_stream) =
-            connected_state_setup(test_values.common_options, bss_description);
+            connected_state_setup(test_values.common_options, bss_description.clone());
         let connect_txn_handle = connect_txn_stream.control_handle();
         let fut = run_state_machine(initial_state);
         pin_mut!(fut);
@@ -3765,7 +3791,7 @@ mod tests {
 
         // Send the first signal report from SME
         let rssi_1 = -50;
-        let snr_1 = 28;
+        let snr_1 = 25;
         let mut fidl_signal_report =
             fidl_internal::SignalReportIndication { rssi_dbm: rssi_1, snr_db: snr_1 };
         connect_txn_handle
@@ -3774,11 +3800,10 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // Verify telemetry event for signal report data then RSSI data.
-        let rssi_velocity_1 = assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::OnSignalReport {ind, rssi_velocity})) => {
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::OnSignalReport {ind, rssi_velocity})) => {
             assert_eq!(ind, fidl_signal_report);
             // verify that RSSI velocity is negative since the signal report RSSI is lower.
             assert_lt!(rssi_velocity, 0);
-            rssi_velocity
         });
 
         // Do a quick check that state machine does not exist and there's no disconnect to SME
@@ -3797,10 +3822,20 @@ mod tests {
         // Test setup always use iface ID 1.
         assert_eq!(stats.iface_id, 1);
         assert_eq!(stats.id, id);
-        // EWMA RSSI should be between the initial RSSI and the newest RSSI
-        let ewma_rssi_1 = stats.ewma_rssi;
+        // EWMA RSSI and SNR should be between the initial and the newest values.
+        let ewma_rssi_1 = stats.quality_data.signal_data.ewma_rssi;
         assert_lt!(ewma_rssi_1.get(), init_rssi);
         assert_gt!(ewma_rssi_1.get(), rssi_1);
+        let ewma_snr_1 = stats.quality_data.signal_data.ewma_snr;
+        assert_lt!(ewma_snr_1.get(), init_snr);
+        assert_gt!(ewma_snr_1.get(), snr_1);
+        // Check that RSSI velocity is negative.
+        let rssi_velocity_1 = stats.quality_data.signal_data.rssi_velocity;
+        assert_lt!(rssi_velocity_1, 0);
+        // Check that the BssQualityData includes the past connection data.
+        assert_eq!(stats.quality_data.past_connections_list, past_connections.clone());
+        // Check that the channel is included.
+        assert_eq!(stats.quality_data.channel, bss_description.channel);
 
         // Send a second signal report with higher RSSI and SNR than the previous reports.
         let rssi_1 = -30;
@@ -3829,7 +3864,15 @@ mod tests {
             .expect("next connection stats is missing");
         assert_eq!(stats.iface_id, 1);
         assert_eq!(stats.id, id);
-        assert_gt!(stats.ewma_rssi.get(), ewma_rssi_1.get());
+        // Check that EWMA RSSI and SNR values are greater than the previous values.
+        assert_gt!(stats.quality_data.signal_data.ewma_rssi.get(), ewma_rssi_1.get());
+        assert_gt!(stats.quality_data.signal_data.ewma_snr.get(), ewma_snr_1.get());
+        // Check that RSSI velocity is greater than the previous velocity.
+        assert_gt!(stats.quality_data.signal_data.rssi_velocity, rssi_velocity_1);
+        // Check that the BssQualityData includes the past connection data.
+        assert_eq!(stats.quality_data.past_connections_list, past_connections);
+        // Check that the channel is included.
+        assert_eq!(stats.quality_data.channel, bss_description.channel);
     }
 
     #[fuchsia::test]

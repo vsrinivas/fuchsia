@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::client::{
-        connection_quality::{PastConnectionData, SignalData},
-        types as client_types,
-    },
+    crate::client::{connection_quality::SignalData, types as client_types},
     arbitrary::Arbitrary,
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon as zx,
     std::{
@@ -72,8 +69,7 @@ pub struct PerformanceStats {
     pub failure_list: ConnectFailureList,
     /// List of recent disconnects where the connect duration was short.
     pub disconnect_list: DisconnectList,
-    /// Maps from bssid to RSSI and velocity measurements
-    pub rssi_data_by_bssid: HashMap<client_types::Bssid, SignalData>,
+    pub past_connections: PastConnectionsByBssid,
 }
 
 impl PerformanceStats {
@@ -81,7 +77,7 @@ impl PerformanceStats {
         Self {
             failure_list: ConnectFailureList::new(),
             disconnect_list: DisconnectList::new(),
-            rssi_data_by_bssid: HashMap::<client_types::Bssid, SignalData>::new(),
+            past_connections: PastConnectionsByBssid::new(),
         }
     }
 }
@@ -185,51 +181,105 @@ impl DisconnectList {
         self.0.iter().skip_while(|d| d.time < earliest_time).cloned().collect()
     }
 }
+
+/// Data points related to historical connection
 #[derive(Clone, Debug, PartialEq)]
-pub struct PastConnectionList(HashMap<client_types::Bssid, VecDeque<PastConnectionData>>);
+pub struct PastConnectionData {
+    pub bssid: client_types::Bssid,
+    /// Time at which connect was first attempted
+    pub connection_attempt_time: zx::Time,
+    /// Duration from connection attempt to success
+    pub time_to_connect: zx::Duration,
+    /// Time at which the connection was ended
+    pub disconnect_time: zx::Time,
+    /// Cause of disconnect or failure to connect
+    pub disconnect_reason: client_types::DisconnectReason,
+    /// Final signal strength measure before disconnect
+    pub signal_data_at_disconnect: SignalData,
+    /// Average phy rate over connection duration
+    pub average_tx_rate: u32,
+}
+
+impl PastConnectionData {
+    pub fn new(
+        bssid: client_types::Bssid,
+        connection_attempt_time: zx::Time,
+        time_to_connect: zx::Duration,
+        disconnect_time: zx::Time,
+        disconnect_reason: client_types::DisconnectReason,
+        signal_data_at_disconnect: SignalData,
+        average_tx_rate: u32,
+    ) -> Self {
+        Self {
+            bssid,
+            connection_attempt_time,
+            time_to_connect,
+            disconnect_time,
+            disconnect_reason,
+            signal_data_at_disconnect,
+            average_tx_rate,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PastConnectionList(VecDeque<PastConnectionData>);
 
 impl PastConnectionList {
+    pub fn new() -> Self {
+        Self(VecDeque::with_capacity(NUM_PAST_CONNECTIONS_PER_BSS))
+    }
+
+    /// Add data for a past connection, evicting the oldest entry if full.
+    pub fn add(&mut self, connection_data: PastConnectionData) {
+        if self.0.len() == self.0.capacity() {
+            let _ = self.0.pop_front();
+        }
+        self.0.push_back(connection_data);
+    }
+
+    /// Retrieve list of PastConnectionData from connections to this BSS that ended more
+    /// recently than earliest_time, sorted from oldest to newest. May be empty.
+    pub fn get_recent(&self, earliest_time: zx::Time) -> Vec<PastConnectionData> {
+        let i = self.0.partition_point(|data| data.disconnect_time < earliest_time);
+        return self.0.iter().skip(i).cloned().collect();
+    }
+}
+
+impl Default for PastConnectionList {
+    fn default() -> Self {
+        PastConnectionList::new()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PastConnectionsByBssid(HashMap<client_types::Bssid, PastConnectionList>);
+
+impl PastConnectionsByBssid {
     pub fn new() -> Self {
         Self(HashMap::new())
     }
 
-    /// Add a past connection to a BSS's VecDeque, evicting the oldest entry if full.
     pub fn add(&mut self, bssid: client_types::Bssid, connection_data: PastConnectionData) {
-        if let Some(deq) = self.0.get_mut(&bssid) {
-            if deq.len() == deq.capacity() {
-                let _ = deq.pop_front();
-            }
-            deq.push_back(connection_data);
-        } else {
-            let mut deq = VecDeque::with_capacity(NUM_PAST_CONNECTIONS_PER_BSS);
-            deq.push_back(connection_data);
-            let _ = self.0.insert(bssid, deq);
-        }
-    }
-
-    /// Retrieve list of PastConnectionData from connections to a particular BSS that ended more
-    /// recently than earliest_time, sorted from oldest to newest. May be empty.
-    pub fn get_recent_for_bss(
-        &self,
-        bssid: client_types::Bssid,
-        earliest_time: zx::Time,
-    ) -> Vec<&PastConnectionData> {
-        if let Some(deq) = self.0.get(&bssid) {
-            let i = deq.partition_point(|data| data.disconnect_time < earliest_time);
-            return deq.iter().skip(i).collect();
-        }
-        vec![]
+        self.0.entry(bssid).or_default().add(connection_data);
     }
 
     /// Retrieve list of PastConnectionData from connections to any BSS that ended more recently
     /// than earliest_time, sorted from oldest to newest. May be empty.
-    pub fn get_recent_for_network(&self, earliest_time: zx::Time) -> Vec<&PastConnectionData> {
-        let mut recents: Vec<&PastConnectionData> = vec![];
+    pub fn get_recent_for_network(&self, earliest_time: zx::Time) -> Vec<PastConnectionData> {
+        let mut recents: Vec<PastConnectionData> = vec![];
         for bssid in self.0.keys() {
-            recents.append(&mut self.get_recent_for_bss(*bssid, earliest_time));
+            recents.append(&mut self.get_list_for_bss(bssid).get_recent(earliest_time));
         }
         recents.sort_by(|a, b| a.disconnect_time.cmp(&b.disconnect_time));
         recents
+    }
+
+    /// Retrieve the list of past connection data for a particular BSS, or return a new empty
+    /// list if there is no data for the BSS. To be used in cases where the same past connection
+    /// list will be queried multiple times.
+    pub fn get_list_for_bss(&self, bssid: &client_types::Bssid) -> PastConnectionList {
+        self.0.get(bssid).cloned().unwrap_or_default()
     }
 }
 
@@ -613,7 +663,9 @@ impl From<NetworkConfigError> for fidl_policy::NetworkConfigChangeError {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, rand::Rng, wlan_common::assert_variant};
+    use {
+        super::*, crate::util::testing::create_fake_connection_data, wlan_common::assert_variant,
+    };
 
     #[fuchsia::test]
     fn new_network_config_none_credential() {
@@ -991,26 +1043,12 @@ mod tests {
         assert_eq!(all_disconnects.len(), disconnect_list_capacity);
     }
 
-    fn create_fake_connection_data(
-        bssid: client_types::Bssid,
-        disconnect_time: zx::Time,
-    ) -> PastConnectionData {
-        let mut rng = rand::thread_rng();
-        PastConnectionData::new(
-            bssid,
-            disconnect_time - zx::Duration::from_seconds(rng.gen::<u8>().into()),
-            zx::Duration::from_seconds(rng.gen_range::<i64, _>(5..10).into()),
-            disconnect_time,
-            client_types::DisconnectReason::NetworkUnsaved,
-            SignalData::new(rng.gen_range(-90..-20), rng.gen_range(-90..-20), 10),
-            rng.gen::<u8>().into(),
-        )
-    }
-
     #[fuchsia::test]
-    fn test_past_connections_list_add_and_get_recent_by_bssid() {
-        // Create a new PastConnectionDataList
-        let mut past_connections = PastConnectionList::new();
+    fn test_past_connections_by_bssid_add_and_get_recent() {
+        // Tests saving and getting data by BSSID and time in PastConnectionByBss and
+        // PastConnectionList.
+        // Create a new PastConnectionList
+        let mut past_connections = PastConnectionsByBssid::new();
         assert_eq!(past_connections.0.len(), 0);
 
         let curr_time = zx::Time::get_monotonic();
@@ -1035,41 +1073,42 @@ mod tests {
         past_connections.add(bssid_2, bss_2_entry_1.clone());
         assert_eq!(past_connections.0.len(), 2);
 
-        // Verify both BSSID_1 entries are retrieved
+        // Verify that the list of BSSID_1 entries is retrieved for the BSSID, and in the
+        // PastConnectionList returns the two entries.
         assert_eq!(
             past_connections
-                .get_recent_for_bss(bssid_1, curr_time + zx::Duration::from_seconds(10)),
-            vec![&bss_1_entry_1, &bss_1_entry_2]
+                .get_list_for_bss(&bssid_1)
+                .get_recent(curr_time + zx::Duration::from_seconds(10)),
+            vec![bss_1_entry_1.clone(), bss_1_entry_2.clone()]
         );
         // Verify only the later BSSID_1 entry is retrieved
         assert_eq!(
             past_connections
-                .get_recent_for_bss(bssid_1, curr_time + zx::Duration::from_seconds(12)),
-            vec![&bss_1_entry_2]
+                .get_list_for_bss(&bssid_1)
+                .get_recent(curr_time + zx::Duration::from_seconds(12)),
+            vec![bss_1_entry_2.clone()]
         );
         // Verify only the BSSID_2 entry is retrieved
         assert_eq!(
-            past_connections
-                .get_recent_for_bss(bssid_2, curr_time + zx::Duration::from_seconds(18)),
-            vec![&bss_2_entry_1]
+            past_connections.get_list_for_bss(&bssid_2).get_recent(curr_time),
+            vec![bss_2_entry_1.clone()]
         );
         // No entries exist later than 25 seconds
         assert!(past_connections
-            .get_recent_for_bss(bssid_1, curr_time + zx::Duration::from_seconds(25))
+            .get_list_for_bss(&bssid_1)
+            .get_recent(curr_time + zx::Duration::from_seconds(25))
             .is_empty());
-        // No entries exist for this BSSID
-        assert!(past_connections
-            .get_recent_for_bss(
-                client_types::Bssid([12; 6]),
-                curr_time + zx::Duration::from_seconds(12)
-            )
-            .is_empty());
+        // No entries exist for this BSSID. An empty list should be returned.
+        assert_eq!(
+            past_connections.get_list_for_bss(&client_types::Bssid([12; 6])),
+            PastConnectionList::new()
+        );
     }
 
     #[fuchsia::test]
-    fn test_past_connections_list_add_and_get_recent_for_network() {
-        // Create a new PastConnectionDataList
-        let mut past_connections = PastConnectionList::new();
+    fn test_past_connections_by_bss_add_and_get_recent_for_network() {
+        // Create a new PastConnectionList
+        let mut past_connections = PastConnectionsByBssid::new();
         assert_eq!(past_connections.0.len(), 0);
 
         let curr_time = zx::Time::get_monotonic();
@@ -1097,12 +1136,12 @@ mod tests {
         // Verify entries from all BSSIDs are retrieved
         assert_eq!(
             past_connections.get_recent_for_network(curr_time + zx::Duration::from_seconds(10)),
-            vec![&bss_1_entry_1, &bss_1_entry_2, &bss_2_entry_1]
+            vec![bss_1_entry_1.clone(), bss_1_entry_2.clone(), bss_2_entry_1.clone()]
         );
         // Verify only later entries are retrieved
         assert_eq!(
             past_connections.get_recent_for_network(curr_time + zx::Duration::from_seconds(12)),
-            vec![&bss_1_entry_2, &bss_2_entry_1]
+            vec![bss_1_entry_2.clone(), bss_2_entry_1.clone()]
         );
         // No entries exist later than 21 seconds.
         assert!(past_connections

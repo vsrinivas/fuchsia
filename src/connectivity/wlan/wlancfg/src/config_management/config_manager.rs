@@ -6,7 +6,7 @@ use {
     super::{
         network_config::{
             Credential, FailureReason, HiddenProbEvent, NetworkConfig, NetworkConfigError,
-            NetworkIdentifier, SecurityType,
+            NetworkIdentifier, PastConnectionList, SecurityType,
         },
         stash_conversion::*,
     },
@@ -132,6 +132,14 @@ pub trait SavedNetworksManagerApi: Send + Sync {
 
     // Return a list of every network config that has been saved.
     async fn get_networks(&self) -> Vec<NetworkConfig>;
+
+    // Get the list of past connections for a specific BSS
+    async fn get_past_connections(
+        &self,
+        id: &NetworkIdentifier,
+        credential: &Credential,
+        bssid: &types::Bssid,
+    ) -> PastConnectionList;
 }
 
 impl SavedNetworksManager {
@@ -500,6 +508,22 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
             .flatten()
             .collect()
     }
+
+    async fn get_past_connections(
+        &self,
+        id: &NetworkIdentifier,
+        credential: &Credential,
+        bssid: &types::Bssid,
+    ) -> PastConnectionList {
+        self.saved_networks
+            .lock()
+            .await
+            .get(id)
+            .map(|configs| configs.iter().find(|config| &config.credential == credential))
+            .flatten()
+            .map(|config| config.perf_stats.past_connections.get_list_for_bss(bssid))
+            .unwrap_or_default()
+    }
 }
 
 /// Returns a subset of potentially hidden saved networks, filtering probabilistically based
@@ -622,11 +646,13 @@ mod tests {
         super::*,
         crate::{
             config_management::{
-                Disconnect, PROB_HIDDEN_DEFAULT, PROB_HIDDEN_IF_CONNECT_ACTIVE,
-                PROB_HIDDEN_IF_CONNECT_PASSIVE, PROB_HIDDEN_IF_SEEN_PASSIVE,
+                Disconnect, PastConnectionsByBssid, PROB_HIDDEN_DEFAULT,
+                PROB_HIDDEN_IF_CONNECT_ACTIVE, PROB_HIDDEN_IF_CONNECT_PASSIVE,
+                PROB_HIDDEN_IF_SEEN_PASSIVE,
             },
-            util::testing::cobalt::{
-                create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
+            util::testing::{
+                cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},
+                create_fake_connection_data,
             },
         },
         cobalt_client::traits::AsEventCode,
@@ -1933,6 +1959,58 @@ mod tests {
 
         // Check that a config was not saved for the identifier that was not saved before.
         assert!(saved_networks.lookup(id_3).await.is_empty());
+    }
+
+    #[fuchsia::test]
+    async fn test_get_past_connections() {
+        let saved_networks_manager = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
+
+        // Create a config with two past connections for BSS 1 and one past connection for BSS 2.
+        let id = NetworkIdentifier::try_from("foo", SecurityType::Wpa).unwrap();
+        let credential = Credential::Password(b"some_password".to_vec());
+        let mut config = NetworkConfig::new(id.clone(), credential.clone(), true)
+            .expect("failed to create config");
+        let mut past_connections = PastConnectionsByBssid::new();
+        let bssid_1 = types::Bssid([1; 6]);
+        let data_1 = create_fake_connection_data(bssid_1, zx::Time::get_monotonic());
+        let data_2 = create_fake_connection_data(bssid_1, zx::Time::get_monotonic());
+        past_connections.add(bssid_1, data_1.clone());
+        past_connections.add(bssid_1, data_2.clone());
+        let bssid_2 = types::Bssid([2; 6]);
+        let data_3 = create_fake_connection_data(bssid_2, zx::Time::get_monotonic());
+        past_connections.add(bssid_2, data_3.clone());
+        config.perf_stats.past_connections = past_connections;
+
+        // Create SavedNetworksManager with configs that have past connections
+        assert!(saved_networks_manager
+            .saved_networks
+            .lock()
+            .await
+            .insert(id.clone(), vec![config])
+            .is_none());
+
+        // Check that get_past_connections gets the two PastConnectionLists for the BSSIDs.
+        let mut expected_past_connections = PastConnectionList::new();
+        expected_past_connections.add(data_1);
+        expected_past_connections.add(data_2);
+        let actual_past_connections =
+            saved_networks_manager.get_past_connections(&id, &credential, &bssid_1).await;
+        assert_eq!(actual_past_connections, expected_past_connections);
+
+        let mut expected_past_connections = PastConnectionList::new();
+        expected_past_connections.add(data_3);
+        let actual_past_connections =
+            saved_networks_manager.get_past_connections(&id, &credential, &bssid_2).await;
+        assert_eq!(actual_past_connections, expected_past_connections);
+
+        // Check that get_past_connections will not get the PastConnectionLists if the specified
+        // Credential is different.
+        let actual_past_connections = saved_networks_manager
+            .get_past_connections(&id, &Credential::Password(b"other-password".to_vec()), &bssid_1)
+            .await;
+        assert_eq!(actual_past_connections, PastConnectionList::new());
     }
 
     fn fake_successful_connect_result() -> fidl_sme::ConnectResult {

@@ -5,10 +5,10 @@
 
 use {
     crate::{
-        client::types as client_types,
+        client::{connection_quality::SignalData, types as client_types},
         config_management::{
-            Credential, NetworkConfig, NetworkConfigError, NetworkIdentifier,
-            SavedNetworksManagerApi, ScanResultType,
+            Credential, NetworkConfig, NetworkConfigError, NetworkIdentifier, PastConnectionData,
+            PastConnectionList, SavedNetworksManagerApi, ScanResultType,
         },
     },
     async_trait::async_trait,
@@ -27,6 +27,7 @@ pub struct FakeSavedNetworksManager {
     pub fail_all_stores: bool,
     pub active_scan_result_recorded: Arc<Mutex<bool>>,
     pub passive_scan_result_recorded: Arc<Mutex<bool>>,
+    pub past_connections_response: PastConnectionList,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,10 +47,13 @@ impl FakeSavedNetworksManager {
             fail_all_stores: false,
             active_scan_result_recorded: Arc::new(Mutex::new(false)),
             passive_scan_result_recorded: Arc::new(Mutex::new(false)),
+            past_connections_response: PastConnectionList::new(),
         }
     }
-    /// Create FakeSavedNetworksManager, saving some network configs at init.
-    pub fn new_with_saved_configs(network_configs: Vec<(NetworkIdentifier, Credential)>) -> Self {
+
+    /// Create FakeSavedNetworksManager, saving network configs with the specified
+    /// network identifiers and credentials at init.
+    pub fn new_with_saved_networks(network_configs: Vec<(NetworkIdentifier, Credential)>) -> Self {
         let saved_networks = network_configs
             .into_iter()
             .filter_map(|(id, cred)| {
@@ -63,6 +67,20 @@ impl FakeSavedNetworksManager {
             fail_all_stores: false,
             active_scan_result_recorded: Arc::new(Mutex::new(false)),
             passive_scan_result_recorded: Arc::new(Mutex::new(false)),
+            past_connections_response: PastConnectionList::new(),
+        }
+    }
+
+    /// Create FakeSavedNetworksManager, that will always respond to get_past_connections with
+    /// the specified value.
+    pub fn new_with_past_connections_response(response: PastConnectionList) -> Self {
+        Self {
+            saved_networks: Mutex::new(HashMap::new()),
+            disconnects_recorded: Mutex::new(vec![]),
+            fail_all_stores: false,
+            active_scan_result_recorded: Arc::new(Mutex::new(false)),
+            passive_scan_result_recorded: Arc::new(Mutex::new(false)),
+            past_connections_response: response,
         }
     }
 
@@ -202,6 +220,15 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
             .flatten()
             .collect()
     }
+
+    async fn get_past_connections(
+        &self,
+        _id: &NetworkIdentifier,
+        _credential: &Credential,
+        _bssid: &client_types::Bssid,
+    ) -> PastConnectionList {
+        self.past_connections_response.clone()
+    }
 }
 
 pub fn create_wlan_hasher() -> WlanHasher {
@@ -211,4 +238,20 @@ pub fn create_wlan_hasher() -> WlanHasher {
 pub fn create_inspect_persistence_channel() -> (mpsc::Sender<String>, mpsc::Receiver<String>) {
     const DEFAULT_BUFFER_SIZE: usize = 100; // arbitrary value
     mpsc::channel(DEFAULT_BUFFER_SIZE)
+}
+
+pub fn create_fake_connection_data(
+    bssid: client_types::Bssid,
+    disconnect_time: zx::Time,
+) -> PastConnectionData {
+    let mut rng = rand::thread_rng();
+    PastConnectionData::new(
+        bssid,
+        disconnect_time - zx::Duration::from_seconds(rng.gen::<u8>().into()),
+        zx::Duration::from_seconds(rng.gen_range::<i64, _>(5..10).into()),
+        disconnect_time,
+        client_types::DisconnectReason::NetworkUnsaved,
+        SignalData::new(rng.gen_range(-90..-20), rng.gen_range(-90..-20), 10),
+        rng.gen::<u8>().into(),
+    )
 }

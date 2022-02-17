@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{client::types as client_types, util::pseudo_energy::*},
-    fuchsia_zircon as zx,
+    crate::{
+        client::types as client_types, config_management::network_config::PastConnectionList,
+        util::pseudo_energy::*,
+    },
     log::error,
-    std::collections::VecDeque,
 };
 
 // Number of previous RSSI measurements to exponentially weigh into average.
@@ -48,61 +49,21 @@ impl SignalData {
     }
 }
 
-/// Data points related to historical connection
-#[derive(Clone, Debug, PartialEq)]
-pub struct PastConnectionData {
-    pub bssid: client_types::Bssid,
-    /// Time at which connect was first attempted
-    pub connection_attempt_time: zx::Time,
-    /// Duration from connection attempt to success
-    pub time_to_connect: zx::Duration,
-    /// Time at which the connection was ended
-    pub disconnect_time: zx::Time,
-    /// Cause of disconnect or failure to connect
-    pub disconnect_reason: client_types::DisconnectReason,
-    /// Final signal strength measure before disconnect
-    pub signal_data_at_disconnect: SignalData,
-    /// Average phy rate over connection duration
-    pub average_tx_rate: u32,
-}
-
-impl PastConnectionData {
-    pub fn new(
-        bssid: client_types::Bssid,
-        connection_attempt_time: zx::Time,
-        time_to_connect: zx::Duration,
-        disconnect_time: zx::Time,
-        disconnect_reason: client_types::DisconnectReason,
-        signal_data_at_disconnect: SignalData,
-        average_tx_rate: u32,
-    ) -> Self {
-        Self {
-            bssid,
-            connection_attempt_time,
-            time_to_connect,
-            disconnect_time,
-            disconnect_reason,
-            signal_data_at_disconnect,
-            average_tx_rate,
-        }
-    }
-}
-
 /// Aggregated information about the current BSS's connection quality, used for evaluation.
-pub struct BssQualityData<'a> {
+pub struct BssQualityData {
     pub signal_data: SignalData,
     pub channel: client_types::WlanChan,
     // TX and RX rate, respectively.
     pub phy_rates: (u32, u32),
-    // Connection data of past successful connections to this BSS.
-    pub past_connections_list: &'a VecDeque<PastConnectionData>,
+    // Connection data  of past successful connections to this BSS.
+    pub past_connections_list: PastConnectionList,
 }
 
-impl<'a> BssQualityData<'a> {
+impl BssQualityData {
     pub fn new(
         signal_data: SignalData,
         channel: client_types::WlanChan,
-        past_connections_list: &'a VecDeque<PastConnectionData>,
+        past_connections_list: PastConnectionList,
     ) -> Self {
         BssQualityData {
             signal_data: signal_data,

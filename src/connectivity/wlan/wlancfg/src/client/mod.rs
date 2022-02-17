@@ -734,7 +734,7 @@ mod tests {
             ),
         ];
         let saved_networks =
-            Arc::new(FakeSavedNetworksManager::new_with_saved_configs(presaved_default_configs));
+            Arc::new(FakeSavedNetworksManager::new_with_saved_networks(presaved_default_configs));
         let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
@@ -1725,7 +1725,7 @@ mod tests {
     ) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks =
-            Arc::new(FakeSavedNetworksManager::new_with_saved_configs(saved_configs));
+            Arc::new(FakeSavedNetworksManager::new_with_saved_networks(saved_configs));
         let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
