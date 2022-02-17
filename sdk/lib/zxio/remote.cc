@@ -7,7 +7,6 @@
 #include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/channel.h>
-#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
@@ -97,17 +96,18 @@ class DirentIteratorImpl {
  private:
   zx_status_t RemoteReadDirents() {
     fidl::BufferSpan fidl_buffer(buffer_, sizeof(buffer_));
-    auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(io_->control))
-                      .buffer(fidl_buffer)
-                      ->ReadDirents(kBufferSize);
-    if (result.status() != ZX_OK) {
+    const fidl::WireUnownedResult result =
+        fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(io_->control))
+            .buffer(fidl_buffer)
+            ->ReadDirents(kBufferSize);
+    if (!result.ok()) {
       return result.status();
     }
-    fidl::WireResponse<fio::Directory::ReadDirents>* response = result.Unwrap();
-    if (response->s != ZX_OK) {
-      return response->s;
+    const auto& response = result.value();
+    if (zx_status_t status = response.s; status != ZX_OK) {
+      return status;
     }
-    const auto& dirents = response->dirents;
+    const fidl::VectorView dirents = response.dirents;
     if (dirents.count() > kBufferSize) {
       return ZX_ERR_IO;
     }
@@ -116,7 +116,7 @@ class DirentIteratorImpl {
     return ZX_OK;
   }
 
-  zxio_node_protocols_t DTypeToProtocols(uint8_t type) {
+  static zxio_node_protocols_t DTypeToProtocols(uint8_t type) {
     switch (type) {
       case DT_BLK:
         return ZXIO_NODE_PROTOCOL_DEVICE;
@@ -193,12 +193,12 @@ class Remote {
   }
 
   zx::status<bool> IsATty() {
-    fidl::WireResult result =
+    const fidl::WireResult result =
         fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control()))->Describe();
-    if (result.status() != ZX_OK) {
+    if (!result.ok()) {
       return zx::error(result.status());
     }
-    return zx::ok(result.Unwrap()->info.is_tty());
+    return zx::ok(result.value().info.is_tty());
   }
 
  private:
@@ -470,24 +470,33 @@ void zxio_remote_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* o
 
 zx_status_t zxio_remote_sync(zxio_t* io) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(rio.control()))->Sync();
-  if (result.status() != ZX_OK) {
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(rio.control()))->Sync();
+  if (!result.ok()) {
     return result.status();
   }
-  return result->result.is_err() ? result->result.err() : ZX_OK;
+  const auto& response = result.value();
+  switch (response.result.Which()) {
+    case fio::wire::Node2SyncResult::Tag::kErr:
+      return response.result.err();
+    case fio::wire::Node2SyncResult::Tag::kResponse:
+      return ZX_OK;
+  }
 }
 
 template <typename ToZxioAbilities>
 zx_status_t zxio_common_attr_get(zx::unowned_channel control, ToZxioAbilities to_zxio,
                                  zxio_node_attributes_t* out_attr) {
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control))->GetAttr();
-  if (result.status() != ZX_OK) {
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control))->GetAttr();
+  if (!result.ok()) {
     return result.status();
   }
-  if (auto status = result.Unwrap()->s; status != ZX_OK) {
+  const auto& response = result.value();
+  if (zx_status_t status = response.s; status != ZX_OK) {
     return status;
   }
-  *out_attr = ToZxioNodeAttributes(result.Unwrap()->attributes, to_zxio);
+  *out_attr = ToZxioNodeAttributes(response.attributes, to_zxio);
   return ZX_OK;
 }
 
@@ -508,9 +517,13 @@ zx_status_t zxio_common_attr_set(zx::unowned_channel control, ToIo1ModePermissio
   if (remaining != all_absent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control))
-                    ->SetAttr(flags, ToNodeAttributes(*attr, to_io1));
-  return result.ok() ? result.Unwrap()->s : result.status();
+  const fidl::WireResult result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control))
+                                      ->SetAttr(flags, ToNodeAttributes(*attr, to_io1));
+  if (!result.ok()) {
+    return result.status();
+  }
+  const auto& response = result.value();
+  return response.s;
 }
 
 zx_status_t zxio_remote_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
@@ -539,16 +552,21 @@ zx_status_t zxio_common_advisory_lock(zx::unowned_channel control, advisory_lock
       return ZX_ERR_INTERNAL;
   }
   fidl::Arena allocator;
-  fuchsia_io::wire::AdvisoryLockRequest lock_req;
-  lock_req.Allocate(allocator);
+  fuchsia_io::wire::AdvisoryLockRequest lock_req(allocator);
   lock_req.set_type(lock_type);
   lock_req.set_wait(req->wait);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::AdvisoryLocking>(control))
-                    ->AdvisoryLock(std::move(lock_req));
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::AdvisoryLocking>(control))->AdvisoryLock(lock_req);
   if (!result.ok()) {
     return result.status();
   }
-  return result.Unwrap()->result.err();
+  const auto& response = result.value();
+  switch (response.result.Which()) {
+    case fio::wire::AdvisoryLockingAdvisoryLockResult::Tag::kErr:
+      return response.result.err();
+    case fio::wire::AdvisoryLockingAdvisoryLockResult::Tag::kResponse:
+      return ZX_OK;
+  }
 }
 
 template <typename F>
@@ -597,23 +615,27 @@ zx_status_t zxio_remote_readv(zxio_t* io, const zx_iovec_t* vector, size_t vecto
       [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::SyncClientBuffer<fio::File::Read2> fidl_buffer;
-        auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
-                          .buffer(fidl_buffer.view())
-                          ->Read2(capacity);
-        if (result.status() != ZX_OK) {
+        const fidl::WireUnownedResult result =
+            fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
+                .buffer(fidl_buffer.view())
+                ->Read2(capacity);
+        if (!result.ok()) {
           return result.status();
         }
-        if (result->result.is_err()) {
-          return result->result.err();
+        const auto& response = result.value();
+        switch (response.result.Which()) {
+          case fio::wire::File2Read2Result::Tag::kErr:
+            return response.result.err();
+          case fio::wire::File2Read2Result::Tag::kResponse:
+            const fidl::VectorView data = result->result.response().data;
+            size_t actual = data.count();
+            if (actual > capacity) {
+              return ZX_ERR_IO;
+            }
+            memcpy(buffer, data.begin(), actual);
+            *out_actual = actual;
+            return ZX_OK;
         }
-        const auto& data = result->result.response().data;
-        size_t actual = data.count();
-        if (actual > capacity) {
-          return ZX_ERR_IO;
-        }
-        memcpy(buffer, data.begin(), actual);
-        *out_actual = actual;
-        return ZX_OK;
       });
 }
 
@@ -632,24 +654,28 @@ zx_status_t zxio_remote_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* 
       rio, vector, vector_count, flags, out_actual,
       [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         fidl::SyncClientBuffer<fio::File::ReadAt2> fidl_buffer;
-        auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
-                          .buffer(fidl_buffer.view())
-                          ->ReadAt2(capacity, offset);
-        if (result.status() != ZX_OK) {
+        const fidl::WireUnownedResult result =
+            fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
+                .buffer(fidl_buffer.view())
+                ->ReadAt2(capacity, offset);
+        if (!result.ok()) {
           return result.status();
         }
-        if (result->result.is_err()) {
-          return result->result.err();
+        const auto& response = result.value();
+        switch (response.result.Which()) {
+          case fio::wire::File2ReadAt2Result::Tag::kErr:
+            return response.result.err();
+          case fio::wire::File2ReadAt2Result::Tag::kResponse:
+            const fidl::VectorView data = result->result.response().data;
+            size_t actual = data.count();
+            if (actual > capacity) {
+              return ZX_ERR_IO;
+            }
+            offset += actual;
+            memcpy(buffer, data.begin(), actual);
+            *out_actual = actual;
+            return ZX_OK;
         }
-        const auto& data = result->result.response().data;
-        size_t actual = data.count();
-        if (actual > capacity) {
-          return ZX_ERR_IO;
-        }
-        offset += actual;
-        memcpy(buffer, data.begin(), actual);
-        *out_actual = actual;
-        return ZX_OK;
       });
 }
 
@@ -669,21 +695,25 @@ zx_status_t zxio_remote_writev(zxio_t* io, const zx_iovec_t* vector, size_t vect
       [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::SyncClientBuffer<fio::File::Write2> fidl_buffer;
-        auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
-                          .buffer(fidl_buffer.view())
-                          ->Write2(fidl::VectorView<uint8_t>::FromExternal(buffer, capacity));
-        if (result.status() != ZX_OK) {
+        const fidl::WireUnownedResult result =
+            fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
+                .buffer(fidl_buffer.view())
+                ->Write2(fidl::VectorView<uint8_t>::FromExternal(buffer, capacity));
+        if (!result.ok()) {
           return result.status();
         }
-        if (result->result.is_err()) {
-          return result->result.err();
+        const auto& response = result.value();
+        switch (response.result.Which()) {
+          case fio::wire::File2Write2Result::Tag::kErr:
+            return response.result.err();
+          case fio::wire::File2Write2Result::Tag::kResponse:
+            const size_t actual = response.result.response().actual_count;
+            if (actual > capacity) {
+              return ZX_ERR_IO;
+            }
+            *out_actual = actual;
+            return ZX_OK;
         }
-        size_t actual = result->result.response().actual_count;
-        if (actual > capacity) {
-          return ZX_ERR_IO;
-        }
-        *out_actual = actual;
-        return ZX_OK;
       });
 }
 
@@ -703,23 +733,26 @@ zx_status_t zxio_remote_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t*
       [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::SyncClientBuffer<fio::File::WriteAt2> fidl_buffer;
-        auto result =
+        const fidl::WireUnownedResult result =
             fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
                 .buffer(fidl_buffer.view())
                 ->WriteAt2(fidl::VectorView<uint8_t>::FromExternal(buffer, capacity), offset);
-        if (result.status() != ZX_OK) {
+        if (!result.ok()) {
           return result.status();
         }
-        if (result->result.is_err()) {
-          return result->result.err();
+        const auto& response = result.value();
+        switch (response.result.Which()) {
+          case fio::wire::File2WriteAt2Result::Tag::kErr:
+            return response.result.err();
+          case fio::wire::File2WriteAt2Result::Tag::kResponse:
+            const size_t actual = response.result.response().actual_count;
+            if (actual > capacity) {
+              return ZX_ERR_IO;
+            }
+            offset += actual;
+            *out_actual = actual;
+            return ZX_OK;
         }
-        size_t actual = result->result.response().actual_count;
-        if (actual > capacity) {
-          return ZX_ERR_IO;
-        }
-        offset += actual;
-        *out_actual = actual;
-        return ZX_OK;
       });
 }
 
@@ -730,55 +763,69 @@ zx_status_t zxio_remote_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offse
     return rio.stream()->seek(start, offset, out_offset);
   }
 
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))
-                    ->Seek(offset, static_cast<fio::wire::SeekOrigin>(start));
-  if (result.status() != ZX_OK) {
+  const fidl::WireResult result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))
+                                      ->Seek(offset, static_cast<fio::wire::SeekOrigin>(start));
+  if (!result.ok()) {
     return result.status();
   }
-  if (auto status = result.Unwrap()->s; status != ZX_OK) {
+  const auto& response = result.value();
+  if (zx_status_t status = response.s; status != ZX_OK) {
     return status;
   }
-  *out_offset = result.Unwrap()->offset;
+  *out_offset = response.offset;
   return ZX_OK;
 }
 
 zx_status_t zxio_remote_truncate(zxio_t* io, uint64_t length) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->Truncate(length);
-  return result.ok() ? result.Unwrap()->s : result.status();
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->Truncate(length);
+  if (!result.ok()) {
+    return result.status();
+  }
+  const auto& response = result.value();
+  return response.s;
 }
 
 zx_status_t zxio_remote_flags_get(zxio_t* io, uint32_t* out_flags) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->GetFlags();
-  if (result.status() != ZX_OK) {
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->GetFlags();
+  if (!result.ok()) {
     return result.status();
   }
-  if (auto status = result.Unwrap()->s; status != ZX_OK) {
+  const auto& response = result.value();
+  if (zx_status_t status = response.s; status != ZX_OK) {
     return status;
   }
-  *out_flags = result.Unwrap()->flags;
+  *out_flags = response.flags;
   return ZX_OK;
 }
 
 zx_status_t zxio_remote_flags_set(zxio_t* io, uint32_t flags) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->SetFlags(flags);
-  return result.ok() ? result.Unwrap()->s : result.status();
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->SetFlags(flags);
+  if (!result.ok()) {
+    return result.status();
+  }
+  const auto& response = result.value();
+  return response.s;
 }
 
 zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
                                 size_t* out_size) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->GetBuffer(flags);
-  if (result.status() != ZX_OK) {
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->GetBuffer(flags);
+  if (!result.ok()) {
     return result.status();
   }
-  fidl::WireResponse<fio::File::GetBuffer>* response = result.Unwrap();
-  if (response->s != ZX_OK) {
-    return response->s;
+  const auto& response = result.value();
+  if (zx_status_t status = response.s; status != ZX_OK) {
+    return status;
   }
-  fuchsia_mem::wire::Buffer* buffer = response->buffer.get();
+  const fidl::ObjectView buffer = response.buffer;
   if (!buffer) {
     return ZX_ERR_IO;
   }
@@ -798,7 +845,7 @@ zx_status_t zxio_dir_open(zxio_t* io, uint32_t flags, uint32_t mode, const char*
 
   Remote rio(io);
   zx::status node_ends = fidl::CreateEndpoints<fio::Node>();
-  if (!node_ends.is_ok()) {
+  if (node_ends.is_error()) {
     return node_ends.status_value();
   }
   auto [node_client_end, node_server_end] = std::move(node_ends.value());
@@ -806,7 +853,7 @@ zx_status_t zxio_dir_open(zxio_t* io, uint32_t flags, uint32_t mode, const char*
   fidl::Result result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
                             ->Open(flags, mode, fidl::StringView::FromExternal(path, path_len),
                                    std::move(node_server_end));
-  if (result.status() != ZX_OK) {
+  if (!result.ok()) {
     return result.status();
   }
   return zxio_create_with_on_open(node_client_end.TakeChannel().release(), storage);
@@ -815,10 +862,11 @@ zx_status_t zxio_dir_open(zxio_t* io, uint32_t flags, uint32_t mode, const char*
 zx_status_t zxio_remote_open_async(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
                                    size_t path_len, zx_handle_t request) {
   Remote rio(io);
-  auto node_request = fidl::ServerEnd<fio::Node>(zx::channel(request));
-  fidl::WireResult result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                                ->Open(flags, mode, fidl::StringView::FromExternal(path, path_len),
-                                       std::move(node_request));
+  fidl::ServerEnd<fio::Node> node_request{zx::channel(request)};
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
+          ->Open(flags, mode, fidl::StringView::FromExternal(path, path_len),
+                 std::move(node_request));
   return result.status();
 }
 
@@ -827,9 +875,10 @@ zx_status_t zxio_remote_add_inotify_filter(zxio_t* io, const char* path, size_t 
                                            zx_handle_t socket_handle) {
   Remote rio(io);
   fio::wire::InotifyWatchMask inotify_mask = static_cast<fio::wire::InotifyWatchMask>(mask);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                    ->AddInotifyFilter(fidl::StringView::FromExternal(path, path_len), inotify_mask,
-                                       watch_descriptor, zx::socket(socket_handle));
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
+          ->AddInotifyFilter(fidl::StringView::FromExternal(path, path_len), inotify_mask,
+                             watch_descriptor, zx::socket(socket_handle));
   return result.status();
 }
 
@@ -841,52 +890,67 @@ zx_status_t zxio_remote_unlink(zxio_t* io, const char* name, size_t name_len, in
   if (flags & AT_REMOVEDIR) {
     options.set_flags(fidl::ObjectView<decltype(io_flags)>::FromExternal(&io_flags));
   }
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                    ->Unlink(fidl::StringView::FromExternal(name, name_len), options);
-  if (result.status() != ZX_OK) {
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
+          ->Unlink(fidl::StringView::FromExternal(name, name_len), options);
+  if (!result.ok()) {
     return result.status();
   }
-  const auto& unwrapped_result = result.Unwrap()->result;
-  return unwrapped_result.is_err() ? unwrapped_result.err() : ZX_OK;
+  const auto& response = result.value();
+  switch (response.result.Which()) {
+    case fio::wire::Directory2UnlinkResult::Tag::kErr:
+      return response.result.err();
+    case fio::wire::Directory2UnlinkResult::Tag::kResponse:
+      return ZX_OK;
+  }
 }
 
 zx_status_t zxio_remote_token_get(zxio_t* io, zx_handle_t* out_token) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))->GetToken();
-  if (result.status() != ZX_OK) {
+  fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))->GetToken();
+  if (!result.ok()) {
     return result.status();
   }
-  if (auto status = result.Unwrap()->s; status != ZX_OK) {
+  auto& response = result.value();
+  if (zx_status_t status = response.s; status != ZX_OK) {
     return status;
   }
-  *out_token = result.Unwrap()->token.release();
+  *out_token = response.token.release();
   return ZX_OK;
 }
 
 zx_status_t zxio_remote_rename(zxio_t* io, const char* old_path, size_t old_path_len,
                                zx_handle_t dst_token, const char* new_path, size_t new_path_len) {
   Remote rio(io);
-  auto result =
+  const fidl::WireResult result =
       fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
           ->Rename(fidl::StringView::FromExternal(old_path, old_path_len), zx::event(dst_token),
                    fidl::StringView::FromExternal(new_path, new_path_len));
   if (!result.ok()) {
     return result.status();
   }
-  if (result->result.is_err()) {
-    return result->result.err();
+  const auto& response = result.value();
+  switch (response.result.Which()) {
+    case fio::wire::Directory2RenameResult::Tag::kErr:
+      return response.result.err();
+    case fio::wire::Directory2RenameResult::Tag::kResponse:
+      return ZX_OK;
   }
-  return ZX_OK;
 }
 
 zx_status_t zxio_remote_link(zxio_t* io, const char* src_path, size_t src_path_len,
                              zx_handle_t dst_token, const char* dst_path, size_t dst_path_len) {
   Remote rio(io);
-  auto result =
+  const fidl::WireResult result =
       fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
           ->Link(fidl::StringView::FromExternal(src_path, src_path_len), zx::handle(dst_token),
                  fidl::StringView::FromExternal(dst_path, dst_path_len));
-  return result.ok() ? result.Unwrap()->s : result.status();
+  if (!result.ok()) {
+    return result.status();
+  }
+  const auto& response = result.value();
+  return response.s;
 }
 
 zx_status_t zxio_remote_dirent_iterator_init(zxio_t* directory, zxio_dirent_iterator_t* iterator) {
@@ -906,7 +970,7 @@ void zxio_remote_dirent_iterator_destroy(zxio_t* io, zxio_dirent_iterator_t* ite
 zx_status_t zxio_remote_isatty(zxio_t* io, bool* tty) {
   Remote rio(io);
   zx::status result = rio.IsATty();
-  if (!result.is_ok()) {
+  if (result.is_error()) {
     return result.status_value();
   }
   *tty = *result;
@@ -916,7 +980,7 @@ zx_status_t zxio_remote_isatty(zxio_t* io, bool* tty) {
 zx_status_t zxio_remote_get_window_size(zxio_t* io, uint32_t* width, uint32_t* height) {
   Remote rio(io);
   zx::status tty_result = rio.IsATty();
-  if (!tty_result.is_ok()) {
+  if (tty_result.is_error()) {
     return tty_result.status_value();
   }
   if (!*tty_result) {
@@ -927,19 +991,23 @@ zx_status_t zxio_remote_get_window_size(zxio_t* io, uint32_t* width, uint32_t* h
   if (!device.is_valid()) {
     return ZX_ERR_BAD_STATE;
   }
-  fidl::WireResult result = fidl::WireCall(device)->GetWindowSize();
-  if (result.status() != ZX_OK || result->status != ZX_OK) {
+  const fidl::WireResult result = fidl::WireCall(device)->GetWindowSize();
+  if (!result.ok()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  *width = result->size.width;
-  *height = result->size.height;
+  const auto& response = result.value();
+  if (response.status != ZX_OK) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  *width = response.size.width;
+  *height = response.size.height;
   return ZX_OK;
 }
 
 zx_status_t zxio_remote_set_window_size(zxio_t* io, uint32_t width, uint32_t height) {
   Remote rio(io);
-  auto tty_result = rio.IsATty();
-  if (!tty_result.is_ok()) {
+  zx::status tty_result = rio.IsATty();
+  if (tty_result.is_error()) {
     return tty_result.status_value();
   }
   if (!*tty_result) {
@@ -956,8 +1024,12 @@ zx_status_t zxio_remote_set_window_size(zxio_t* io, uint32_t width, uint32_t hei
       .height = height,
   };
 
-  auto result = fidl::WireCall(device)->SetWindowSize(size);
-  if (result.status() != ZX_OK || result->status != ZX_OK) {
+  const fidl::WireResult result = fidl::WireCall(device)->SetWindowSize(size);
+  if (!result.ok()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  const auto& response = result.value();
+  if (response.status != ZX_OK) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -1059,8 +1131,9 @@ zx_status_t zxio_remote_watch_directory(zxio_t* io, zxio_watch_directory_cb cb, 
     return endpoints.status_value();
   }
 
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                    ->Watch(fio::wire::kWatchMaskAll, 0, endpoints->client.TakeChannel());
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
+          ->Watch(fio::wire::kWatchMaskAll, 0, endpoints->client.TakeChannel());
 
   if (zx_status_t status = result.status(); status != ZX_OK) {
     return status;
@@ -1262,26 +1335,33 @@ uint32_t zxio_get_posix_mode(zxio_node_protocols_t protocols, zxio_abilities_t a
 }
 
 zx_status_t zxio_raw_remote_close(zx::unowned_channel control) {
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control))->Close();
-  if (result.status() != ZX_OK) {
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control))->Close();
+  if (!result.ok()) {
     return result.status();
   }
-  return result->result.is_err() ? result->result.err() : ZX_OK;
+  const auto& response = result.value();
+  switch (response.result.Which()) {
+    case fio::wire::Node2CloseResult::Tag::kErr:
+      return response.result.err();
+    case fio::wire::Node2CloseResult::Tag::kResponse:
+      return ZX_OK;
+  }
 }
 
 zx_status_t zxio_raw_remote_reopen(zx::unowned_channel source, zxio_reopen_flags_t zxio_flags,
                                    zx_handle_t* out_handle) {
-  auto ends = fidl::CreateEndpoints<fio::Node>();
-  if (!ends.is_ok()) {
+  zx::status ends = fidl::CreateEndpoints<fio::Node>();
+  if (ends.is_error()) {
     return ends.status_value();
   }
   uint32_t flags = fio::wire::kCloneFlagSameRights;
   if (zxio_flags & ZXIO_REOPEN_DESCRIBE) {
     flags |= fio::wire::kOpenFlagDescribe;
   }
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(source))
-                    ->Clone(flags, std::move(ends->server));
-  if (result.status() != ZX_OK) {
+  const fidl::WireResult result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(source))
+                                      ->Clone(flags, std::move(ends->server));
+  if (!result.ok()) {
     return result.status();
   }
   *out_handle = ends->client.TakeChannel().release();

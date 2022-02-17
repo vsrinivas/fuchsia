@@ -19,7 +19,7 @@ void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension
 
 class TestServerBase : public fidl::WireServer<fuchsia_io::Node> {
  public:
-  virtual ~TestServerBase() = default;
+  ~TestServerBase() override = default;
 
   // Exercised by |zxio_close|.
   void CloseDeprecated(CloseDeprecatedRequestView request,
@@ -88,9 +88,9 @@ class TestServerBase : public fidl::WireServer<fuchsia_io::Node> {
 
 class ExtensionNode : public zxtest::Test {
  public:
-  virtual ~ExtensionNode() { binding_->Unbind(); }
+  ~ExtensionNode() override { binding_->Unbind(); }
   void SetUp() final {
-    auto server_end = fidl::CreateEndpoints(&client_end_);
+    zx::status server_end = fidl::CreateEndpoints(&client_end_);
     ASSERT_OK(server_end.status_value());
     server_end_ = std::move(server_end).value();
   }

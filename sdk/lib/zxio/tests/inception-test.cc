@@ -97,8 +97,9 @@ TEST(CreateWithInfo, Unsupported) {
   zx::socket socket0, socket1;
   ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
 
-  fuchsia_io::wire::StreamSocket stream_socket = {.socket = std::move(socket0)};
-  auto node_info = fuchsia_io::wire::NodeInfo::WithStreamSocket(std::move(stream_socket));
+  auto node_info = fuchsia_io::wire::NodeInfo::WithStreamSocket({
+      .socket = std::move(socket0),
+  });
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
     *out_storage = new zxio_storage_t;
@@ -126,12 +127,11 @@ TEST(CreateWithInfo, Unsupported) {
 }
 
 TEST(CreateWithInfo, Device) {
-  auto node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
+  zx::status node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(node_ends.status_value());
   auto [node_client, node_server] = std::move(node_ends.value());
 
-  fuchsia_io::wire::Device device;
-  auto node_info = fuchsia_io::wire::NodeInfo::WithDevice(std::move(device));
+  auto node_info = fuchsia_io::wire::NodeInfo::WithDevice({});
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
     if (type != ZXIO_OBJECT_TYPE_DEVICE) {
@@ -170,7 +170,7 @@ class TestDirectoryServer final : public zxio_tests::TestDirectoryServerBase {
 }  // namespace
 
 TEST(CreateWithInfo, Directory) {
-  auto dir_ends = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  zx::status dir_ends = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(dir_ends.status_value());
   auto [dir_client, dir_server] = std::move(dir_ends.value());
 
@@ -207,16 +207,17 @@ TEST(CreateWithInfo, Directory) {
 }
 
 TEST(CreateWithInfo, File) {
-  auto file_ends = fidl::CreateEndpoints<fuchsia_io::File>();
+  zx::status file_ends = fidl::CreateEndpoints<fuchsia_io::File>();
   ASSERT_OK(file_ends.status_value());
   auto [file_client, file_server] = std::move(file_ends.value());
 
   zx::event file_event;
   ASSERT_OK(zx::event::create(0u, &file_event));
-  fuchsia_io::wire::FileObject file = {.event = std::move(file_event)};
-
-  fidl::Arena fidl_allocator;
-  auto node_info = fuchsia_io::wire::NodeInfo::WithFile(fidl_allocator, std::move(file));
+  fuchsia_io::wire::FileObject file = {
+      .event = std::move(file_event),
+  };
+  auto node_info =
+      fuchsia_io::wire::NodeInfo::WithFile(fidl::ObjectView<decltype(file)>::FromExternal(&file));
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
     if (type != ZXIO_OBJECT_TYPE_FILE) {
@@ -258,7 +259,7 @@ TEST(CreateWithInfo, File) {
 }
 
 TEST(CreateWithInfo, Pipe) {
-  auto node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
+  zx::status node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(node_ends.status_value());
   auto [node_client, node_server] = std::move(node_ends.value());
 
@@ -322,7 +323,7 @@ class TestServiceNodeServer : public fidl::testing::WireTestBase<fuchsia_io::Nod
 };
 
 TEST(CreateWithInfo, Service) {
-  auto node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
+  zx::status node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(node_ends.status_value());
   auto [node_client, node_server] = std::move(node_ends.value());
 
@@ -375,15 +376,16 @@ class TestTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_pty::D
 };
 
 TEST(CreateWithInfo, Tty) {
-  auto node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
+  zx::status node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(node_ends.status_value());
   auto [node_client, node_server] = std::move(node_ends.value());
 
   zx::eventpair event0, event1;
   ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
 
-  fuchsia_io::wire::Tty tty = {.event = std::move(event1)};
-  auto node_info = fuchsia_io::wire::NodeInfo::WithTty(std::move(tty));
+  auto node_info = fuchsia_io::wire::NodeInfo::WithTty({
+      .event = std::move(event1),
+  });
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
     if (type != ZXIO_OBJECT_TYPE_TTY) {
@@ -424,7 +426,7 @@ TEST(CreateWithInfo, Tty) {
 }
 
 TEST(CreateWithInfo, Vmofile) {
-  auto file_ends = fidl::CreateEndpoints<fuchsia_io::File>();
+  zx::status file_ends = fidl::CreateEndpoints<fuchsia_io::File>();
   ASSERT_OK(file_ends.status_value());
   auto [file_client, file_server] = std::move(file_ends.value());
 
@@ -440,8 +442,8 @@ TEST(CreateWithInfo, Vmofile) {
       .offset = file_start_offset,
       .length = file_length,
   };
-  fidl::Arena fidl_allocator;
-  auto node_info = fuchsia_io::wire::NodeInfo::WithVmofile(fidl_allocator, std::move(vmofile));
+  auto node_info = fuchsia_io::wire::NodeInfo::WithVmofile(
+      fidl::ObjectView<decltype(vmofile)>::FromExternal(&vmofile));
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
     if (type != ZXIO_OBJECT_TYPE_VMOFILE) {

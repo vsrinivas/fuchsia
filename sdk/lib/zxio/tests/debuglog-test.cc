@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
-#include <lib/fdio/directory.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/zxio.h>
 
 #include <array>
@@ -20,10 +18,10 @@ namespace {
 
 zx::status<zx::debuglog> GetDebugLogHandle() {
   zx::status log_service = service::Connect<fuchsia_boot::WriteOnlyLog>();
-  if (!log_service.is_ok()) {
-    return zx::error(log_service.status_value());
+  if (log_service.is_error()) {
+    return log_service.take_error();
   }
-  auto response = fidl::WireCall(*log_service)->Get();
+  fidl::WireResult response = fidl::WireCall(*log_service)->Get();
   if (!response.ok()) {
     return zx::error(response.status());
   }
@@ -42,7 +40,7 @@ TEST(DebugLog, Create) {
 
 class DebugLogTest : public zxtest::Test {
  protected:
-  void SetUp() override final {
+  void SetUp() final {
     zx::status log = GetDebugLogHandle();
     ASSERT_OK(log.status_value());
 
@@ -52,7 +50,7 @@ class DebugLogTest : public zxtest::Test {
     ASSERT_NE(logger_, nullptr);
   }
 
-  void TearDown() override final { ASSERT_OK(zxio_close(logger_)); }
+  void TearDown() final { ASSERT_OK(zxio_close(logger_)); }
 
   zx::channel local_;
   zx::channel remote_;
@@ -74,7 +72,7 @@ TEST_F(DebugLogTest, ThreadSafety) {
     });
   }
 
-  for (auto& t : threads) {
+  for (std::thread& t : threads) {
     t.join();
   }
 }

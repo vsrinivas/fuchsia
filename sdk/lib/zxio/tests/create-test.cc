@@ -50,7 +50,7 @@ TEST(Create, NotSupported) {
 }
 
 // Tests that calling zxio_create_with_type() with an invalid storage pointer
-// still closes all of the handles known for the type.
+// still closes all the handles known for the type.
 TEST(CreateWithTypeInvalidStorageClosesHandles, DatagramSocket) {
   zx::eventpair event0, event1;
   ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
@@ -167,7 +167,7 @@ class CreateTestBase : public zxtest::Test {
   using ProtocolType = typename NodeServer::_EnclosingProtocol;
 
   void SetUp() final {
-    auto node_ends = fidl::CreateEndpoints<ProtocolType>();
+    zx::status node_ends = fidl::CreateEndpoints<ProtocolType>();
     ASSERT_OK(node_ends.status_value());
     node_client_end_ = std::move(node_ends->client);
     node_server_end_ = std::move(node_ends->server);
@@ -208,9 +208,7 @@ using DescribeCompleter = fidl::WireServer<::fuchsia_io::Node>::DescribeComplete
 TEST_F(CreateTest, Device) {
   node_server().set_describe_function(
       [](DescribeRequestView request, DescribeCompleter::Sync& completer) mutable {
-        fuchsia_io::wire::Device device;
-        auto node_info = fuchsia_io::wire::NodeInfo::WithDevice(std::move(device));
-        completer.Reply(std::move(node_info));
+        completer.Reply(fuchsia_io::wire::NodeInfo::WithDevice({}));
       });
 
   StartServerThread();
@@ -219,10 +217,7 @@ TEST_F(CreateTest, Device) {
 }
 
 TEST_F(CreateWithOnOpenTest, Device) {
-  fuchsia_io::wire::Device device;
-  auto node_info = fuchsia_io::wire::NodeInfo::WithDevice(std::move(device));
-
-  SendOnOpenEvent(std::move(node_info));
+  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithDevice({}));
 
   ASSERT_OK(zxio_create_with_on_open(TakeClientChannel().release(), storage()));
 
@@ -243,8 +238,7 @@ using CreateDirectoryTest = CreateTestBase<SyncNodeServer>;
 TEST_F(CreateDirectoryTest, Directory) {
   node_server().set_describe_function(
       [](DescribeRequestView request, DescribeCompleter::Sync& completer) mutable {
-        auto node_info = fuchsia_io::wire::NodeInfo::WithDirectory({});
-        completer.Reply(std::move(node_info));
+        completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory({}));
       });
 
   StartServerThread();
@@ -280,9 +274,7 @@ TEST_F(CreateDirectoryTest, DirectoryWithTypeWrapper) {
 using CreateDirectoryWithOnOpenTest = CreateTestBase<SyncNodeServer>;
 
 TEST_F(CreateDirectoryWithOnOpenTest, Directory) {
-  auto node_info = fuchsia_io::wire::NodeInfo::WithDirectory({});
-
-  SendOnOpenEvent(std::move(node_info));
+  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithDirectory({}));
 
   ASSERT_OK(zxio_create_with_on_open(TakeClientChannel().release(), storage()));
 
@@ -299,9 +291,8 @@ class TestFileServerWithDescribe : public zxio_tests::TestReadFileServer {
 
  protected:
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final {
-    fidl::Arena fidl_allocator;
-    auto node_info = fuchsia_io::wire::NodeInfo::WithFile(fidl_allocator, std::move(file_));
-    completer.Reply(std::move(node_info));
+    completer.Reply(fuchsia_io::wire::NodeInfo::WithFile(
+        fidl::ObjectView<decltype(file_)>::FromExternal(&file_)));
   }
 
  private:
@@ -315,8 +306,10 @@ TEST_F(CreateFileTest, File) {
   ASSERT_OK(zx::event::create(0u, &file_event));
   zx::stream stream;
 
-  fuchsia_io::wire::FileObject file = {.event = std::move(file_event), .stream = std::move(stream)};
-  node_server().set_file(std::move(file));
+  node_server().set_file({
+      .event = std::move(file_event),
+      .stream = std::move(stream),
+  });
 
   StartServerThread();
 
@@ -339,11 +332,12 @@ TEST_F(CreateFileWithOnOpenTest, File) {
   ASSERT_OK(zx::event::create(0u, &file_event));
   zx::stream stream;
 
-  fuchsia_io::wire::FileObject file = {.event = std::move(file_event), .stream = std::move(stream)};
-  fidl::Arena fidl_allocator;
-  auto node_info = fuchsia_io::wire::NodeInfo::WithFile(fidl_allocator, std::move(file));
-
-  SendOnOpenEvent(std::move(node_info));
+  fuchsia_io::wire::FileObject file = {
+      .event = std::move(file_event),
+      .stream = std::move(stream),
+  };
+  SendOnOpenEvent(
+      fuchsia_io::wire::NodeInfo::WithFile(fidl::ObjectView<decltype(file)>::FromExternal(&file)));
 
   ASSERT_OK(zxio_create_with_on_open(TakeClientChannel().release(), storage()));
 
@@ -364,12 +358,12 @@ TEST_F(CreateFileWithOnOpenTest, File) {
 TEST_F(CreateTest, Pipe) {
   zx::socket socket0, socket1;
   ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
-  fuchsia_io::wire::PipeObject pipe = {.socket = std::move(socket0)};
   node_server().set_describe_function(
-      [pipe = std::move(pipe)](DescribeRequestView request,
-                               DescribeCompleter::Sync& completer) mutable {
-        auto node_info = fuchsia_io::wire::NodeInfo::WithPipe(std::move(pipe));
-        completer.Reply(std::move(node_info));
+      [socket0 = std::move(socket0)](DescribeRequestView request,
+                                     DescribeCompleter::Sync& completer) mutable {
+        completer.Reply(fuchsia_io::wire::NodeInfo::WithPipe({
+            .socket = std::move(socket0),
+        }));
       });
 
   StartServerThread();
@@ -446,10 +440,9 @@ TEST(CreateWithTypeWrapperTest, Pipe) {
 TEST_F(CreateWithOnOpenTest, Pipe) {
   zx::socket socket0, socket1;
   ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
-  fuchsia_io::wire::PipeObject pipe = {.socket = std::move(socket0)};
-  auto node_info = fuchsia_io::wire::NodeInfo::WithPipe(std::move(pipe));
-
-  SendOnOpenEvent(std::move(node_info));
+  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithPipe({
+      .socket = std::move(socket0),
+  }));
 
   ASSERT_OK(zxio_create_with_on_open(TakeClientChannel().release(), storage()));
 
@@ -473,8 +466,7 @@ TEST_F(CreateWithOnOpenTest, Pipe) {
 TEST_F(CreateTest, Service) {
   node_server().set_describe_function(
       [](DescribeRequestView request, DescribeCompleter::Sync& completer) mutable {
-        auto node_info = fuchsia_io::wire::NodeInfo::WithService({});
-        completer.Reply(std::move(node_info));
+        completer.Reply(fuchsia_io::wire::NodeInfo::WithService({}));
       });
 
   StartServerThread();
@@ -485,9 +477,7 @@ TEST_F(CreateTest, Service) {
 }
 
 TEST_F(CreateWithOnOpenTest, Service) {
-  auto node_info = fuchsia_io::wire::NodeInfo::WithService({});
-
-  SendOnOpenEvent(std::move(node_info));
+  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithService({}));
 
   ASSERT_OK(zxio_create_with_on_open(TakeClientChannel().release(), storage()));
 
@@ -502,9 +492,9 @@ TEST_F(CreateTest, Tty) {
   node_server().set_describe_function(
       [event1 = std::move(event1)](DescribeRequestView request,
                                    DescribeCompleter::Sync& completer) mutable {
-        fuchsia_io::wire::Tty device = {.event = std::move(event1)};
-        auto node_info = fuchsia_io::wire::NodeInfo::WithTty(std::move(device));
-        completer.Reply(std::move(node_info));
+        completer.Reply(fuchsia_io::wire::NodeInfo::WithTty({
+            .event = std::move(event1),
+        }));
       });
 
   StartServerThread();
@@ -526,10 +516,9 @@ TEST_F(CreateWithOnOpenTest, Tty) {
   zx::eventpair event0, event1;
 
   ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
-  fuchsia_io::wire::Tty device = {.event = std::move(event1)};
-  auto node_info = fuchsia_io::wire::NodeInfo::WithTty(std::move(device));
-
-  SendOnOpenEvent(std::move(node_info));
+  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithTty({
+      .event = std::move(event1),
+  }));
 
   ASSERT_OK(zxio_create_with_on_open(TakeClientChannel().release(), storage()));
 
@@ -552,9 +541,8 @@ class TestVmofileServerWithDescribe : public zxio_tests::TestVmofileServer {
 
  protected:
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final {
-    fidl::Arena fidl_allocator;
-    auto node_info = fuchsia_io::wire::NodeInfo::WithVmofile(fidl_allocator, std::move(vmofile_));
-    completer.Reply(std::move(node_info));
+    completer.Reply(fuchsia_io::wire::NodeInfo::WithVmofile(
+        fidl::ObjectView<decltype(vmofile_)>::FromExternal(&vmofile_)));
   }
 
  private:
@@ -574,12 +562,11 @@ TEST_F(CreateVmofileTest, File) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(vmo_size, 0u, &vmo));
 
-  fuchsia_io::wire::Vmofile vmofile = {
+  node_server().set_vmofile({
       .vmo = std::move(vmo),
       .offset = file_start_offset,
       .length = file_length,
-  };
-  node_server().set_vmofile(std::move(vmofile));
+  });
 
   StartServerThread();
 
@@ -658,10 +645,8 @@ TEST_F(CreateVmofileWithOnOpenTest, File) {
       .offset = file_start_offset,
       .length = file_length,
   };
-  fidl::Arena fidl_allocator;
-  auto node_info = fuchsia_io::wire::NodeInfo::WithVmofile(fidl_allocator, std::move(vmofile));
-
-  SendOnOpenEvent(std::move(node_info));
+  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithVmofile(
+      fidl::ObjectView<decltype(vmofile)>::FromExternal(&vmofile)));
 
   node_server().set_seek_offset(offset_within_file);
 

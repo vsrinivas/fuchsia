@@ -33,19 +33,18 @@ class BaseSocket {
   explicit BaseSocket(Client& client) : client_(client) {}
 
   zx_status_t CloseSocket() {
-    fidl::WireResult result = client_->Close();
-    zx_status_t status;
-    if ((status = result.status()) != ZX_OK) {
-      return status;
+    const fidl::WireResult result = client_->Close();
+    if (!result.ok()) {
+      return result.status();
     }
-    if (result->result.is_err()) {
-      return result->result.err();
+    const auto& response = result.value();
+    switch (response.result.Which()) {
+      case fio::wire::Node2CloseResult::Tag::kErr:
+        return response.result.err();
+      case fio::wire::Node2CloseResult::Tag::kResponse:
+        return client_.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
+                                                       nullptr);
     }
-    if ((status = client_.client_end().channel().wait_one(
-             ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr)) != ZX_OK) {
-      return status;
-    }
-    return ZX_OK;
   }
 
   zx_status_t CloneSocket(zx_handle_t* out_handle) {

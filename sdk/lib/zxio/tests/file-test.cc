@@ -3,18 +3,14 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/sync/completion.h>
-#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/ops.h>
 
 #include <atomic>
-#include <future>
 #include <memory>
-#include <thread>
 
 #include <zxtest/zxtest.h>
 
@@ -29,7 +25,7 @@ namespace fio = fuchsia_io;
 class CloseCountingFileServer : public zxio_tests::TestFileServerBase {
  public:
   CloseCountingFileServer() = default;
-  virtual ~CloseCountingFileServer() = default;
+  ~CloseCountingFileServer() override = default;
 
   // Exercised by |zxio_close|.
   void CloseDeprecated(CloseDeprecatedRequestView request,
@@ -58,7 +54,7 @@ class CloseCountingFileServer : public zxio_tests::TestFileServerBase {
 
 class File : public zxtest::Test {
  public:
-  virtual ~File() { binding_->Unbind(); }
+  ~File() override { binding_->Unbind(); }
 
   template <typename ServerImpl>
   ServerImpl* StartServer() {
@@ -72,31 +68,31 @@ class File : public zxtest::Test {
     return static_cast<ServerImpl*>(server_.get());
   }
 
-  fpromise::result<fidl::ClientEnd<fio::File>, zx_status_t> OpenConnection() {
-    auto ends = fidl::CreateEndpoints<fio::File>();
-    if (!ends.is_ok()) {
-      return fpromise::error(ends.status_value());
+  zx::status<fidl::ClientEnd<fio::File>> OpenConnection() {
+    zx::status ends = fidl::CreateEndpoints<fio::File>();
+    if (ends.is_error()) {
+      return ends.take_error();
     }
     auto binding = fidl::BindServer(loop_->dispatcher(), std::move(ends->server), server_.get());
     binding_ = std::make_unique<fidl::ServerBindingRef<fio::File>>(std::move(binding));
-    return fpromise::ok(std::move(ends->client));
+    return zx::ok(std::move(ends->client));
   }
 
   zx_status_t OpenFile() {
-    auto client_end = OpenConnection();
+    zx::status client_end = OpenConnection();
     if (client_end.is_error()) {
-      return client_end.error();
+      return client_end.status_value();
     }
-    auto result = fidl::WireCall<fio::File>(client_end.value())->Describe();
-
+    fidl::WireResult result = fidl::WireCall<fio::File>(client_end.value())->Describe();
     if (result.status() != ZX_OK) {
       return result.status();
     }
+    auto& response = result.value();
+    EXPECT_TRUE(response.info.is_file());
+    fio::wire::FileObject& file = response.info.file();
 
-    EXPECT_TRUE(result->info.is_file());
-    return zxio_file_init(&file_, client_end.value().TakeChannel().release(),
-                          result->info.file().event.release(),
-                          result->info.file().stream.release());
+    return zxio_file_init(&file_, client_end.value().TakeChannel().release(), file.event.release(),
+                          file.stream.release());
   }
 
   void TearDown() override {
@@ -328,13 +324,11 @@ TEST_F(File, ReadWriteStream) {
 class Remote : public File {
  public:
   zx_status_t OpenRemote() {
-    auto client_end = OpenConnection();
+    zx::status client_end = OpenConnection();
     if (client_end.is_error()) {
-      return client_end.error();
+      return client_end.status_value();
     }
-
-    return zxio_remote_init(&file_, client_end.take_value().TakeChannel().release(),
-                            ZX_HANDLE_INVALID);
+    return zxio_remote_init(&file_, client_end.value().TakeChannel().release(), ZX_HANDLE_INVALID);
   }
 };
 

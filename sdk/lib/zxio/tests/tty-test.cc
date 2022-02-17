@@ -46,9 +46,9 @@ class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_
       completer.Close(status);
       return;
     }
-    fuchsia_io::wire::Tty tty = {.event = std::move(event)};
-    auto node_info = fuchsia_io::wire::NodeInfo::WithTty(std::move(tty));
-    completer.Reply(std::move(node_info));
+    completer.Reply(fuchsia_io::wire::NodeInfo::WithTty({
+        .event = std::move(event),
+    }));
   }
 
   void SetWindowSize(SetWindowSizeRequestView request,
@@ -83,7 +83,7 @@ class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_
 };
 
 TEST(Tty, Basic) {
-  auto device_ends = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
+  zx::status device_ends = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
   ASSERT_OK(device_ends.status_value());
   auto [device_client, device_server] = std::move(device_ends.value());
 
@@ -102,7 +102,7 @@ TEST(Tty, Basic) {
 
   EXPECT_OK(zxio_set_window_size(io, 42, 57));
 
-  auto server_size = server.size();
+  fuchsia_hardware_pty::wire::WindowSize server_size = server.size();
   EXPECT_EQ(42, server_size.width);
   EXPECT_EQ(57, server_size.height);
 

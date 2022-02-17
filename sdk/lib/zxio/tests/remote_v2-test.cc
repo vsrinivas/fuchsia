@@ -6,8 +6,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/zxio/cpp/inception.h>
-#include <lib/zxio/ops.h>
 #include <lib/zxio/zxio.h>
 
 #include <atomic>
@@ -24,7 +22,7 @@ namespace fio = fuchsia_io;
 class TestServerBase : public fidl::WireServer<fio::Node2> {
  public:
   TestServerBase() = default;
-  virtual ~TestServerBase() = default;
+  ~TestServerBase() override = default;
 
   void Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
@@ -64,7 +62,7 @@ class TestServerBase : public fidl::WireServer<fio::Node2> {
 class RemoteV2 : public zxtest::Test {
  public:
   void SetUp() final {
-    auto control_client_end = fidl::CreateEndpoints(&control_server_);
+    zx::status control_client_end = fidl::CreateEndpoints(&control_server_);
     ASSERT_OK(control_client_end.status_value());
     ASSERT_OK(zx::eventpair::create(0, &eventpair_to_client_, &eventpair_on_server_));
     ASSERT_OK(zxio_remote_v2_init(&remote_, control_client_end->TakeChannel().release(),
@@ -119,7 +117,7 @@ TEST_F(RemoteV2, GetAttributes) {
       nodes_attributes.set_content_size(allocator, content_size)
           .set_protocols(allocator, fio::wire::NodeProtocols::kFile)
           .set_id(allocator, id);
-      completer.ReplySuccess(std::move(nodes_attributes));
+      completer.ReplySuccess(nodes_attributes);
     }
   };
   ASSERT_NO_FAILURES(StartServer<TestServer>());

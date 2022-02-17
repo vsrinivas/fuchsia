@@ -6,7 +6,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/ops.h>
 #include <string.h>
 
@@ -47,7 +46,7 @@ class TestServer final : public zxio_tests::TestDirectoryServerBase {
 
     for (; index_ < kEntryCount; index_++) {
       const size_t name_length = std::min(static_cast<size_t>(index_) + 1, fio::wire::kMaxFilename);
-      auto buffer_position = buffer_start + actual;
+      uint8_t* buffer_position = buffer_start + actual;
 
       struct dirent {
         uint64_t inode;
@@ -98,7 +97,7 @@ class TestServer final : public zxio_tests::TestDirectoryServerBase {
 class DirentTest : public zxtest::Test {
  public:
   void SetUp() final {
-    auto control_ends = fidl::CreateEndpoints<fio::Directory>();
+    zx::status control_ends = fidl::CreateEndpoints<fio::Directory>();
     ASSERT_OK(control_ends.status_value());
     ASSERT_OK(zxio_dir_init(&dir_, control_ends->client.TakeChannel().release()));
     server_ = std::make_unique<TestServer>();

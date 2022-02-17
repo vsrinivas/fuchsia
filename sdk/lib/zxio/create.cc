@@ -10,7 +10,6 @@
 #include <lib/zxio/null.h>
 #include <lib/zxio/zxio.h>
 #include <stdarg.h>
-#include <zircon/syscalls.h>
 
 #include "sdk/lib/zxio/private.h"
 
@@ -33,7 +32,7 @@ zxio_handle_holder& zxio_get_handle_holder(zxio_t* io) {
   return *reinterpret_cast<zxio_handle_holder*>(io);
 }
 
-static constexpr zxio_ops_t zxio_handle_holder_ops = []() {
+constexpr zxio_ops_t zxio_handle_holder_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = [](zxio_t* io) {
     zxio_get_handle_holder(io).~zxio_handle_holder();
@@ -92,12 +91,10 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
     case ZX_OBJ_TYPE_CHANNEL: {
       fidl::ClientEnd<fio::Node> node(zx::channel(std::move(handle)));
       fidl::WireResult result = fidl::WireCall(node)->Describe();
-      zx_status_t status = result.status();
-      if (status != ZX_OK) {
-        return status;
+      if (!result.ok()) {
+        return result.status();
       }
-      auto node_info = std::move(result.value().info);
-      return zxio_create_with_nodeinfo(std::move(node), node_info, storage);
+      return zxio_create_with_nodeinfo(std::move(node), result.value().info, storage);
     }
     case ZX_OBJ_TYPE_LOG: {
       zxio_debuglog_init(storage, zx::debuglog(std::move(handle)));
@@ -153,7 +150,7 @@ zx_status_t zxio_create(zx_handle_t raw_handle, zxio_storage_t* storage) {
 }
 
 zx_status_t zxio_create_with_on_open(zx_handle_t raw_handle, zxio_storage_t* storage) {
-  auto node = fidl::ClientEnd<fio::Node>(zx::channel(raw_handle));
+  fidl::ClientEnd<fio::Node> node{zx::channel(raw_handle)};
   if (!node.is_valid() || storage == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -177,14 +174,14 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
       return zxio_dir_init(storage, node.TakeChannel().release());
     }
     case fio::wire::NodeInfo::Tag::kFile: {
-      auto& file = info.file();
+      fio::wire::FileObject& file = info.file();
       zx::event event = std::move(file.event);
       zx::stream stream = std::move(file.stream);
       return zxio_file_init(storage, node.TakeChannel().release(), event.release(),
                             stream.release());
     }
     case fio::wire::NodeInfo::Tag::kPipe: {
-      auto& pipe = info.pipe();
+      fio::wire::PipeObject& pipe = info.pipe();
       zx::socket socket = std::move(pipe.socket);
       zx_info_socket_t socket_info;
       zx_status_t status =
@@ -198,24 +195,24 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
       return zxio_remote_init(storage, node.TakeChannel().release(), ZX_HANDLE_INVALID);
     }
     case fio::wire::NodeInfo::Tag::kTty: {
-      auto& tty = info.tty();
+      fio::wire::Tty& tty = info.tty();
       zx::eventpair event = std::move(tty.event);
       return zxio_remote_init(storage, node.TakeChannel().release(), event.release());
     }
     case fio::wire::NodeInfo::Tag::kVmofile: {
-      auto& file = info.vmofile();
-      auto control = fidl::ClientEnd<fio::File>(node.TakeChannel());
-      auto result = fidl::WireCall(control.borrow())->Seek(0, fio::wire::SeekOrigin::kStart);
-      zx_status_t status = result.status();
-      if (status != ZX_OK) {
+      fio::wire::Vmofile& file = info.vmofile();
+      fidl::ClientEnd<fio::File> control(node.TakeChannel());
+      const fidl::WireResult result =
+          fidl::WireCall(control.borrow())->Seek(0, fio::wire::SeekOrigin::kStart);
+      if (!result.ok()) {
+        return result.status();
+      }
+      if (zx_status_t status = result->s; status != ZX_OK) {
         return status;
       }
-      status = result->s;
-      if (status != ZX_OK) {
-        return status;
-      }
+      const auto& response = result.value();
       return zxio_vmofile_init(storage, fidl::BindSyncClient(std::move(control)),
-                               std::move(file.vmo), file.offset, file.length, result->offset);
+                               std::move(file.vmo), file.offset, file.length, response.offset);
     }
     default: {
       zxio_handle_holder_init(storage, node.TakeChannel());
@@ -227,7 +224,7 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
 zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t type, ...) {
   va_list args;
   va_start(args, type);
-  auto va_cleanup = fit::defer([&args]() { va_end(args); });
+  const fit::deferred_action va_cleanup = fit::defer([&args]() { va_end(args); });
   switch (type) {
     case ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET: {
       zx::eventpair event(va_arg(args, zx_handle_t));

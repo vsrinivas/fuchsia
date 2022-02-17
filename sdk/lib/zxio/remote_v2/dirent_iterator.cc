@@ -26,17 +26,16 @@ namespace {
 class DirentIteratorImpl {
  public:
   static zx_status_t Create(zxio_dirent_iterator_t* iterator, zxio_t* directory) {
-    auto iterator_ends = fidl::CreateEndpoints<fio::DirectoryIterator>();
-    if (!iterator_ends.is_ok()) {
+    zx::status iterator_ends = fidl::CreateEndpoints<fio::DirectoryIterator>();
+    if (iterator_ends.is_error()) {
       return iterator_ends.status_value();
     }
     RemoteV2 dir(directory);
-    auto status =
+    const fidl::WireResult result =
         fidl::WireCall(fidl::UnownedClientEnd<fio::Directory2>(dir.control()))
-            ->Enumerate(fio::wire::DirectoryEnumerateOptions(), std::move(iterator_ends->server))
-            .status();
-    if (status != ZX_OK) {
-      return status;
+            ->Enumerate(fio::wire::DirectoryEnumerateOptions(), std::move(iterator_ends->server));
+    if (!result.ok()) {
+      return result.status();
     }
     new (iterator)
         DirentIteratorImpl(directory, fidl::BindSyncClient(std::move(iterator_ends->client)));
@@ -57,7 +56,7 @@ class DirentIteratorImpl {
       index_ = 0;
     }
 
-    const auto& fidl_entry = fidl_entries_[index_];
+    const fio::wire::DirectoryEntry& fidl_entry = fidl_entries_[index_];
     index_++;
 
     if (!fidl_entry.has_name() || fidl_entry.name().size() > fio::wire::kMaxNameLength) {
@@ -89,16 +88,18 @@ class DirentIteratorImpl {
 
   zx_status_t ReadNextBatch() {
     fidl::BufferSpan fidl_buffer(buffer_, sizeof(buffer_));
-    auto result = iterator_.buffer(fidl_buffer)->GetNext();
-    if (result.status() != ZX_OK) {
+    const fidl::WireUnownedResult result = iterator_.buffer(fidl_buffer)->GetNext();
+    if (!result.ok()) {
       return result.status();
     }
-    if (result->result.is_err()) {
-      return result->result.err();
+    const auto& response = result.value();
+    switch (response.result.Which()) {
+      case fio::wire::DirectoryIteratorGetNextResult::Tag::kErr:
+        return response.result.err();
+      case fio::wire::DirectoryIteratorGetNextResult::Tag::kResponse:
+        fidl_entries_ = response.result.response().entries;
+        return ZX_OK;
     }
-    auto& response = result->result.response();
-    fidl_entries_ = response.entries;
-    return ZX_OK;
   }
 
   zxio_remote_v2_t* io_;

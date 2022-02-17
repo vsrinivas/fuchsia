@@ -5,19 +5,16 @@
 #define _ALL_SOURCE  // Expose the MTX_INIT extension.
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/zx/channel.h>
-#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
 #include <sys/stat.h>
 #include <threads.h>
-#include <zircon/syscalls.h>
 
 #include "private.h"
 
 namespace fio = fuchsia_io;
 
-typedef struct zxio_vmofile {
+using zxio_vmofile_t = struct zxio_vmofile {
   // The |zxio_t| control structure for this object.
   zxio_t io;
 
@@ -38,7 +35,7 @@ typedef struct zxio_vmofile {
   mtx_t lock;
 
   fidl::WireSyncClient<fio::File> control;
-} zxio_vmofile_t;
+};
 
 static_assert(sizeof(zxio_vmofile_t) <= sizeof(zxio_storage_t),
               "zxio_vmofile_t must fit inside zxio_storage_t.");
@@ -57,11 +54,12 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
   uint64_t seek = file->offset;
   mtx_unlock(&file->lock);
 
-  auto result = file->control->Seek(seek, fio::wire::SeekOrigin::kStart);
-  if (result.status() != ZX_OK) {
+  const fidl::WireResult result = file->control->Seek(seek, fio::wire::SeekOrigin::kStart);
+  if (!result.ok()) {
     return ZX_ERR_BAD_STATE;
   }
-  if (result->s != ZX_OK) {
+  const auto& response = result.value();
+  if (response.s != ZX_OK) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -72,16 +70,16 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
 static zx_status_t zxio_vmofile_reopen(zxio_t* io, zxio_reopen_flags_t zxio_flags,
                                        zx_handle_t* out_handle) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
-  auto ends = fidl::CreateEndpoints<fio::Node>();
-  if (!ends.is_ok()) {
+  zx::status ends = fidl::CreateEndpoints<fio::Node>();
+  if (ends.is_error()) {
     return ends.status_value();
   }
   uint32_t flags = fio::wire::kCloneFlagSameRights;
   if (zxio_flags & ZXIO_REOPEN_DESCRIBE) {
     flags |= fio::wire::kOpenFlagDescribe;
   }
-  auto result = file->control->Clone(flags, std::move(ends->server));
-  if (result.status() != ZX_OK) {
+  const fidl::WireResult result = file->control->Clone(flags, std::move(ends->server));
+  if (!result.ok()) {
     return result.status();
   }
   *out_handle = ends->client.TakeChannel().release();
@@ -191,7 +189,7 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, uint32_
     uint32_t options = ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE;
     if (flags & fio::wire::kVmoFlagExec) {
       // Creating a SNAPSHOT_AT_LEAST_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the
-      // parent VMO has it, and we can't arbitrary add EXECUTE here on the
+      // parent VMO has it, and we can't arbitrarily add EXECUTE here on the
       // client side. Adding CHILD_NO_WRITE still creates a snapshot and a new
       // VMO object, which e.g. can have a unique ZX_PROP_NAME value, but the
       // returned handle lacks WRITE and maintains EXECUTE.

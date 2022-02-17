@@ -5,7 +5,6 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/zx/channel.h>
 #include <lib/zxio/zxio.h>
 
 #include <string>
@@ -17,7 +16,7 @@
 
 namespace {
 
-constexpr auto kTestPath = std::string_view("test_path");
+constexpr std::string_view kTestPath("test_path");
 
 class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
  public:
@@ -26,8 +25,7 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
   }
 
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final {
-    auto node_info = fuchsia_io::wire::NodeInfo::WithDirectory({});
-    completer.Reply(std::move(node_info));
+    completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory({}));
   }
 
   void Open(OpenRequestView request, OpenCompleter::Sync& completer) final {
@@ -63,11 +61,12 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
     zx::event file_event;
     ASSERT_OK(zx::event::create(0u, &file_event));
 
-    fuchsia_io::wire::FileObject file = {.event = std::move(file_event)};
-    fidl::Arena fidl_allocator;
-    auto node_info = fuchsia_io::wire::NodeInfo::WithFile(fidl_allocator, std::move(file));
-
-    ASSERT_OK(fidl::WireSendEvent(file_server)->OnOpen(ZX_OK, std::move(node_info)));
+    fuchsia_io::wire::FileObject file = {
+        .event = std::move(file_event),
+    };
+    ASSERT_OK(fidl::WireSendEvent(file_server)
+                  ->OnOpen(ZX_OK, fuchsia_io::wire::NodeInfo::WithFile(
+                                      fidl::ObjectView<decltype(file)>::FromExternal(&file))));
     fidl::BindServer(dispatcher_, std::move(file_server), &file_);
   }
 
@@ -83,21 +82,21 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
   }
 
   void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) final {
-    unlinks_.push_back(std::string(request->name.get()));
+    unlinks_.emplace_back(request->name.get());
     completer.ReplySuccess();
   }
 
   const std::vector<std::string>& unlinks() const { return unlinks_; }
 
   void Link(LinkRequestView request, LinkCompleter::Sync& completer) final {
-    links_.push_back({std::string(request->src.get()), std::string(request->dst.get())});
+    links_.emplace_back(request->src.get(), request->dst.get());
     completer.Reply(ZX_OK);
   }
 
   const std::vector<std::pair<std::string, std::string>>& links() const { return links_; }
 
   void Rename(RenameRequestView request, RenameCompleter::Sync& completer) final {
-    renames_.push_back({std::string(request->src.get()), std::string(request->dst.get())});
+    renames_.emplace_back(request->src.get(), request->dst.get());
     completer.ReplySuccess();
   }
 
@@ -116,8 +115,7 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
 class Directory : public zxtest::Test {
  public:
   Directory()
-      : server_running_(false),
-        server_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+      : server_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         directory_server_(server_loop_.dispatcher()) {}
 
   void SetUp() override {
@@ -154,7 +152,7 @@ class Directory : public zxtest::Test {
   }
 
  private:
-  bool server_running_;
+  bool server_running_ = false;
   async::Loop server_loop_;
   TestDirectoryServer directory_server_;
   zxio_storage_t directory_storage_;
@@ -194,7 +192,7 @@ TEST_F(Directory, Unlink) {
 
   StopServerThread();
 
-  const auto& unlinks = directory_server().unlinks();
+  const std::vector unlinks = directory_server().unlinks();
 
   ASSERT_EQ(unlinks.size(), 2);
 
@@ -225,7 +223,7 @@ TEST_F(Directory, Link) {
 
   StopServerThread();
 
-  const auto& links = directory_server().links();
+  const std::vector links = directory_server().links();
 
   ASSERT_EQ(links.size(), 3);
 
@@ -265,7 +263,7 @@ TEST_F(Directory, Rename) {
 
   StopServerThread();
 
-  const auto& renames = directory_server().renames();
+  const std::vector renames = directory_server().renames();
 
   ASSERT_EQ(renames.size(), 3);
 

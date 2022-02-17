@@ -9,7 +9,6 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/stream.h>
 #include <lib/zx/vmo.h>
-#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/ops.h>
 
 #include <atomic>
@@ -45,7 +44,7 @@ class TestServerBase : public fidl::testing::WireTestBase<fio::File2> {
       fidl::Arena allocator;
       fio::wire::ConnectionInfo info(allocator);
       info.set_representation(allocator, fio::wire::Representation::WithFile(allocator, allocator));
-      completer.Reply(std::move(info));
+      completer.Reply(info);
       return;
     }
     completer.Close(ZX_ERR_NOT_SUPPORTED);
@@ -73,29 +72,29 @@ class FileV2 : public zxtest::Test {
   }
 
   zx_status_t OpenFile() {
-    auto ends = fidl::CreateEndpoints<fio::File2>();
-    if (!ends.is_ok()) {
+    zx::status ends = fidl::CreateEndpoints<fio::File2>();
+    if (ends.is_error()) {
       return ends.status_value();
     }
 
-    auto status =
-        fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(ends->server), server_.get());
-    if (status != ZX_OK) {
+    if (zx_status_t status = fidl::BindSingleInFlightOnly(loop_->dispatcher(),
+                                                          std::move(ends->server), server_.get());
+        status != ZX_OK) {
       return status;
     }
 
-    auto result =
+    fidl::WireResult result =
         fidl::WireCall(ends->client)->Describe2(fio::wire::ConnectionInfoQuery::kRepresentation);
-
-    if (result.status() != ZX_OK) {
-      return status;
+    if (!result.ok()) {
+      return result.status();
     }
+    fio::wire::ConnectionInfo& info = result.value().info;
 
     zx::event observer;
     zx::stream stream;
-    if (result->info.has_representation()) {
-      EXPECT_TRUE(result->info.representation().is_file());
-      fio::wire::FileInfo& file = result->info.representation().file();
+    if (info.has_representation()) {
+      EXPECT_TRUE(info.representation().is_file());
+      fio::wire::FileInfo& file = info.representation().file();
       if (file.has_observer()) {
         observer = std::move(file.observer());
       }
@@ -138,7 +137,7 @@ class TestServerEvent final : public TestServerBase {
       fio::wire::ConnectionInfo info(allocator);
       info.set_representation(allocator, fio::wire::Representation::WithFile(allocator, allocator));
       info.representation().file().set_observer(std::move(client_observer));
-      completer.Reply(std::move(info));
+      completer.Reply(info);
       return;
     }
     completer.Close(ZX_ERR_NOT_SUPPORTED);
@@ -307,7 +306,7 @@ class TestServerStream final : public TestServerBase {
       fio::wire::ConnectionInfo info(allocator);
       info.set_representation(allocator, fio::wire::Representation::WithFile(allocator, allocator));
       info.representation().file().set_stream(std::move(client_stream));
-      completer.Reply(std::move(info));
+      completer.Reply(info);
       return;
     }
     completer.Close(ZX_ERR_NOT_SUPPORTED);

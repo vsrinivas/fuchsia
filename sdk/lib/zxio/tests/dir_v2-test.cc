@@ -9,7 +9,6 @@
 #include <lib/async/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
-#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/ops.h>
 
 #include <atomic>
@@ -26,7 +25,7 @@ namespace fio = fuchsia_io;
 class TestServerBase : public fidl::testing::WireTestBase<fio::Directory2> {
  public:
   TestServerBase() = default;
-  virtual ~TestServerBase() = default;
+  ~TestServerBase() override = default;
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
     ADD_FAILURE("unexpected message received: %s", name.c_str());
@@ -49,7 +48,7 @@ class TestServerBase : public fidl::testing::WireTestBase<fio::Directory2> {
 class DirV2 : public zxtest::Test {
  public:
   void SetUp() final {
-    auto client_end = fidl::CreateEndpoints(&server_end_);
+    zx::status client_end = fidl::CreateEndpoints(&server_end_);
     ASSERT_OK(client_end.status_value());
     ASSERT_OK(zxio_dir_v2_init(&dir_, client_end->TakeChannel().release()));
   }
@@ -95,30 +94,29 @@ TEST_F(DirV2, Enumerate) {
         // Sends a different entry every time.
         void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) override {
           fidl::Arena allocator;
-          fidl::VectorView<fio::wire::DirectoryEntry> entry(allocator, 1);
-          entry[0].Allocate(allocator);
+          fio::wire::DirectoryEntry entry(allocator);
           switch (count_) {
             case 0:
-              entry[0].set_name(allocator, fidl::StringView("zero"));
-              entry[0].set_protocols(allocator, fio::wire::NodeProtocols::kDirectory);
-              entry[0].set_abilities(allocator, fio::wire::Operations::kEnumerate);
-              entry[0].set_id(allocator, 0);
+              entry.set_name(allocator, fidl::StringView("zero"));
+              entry.set_protocols(allocator, fio::wire::NodeProtocols::kDirectory);
+              entry.set_abilities(allocator, fio::wire::Operations::kEnumerate);
+              entry.set_id(allocator, 0);
               break;
             case 1:
-              entry[0].set_name(allocator, fidl::StringView("one"));
-              entry[0].set_protocols(allocator, fio::wire::NodeProtocols::kFile);
-              entry[0].set_abilities(allocator, fio::wire::Operations::kReadBytes);
-              entry[0].set_id(allocator, 1);
+              entry.set_name(allocator, fidl::StringView("one"));
+              entry.set_protocols(allocator, fio::wire::NodeProtocols::kFile);
+              entry.set_abilities(allocator, fio::wire::Operations::kReadBytes);
+              entry.set_id(allocator, 1);
               break;
             default:
               completer.ReplySuccess(fidl::VectorView<fio::wire::DirectoryEntry>());
               return;
           }
           count_++;
-          completer.ReplySuccess(std::move(entry));
+          completer.ReplySuccess(fidl::VectorView<decltype(entry)>::FromExternal(&entry, 1));
         }
 
-        ~IteratorServer() { sync_completion_signal(completion_); }
+        ~IteratorServer() override { sync_completion_signal(completion_); }
 
        private:
         uint64_t count_ = 0;

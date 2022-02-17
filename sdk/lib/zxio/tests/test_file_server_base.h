@@ -44,10 +44,9 @@ class TestFileServerBase : public fidl::testing::WireTestBase<fuchsia_io::File> 
 class TestReadFileServer : public TestFileServerBase {
  public:
   void Read2(Read2RequestView request, Read2Completer::Sync& completer) final {
-    fidl::Arena fidl_allocator;
-    fidl::VectorView<uint8_t> read_data(fidl_allocator, sizeof(kTestData));
-    memcpy(read_data.mutable_data(), kTestData, sizeof(kTestData));
-    completer.ReplySuccess(read_data);
+    uint8_t read_data[sizeof(kTestData)];
+    memcpy(read_data, kTestData, sizeof(kTestData));
+    completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(read_data));
   }
 
   static constexpr char kTestData[] = "abcdef";

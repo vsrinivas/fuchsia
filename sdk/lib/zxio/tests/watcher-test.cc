@@ -13,7 +13,6 @@
 
 #include <vector>
 
-#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
 TEST(WatcherTest, WatchInvalidObject) {
@@ -43,8 +42,7 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
   }
 
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
-    fuchsia_io::wire::DirectoryObject directory;
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory(std::move(directory)));
+    completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory({}));
   }
 
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override {
@@ -56,7 +54,7 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
 };
 
 TEST(WatcherTest, WatchInvalidCallback) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(endpoints.status_value());
 
   Server server([](uint32_t maks, uint32_t options, zx::channel watcher,
@@ -76,7 +74,7 @@ TEST(WatcherTest, WatchInvalidCallback) {
 }
 
 TEST(WatcherTest, Smoke) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(endpoints.status_value());
 
   Server server([](uint32_t mask, uint32_t options, zx::channel watcher,

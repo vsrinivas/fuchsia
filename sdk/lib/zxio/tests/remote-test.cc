@@ -7,8 +7,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
-#include <lib/zxio/cpp/inception.h>
-#include <lib/zxio/ops.h>
 #include <lib/zxio/zxio.h>
 
 #include <atomic>
@@ -25,7 +23,7 @@ namespace fio = fuchsia_io;
 class TestServerBase : public fidl::WireServer<fio::Node> {
  public:
   TestServerBase() = default;
-  virtual ~TestServerBase() = default;
+  ~TestServerBase() override = default;
 
   // Exercised by |zxio_close|.
   void CloseDeprecated(CloseDeprecatedRequestView request,
@@ -103,7 +101,7 @@ class TestServerBase : public fidl::WireServer<fio::Node> {
 class Remote : public zxtest::Test {
  public:
   void SetUp() final {
-    auto control_client_end = fidl::CreateEndpoints(&control_server_);
+    zx::status control_client_end = fidl::CreateEndpoints(&control_server_);
     ASSERT_OK(control_client_end.status_value());
     ASSERT_OK(zx::eventpair::create(0, &eventpair_to_client_, &eventpair_on_server_));
     ASSERT_OK(zxio_remote_init(&remote_, control_client_end->TakeChannel().release(),
@@ -235,7 +233,7 @@ TEST_F(CloneTest, Clone) {
 
   fidl::ClientEnd<fio::Node> clone_client(std::move(clone));
 
-  auto describe_response = fidl::WireCall(clone_client)->Describe();
+  const fidl::WireResult describe_response = fidl::WireCall(clone_client)->Describe();
   ASSERT_EQ(ZX_OK, describe_response.status());
 
   EXPECT_TRUE(describe_response.value().info.is_file());

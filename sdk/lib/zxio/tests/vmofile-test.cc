@@ -19,7 +19,7 @@ class VmoFileNonZeroOffsetTest : public zxtest::Test {
     ASSERT_OK(zx::vmo::create(300u, 0u, &backing));
     ASSERT_OK(backing.write(ALPHABET, 0, len));
     ASSERT_OK(backing.write(ALPHABET, len, len + len));
-    auto client_end = fidl::CreateEndpoints(&server_);
+    zx::status client_end = fidl::CreateEndpoints(&server_);
     ASSERT_OK(client_end.status_value());
 
     ASSERT_OK(zxio_vmofile_init(&storage, fidl::BindSyncClient(std::move(client_end).value()),
@@ -118,7 +118,7 @@ TEST(VmoFileTest, GetExact) {
   ASSERT_OK(backing.write(ALPHABET, 0, len));
   ASSERT_OK(backing.write(ALPHABET, len, len + len));
 
-  auto ends = fidl::CreateEndpoints<fuchsia_io::File>();
+  zx::status ends = fidl::CreateEndpoints<fuchsia_io::File>();
   ASSERT_OK(ends.status_value());
 
   zxio_storage_t storage;

@@ -10,7 +10,6 @@
 #include <lib/zx/eventpair.h>
 #include <lib/zx/socket.h>
 #include <lib/zxio/cpp/create_with_type.h>
-#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/zxio.h>
 #include <zircon/types.h>
 
@@ -248,7 +247,7 @@ class RawSocketTest : public zxtest::Test {
   void SetUp() final {
     ASSERT_OK(zx::eventpair::create(0u, &event_client_, &event_server_));
 
-    auto server_end = fidl::CreateEndpoints(&client_end_);
+    zx::status server_end = fidl::CreateEndpoints(&client_end_);
     ASSERT_OK(server_end.status_value());
 
     fidl::BindServer(control_loop_.dispatcher(), std::move(*server_end), &server_);
@@ -347,7 +346,7 @@ class PacketSocketTest : public zxtest::Test {
   void SetUp() final {
     ASSERT_OK(zx::eventpair::create(0u, &event_client_, &event_server_));
 
-    auto server_end = fidl::CreateEndpoints(&client_end_);
+    zx::status server_end = fidl::CreateEndpoints(&client_end_);
     ASSERT_OK(server_end.status_value());
 
     fidl::BindServer(control_loop_.dispatcher(), std::move(*server_end), &server_);
