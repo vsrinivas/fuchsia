@@ -415,12 +415,15 @@ impl Socket {
             inner.shutdown_read();
             (maybe_peer, !inner.messages.is_empty())
         };
-        if let Some(peer) = maybe_peer {
-            let mut peer_inner = peer.lock();
-            if has_unread {
-                peer_inner.messages.mark_peer_closed_with_unread_data();
+        // If this is a connected socket type, also shut down the connected peer.
+        if self.socket_type == SocketType::Stream || self.socket_type == SocketType::SeqPacket {
+            if let Some(peer) = maybe_peer {
+                let mut peer_inner = peer.lock();
+                if has_unread {
+                    peer_inner.messages.mark_peer_closed_with_unread_data();
+                }
+                peer_inner.shutdown_write();
             }
-            peer_inner.shutdown_write();
         }
         self.lock().state = SocketState::Closed;
     }
@@ -772,5 +775,42 @@ mod tests {
         assert_eq!(FdEvents::POLLHUP, server_socket.query_events());
 
         assert_eq!(connecting_socket.read_kernel(), vec![message]);
+    }
+
+    #[test]
+    fn test_dgram_socket() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let bind_address = SocketAddress::Unix(b"dgram_test".to_vec());
+        let rec_dgram = Socket::new(SocketDomain::Unix, SocketType::Datagram);
+        rec_dgram.bind(bind_address).expect("failed to bind datagram socket");
+
+        let xfer_value: u64 = 1234567819;
+        let xfer_bytes = xfer_value.to_ne_bytes();
+        let source_mem = map_memory(&current_task, UserAddress::default(), xfer_bytes.len() as u64);
+        current_task.mm.write_memory(source_mem, &xfer_bytes).unwrap();
+
+        let send = Socket::new(SocketDomain::Unix, SocketType::Datagram);
+        let source_buf = [UserBuffer { address: source_mem, length: xfer_bytes.len() }];
+        let mut source_iter = UserBufferIterator::new(&source_buf);
+        let credentials = ucred { pid: current_task.get_pid(), uid: 0, gid: 0 };
+        send.connect(&rec_dgram, credentials).unwrap();
+        let no_write = send.write(&current_task, &mut source_iter, &mut None, &mut None).unwrap();
+        assert_eq!(no_write, xfer_bytes.len());
+        // Previously, this would cause the test to fail,
+        // because rec_dgram was shut down.
+        send.close();
+
+        let rec_mem = map_memory(&current_task, UserAddress::default(), xfer_bytes.len() as u64);
+        let mut recv_mem = [0u8; 8];
+        current_task.mm.write_memory(rec_mem, &recv_mem).unwrap();
+        let rec_buf = [UserBuffer { address: rec_mem, length: recv_mem.len() }];
+        let mut rec_iter = UserBufferIterator::new(&rec_buf);
+        let read_info =
+            rec_dgram.read(&current_task, &mut rec_iter, SocketMessageFlags::empty()).unwrap();
+        assert_eq!(read_info.bytes_read, xfer_bytes.len());
+        current_task.mm.read_memory(rec_mem, &mut recv_mem).unwrap();
+        assert_eq!(recv_mem, xfer_bytes);
+
+        rec_dgram.close();
     }
 }
