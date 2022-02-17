@@ -785,9 +785,6 @@ cleanup_files+=("$inputs_file_list")
 relative_outputs=( "$output" )
 test -z "$depfile" || relative_outputs+=( "$depfile" )
 relative_outputs+=( "${extra_outputs[@]}" )
-# Removing outputs these avoids any unintended reuse of them.
-# This works around b/198660330, where a stale output causes a cache miss.
-rm -f "${relative_outputs[@]}"
 
 remote_outputs=()
 for f in "${relative_outputs[@]}"
