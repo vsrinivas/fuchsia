@@ -3407,14 +3407,6 @@ A human readable product description.
 
 From //build/product.gni:13
 
-### product_name_suffix
-Adds the suffix to the end of the product bundle name in order to make it unique.
-Used to distinguish between similar builds with different packages.
-
-**Current value (from the default):** `""`
-
-From //build/sdk/config.gni:15
-
 ### product_system_image_deps
 A list of binary labels to include in the system_image package.
 
@@ -4023,6 +4015,16 @@ custom disk for development purposes.
 **Current value (from the default):** `"//prebuilt/virtualization/packages/termina_guest/images/arm64/vm_rootfs.img"`
 
 From //src/virtualization/packages/termina_guest/BUILD.gn:18
+
+### termina_extras
+The termina extras disk image.
+
+Defaults to the disk image from CIPD, but can be overridden to use a
+custom disk for development purposes.
+
+**Current value (from the default):** `"//prebuilt/virtualization/packages/termina_guest/images/arm64/vm_extras.img"`
+
+From //src/virtualization/packages/termina_guest/BUILD.gn:30
 
 ### termina_kernel
 The termina kernel image.
