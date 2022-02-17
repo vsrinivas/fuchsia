@@ -89,7 +89,9 @@ func TestOOMSignalBeforeCriticalProcess(t *testing.T) {
 	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC")
 }
 
-func testOOMCommon(t *testing.T, cmdline []string, cmd string) {
+// Boots with |cmdline| appended to boot-options, runs |cmd|, then waits for any of |msgs| to be
+// emitted.
+func testOOMCommon(t *testing.T, cmdline []string, cmd string, msgs ...string) {
 	exDir := execDir(t)
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
@@ -109,7 +111,18 @@ func testOOMCommon(t *testing.T, cmdline []string, cmd string) {
 	// Trigger an OOM.
 	i.RunCommand(cmd)
 
-	// Ensure the memory state transition happens.
+	i.WaitForAnyLogMessage(msgs...)
+
+	// Ensure that the system reboots without panicking.
+	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC")
+}
+
+var stateTransitionString string = "memory-pressure: memory availability state - OutOfMemory"
+
+// Leaks memory until an out of memory event is triggered, then backs off.  Verifies that the system
+// reboots.
+func TestOOM(t *testing.T) {
+	// Ensure the memory availability state transition happens.
 	//
 	// Typically this leads to file systems being shut down and the system rebooting with reason
 	// "ZIRCON REBOOT REASON (OOM)".  However, after triggering the OOM signal, we wait for a
@@ -122,17 +135,10 @@ func testOOMCommon(t *testing.T, cmdline []string, cmd string) {
 	// we have a separate test |TestOOMSignal| to verify that a simulated OOM signal, i.e. an
 	// OOM signal without actually leaking any memory, results in the expected sequence of
 	// events.
-	i.WaitForLogMessage("memory-pressure: memory availability state - OutOfMemory")
-
-	// Ensure that the system reboots without panicking.
-	i.WaitForLogMessageAssertNotSeen("welcome to Zircon", "KERNEL PANIC")
+	testOOMCommon(t, cmdlineCommon, "k pmm oom", stateTransitionString)
 }
 
-// Leaks memory until an out of memory event is triggered, then backs off.  Verifies that the system
-// reboots.
-func TestOOM(t *testing.T) {
-	testOOMCommon(t, cmdlineCommon, "k pmm oom")
-}
+var allocFailedString string = "memory-pressure: pmm failed one or more alloc calls, taking action..."
 
 // Similar to |TestOOM| this test will trigger an out of memory situation and verify the system
 // reboots.  It differs from |TestOOM| in that once the out of memory condition is reached, the
@@ -140,13 +146,19 @@ func TestOOM(t *testing.T) {
 // be terminated (e.g. because a page fault cannot commit).  As a result, the reboot sequence may be
 // less orderly and predictable.
 func TestOOMHard(t *testing.T) {
-	testOOMCommon(t, cmdlineCommon, "k pmm oom hard")
+	// This command will keep on trying to allocate even after all memory is exhausted (and
+	// allocations have failed).  Depending on exactly what the MemoryWatchdog is doing when the
+	// first allocation fails we may or may not see a state transition so we wait for either of
+	// these messages.
+	testOOMCommon(t, cmdlineCommon, "k pmm oom hard", stateTransitionString, allocFailedString)
 }
 
 // See that failing to allocate will trigger an OOM reboot.
 func TestOOMDip(t *testing.T) {
-	cmdline := append(cmdlineCommon, "kernel.oom.trigger-on-alloc-failure=true")
-	testOOMCommon(t, cmdline, "k pmm oom dip")
+	// Similar to TestOOMHard, depending on what the MemoryWatchdog is doing when the first
+	// allocation fails we may see the state transition or we may see the failed allocation
+	// message.
+	testOOMCommon(t, cmdlineCommon, "k pmm oom dip", stateTransitionString, allocFailedString)
 }
 
 func execDir(t *testing.T) string {
