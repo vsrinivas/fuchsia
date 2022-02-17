@@ -10,6 +10,10 @@
     },
     children: [
         {
+            name: "memfs",
+            url: "fuchsia-pkg://fuchsia.com/ermine#meta/memfs.cm",
+        },
+        {
             name: "element_manager",
             url: "fuchsia-pkg://fuchsia.com/element_manager#meta/element_manager.cm",
         },
@@ -24,6 +28,13 @@
                 "fuchsia.element.GraphicalPresenter",
                 "fuchsia.ui.app.ViewProvider",
             ],
+        },
+        {
+            storage: "tmp",
+            from: "#memfs",
+            subdir: "tmp",
+            backing_dir: "memfs",
+            storage_id: "static_instance_id_or_moniker",
         },
     ],
     use: [
@@ -147,11 +158,13 @@
             to: [ "#chrome" ],
         },
         {
-            storage: [
-                "cache",
-                "tmp",
-            ],
+            storage: [ "cache" ],
             from: "parent",
+            to: "#chrome",
+        },
+        {
+            storage: [ "tmp" ],
+            from: "self",
             to: "#chrome",
         },
         {

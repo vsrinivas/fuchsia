@@ -1,0 +1,23 @@
+{
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/memfs",
+    },
+    capabilities: [
+        {
+            directory: "memfs",
+            rights: [ "rw*" ],
+            path: "/svc/fuchsia.io.Directory",
+        },
+    ],
+    expose: [
+        {
+            directory: "memfs",
+            from: "self",
+        },
+    ],
+}

@@ -17,6 +17,7 @@ fuchsia_package("ermine-pkg") {
 
   deps = [
     "login:component",
+    "memfs:component",
     "shell:component",
   ]
 }
