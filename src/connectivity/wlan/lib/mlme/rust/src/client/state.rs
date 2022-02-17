@@ -3033,7 +3033,7 @@ mod tests {
 
         let eth_frame = [
             1, 2, 3, 4, 5, 6, // dst_addr
-            11, 12, 13, 14, 15, 16, // src_addr
+            3, 3, 3, 3, 3, 3, // src_addr == IFACE_MAC
             0x0d, 0x05, // ether_type
             21, 22, 23, 24, 25, 26, 27, 28, // payload
             29, // more payload
@@ -3050,7 +3050,7 @@ mod tests {
                 0b00001000, 0b00000001, // Frame Control
                 0, 0, // Duration
                 6, 6, 6, 6, 6, 6, // addr1
-                11, 12, 13, 14, 15, 16, // addr2 (from src_addr above)
+                3, 3, 3, 3, 3, 3, // addr2 (from src_addr above)
                 1, 2, 3, 4, 5, 6, // addr3 (from dst_addr above)
                 0x10, 0, // Sequence Control
                 // LLC header

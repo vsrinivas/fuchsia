@@ -793,6 +793,24 @@ impl<'a> BoundClient<'a> {
             None
         };
 
+        // IEEE Std 802.11-2016, Table 9-26 specifies address field contents and their relation
+        // to the addr fields.
+        // TODO(fxbug.dev/51295): Support A-MSDU address field contents.
+
+        // We do not currently support RA other than the BSS.
+        // TODO(fxbug.dev/45833): Support to_ds = false and alternative RA for TDLS.
+        let to_ds = true;
+        let from_ds = src != self.sta.iface_mac;
+        // Detect when SA != TA, in which case we use addr4.
+        let addr1 = self.sta.bssid.0;
+        let addr2 = self.sta.iface_mac;
+        let addr3 = match (to_ds, from_ds) {
+            (false, false) => self.sta.bssid.0,
+            (false, true) => src,
+            (true, _) => dst,
+        };
+        let addr4 = if from_ds && to_ds { Some(src) } else { None };
+
         let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
             headers: {
                 mac::FixedDataHdrFields: &mac::FixedDataHdrFields {
@@ -800,11 +818,12 @@ impl<'a> BoundClient<'a> {
                         .with_frame_type(mac::FrameType::DATA)
                         .with_data_subtype(mac::DataSubtype(0).with_qos(qos_ctrl.is_some()))
                         .with_protected(is_protected)
-                        .with_to_ds(true),
+                        .with_to_ds(to_ds)
+                        .with_from_ds(from_ds),
                     duration: 0,
-                    addr1: self.sta.bssid.0,
-                    addr2: src,
-                    addr3: dst,
+                    addr1,
+                    addr2,
+                    addr3,
                     seq_ctrl: mac::SequenceControl(0).with_seq_num(
                         match qos_ctrl.as_ref() {
                             None => self.ctx.seq_mgr.next_sns1(&dst),
@@ -812,6 +831,7 @@ impl<'a> BoundClient<'a> {
                         } as u16
                     )
                 },
+                mac::Addr4?: addr4,
                 mac::QosControl?: qos_ctrl,
                 mac::LlcHdr: &data_writer::make_snap_llc_hdr(ether_type),
             },
@@ -1855,7 +1875,7 @@ mod tests {
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
         client
-            .send_data_frame([2; 6], [3; 6], false, false, 0x1234, &payload[..])
+            .send_data_frame(IFACE_MAC, [4; 6], false, false, 0x1234, &payload[..])
             .expect("error delivering WLAN frame");
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
@@ -1864,8 +1884,8 @@ mod tests {
             0b0000_10_00, 0b0000000_1, // FC
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // addr1
-            2, 2, 2, 2, 2, 2, // addr2
-            3, 3, 3, 3, 3, 3, // addr3
+            7, 7, 7, 7, 7, 7, // addr2
+            4, 4, 4, 4, 4, 4, // addr3
             0x10, 0, // Sequence Control
             // LLC header:
             0xAA, 0xAA, 0x03, // DSAP, SSAP, Control
@@ -1890,8 +1910,8 @@ mod tests {
         client
             .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
             .send_data_frame(
-                [2; 6],
-                [3; 6],
+                IFACE_MAC,
+                [4; 6],
                 false,
                 true,
                 0x0800,              // IPv4
@@ -1905,8 +1925,8 @@ mod tests {
             0b1000_10_00, 0b0000000_1, // FC
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // addr1
-            2, 2, 2, 2, 2, 2, // addr2
-            3, 3, 3, 3, 3, 3, // addr3
+            7, 7, 7, 7, 7, 7, // addr2
+            4, 4, 4, 4, 4, 4, // addr3
             0x10, 0, // Sequence Control
             0x06, 0, // QoS Control - TID = 6
             // LLC header:
@@ -1932,8 +1952,8 @@ mod tests {
         client
             .bind(&mut me.ctx, &mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
             .send_data_frame(
-                [2; 6],
-                [3; 6],
+                IFACE_MAC,
+                [4; 6],
                 false,
                 true,
                 0x86DD,                         // IPv6
@@ -1947,8 +1967,8 @@ mod tests {
             0b1000_10_00, 0b0000000_1, // FC
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // addr1
-            2, 2, 2, 2, 2, 2, // addr2
-            3, 3, 3, 3, 3, 3, // addr3
+            7, 7, 7, 7, 7, 7, // addr2
+            4, 4, 4, 4, 4, 4, // addr3
             0x10, 0, // Sequence Control
             0x03, 0, // QoS Control - TID = 3
             // LLC header:
@@ -1957,6 +1977,42 @@ mod tests {
             0x86, 0xDD, // Protocol ID
             // Payload
             0b0101, 0b10000000, 3, 4, 5,
+        ][..]);
+
+        // Verify no ensure_on_channel. That is, scheduling scan request would cause channel to be
+        // switched right away.
+        me.on_sme_scan(scan_req());
+        assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
+    }
+
+    #[test]
+    fn client_send_data_frame_from_ds() {
+        let payload = vec![5; 8];
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut me = m.make_mlme();
+        me.make_client_station();
+        let mut client = me.get_bound_client().expect("client should be present");
+        client
+            .send_data_frame([3; 6], [4; 6], false, false, 0x1234, &payload[..])
+            .expect("error delivering WLAN frame");
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        #[rustfmt::skip]
+        assert_eq!(&m.fake_device.wlan_queue[0].0[..], &[
+            // Data header:
+            0b0000_10_00, 0b000000_11, // FC (ToDS=1, FromDS=1)
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // addr1
+            7, 7, 7, 7, 7, 7, // addr2 = IFACE_MAC
+            4, 4, 4, 4, 4, 4, // addr3
+            0x10, 0, // Sequence Control
+            3, 3, 3, 3, 3, 3, // addr4
+            // LLC header:
+            0xAA, 0xAA, 0x03, // DSAP, SSAP, Control
+            0, 0, 0, // OUI
+            0x12, 0x34, // Protocol ID
+            // Payload
+            5, 5, 5, 5, 5, 5, 5, 5,
         ][..]);
 
         // Verify no ensure_on_channel. That is, scheduling scan request would cause channel to be
