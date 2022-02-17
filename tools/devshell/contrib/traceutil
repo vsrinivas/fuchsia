@@ -12,6 +12,8 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/image_build_vars.sh || exit $?
 fx-config-read
 
+fx-info "Consider using \`ffx trace\` intead. \`fx traceutil\` will soon be deprecated."
+
 fx-export-device-address
 export TRACEUTIL_TARGET_HOST="${FX_DEVICE_ADDR}"
 export TRACEUTIL_TARGET_PORT="${FX_SSH_PORT}"
