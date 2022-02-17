@@ -28,6 +28,11 @@ zx_status_t FileConnection::BindInternal(zx::channel request, async_dispatcher_t
   return ZX_OK;
 }
 
+void FileConnection::AdvisoryLock(fuchsia::io::AdvisoryLockRequest request,
+                                  AdvisoryLockCallback callback) {
+  callback(fuchsia::io::AdvisoryLocking_AdvisoryLock_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+}
+
 void FileConnection::Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) {
   Connection::Clone(vn_, flags, object.TakeChannel(), binding_.dispatcher());
 }

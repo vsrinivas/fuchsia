@@ -41,68 +41,56 @@ protocol AdvisoryLocking {
     /// * `ZX_ERR_NOT_SUPPORTED` This file does not support advisory locking.
     /// * `ZX_ERR_ACCESS_DENIED` This connection does not have sufficient rights
     ///   to acquire the given type of lock.
-    @transitional
     @selector("fuchsia.io/AdvisoryLocking.AdvisoryLock")
     AdvisoryLock(struct {
-        request AdvisoryLockRequest;
+        request @generated_name("AdvisoryLockRequest") table {
+            /// The type of lock to be acquired.
+            ///
+            /// If this field is absent, the [`AdvisoryLock`] method will fail
+            /// with ZX_ERR_INVALID_ARGS.
+            1: type @generated_name("AdvisoryLockType") strict enum : uint32 {
+                /// Zero or more connections can hold read locks on a file simultaneously.
+                READ = 1;
+
+                /// At most one connection can hold a write lock on a file simultaneously.
+                /// When a write lock is held on a file, no other types of locks can be held
+                /// on that file.
+                WRITE = 2;
+
+                /// The region specifies a region to be unlocked.
+                UNLOCK = 3;
+            };
+
+            /// The byte range within the file to be locked.
+            ///
+            /// The range can extend beyond the end of the file but cannot extend beyond
+            /// the beginning of the file.
+            ///
+            /// If this field is absent, the range defaults to the entire file.
+            2: range @generated_name("AdvisoryLockRange") struct {
+                /// The location in the file from which [`offset`] is computed.
+                origin SeekOrigin;
+
+                /// The start of the byte range, expressed as an offset from [`origin`].
+                /// Cannot be negative if [`origin`] is [`SeekOrigin.START`].
+                offset int64;
+
+                /// The length of the byte range in bytes.
+                ///
+                /// If the length is zero, then the byte range extends until the end of the
+                /// file, regardless of how large the file becomes.
+                ///
+                /// If the length is negative, the byte range includes the bytes `offset` +
+                /// `length` up to, and including, `offset` - 1, provided this range does
+                /// not extend beyond the beginning of the file.
+                length int64;
+            };
+
+            /// Whether the file should wait reply to the [`AdvisoryLock`]
+            /// method until the requested lock can be acquired.
+            ///
+            /// If this field is absent, the file will not wait.
+            3: wait bool;
+        };
     }) -> (struct {}) error zx.status;
-};
-
-/// A type of advisory lock.
-///
-/// Used with [`AdvisoryLocking.AdvisoryLock`].
-type AdvisoryLockType = strict enum : uint32 {
-    /// Zero or more connections can hold read locks on a file simultaneously.
-    READ = 1;
-
-    /// At most one connection can hold a write lock on a file simultaneously.
-    /// When a write lock is held on a file, no other types of locks can be held
-    /// on that file.
-    WRITE = 2;
-
-    /// The region specifies a region to be unlocked.
-    UNLOCK = 3;
-};
-
-/// A range within a file associated with an advisory lock.
-///
-/// The range can extend beyond the end of the file but cannot extend beyond
-/// the beginning of the file.
-type AdvisoryLockRange = struct {
-    /// The location in the file from which [`offset`] is computed.
-    origin SeekOrigin;
-
-    /// The start of the byte range, expressed as an offset from [`origin`].
-    /// Cannot be negative if [`origin`] is [`SeekOrigin.START`].
-    offset int64;
-
-    /// The length of the byte range in bytes.
-    ///
-    /// If the length is zero, then the byte range exends until the end of the
-    /// file, regardless of how large the file becomes.
-    ///
-    /// If the length is negative, the byte range includes the bytes `offset` +
-    /// `length` up to, and including, `offset` - 1, provided this range does
-    /// not extend beyond the beginning of the file.
-    length int64;
-};
-
-type AdvisoryLockRequest = table {
-    /// The type of lock to be acquired.
-    ///
-    /// If this field is absent, the [`AdvisoryLock`] method will fail
-    /// with ZX_ERR_INVALID_ARGS.
-    1: type AdvisoryLockType;
-
-    /// The byte range within the file to be locked. See [`AdvisoryLockRange`]
-    /// for semantics.
-    ///
-    /// If this field is absent, the range defaults to the entire file.
-    2: range AdvisoryLockRange;
-
-    /// Whether the file should wait reply to the [`AdvisoryLock`]
-    /// method until the requested lock can be acquired.
-    ///
-    /// If this field is absent, the file will not wait.
-    3: wait bool;
 };

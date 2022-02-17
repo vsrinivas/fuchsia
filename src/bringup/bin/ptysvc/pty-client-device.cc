@@ -101,6 +101,11 @@ void PtyClientDevice::Write2(Write2RequestView request, Write2Completer::Sync& c
   ZX_ASSERT(false);
 }
 
+void PtyClientDevice::AdvisoryLock(AdvisoryLockRequestView request,
+                                   AdvisoryLockCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void PtyClientDevice::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

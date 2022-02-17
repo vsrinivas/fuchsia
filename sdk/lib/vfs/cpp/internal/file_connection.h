@@ -26,6 +26,8 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   zx_status_t BindInternal(zx::channel request, async_dispatcher_t* dispatcher) override;
 
   // |fuchsia::io::File| Implementation:
+  void AdvisoryLock(fuchsia::io::AdvisoryLockRequest request,
+                    AdvisoryLockCallback callback) override;
   void Clone(uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) override;
   void CloseDeprecated(CloseDeprecatedCallback callback) override;
   void Close(CloseCallback callback) override;

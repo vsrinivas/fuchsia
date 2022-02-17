@@ -296,6 +296,11 @@ class _FileConnection extends File {
   Stream<ConnectionInfo> get onConnectionInfo async* {}
 
   @override
+  Future<void> advisoryLock(AdvisoryLockRequest request) async {
+    throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
+  }
+
+  @override
   Future<void> clone(int flags, fidl.InterfaceRequest<Node> object) async {
     if (!Flags.inputPrecondition(flags)) {
       file.sendErrorEvent(flags, ZX.ERR_INVALID_ARGS, object);

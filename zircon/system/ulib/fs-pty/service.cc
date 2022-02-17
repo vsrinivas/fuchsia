@@ -83,6 +83,11 @@ void NullPtyDeviceImpl::Write2(Write2RequestView request, Write2Completer::Sync&
   ZX_ASSERT(false);
 }
 
+void NullPtyDeviceImpl::AdvisoryLock(AdvisoryLockRequestView request,
+                                     AdvisoryLockCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void NullPtyDeviceImpl::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

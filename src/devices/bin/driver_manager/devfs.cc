@@ -95,6 +95,10 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   // Remove this DcIostate from its devnode
   void DetachFromDevnode();
 
+  void AdvisoryLock(AdvisoryLockRequestView request,
+                    AdvisoryLockCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;
   void CloseDeprecated(CloseDeprecatedRequestView request,
                        CloseDeprecatedCompleter::Sync& completer) override;

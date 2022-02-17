@@ -56,6 +56,7 @@ class PtyClientDevice : public fidl::WireServer<fuchsia_hardware_pty::Device> {
   void GetBackingMemory(GetBackingMemoryRequestView request,
                         GetBackingMemoryCompleter::Sync& completer) final;
 
+  void AdvisoryLock(AdvisoryLockRequestView request, AdvisoryLockCompleter::Sync& completer) final;
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
   void CloseDeprecated(CloseDeprecatedRequestView request,
                        CloseDeprecatedCompleter::Sync& completer) final;
