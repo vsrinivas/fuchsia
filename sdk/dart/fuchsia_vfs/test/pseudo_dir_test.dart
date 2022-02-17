@@ -776,9 +776,8 @@ void main() {
         await proxy.open(openRightReadable, 0, filePath,
             InterfaceRequest(fileProxy.ctrl.request().passChannel()));
 
-        var readResonse = await fileProxy.read(bufferLen);
-        expect(readResonse.s, ZX.OK);
-        expect(String.fromCharCodes(readResonse.data), expectedContent);
+        final data = await fileProxy.read(bufferLen);
+        expect(String.fromCharCodes(data), expectedContent);
       }
 
       PseudoDir _setUpDir() {

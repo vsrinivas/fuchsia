@@ -178,10 +178,10 @@ protocol/member fuchsia.io/File.IoToIo2Placeholder()
 protocol/member fuchsia.io/File.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/File.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.io/File.QueryFilesystem() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)
-protocol/member fuchsia.io/File.Read(uint64 count) -> (int32 s,vector<uint8>:8192 data)
-protocol/member fuchsia.io/File.Read2(uint64 count) -> (fuchsia.io/File2_Read2_Result result)
+protocol/member fuchsia.io/File.Read(uint64 count) -> (fuchsia.io/File2_Read_Result result)
 protocol/member fuchsia.io/File.ReadAt(uint64 count,uint64 offset) -> (int32 s,vector<uint8>:8192 data)
 protocol/member fuchsia.io/File.ReadAt2(uint64 count,uint64 offset) -> (fuchsia.io/File2_ReadAt2_Result result)
+protocol/member fuchsia.io/File.ReadDeprecated(uint64 count) -> (int32 s,vector<uint8>:8192 data)
 protocol/member fuchsia.io/File.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/File.Resize(uint64 length) -> (fuchsia.io/File2_Resize_Result result)
 protocol/member fuchsia.io/File.Seek(fuchsia.io/SeekOrigin origin,int64 offset) -> (fuchsia.io/File2_Seek_Result result)
@@ -212,8 +212,8 @@ protocol/member fuchsia.io/File1.IoToIo2Placeholder()
 protocol/member fuchsia.io/File1.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/File1.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.io/File1.QueryFilesystem() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)
-protocol/member fuchsia.io/File1.Read(uint64 count) -> (int32 s,vector<uint8>:8192 data)
 protocol/member fuchsia.io/File1.ReadAt(uint64 count,uint64 offset) -> (int32 s,vector<uint8>:8192 data)
+protocol/member fuchsia.io/File1.ReadDeprecated(uint64 count) -> (int32 s,vector<uint8>:8192 data)
 protocol/member fuchsia.io/File1.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/File1.SeekDeprecated(int64 offset,fuchsia.io/SeekOrigin start) -> (int32 s,uint64 offset)
 protocol/member fuchsia.io/File1.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
@@ -232,7 +232,7 @@ protocol/member fuchsia.io/File2.Describe2(fuchsia.io/ConnectionInfoQuery query)
 protocol/member fuchsia.io/File2.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
 protocol/member fuchsia.io/File2.GetBackingMemory(fuchsia.io/VmoFlags flags) -> (fuchsia.io/File2_GetBackingMemory_Result result)
 protocol/member fuchsia.io/File2.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
-protocol/member fuchsia.io/File2.Read2(uint64 count) -> (fuchsia.io/File2_Read2_Result result)
+protocol/member fuchsia.io/File2.Read(uint64 count) -> (fuchsia.io/File2_Read_Result result)
 protocol/member fuchsia.io/File2.ReadAt2(uint64 count,uint64 offset) -> (fuchsia.io/File2_ReadAt2_Result result)
 protocol/member fuchsia.io/File2.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/File2.Resize(uint64 length) -> (fuchsia.io/File2_Resize_Result result)
@@ -247,16 +247,16 @@ resource struct fuchsia.io/File2_GetBackingMemory_Response
 union/member fuchsia.io/File2_GetBackingMemory_Result.err int32
 union/member fuchsia.io/File2_GetBackingMemory_Result.response fuchsia.io/File2_GetBackingMemory_Response
 resource strict union fuchsia.io/File2_GetBackingMemory_Result
-struct/member fuchsia.io/File2_Read2_Response.data vector<uint8>:8192
-struct fuchsia.io/File2_Read2_Response
-union/member fuchsia.io/File2_Read2_Result.err int32
-union/member fuchsia.io/File2_Read2_Result.response fuchsia.io/File2_Read2_Response
-strict union fuchsia.io/File2_Read2_Result
 struct/member fuchsia.io/File2_ReadAt2_Response.data vector<uint8>:8192
 struct fuchsia.io/File2_ReadAt2_Response
 union/member fuchsia.io/File2_ReadAt2_Result.err int32
 union/member fuchsia.io/File2_ReadAt2_Result.response fuchsia.io/File2_ReadAt2_Response
 strict union fuchsia.io/File2_ReadAt2_Result
+struct/member fuchsia.io/File2_Read_Response.data vector<uint8>:8192
+struct fuchsia.io/File2_Read_Response
+union/member fuchsia.io/File2_Read_Result.err int32
+union/member fuchsia.io/File2_Read_Result.response fuchsia.io/File2_Read_Response
+strict union fuchsia.io/File2_Read_Result
 struct fuchsia.io/File2_Resize_Response
 union/member fuchsia.io/File2_Resize_Result.err int32
 union/member fuchsia.io/File2_Resize_Result.response fuchsia.io/File2_Resize_Response

@@ -53,12 +53,11 @@ pub async fn read_data(file: &fidl_fuchsia_io::FileProxy) -> Result<Vec<u8>> {
     }
 
     loop {
-        let (status, mut bytes) =
-            queue.next().await.ok_or(anyhow!("Error: read stream closed prematurely"))??;
-
-        if status != 0 {
-            bail!("Error: Failed to get data, status: {}", status);
-        }
+        let mut bytes: Vec<u8> = queue
+            .next()
+            .await
+            .context("read stream closed prematurely")??
+            .map_err(|status: i32| anyhow!("read error: status={}", status))?;
 
         if bytes.is_empty() {
             break;
@@ -244,7 +243,7 @@ mod test {
             let mut cc: u32 = 0;
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    FileRequest::Read { count: _, responder } => {
+                    FileRequest::ReadDeprecated { count: _, responder } => {
                         cc = cc + 1;
                         if cc == 1 {
                             responder
@@ -254,7 +253,7 @@ mod test {
                             responder.send(/*Status*/ 0, &[]).expect("writing file test response");
                         }
                     }
-                    FileRequest::Read2 { count: _, responder } => {
+                    FileRequest::Read { count: _, responder } => {
                         cc = cc + 1;
                         if cc == 1 {
                             responder

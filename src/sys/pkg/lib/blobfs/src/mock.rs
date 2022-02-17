@@ -341,12 +341,12 @@ impl Blob {
 
     async fn handle_read(&mut self, data: &[u8]) -> usize {
         match self.stream.next().await {
-            Some(Ok(FileRequest::Read { count, responder })) => {
+            Some(Ok(FileRequest::ReadDeprecated { count, responder })) => {
                 let count = min(count.try_into().unwrap(), data.len());
                 responder.send(Status::OK.into_raw(), &data[..count]).unwrap();
                 return count;
             }
-            Some(Ok(FileRequest::Read2 { count, responder })) => {
+            Some(Ok(FileRequest::Read { count, responder })) => {
                 let count = min(count.try_into().unwrap(), data.len());
                 responder.send(&mut Ok(data[..count].to_vec())).unwrap();
                 return count;
@@ -397,13 +397,13 @@ impl Blob {
 
         loop {
             match self.stream.next().await {
-                Some(Ok(FileRequest::Read { count, responder })) => {
+                Some(Ok(FileRequest::ReadDeprecated { count, responder })) => {
                     let avail = data.len() - pos;
                     let count = min(count.try_into().unwrap(), avail);
                     responder.send(Status::OK.into_raw(), &data[pos..pos + count]).unwrap();
                     pos += count;
                 }
-                Some(Ok(FileRequest::Read2 { count, responder })) => {
+                Some(Ok(FileRequest::Read { count, responder })) => {
                     let avail = data.len() - pos;
                     let count = min(count.try_into().unwrap(), avail);
                     responder.send(&mut Ok(data[pos..pos + count].to_vec())).unwrap();

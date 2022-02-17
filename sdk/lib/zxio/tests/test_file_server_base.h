@@ -40,10 +40,10 @@ class TestFileServerBase : public fidl::testing::WireTestBase<fuchsia_io::File> 
   }
 };
 
-// This implementation provides a simple Read2() implementation.
+// This implementation provides a simple Read() implementation.
 class TestReadFileServer : public TestFileServerBase {
  public:
-  void Read2(Read2RequestView request, Read2Completer::Sync& completer) final {
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) final {
     uint8_t read_data[sizeof(kTestData)];
     memcpy(read_data, kTestData, sizeof(kTestData));
     completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(read_data));

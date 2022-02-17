@@ -35,9 +35,13 @@ macro_rules! assert_read {
     ($proxy:expr, $expected:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let (status, content) = $proxy.read($expected.len() as u64).await.expect("read failed");
+        let content = $proxy
+            .read($expected.len() as u64)
+            .await
+            .expect("read failed")
+            .map_err(Status::from_raw)
+            .expect("read error");
 
-        assert_eq!(Status::from_raw(status), Status::OK);
         assert_eq!(content.as_slice(), $expected.as_bytes());
     }};
 }
@@ -48,10 +52,9 @@ macro_rules! assert_read_err {
     ($proxy:expr, $expected_status:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let (status, content) = $proxy.read(100).await.expect("read failed");
+        let result = $proxy.read(100).await.expect("read failed").map_err(Status::from_raw);
 
-        assert_eq!(Status::from_raw(status), $expected_status);
-        assert_eq!(content.len(), 0);
+        assert_eq!(result, Err($expected_status));
     }};
 }
 
@@ -62,8 +65,8 @@ macro_rules! assert_read_fidl_err {
         match $proxy.read(100).await {
             Err($expected_error) => (),
             Err(error) => panic!("read() returned unexpected error: {:?}", error),
-            Ok((status, content)) => {
-                panic!("Read succeeded: status: {:?}, content: '{:?}'", status, content)
+            Ok(result) => {
+                panic!("Read succeeded: {:?}", result)
             }
         }
     }};
@@ -76,8 +79,8 @@ macro_rules! assert_read_fidl_err_closed {
         match $proxy.read(100).await {
             Err(error) if error.is_closed() => (),
             Err(error) => panic!("read() returned unexpected error: {:?}", error),
-            Ok((status, content)) => {
-                panic!("Read succeeded: status: {:?}, content: '{:?}'", status, content)
+            Ok(result) => {
+                panic!("Read succeeded: {:?}", result)
             }
         }
     }};

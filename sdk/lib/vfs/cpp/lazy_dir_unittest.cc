@@ -9,6 +9,7 @@
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/vfs/cpp/testing/dir_test_util.h>
 #include <zircon/errors.h>
+#include <zircon/status.h>
 
 #include <memory>
 
@@ -158,13 +159,13 @@ TEST_F(LazyDirConnection, LookupWorks) {
   fuchsia::io::FileSyncPtr file_ptr;
   n->Serve(fuchsia::io::OPEN_RIGHT_READABLE, file_ptr.NewRequest().TakeChannel(),
            dir_.dispatcher());
-  zx_status_t status;
-  std::vector<uint8_t> data;
-  file_ptr->Read(20, &status, &data);
-  ASSERT_EQ(ZX_OK, status);
+
+  fuchsia::io::File2_Read_Result result;
+  file_ptr->Read(20, &result);
+  ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
   std::string str = "file3";
   std::vector<uint8_t> expected_data(str.begin(), str.end());
-  ASSERT_EQ(expected_data, data);
+  ASSERT_EQ(expected_data, result.response().data);
 }
 
 TEST_F(LazyDirConnection, LookupReturnsNotFound) {

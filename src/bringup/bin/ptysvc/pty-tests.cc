@@ -198,10 +198,13 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
 
     // Attempts to read should get 0 bytes and ZX_OK
     {
-      auto result = server->Read(10);
+      const fidl::WireResult result = server->Read(10);
       ASSERT_OK(result.status());
-      ASSERT_OK(result->s);
-      ASSERT_EQ(result->data.count(), 0);
+      const fidl::WireResponse response = result.value();
+      ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
+      const fidl::VectorView data = response.result.response().data;
+      ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
+                std::string_view());
     }
 
     // Attempts to write should fail with ZX_ERR_PEER_CLOSED
@@ -247,14 +250,18 @@ TEST_F(PtyTestCase, ServerWithClientInitialConditions) {
 
   // Attempts to read on either side should get SHOULD_WAIT
   {
-    auto result = server->Read(10);
+    const fidl::WireResult result = server->Read(10);
     ASSERT_OK(result.status());
-    ASSERT_STATUS(result->s, ZX_ERR_SHOULD_WAIT);
+    const fidl::WireResponse response = result.value();
+    ASSERT_TRUE(response.result.is_err());
+    ASSERT_STATUS(response.result.err(), ZX_ERR_SHOULD_WAIT);
   }
   {
-    auto result = client->Read(10);
+    const fidl::WireResult result = client->Read(10);
     ASSERT_OK(result.status());
-    ASSERT_STATUS(result->s, ZX_ERR_SHOULD_WAIT);
+    const fidl::WireResponse response = result.value();
+    ASSERT_TRUE(response.result.is_err());
+    ASSERT_STATUS(response.result.err(), ZX_ERR_SHOULD_WAIT);
   }
 
   // Client should be in cooked mode
@@ -272,10 +279,13 @@ TEST_F(PtyTestCase, ServerEmpty0ByteRead) {
   Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
 
-  auto result = server->Read(0);
+  const fidl::WireResult result = server->Read(0);
   ASSERT_OK(result.status());
-  ASSERT_OK(result->s);
-  ASSERT_EQ(result->data.count(), 0);
+  const fidl::WireResponse response = result.value();
+  ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
+  const fidl::VectorView data = response.result.response().data;
+  ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
+            std::string_view());
 }
 
 // Verify a write by the server for 0 bytes when the receiving client is full doesn't return
@@ -718,18 +728,22 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   // Attempts to drain the buffer should succeed
   {
     // Request more bytes than are present
-    auto result = client->Read(std::size(kTestData) + 10);
+    const fidl::WireResult result = client->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->s);
-    ASSERT_EQ(result->data.count(), std::size(kTestData));
-    ASSERT_BYTES_EQ(result->data.data(), kTestData, std::size(kTestData));
+    const fidl::WireResponse response = result.value();
+    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
+    const fidl::VectorView data = response.result.response().data;
+    ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
+              std::string_view(reinterpret_cast<char*>(kTestData), std::size(kTestData)));
   }
 
   // Attempts to read the empty buffer should fail with ZX_ERR_PEER_CLOSED
   {
-    auto result = client->Read(10);
+    const fidl::WireResult result = client->Read(10);
     ASSERT_OK(result.status());
-    ASSERT_STATUS(result->s, ZX_ERR_PEER_CLOSED);
+    const fidl::WireResponse response = result.value();
+    ASSERT_TRUE(response.result.is_err());
+    ASSERT_STATUS(response.result.err(), ZX_ERR_PEER_CLOSED);
   }
 
   // Attempts to write should fail with ZX_ERR_PEER_CLOSED
@@ -762,11 +776,14 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
   ASSERT_OK(
       event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
-    auto result = server->Read(std::size(kExpectedReadback) + 10);
+    const fidl::WireResult result = server->Read(std::size(kExpectedReadback) + 10);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->s);
-    ASSERT_EQ(result->data.count(), std::size(kExpectedReadback));
-    ASSERT_BYTES_EQ(result->data.data(), kExpectedReadback, std::size(kExpectedReadback));
+    const fidl::WireResponse response = result.value();
+    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
+    const fidl::VectorView data = response.result.response().data;
+    ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
+              std::string_view(reinterpret_cast<const char*>(kExpectedReadback),
+                               std::size(kExpectedReadback)));
   }
   // Nothing left to read
   ASSERT_STATUS(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr),
@@ -796,12 +813,14 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
   ASSERT_OK(
       event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
-    auto result = client->Read(std::size(kExpectedReadbackWithNul) + 10);
+    const fidl::WireResult result = client->Read(std::size(kExpectedReadbackWithNul) + 10);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->s);
-    ASSERT_EQ(result->data.count(), std::size(kExpectedReadbackWithNul) - 1);
-    ASSERT_BYTES_EQ(result->data.data(), kExpectedReadbackWithNul,
-                    std::size(kExpectedReadbackWithNul) - 1);
+    const fidl::WireResponse response = result.value();
+    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
+    const fidl::VectorView data = response.result.response().data;
+    ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
+              std::string_view(reinterpret_cast<const char*>(kExpectedReadbackWithNul),
+                               std::size(kExpectedReadbackWithNul) - 1));
   }
   // Nothing left to read
   ASSERT_STATUS(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr),
@@ -833,11 +852,13 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
   ASSERT_OK(
       event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
-    auto result = server->Read(std::size(kTestData) + 10);
+    const fidl::WireResult result = server->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->s);
-    ASSERT_EQ(result->data.count(), std::size(kTestData));
-    ASSERT_BYTES_EQ(result->data.data(), kTestData, std::size(kTestData));
+    const fidl::WireResponse response = result.value();
+    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
+    const fidl::VectorView data = response.result.response().data;
+    ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
+              std::string_view(reinterpret_cast<char*>(kTestData), std::size(kTestData)));
   }
   // Nothing left to read
   ASSERT_STATUS(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr),
@@ -871,11 +892,13 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
   ASSERT_OK(
       event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
-    auto result = client->Read(std::size(kTestData) + 10);
+    const fidl::WireResult result = client->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->s);
-    ASSERT_EQ(result->data.count(), std::size(kTestData));
-    ASSERT_BYTES_EQ(result->data.data(), kTestData, std::size(kTestData));
+    const fidl::WireResponse response = result.value();
+    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
+    const fidl::VectorView data = response.result.response().data;
+    ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
+              std::string_view(reinterpret_cast<char*>(kTestData), std::size(kTestData)));
   }
   // Nothing left to read
   ASSERT_STATUS(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr),
@@ -923,13 +946,15 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
   while (total_read < total_written) {
     ASSERT_OK(
         client_event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr));
-    auto result = client->Read(std::size(kTestString) - 1);
+    const fidl::WireResult result = client->Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->s);
-    ASSERT_EQ(result->data.count(),
-              std::min(std::size(kTestString) - 1, total_written - total_read));
-    ASSERT_BYTES_EQ(result->data.data(), kTestString, result->data.count());
-    total_read += result->data.count();
+    const fidl::WireResponse response = result.value();
+    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
+    const fidl::VectorView data = response.result.response().data;
+    ASSERT_EQ(data.count(), std::min(std::size(kTestString) - 1, total_written - total_read));
+    ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
+              std::string_view(reinterpret_cast<char*>(kTestString), data.count()));
+    total_read += data.count();
   }
 
   ASSERT_STATUS(
@@ -970,13 +995,15 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
   while (total_read < total_written) {
     ASSERT_OK(
         server_event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr));
-    auto result = server->Read(std::size(kTestString) - 1);
+    const fidl::WireResult result = server->Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->s);
-    ASSERT_EQ(result->data.count(),
-              std::min(std::size(kTestString) - 1, total_written - total_read));
-    ASSERT_BYTES_EQ(result->data.data(), kTestString, result->data.count());
-    total_read += result->data.count();
+    const fidl::WireResponse response = result.value();
+    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
+    const fidl::VectorView data = response.result.response().data;
+    ASSERT_EQ(data.count(), std::min(std::size(kTestString) - 1, total_written - total_read));
+    ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
+              std::string_view(reinterpret_cast<char*>(kTestString), data.count()));
+    total_read += data.count();
   }
 
   ASSERT_STATUS(
@@ -1043,11 +1070,13 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
 
     ASSERT_OK(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr));
 
-    auto result = (*client)->Read(10);
+    const fidl::WireResult result = (*client)->Read(10);
     ASSERT_OK(result.status());
-    ASSERT_OK(result->s);
-    ASSERT_EQ(result->data.count(), 1);
-    ASSERT_EQ(result->data.data()[0], expected_value);
+    const fidl::WireResponse response = result.value();
+    ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
+    const fidl::VectorView data = response.result.response().data;
+    ASSERT_EQ(data.count(), 1);
+    ASSERT_EQ(data.data()[0], expected_value);
 
     ASSERT_STATUS(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr),
                   ZX_ERR_TIMED_OUT);

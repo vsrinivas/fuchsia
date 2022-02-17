@@ -65,8 +65,8 @@ void main() {
           io.modeTypeFile,
           'diagnostics/foo',
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));
-      final response = await fileProxy.read(io.maxBuf);
-      expect(utf8.decode(response.data), 'test');
+      final data = await fileProxy.read(io.maxBuf);
+      expect(utf8.decode(data), 'test');
     });
   });
 }

@@ -282,13 +282,12 @@ async fn get_entries(dir: &fio::DirectoryProxy) -> Result<Vec<DirectoryEntry>, E
         if zx::Status::from_raw(status) != zx::Status::OK {
             bail!("failed to get attributes of file {}", ent.name);
         }
-        let (status, data) = file_proxy
+        let data = file_proxy
             .read(attrs.content_size)
             .await
-            .context(format!("failed to read contents of file {}: (fidl failure)", ent.name))?;
-        if zx::Status::from_raw(status) != zx::Status::OK {
-            bail!("failed to get attributes of file {}", ent.name);
-        }
+            .context(format!("failed to read contents of file {}: (fidl failure)", ent.name))?
+            .map_err(zx::Status::from_raw)
+            .context(format!("failed to read contents of file {}", ent.name))?;
 
         entries.push(DirectoryEntry { name: ent.name.as_bytes().to_vec(), data });
     }

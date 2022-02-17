@@ -9,6 +9,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
+#include <zircon/status.h>
 
 #include <gtest/gtest.h>
 
@@ -355,15 +356,14 @@ TEST_F(SessionTest, LaunchBasemgrV1ProvidesConfig) {
                                       file.NewRequest().TakeChannel().get()));
 
         // Read from the startup.config file into |config_str|.
-        zx_status_t status;
-        std::vector<uint8_t> buffer;
-        file->Read(kReadCount, &status, &buffer);
-        ASSERT_EQ(ZX_OK, status);
-        std::string config_str(buffer.size(), 0);
-        std::copy(buffer.begin(), buffer.end(), config_str.begin());
+        fuchsia::io::File2_Read_Result result;
+        file->Read(kReadCount, &result);
+        ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+        const std::vector<uint8_t>& data = result.response().data;
 
         // The config that basemgr received should be the same as the one passed to Launch.
-        ASSERT_EQ(expected_config_str, config_str);
+        ASSERT_EQ(expected_config_str,
+                  std::string_view(reinterpret_cast<const char*>(data.data()), data.size()));
 
         // The thread serving the config PseudoDir must be destroyed before the dir itself.
         serve_loop.Quit();

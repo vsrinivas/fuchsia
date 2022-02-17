@@ -54,9 +54,15 @@ void main() {
 
   Future<void> _assertRead(FileProxy proxy, int bufSize, String expectedStr,
       {expectedStatus = ZX.OK}) async {
-    var readResponse = await proxy.read(bufSize);
-    expect(readResponse.s, expectedStatus);
-    expect(String.fromCharCodes(readResponse.data), expectedStr);
+    if (expectedStatus == ZX.OK) {
+      final data = await proxy.read(bufSize);
+      expect(String.fromCharCodes(data), expectedStr);
+    } else {
+      await expectLater(
+          proxy.read(bufSize),
+          throwsA(isA<MethodException>()
+              .having((e) => e.value, 'value', equals(expectedStatus))));
+    }
   }
 
   Future<void> _assertReadAt(
@@ -418,8 +424,10 @@ void main() {
     test('read functions fails for NodeReference flag', () async {
       var file = _createReadOnlyFile(
           'test_str', openRightReadable | openFlagNodeReference);
-      var readResponse = await file.proxy.read(1024);
-      expect(readResponse.s, ZX.ERR_ACCESS_DENIED);
+      await expectLater(
+          file.proxy.read(1024),
+          throwsA(isA<MethodException>()
+              .having((e) => e.value, 'value', equals(ZX.ERR_ACCESS_DENIED))));
 
       var readAtResponse = await file.proxy.readAt(0, 1024);
       expect(readAtResponse.s, ZX.ERR_ACCESS_DENIED);
@@ -683,66 +691,60 @@ void main() {
       var proxy = file.proxy;
 
       {
-        var c = 5;
-        var response = await proxy.read(5);
-        expect(response.s, ZX.OK);
-        expect(String.fromCharCodes(response.data), str.substring(0, c));
+        const c = 5;
+        final data = await proxy.read(5);
+        expect(String.fromCharCodes(data), str.substring(0, c));
       }
 
       var lastOffset = 5;
       {
-        var c = 6;
-        var response = await proxy.read(6);
-        expect(response.s, ZX.OK);
-        expect(String.fromCharCodes(response.data),
+        const c = 6;
+        final data = await proxy.read(6);
+        expect(String.fromCharCodes(data),
             str.substring(lastOffset, lastOffset + c));
       }
 
       {
-        var c = 10;
+        const c = 10;
         int offsetFromStart = await proxy.seek(SeekOrigin.start, c);
         expect(offsetFromStart, c);
-        var response = await proxy.read(100);
-        expect(response.s, ZX.OK);
-        expect(String.fromCharCodes(response.data), str.substring(c));
+        final data = await proxy.read(100);
+        expect(String.fromCharCodes(data), str.substring(c));
       }
 
       {
-        var c = 2;
-        int offsetFromStart = await proxy.seek(SeekOrigin.start, c);
+        const c = 2;
+        final offsetFromStart = await proxy.seek(SeekOrigin.start, c);
         expect(offsetFromStart, c);
         lastOffset = c;
       }
 
       {
-        var c = 5;
-        int offsetFromStart = await proxy.seek(SeekOrigin.current, c);
+        const c = 5;
+        final offsetFromStart = await proxy.seek(SeekOrigin.current, c);
         expect(offsetFromStart, c + lastOffset);
         lastOffset = offsetFromStart;
-        var response = await proxy.read(100);
-        expect(response.s, ZX.OK);
-        expect(String.fromCharCodes(response.data), str.substring(lastOffset));
+        final data = await proxy.read(100);
+        expect(String.fromCharCodes(data), str.substring(lastOffset));
       }
 
       {
-        var c = 0;
-        int offsetFromStart = await proxy.seek(SeekOrigin.end, c);
+        const c = 0;
+        final offsetFromStart = await proxy.seek(SeekOrigin.end, c);
         expect(offsetFromStart, str.length - 1);
       }
 
       {
-        var c = -3;
-        int offsetFromStart = await proxy.seek(SeekOrigin.end, c);
+        const c = -3;
+        final offsetFromStart = await proxy.seek(SeekOrigin.end, c);
         expect(offsetFromStart, str.length - 1 + c);
-        var response = await proxy.read(100);
-        expect(response.s, ZX.OK);
-        expect(String.fromCharCodes(response.data),
-            str.substring(offsetFromStart));
+        final data = await proxy.read(100);
+        expect(String.fromCharCodes(data), str.substring(offsetFromStart));
       }
 
       // Check edge and error conditions
       {
-        var c = 3;
+        const c = 3;
         await expectLater(
             proxy.seek(SeekOrigin.end, c),
             throwsA(isA<MethodException>()
@@ -750,7 +752,7 @@ void main() {
       }
 
       {
-        var c = -3;
+        const c = -3;
         await expectLater(
             proxy.seek(SeekOrigin.start, c),
             throwsA(isA<MethodException>()
@@ -758,8 +760,8 @@ void main() {
       }
 
       {
-        var c = 5;
-        int offsetFromStart = await proxy.seek(SeekOrigin.start, c);
+        const c = 5;
+        final offsetFromStart = await proxy.seek(SeekOrigin.start, c);
         await expectLater(
             proxy.seek(SeekOrigin.current, str.length - offsetFromStart + 1),
             throwsA(isA<MethodException>()

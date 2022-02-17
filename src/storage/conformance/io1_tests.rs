@@ -132,9 +132,7 @@ async fn get_token(dir: &io::DirectoryProxy) -> fidl::Handle {
 async fn read_file(dir: &io::DirectoryProxy, path: &str) -> Vec<u8> {
     let file =
         open_node::<io::FileMarker>(dir, io::OPEN_RIGHT_READABLE, io::MODE_TYPE_FILE, path).await;
-    let (status, data) = file.read(100).await.expect("read failed");
-    assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-    data
+    file.read(100).await.expect("read failed").map_err(zx::Status::from_raw).expect("read error")
 }
 
 /// Attempts to open the given file, and checks the status is `NOT_FOUND`.
@@ -919,8 +917,12 @@ async fn file_read_with_sufficient_rights() {
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
-        let (status, _data) = file.read(0).await.expect("read failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let _data: Vec<u8> = file
+            .read(0)
+            .await
+            .expect("read failed")
+            .map_err(zx::Status::from_raw)
+            .expect("read error");
     }
 }
 
@@ -934,8 +936,8 @@ async fn file_read_with_insufficient_rights() {
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
-        let (status, _data) = file.read(0).await.expect("read failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
+        let result = file.read(0).await.expect("read failed").map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::BAD_HANDLE))
     }
 }
 
@@ -1072,8 +1074,12 @@ async fn file_read_in_subdirectory() {
             "subdir/testing.txt",
         )
         .await;
-        let (status, _data) = file.read(0).await.expect("Read failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let _data: Vec<u8> = file
+            .read(0)
+            .await
+            .expect("read failed")
+            .map_err(zx::Status::from_raw)
+            .expect("read error");
     }
 }
 

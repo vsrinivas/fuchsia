@@ -11,6 +11,7 @@
 #include <lib/vfs/cpp/vmo_file.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 
 #include <algorithm>
 #include <string>
@@ -76,15 +77,18 @@ TEST(VmoFile, Reading) {
   ASSERT_TRUE(file_ptr.is_bound());
 
   // Reading the VMO from offset 24 should match reading the file from offset 0.
-  std::vector<uint8_t> result;
-  std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
-  zx_status_t status;
-  EXPECT_EQ(ZX_OK, file_ptr->Read(500, &status, &result));
-  EXPECT_EQ(ZX_OK, status);
-  EXPECT_EQ(ReadVmo(test_vmo, 24, 500), result);
-  EXPECT_EQ(ZX_OK, file_ptr->Read(500, &status, &result));
-  EXPECT_EQ(ZX_OK, status);
-  EXPECT_EQ(ReadVmo(test_vmo, 524, 500), result);
+  {
+    fuchsia::io::File2_Read_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->Read(500, &result));
+    ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    EXPECT_EQ(ReadVmo(test_vmo, 24, 500), result.response().data);
+  }
+  {
+    fuchsia::io::File2_Read_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->Read(500, &result));
+    ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    EXPECT_EQ(ReadVmo(test_vmo, 524, 500), result.response().data);
+  }
 }
 
 TEST(VmoFile, GetAttrReadOnly) {

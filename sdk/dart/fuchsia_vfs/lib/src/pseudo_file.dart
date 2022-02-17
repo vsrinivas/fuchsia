@@ -398,7 +398,7 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<File$Read$Response> read(int count) async {
+  Future<File$ReadDeprecated$Response> readDeprecated(int count) async {
     var response = _handleRead(count, seekPos);
     if (response.s == ZX.OK) {
       seekPos += response.data.length;
@@ -407,7 +407,7 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<Uint8List> read2(int count) async {
+  Future<Uint8List> read(int count) async {
     var response = _handleRead(count, seekPos);
     if (response.s != ZX.OK) {
       throw fidl.MethodException(response.s);
@@ -557,18 +557,18 @@ class _FileConnection extends File {
     return response.actual;
   }
 
-  File$Read$Response _handleRead(int count, int offset) {
+  File$ReadDeprecated$Response _handleRead(int count, int offset) {
     if ((flags & openRightReadable) == 0) {
-      return File$Read$Response(ZX.ERR_ACCESS_DENIED, Uint8List(0));
+      return File$ReadDeprecated$Response(ZX.ERR_ACCESS_DENIED, Uint8List(0));
     }
     if (file._readFn == null) {
-      return File$Read$Response(ZX.ERR_NOT_SUPPORTED, Uint8List(0));
+      return File$ReadDeprecated$Response(ZX.ERR_NOT_SUPPORTED, Uint8List(0));
     }
     if (offset == _currentLen) {
-      return File$Read$Response(ZX.OK, Uint8List(0));
+      return File$ReadDeprecated$Response(ZX.OK, Uint8List(0));
     }
     if (offset > _currentLen) {
-      return File$Read$Response(ZX.ERR_OUT_OF_RANGE, Uint8List(0));
+      return File$ReadDeprecated$Response(ZX.ERR_OUT_OF_RANGE, Uint8List(0));
     }
 
     var c = count;
@@ -579,7 +579,7 @@ class _FileConnection extends File {
       }
     }
     var b = Uint8List.view(_buffer.buffer, offset, c);
-    return File$Read$Response(ZX.OK, b);
+    return File$ReadDeprecated$Response(ZX.OK, b);
   }
 
   File$Write$Response _handleWrite(int offset, Uint8List data) {

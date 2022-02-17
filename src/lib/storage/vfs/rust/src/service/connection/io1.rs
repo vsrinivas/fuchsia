@@ -189,10 +189,10 @@ impl Connection {
             FileRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            FileRequest::Read { count: _, responder } => {
+            FileRequest::ReadDeprecated { count: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED, &[])?;
             }
-            FileRequest::Read2 { count: _, responder } => {
+            FileRequest::Read { count: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
             FileRequest::ReadAt { offset: _, count: _, responder } => {

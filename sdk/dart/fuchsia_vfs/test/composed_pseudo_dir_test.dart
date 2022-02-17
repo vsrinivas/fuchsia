@@ -38,8 +38,8 @@ void main() {
       composedDir.open(io.openRightReadable, io.modeTypeFile, 'foo.txt',
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));
 
-      final response = await fileProxy.read(io.maxBuf);
-      expect(utf8.decode(response.data), 'hello world');
+      final data = await fileProxy.read(io.maxBuf);
+      expect(utf8.decode(data), 'hello world');
     });
 
     test('inherited services are opened', () async {
@@ -72,8 +72,8 @@ void main() {
       composedDir.open(io.openRightReadable, io.modeTypeFile, 'foo.txt',
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));
 
-      final response = await fileProxy.read(io.maxBuf);
-      expect(utf8.decode(response.data), 'hello world');
+      final data = await fileProxy.read(io.maxBuf);
+      expect(utf8.decode(data), 'hello world');
     });
 
     test('adding a node which is already included in inherited nodes fails',

@@ -534,8 +534,12 @@ mod tests {
             open_file_checked(&root, OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
                 .await;
 
-        let (status, buf) = file.read(fio::MAX_BUF).await.expect("FIDL call failed");
-        Status::ok(status).expect("read failed");
+        let buf = file
+            .read(fio::MAX_BUF)
+            .await
+            .expect("FIDL call failed")
+            .map_err(Status::from_raw)
+            .expect("read failed");
         assert!(buf.is_empty());
 
         let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
@@ -674,8 +678,12 @@ mod tests {
                     file.write(&vec![0xaa as u8; 8192]).await.expect("FIDL call failed");
                 Status::ok(status).expect("File write was successful");
             } else {
-                let (status, buf) = file.read(8192).await.expect("FIDL call failed");
-                Status::ok(status).expect("File read was successful");
+                let buf = file
+                    .read(8192)
+                    .await
+                    .expect("FIDL call failed")
+                    .map_err(Status::from_raw)
+                    .expect("File read was successful");
                 assert_eq!(buf, vec![0xaa as u8; 8192]);
             }
 
@@ -753,8 +761,12 @@ mod tests {
                 .map_err(Status::from_raw)
                 .expect("seek was successful");
             assert_eq!(offset, 0);
-            let (status, buf) = file.read(5).await.expect("FIDL call failed");
-            Status::ok(status).expect("File read was successful");
+            let buf = file
+                .read(5)
+                .await
+                .expect("FIDL call failed")
+                .map_err(Status::from_raw)
+                .expect("File read was successful");
             assert!(buf.iter().eq("hello".as_bytes().into_iter()));
         }
         {
@@ -765,8 +777,12 @@ mod tests {
                 .map_err(Status::from_raw)
                 .expect("seek was successful");
             assert_eq!(offset, 7);
-            let (status, buf) = file.read(5).await.expect("FIDL call failed");
-            Status::ok(status).expect("File read was successful");
+            let buf = file
+                .read(5)
+                .await
+                .expect("FIDL call failed")
+                .map_err(Status::from_raw)
+                .expect("File read was successful");
             assert!(buf.iter().eq("world".as_bytes().into_iter()));
         }
         {
@@ -777,8 +793,12 @@ mod tests {
                 .map_err(Status::from_raw)
                 .expect("seek was successful");
             assert_eq!(offset, 7);
-            let (status, buf) = file.read(5).await.expect("FIDL call failed");
-            Status::ok(status).expect("File read was successful");
+            let buf = file
+                .read(5)
+                .await
+                .expect("FIDL call failed")
+                .map_err(Status::from_raw)
+                .expect("File read was successful");
             assert!(buf.iter().eq("world".as_bytes().into_iter()));
         }
         {
@@ -789,8 +809,12 @@ mod tests {
                 .map_err(Status::from_raw)
                 .expect("seek was successful");
             assert_eq!(offset, 12);
-            let (status, buf) = file.read(1).await.expect("FIDL call failed");
-            Status::ok(status).expect("File read was successful");
+            let buf = file
+                .read(1)
+                .await
+                .expect("FIDL call failed")
+                .map_err(Status::from_raw)
+                .expect("File read was successful");
             assert!(buf.iter().eq("!".as_bytes().into_iter()));
         }
 

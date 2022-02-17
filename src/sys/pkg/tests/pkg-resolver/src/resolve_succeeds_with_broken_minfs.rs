@@ -337,12 +337,13 @@ impl FailingWriteFileStreamHandler {
                         let (status, mut attrs) = self.backing_file.get_attr().await.unwrap();
                         responder.send(status, &mut attrs).unwrap();
                     }
-                    FileRequest::Read { count, responder } => {
-                        let (status, data) = self.backing_file.read(count).await.unwrap();
+                    FileRequest::ReadDeprecated { count, responder } => {
+                        let (status, data) =
+                            self.backing_file.read_deprecated(count).await.unwrap();
                         responder.send(status, &data).unwrap();
                     }
-                    FileRequest::Read2 { count, responder } => {
-                        let mut result = self.backing_file.read2(count).await.unwrap();
+                    FileRequest::Read { count, responder } => {
+                        let mut result = self.backing_file.read(count).await.unwrap();
                         responder.send(&mut result).unwrap();
                     }
                     FileRequest::CloseDeprecated { responder } => {

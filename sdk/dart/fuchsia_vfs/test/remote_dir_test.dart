@@ -234,9 +234,9 @@ Future<String> _readFileContents(DirectoryProxy dir, String filename) async {
   await dir.open(openRightReadable, modeTypeFile, filename,
       InterfaceRequest<Node>(proxy.ctrl.request().passChannel()));
 
-  final response = await proxy.read(maxBuf);
+  final data = await proxy.read(maxBuf);
   proxy.ctrl.close();
-  return utf8.decode(response.data);
+  return utf8.decode(data);
 }
 
 Future<String> _readFileContentsInRemoteDir(

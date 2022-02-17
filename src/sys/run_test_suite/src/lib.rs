@@ -903,10 +903,8 @@ async fn read_file_to_writer<T: Write>(
         vector.push_back(file.read(READ_SIZE));
     }
     loop {
-        let (status, mut buf) = vector.pop_front().unwrap().await?;
-        if status != 0 {
-            return Err(anyhow!("Read failed: {}", status));
-        }
+        let mut buf =
+            vector.pop_front().unwrap().await?.map_err(fuchsia_zircon_status::Status::from_raw)?;
         if buf.is_empty() {
             break;
         }

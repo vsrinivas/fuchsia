@@ -213,13 +213,12 @@ mod tests {
 
                     return async move {
                         loop {
-                            let (status, mut vec) =
-                                remote.read(content.len() as u64).await.context("Read failed")?;
-                            let status = Status::from_raw(status);
-                            if status != Status::OK {
-                                // Note that we don't assert here to make the error message nicer.
-                                return Err(anyhow!("Failed to read: {:?}", status));
-                            }
+                            let mut vec = remote
+                                .read(content.len() as u64)
+                                .await
+                                .context("Read failed")?
+                                .map_err(Status::from_raw)
+                                .context("Read error")?;
                             if vec.len() == 0 {
                                 break;
                             }

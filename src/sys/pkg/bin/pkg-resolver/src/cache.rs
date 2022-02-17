@@ -834,9 +834,12 @@ async fn read_local_blob(
 
     loop {
         inspect.state(inspect::LocalMirror::ReadBlob);
-        let (status, data) =
-            local_file.read(fidl_fuchsia_io::MAX_BUF).await.map_err(FetchError::FidlError)?;
-        Status::ok(status).map_err(FetchError::IoError)?;
+        let data = local_file
+            .read(fidl_fuchsia_io::MAX_BUF)
+            .await
+            .map_err(FetchError::FidlError)?
+            .map_err(Status::from_raw)
+            .map_err(FetchError::IoError)?;
         if data.len() == 0 {
             return Err(FetchError::BlobTooSmall { uri: merkle.to_string() });
         }

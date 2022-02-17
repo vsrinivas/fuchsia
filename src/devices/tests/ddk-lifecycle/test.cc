@@ -177,7 +177,13 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
   fdio_get_service_handle(fd.get(), chan.channel().reset_and_get_address());
 
   ASSERT_TRUE(fidl::WireCall<TestDevice>(chan_)->AsyncRemoveChild(child_id).ok());
-  ASSERT_EQ(fidl::WireCall<File>(chan)->Read(10).value().s, ZX_ERR_IO_NOT_PRESENT);
+  {
+    const fidl::WireResult read_result = fidl::WireCall<File>(chan)->Read(10);
+    ASSERT_OK(read_result.status());
+    const fidl::WireResponse response = read_result.value();
+    ASSERT_TRUE(response.result.is_err());
+    ASSERT_STATUS(response.result.err(), ZX_ERR_IO_NOT_PRESENT);
+  }
   std::array<uint8_t, 5> array;
   ASSERT_EQ(
       fidl::WireCall<File>(chan)->Write(fidl::VectorView<uint8_t>::FromExternal(array)).value().s,

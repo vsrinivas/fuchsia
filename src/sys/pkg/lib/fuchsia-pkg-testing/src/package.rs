@@ -363,9 +363,11 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
 
         let mut buf = vec![];
         loop {
-            let (status, chunk) =
-                file.read(fidl_fuchsia_io::MAX_BUF).await.context("file read to respond")?;
-            Status::ok(status)
+            let chunk = file
+                .read(fidl_fuchsia_io::MAX_BUF)
+                .await
+                .context("file read to respond")?
+                .map_err(Status::from_raw)
                 .map_err(|status| VerificationError::FileReadError { path: path.into(), status })?;
 
             if chunk.is_empty() {

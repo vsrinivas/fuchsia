@@ -33,9 +33,15 @@ void main() {
 
   Future<void> _assertRead(FileProxy proxy, int bufSize, String expectedStr,
       {expectedStatus = ZX.OK}) async {
-    var readResponse = await proxy.read(bufSize);
-    expect(readResponse.s, expectedStatus);
-    expect(String.fromCharCodes(readResponse.data), expectedStr);
+    if (expectedStatus == ZX.OK) {
+      final data = await proxy.read(bufSize);
+      expect(String.fromCharCodes(data), expectedStr);
+    } else {
+      await expectLater(
+          proxy.read(bufSize),
+          throwsA(isA<MethodException>()
+              .having((e) => e.value, 'value', equals(expectedStatus))));
+    }
   }
 
   Future<void> _assertDescribeFile(FileProxy proxy) async {

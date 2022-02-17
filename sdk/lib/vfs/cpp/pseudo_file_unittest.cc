@@ -157,13 +157,17 @@ class PseudoFileTest : public gtest::RealLoopFixture {
 
   void AssertRead(fuchsia::io::FileSyncPtr& file, int count, const std::string& expected_str,
                   zx_status_t expected_status = ZX_OK) {
-    zx_status_t status;
-    std::vector<uint8_t> buffer;
-    file->Read(count, &status, &buffer);
-    ASSERT_EQ(expected_status, status);
-    std::string str(buffer.size(), 0);
-    std::copy(buffer.begin(), buffer.end(), str.begin());
-    ASSERT_EQ(expected_str, str);
+    fuchsia::io::File2_Read_Result result;
+    file->Read(count, &result);
+    if (expected_status == ZX_OK) {
+      ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+      const std::vector<uint8_t>& data = result.response().data;
+      ASSERT_EQ(expected_str,
+                std::string_view(reinterpret_cast<const char*>(data.data()), data.size()));
+    } else {
+      ASSERT_TRUE(result.is_err());
+      ASSERT_EQ(expected_status, result.err());
+    }
   }
 
   void AssertTruncate(fuchsia::io::FileSyncPtr& file, int count,
@@ -564,8 +568,8 @@ TEST_F(PseudoFileTest, CantReadNodeReferenceFile) {
   ASSERT_EQ(ZX_OK, status);
   ASSERT_NE(0u, attr.mode | fuchsia::io::MODE_TYPE_FILE);
 
-  std::vector<uint8_t> buffer;
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED, file->Read(100, &status, &buffer));
+  fuchsia::io::File2_Read_Result result;
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, file->Read(100, &result));
 }
 
 TEST_F(PseudoFileTest, CanCloneFileConnectionAndReadAndWrite) {
@@ -612,8 +616,8 @@ TEST_F(PseudoFileTest, NodeReferenceIsClonedAsNodeReference) {
   ASSERT_EQ(ZX_OK, status);
   ASSERT_NE(0u, attr.mode | fuchsia::io::MODE_TYPE_FILE);
 
-  std::vector<uint8_t> buffer;
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED, cloned_file->Read(100, &status, &buffer));
+  fuchsia::io::File2_Read_Result result;
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, cloned_file->Read(100, &result));
 }
 
 class FileWrapperWithFailingWriteFn {

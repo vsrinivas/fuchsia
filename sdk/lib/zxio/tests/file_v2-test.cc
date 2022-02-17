@@ -189,7 +189,7 @@ class TestServerChannel final : public TestServerBase {
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 
-  void Read2(Read2RequestView request, Read2Completer::Sync& completer) override {
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override {
     if (request->count > fio::wire::kMaxTransferSize) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;

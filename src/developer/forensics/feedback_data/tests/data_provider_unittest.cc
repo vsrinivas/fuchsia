@@ -11,6 +11,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
+#include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -410,11 +411,10 @@ TEST_F(DataProviderTest, GetSnapshotViaChannel) {
     uint64_t read_count = 0;
     uint64_t increment = 0;
     do {
-      archive->Read(fuchsia::io::MAX_BUF,
-                    [&increment](zx_status_t status, std::vector<uint8_t> result) {
-                      EXPECT_EQ(ZX_OK, status);
-                      increment = result.size();
-                    });
+      archive->Read(fuchsia::io::MAX_BUF, [&increment](fuchsia::io::File2_Read_Result result) {
+        EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+        increment = result.response().data.size();
+      });
       RunLoopUntilIdle();
       read_count += increment;
     } while (increment);
