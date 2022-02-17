@@ -104,7 +104,6 @@ func main() {
 	deviceIPFlag := flag.String("device-ip", "", `Serves packages to a device with the given device ip address. Cannot be used with --device-name."
 	  If neither --device-name nor --device-ip are specified, the device-name configured using ffx is used.`)
 	sshConfigFlag := flag.String("sshconfig", "", "Use the specified sshconfig file instead of fssh's version.")
-	serverMode := flag.String("server-mode", "", "Specify the server mode 'pm' or 'ffx'.")
 
 	flag.Parse()
 
@@ -138,7 +137,9 @@ func main() {
 
 	if *getPackageRepoPathFlag {
 		fmt.Printf("%s", *repoFlag)
-		os.Exit(0)
+		osExit(0)
+		// This return is needed for tests that overload osExit to not exit.
+		return
 	}
 
 	if *bucketFlag == "" {
@@ -157,16 +158,16 @@ func main() {
 		log.Fatalf("SDK version not known. Use --version to specify it manually.\n")
 	}
 
-	// If the server mode was not passed in on the CLI, try to read it from the ffx config.
-	if *serverMode == "" {
-		*serverMode, err = getServerModeFromConfig(sdk)
-		if err != nil {
-			log.Fatalf("Error reading the server mode from FFX config: %v", err)
-		}
+	// Read the server mode from the ffx config.
+	serverMode, err := getServerModeFromConfig(sdk)
+	if err != nil {
+		log.Fatalf("Error reading the server mode from FFX config: %v", err)
+	}
 
-		if *serverMode == "" {
-			*serverMode = defaultServerMode
-		}
+	// If ffx does not have an entry for repository.server.mode, then that means we're interacting
+	// with an older ffx. Use pm in that case.
+	if serverMode == "" {
+		serverMode = defaultServerMode
 	}
 
 	// if no deviceIPFlag was given, then get the SSH Port from the configuration.
@@ -186,7 +187,7 @@ func main() {
 
 	var server packageServer
 	log.Infof("Using target address: %s", deviceConfig.DeviceIP)
-	switch *serverMode {
+	switch serverMode {
 	case "pm":
 		if *repoPortFlag == "" {
 			flag.Set("server-port", deviceConfig.PackagePort)
@@ -213,7 +214,7 @@ func main() {
 	case "ffx":
 		if *repoPortFlag != "" {
 			log.Errorf(
-				"`-server-mode ffx` does not support `-server-port`. "+
+				"`repository.server.mode ffx` does not support `-server-port`. "+
 					"Instead, to change the repository server port, run: "+
 					"`ffx config set repository.server.listen '[::1]:%s' && ffx doctor --restart-daemon`", *repoPortFlag)
 			osExit(1)
@@ -221,19 +222,9 @@ func main() {
 			return
 		}
 
-		if *killFlag {
-			log.Errorf(
-				"`-server-mode ffx` does not support `-kill`. " +
-					"Instead, to turn off the repository server, run: " +
-					"`ffx config set repository.server.listen '' && ffx doctor --restart-daemon`")
-			osExit(1)
-			// this return is needed for tests that overload osExit to not exit.
-			return
-		}
-
 		if *privateKeyFlag != "" {
 			log.Errorf(
-				"`-server-mode ffx` does not support `-private-key` "+
+				"`repository.server.mode ffx` does not support `-private-key` "+
 					"Instead, if a specific private key is needed for ffx to communicate with the device, run: "+
 					"`ffx config add ssh.priv %s && ffx doctor --restart-daemon`", *privateKeyFlag)
 			osExit(1)
@@ -248,6 +239,15 @@ func main() {
 			return
 		}
 
+		if err = removeFFXRepository(ctx, sdk, *nameFlag); err != nil {
+			log.Fatalf("Could not remove repositories from ffx: %v", err)
+		}
+		if *killFlag {
+			osExit(0)
+			// This return is needed for tests that overload osExit to not exit.
+			return
+		}
+
 		server = &ffxServer{
 			repoPath:      *repoFlag,
 			name:          *nameFlag,
@@ -256,7 +256,7 @@ func main() {
 			sshPort:       sshPort,
 		}
 	default:
-		log.Fatalf("Unknown server mode %v", *serverMode)
+		log.Fatalf("Unknown server mode %v", serverMode)
 	}
 
 	if *cleanFlag {
@@ -350,6 +350,20 @@ func (s *pmServer) startServer(ctx context.Context, sdk sdkProvider) error {
 
 func (s *pmServer) registerRepository(ctx context.Context, sdk sdkProvider) error {
 	return registerPMRepository(ctx, sdk, s.repoPort, s.name, s.targetAddress, s.sshConfig, s.privateKey, s.persist, s.sshPort)
+}
+
+func removeFFXRepository(ctx context.Context, sdk sdkProvider, name string) error {
+	// TODO(http://fxbug.dev/83720): We need `ffx_repository=true` until
+	// ffx repository has graduated from experimental.
+	args := []string{"--config", "ffx_repository=true", "repository", "remove", "--repository", name}
+	logger.Debugf(ctx, "running %v", args)
+	if _, err := sdk.RunFFX(args, false); err != nil {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
+			return fmt.Errorf("Error removing repository %v: %w", string(exitError.Stderr), err)
+		}
+	}
+	return nil
 }
 
 type ffxServer struct {
