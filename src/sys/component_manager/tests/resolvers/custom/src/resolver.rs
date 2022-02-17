@@ -28,8 +28,12 @@ async fn serve_resolver(mut stream: ComponentResolverRequestStream) -> Result<()
                 if component_url == "test://component" {
                     let (client, server) = fidl::endpoints::create_endpoints()
                         .context("failed to create zx::channel pair")?;
-                    fdio::open("/pkg", fio::OPEN_RIGHT_READABLE, server.into_channel())
-                        .context("failed to open /pkg")?;
+                    fdio::open(
+                        "/pkg",
+                        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+                        server.into_channel(),
+                    )
+                    .context("failed to open /pkg")?;
                     responder.send(&mut Ok(fsys::Component {
                         resolved_url: Some("fuchsia-pkg://fuchsia.com/component-manager-test-resolver#meta/component.cm".to_string()),
                         decl: Some(build_decl()),
