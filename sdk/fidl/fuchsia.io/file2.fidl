@@ -29,9 +29,8 @@ protocol File2 {
     ///   of the file.
     ///
     /// This method does not require any rights.
-    @transitional
     @selector("fuchsia.io/File.Seek")
-    Seek2(struct {
+    Seek(struct {
         origin SeekOrigin;
         offset int64;
     }) -> (struct {

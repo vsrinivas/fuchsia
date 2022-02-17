@@ -131,6 +131,11 @@ void NullPtyDeviceImpl::WriteAt2(WriteAt2RequestView request, WriteAt2Completer:
   ZX_ASSERT(false);
 }
 
+void NullPtyDeviceImpl::SeekDeprecated(SeekDeprecatedRequestView request,
+                                       SeekDeprecatedCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void NullPtyDeviceImpl::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

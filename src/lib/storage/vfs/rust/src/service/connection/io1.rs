@@ -213,10 +213,10 @@ impl Connection {
             FileRequest::WriteAt2 { offset: _, data: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
-            FileRequest::Seek { offset: _, start: _, responder } => {
+            FileRequest::SeekDeprecated { offset: _, start: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED, 0)?;
             }
-            FileRequest::Seek2 { origin: _, offset: _, responder } => {
+            FileRequest::Seek { origin: _, offset: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
             FileRequest::Truncate { length: _, responder } => {

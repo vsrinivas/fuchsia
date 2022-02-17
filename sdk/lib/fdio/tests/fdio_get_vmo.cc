@@ -115,14 +115,15 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
     completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buffer.data(), actual));
   }
 
-  void Seek(SeekRequestView request, SeekCompleter::Sync& completer) override {
+  void SeekDeprecated(SeekDeprecatedRequestView request,
+                      SeekDeprecatedCompleter::Sync& completer) override {
     if (!context->supports_seek) {
       completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
     }
     completer.Reply(ZX_OK, 0);
   }
 
-  void Seek2(Seek2RequestView request, Seek2Completer::Sync& completer) override {
+  void Seek(SeekRequestView request, SeekCompleter::Sync& completer) override {
     if (!context->supports_seek) {
       completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
     }

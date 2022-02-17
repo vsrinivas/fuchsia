@@ -10,11 +10,10 @@ use super::{read_only, read_only_const, read_only_static, read_write, write_only
 use crate::{
     assert_close, assert_event, assert_get_attr, assert_get_buffer, assert_get_buffer_err,
     assert_read, assert_read_at, assert_read_at_err, assert_read_err, assert_read_fidl_err_closed,
-    assert_seek, assert_seek_err, assert_truncate, assert_truncate_err, assert_vmo_content,
-    assert_write, assert_write_at, assert_write_at_err, assert_write_err,
-    assert_write_fidl_err_closed, clone_as_file_assert_err, clone_get_proxy_assert,
-    clone_get_vmo_file_proxy_assert_err, clone_get_vmo_file_proxy_assert_ok,
-    report_invalid_vmo_content,
+    assert_seek, assert_truncate, assert_truncate_err, assert_vmo_content, assert_write,
+    assert_write_at, assert_write_at_err, assert_write_err, assert_write_fidl_err_closed,
+    clone_as_file_assert_err, clone_get_proxy_assert, clone_get_vmo_file_proxy_assert_err,
+    clone_get_vmo_file_proxy_assert_ok, report_invalid_vmo_content,
 };
 
 use crate::{
@@ -401,7 +400,7 @@ fn open_truncate() {
         |proxy| {
             async move {
                 // Seek to the end to check the current size.
-                assert_seek!(proxy, 0, End, 0);
+                assert_seek!(proxy, 0, End, Ok(0));
                 assert_write!(proxy, "File content");
                 assert_close!(proxy);
             }
@@ -518,7 +517,7 @@ fn seek_read_write() {
                 assert_seek!(proxy, 0, Start);
                 assert_write!(proxy, "Fina");
                 // buffer: "Final con"
-                assert_seek!(proxy, 0, End, 9);
+                assert_seek!(proxy, 0, End, Ok(9));
                 assert_write!(proxy, "tent");
                 assert_close!(proxy);
             }
@@ -533,8 +532,8 @@ fn write_after_seek_beyond_capacity_fills_gap_with_zeroes() {
         simple_read_write(b"Before gap", b"Before gap\0\0\0\0After gap"),
         |proxy| {
             async move {
-                assert_seek!(proxy, 0, End, 10);
-                assert_seek!(proxy, 4, Current, 14); // Four byte gap past original content.
+                assert_seek!(proxy, 0, End, Ok(10));
+                assert_seek!(proxy, 4, Current, Ok(14)); // Four byte gap past original content.
                 assert_write!(proxy, "After gap");
                 assert_close!(proxy);
             }
@@ -552,9 +551,9 @@ fn seek_valid_positions() {
         |proxy| async move {
             assert_seek!(proxy, 5, Start);
             assert_read!(proxy, "file");
-            assert_seek!(proxy, 1, Current, 10);
+            assert_seek!(proxy, 1, Current, Ok(10));
             assert_read!(proxy, "content");
-            assert_seek!(proxy, -12, End, 5);
+            assert_seek!(proxy, -12, End, Ok(5));
             assert_read!(proxy, "file content");
             assert_close!(proxy);
         },
@@ -579,10 +578,10 @@ fn seek_valid_after_size_before_capacity() {
                 assert_read!(proxy, "");
                 assert_write!(proxy, " ext");
                 //      "Content ext"));
-                assert_seek!(proxy, 3, Current, 14);
+                assert_seek!(proxy, 3, Current, Ok(14));
                 assert_write!(proxy, "ed");
                 //      "Content ext000ed"));
-                assert_seek!(proxy, 4, End, 20);
+                assert_seek!(proxy, 4, End, Ok(20));
                 assert_write!(proxy, "ther");
                 //      "Content ext000ed0000ther"));
                 //       0         1         2
@@ -604,7 +603,7 @@ fn seek_triggers_overflow() {
         simple_read_only(b"File size and contents don't matter for this test"),
         |proxy| async move {
             assert_seek!(proxy, i64::MAX, Start);
-            assert_seek_err!(proxy, 1, Current, Status::OUT_OF_RANGE, i64::MAX as u64);
+            assert_seek!(proxy, 1, Current, Err(Status::OUT_OF_RANGE));
         },
     );
 }
@@ -620,11 +619,11 @@ fn seek_invalid_before_0() {
             50,
         )),
         |proxy| async move {
-            assert_seek_err!(proxy, -10, Current, Status::OUT_OF_RANGE, 0);
+            assert_seek!(proxy, -10, Current, Err(Status::OUT_OF_RANGE));
             assert_read!(proxy, "Seek");
-            assert_seek_err!(proxy, -10, Current, Status::OUT_OF_RANGE, 4);
+            assert_seek!(proxy, -10, Current, Err(Status::OUT_OF_RANGE));
             assert_read!(proxy, " position");
-            assert_seek_err!(proxy, -100, End, Status::OUT_OF_RANGE, 13);
+            assert_seek!(proxy, -100, End, Err(Status::OUT_OF_RANGE));
             assert_read!(proxy, " is unaffected");
             assert_close!(proxy);
         },
@@ -658,8 +657,8 @@ fn seek_beyond_size_after_shrinking_truncate() {
         read_write(simple_init_vmo_resizable(b"Content"), simple_consume_vmo(b"Cont\0\0\0\0end")),
         |proxy| async move {
             assert_truncate!(proxy, 4); // Decrease the size of the file to four.
-            assert_seek!(proxy, 0, End, 4);
-            assert_seek!(proxy, 4, Current, 8); // Four bytes beyond the truncated end.
+            assert_seek!(proxy, 0, End, Ok(4));
+            assert_seek!(proxy, 4, Current, Ok(8)); // Four bytes beyond the truncated end.
             assert_write!(proxy, "end");
             assert_close!(proxy);
         },
@@ -701,7 +700,7 @@ fn truncate_to_0() {
                 assert_read!(proxy, "Content");
                 assert_truncate!(proxy, 0);
                 // truncate should not change the seek position.
-                assert_seek!(proxy, 0, Current, 7);
+                assert_seek!(proxy, 0, Current, Ok(7));
                 assert_seek!(proxy, 0, Start);
                 assert_write!(proxy, "Replaced");
                 assert_close!(proxy);
@@ -982,7 +981,7 @@ fn clone_can_not_remove_node_reference() {
                 let third_proxy =
                     clone_get_vmo_file_proxy_assert_err!(&first_proxy, OPEN_FLAG_DESCRIBE);
 
-                assert_seek_err!(third_proxy, 0, Current, Status::BAD_HANDLE, 0);
+                assert_seek!(third_proxy, 0, Current, Err(Status::BAD_HANDLE));
 
                 assert_close!(third_proxy);
                 assert_close!(first_proxy);
@@ -997,7 +996,7 @@ fn node_reference_can_not_seek() {
         OPEN_FLAG_NODE_REFERENCE,
         read_only(simple_init_vmo(b"Content")),
         |proxy| async move {
-            assert_seek_err!(proxy, 0, Current, Status::BAD_HANDLE, 0);
+            assert_seek!(proxy, 0, Current, Err(Status::BAD_HANDLE));
             assert_close!(proxy);
         },
     );

@@ -2788,7 +2788,7 @@ mod serve_write_blob_tests {
                 StubRequestor::Read => proxy.read(0).map(|_| ()).boxed(),
                 StubRequestor::ReadAt => proxy.read_at(0, 0).map(|_| ()).boxed(),
                 StubRequestor::Seek => {
-                    proxy.seek(0, fidl_fuchsia_io::SeekOrigin::Start).map(|_| ()).boxed()
+                    proxy.seek(fidl_fuchsia_io::SeekOrigin::Start, 0).map(|_| ()).boxed()
                 }
                 StubRequestor::Truncate => proxy.truncate(0).map(|_| ()).boxed(),
                 StubRequestor::GetFlags => proxy.get_flags().map(|_| ()).boxed(),

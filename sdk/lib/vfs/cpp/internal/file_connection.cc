@@ -153,7 +153,8 @@ void FileConnection::WriteAt2(std::vector<uint8_t> data, uint64_t offset,
   });
 }
 
-void FileConnection::Seek(int64_t new_offset, fuchsia::io::SeekOrigin seek, SeekCallback callback) {
+void FileConnection::SeekDeprecated(int64_t new_offset, fuchsia::io::SeekOrigin seek,
+                                    SeekDeprecatedCallback callback) {
   int64_t cur_len = vn_->GetLength();
   size_t capacity = vn_->GetCapacity();
   uint64_t calculated_offset = 0u;
@@ -181,16 +182,16 @@ void FileConnection::Seek(int64_t new_offset, fuchsia::io::SeekOrigin seek, Seek
   callback(ZX_OK, offset());
 }
 
-void FileConnection::Seek2(fuchsia::io::SeekOrigin origin, int64_t offset, Seek2Callback callback) {
-  Seek(offset, origin,
-       [callback = std::move(callback)](zx_status_t status, int64_t offset_from_start) {
-         if (status != ZX_OK) {
-           callback(fpromise::error(status));
-         } else {
-           callback(fuchsia::io::File2_Seek2_Result::WithResponse(
-               fuchsia::io::File2_Seek2_Response(offset_from_start)));
-         }
-       });
+void FileConnection::Seek(fuchsia::io::SeekOrigin origin, int64_t offset, SeekCallback callback) {
+  SeekDeprecated(offset, origin,
+                 [callback = std::move(callback)](zx_status_t status, int64_t offset_from_start) {
+                   if (status != ZX_OK) {
+                     callback(fpromise::error(status));
+                   } else {
+                     callback(fuchsia::io::File2_Seek_Result::WithResponse(
+                         fuchsia::io::File2_Seek_Response(offset_from_start)));
+                   }
+                 });
 }
 
 void FileConnection::Truncate(uint64_t length, TruncateCallback callback) {

@@ -254,8 +254,11 @@ impl Blob<AtEof> {
     /// Rewinds the file position to the start, returning the now read-only FileProxy representing
     /// the blob.
     pub async fn reopen_for_read(self) -> Result<FileProxy, IntoReadError> {
-        let (status, _pos) = self.proxy.seek(0i64, fidl_fuchsia_io::SeekOrigin::Start).await?;
-        Status::ok(status)?;
+        let _pos: u64 = self
+            .proxy
+            .seek(fidl_fuchsia_io::SeekOrigin::Start, 0)
+            .await?
+            .map_err(Status::from_raw)?;
 
         Ok(self.proxy)
     }

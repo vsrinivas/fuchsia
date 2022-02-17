@@ -284,7 +284,7 @@ TEST_F(ConnectionTest, FileSeekDirectory) {
     // Borrowing directory channel as file channel.
     auto dir_get_result =
         fidl::WireCall(fidl::UnownedClientEnd<fio::File>(dc->client.borrow().handle()))
-            ->Seek(0, fio::wire::SeekOrigin::kStart);
+            ->Seek(fio::wire::SeekOrigin::kStart, 0);
     EXPECT_NOT_OK(dir_get_result.status());
   }
 }

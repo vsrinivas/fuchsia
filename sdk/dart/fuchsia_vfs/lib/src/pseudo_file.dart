@@ -427,12 +427,13 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<File$Seek$Response> seek(int offset, SeekOrigin seek) async {
+  Future<File$SeekDeprecated$Response> seekDeprecated(
+      int offset, SeekOrigin seek) async {
     return _handleSeek(seek, offset);
   }
 
   @override
-  Future<int> seek2(SeekOrigin seek, int offset) async {
+  Future<int> seek(SeekOrigin seek, int offset) async {
     var response = _handleSeek(seek, offset);
     if (response.s != ZX.OK) {
       throw fidl.MethodException(response.s);
@@ -440,7 +441,7 @@ class _FileConnection extends File {
     return response.offset;
   }
 
-  File$Seek$Response _handleSeek(SeekOrigin origin, int offset) {
+  File$SeekDeprecated$Response _handleSeek(SeekOrigin origin, int offset) {
     var calculatedOffset = offset;
     switch (origin) {
       case SeekOrigin.start:
@@ -453,13 +454,13 @@ class _FileConnection extends File {
         calculatedOffset = (_currentLen - 1) + offset;
         break;
       default:
-        return File$Seek$Response(ZX.ERR_INVALID_ARGS, 0);
+        return File$SeekDeprecated$Response(ZX.ERR_INVALID_ARGS, 0);
     }
     if (calculatedOffset > _currentLen || calculatedOffset < 0) {
-      return File$Seek$Response(ZX.ERR_OUT_OF_RANGE, seekPos);
+      return File$SeekDeprecated$Response(ZX.ERR_OUT_OF_RANGE, seekPos);
     }
     seekPos = calculatedOffset;
-    return File$Seek$Response(ZX.OK, seekPos);
+    return File$SeekDeprecated$Response(ZX.OK, seekPos);
   }
 
   @override

@@ -656,15 +656,15 @@ func (*fileState) WriteAt2(_ fidl.Context, data []uint8, offset uint64) (io.File
 	return io.File2WriteAt2ResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (fState *fileState) Seek(_ fidl.Context, offset int64, start io.SeekOrigin) (int32, uint64, error) {
+func (fState *fileState) SeekDeprecated(_ fidl.Context, offset int64, start io.SeekOrigin) (int32, uint64, error) {
 	n, err := fState.reader.Seek(offset, int(start))
 	return int32(zx.ErrOk), uint64(n), err
 }
 
-func (fState *fileState) Seek2(_ fidl.Context, origin io.SeekOrigin, offset int64) (io.File2Seek2Result, error) {
+func (fState *fileState) Seek(_ fidl.Context, origin io.SeekOrigin, offset int64) (io.File2SeekResult, error) {
 	n, err := fState.reader.Seek(offset, int(origin))
-	return io.File2Seek2ResultWithResponse(
-		io.File2Seek2Response{
+	return io.File2SeekResultWithResponse(
+		io.File2SeekResponse{
 			OffsetFromStart: uint64(n),
 		}), err
 }

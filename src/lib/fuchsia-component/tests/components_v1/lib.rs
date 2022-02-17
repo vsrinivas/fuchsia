@@ -735,8 +735,7 @@ async_test_with_vmo_file![
         assert_read(&file_proxy, file_data.len() as u64, &[]).await?;
 
         // Seek back to 5 bytes from the end and read again.
-        let (status, position) = file_proxy.seek(-5, SeekOrigin::End).await?;
-        zx::Status::ok(status)?;
+        let position = file_proxy.seek(SeekOrigin::End, -5).await?.map_err(zx::Status::from_raw)?;
         assert_eq!(position, file_data.len() as u64 - 5);
 
         let read_at_count = 10usize;

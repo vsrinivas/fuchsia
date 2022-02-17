@@ -61,12 +61,13 @@ class TestVmofileServer : public TestFileServerBase {
   // over the fuchsia.io.File protocol. This is a test implementation smart enough
   // to respond to this call.
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final {
-    if (request->start != fuchsia_io::wire::SeekOrigin::kStart || request->offset != 0) {
-      ADD_FAILURE("unsupported Seek received start %d offset %ld", request->start, request->offset);
-      completer.Close(ZX_ERR_NOT_SUPPORTED);
-      return;
+    if (request->origin != fuchsia_io::wire::SeekOrigin::kStart || request->offset != 0) {
+      ADD_FAILURE("unsupported Seek received origin %d offset %ld", request->origin,
+                  request->offset);
+      completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+    } else {
+      completer.ReplySuccess(seek_start_offset_);
     }
-    completer.Reply(ZX_OK, seek_start_offset_);
   }
 
   uint64_t seek_start_offset_;

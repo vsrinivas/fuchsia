@@ -39,6 +39,8 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
   void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) final;
   void WriteAt2(WriteAt2RequestView request, WriteAt2Completer::Sync& completer) final;
 
+  void SeekDeprecated(SeekDeprecatedRequestView request,
+                      SeekDeprecatedCompleter::Sync& completer) final;
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
   void Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) final;
   void GetFlagsDeprecatedUseNode(GetFlagsDeprecatedUseNodeRequestView request,

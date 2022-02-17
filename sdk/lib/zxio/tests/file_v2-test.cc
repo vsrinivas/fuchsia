@@ -263,7 +263,7 @@ class TestServerChannel final : public TestServerBase {
     completer.ReplySuccess(actual);
   }
 
-  void Seek2(Seek2RequestView request, Seek2Completer::Sync& completer) override {
+  void Seek(SeekRequestView request, SeekCompleter::Sync& completer) override {
     zx_off_t seek = 0u;
     zx_status_t status =
         stream_.seek(static_cast<zx_stream_seek_origin_t>(request->origin), request->offset, &seek);

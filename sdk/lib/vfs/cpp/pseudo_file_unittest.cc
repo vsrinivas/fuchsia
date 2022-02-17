@@ -173,13 +173,17 @@ class PseudoFileTest : public gtest::RealLoopFixture {
     ASSERT_EQ(expected_status, status);
   }
 
-  void AssertSeek(fuchsia::io::FileSyncPtr& file, int64_t offest, fuchsia::io::SeekOrigin seek,
+  void AssertSeek(fuchsia::io::FileSyncPtr& file, int64_t offset, fuchsia::io::SeekOrigin origin,
                   uint64_t expected_offset, zx_status_t expected_status = ZX_OK) {
-    zx_status_t status;
-    uint64_t new_offset;
-    file->Seek(offest, seek, &status, &new_offset);
-    ASSERT_EQ(expected_status, status);
-    ASSERT_EQ(expected_offset, new_offset);
+    fuchsia::io::File2_Seek_Result result;
+    file->Seek(origin, offset, &result);
+    if (expected_status == ZX_OK) {
+      ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+      ASSERT_EQ(expected_offset, result.response().offset_from_start);
+    } else {
+      ASSERT_TRUE(result.is_err());
+      ASSERT_EQ(expected_status, result.err());
+    }
   }
 
   void CloseFile(fuchsia::io::FileSyncPtr& file, zx_status_t expected_status = ZX_OK) {

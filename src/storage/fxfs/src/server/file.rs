@@ -746,35 +746,49 @@ mod tests {
         Status::ok(status).expect("File write was successful");
 
         {
-            let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("FIDL call failed");
+            let offset = file
+                .seek(SeekOrigin::Start, 0)
+                .await
+                .expect("FIDL call failed")
+                .map_err(Status::from_raw)
+                .expect("seek was successful");
             assert_eq!(offset, 0);
-            Status::ok(status).expect("seek was successful");
             let (status, buf) = file.read(5).await.expect("FIDL call failed");
             Status::ok(status).expect("File read was successful");
             assert!(buf.iter().eq("hello".as_bytes().into_iter()));
         }
         {
-            let (status, offset) =
-                file.seek(2, SeekOrigin::Current).await.expect("FIDL call failed");
+            let offset = file
+                .seek(SeekOrigin::Current, 2)
+                .await
+                .expect("FIDL call failed")
+                .map_err(Status::from_raw)
+                .expect("seek was successful");
             assert_eq!(offset, 7);
-            Status::ok(status).expect("seek was successful");
             let (status, buf) = file.read(5).await.expect("FIDL call failed");
             Status::ok(status).expect("File read was successful");
             assert!(buf.iter().eq("world".as_bytes().into_iter()));
         }
         {
-            let (status, offset) =
-                file.seek(-5, SeekOrigin::Current).await.expect("FIDL call failed");
+            let offset = file
+                .seek(SeekOrigin::Current, -5)
+                .await
+                .expect("FIDL call failed")
+                .map_err(Status::from_raw)
+                .expect("seek was successful");
             assert_eq!(offset, 7);
-            Status::ok(status).expect("seek was successful");
             let (status, buf) = file.read(5).await.expect("FIDL call failed");
             Status::ok(status).expect("File read was successful");
             assert!(buf.iter().eq("world".as_bytes().into_iter()));
         }
         {
-            let (status, offset) = file.seek(-1, SeekOrigin::End).await.expect("FIDL call failed");
+            let offset = file
+                .seek(SeekOrigin::End, -1)
+                .await
+                .expect("FIDL call failed")
+                .map_err(Status::from_raw)
+                .expect("seek was successful");
             assert_eq!(offset, 12);
-            Status::ok(status).expect("seek was successful");
             let (status, buf) = file.read(1).await.expect("FIDL call failed");
             Status::ok(status).expect("File read was successful");
             assert!(buf.iter().eq("!".as_bytes().into_iter()));
@@ -804,9 +818,13 @@ mod tests {
             file.write(input.as_bytes()).await.expect("FIDL call failed");
         Status::ok(status).expect("File write was successful");
 
-        let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("FIDL call failed");
+        let offset = file
+            .seek(SeekOrigin::Start, 0)
+            .await
+            .expect("FIDL call failed")
+            .map_err(Status::from_raw)
+            .expect("Seek was successful");
         assert_eq!(offset, 0);
-        Status::ok(status).expect("Seek was successful");
 
         let status = file.truncate(len as u64).await.expect("FIDL call failed");
         Status::ok(status).expect("File truncate was successful");
@@ -825,9 +843,13 @@ mod tests {
             file.write_at("a".as_bytes(), (len - 1) as u64).await.expect("FIDL call failed");
         Status::ok(status).expect("File write was successful");
 
-        let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("FIDL call failed");
+        let offset = file
+            .seek(SeekOrigin::Start, 0)
+            .await
+            .expect("FIDL call failed")
+            .map_err(Status::from_raw)
+            .expect("Seek was successful");
         assert_eq!(offset, 0);
-        Status::ok(status).expect("Seek was successful");
 
         let buf = read_file_bytes(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), len);
@@ -865,9 +887,13 @@ mod tests {
         let status = file.truncate(short_len as u64).await.expect("truncate failed");
         Status::ok(status).expect("File truncate was successful");
 
-        let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("FIDL call failed");
+        let offset = file
+            .seek(SeekOrigin::Start, 0)
+            .await
+            .expect("FIDL call failed")
+            .map_err(Status::from_raw)
+            .expect("Seek was successful");
         assert_eq!(offset, 0);
-        Status::ok(status).expect("Seek was successful");
 
         let buf = read_file_bytes(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), short_len);
@@ -883,9 +909,13 @@ mod tests {
             v
         };
 
-        let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("seek failed");
+        let offset = file
+            .seek(SeekOrigin::Start, 0)
+            .await
+            .expect("seek failed")
+            .map_err(Status::from_raw)
+            .expect("Seek was successful");
         assert_eq!(offset, 0);
-        Status::ok(status).expect("Seek was successful");
 
         let buf = read_file_bytes(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), len);
@@ -929,9 +959,13 @@ mod tests {
             len -= to_truncate;
         }
 
-        let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("truncate failed");
+        let offset = file
+            .seek(SeekOrigin::Start, 0)
+            .await
+            .expect("truncate failed")
+            .map_err(Status::from_raw)
+            .expect("Seek was successful");
         assert_eq!(offset, 0);
-        Status::ok(status).expect("Seek was successful");
 
         let buf = read_file_bytes(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), short_len);
@@ -947,9 +981,13 @@ mod tests {
             v
         };
 
-        let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("seek failed");
+        let offset = file
+            .seek(SeekOrigin::Start, 0)
+            .await
+            .expect("seek failed")
+            .map_err(Status::from_raw)
+            .expect("Seek was successful");
         assert_eq!(offset, 0);
-        Status::ok(status).expect("Seek was successful");
 
         let buf = read_file_bytes(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), orig_len);

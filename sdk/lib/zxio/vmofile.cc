@@ -51,20 +51,21 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
   mtx_lock(&file->lock);
-  uint64_t seek = file->offset;
+  uint64_t offset = file->offset;
   mtx_unlock(&file->lock);
 
-  const fidl::WireResult result = file->control->Seek(seek, fio::wire::SeekOrigin::kStart);
+  const fidl::WireResult result = file->control->Seek(fio::wire::SeekOrigin::kStart, offset);
   if (!result.ok()) {
     return ZX_ERR_BAD_STATE;
   }
   const auto& response = result.value();
-  if (response.s != ZX_OK) {
-    return ZX_ERR_BAD_STATE;
+  switch (response.result.Which()) {
+    case fio::wire::File2SeekResult::Tag::kErr:
+      return ZX_ERR_BAD_STATE;
+    case fio::wire::File2SeekResult::Tag::kResponse:
+      *out_handle = file->control.TakeClientEnd().TakeChannel().release();
+      return ZX_OK;
   }
-
-  *out_handle = file->control.TakeClientEnd().TakeChannel().release();
-  return ZX_OK;
 }
 
 static zx_status_t zxio_vmofile_reopen(zxio_t* io, zxio_reopen_flags_t zxio_flags,

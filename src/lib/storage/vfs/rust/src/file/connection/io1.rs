@@ -352,13 +352,13 @@ impl<T: 'static + File> FileConnection<T> {
                     responder.send(&mut Err(status.into_raw()))?;
                 }
             }
-            FileRequest::Seek { offset, start, responder } => {
-                fuchsia_trace::duration!("storage", "File::Seek");
+            FileRequest::SeekDeprecated { offset, start, responder } => {
+                fuchsia_trace::duration!("storage", "File::SeekDeprecated");
                 let (status, seek) = self.handle_seek(offset, start).await;
                 responder.send(status.into_raw(), seek)?;
             }
-            FileRequest::Seek2 { origin, offset, responder } => {
-                fuchsia_trace::duration!("storage", "File::Seek2");
+            FileRequest::Seek { origin, offset, responder } => {
+                fuchsia_trace::duration!("storage", "File::Seek");
                 let (status, seek) = self.handle_seek(offset, origin).await;
                 if status == zx::Status::OK {
                     responder.send(&mut Ok(seek))?;
@@ -823,8 +823,12 @@ mod tests {
         let (clone_proxy, remote) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
         env.proxy.clone(CLONE_FLAG_SAME_RIGHTS, remote.into_channel().into()).unwrap();
         // Seek and read from clone_proxy.
-        let (status, _) = clone_proxy.seek(100, SeekOrigin::Start).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let _: u64 = clone_proxy
+            .seek(SeekOrigin::Start, 100)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw)
+            .unwrap();
         let (status, _) = clone_proxy.read(5).await.unwrap();
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
@@ -1061,8 +1065,13 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_seek_start() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
-        let (status, offset) = env.proxy.seek(10, SeekOrigin::Start).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let offset = env
+            .proxy
+            .seek(SeekOrigin::Start, 10)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw)
+            .unwrap();
         assert_eq!(offset, 10);
 
         let (status, data) = env.proxy.read(1).await.unwrap();
@@ -1081,12 +1090,22 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_seek_cur() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
-        let (status, offset) = env.proxy.seek(10, SeekOrigin::Start).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let offset = env
+            .proxy
+            .seek(SeekOrigin::Start, 10)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw)
+            .unwrap();
         assert_eq!(offset, 10);
 
-        let (status, offset) = env.proxy.seek(-2, SeekOrigin::Current).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let offset = env
+            .proxy
+            .seek(SeekOrigin::Current, -2)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw)
+            .unwrap();
         assert_eq!(offset, 8);
 
         let (status, data) = env.proxy.read(1).await.unwrap();
@@ -1105,16 +1124,21 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_seek_before_start() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
-        let (status, offset) = env.proxy.seek(-4, SeekOrigin::Current).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OUT_OF_RANGE);
-        assert_eq!(offset, 0);
+        let result =
+            env.proxy.seek(SeekOrigin::Current, -4).await.unwrap().map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::OUT_OF_RANGE));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_seek_end() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
-        let (status, offset) = env.proxy.seek(-4, SeekOrigin::End).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let offset = env
+            .proxy
+            .seek(SeekOrigin::End, -4)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw)
+            .unwrap();
         assert_eq!(offset, *MOCK_FILE_SIZE - 4);
 
         let (status, data) = env.proxy.read(1).await.unwrap();
@@ -1272,8 +1296,13 @@ mod tests {
         let (status, count) = env.proxy.write(data).await.unwrap();
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(count, data.len() as u64);
-        let (status, offset) = env.proxy.seek(0, SeekOrigin::Current).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let offset = env
+            .proxy
+            .seek(SeekOrigin::Current, 0)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw)
+            .unwrap();
         assert_eq!(offset, *MOCK_FILE_SIZE + data.len() as u64);
         let events = env.file.operations.lock().unwrap();
         const INIT_FLAGS: u32 = OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND;

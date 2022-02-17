@@ -624,17 +624,17 @@ func (f *fileWrapper) WriteAt2(_ fidl.Context, data []uint8, offset uint64) (io.
 	return io.File2WriteAt2ResultWithResponse(io.File2WriteAt2Response{ActualCount: uint64(r)}), nil
 }
 
-func (f *fileWrapper) Seek(_ fidl.Context, offset int64, start io.SeekOrigin) (int32, uint64, error) {
+func (f *fileWrapper) SeekDeprecated(_ fidl.Context, offset int64, start io.SeekOrigin) (int32, uint64, error) {
 	r, err := f.file.Seek(offset, int(start))
 	return int32(errorToZx(err)), uint64(r), nil
 }
 
-func (f *fileWrapper) Seek2(_ fidl.Context, origin io.SeekOrigin, offset int64) (io.File2Seek2Result, error) {
+func (f *fileWrapper) Seek(_ fidl.Context, origin io.SeekOrigin, offset int64) (io.File2SeekResult, error) {
 	r, err := f.file.Seek(offset, int(origin))
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
-		return io.File2Seek2ResultWithErr(int32(zxErr)), nil
+		return io.File2SeekResultWithErr(int32(zxErr)), nil
 	}
-	return io.File2Seek2ResultWithResponse(io.File2Seek2Response{OffsetFromStart: uint64(r)}), nil
+	return io.File2SeekResultWithResponse(io.File2SeekResponse{OffsetFromStart: uint64(r)}), nil
 }
 
 func (f *fileWrapper) Truncate(_ fidl.Context, length uint64) (int32, error) {

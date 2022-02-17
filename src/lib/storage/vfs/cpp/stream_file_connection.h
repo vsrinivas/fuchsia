@@ -41,8 +41,9 @@ class StreamFileConnection final : public FileConnection {
   void Write2(Write2RequestView request, Write2Completer::Sync& completer) final;
   void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) final;
   void WriteAt2(WriteAt2RequestView request, WriteAt2Completer::Sync& completer) final;
+  void SeekDeprecated(SeekDeprecatedRequestView request,
+                      SeekDeprecatedCompleter::Sync& completer) final;
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
-  void Seek2(Seek2RequestView request, Seek2Completer::Sync& completer) final;
   void QueryFilesystem(QueryFilesystemRequestView request,
                        QueryFilesystemCompleter::Sync& completer) final;
 

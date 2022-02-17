@@ -305,7 +305,7 @@ TEST_F(BuiltinSemanticTest, OpenShortDisplay) {
 
 // Check short display of File::Seek.
 TEST_F(BuiltinSemanticTest, FileSeekShortDisplay) {
-  // Checks that Node::Clone exists in fuchsia.io.
+  // Checks that File::Seek exists in fuchsia.io.
   Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
   ASSERT_NE(library, nullptr);
   library->DecodeTypes();
@@ -319,7 +319,7 @@ TEST_F(BuiltinSemanticTest, FileSeekShortDisplay) {
 
   // This message (we only define the fields used by the display):
   StructValue request(*method->request());
-  request.AddField("start", std::make_unique<IntegerValue>(0, false));
+  request.AddField("origin", std::make_unique<IntegerValue>(0, false));
   request.AddField("offset", std::make_unique<IntegerValue>(1000, false));
 
   std::stringstream os;
@@ -329,7 +329,7 @@ TEST_F(BuiltinSemanticTest, FileSeekShortDisplay) {
 
 // Check short display of File::Write.
 TEST_F(BuiltinSemanticTest, FileWriteShortDisplay) {
-  // Checks that Node::Clone exists in fuchsia.io.
+  // Checks that File::Write exists in fuchsia.io.
   Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
   ASSERT_NE(library, nullptr);
   library->DecodeTypes();

@@ -111,11 +111,12 @@ void PtyServerDevice::WriteAt2(WriteAt2RequestView request, WriteAt2Completer::S
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
+void PtyServerDevice::SeekDeprecated(SeekDeprecatedRequestView request,
+                                     SeekDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Seek2(Seek2RequestView request, Seek2Completer::Sync& completer) {
+void PtyServerDevice::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

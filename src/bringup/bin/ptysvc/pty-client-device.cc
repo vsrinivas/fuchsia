@@ -148,11 +148,12 @@ void PtyClientDevice::WriteAt2(WriteAt2RequestView request, WriteAt2Completer::S
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
+void PtyClientDevice::SeekDeprecated(SeekDeprecatedRequestView request,
+                                     SeekDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::Seek2(Seek2RequestView request, Seek2Completer::Sync& completer) {
+void PtyClientDevice::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

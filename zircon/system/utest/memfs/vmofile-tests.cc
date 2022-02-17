@@ -134,11 +134,12 @@ TEST(VmofileTests, test_vmofile_basic) {
   }
 
   {
-    auto seek_result =
-        fidl::WireCall<fio::File>(zx::unowned_channel(h))->Seek(7u, fio::wire::SeekOrigin::kStart);
-    ASSERT_EQ(seek_result.status(), ZX_OK);
-    ASSERT_EQ(seek_result.Unwrap()->s, ZX_OK);
-    ASSERT_EQ(seek_result.Unwrap()->offset, 7u);
+    const fidl::WireResult seek_result =
+        fidl::WireCall<fio::File>(zx::unowned_channel(h))->Seek(fio::wire::SeekOrigin::kStart, 7u);
+    ASSERT_TRUE(seek_result.ok(), "%s", seek_result.status_string());
+    const fio::wire::File2SeekResult& response = seek_result.value().result;
+    ASSERT_TRUE(response.is_response(), "%s", zx_status_get_string(response.err()));
+    ASSERT_EQ(response.response().offset_from_start, 7u);
   }
 
   shutdown_vfs(std::move(vfs));

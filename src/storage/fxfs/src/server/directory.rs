@@ -888,7 +888,11 @@ mod tests {
         );
 
         // But its contents should still be readable from the other handle.
-        file.seek(0, SeekOrigin::Start).await.expect("seek failed");
+        file.seek(SeekOrigin::Start, 0)
+            .await
+            .expect("seek failed")
+            .map_err(Status::from_raw)
+            .expect("seek error");
         let rbuf = read_file_bytes(&file).await.expect("read failed");
         assert_eq!(rbuf, buf);
         close_file_checked(file).await;

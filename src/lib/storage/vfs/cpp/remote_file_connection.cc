@@ -262,7 +262,8 @@ zx_status_t RemoteFileConnection::SeekInternal(fuchsia_io::wire::SeekOrigin orig
   return ZX_OK;
 }
 
-void RemoteFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
+void RemoteFileConnection::SeekDeprecated(SeekDeprecatedRequestView request,
+                                          SeekDeprecatedCompleter::Sync& completer) {
   zx_status_t status = SeekInternal(request->start, request->offset);
   if (status == ZX_ERR_STOP) {
     completer.Close(ZX_ERR_INTERNAL);
@@ -271,7 +272,7 @@ void RemoteFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& co
   }
 }
 
-void RemoteFileConnection::Seek2(Seek2RequestView request, Seek2Completer::Sync& completer) {
+void RemoteFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
   zx_status_t status = SeekInternal(request->origin, request->offset);
   if (status == ZX_ERR_STOP) {
     completer.Close(ZX_ERR_INTERNAL);

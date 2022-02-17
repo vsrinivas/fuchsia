@@ -442,8 +442,8 @@ mod tests {
         let pkg = open_pkg();
         let file = open_file(&pkg, "data/file", OPEN_RIGHT_READABLE).await.unwrap();
         assert_eq!(
-            file.seek(0, fidl_fuchsia_io::SeekOrigin::End).await.unwrap(),
-            (zx_status::Status::OK.into_raw(), DATA_FILE_CONTENTS.len() as u64)
+            file.seek(fidl_fuchsia_io::SeekOrigin::End, 0).await.unwrap(),
+            Ok(DATA_FILE_CONTENTS.len() as u64),
         );
         crate::file::close(file).await.unwrap();
     }

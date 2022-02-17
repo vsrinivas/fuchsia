@@ -23,7 +23,7 @@ std::string builtin_semantic_fuchsia_io =
     "    print mode as directory_open_mode;\n"
     "  }\n"
     "  File::Seek {\n"
-    "    input_field: request.start;\n"
+    "    input_field: request.origin;\n"
     "    input_field: request.offset;\n"
     "  }\n"
     "  File::Write {\n"

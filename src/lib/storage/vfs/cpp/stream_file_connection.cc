@@ -209,7 +209,8 @@ void StreamFileConnection::WriteAt2(WriteAt2RequestView request,
   }
 }
 
-void StreamFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
+void StreamFileConnection::SeekDeprecated(SeekDeprecatedRequestView request,
+                                          SeekDeprecatedCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileSeek] options: ", options());
 
   if (options().flags.node_reference) {
@@ -223,7 +224,7 @@ void StreamFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& co
   completer.Reply(status, seek);
 }
 
-void StreamFileConnection::Seek2(Seek2RequestView request, Seek2Completer::Sync& completer) {
+void StreamFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileSeek] options: ", options());
 
   if (options().flags.node_reference) {

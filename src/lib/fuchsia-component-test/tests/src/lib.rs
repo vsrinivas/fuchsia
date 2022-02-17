@@ -1221,7 +1221,7 @@ async fn route_storage() -> Result<(), Error> {
                     .expect("failed to open example_file");
                     let example_data = "example data";
                     io_util::write_file(&example_file, example_data).await?;
-                    let (_, _) = example_file.seek(0, fio::SeekOrigin::Start).await?;
+                    let _: Result<u64, i32> = example_file.seek(fio::SeekOrigin::Start, 0).await?;
                     let file_contents = io_util::read_file(&example_file).await?;
                     assert_eq!(example_data, file_contents.as_str());
                     send_storage_used.send(()).await.expect("failed to send results");

@@ -203,16 +203,19 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
       fio::wire::Vmofile& file = info.vmofile();
       fidl::ClientEnd<fio::File> control(node.TakeChannel());
       const fidl::WireResult result =
-          fidl::WireCall(control.borrow())->Seek(0, fio::wire::SeekOrigin::kStart);
+          fidl::WireCall(control.borrow())->Seek(fio::wire::SeekOrigin::kStart, 0);
       if (!result.ok()) {
         return result.status();
       }
-      if (zx_status_t status = result->s; status != ZX_OK) {
-        return status;
-      }
       const auto& response = result.value();
-      return zxio_vmofile_init(storage, fidl::BindSyncClient(std::move(control)),
-                               std::move(file.vmo), file.offset, file.length, response.offset);
+      switch (response.result.Which()) {
+        case fio::wire::File2SeekResult::Tag::kErr:
+          return response.result.err();
+        case fio::wire::File2SeekResult::Tag::kResponse:
+          return zxio_vmofile_init(storage, fidl::BindSyncClient(std::move(control)),
+                                   std::move(file.vmo), file.offset, file.length,
+                                   response.result.response().offset_from_start);
+      }
     }
     default: {
       zxio_handle_holder_init(storage, node.TakeChannel());

@@ -489,13 +489,13 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::Seek { offset, start, responder } => {
+            FileRequest::SeekDeprecated { offset, start, responder } => {
                 self.handle_seek(offset, start, |status, offset| {
                     responder.send(status.into_raw(), offset)
                 })
                 .await?;
             }
-            FileRequest::Seek2 { origin, offset, responder } => {
+            FileRequest::Seek { origin, offset, responder } => {
                 self.handle_seek(offset, origin, |status, offset| {
                     if status == zx::Status::OK {
                         responder.send(&mut Ok(offset))

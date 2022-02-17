@@ -273,10 +273,14 @@ class TestServerChannel final : public CloseCountingFileServer {
   }
 
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) override {
-    zx_off_t seek = 0u;
-    zx_status_t status =
-        stream_.seek(static_cast<zx_stream_seek_origin_t>(request->start), request->offset, &seek);
-    completer.Reply(status, seek);
+    zx_off_t seek;
+    if (zx_status_t status = stream_.seek(static_cast<zx_stream_seek_origin_t>(request->origin),
+                                          request->offset, &seek);
+        status != ZX_OK) {
+      completer.ReplyError(status);
+    } else {
+      completer.ReplySuccess(seek);
+    }
   }
 
  private:

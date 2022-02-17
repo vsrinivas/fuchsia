@@ -764,16 +764,18 @@ zx_status_t zxio_remote_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offse
   }
 
   const fidl::WireResult result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))
-                                      ->Seek(offset, static_cast<fio::wire::SeekOrigin>(start));
+                                      ->Seek(static_cast<fio::wire::SeekOrigin>(start), offset);
   if (!result.ok()) {
     return result.status();
   }
   const auto& response = result.value();
-  if (zx_status_t status = response.s; status != ZX_OK) {
-    return status;
+  switch (response.result.Which()) {
+    case fio::wire::File2SeekResult::Tag::kErr:
+      return response.result.err();
+    case fio::wire::File2SeekResult::Tag::kResponse:
+      *out_offset = response.result.response().offset_from_start;
+      return ZX_OK;
   }
-  *out_offset = response.offset;
-  return ZX_OK;
 }
 
 zx_status_t zxio_remote_truncate(zxio_t* io, uint64_t length) {

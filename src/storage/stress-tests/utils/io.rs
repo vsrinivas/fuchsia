@@ -277,8 +277,8 @@ impl File {
 
     // Set the offset of the file
     pub async fn seek(&self, origin: SeekOrigin, offset: u64) -> Result<(), Status> {
-        match self.proxy.seek(offset as i64, origin).await {
-            Ok((raw_status_code, _)) => Status::ok(raw_status_code),
+        match self.proxy.seek(origin, offset as i64).await {
+            Ok(result) => result.map_err(Status::from_raw).map(|_: u64| ()),
             Err(e) => {
                 if e.is_closed() {
                     Err(Status::PEER_CLOSED)
