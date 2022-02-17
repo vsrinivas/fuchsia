@@ -425,6 +425,24 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
   cfg->set_virtio_gpu(false);
   cfg->set_magma_device(fuchsia::virtualization::MagmaDevice());
 
+  // Add the block device that contains the VM extras
+  {
+    fbl::unique_fd fd(open("/pkg/data/vm_extras.img", O_RDONLY));
+    if (!fd.is_valid()) {
+      return ZX_ERR_BAD_STATE;
+    }
+    zx::channel client;
+    zx_status_t status = fdio_get_service_handle(fd.get(), client.reset_and_get_address());
+    if (status != ZX_OK) {
+      return status;
+    }
+    cfg->mutable_block_devices()->push_back({
+        "vm_extras",
+        fuchsia::virtualization::BlockMode::READ_ONLY,
+        fuchsia::virtualization::BlockFormat::FILE,
+        std::move(client),
+    });
+  }
   // Add the block device that contains the test binaries.
   {
     fbl::unique_fd fd(open("/pkg/data/linux_tests.img", O_RDONLY));
@@ -556,11 +574,15 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
   // Create mountpoints for test utils and extras. The root filesystem is read only so we
   // put these under /tmp.
   zx_status_t status;
-  status = MountDeviceInGuest(*maitred_, "/dev/vdc", "/tmp/test_utils", "ext2", MS_RDONLY);
+  status = MountDeviceInGuest(*maitred_, "/dev/vdc", "/tmp/vm_extras", "ext2", MS_RDONLY);
   if (status != ZX_OK) {
     return status;
   }
-  status = MountDeviceInGuest(*maitred_, "/dev/vdd", "/tmp/extras", "romfs", MS_RDONLY);
+  status = MountDeviceInGuest(*maitred_, "/dev/vdd", "/tmp/test_utils", "ext2", MS_RDONLY);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = MountDeviceInGuest(*maitred_, "/dev/vde", "/tmp/extras", "romfs", MS_RDONLY);
   if (status != ZX_OK) {
     return status;
   }

@@ -22,11 +22,18 @@ declare_args() {
   # Defaults to the disk image from CIPD, but can be overridden to use a
   # custom disk for development purposes.
   termina_tools = "//prebuilt/virtualization/packages/termina_guest/images/${target_cpu}/vm_tools.img"
+
+  # The termina extras disk image.
+  #
+  # Defaults to the disk image from CIPD, but can be overridden to use a
+  # custom disk for development purposes.
+  termina_extras = "//prebuilt/virtualization/packages/termina_guest/images/${target_cpu}/vm_extras.img"
 }
 
 _kernel_artifact_path = "${target_out_dir}/vm_kernel"
 _rootfs_artifact_path = "${target_out_dir}/vm_rootfs"
 _tools_artifact_path = "${target_out_dir}/vm_tools"
+_extras_artifact_path = "${target_out_dir}/vm_extras"
 
 guest_prebuilt("kernel") {
   source = termina_kernel
@@ -41,6 +48,11 @@ guest_prebuilt("rootfs") {
 guest_prebuilt("tools") {
   source = termina_tools
   output = _tools_artifact_path
+}
+
+guest_prebuilt("extras") {
+  source = termina_extras
+  output = _extras_artifact_path
 }
 
 guest_package("termina_guest") {

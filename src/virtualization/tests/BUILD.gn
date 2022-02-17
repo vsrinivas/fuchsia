@@ -20,6 +20,14 @@ resource("debian_tests_img") {
   deps = [ linux_tests_label ]
 }
 
+termina_extras_label = "//src/virtualization/packages/termina_guest:extras"
+resource("termina_extras_img") {
+  sources =
+      [ get_label_info(termina_extras_label, "target_out_dir") + "/vm_extras" ]
+  outputs = [ "data/vm_extras.img" ]
+  deps = [ termina_extras_label ]
+}
+
 group("tests") {
   testonly = true
   deps = [
@@ -244,14 +252,23 @@ executable("virtualization_core_tests") {
   ]
 }
 
+group("test_images") {
+  testonly = true
+  deps = [
+           ":termina_extras_img",
+           ":debian_tests_img",
+           ":linux_extras_img",
+           termina_extras_label,
+           linux_tests_label,
+         ] + guest_packages
+}
+
 fuchsia_test_component("virtualization_core_tests_cmp") {
   component_name = "virtualization_core_tests"
   deps = [
-           ":debian_tests_img",
-           ":linux_extras_img",
-           ":virtualization_core_tests",
-           linux_tests_label,
-         ] + guest_packages
+    ":test_images",
+    ":virtualization_core_tests",
+  ]
   manifest = "meta/virtualization_core_tests.cmx"
 }
 
@@ -284,10 +301,9 @@ executable("virtualization_block_tests") {
 fuchsia_test_component("virtualization_block_tests_cmp") {
   component_name = "virtualization_block_tests"
   deps = [
-           ":debian_tests_img",
-           ":virtualization_block_tests",
-           linux_tests_label,
-         ] + guest_packages
+    ":test_images",
+    ":virtualization_block_tests",
+  ]
   manifest = "meta/virtualization_block_tests.cmx"
 }
 
@@ -320,10 +336,9 @@ executable("virtualization_gpu_tests") {
 fuchsia_test_component("virtualization_gpu_tests_cmp") {
   component_name = "virtualization_gpu_tests"
   deps = [
-           ":debian_tests_img",
-           ":virtualization_gpu_tests",
-           linux_tests_label,
-         ] + guest_packages
+    ":test_images",
+    ":virtualization_gpu_tests",
+  ]
   manifest = "meta/virtualization_gpu_tests.cmx"
 }
 
@@ -354,10 +369,9 @@ executable("virtualization_input_tests") {
 fuchsia_test_component("virtualization_input_tests_cmp") {
   component_name = "virtualization_input_tests"
   deps = [
-           ":debian_tests_img",
-           ":virtualization_input_tests",
-           linux_tests_label,
-         ] + guest_packages
+    ":test_images",
+    ":virtualization_input_tests",
+  ]
   manifest = "meta/virtualization_input_tests.cmx"
 }
 
@@ -390,10 +404,9 @@ executable("virtualization_net_tests") {
 fuchsia_test_component("virtualization_net_tests_cmp") {
   component_name = "virtualization_net_tests"
   deps = [
-           ":debian_tests_img",
-           ":virtualization_net_tests",
-           linux_tests_label,
-         ] + guest_packages
+    ":test_images",
+    ":virtualization_net_tests",
+  ]
   manifest = "meta/virtualization_net_tests.cmx"
 }
 
@@ -425,11 +438,9 @@ executable("virtualization_vsock_tests") {
 fuchsia_test_component("virtualization_vsock_tests_cmp") {
   component_name = "virtualization_vsock_tests"
   deps = [
-           ":debian_tests_img",
-           ":linux_extras_img",
-           ":virtualization_vsock_tests",
-           linux_tests_label,
-         ] + guest_packages
+    ":test_images",
+    ":virtualization_vsock_tests",
+  ]
   manifest = "meta/virtualization_vsock_tests.cmx"
 }
 
@@ -501,6 +512,7 @@ executable("termina_integration_tests_bin") {
 
   sources = [
     "virtio_magma_tests.cc",
+    "virtio_sound_tests.cc",
     "virtio_wl_tests.cc",
   ]
 
@@ -527,10 +539,8 @@ resource("linux_extras_img") {
 fuchsia_test_component("termina_integration_tests_cmp") {
   component_name = "termina_integration_tests"
   deps = [
-    ":debian_tests_img",
-    ":linux_extras_img",
     ":termina_integration_tests_bin",
-    linux_tests_label,
+    ":test_images",
   ]
   manifest = "meta/termina_integration_tests.cmx"
 }
