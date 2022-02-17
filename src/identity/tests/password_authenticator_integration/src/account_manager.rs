@@ -49,7 +49,7 @@ const FVM_SLICE_SIZE: usize = BLOCK_SIZE as usize * 4;
 // The maximum time to wait for a `wait_for_device_at` call. For whatever reason, using
 // `Duration::MAX` seems to trigger immediate ZX_ERR_TIMED_OUT in the wait_for_device_at calls, so
 // we just set a quite large timeout here.
-const DEVICE_WAIT_TIMEOUT: Duration = Duration::from_secs(20);
+const DEVICE_WAIT_TIMEOUT: Duration = Duration::from_secs(60);
 
 // The maximum time to wait for an account channel to close after the account is locked.
 const ACCOUNT_CLOSE_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
