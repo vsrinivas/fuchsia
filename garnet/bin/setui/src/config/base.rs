@@ -58,15 +58,6 @@ pub enum AgentType {
     MediaButtons,
     /// Responsible for initializing all of the controllers.
     Restore,
-    // TODO(fxb/93577): Remove transition code.
-    /// Responsible for logging to Inspect.
-    Inspect,
-    /// Responsible for recording internal state of messages sent on the message
-    /// hub to policy proxies handlers.
-    InspectPolicy,
-    /// Responsible for logging all settings values of messages between the
-    /// proxy and setting handlers to Inspect.
-    InspectSettingData,
     /// Responsible for recording internal state of messages sent on the message
     /// hub to policy proxies handlers.
     InspectPolicyValues,
@@ -98,29 +89,22 @@ impl AgentType {
             AgentType::Restore => {
                 storage_factory.initialize::<crate::agent::restore_agent::RestoreAgent>().await
             }
-            AgentType::Inspect => {
-                storage_factory.initialize::<crate::agent::inspect::InspectAgent>().await
-            }
-            AgentType::InspectPolicy => {
+            AgentType::InspectSettingProxy => {
                 storage_factory
-                    .initialize::<crate::agent::inspect_policy::InspectPolicyAgent>()
+                    .initialize::<crate::agent::inspect::setting_proxy::SettingProxyInspectAgent>()
                     .await
             }
-            AgentType::InspectSettingData => {
+            AgentType::InspectPolicyValues => {
                 storage_factory
-                    .initialize::<crate::agent::inspect_setting_data::InspectSettingAgent>()
+                    .initialize::<crate::agent::inspect::policy_values::PolicyValuesInspectAgent>()
                     .await
             }
-            AgentType::InspectSettingProxy => storage_factory
-                .initialize::<crate::agent::inspect_mod::setting_proxy::SettingProxyInspectAgent>()
-                .await,
-            AgentType::InspectPolicyValues => storage_factory
-                .initialize::<crate::agent::inspect_mod::policy_values::PolicyValuesInspectAgent>()
-                .await,
-            AgentType::InspectSettingValues => storage_factory
-                .initialize::<crate::agent::inspect_mod::setting_values::SettingValuesInspectAgent>(
-                )
-                .await,
+            AgentType::InspectSettingValues => {
+                storage_factory
+                    .initialize::<crate::agent::inspect::setting_values::SettingValuesInspectAgent>(
+                    )
+                    .await
+            }
         }
     }
 }
@@ -136,19 +120,14 @@ impl From<AgentType> for BlueprintHandle {
             AgentType::Earcons => crate::agent::earcons::agent::blueprint::create(),
             AgentType::MediaButtons => crate::agent::media_buttons::blueprint::create(),
             AgentType::Restore => crate::agent::restore_agent::blueprint::create(),
-            AgentType::Inspect => crate::agent::inspect::blueprint::create(),
-            AgentType::InspectPolicy => crate::agent::inspect_policy::blueprint::create(),
-            AgentType::InspectSettingData => {
-                crate::agent::inspect_setting_data::blueprint::create()
-            }
             AgentType::InspectSettingProxy => {
-                crate::agent::inspect_mod::setting_proxy::blueprint::create()
+                crate::agent::inspect::setting_proxy::blueprint::create()
             }
             AgentType::InspectPolicyValues => {
-                crate::agent::inspect_mod::policy_values::blueprint::create()
+                crate::agent::inspect::policy_values::blueprint::create()
             }
             AgentType::InspectSettingValues => {
-                crate::agent::inspect_mod::setting_values::blueprint::create()
+                crate::agent::inspect::setting_values::blueprint::create()
             }
         }
     }

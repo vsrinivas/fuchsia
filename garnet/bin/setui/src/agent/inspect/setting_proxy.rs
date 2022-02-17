@@ -31,7 +31,7 @@ use std::sync::Arc;
 
 blueprint_definition!(
     "setting_proxy",
-    crate::agent::inspect_mod::setting_proxy::SettingProxyInspectAgent::create
+    crate::agent::inspect::setting_proxy::SettingProxyInspectAgent::create
 );
 
 const INSPECT_REQUESTS_COUNT: usize = 25;

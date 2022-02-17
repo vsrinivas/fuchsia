@@ -33,24 +33,11 @@ pub(crate) mod restore_agent;
 /// Agent for managing access to storage.
 pub(crate) mod storage_agent;
 
-/// Agent for capturing requests.
-// TODO(fxb/93577): remove transition code.
-pub(crate) mod inspect;
-
 /// Earcons.
 pub(crate) mod earcons;
 
 /// Inspect agents.
-// TODO(fxb/93577): Rename to inspect after migration.
-pub(crate) mod inspect_mod;
-
-/// Agent for capturing policy state from messages from the message hub to
-/// policy proxies.
-pub(crate) mod inspect_policy;
-
-/// Agent for capturing setting values of messages between proxies and setting
-/// handlers.
-pub(crate) mod inspect_setting_data;
+pub(crate) mod inspect;
 
 #[derive(Error, Debug, Clone, Copy, PartialEq)]
 pub enum AgentError {

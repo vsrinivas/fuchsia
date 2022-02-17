@@ -22,11 +22,14 @@ use futures::StreamExt;
 
 const INSPECT_NODE_NAME: &str = "policy_values";
 
-blueprint_definition!("inspect_policy", crate::agent::inspect_policy::InspectPolicyAgent::create);
+blueprint_definition!(
+    "policy_values",
+    crate::agent::inspect::policy_values::PolicyValuesInspectAgent::create
+);
 
 /// An agent that listens in on messages sent on the message hub to policy handlers
 /// to record their internal state to inspect.
-pub(crate) struct InspectPolicyAgent {
+pub(crate) struct PolicyValuesInspectAgent {
     messenger_client: Messenger,
     inspect_node: inspect::Node,
     policy_values: HashMap<&'static str, InspectPolicyInfo>,
@@ -47,11 +50,11 @@ struct InspectPolicyInfo {
     timestamp: inspect::StringProperty,
 }
 
-impl DeviceStorageAccess for InspectPolicyAgent {
+impl DeviceStorageAccess for PolicyValuesInspectAgent {
     const STORAGE_KEYS: &'static [&'static str] = &[];
 }
 
-impl InspectPolicyAgent {
+impl PolicyValuesInspectAgent {
     async fn create(context: Context) {
         Self::create_with_node(
             context,
@@ -91,7 +94,7 @@ impl InspectPolicyAgent {
 
         fasync::Task::spawn(async move {
             let nonce = fuchsia_trace::generate_nonce();
-            trace!(nonce, "inspect_policy_agent");
+            trace!(nonce, "policy_values_inspect_agent");
             // Request initial values from all policy handlers.
             let initial_get_receptor = agent
                 .messenger_client
@@ -113,7 +116,6 @@ impl InspectPolicyAgent {
                     initial_get_message = initial_get_fuse.select_next_some() => {
                         trace!(
                             nonce,
-
                             "initial get"
                         );
                         // Received a reply to our initial broadcast to all policy handlers asking
@@ -124,7 +126,6 @@ impl InspectPolicyAgent {
                     intercepted_message = broker_fuse.select_next_some() => {
                         trace!(
                             nonce,
-
                             "intercepted"
                         );
                         // Intercepted a policy request.
@@ -134,7 +135,6 @@ impl InspectPolicyAgent {
                     agent_message = agent_event.select_next_some() => {
                         trace!(
                             nonce,
-
                             "invocation"
                         );
                         if let MessageEvent::Message(
@@ -177,7 +177,7 @@ impl InspectPolicyAgent {
             // When we see a request to a policy proxy, we assume that the policy will be modified,
             // so we wait for the reply to get the signature of the proxy, then ask the proxy for
             // its latest value.
-            match InspectPolicyAgent::watch_reply(client).await {
+            match PolicyValuesInspectAgent::watch_reply(client).await {
                 Ok(reply_signature) => {
                     if let Err(err) = self.request_and_write_to_inspect(reply_signature).await {
                         fx_log_err!("Failed request value from policy proxy: {:?}", err);
@@ -271,7 +271,7 @@ mod tests {
     use futures::future::BoxFuture;
     use futures::StreamExt;
 
-    use crate::agent::inspect_policy::{InspectPolicyAgent, INSPECT_NODE_NAME};
+    use crate::agent::inspect::policy_values::{PolicyValuesInspectAgent, INSPECT_NODE_NAME};
     use crate::agent::Context;
     use crate::audio::policy as audio_policy;
     use crate::audio::policy::{PolicyId, StateBuilder, TransformFlags};
@@ -321,7 +321,7 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child(INSPECT_NODE_NAME);
 
-        InspectPolicyAgent::create_with_node(context, inspect_node).await;
+        PolicyValuesInspectAgent::create_with_node(context, inspect_node).await;
 
         let expected_state = StateBuilder::new()
             .add_property(AudioStreamType::Media, TransformFlags::TRANSFORM_MAX)
@@ -389,7 +389,7 @@ mod tests {
         // Create the inspect agent.
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child(INSPECT_NODE_NAME);
-        InspectPolicyAgent::create_with_node(context, inspect_node).await;
+        PolicyValuesInspectAgent::create_with_node(context, inspect_node).await;
 
         // Starting state for audio policy.
         let initial_state = StateBuilder::new()

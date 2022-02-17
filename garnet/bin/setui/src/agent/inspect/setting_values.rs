@@ -27,7 +27,7 @@ const SETTING_TYPE_INSPECT_NODE_NAME: &str = "setting_types";
 
 blueprint_definition!(
     "setting_values",
-    crate::agent::inspect_mod::setting_values::SettingValuesInspectAgent::create
+    crate::agent::inspect::setting_values::SettingValuesInspectAgent::create
 );
 
 /// An agent that listens in on messages between the proxy and setting handlers to record the
