@@ -173,7 +173,8 @@ INSTANTIATE_TEST_SUITE_P(BufferCollectionImportModes, ParameterizedDisplayCompos
                          ::testing::Values(BufferCollectionImportMode::EnforceDisplayConstraints,
                                            BufferCollectionImportMode::AttemptDisplayConstraints));
 
-TEST_F(DisplayCompositorTest, ClientDropSysmemToken) {
+// TODO(https://fxbug.dev/94017): Re-enable
+TEST_F(DisplayCompositorTest, DISABLED_ClientDropSysmemToken) {
   auto mock = mock_display_controller_.get();
   // Set the mock display controller functions and wait for messages.
   std::thread server([&mock]() mutable {
