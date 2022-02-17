@@ -12,7 +12,7 @@ use ffx_core::ffx_command;
 pub struct ShowCommand {
     /// name of the emulator instance to show details for.
     /// See a list of available instances by running `ffx emu list`.
-    /// Defaults to "fuchsia-emulator".
-    #[argh(positional, default = "\"fuchsia-emulator\".to_string()")]
-    pub name: String,
+    /// If only one instance is running, this defaults to that instance name.
+    #[argh(positional)]
+    pub name: Option<String>,
 }

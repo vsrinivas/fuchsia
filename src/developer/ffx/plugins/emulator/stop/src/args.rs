@@ -32,9 +32,9 @@ pub struct StopCommand {
     #[argh(switch, short = 'p')]
     pub persist: bool,
 
-    /// name of the emulator to stop, as specified to the start command.
-    /// See a list of available instances by running `ffx emu list`. Default
-    /// is "fuchsia-emulator", which matches the default for the start command.
-    #[argh(positional, default = "\"fuchsia-emulator\".to_string()")]
-    pub name: String,
+    /// name of the emulator to shutdown, as specified to the start command.
+    /// See a list of available instances by running `ffx emu list`. If no name
+    /// is specified, and only one emulator is running, it will be terminated.
+    #[argh(positional)]
+    pub name: Option<String>,
 }
