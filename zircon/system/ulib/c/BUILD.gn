@@ -210,7 +210,7 @@ if (zircon_toolchain == false) {
     sources = [ "Scrt1.cc" ]
 
     # This runs before all runtime setup.
-    configs += [ "//build/config/zircon:no_sanitizers" ]
+    configs += [ "//build/config/sanitizers:no_sanitizers" ]
 
     # Minimize the code.  Even if there were lazy PLT resolution, it's never
     # worthwhile to have PLT entries for main or __libc_start_main, since

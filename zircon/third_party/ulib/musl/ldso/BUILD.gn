@@ -41,5 +41,5 @@ source_set("dlstart") {
   visibility = [ ":*" ]
   deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [ "dlstart.c" ]
-  configs += [ "//build/config/zircon:no_sanitizers" ]
+  configs += [ "//build/config/sanitizers:no_sanitizers" ]
 }

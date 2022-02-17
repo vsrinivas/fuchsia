@@ -1125,12 +1125,6 @@ config("default_libs") {
   }
 }
 
-config("no-shadow-call-stack") {
-  if (current_cpu == "arm64") {
-    cflags = [ "-fsanitize=no-shadow-call-stack" ]
-  }
-}
-
 config("werror") {
   if (!use_ccache) {
     cflags = [
@@ -1154,29 +1148,14 @@ config("werror") {
   rustflags = [ "-Dwarnings" ]
 }
 
-config("temporarily_disable_tsan_do_not_use") {
-  cflags = [ "-fno-sanitize=thread" ]
-  visibility = []
-}
-
+# Please use //build/config/sanitizers:suppress-ubsan.DO-NOT-USE-THIS instead
 config("temporarily_disable_ubsan_do_not_use") {
-  cflags = [ "-fno-sanitize=undefined" ]
-  visibility = [
-    "//third_party/*",
-    "//zircon/third_party/uapp/dash/*",
-  ]
+  configs = [ "//build/config/sanitizers:suppress-ubsan.DO-NOT-USE-THIS" ]
+  visibility = [ "//third_party/*" ]
 }
 
 config("no_stack_protector") {
   cflags = [ "-fno-stack-protector" ]
-}
-
-config("no_sanitizers") {
-  cflags = [ "-fno-sanitize=all" ]
-  if (!is_gcc) {
-    cflags += [ "-fsanitize-coverage=0" ]
-  }
-  configs = [ ":no_stack_protector" ]
 }
 
 config("no_profile") {

@@ -137,6 +137,33 @@ sanitizer_extra_options("suppress-asan-container-overflow") {
   tags = [ "asan" ]
 }
 
+config("suppress-tsan.DO-NOT-USE-THIS") {
+  cflags = [ "-fno-sanitize=thread" ]
+  visibility = []
+}
+
+config("suppress-ubsan.DO-NOT-USE-THIS") {
+  cflags = [ "-fno-sanitize=undefined" ]
+  visibility = [
+    "//build/config:temporarily_disable_ubsan_do_not_use",
+    "//zircon/third_party/uapp/dash/*",
+  ]
+}
+
+config("no-shadow-call-stack") {
+  if (current_cpu == "arm64" && !is_gcc) {
+    cflags = [ "-fno-sanitize=shadow-call-stack" ]
+  }
+}
+
+config("no_sanitizers") {
+  cflags = [ "-fno-sanitize=all" ]
+  if (!is_gcc) {
+    cflags += [ "-fsanitize-coverage=0" ]
+  }
+  configs = [ "//build/config:no_stack_protector" ]
+}
+
 # rustc flags for AddressSanitizer, primarily used for fuzzing Rust code.
 # TODO(fxbug.dev/45102): This is technically wrong; it will use clang's ASan.
 # rustc is built from a different fork of LLVM and should use a matching ASan.

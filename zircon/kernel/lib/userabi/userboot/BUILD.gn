@@ -57,7 +57,7 @@ if (toolchain_environment == "userboot") {
     configs = [
       "//build/config/zircon:user",
       "//build/config/zircon:static-libc++",
-      "//build/config/zircon:no_sanitizers",
+      "//build/config/sanitizers:no_sanitizers",
       "//build/config:symbol_no_undefined",
     ]
 

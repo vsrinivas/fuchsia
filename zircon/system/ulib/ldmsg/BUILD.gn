@@ -18,8 +18,8 @@ zx_library("ldmsg") {
   # fancy stacks have been set up.  So it can't rely on safe-stack or
   # shadow-call-stack ABIs.
   configs += [
+    "//build/config/sanitizers:no-shadow-call-stack",
     "//build/config/zircon:no_safestack",
-    "//build/config/zircon:no-shadow-call-stack",
 
     # This library is linked into libc, which is used by libfuzzer.
     # Don't instrument it to avoid getting noise in code coverage.

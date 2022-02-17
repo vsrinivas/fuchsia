@@ -112,7 +112,7 @@ executable("dash") {
   #    #11   0x000021e48dfa3590 in _start(zx_handle_t) ../../zircon/system/ulib/c/Scrt1.cc:7 <<application>>+0x89590
   #
   # At the time of writing, our dash import dates to 2016. Perhaps this has been fixed upstream? We should try updating it.
-  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
+  configs += [ "//build/config/sanitizers:suppress-ubsan.DO-NOT-USE-THIS" ]
 
   # Suppress warnings the dash code doesn't comply with.
   configs += [ "//build/config:Wno-conversion" ]

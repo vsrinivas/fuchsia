@@ -40,7 +40,7 @@ if (toolchain_variant.instrumented) {
     configs += [
       # No real sanitizers should be enabled in this variant anyway.
       # But this also disables SafeStack, which is on by default.
-      "//build/config:no_sanitizers",
+      "//build/config/sanitizers:no_sanitizers",
 
       # This defeats optimizations that break the assumptions.
       ":subprocess.config",

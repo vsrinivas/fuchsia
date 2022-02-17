@@ -286,20 +286,6 @@ group("no_safestack_deps") {
   # _deps group listing implicit dependencies if needed.
 }
 
-config("no-shadow-call-stack") {
-  if (current_cpu == "arm64" && !is_gcc) {
-    cflags = [ "-fno-sanitize=shadow-call-stack" ]
-  }
-}
-
-config("no_sanitizers") {
-  cflags = [ "-fno-sanitize=all" ]
-  if (!is_gcc) {
-    cflags += [ "-fsanitize-coverage=0" ]
-  }
-  configs = [ ":no_stack_protector" ]
-}
-
 config("no_fuzzer") {
   if (!is_gcc) {
     cflags = [ "-fno-sanitize=fuzzer" ]

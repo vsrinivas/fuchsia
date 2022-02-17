@@ -44,7 +44,7 @@ if (toolchain_environment == "user.vdso") {
       "//build/config/zircon:user",
 
       # But it can't rely on full Fuchsia ABI like SafeStack/ShadowCallStack.
-      "//build/config/zircon:no_sanitizers",
+      "//build/config/sanitizers:no_sanitizers",
 
       # And it can't rely on libc.
       "//build/config/zircon:freestanding",

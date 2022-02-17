@@ -31,7 +31,7 @@ if (toolchain_environment == "physmem") {
       "//zircon/kernel:headers",
       "//zircon/kernel:standalone",
       "//zircon/kernel:warnings",
-      "//build/config/zircon:no_sanitizers",
+      "//build/config/sanitizers:no_sanitizers",
     ]
 
     cflags = [
@@ -172,7 +172,7 @@ if (toolchain_environment == "physmem" ||
 
     # Everything in this file runs too early to use the full ABI.  Per-function
     # attribute suppression of sanitizer modes doesn't work for C++ lambda.
-    configs += [ "//build/config/zircon:no_sanitizers" ]
+    configs += [ "//build/config/sanitizers:no_sanitizers" ]
   }
 
   source_set("dev-init") {

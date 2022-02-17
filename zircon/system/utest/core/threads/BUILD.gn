@@ -23,6 +23,6 @@ source_set("thread-functions") {
   testonly = true
   visibility = [ ":*" ]
   sources = [ "thread-functions/thread-functions.cc" ]
-  configs += [ "//build/config:no_sanitizers" ]
+  configs += [ "//build/config/sanitizers:no_sanitizers" ]
   deps = [ "//zircon/system/ulib/runtime" ]
 }

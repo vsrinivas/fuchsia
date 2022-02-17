@@ -109,12 +109,12 @@ sanitizer_default_options_args = [
 if (zircon_toolchain == false) {
   _sanitizer_config_dir = "//build/config/sanitizers"
   _hidden_config = "//build/config:symbol_visibility_hidden"
-  _no_sanitizers_config = "//build/config:no_sanitizers"
+  _no_sanitizers_config = "//build/config/sanitizers:no_sanitizers"
   assert(!is_kernel)
 } else {
   _sanitizer_config_dir = "//build/config/zircon/instrumentation"
   _hidden_config = "//build/config:symbol_visibility_hidden"
-  _no_sanitizers_config = "//build/config/zircon:no_sanitizers"
+  _no_sanitizers_config = "//build/config/sanitizers:no_sanitizers"
 }
 
 if (defined(toolchain_variant.tags)) {

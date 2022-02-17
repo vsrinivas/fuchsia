@@ -39,7 +39,7 @@ if (zircon_toolchain != false) {
   source_set("sancov-stubs") {
     visibility = [ ":*" ]
     sources = [ "sancov-stubs.cc" ]
-    configs += [ "//build/config/zircon:no_sanitizers" ]
+    configs += [ "//build/config/sanitizers:no_sanitizers" ]
   }
 }
 

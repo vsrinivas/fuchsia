@@ -49,7 +49,7 @@ if (is_efi_toolchain) {
   config("efi_config") {
     configs = [
       "//build/config/zircon:standalone",
-      "//build/config/zircon:no_sanitizers",
+      "//build/config/sanitizers:no_sanitizers",
 
       # TODO: "//zircon/kernel:warnings",
     ]
