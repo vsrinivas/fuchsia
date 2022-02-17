@@ -1977,7 +1977,8 @@ mod tests {
             assert_eq!(state_guard.load_string(name_block.index()).unwrap(), "link-name");
 
             // Verify link's content block.
-            let content_block = state_guard.heap().get_block(4).unwrap();
+            let content_block =
+                state_guard.heap().get_block(block.link_content_index().unwrap()).unwrap();
             assert_eq!(content_block.block_type(), BlockType::StringReference);
             assert_eq!(content_block.total_length().unwrap(), 11);
             assert_eq!(state_guard.load_string(content_block.index()).unwrap(), "link-name-0");
@@ -1991,6 +1992,7 @@ mod tests {
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::LinkValue);
         assert_eq!(blocks[2].block_type(), BlockType::StringReference);
+        assert_eq!(blocks[3].block_type(), BlockType::StringReference);
         assert_eq!(blocks[4].block_type(), BlockType::Free);
         assert!(blocks[5..].iter().all(|b| b.block_type() == BlockType::Free));
 
