@@ -7,40 +7,26 @@ pub mod client;
 pub mod mesh;
 
 use anyhow::format_err;
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent, MlmeEventStream, MlmeProxy};
-use fidl_fuchsia_wlan_stats::IfaceStats;
-use futures::channel::mpsc;
+use fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy};
 use futures::prelude::*;
 use futures::select;
-use log::warn;
-use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
-use void::Void;
 use wlan_common::timer::{self, TimeEntry};
 use wlan_sme::{MlmeRequest, MlmeStream, Station};
 
-use crate::stats_scheduler::StatsRequest;
-
 // The returned future successfully terminates when MLME closes the channel
-async fn serve_mlme_sme<STA, SRS, TS>(
+async fn serve_mlme_sme<STA, TS>(
     proxy: MlmeProxy,
     mut event_stream: MlmeEventStream,
     station: Arc<Mutex<STA>>,
     mut mlme_stream: MlmeStream,
-    stats_requests: SRS,
     time_stream: TS,
 ) -> Result<(), anyhow::Error>
 where
     STA: Station,
-    SRS: Stream<Item = StatsRequest> + Unpin,
     TS: Stream<Item = TimeEntry<<STA as wlan_sme::Station>::Event>> + Unpin,
 {
-    let (mut stats_sender, stats_receiver) = mpsc::channel(1);
-    let stats_fut = serve_stats(proxy.clone(), stats_requests, stats_receiver);
-    pin_mut!(stats_fut);
-    let mut stats_fut = stats_fut.fuse();
-
     let mut timeout_stream = timer::make_async_timed_event_stream(time_stream).fuse();
 
     loop {
@@ -49,9 +35,7 @@ where
             // bailing immediately, so we don't need to track if we've seen a
             // `None` or not and can `fuse` directly in the `select` call.
             mlme_event = event_stream.next().fuse() => match mlme_event {
-                // Handle the stats response separately since it is SME-independent
-                Some(Ok(MlmeEvent::StatsQueryResp{ resp })) => handle_stats_resp(&mut stats_sender, resp)?,
-                Some(Ok(other)) => station.lock().unwrap().on_mlme_event(other),
+                Some(Ok(mlme_event)) => station.lock().unwrap().on_mlme_event(mlme_event),
                 Some(Err(ref e)) if e.is_closed() => return Ok(()),
                 None => return Ok(()),
                 Some(Err(e)) => return Err(format_err!("Error reading an event from MLME channel: {}", e)),
@@ -68,7 +52,6 @@ where
                 Some(timed_event) => station.lock().unwrap().on_timeout(timed_event),
                 None => return Err(format_err!("SME timer stream has ended unexpectedly")),
             },
-            stats = stats_fut => match stats? {},
         }
     }
 }
@@ -95,40 +78,4 @@ fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl:
         MlmeRequest::WmmStatusReq => proxy.wmm_status_req(),
         MlmeRequest::FinalizeAssociation(mut cap) => proxy.finalize_association_req(&mut cap),
     }
-}
-
-fn handle_stats_resp(
-    stats_sender: &mut mpsc::Sender<IfaceStats>,
-    resp: fidl_mlme::StatsQueryResponse,
-) -> Result<(), anyhow::Error> {
-    stats_sender.try_send(resp.stats).or_else(|e| {
-        if e.is_full() {
-            // We only expect one response from MLME per each request, so the bounded
-            // queue of size 1 should always suffice.
-            warn!("Received an extra GetStatsResp from MLME, discarding");
-            Ok(())
-        } else {
-            Err(format_err!("Failed to send a message to stats future"))
-        }
-    })
-}
-
-async fn serve_stats<S>(
-    proxy: MlmeProxy,
-    mut stats_requests: S,
-    mut responses: mpsc::Receiver<IfaceStats>,
-) -> Result<Void, anyhow::Error>
-where
-    S: Stream<Item = StatsRequest> + Unpin,
-{
-    while let Some(req) = stats_requests.next().await {
-        proxy
-            .stats_query_req()
-            .map_err(|e| format_err!("Failed to send a StatsReq to MLME: {}", e))?;
-        match responses.next().await {
-            Some(response) => req.reply(response),
-            None => return Err(format_err!("Stream of stats responses has ended unexpectedly")),
-        };
-    }
-    Err(format_err!("Stream of stats requests has ended unexpectedly"))
 }

@@ -15,7 +15,6 @@ use futures::{prelude::*, select, stream::FuturesUnordered};
 use itertools::Itertools;
 use log::{error, info};
 use pin_utils::pin_mut;
-use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use void::Void;
 use wlan_common::hasher::WlanHasher;
@@ -27,25 +26,19 @@ use wlan_sme::{
     },
 };
 
-use crate::stats_scheduler::StatsRequest;
-
 pub type Endpoint = ServerEnd<fidl_sme::ClientSmeMarker>;
 type Sme = client_sme::ClientSme;
 
-pub async fn serve<S>(
+pub async fn serve(
     cfg: sme::Config,
     proxy: MlmeProxy,
     device_info: fidl_mlme::DeviceInfo,
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-    stats_requests: S,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     hasher: WlanHasher,
     persistence_req_sender: auto_persist::PersistenceReqSender,
-) -> Result<(), anyhow::Error>
-where
-    S: Stream<Item = StatsRequest> + Unpin,
-{
+) -> Result<(), anyhow::Error> {
     let wpa3_supported =
         device_info.driver_features.iter().any(|f| {
             f == &fidl_common::DriverFeature::SaeSmeAuth
@@ -56,14 +49,8 @@ where
     let (sme, mlme_stream, time_stream) =
         Sme::new(cfg, device_info, iface_tree_holder, hasher, persistence_req_sender, is_softmac);
     let sme = Arc::new(Mutex::new(sme));
-    let mlme_sme = super::serve_mlme_sme(
-        proxy,
-        event_stream,
-        Arc::clone(&sme),
-        mlme_stream,
-        stats_requests,
-        time_stream,
-    );
+    let mlme_sme =
+        super::serve_mlme_sme(proxy, event_stream, Arc::clone(&sme), mlme_stream, time_stream);
     let sme_fidl = serve_fidl(sme, new_fidl_clients);
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);

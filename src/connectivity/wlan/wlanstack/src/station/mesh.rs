@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::stats_scheduler::StatsRequest,
     anyhow::format_err,
     fidl_fuchsia_wlan_mesh as fidl_mesh, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy},
@@ -17,7 +16,6 @@ use {
     log::error,
     pin_utils::pin_mut,
     std::{
-        marker::Unpin,
         sync::{Arc, Mutex},
         task::Poll,
     },
@@ -29,16 +27,12 @@ use {
 pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::MeshSmeMarker>;
 type Sme = mesh_sme::MeshSme;
 
-pub async fn serve<S>(
+pub async fn serve(
     proxy: MlmeProxy,
     device_info: fidl_mlme::DeviceInfo,
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-    stats_requests: S,
-) -> Result<(), anyhow::Error>
-where
-    S: Stream<Item = StatsRequest> + Send + Unpin,
-{
+) -> Result<(), anyhow::Error> {
     let (sme, mlme_stream) = Sme::new(device_info);
     let sme = Arc::new(Mutex::new(sme));
     let time_stream = stream::poll_fn::<TimeEntry<()>, _>(|_| Poll::Pending);
@@ -47,7 +41,6 @@ where
         event_stream,
         Arc::clone(&sme),
         mlme_stream,
-        stats_requests,
         time_stream,
     );
     let sme_fidl = serve_fidl(&sme, new_fidl_clients, &proxy);

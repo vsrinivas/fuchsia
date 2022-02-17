@@ -7,42 +7,29 @@ use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use futures::channel::mpsc;
 use futures::prelude::*;
+use futures::select;
 use futures::stream::FuturesUnordered;
-use futures::{select, Stream};
 use ieee80211::Ssid;
 use log::error;
 use pin_utils::pin_mut;
-use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use void::Void;
 use wlan_common::RadioConfig;
 use wlan_sme::ap as ap_sme;
 
-use crate::stats_scheduler::StatsRequest;
-
 pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::ApSmeMarker>;
 type Sme = ap_sme::ApSme;
 
-pub async fn serve<S>(
+pub async fn serve(
     proxy: MlmeProxy,
     device_info: fidl_mlme::DeviceInfo,
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-    stats_requests: S,
-) -> Result<(), anyhow::Error>
-where
-    S: Stream<Item = StatsRequest> + Send + Unpin,
-{
+) -> Result<(), anyhow::Error> {
     let (sme, mlme_stream, time_stream) = Sme::new(device_info);
     let sme = Arc::new(Mutex::new(sme));
-    let mlme_sme = super::serve_mlme_sme(
-        proxy,
-        event_stream,
-        Arc::clone(&sme),
-        mlme_stream,
-        stats_requests,
-        time_stream,
-    );
+    let mlme_sme =
+        super::serve_mlme_sme(proxy, event_stream, Arc::clone(&sme), mlme_stream, time_stream);
     let sme_fidl = serve_fidl(&sme, new_fidl_clients);
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);

@@ -90,7 +90,6 @@ rustc_binary("bin") {
     "src/station/client.rs",
     "src/station/mesh.rs",
     "src/station/mod.rs",
-    "src/stats_scheduler.rs",
     "src/test_helper.rs",
   ]
 }

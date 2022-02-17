@@ -12,7 +12,6 @@ mod future_util;
 mod inspect;
 mod service;
 mod station;
-mod stats_scheduler;
 #[cfg(test)]
 pub mod test_helper;
 

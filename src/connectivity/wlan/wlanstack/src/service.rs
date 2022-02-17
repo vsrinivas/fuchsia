@@ -17,7 +17,6 @@ use std::sync::{atomic::Ordering, Arc};
 use crate::device::{self, IfaceMap};
 use crate::inspect;
 use crate::station;
-use crate::stats_scheduler::StatsRef;
 use crate::ServiceCfg;
 
 /// Thread-safe counter for spawned ifaces.
@@ -85,14 +84,10 @@ pub async fn serve_device_requests(
                 let status = get_mesh_sme(&ifaces, iface_id, sme);
                 responder.send(status.into_raw())
             }
-            DeviceServiceRequest::GetIfaceStats { iface_id, responder } => {
-                match get_iface_stats(&ifaces, iface_id).await {
-                    Ok(stats_ref) => {
-                        let mut stats = stats_ref.lock();
-                        responder.send(zx::sys::ZX_OK, Some(&mut stats))
-                    }
-                    Err(status) => responder.send(status.into_raw(), None),
-                }
+            DeviceServiceRequest::GetIfaceStats { .. } => {
+                // TODO(fxbug.dev/82654) - Remove this API call
+                warn!("GetIfaceStats is no longer supported");
+                Ok(())
             }
             DeviceServiceRequest::GetIfaceCounterStats { iface_id, responder } => {
                 let mut resp = match get_iface_counter_stats(&ifaces, iface_id).await {
@@ -235,11 +230,6 @@ fn get_mesh_sme(ifaces: &IfaceMap, iface_id: u16, endpoint: station::mesh::Endpo
             zx::Status::INTERNAL
         }
     }
-}
-
-pub async fn get_iface_stats(ifaces: &IfaceMap, iface_id: u16) -> Result<StatsRef, zx::Status> {
-    let iface = ifaces.get(&iface_id).ok_or(zx::Status::NOT_FOUND)?;
-    iface.stats_sched.get_stats().await
 }
 
 pub async fn get_iface_counter_stats(
@@ -398,10 +388,7 @@ mod tests {
     use std::pin::Pin;
     use wlan_common::{assert_variant, channel::Cbw, RadioConfig};
 
-    use crate::{
-        device::IfaceDevice,
-        stats_scheduler::{self, StatsRequest},
-    };
+    use crate::device::IfaceDevice;
 
     const IFACE_ID: u16 = 10;
 
@@ -941,16 +928,14 @@ mod tests {
         }
     }
 
-    struct FakeClientIface<St: Stream<Item = StatsRequest>> {
+    struct FakeClientIface {
         iface: IfaceDevice,
-        _stats_requests: St,
         new_sme_clients: mpsc::UnboundedReceiver<station::client::Endpoint>,
         mlme_req_stream: fidl_mlme::MlmeRequestStream,
     }
 
-    fn fake_client_iface() -> FakeClientIface<impl Stream<Item = StatsRequest>> {
+    fn fake_client_iface() -> FakeClientIface {
         let (sme_sender, sme_receiver) = mpsc::unbounded();
-        let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
         let (mlme_proxy, mlme_req_stream) =
             create_proxy_and_stream::<MlmeMarker>().expect("Error creating proxy");
         let (shutdown_sender, _) = mpsc::channel(1);
@@ -958,40 +943,31 @@ mod tests {
         let iface = IfaceDevice {
             phy_ownership: device::PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
             sme_server: device::SmeServer::Client(sme_sender),
-            stats_sched,
             mlme_proxy,
             device_info,
             shutdown_sender,
         };
-        FakeClientIface {
-            iface,
-            _stats_requests: stats_requests,
-            new_sme_clients: sme_receiver,
-            mlme_req_stream,
-        }
+        FakeClientIface { iface, new_sme_clients: sme_receiver, mlme_req_stream }
     }
 
-    struct FakeApIface<St: Stream<Item = StatsRequest>> {
+    struct FakeApIface {
         iface: IfaceDevice,
-        _stats_requests: St,
         new_sme_clients: mpsc::UnboundedReceiver<station::ap::Endpoint>,
     }
 
-    fn fake_ap_iface() -> FakeApIface<impl Stream<Item = StatsRequest>> {
+    fn fake_ap_iface() -> FakeApIface {
         let (sme_sender, sme_receiver) = mpsc::unbounded();
-        let (stats_sched, stats_requests) = stats_scheduler::create_scheduler();
         let (mlme_proxy, _server) = create_proxy::<MlmeMarker>().expect("Error creating proxy");
         let (shutdown_sender, _) = mpsc::channel(1);
         let device_info = fake_device_info();
         let iface = IfaceDevice {
             phy_ownership: device::PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
             sme_server: device::SmeServer::Ap(sme_sender),
-            stats_sched,
             mlme_proxy,
             device_info,
             shutdown_sender,
         };
-        FakeApIface { iface, _stats_requests: stats_requests, new_sme_clients: sme_receiver }
+        FakeApIface { iface, new_sme_clients: sme_receiver }
     }
 
     fn fake_device_info() -> fidl_mlme::DeviceInfo {
