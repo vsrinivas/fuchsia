@@ -3953,6 +3953,13 @@ Platform portability header for spinel.
 
 From [//third_party/openthread/src/lib/spinel/BUILD.gn:32](https://fuchsia.googlesource.com/third_party/openthread/+/48f089856f7d326d664ee2d947a6dc40f70dab5a/src/lib/spinel/BUILD.gn#32)
 
+### starnix_wayland_protocol_logging
+Whether wayland protocol logging should be enabled
+
+**Current value (from the default):** `false`
+
+From //src/proc/bin/starnix/BUILD.gn:12
+
 ### start_oobe
 TODO(http://fxb/85576): Whether or not to launch OOBE workflow on startup.
 This feature is still WIP but you can turn it on at your own risk.
@@ -4566,6 +4573,20 @@ If false, any unacknowledged SDK change will cause a build failure.
 **Current value (from the default):** `false`
 
 From //build/sdk/config.gni:11
+
+### wayland_bridge_protocol_logging
+Whether protocol logging should be enabled
+
+**Current value (from the default):** `false`
+
+From //src/ui/wayland/bin/bridge/BUILD.gn:12
+
+### wayland_server_fatal_object_lookup_failures
+Enable this to make object lookup failures fatal for debugging.
+
+**Current value (from the default):** `false`
+
+From //src/lib/ui/wayland/server/BUILD.gn:12
 
 ### weave_build_legacy_wdm
 Tells openweave to support legacy WDM mode.
