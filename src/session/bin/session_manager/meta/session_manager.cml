@@ -45,6 +45,7 @@
         {
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.bluetooth.sys.Access",
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.manager.Administrator",

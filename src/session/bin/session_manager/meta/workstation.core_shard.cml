@@ -78,5 +78,10 @@
             from: "#setui_service",
             to: "#session-manager",
         },
+        {
+            protocol: [ "fuchsia.bluetooth.sys.Access" ],
+            from: "#bluetooth-core",
+            to: "#session-manager",
+        },
     ],
 }
