@@ -173,20 +173,21 @@ impl Display {
     }
 
     /// Create a new client and begin polling `chan` for requests.
-    pub fn spawn_new_client(self, chan: fasync::Channel) {
-        Display::spawn_client(Client::new(chan, self));
+    pub fn spawn_new_client(self, chan: fasync::Channel, protocol_logging: bool) {
+        Display::spawn_client(Client::new(chan, self), protocol_logging);
     }
 
     pub fn spawn_new_local_client(
         self,
         sender: mpsc::UnboundedSender<zx::MessageBuf>,
         receiver: mpsc::UnboundedReceiver<zx::MessageBuf>,
+        protocol_logging: bool,
     ) {
-        Display::spawn_client(Client::new_local(sender, receiver, self));
+        Display::spawn_client(Client::new_local(sender, receiver, self), protocol_logging);
     }
 
-    fn spawn_client(mut client: Client) {
-        client.set_protocol_logging(false);
+    fn spawn_client(mut client: Client, protocol_logging: bool) {
+        client.set_protocol_logging(protocol_logging);
 
         // Add the global wl_display object. We unwrap here since the object map
         // is empty so failure should not be possible.

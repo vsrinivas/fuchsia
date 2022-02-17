@@ -7,6 +7,11 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_macro.gni")
 import("//build/rust/rustc_test.gni")
 
+declare_args() {
+  # Whether wayland protocol logging should be enabled
+  starnix_wayland_protocol_logging = false
+}
+
 group("starnix") {
   deps = [
     ":pkg",
@@ -195,6 +200,11 @@ if (target_cpu == "x64") {
       "types/user_buffer.rs",
       "vmex_resource.rs",
     ]
+
+    features = []
+    if (starnix_wayland_protocol_logging) {
+      features += [ "wayland_protocol_logging" ]
+    }
   }
 
   fuchsia_component("starnix_runner_component") {

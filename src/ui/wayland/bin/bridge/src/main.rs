@@ -21,7 +21,10 @@ fn spawn_wayland_server_service(mut stream: Server_RequestStream, display: Displ
             while let Some(Server_Request::Connect { channel, .. }) =
                 stream.try_next().await.unwrap()
             {
-                display.clone().spawn_new_client(fasync::Channel::from_channel(channel).unwrap());
+                display.clone().spawn_new_client(
+                    fasync::Channel::from_channel(channel).unwrap(),
+                    cfg!(feature = "protocol_logging"),
+                );
             }
             Ok(())
         }

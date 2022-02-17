@@ -98,7 +98,11 @@ pub fn serve_wayland(
     let dispatcher = WaylandDispatcher::new_local(wayland_server).map_err(|_| errno!(EINVAL))?;
     let display = &dispatcher.display;
 
-    display.clone().spawn_new_local_client(wayland_server_sender, wayland_server_receiver);
+    display.clone().spawn_new_local_client(
+        wayland_server_sender,
+        wayland_server_receiver,
+        cfg!(feature = "wayland_protocol_logging"),
+    );
 
     fasync::Task::local(serve_view_provider(outgoing_dir, view_provider_receiver, dispatcher))
         .detach();

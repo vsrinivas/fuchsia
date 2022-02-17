@@ -7,6 +7,11 @@ import("//build/dist/resource.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
+declare_args() {
+  # Whether protocol logging should be enabled
+  wayland_bridge_protocol_logging = false
+}
+
 rustc_binary("bin") {
   output_name = "wayland_bridge"
   edition = "2018"
@@ -21,6 +26,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures",
   ]
   sources = [ "src/main.rs" ]
+  features = []
+  if (wayland_bridge_protocol_logging) {
+    features += [ "protocol_logging" ]
+  }
 }
 
 fuchsia_component("wayland_bridge") {
