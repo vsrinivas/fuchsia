@@ -688,12 +688,14 @@ mod tests {
             let mut ns = Vec::<fcrunner::ComponentNamespaceEntry>::new();
             if include_pkg {
                 let pkg_path = "/pkg".to_string();
-                let pkg_chan =
-                    io_util::open_directory_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE)
-                        .unwrap()
-                        .into_channel()
-                        .unwrap()
-                        .into_zx_channel();
+                let pkg_chan = io_util::open_directory_in_namespace(
+                    "/pkg",
+                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+                )
+                .unwrap()
+                .into_channel()
+                .unwrap()
+                .into_zx_channel();
                 let pkg_handle = ClientEnd::new(pkg_chan);
 
                 ns.push(fcrunner::ComponentNamespaceEntry {
