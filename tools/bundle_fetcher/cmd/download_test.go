@@ -295,7 +295,7 @@ var (
 			"mdns": 5353,
 			"debug": 2345
 		  },
-		  "start_up_args_template": "emulator_flags.json.template",
+		  "start_up_args_template": "gen/build/images/emulator_flags.json.template",
 		  "name": "qemu-x64",
 		  "type": "virtual_device"
 		},
@@ -373,7 +373,7 @@ func TestReadDeviceMetadata(t *testing.T) {
     "mdns": 5353,
     "debug": 2345
   },
-  "start_up_args_template": "emulator_flags.json.template"
+  "start_up_args_template": "gen/build/images/emulator_flags.json.template"
 }`,
 		},
 		{
@@ -436,7 +436,7 @@ func TestReadDeviceMetadata(t *testing.T) {
     "mdns": 5353,
     "debug": 2345
   },
-  "start_up_args_template": "emulator_flags.json.template"
+  "start_up_args_template": "gen/build/images/emulator_flags.json.template"
 }`,
 		},
 	}

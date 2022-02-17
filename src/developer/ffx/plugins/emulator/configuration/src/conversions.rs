@@ -14,7 +14,7 @@ use std::path::PathBuf;
 /// - `data_root` is a path to a directory. When working in-tree it's the path
 ///   to build output dir; when using the SDK it's the path to the downloaded
 ///   images directory.
-/// - `metadata_root` is a path to a directory.
+/// - `metadata_root` is a path to a directory containing the metadata files.
 pub fn convert_bundle_to_configs(
     product_bundle: &ProductBundleV1,
     virtual_device: &VirtualDeviceV1,

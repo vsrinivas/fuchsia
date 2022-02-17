@@ -55,10 +55,10 @@ func TestValidateProductBundleContainer(t *testing.T) {
 					{
 					  "name":"recovery",
 					  "bootloader_partitions":[
-						
+
 					  ],
 					  "oem_files":[
-						
+
 					  ],
 					  "partitions":[
 						{
@@ -70,10 +70,10 @@ func TestValidateProductBundleContainer(t *testing.T) {
 					{
 					  "name":"fuchsia",
 					  "bootloader_partitions":[
-						
+
 					  ],
 					  "oem_files":[
-						
+
 					  ],
 					  "partitions":[
 						{
@@ -85,13 +85,13 @@ func TestValidateProductBundleContainer(t *testing.T) {
 					{
 					  "name":"bootstrap",
 					  "bootloader_partitions":[
-						
+
 					  ],
 					  "oem_files":[
-						
+
 					  ],
 					  "partitions":[
-						
+
 					  ]
 					}
 				  ]
@@ -130,7 +130,7 @@ func TestValidateProductBundleContainer(t *testing.T) {
 				"mdns": 5353,
 				"debug": 2345
 			  },
-			  "start_up_args_template": "emulator_flags.json.template"
+			  "start_up_args_template": "gen/build/images/emulator_flags.json.template"
 			},
 			{
 			  "hardware":{
