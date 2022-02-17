@@ -41,7 +41,6 @@ group("all") {
     "//garnet/packages/prod:scenic",
     "//garnet/packages/prod:sched",
     "//garnet/packages/prod:setui_client",
-    "//garnet/packages/prod:tee_manager",
     "//garnet/packages/prod:telephony",
     "//garnet/packages/prod:terminal",
     "//garnet/packages/prod:tiles",
@@ -318,10 +317,6 @@ group("sched") {
 group("setui_client") {
   testonly = true
   public_deps = [ "//garnet/bin/setui_client" ]
-}
-
-group("tee_manager") {
-  public_deps = [ "//src/security/tee_manager" ]
 }
 
 group("telephony") {

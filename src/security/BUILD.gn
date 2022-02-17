@@ -7,7 +7,6 @@ group("security") {
   deps = [
     ":tests",
     "kms",
-    "tee_manager",
   ]
 }
 
