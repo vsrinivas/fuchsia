@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Result},
-    errors::{ffx_bail, ffx_error},
+    anyhow::{Context, Result},
+    errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_target_repository_deregister_args::DeregisterCommand,
-    fidl_fuchsia_developer_bridge::{RepositoryError, RepositoryRegistryProxy},
+    fidl_fuchsia_developer_bridge::RepositoryRegistryProxy,
+    fidl_fuchsia_developer_bridge_ext::RepositoryError,
 };
 
 #[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
@@ -33,36 +34,80 @@ async fn deregister(
         } else {
             ffx_bail!(
                 "Either a default repository must be set, or the --repository flag must be provided.\n\
-                You can set a default repository using: `ffx repository default set <name>`."
+                You can set a default repository using:\n\
+                $ ffx repository default set <name>"
             )
         }
     };
 
-    repos
-        .deregister_target(
-            &repo_name,
-            target_str.as_deref(),
-        )
+    match repos
+        .deregister_target(&repo_name, target_str.as_deref())
         .await
         .context("communicating with daemon")?
-        .map_err(|e| match e {
-            RepositoryError::TargetCommunicationFailure => {
-                anyhow!(ffx_error!("Failed to communicate with the target. Ensure that a target is running and connected with `ffx target list`"))
+        .map_err(RepositoryError::from)
+    {
+        Ok(()) => Ok(()),
+        Err(err @ RepositoryError::TargetCommunicationFailure) => {
+            ffx_bail!(
+                "Error while deregistering repository: {}\n\
+                Ensure that a target is running and connected with:\n\
+                $ ffx target list",
+                err,
+            )
+        }
+        Err(err @ RepositoryError::ServerNotRunning) => {
+            // Try to figure out why the server is not running.
+            if !pkg::config::repository_server_enabled().await.unwrap_or(true) {
+                ffx_bail!(
+                    "Error while deregistering repository: {}\n\
+                    You can correct this by enabling the server with:\n\
+                    $ ffx config set repository.server.mode ffx\n\
+                    $ ffx doctor --restart-daemon",
+                    err,
+                )
+            } else {
+                match pkg::config::repository_listen_addr().await {
+                    Ok(Some(addr)) => {
+                        ffx_bail!(
+                            "Error while deregistering repository: {}\n\
+                            Another process may be using {}. Try shutting it down and restarting the\n\
+                            ffx daemon with:\n\
+                            $ ffx doctor --restart-daemon",
+                            err,
+                            addr,
+                        )
+                    }
+                    Ok(None) => {
+                        ffx_bail!(
+                            "Error while deregistering repository: {}\n\
+                            You can correct this by enabling the server with:\n\
+                            $ ffx config set repository.server.listen '[::]:8083'\n\
+                            $ ffx doctor --restart-daemon",
+                            err,
+                        )
+                    }
+                    Err(config_err) => {
+                        ffx_bail!(
+                            "Error while deregistering repository: {}\n\
+                            Failed to read repository.server.listen from the ffx config: {:#}",
+                            err,
+                            config_err,
+                        )
+                    }
+                }
             }
-            RepositoryError::ServerNotRunning => {
-                anyhow!(ffx_error!("Failed to register repository because the repository server is not running"))
-            }
-            _ => {
-                anyhow!("failed to deregister repository: {:?}", e)
-            }
-        })
+        }
+        Err(err) => {
+            ffx_bail!("failed to deregister repository: {}", err)
+        }
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use {
-        fidl_fuchsia_developer_bridge::RepositoryRegistryRequest,
+        fidl_fuchsia_developer_bridge::{RepositoryError, RepositoryRegistryRequest},
         fuchsia_async as fasync,
         futures::channel::oneshot::{channel, Receiver},
     };
