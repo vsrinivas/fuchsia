@@ -355,7 +355,7 @@ func (s *pmServer) registerRepository(ctx context.Context, sdk sdkProvider) erro
 func removeFFXRepository(ctx context.Context, sdk sdkProvider, name string) error {
 	// TODO(http://fxbug.dev/83720): We need `ffx_repository=true` until
 	// ffx repository has graduated from experimental.
-	args := []string{"--config", "ffx_repository=true", "repository", "remove", "--repository", name}
+	args := []string{"--config", "ffx_repository=true", "repository", "remove", name}
 	logger.Debugf(ctx, "running %v", args)
 	if _, err := sdk.RunFFX(args, false); err != nil {
 		var exitError *exec.ExitError
