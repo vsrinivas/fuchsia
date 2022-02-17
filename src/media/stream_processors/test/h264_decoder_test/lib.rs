@@ -63,6 +63,43 @@ lazy_static! {
 // TODO(turnage): Add hash validator for NV12 and YV12.
 
 #[test]
+fn test_bear() -> std::result::Result<(), ::anyhow::Error> {
+    with_large_stack(|| {
+        *LOGGER;
+
+        let stream = Rc::new(TimestampedStream {
+            source: H264Stream::from_file(BEAR_TEST_FILE)?,
+            timestamps: 0..,
+        });
+
+        let frame_count_validator = Rc::new(OutputPacketCountValidator {
+            expected_output_packet_count: stream.video_frame_count(),
+        });
+
+        let hash_validator = Rc::new(VideoFrameHasher { expected_digest: BEAR_DIGEST.clone() });
+
+        let spec = TestSpec {
+            cases: vec![TestCase {
+                name: "Simple bear test run 1",
+                stream: stream.clone(),
+                validators: vec![
+                    Rc::new(TerminatesWithValidator {
+                        expected_terminal_output: Output::Eos { stream_lifetime_ordinal: 1 },
+                    }),
+                    frame_count_validator.clone(),
+                    hash_validator.clone(),
+                ],
+                stream_options: None,
+            }],
+            relation: CaseRelation::Serial,
+            stream_processor_factory: Rc::new(DecoderFactory),
+        };
+
+        fuchsia_async::TestExecutor::new()?.run_singlethreaded(spec.run())
+    })
+}
+
+#[test]
 fn test_serial_bear_on_same_codec() -> std::result::Result<(), ::anyhow::Error> {
     with_large_stack(|| {
         *LOGGER;
