@@ -10,6 +10,7 @@
 #include <zircon/syscalls.h>
 
 #include <cmath>
+#include <utility>
 
 #include "gtest/gtest.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
@@ -100,8 +101,8 @@ class AudioRendererTest : public HermeticAudioTest {
     ExpectCallbacks();
   }
 
-  // Creates a VMO with |buffer_size| and then passes it to |AudioRenderer::AddPayloadBuffer|
-  // with |id|. This is purely a convenience method and doesn't provide access to the buffer VMO.
+  // Creates a VMO and passes it to |AudioRenderer::AddPayloadBuffer| with a given |id|. This is
+  // purely a convenience method and doesn't provide access to the buffer VMO.
   void CreateAndAddPayloadBuffer(uint32_t id) {
     zx::vmo payload_buffer;
     constexpr uint32_t kVmoOptionsNone = 0;
@@ -127,13 +128,12 @@ TEST_F(AudioRendererBufferTest, AddPayloadBuffer) {
   ExpectConnectedAndDiscardAllPackets();
 }
 
-// TODO(fxbug.dev/77815): This is out-of-spec, but clients rely on AddPayloadBuffer(existing_id) to
-// replace or update an already-added buffer. Update this test to fail, once all clients are fixed.
+// It is invalid to add a payload buffer with a duplicate id.
 TEST_F(AudioRendererBufferTest, AddPayloadBufferDuplicateId) {
   CreateAndAddPayloadBuffer(0);
   CreateAndAddPayloadBuffer(0);
 
-  ExpectConnectedAndDiscardAllPackets();
+  ExpectDisconnect(audio_renderer_);
 }
 
 // AddPayloadBuffer is callable after packets are completed/discarded, regardless of play/pause
@@ -187,6 +187,27 @@ TEST_F(AudioRendererBufferTest, RemovePayloadBuffer) {
   audio_renderer_->RemovePayloadBuffer(0);
   audio_renderer_->RemovePayloadBuffer(1);
 
+  ExpectConnectedAndDiscardAllPackets();
+}
+
+// A payload buffer can be added with a previously used id after the removal of the former.
+TEST_F(AudioRendererBufferTest, RemovePayloadBufferThenAddDuplicateId) {
+  CreateAndAddPayloadBuffer(0);
+
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+  auto play_callback = AddCallback("Play");
+  audio_renderer_->SendPacket(kTestPacket, AddCallback("SendPacket1"));
+  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, 0, play_callback);
+  ExpectCallbacks();
+
+  // Remove payload buffer, and re-add with the same id.
+  audio_renderer_->RemovePayloadBuffer(0);
+  CreateAndAddPayloadBuffer(0);
+
+  audio_renderer_->SendPacket(kTestPacket, AddCallback("SendPacket2"));
+  ExpectCallbacks();
+
+  audio_renderer_->Pause(AddCallback("Pause"));
   ExpectConnectedAndDiscardAllPackets();
 }
 

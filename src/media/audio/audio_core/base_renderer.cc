@@ -245,10 +245,11 @@ void BaseRenderer::AddPayloadBufferInternal(uint32_t id, zx::vmo payload_buffer)
   }
 
   auto vmo_mapper = fbl::MakeRefCounted<RefCountedVmoMapper>();
-  // Ideally we would reject this request if we already have a payload buffer with |id|, however
-  // some clients currently rely on being able to update the payload buffer without first calling
-  // |RemovePayloadBuffer|.
-  payload_buffers_[id] = vmo_mapper;
+  if (!payload_buffers_.emplace(id, vmo_mapper).second) {
+    FX_LOGS(ERROR) << "Duplicate payload buffer id: " << id;
+    return;
+  }
+
   zx_status_t res = vmo_mapper->Map(payload_buffer, 0, 0, ZX_VM_PERM_READ, context_.vmar());
   if (res != ZX_OK) {
     FX_PLOGS(ERROR, res) << "Failed to map payload buffer";
