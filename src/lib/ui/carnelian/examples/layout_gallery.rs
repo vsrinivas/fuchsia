@@ -25,7 +25,6 @@ use carnelian::{
     ViewAssistantPtr, ViewKey,
 };
 use euclid::size2;
-use fuchsia_zircon::Event;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -217,13 +216,8 @@ impl ViewAssistant for LayoutsViewAssistant {
         Ok(())
     }
 
-    fn render(
-        &mut self,
-        render_context: &mut RenderContext,
-        ready_event: Event,
-        context: &ViewAssistantContext,
-    ) -> Result<(), Error> {
-        let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
+    fn get_scene(&mut self, size: Size) -> Option<&mut Scene> {
+        let scene_details = self.scene_details.take().unwrap_or_else(|| {
             let mut builder =
                 SceneBuilder::new().background_color(Color::white()).enable_mouse_cursor(false);
             builder.group().stack().expand().align(Alignment::top_center()).contents(|builder| {
@@ -265,7 +259,7 @@ impl ViewAssistant for LayoutsViewAssistant {
                     Mode::Text(h, v, visual) => make_text_alignment(
                         builder,
                         &self.face,
-                        context.size,
+                        size,
                         TEXT_H_ALIGNS[h],
                         TEXT_V_ALIGNS[v],
                         visual,
@@ -286,20 +280,17 @@ impl ViewAssistant for LayoutsViewAssistant {
                     );
                 }
             });
-            let mut scene = builder.build();
-            scene.layout(context.size);
+            let scene = builder.build();
             SceneDetails { scene }
         });
 
-        scene_details.scene.render(render_context, ready_event, context)?;
         self.scene_details = Some(scene_details);
-        context.request_render();
-        Ok(())
+        Some(&mut self.scene_details.as_mut().unwrap().scene)
     }
 
     fn handle_keyboard_event(
         &mut self,
-        _context: &mut ViewAssistantContext,
+        context: &mut ViewAssistantContext,
         _event: &input::Event,
         keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {
@@ -326,6 +317,7 @@ impl ViewAssistant for LayoutsViewAssistant {
                     B => self.toggle_background(),
                     _ => println!("code_point = {}", code_point),
                 }
+                context.request_render();
             }
         }
         Ok(())

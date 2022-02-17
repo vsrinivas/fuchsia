@@ -8,6 +8,7 @@ use crate::{
     input::{self, UserInputMessage},
     message::Message,
     render::Context,
+    scene::scene::Scene,
     view::strategies::base::ViewStrategyPtr,
     MessageTarget,
 };
@@ -116,20 +117,48 @@ pub trait ViewAssistant {
     }
 
     #[allow(unused_variables)]
+    /// Implement this method to to handle when a view is resized.
     fn resize(&mut self, new_size: &Size) -> Result<(), Error> {
         Ok(())
     }
 
+    #[allow(unused_variables)]
+    /// Implement this method to return a mutable reference to the scene that
+    /// represents the view.
+    fn get_scene(&mut self, size: Size) -> Option<&mut Scene> {
+        None
+    }
+
+    #[allow(unused_variables)]
+    /// Implement this method to return a mutable reference to the scene that
+    /// represents the view. Implement this one if you'll need the various
+    /// contexts to build a scene.
+    fn get_scene_with_contexts(
+        &mut self,
+        render_context: &mut Context,
+        view_context: &ViewAssistantContext,
+    ) -> Option<&mut Scene> {
+        self.get_scene(view_context.size)
+    }
+
     /// This method is called when a view needs to
     /// be rendered.
-    #[allow(unused_variables)]
     fn render(
         &mut self,
         render_context: &mut Context,
         buffer_ready_event: Event,
         view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
-        anyhow::bail!("Assistant has ViewMode::Render but doesn't implement render.")
+        if let Some(scene) = self.get_scene_with_contexts(render_context, view_context) {
+            scene.layout(view_context.size);
+            scene.render(render_context, buffer_ready_event, view_context)?;
+            if scene.is_animated() {
+                view_context.request_render();
+            }
+            Ok(())
+        } else {
+            anyhow::bail!("Assistant has ViewMode::Render but doesn't implement render or scene.")
+        }
     }
 
     /// This method is called when input events come to this view. The default implementation

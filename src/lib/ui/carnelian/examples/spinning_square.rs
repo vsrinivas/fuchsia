@@ -8,34 +8,40 @@ use carnelian::{
     color::Color,
     drawing::{path_for_rectangle, path_for_rounded_rectangle},
     input::{self},
-    make_app_assistant,
     render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Style},
     scene::{
         facets::{Facet, FacetId},
         scene::{Scene, SceneBuilder, SceneOrder},
         LayerGroup,
     },
-    App, AppAssistant, Coord, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
-    ViewKey,
+    App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, Coord, LocalBoxFuture,
+    Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::{point2, size2, vec2, Angle, Transform2D};
 use fidl::endpoints::{ProtocolMarker, RequestStream};
 use fidl_test_placeholders::{EchoMarker, EchoRequest, EchoRequestStream};
 use fuchsia_async as fasync;
-use fuchsia_zircon::{Event, Time};
+use fuchsia_zircon::Time;
 use futures::prelude::*;
 use std::{any::Any, f32::consts::PI};
 
-#[derive(Default)]
-struct SpinningSquareAppAssistant;
+struct SpinningSquareAppAssistant {
+    app_sender: AppSender,
+}
+
+impl SpinningSquareAppAssistant {
+    fn new(app_sender: AppSender) -> Self {
+        Self { app_sender }
+    }
+}
 
 impl AppAssistant for SpinningSquareAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        SpinningSquareViewAssistant::new()
+    fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        SpinningSquareViewAssistant::new(view_key, self.app_sender.clone())
     }
 
     /// Return the list of names of services this app wants to provide
@@ -181,23 +187,52 @@ impl Facet for SpinningSquareFacet {
 }
 
 struct SpinningSquareViewAssistant {
+    view_key: ViewKey,
     background_color: Color,
     square_color: Color,
     start: Time,
+    app_sender: AppSender,
     scene_details: Option<SceneDetails>,
 }
 
 impl SpinningSquareViewAssistant {
-    fn new() -> Result<ViewAssistantPtr, Error> {
+    fn new(view_key: ViewKey, app_sender: AppSender) -> Result<ViewAssistantPtr, Error> {
         let square_color = Color { r: 0xbb, g: 0x00, b: 0xff, a: 0xbb };
         let background_color = Color { r: 0x3f, g: 0x8a, b: 0x99, a: 0xff };
         let start = Time::get_monotonic();
+
         Ok(Box::new(SpinningSquareViewAssistant {
+            view_key,
             background_color,
             square_color,
             start,
             scene_details: None,
+            app_sender,
         }))
+    }
+
+    fn ensure_scene_built(&mut self, size: Size) {
+        if self.scene_details.is_none() {
+            let mut builder =
+                SceneBuilder::new().background_color(self.background_color).animated(true);
+            let mut square = None;
+            builder.group().stack().center().contents(|builder| {
+                let square_facet = SpinningSquareFacet::new(self.square_color, self.start, size);
+                square = Some(builder.facet(Box::new(square_facet)));
+                const STRIPE_COUNT: usize = 5;
+                let stripe_height = size.height / (STRIPE_COUNT * 2 + 1) as f32;
+                const STRIPE_WIDTH_RATIO: f32 = 0.8;
+                let stripe_size = size2(size.width * STRIPE_WIDTH_RATIO, stripe_height);
+                builder.group().column().max_size().space_evenly().contents(|builder| {
+                    for _ in 0..STRIPE_COUNT {
+                        builder.rectangle(stripe_size, Color::white());
+                    }
+                });
+            });
+            let square = square.expect("square");
+            let scene = builder.build();
+            self.scene_details = Some(SceneDetails { scene, square });
+        }
     }
 
     fn toggle_rounded(&mut self) {
@@ -205,6 +240,7 @@ impl SpinningSquareViewAssistant {
             scene_details
                 .scene
                 .send_message(&scene_details.square, Box::new(ToggleRoundedMessage {}));
+            self.app_sender.request_render(self.view_key);
         }
     }
 
@@ -214,6 +250,7 @@ impl SpinningSquareViewAssistant {
                 .scene
                 .move_facet_backward(scene_details.square)
                 .unwrap_or_else(|e| println!("error in move_facet_backward: {}", e));
+            self.app_sender.request_render(self.view_key);
         }
     }
 
@@ -223,49 +260,21 @@ impl SpinningSquareViewAssistant {
                 .scene
                 .move_facet_forward(scene_details.square)
                 .unwrap_or_else(|e| println!("error in move_facet_forward: {}", e));
+            self.app_sender.request_render(self.view_key);
         }
     }
 }
 
 impl ViewAssistant for SpinningSquareViewAssistant {
-    fn resize(&mut self, _new_size: &Size) -> Result<(), Error> {
+    fn resize(&mut self, new_size: &Size) -> Result<(), Error> {
         self.scene_details = None;
+        self.ensure_scene_built(*new_size);
         Ok(())
     }
 
-    fn render(
-        &mut self,
-        render_context: &mut RenderContext,
-        ready_event: Event,
-        context: &ViewAssistantContext,
-    ) -> Result<(), Error> {
-        let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
-            let mut builder = SceneBuilder::new().background_color(self.background_color);
-            let mut square = None;
-            builder.group().stack().center().contents(|builder| {
-                let square_facet =
-                    SpinningSquareFacet::new(self.square_color, self.start, context.size);
-                square = Some(builder.facet(Box::new(square_facet)));
-                const STRIPE_COUNT: usize = 5;
-                let stripe_height = context.size.height / (STRIPE_COUNT * 2 + 1) as f32;
-                const STRIPE_WIDTH_RATIO: f32 = 0.8;
-                let stripe_size = size2(context.size.width * STRIPE_WIDTH_RATIO, stripe_height);
-                builder.group().column().max_size().space_evenly().contents(|builder| {
-                    for _ in 0..STRIPE_COUNT {
-                        builder.rectangle(stripe_size, Color::white());
-                    }
-                });
-            });
-            let square = square.expect("square");
-            let mut scene = builder.build();
-            scene.layout(context.size);
-            SceneDetails { scene, square }
-        });
-
-        scene_details.scene.render(render_context, ready_event, context)?;
-        self.scene_details = Some(scene_details);
-        context.request_render();
-        Ok(())
+    fn get_scene(&mut self, size: Size) -> Option<&mut Scene> {
+        self.ensure_scene_built(size);
+        Some(&mut self.scene_details.as_mut().unwrap().scene)
     }
 
     fn handle_keyboard_event(
@@ -293,7 +302,21 @@ impl ViewAssistant for SpinningSquareViewAssistant {
     }
 }
 
+fn make_app_assistant_fut(
+    app_sender: &AppSender,
+) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
+    let f = async move {
+        let assistant = Box::new(SpinningSquareAppAssistant::new(app_sender.clone()));
+        Ok::<AppAssistantPtr, Error>(assistant)
+    };
+    Box::pin(f)
+}
+
+fn make_app_assistant() -> AssistantCreatorFunc {
+    Box::new(make_app_assistant_fut)
+}
+
 fn main() -> Result<(), Error> {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
-    App::run(make_app_assistant::<SpinningSquareAppAssistant>())
+    App::run(make_app_assistant())
 }

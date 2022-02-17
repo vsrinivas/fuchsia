@@ -8,7 +8,6 @@ use carnelian::{
     drawing::{load_font, FontFace},
     input::{self},
     make_app_assistant,
-    render::Context as RenderContext,
     scene::{
         facets::{
             FacetId, SetBackgroundColorMessage, SetColorMessage, SetTextMessage, TextFacetOptions,
@@ -21,7 +20,6 @@ use carnelian::{
     ViewAssistantPtr, ViewKey,
 };
 use euclid::point2;
-use fuchsia_zircon::Event;
 use lipsum::lipsum_words;
 use std::path::PathBuf;
 
@@ -198,13 +196,8 @@ impl ViewAssistant for FontMetricsViewAssistant {
         Ok(())
     }
 
-    fn render(
-        &mut self,
-        render_context: &mut RenderContext,
-        ready_event: Event,
-        context: &ViewAssistantContext,
-    ) -> Result<(), Error> {
-        let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
+    fn get_scene(&mut self, size: Size) -> Option<&mut Scene> {
+        let scene_details = self.scene_details.take().unwrap_or_else(|| {
             let mut sample_title_ref = None;
             let mut sample_paragraph_ref = None;
             let mut lines_ref = None;
@@ -213,7 +206,6 @@ impl ViewAssistant for FontMetricsViewAssistant {
                 .round_scene_corners(self.round_scene_corners);
             root_builder.group().stack().expand().align(Alignment::top_center()).contents(
                 |stack_builder| {
-                    let size = context.size;
                     let text_size = size.height.min(size.width) / self.sample_size_divisor;
                     let ascent = self.sample_faces[self.sample_index].ascent(text_size);
                     let descent = self.sample_faces[self.sample_index].descent(text_size);
@@ -349,10 +341,8 @@ impl ViewAssistant for FontMetricsViewAssistant {
                 lines: lines_ref.unwrap(),
             }
         });
-        scene_details.scene.layout(context.size);
-        scene_details.scene.render(render_context, ready_event, context)?;
         self.scene_details = Some(scene_details);
-        Ok(())
+        Some(&mut self.scene_details.as_mut().unwrap().scene)
     }
 
     fn handle_keyboard_event(

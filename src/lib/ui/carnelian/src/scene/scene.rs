@@ -121,6 +121,9 @@ pub struct SceneOptions {
     /// to change, setting this to false can provide some important
     /// performance benefits.
     pub mutable: bool,
+    /// True if the scene is animated in a way that requires a render
+    /// on every frame, for example, Spinning Square.
+    pub animated: bool,
 }
 
 impl SceneOptions {
@@ -138,6 +141,7 @@ impl Default for SceneOptions {
             enable_mouse_cursor: true,
             root_arranger: None,
             mutable: true,
+            animated: false,
         }
     }
 }
@@ -550,6 +554,10 @@ impl Scene {
             })
             .collect()
     }
+
+    pub(crate) fn is_animated(&self) -> bool {
+        self.options.animated
+    }
 }
 
 impl Debug for Scene {
@@ -678,6 +686,12 @@ impl SceneBuilder {
     /// If true, the scene can be mutated after being built.
     pub fn mutable(mut self, mutable: bool) -> Self {
         self.options.mutable = mutable;
+        self
+    }
+
+    /// If true, the scene should be rendered on every frame.
+    pub fn animated(mut self, animated: bool) -> Self {
+        self.options.animated = animated;
         self
     }
 

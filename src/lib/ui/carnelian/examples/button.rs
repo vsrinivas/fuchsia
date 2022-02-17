@@ -12,7 +12,6 @@ use carnelian::{
     drawing::{load_font, measure_text_width, DisplayRotation, FontFace},
     input::{self},
     make_app_assistant, make_message,
-    render::Context as RenderContext,
     scene::{
         facets::{
             FacetId, SetColorMessage, SetSizeMessage, TextFacetOptions, TextHorizontalAlignment,
@@ -28,7 +27,7 @@ use carnelian::{
     ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::size2;
-use fuchsia_zircon::{Event, Time};
+use fuchsia_zircon::Time;
 use std::{
     f32::consts::PI,
     path::PathBuf,
@@ -287,6 +286,58 @@ impl ButtonViewAssistant {
         Ok(b)
     }
 
+    fn ensure_scene_built(&mut self, size: Size) {
+        if self.scene_details.is_none() {
+            let min_dimension = size.width.min(size.height);
+            let font_size = (min_dimension / 5.0).ceil().min(64.0);
+            let padding = (min_dimension / 20.0).ceil().max(8.0);
+            let mut builder = SceneBuilder::new().background_color(self.bg_color);
+            let mut button = None;
+            let mut indicator_id = None;
+            let mut indicator_size_opt = None;
+            builder
+                .group()
+                .column()
+                .max_size()
+                .main_align(MAIN_AXIS_ALIGNMENTS[self.column_main_alignment_index])
+                .contents(|builder| {
+                    let indicator_len = size.height.min(size.width) / 8.0;
+                    let indicator_size = size2(indicator_len * 1.25, indicator_len);
+                    indicator_size_opt = Some(indicator_size);
+                    let indicator_side_size = size2(indicator_len / 2.0, indicator_len * 1.5);
+                    builder.start_group(
+                        "indicator_row",
+                        Flex::with_options_ptr(FlexOptions::row(
+                            MainAxisSize::Max,
+                            MAIN_AXIS_ALIGNMENTS[self.main_alignment_index],
+                            CROSS_AXIS_ALIGNMENTS[self.cross_alignment_index],
+                        )),
+                    );
+                    builder.rectangle(indicator_side_size, Color::blue());
+                    indicator_id = Some(builder.rectangle(
+                        indicator_size,
+                        if self.red_light { Color::red() } else { Color::green() },
+                    ));
+                    builder.rectangle(indicator_side_size, Color::blue());
+                    builder.end_group();
+                    button = Some(
+                        Button::new(BUTTON_LABEL, font_size, padding, builder).expect("button"),
+                    );
+                });
+            let mut button = button.expect("button");
+            let mut scene = builder.build();
+            self.indicator_size = indicator_size_opt.expect("indicator_size_opt");
+            self.original_indicator_size = self.indicator_size;
+            button.set_focused(&mut scene, self.focused);
+            self.animation_start = Instant::now();
+            self.scene_details = Some(SceneDetails {
+                scene,
+                indicator: indicator_id.expect("indicator_id"),
+                button,
+            });
+        }
+    }
+
     fn schedule_resize_timer(&mut self) {
         // use a thread to drive the button resize timer as a way to demonstrate the cross thread
         // sender.
@@ -341,69 +392,15 @@ impl ButtonViewAssistant {
 }
 
 impl ViewAssistant for ButtonViewAssistant {
-    fn resize(&mut self, _new_size: &Size) -> Result<(), Error> {
+    fn resize(&mut self, new_size: &Size) -> Result<(), Error> {
         self.scene_details = None;
+        self.ensure_scene_built(*new_size);
         Ok(())
     }
 
-    fn render(
-        &mut self,
-        render_context: &mut RenderContext,
-        ready_event: Event,
-        context: &ViewAssistantContext,
-    ) -> Result<(), Error> {
-        let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
-            let target_size = context.size;
-            let min_dimension = target_size.width.min(target_size.height);
-            let font_size = (min_dimension / 5.0).ceil().min(64.0);
-            let padding = (min_dimension / 20.0).ceil().max(8.0);
-            let mut builder = SceneBuilder::new().background_color(self.bg_color);
-            let mut button = None;
-            let mut indicator_id = None;
-            let mut indicator_size_opt = None;
-            builder
-                .group()
-                .column()
-                .max_size()
-                .main_align(MAIN_AXIS_ALIGNMENTS[self.column_main_alignment_index])
-                .contents(|builder| {
-                    let indicator_len = target_size.height.min(target_size.width) / 8.0;
-                    let indicator_size = size2(indicator_len * 1.25, indicator_len);
-                    indicator_size_opt = Some(indicator_size);
-                    let indicator_side_size = size2(indicator_len / 2.0, indicator_len * 1.5);
-                    builder.start_group(
-                        "indicator_row",
-                        Flex::with_options_ptr(FlexOptions::row(
-                            MainAxisSize::Max,
-                            MAIN_AXIS_ALIGNMENTS[self.main_alignment_index],
-                            CROSS_AXIS_ALIGNMENTS[self.cross_alignment_index],
-                        )),
-                    );
-                    builder.rectangle(indicator_side_size, Color::blue());
-                    indicator_id = Some(builder.rectangle(
-                        indicator_size,
-                        if self.red_light { Color::red() } else { Color::green() },
-                    ));
-                    builder.rectangle(indicator_side_size, Color::blue());
-                    builder.end_group();
-                    button = Some(
-                        Button::new(BUTTON_LABEL, font_size, padding, builder).expect("button"),
-                    );
-                });
-            let mut button = button.expect("button");
-            let mut scene = builder.build();
-            self.indicator_size = indicator_size_opt.expect("indicator_size_opt");
-            self.original_indicator_size = self.indicator_size;
-            button.set_focused(&mut scene, self.focused);
-            self.animation_start = Instant::now();
-            SceneDetails { scene, indicator: indicator_id.expect("indicator_id"), button }
-        });
-
-        scene_details.scene.layout(context.size);
-        scene_details.scene.render(render_context, ready_event, context)?;
-        self.scene_details = Some(scene_details);
-        context.request_render();
-        Ok(())
+    fn get_scene(&mut self, target_size: Size) -> Option<&mut Scene> {
+        self.ensure_scene_built(target_size);
+        Some(&mut self.scene_details.as_mut().unwrap().scene)
     }
 
     fn handle_message(&mut self, message: Message) {
