@@ -22,6 +22,7 @@ if (is_host) {
   group("host_tests") {
     testonly = true
     deps = [
+      "tests/assembly:tests",
       "tests/bin",
       "tests/depfile:tests",
       "tests/host_test:py_host_test_with_lib",

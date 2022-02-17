@@ -3,7 +3,8 @@
 # found in the LICENSE file.
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Dict, List, Optional
+from serialization import serialize_fields_as
 
 __all__ = ['PackageManifest', 'PackageMetaData', 'BlobEntry']
 
@@ -11,6 +12,7 @@ from .common import FilePath
 
 
 @dataclass(init=False)
+@serialize_fields_as(version=str)
 class PackageMetaData:
     """The metadata that describes a package.
 
@@ -50,3 +52,7 @@ class PackageManifest:
     """The output manifest for a Fuchsia package."""
     package: PackageMetaData
     blobs: List[BlobEntry]
+    version: str = "1"
+
+    def blobs_by_path(self) -> Dict[FilePath, BlobEntry]:
+        return {blob.path: blob for blob in self.blobs}

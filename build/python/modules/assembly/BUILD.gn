@@ -16,5 +16,8 @@ python_library("assembly") {
     "utils.py",
   ]
 
-  library_deps = [ "//build/python/modules/depfile" ]
+  library_deps = [
+    "//build/python/modules/depfile",
+    "//build/python/modules/serialization",
+  ]
 }
