@@ -14,4 +14,4 @@ source "$SCRIPT_DIR"/../lib/vars.sh || exit $?
 
 fx-config-read
 
-"$SCRIPT_DIR"/run-zbi-test.py "$@"
+"${PREBUILT_PYTHON3_DIR}/bin/python3.8" "$SCRIPT_DIR"/run-zbi-test.py "$@"
