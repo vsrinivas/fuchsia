@@ -2308,7 +2308,7 @@ async fn resolver_component_decl_is_validated() {
                             };
                             fidl::encoding::encode_persistent_with_context(
                                 &fidl::encoding::Context {
-                                    wire_format_version: fidl::encoding::WireFormatVersion::V1,
+                                    wire_format_version: fidl::encoding::WireFormatVersion::V2,
                                 },
                                 &mut fidl,
                             )

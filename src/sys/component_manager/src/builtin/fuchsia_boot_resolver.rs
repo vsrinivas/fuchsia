@@ -326,14 +326,20 @@ mod tests {
             checksum: Some(fake_checksum.clone().native_into_fidl()),
             ..fconfig::ValuesData::EMPTY
         };
+        let manifest_encoded = encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
+            &mut manifest,
+        )
+        .unwrap();
+        let values_data_encoded = encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
+            &mut values_data,
+        )
+        .unwrap();
         let root = pseudo_directory! {
             "meta" => pseudo_directory! {
-                "has_config.cm" => read_only_static(encode_persistent_with_context(
-                    &fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},
-                    &mut manifest).unwrap()),
-                "has_config.cvf" => read_only_static(encode_persistent_with_context(
-                    &fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},
-                    &mut values_data).unwrap()),
+                "has_config.cm" => read_only_static(manifest_encoded),
+                "has_config.cvf" => read_only_static(values_data_encoded),
             }
         };
         let (_task, bootfs) = serve_vfs_dir(root);
@@ -387,11 +393,14 @@ mod tests {
             ),
             ..fdecl::Component::EMPTY
         };
+        let manifest_encoded = encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
+            &mut manifest,
+        )
+        .unwrap();
         let root = pseudo_directory! {
             "meta" => pseudo_directory! {
-                "has_config.cm" => read_only_static(encode_persistent_with_context(
-                    &fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},
-                    &mut manifest).unwrap()),
+                "has_config.cm" => read_only_static(manifest_encoded),
             }
         };
         let (_task, bootfs) = serve_vfs_dir(root);
@@ -421,24 +430,25 @@ mod tests {
 
     #[fuchsia::test]
     async fn resolve_errors_test() {
+        let manifest_encoded = encode_persistent_with_context(
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
+            &mut fdecl::Component {
+                program: Some(fdecl::Program {
+                    runner: None,
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fdecl::Program::EMPTY
+                }),
+                ..fdecl::Component::EMPTY
+            },
+        )
+        .unwrap();
         let root = pseudo_directory! {
             "meta" => pseudo_directory! {
                 // Provide a cm that will fail due to a missing runner.
-                "invalid.cm" => read_only_static(
-                    encode_persistent_with_context(
-                        &fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},
-                        &mut fdecl::Component {
-                        program: Some(fdecl::Program {
-                            runner: None,
-                            info: Some(fdata::Dictionary {
-                                entries: Some(vec![]),
-                                ..fdata::Dictionary::EMPTY
-                            }),
-                            ..fdecl::Program::EMPTY
-                        }),
-                        ..fdecl::Component::EMPTY
-                    }).unwrap()
-                ),
+                "invalid.cm" => read_only_static(manifest_encoded),
             },
         };
         let (_task, bootfs) = serve_vfs_dir(root);

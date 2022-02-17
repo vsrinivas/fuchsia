@@ -89,7 +89,7 @@ fn build_decl() -> fmem::Data {
     })]);
     fmem::Data::Bytes(
         fidl::encoding::encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut component_decl,
         )
         .expect("encoded"),

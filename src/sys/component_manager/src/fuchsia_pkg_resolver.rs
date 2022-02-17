@@ -178,6 +178,70 @@ mod tests {
             let (dir_c, dir_s) = zx::Channel::create().unwrap();
             let parsed_url = PkgUrl::parse(&package_url).expect("bad url");
             // Simulate a package server that only contains the "hello-world" package.
+            let invalid_cm_bytes = encode_persistent_with_context(
+                &fidl::encoding::Context {
+                    wire_format_version: fidl::encoding::WireFormatVersion::V2,
+                },
+                &mut fdecl::Component {
+                    program: Some(fdecl::Program {
+                        runner: None,
+                        info: Some(fdata::Dictionary {
+                            entries: Some(vec![]),
+                            ..fdata::Dictionary::EMPTY
+                        }),
+                        ..fdecl::Program::EMPTY
+                    }),
+                    uses: None,
+                    exposes: None,
+                    offers: None,
+                    capabilities: None,
+                    children: None,
+                    collections: None,
+                    environments: None,
+                    facets: None,
+                    ..fdecl::Component::EMPTY
+                },
+            )
+            .unwrap();
+            let foo_cm_bytes = encode_persistent_with_context(
+                &fidl::encoding::Context {
+                    wire_format_version: fidl::encoding::WireFormatVersion::V2,
+                },
+                &mut fdecl::Component {
+                    config: Some(fdecl::ConfigSchema {
+                        fields: Some(vec![fdecl::ConfigField {
+                            key: Some("test".to_string()),
+                            type_: Some(fdecl::ConfigType {
+                                layout: fdecl::ConfigTypeLayout::Bool,
+                                parameters: Some(vec![]),
+                                constraints: vec![],
+                            }),
+                            ..fdecl::ConfigField::EMPTY
+                        }]),
+                        checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
+                        value_source: Some(fdecl::ConfigValueSource::PackagePath(
+                            "config/foo.cvf".to_string(),
+                        )),
+                        ..fdecl::ConfigSchema::EMPTY
+                    }),
+                    ..fdecl::Component::EMPTY
+                },
+            )
+            .unwrap();
+            let foo_cvf_bytes = encode_persistent_with_context(
+                &fidl::encoding::Context {
+                    wire_format_version: fidl::encoding::WireFormatVersion::V2,
+                },
+                &mut fconfig::ValuesData {
+                    values: Some(vec![fconfig::ValueSpec {
+                        value: Some(fconfig::Value::Single(fconfig::SingleValue::Flag(false))),
+                        ..fconfig::ValueSpec::EMPTY
+                    }]),
+                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
+                    ..fconfig::ValuesData::EMPTY
+                },
+            )
+            .unwrap();
             match parsed_url.name().as_ref() {
                 "hello-world" => {
                     let path = Path::new("/pkg");
@@ -197,27 +261,7 @@ mod tests {
                     // Provide a cm that will fail due to a missing runner.
                     let sub_dir = pseudo_directory! {
                         "meta" => pseudo_directory! {
-                            "invalid.cm" => read_only_static(
-                                encode_persistent_with_context(&fidl::encoding::Context{wire_format_version: fidl::encoding::WireFormatVersion::V1},&mut fdecl::Component {
-                                    program: Some(fdecl::Program {
-                                        runner: None,
-                                        info: Some(fdata::Dictionary {
-                                            entries: Some(vec![]),
-                                            ..fdata::Dictionary::EMPTY
-                                        }),
-                                        ..fdecl::Program::EMPTY
-                                    }),
-                                    uses: None,
-                                    exposes: None,
-                                    offers: None,
-                                    capabilities: None,
-                                    children: None,
-                                    collections: None,
-                                    environments: None,
-                                    facets: None,
-                                    ..fdecl::Component::EMPTY
-                                }).unwrap()
-                            ),
+                            "invalid.cm" => read_only_static(invalid_cm_bytes),
                         }
                     };
                     sub_dir.open(
@@ -237,43 +281,10 @@ mod tests {
                     // Provide a cm that will fail due to a missing runner.
                     let sub_dir = pseudo_directory! {
                         "meta" => pseudo_directory! {
-                            "foo.cm" => read_only_static(
-                                encode_persistent_with_context(
-                                    &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
-                        &mut fdecl::Component {
-                                    config: Some(fdecl::ConfigSchema {
-                                        fields: Some(vec![fdecl::ConfigField {
-                                            key: Some("test".to_string()),
-                                            type_: Some(fdecl::ConfigType {
-                                                layout: fdecl::ConfigTypeLayout::Bool,
-                                                parameters: Some(vec![]),
-                                                constraints: vec![]
-                                            }),
-                                            ..fdecl::ConfigField::EMPTY
-                                        }]),
-                                        checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
-                                        value_source: Some(fdecl::ConfigValueSource::PackagePath("config/foo.cvf".to_string())),
-                                        ..fdecl::ConfigSchema::EMPTY
-                                    }),
-                                    ..fdecl::Component::EMPTY
-                                }).unwrap()
-                            ),
+                            "foo.cm" => read_only_static(foo_cm_bytes),
                         },
                         "config" => pseudo_directory! {
-                            "foo.cvf" => read_only_static(
-                                encode_persistent_with_context(
-                                    &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
-                        &mut fconfig::ValuesData {
-                                    values: Some(vec![
-                                        fconfig::ValueSpec {
-                                            value: Some(fconfig::Value::Single(fconfig::SingleValue::Flag(false))),
-                                            ..fconfig::ValueSpec::EMPTY
-                                        }
-                                    ]),
-                                    checksum: Some(fdecl::ConfigChecksum::Sha256([0; 32])),
-                                    ..fconfig::ValuesData::EMPTY
-                                }).unwrap()
-                            ),
+                            "foo.cvf" => read_only_static(foo_cvf_bytes),
                         }
                     };
                     sub_dir.open(

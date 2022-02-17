@@ -999,7 +999,7 @@ mod tests {
     ) -> Result<PathBuf, Error> {
         let path = tmp_dir.path().join("test_config.fidl");
         let content = fidl::encoding::encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V1 },
+            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut config,
         )?;
         std::fs::write(&path, &content)?;
