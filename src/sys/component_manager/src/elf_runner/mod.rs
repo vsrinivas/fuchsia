@@ -689,7 +689,9 @@ mod tests {
         fidl_fuchsia_diagnostics_types::{
             ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
         },
-        fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, OPEN_RIGHT_READABLE},
+        fidl_fuchsia_io::{
+            DirectoryMarker, DirectoryProxy, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
+        },
         fidl_fuchsia_logger::LogSinkRequest,
         fidl_fuchsia_process_lifecycle::LifecycleMarker,
         fidl_fuchsia_process_lifecycle::LifecycleProxy,
@@ -734,11 +736,14 @@ mod tests {
     ) -> fcrunner::ComponentStartInfo {
         // Get a handle to /pkg
         let pkg_path = "/pkg".to_string();
-        let pkg_chan = io_util::open_directory_in_namespace("/pkg", OPEN_RIGHT_READABLE)
-            .unwrap()
-            .into_channel()
-            .unwrap()
-            .into_zx_channel();
+        let pkg_chan = io_util::open_directory_in_namespace(
+            "/pkg",
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+        )
+        .unwrap()
+        .into_channel()
+        .unwrap()
+        .into_zx_channel();
         let pkg_handle = ClientEnd::new(pkg_chan);
 
         let ns = vec![fcrunner::ComponentNamespaceEntry {
@@ -784,11 +789,14 @@ mod tests {
     ) -> fcrunner::ComponentStartInfo {
         // Get a handle to /pkg
         let pkg_path = "/pkg".to_string();
-        let pkg_chan = io_util::open_directory_in_namespace("/pkg", OPEN_RIGHT_READABLE)
-            .unwrap()
-            .into_channel()
-            .unwrap()
-            .into_zx_channel();
+        let pkg_chan = io_util::open_directory_in_namespace(
+            "/pkg",
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+        )
+        .unwrap()
+        .into_channel()
+        .unwrap()
+        .into_zx_channel();
         let pkg_handle = ClientEnd::new(pkg_chan);
 
         let ns = vec![fcrunner::ComponentNamespaceEntry {
@@ -1468,11 +1476,14 @@ mod tests {
         mut ns: Vec<fcrunner::ComponentNamespaceEntry>,
     ) -> fcrunner::ComponentStartInfo {
         let pkg_path = "/pkg".to_string();
-        let pkg_chan = io_util::open_directory_in_namespace("/pkg", OPEN_RIGHT_READABLE)
-            .unwrap()
-            .into_channel()
-            .unwrap()
-            .into_zx_channel();
+        let pkg_chan = io_util::open_directory_in_namespace(
+            "/pkg",
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
+        )
+        .unwrap()
+        .into_channel()
+        .unwrap()
+        .into_zx_channel();
         let pkg_handle = ClientEnd::new(pkg_chan);
 
         ns.push(fcrunner::ComponentNamespaceEntry {
