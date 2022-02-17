@@ -41,8 +41,18 @@ static const pbus_mmio_t pwm_mmios[] = {
 };
 
 static const pwm_id_t pwm_ids[] = {
-    {T931_PWM_A}, {T931_PWM_B},    {T931_PWM_C},    {T931_PWM_D},    {T931_PWM_E},
-    {T931_PWM_F}, {T931_PWM_AO_A}, {T931_PWM_AO_B}, {T931_PWM_AO_C}, {T931_PWM_AO_D},
+    {T931_PWM_A},
+    {T931_PWM_B},
+    {T931_PWM_C},
+    {T931_PWM_D},
+    {T931_PWM_E},
+    {T931_PWM_F},
+    {T931_PWM_AO_A},
+    // T931_PWM_AO_B controls VDDEE_800 which is configured by the bootloader.
+    // Marked as protect so we don't try to initialize it.
+    {T931_PWM_AO_B, /*protect = */ true},
+    {T931_PWM_AO_C},
+    {T931_PWM_AO_D},
 };
 
 static const pbus_metadata_t pwm_metadata[] = {
