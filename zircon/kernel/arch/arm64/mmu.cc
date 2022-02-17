@@ -1772,7 +1772,7 @@ zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write) 
 
   // if bit 0 is clear, the translation succeeded
   if (BIT(par, 0)) {
-    return ZX_ERR_NO_MEMORY;
+    return ZX_ERR_NOT_FOUND;
   }
 
   // physical address is stored in bits [51..12], naturally aligned
