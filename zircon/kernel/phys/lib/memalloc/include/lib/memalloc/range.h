@@ -11,6 +11,7 @@
 #include <lib/stdcompat/span.h>
 #include <zircon/boot/image.h>
 
+#include <algorithm>
 #include <array>
 #include <string_view>
 
