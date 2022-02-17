@@ -39,7 +39,8 @@ class TimeDelta {
   }
 
   static constexpr TimeDelta FromSecondsF(double seconds) {
-    return FromNanoseconds(seconds * (1000.0 * 1000.0 * 1000.0));
+    return FromNanoseconds(
+        static_cast<int64_t>(seconds * (1000.0 * 1000.0 * 1000.0)));
   }
 
   constexpr int64_t ToNanoseconds() const { return delta_; }
@@ -47,13 +48,15 @@ class TimeDelta {
   constexpr int64_t ToMilliseconds() const { return ToMicroseconds() / 1000; }
   constexpr int64_t ToSeconds() const { return ToMilliseconds() / 1000; }
 
-  constexpr double ToNanosecondsF() const { return delta_; }
-  constexpr double ToMicrosecondsF() const { return delta_ / 1000.0; }
+  constexpr double ToNanosecondsF() const {
+    return static_cast<double>(delta_);
+  }
+  constexpr double ToMicrosecondsF() const { return ToNanosecondsF() / 1000.0; }
   constexpr double ToMillisecondsF() const {
-    return delta_ / (1000.0 * 1000.0);
+    return ToNanosecondsF() / (1000.0 * 1000.0);
   }
   constexpr double ToSecondsF() const {
-    return delta_ / (1000.0 * 1000.0 * 1000.0);
+    return ToNanosecondsF() / (1000.0 * 1000.0 * 1000.0);
   }
 
   constexpr TimeDelta operator-(TimeDelta other) const {

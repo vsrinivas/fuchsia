@@ -71,7 +71,7 @@ void H264DPB::set_max_num_pics(size_t max_num_pics) {
 void H264DPB::UpdatePicPositions() {
   size_t i = 0;
   for (auto& pic : pics_) {
-    pic->dpb_position = i;
+    pic->dpb_position = static_cast<int>(i);
     ++i;
   }
 }
@@ -101,7 +101,7 @@ void H264DPB::StorePic(scoped_refptr<H264Picture> pic) {
   DCHECK_LT(pics_.size(), max_num_pics_);
   DVLOG(3) << "Adding PicNum: " << pic->pic_num << " ref: " << (int)pic->ref
            << " longterm: " << (int)pic->long_term << " to DPB";
-  pic->dpb_position = pics_.size();
+  pic->dpb_position = static_cast<int>(pics_.size());
   pics_.push_back(std::move(pic));
 }
 

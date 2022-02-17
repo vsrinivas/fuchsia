@@ -33,10 +33,11 @@ std::vector<SubsampleEntry> EncryptedRangesToSubsampleEntry(
     const uint8_t* encrypted_start = encrypted_ranges.start(i);
     DCHECK_GE(encrypted_start, cur)
         << "Encrypted range started before the current buffer pointer.";
-    subsample.clear_bytes = encrypted_start - cur;
+    subsample.clear_bytes = static_cast<uint32_t>(encrypted_start - cur);
 
     const uint8_t* encrypted_end = encrypted_ranges.end(i);
-    subsample.cypher_bytes = encrypted_end - encrypted_start;
+    subsample.cypher_bytes =
+        static_cast<uint32_t>(encrypted_end - encrypted_start);
 
     subsamples.push_back(subsample);
     cur = encrypted_end;
@@ -47,7 +48,7 @@ std::vector<SubsampleEntry> EncryptedRangesToSubsampleEntry(
   // then it must be in the clear.
   if (cur < end) {
     SubsampleEntry subsample = {};
-    subsample.clear_bytes = end - cur;
+    subsample.clear_bytes = static_cast<uint32_t>(end - cur);
     subsamples.push_back(subsample);
   }
   return subsamples;
@@ -808,8 +809,9 @@ H264Parser::Result H264Parser::ParseSPSScalingLists(H264SPS* sps) {
     READ_BOOL_OR_RETURN(&seq_scaling_list_present_flag);
 
     if (seq_scaling_list_present_flag) {
-      res = ParseScalingList(base::size(sps->scaling_list4x4[i]),
-                             sps->scaling_list4x4[i], &use_default);
+      res = ParseScalingList(
+          static_cast<int>(base::size(sps->scaling_list4x4[i])),
+          sps->scaling_list4x4[i], &use_default);
       if (res != kOk)
         return res;
 
@@ -827,8 +829,9 @@ H264Parser::Result H264Parser::ParseSPSScalingLists(H264SPS* sps) {
     READ_BOOL_OR_RETURN(&seq_scaling_list_present_flag);
 
     if (seq_scaling_list_present_flag) {
-      res = ParseScalingList(base::size(sps->scaling_list8x8[i]),
-                             sps->scaling_list8x8[i], &use_default);
+      res = ParseScalingList(
+          static_cast<int>(base::size(sps->scaling_list8x8[i])),
+          sps->scaling_list8x8[i], &use_default);
       if (res != kOk)
         return res;
 
@@ -855,8 +858,9 @@ H264Parser::Result H264Parser::ParsePPSScalingLists(const H264SPS& sps,
     READ_BOOL_OR_RETURN(&pic_scaling_list_present_flag);
 
     if (pic_scaling_list_present_flag) {
-      res = ParseScalingList(base::size(pps->scaling_list4x4[i]),
-                             pps->scaling_list4x4[i], &use_default);
+      res = ParseScalingList(
+          static_cast<int>(base::size(pps->scaling_list4x4[i])),
+          pps->scaling_list4x4[i], &use_default);
       if (res != kOk)
         return res;
 
@@ -881,8 +885,9 @@ H264Parser::Result H264Parser::ParsePPSScalingLists(const H264SPS& sps,
       READ_BOOL_OR_RETURN(&pic_scaling_list_present_flag);
 
       if (pic_scaling_list_present_flag) {
-        res = ParseScalingList(base::size(pps->scaling_list8x8[i]),
-                               pps->scaling_list8x8[i], &use_default);
+        res = ParseScalingList(
+            static_cast<int>(base::size(pps->scaling_list8x8[i])),
+            pps->scaling_list8x8[i], &use_default);
         if (res != kOk)
           return res;
 
