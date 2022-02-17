@@ -1164,7 +1164,10 @@ config("temporarily_disable_tsan_do_not_use") {
 
 config("temporarily_disable_ubsan_do_not_use") {
   cflags = [ "-fno-sanitize=undefined" ]
-  visibility = [ "//third_party/*" ]
+  visibility = [
+    "//third_party/*",
+    "//zircon/third_party/uapp/dash/*",
+  ]
 }
 
 config("no_stack_protector") {
