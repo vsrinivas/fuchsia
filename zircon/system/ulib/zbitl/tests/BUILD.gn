@@ -3,13 +3,16 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/cpp/cpp_fuzzer.gni")
+import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/testing/host_test_data.gni")
 
 group("tests") {
   testonly = true
   deps = [
-    ":zbitl-test-package",
+    ":zbitl-fuzzers",
+    ":zbitl-tests",
     ":zbitl-unittests($host_toolchain)",
   ]
 }
@@ -78,9 +81,6 @@ foreach(src, src_storage_types) {
         "SRC_STORAGE_TYPE=${src}",
         "DEST_STORAGE_TYPE=${dest}",
       ]
-
-      # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-      configs += [ "//build/config:Wno-conversion" ]
     }
     copy_test_deps += [ ":${source_set_name}" ]
   }
@@ -115,9 +115,6 @@ test("zbitl-unittests") {
   } else if (is_host) {
     deps += [ ":host-test-data" ]
   }
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 resource("zbitl-test-resources") {
@@ -125,11 +122,48 @@ resource("zbitl-test-resources") {
   outputs = [ "data/{{source_file_part}}" ]
 }
 
-fuchsia_unittest_package("zbitl-test-package") {
-  package_name = "zbitl-test"
+fuchsia_unittest_package("zbitl-tests") {
   deps = [
     ":zbitl-test-resources",
     ":zbitl-unittests",
   ]
   manifest = "meta/zbitl-unittests.cmx"
+}
+
+fuzzer_package("zbitl-fuzzers") {
+  fuzz_host = true
+  cpp_fuzzers = [
+    ":append-fuzzer",
+    ":bootfs-iteration-fuzzer",
+    ":copy-fuzzer",
+    ":view-iteration-fuzzer",
+  ]
+}
+
+cpp_fuzzer("append-fuzzer") {
+  sources = [ "append-fuzzer.cc" ]
+  deps = [ ".." ]
+}
+
+cpp_fuzzer("copy-fuzzer") {
+  sources = [ "copy-fuzzer.cc" ]
+  deps = [
+    "..",
+    "//zircon/system/ulib/fbl",
+  ]
+  if (is_fuchsia) {
+    deps += [ "//zircon/system/ulib/zx" ]
+  }
+}
+
+# Why does passing configs not work when cpp_fuzzer is used? GN produces an
+# undefined identifier error, but cpp_fuzzer is a direct delegate to fuzzer.
+fuzzer("bootfs-iteration-fuzzer") {
+  sources = [ "bootfs-iteration-fuzzer.cc" ]
+  deps = [ ".." ]
+}
+
+cpp_fuzzer("view-iteration-fuzzer") {
+  sources = [ "view-iteration-fuzzer.cc" ]
+  deps = [ ".." ]
 }

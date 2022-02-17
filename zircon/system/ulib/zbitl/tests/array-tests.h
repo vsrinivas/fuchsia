@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_ARRAY_TESTS_H_
-#define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_ARRAY_TESTS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_ARRAY_TESTS_H_
+#define ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_ARRAY_TESTS_H_
 
 #include <lib/zbitl/memory.h>
 
@@ -64,4 +64,4 @@ struct FblArrayTestTraits {
 
 using FblByteArrayTestTraits = FblArrayTestTraits<std::byte>;
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_ARRAY_TESTS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_ARRAY_TESTS_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TESTING_TRAITS_H_
-#define ZIRCON_SYSTEM_ULIB_ZBITL_TESTING_TRAITS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_TRAITS_H_
+#define ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_TRAITS_H_
 
 #include <lib/zbitl/memory.h>
 #include <lib/zbitl/storage-traits.h>
@@ -69,4 +69,4 @@ struct FuzzTraits<zx::vmo> : public zbitl::StorageTraits<zx::vmo> {
 };
 #endif  // __Fuchsia__
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TESTING_TRAITS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_TRAITS_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_COPY_TESTS_H_
-#define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_COPY_TESTS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_COPY_TESTS_H_
+#define ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_COPY_TESTS_H_
 
 #include <zircon/assert.h>
 
@@ -30,4 +30,4 @@ std::string CopyResultErrorMsg(CopyError copy_error) {
   return ss.str();
 }
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_COPY_TESTS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_COPY_TESTS_H_

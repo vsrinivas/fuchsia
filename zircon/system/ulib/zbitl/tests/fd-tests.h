@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_FD_TESTS_H_
-#define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_FD_TESTS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_FD_TESTS_H_
+#define ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_FD_TESTS_H_
 
 #include <fcntl.h>
 #include <lib/zbitl/fd.h>
@@ -74,4 +74,4 @@ struct FdTestTraits {
   }
 };
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_FD_TESTS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_FD_TESTS_H_

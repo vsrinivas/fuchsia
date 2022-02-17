@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_VMO_TESTS_H_
-#define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_VMO_TESTS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_VMO_TESTS_H_
+#define ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_VMO_TESTS_H_
 
 #include <lib/zbitl/vmo.h>
 
@@ -205,4 +205,4 @@ struct MapUnownedVmoTestTraits {
   static const zx::vmo& GetVmo(const storage_type& storage) { return storage.vmo(); }
 };
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_VMO_TESTS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_VMO_TESTS_H_

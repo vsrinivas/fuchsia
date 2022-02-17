@@ -94,8 +94,5 @@ source_set("internal.decompress-zstd") {
 
 group("tests") {
   testonly = true
-  deps = [
-    "test:tests",
-    "testing",
-  ]
+  deps = [ "tests" ]
 }

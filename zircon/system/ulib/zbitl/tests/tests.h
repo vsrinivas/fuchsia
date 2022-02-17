@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_
-#define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_TESTS_H_
+#define ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_TESTS_H_
 
 #include <lib/zbitl/error-string.h>
 #include <lib/zbitl/image.h>
@@ -1120,4 +1120,4 @@ void TestExtending() {
 #define TEST_EXTENDING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name) \
   TEST_EXTENDING_1(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_TESTS_H_

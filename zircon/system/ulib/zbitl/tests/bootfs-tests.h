@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_BOOTFS_TESTS_H_
-#define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_BOOTFS_TESTS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_BOOTFS_TESTS_H_
+#define ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_BOOTFS_TESTS_H_
 
 #include <lib/zbitl/items/bootfs.h>
 #include <lib/zbitl/view.h>
@@ -116,4 +116,4 @@ void TestBootfsIteration() {
   }
 }
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_BOOTFS_TESTS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TESTS_BOOTFS_TESTS_H_
