@@ -634,7 +634,16 @@
   definition of the <a href=\"/docs/glossary#fuchsia-system-interface\">Fuchsia System Interface</a>
   as well as a number of client libraries. The IDK is targeted at development environment integrators
   that add environment specific tooling specific to the build
-environment to form a full SDK."
+environment to form a full <a href=\"/docs/glossary#fuchsia-sdk\">Fuchsia SDK</a>."
+  see_also: [""]
+  related_guides: [""]
+  area: ["General"]
+
+- term: "Fuchsia SDK"
+  short_description: "The Fuchsia SDK is the set of APIs, tools, build system integrations, and language
+  integration artifacts produced by Fuchsia that enable the production of software and products for and with Fuchsia."
+  full_description: "The Fuchsia SDK is produced from the <a href=\"/docs/glossary#fuchsia-idk\">Fuchsia IDK</a>
+  by adding integrations with build systems and language runtimes."
   see_also: [""]
   related_guides: [""]
   area: ["General"]
