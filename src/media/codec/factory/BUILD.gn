@@ -155,6 +155,7 @@ executable("codec_factory_integration_test_exe") {
   deps = [
     "//sdk/fidl/fuchsia.gpu.magma",
     "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",

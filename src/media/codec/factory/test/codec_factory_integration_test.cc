@@ -5,6 +5,7 @@
 #include <fuchsia/gpu/magma/cpp/fidl_test_base.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
+#include <fuchsia/sysinfo/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/gtest/real_loop_fixture.h>
@@ -19,6 +20,32 @@
 
 // NOLINTNEXTLINE
 using namespace component_testing;
+
+class FakeSysInfoDevice : public fuchsia::sysinfo::testing::SysInfo_TestBase {
+ public:
+  void NotImplemented_(const std::string& name) override {
+    fprintf(stderr, "FakeSysInfoDevice doing notimplemented with %s\n", name.c_str());
+  }
+  void GetBoardName(GetBoardNameCallback callback) override { callback(ZX_OK, "FakeBoard"); }
+  fidl::InterfaceRequestHandler<fuchsia::sysinfo::SysInfo> GetHandler() {
+    return bindings_.GetHandler(this);
+  }
+
+ private:
+  fidl::BindingSet<fuchsia::sysinfo::SysInfo> bindings_;
+};
+
+class MockSysInfoComponent : public LocalComponent {
+ public:
+  void Start(std::unique_ptr<LocalComponentHandles> mock_handles) override {
+    handles_ = std::move(mock_handles);
+    handles_->outgoing()->AddPublicService(sysinfo_device_.GetHandler());
+  }
+
+ private:
+  FakeSysInfoDevice sysinfo_device_;
+  std::unique_ptr<LocalComponentHandles> handles_;
+};
 
 class FakeMagmaDevice : public fuchsia::gpu::magma::testing::Device_TestBase {
  public:
@@ -97,6 +124,7 @@ class MockGpuComponent : public LocalComponent {
 
 constexpr auto kCodecFactoryName = "codec_factory";
 constexpr auto kMockGpuName = "mock_gpu";
+constexpr auto kSysInfoName = "mock_sys_info";
 
 class Integration : public testing::Test {
  protected:
@@ -111,6 +139,10 @@ class Integration : public testing::Test {
                            .source = ChildRef{kCodecFactoryName},
                            .targets = {ParentRef()}});
     builder.AddLocalChild(kMockGpuName, &mock_gpu_);
+    builder.AddLocalChild(kSysInfoName, &mock_sys_info_);
+    builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.sysinfo.SysInfo"}},
+                           .source = ChildRef{kSysInfoName},
+                           .targets = {ChildRef{kCodecFactoryName}}});
     auto dir_rights = fuchsia::io::Operations::CONNECT | fuchsia::io::Operations::READ_BYTES |
                       fuchsia::io::Operations::WRITE_BYTES | fuchsia::io::Operations::ENUMERATE |
                       fuchsia::io::Operations::TRAVERSE | fuchsia::io::Operations::GET_ATTRIBUTES |
@@ -131,6 +163,7 @@ class Integration : public testing::Test {
   async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
   FakeMagmaDevice magma_device_;
   MockGpuComponent mock_gpu_{loop_, magma_device_};
+  MockSysInfoComponent mock_sys_info_;
 };
 
 TEST_F(Integration, MagmaDevice) {
