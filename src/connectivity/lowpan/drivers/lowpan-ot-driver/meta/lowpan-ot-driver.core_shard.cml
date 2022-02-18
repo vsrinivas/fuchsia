@@ -60,6 +60,11 @@
             to: [ "#lowpan-ot-driver" ],
         },
         {
+            protocol: [ "fuchsia.net.mdns.Subscriber" ],
+            from: "#mdns",
+            to: [ "#lowpan-ot-driver" ],
+        },
+        {
             protocol: [ "fuchsia.net.tun.Control" ],
             from: "#network-tun",
             to: [ "#lowpan-ot-driver" ],
