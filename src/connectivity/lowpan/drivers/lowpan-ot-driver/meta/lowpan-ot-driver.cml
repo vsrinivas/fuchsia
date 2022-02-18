@@ -21,6 +21,7 @@
                 "fuchsia.net.stack.Stack",
                 "fuchsia.net.tun.Control",
                 "fuchsia.posix.socket.Provider",
+                "fuchsia.posix.socket.raw.Provider",
             ],
         },
         {

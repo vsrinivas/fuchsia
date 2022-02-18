@@ -480,6 +480,7 @@
                 target_monikers: [
                     "/core/network",
                     "/core/network/netstack",
+                    "/core/lowpan-ot-driver",
                 ],
             },
         ],
