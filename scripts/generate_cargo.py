@@ -106,9 +106,8 @@ def mangle_label(label):
             result.append("-_-")
         elif c == ".":
             result.append("_--")
-        elif c == "(":
-            # Toolchain is not part of mangled label
-            break
+        elif c == "(" or c == ")":
+            result.append("-__")
         else:
             result.append(c)
     return "".join(result)
