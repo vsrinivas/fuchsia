@@ -146,3 +146,18 @@ You can then build and run your test as usual:
 fx build
 fx test syscalls_test
 ```
+
+### Updating Starnix when running prebuilt tests
+
+When working on the Starnix runner to make behavioral changes that affect
+prebuilt tests such as the GVisor tests, re-running the test does not implicitly
+fetch and start a new runner. In these cases it is necessary to explicitly stop
+the runner so that it is updated on next component launch.
+
+The following snippet performs those stops:
+
+```sh
+for moniker in /core/{starnix_runner,starnix_manager,test_manager/{starnix_test_runner,starnix_unit_test_runner}}; do
+  ffx component stop -r $moniker
+done
+```
