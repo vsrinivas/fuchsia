@@ -10,6 +10,7 @@
 #include <lib/stdcompat/span.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
