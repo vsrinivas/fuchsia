@@ -108,4 +108,86 @@ static_assert(fit::is_callable<std::function<int(float, bool)>>::value, "");
 
 }  // namespace test_callables
 
+namespace test_detection {
+
+struct Nothing {};
+
+template <typename T>
+struct OneSpecialization {};
+
+template <>
+struct OneSpecialization<int> {
+  using type = void;
+};
+
+template <typename T>
+using only_int_t = typename OneSpecialization<T>::type;
+
+template <typename T>
+using arithmetic_exists_t = std::enable_if_t<cpp17::is_arithmetic_v<T>, std::add_const_t<T>>;
+
+struct HasEqualityBad {
+  void operator==(const HasEqualityBad&) const {}
+};
+
+struct HasEqualityExact {
+  bool operator==(const HasEqualityExact&) const { return true; }
+};
+
+struct HasEqualityConvertible {
+  int operator==(const HasEqualityConvertible&) const { return 1; }
+};
+
+template <typename T>
+using equality_t = decltype(std::declval<const T&>() == std::declval<const T&>());
+
+template <typename T>
+constexpr bool has_equality_v = fit::is_detected_v<equality_t, T>;
+
+template <typename T>
+constexpr bool has_equality_exact_v = fit::is_detected_exact_v<bool, equality_t, T>;
+
+template <typename T>
+constexpr bool has_equality_convertible_v = fit::is_detected_convertible_v<bool, equality_t, T>;
+
+static_assert(!fit::is_detected_v<only_int_t, void>, "");
+static_assert(!fit::is_detected_v<only_int_t, Nothing>, "");
+static_assert(fit::is_detected_v<only_int_t, int>, "");
+
+static_assert(!fit::is_detected_v<arithmetic_exists_t, void>, "");
+static_assert(!fit::is_detected_v<arithmetic_exists_t, Nothing>, "");
+static_assert(fit::is_detected_v<arithmetic_exists_t, int>, "");
+static_assert(fit::is_detected_v<arithmetic_exists_t, float>, "");
+
+static_assert(cpp17::is_same_v<fit::detected_t<only_int_t, void>, fit::nonesuch>, "");
+static_assert(cpp17::is_same_v<fit::detected_t<only_int_t, int>, void>, "");
+static_assert(cpp17::is_same_v<fit::detected_t<arithmetic_exists_t, int>, const int>, "");
+static_assert(cpp17::is_same_v<fit::detected_t<arithmetic_exists_t, float>, const float>, "");
+
+static_assert(cpp17::is_same_v<fit::detected_or_t<bool, only_int_t, void>, bool>, "");
+static_assert(cpp17::is_same_v<fit::detected_or_t<bool, only_int_t, int>, void>, "");
+
+static_assert(!has_equality_v<void>, "");
+static_assert(!has_equality_v<Nothing>, "");
+static_assert(has_equality_v<HasEqualityBad>, "");
+static_assert(has_equality_v<HasEqualityExact>, "");
+static_assert(has_equality_v<HasEqualityConvertible>, "");
+static_assert(has_equality_v<int>, "");
+
+static_assert(!has_equality_exact_v<void>, "");
+static_assert(!has_equality_exact_v<Nothing>, "");
+static_assert(!has_equality_exact_v<HasEqualityBad>, "");
+static_assert(has_equality_exact_v<HasEqualityExact>, "");
+static_assert(!has_equality_exact_v<HasEqualityConvertible>, "");
+static_assert(has_equality_exact_v<int>, "");
+
+static_assert(!has_equality_convertible_v<void>, "");
+static_assert(!has_equality_convertible_v<Nothing>, "");
+static_assert(!has_equality_convertible_v<HasEqualityBad>, "");
+static_assert(has_equality_convertible_v<HasEqualityExact>, "");
+static_assert(has_equality_convertible_v<HasEqualityConvertible>, "");
+static_assert(has_equality_convertible_v<int>, "");
+
+}  // namespace test_detection
+
 }  // namespace

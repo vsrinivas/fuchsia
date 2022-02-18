@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_TRAITS_H_
-#define LIB_FIT_TRAITS_H_
+#ifndef LIB_FIT_INCLUDE_LIB_FIT_TRAITS_H_
+#define LIB_FIT_INCLUDE_LIB_FIT_TRAITS_H_
 
 #include <lib/stdcompat/type_traits.h>
 
@@ -91,6 +91,91 @@ struct is_callable<ReturnType (FunctorType::*)(ArgTypes...)> : public std::true_
 template <typename T>
 struct is_callable<T, cpp17::void_t<decltype(&T::operator())>> : public std::true_type {};
 
+namespace internal {
+
+template <typename Default, typename AlwaysVoid, template <typename...> class Op, typename... Args>
+struct detector {
+  using value_t = std::false_type;
+  using type = Default;
+};
+
+template <typename Default, template <typename...> class Op, typename... Args>
+struct detector<Default, cpp17::void_t<Op<Args...>>, Op, Args...> {
+  using value_t = std::true_type;
+  using type = Op<Args...>;
+};
+
+}  // namespace internal
+
+// Default type when detection fails; |void| could be a legitimate result so we need something else.
+struct nonesuch {
+  constexpr nonesuch() = delete;
+  constexpr nonesuch(const nonesuch&) = delete;
+  constexpr nonesuch& operator=(const nonesuch&) = delete;
+  constexpr nonesuch(nonesuch&&) = delete;
+  constexpr nonesuch& operator=(nonesuch&&) = delete;
+
+  // This ensures that no one can actually make a value of this type.
+  ~nonesuch() = delete;
+};
+
+// Trait for detecting if |Op<Args...>| resolves to a legitimate type. Without this trait,
+// metaprogrammers often resort to making their own detectors with |void_t<>|.
+//
+// With this trait, they can simply make the core part of the detector, like this to detect an
+// |operator==|:
+//
+//     template <typename T>
+//     using equality_t = decltype(std::declval<const T&>() == std::declval<const T&>());
+//
+// And then make their detector like so:
+//
+//     template <typename T>
+//     using has_equality = fit::is_detected<equality_t, T>;
+template <template <typename...> class Op, typename... Args>
+using is_detected = typename ::fit::internal::detector<nonesuch, void, Op, Args...>::value_t;
+
+template <template <typename...> class Op, typename... Args>
+constexpr bool is_detected_v = is_detected<Op, Args...>::value;
+
+// Trait for accessing the result of |Op<Args...>| if it exists, or |fit::nonesuch| otherwise.
+//
+// This is advantageous because the same "core" of the detector can be used both for finding if the
+// prospective type exists at all (with |fit::is_detected|) and what it actually is.
+template <template <typename...> class Op, typename... Args>
+using detected_t = typename ::fit::internal::detector<nonesuch, void, Op, Args...>::type;
+
+// Trait for detecting whether |Op<Args...>| exists (via |::value_t|, which is either
+// |std::true_type| or |std::false_type|) and accessing its type via |::type| if so, which will
+// otherwise be |Default|.
+template <typename Default, template <typename...> class Op, typename... Args>
+using detected_or = typename ::fit::internal::detector<Default, void, Op, Args...>;
+
+// Essentially the same as |fit::detected_t| but with a user-specified default instead of
+// |fit::nonesuch|.
+template <typename Default, template <typename...> class Op, typename... Args>
+using detected_or_t = typename detected_or<Default, Op, Args...>::type;
+
+// Trait for detecting whether |Op<Args...>| exists and is exactly the type |Expected|.
+//
+// To reuse the previous example of |operator==| and |equality_t|:
+//
+//     template <typename T>
+//     using has_equality_exact = fit::is_detected_exact<bool, equality_t, T>;
+template <typename Expected, template <typename...> class Op, typename... Args>
+using is_detected_exact = std::is_same<Expected, detected_t<Op, Args...>>;
+
+template <typename Expected, template <typename...> class Op, typename... Args>
+constexpr bool is_detected_exact_v = is_detected_exact<Expected, Op, Args...>::value;
+
+// Essentially the same as |fit::is_detected_exact| but tests for convertibility instead of exact
+// sameness.
+template <typename To, template <typename...> class Op, typename... Args>
+using is_detected_convertible = std::is_convertible<detected_t<Op, Args...>, To>;
+
+template <typename To, template <typename...> class Op, typename... Args>
+constexpr bool is_detected_convertible_v = is_detected_convertible<To, Op, Args...>::value;
+
 }  // namespace fit
 
-#endif  // LIB_FIT_TRAITS_H_
+#endif  // LIB_FIT_INCLUDE_LIB_FIT_TRAITS_H_
