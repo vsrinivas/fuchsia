@@ -133,7 +133,7 @@ assemble_system("bringup_fastboot") {
     deps = custom_signing_script_deps
   } else if (use_vboot) {
     rebased_script = rebase_path(vboot_action.script, root_build_dir)
-    zbi_signing_args = [ "-s ${rebased_script}" ] + vboot_action.args
+    zbi_signing_args += [ "-s ${rebased_script}" ] + vboot_action.args
     deps = vboot_action.deps
   }
 
