@@ -848,6 +848,8 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
     // VMO was resized, rather than just when the system is running out of memory.
     LTRACEF("ERROR: failed to fault in or grab existing page: %d\n", (int)status);
     LTRACEF("%p vmo_offset %#" PRIx64 ", pf_flags %#x\n", this, vmo_offset, pf_flags);
+    // TODO(rashaeqbal): Audit error codes from LookupPagesLocked and make sure we're not returning
+    // something unexpected. Document expected return codes and constrain them if required.
     return status;
   }
   DEBUG_ASSERT(lookup_info.num_pages > 0);
@@ -933,8 +935,9 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
       // unmap the old one and put the new one in place
       status = aspace_->arch_aspace().Unmap(va, 1, aspace_->EnlargeArchUnmap(), nullptr);
       if (status != ZX_OK) {
+        DEBUG_ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "Unexpected failure from unmap: %d\n", status);
         TRACEF("failed to remove old mapping before replacing\n");
-        return ZX_ERR_NO_MEMORY;
+        return status;
       }
 
       size_t mapped;
@@ -942,8 +945,9 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
           aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages, range.mmu_flags,
                                      ArchVmAspace::ExistingEntryAction::Skip, &mapped);
       if (status != ZX_OK) {
+        DEBUG_ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "Unexpected failure from map: %d\n", status);
         TRACEF("failed to map replacement page\n");
-        return ZX_ERR_NO_MEMORY;
+        return status;
       }
       DEBUG_ASSERT(mapped >= 1);
 
@@ -962,8 +966,9 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
         aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages, range.mmu_flags,
                                    ArchVmAspace::ExistingEntryAction::Skip, &mapped);
     if (status != ZX_OK) {
+      DEBUG_ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "Unexpected failure from map: %d\n", status);
       TRACEF("failed to map page %d\n", status);
-      return ZX_ERR_NO_MEMORY;
+      return status;
     }
     DEBUG_ASSERT(mapped >= 1);
   }
