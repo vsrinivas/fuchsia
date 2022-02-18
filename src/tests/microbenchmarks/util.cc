@@ -4,6 +4,7 @@
 
 #include "util.h"
 
+#include <algorithm>
 #include <random>
 
 #include "src/lib/fxl/strings/string_printf.h"
