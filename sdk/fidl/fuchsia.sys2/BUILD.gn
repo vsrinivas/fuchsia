@@ -21,6 +21,7 @@ fidl("fuchsia.sys2") {
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.url",
+    "//zircon/vdso/zx",
   ]
 
   sources = [
