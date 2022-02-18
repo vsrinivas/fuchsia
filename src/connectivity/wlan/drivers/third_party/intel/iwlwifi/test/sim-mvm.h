@@ -10,6 +10,7 @@
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }  // extern "C"
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-nvm.h"
@@ -27,7 +28,7 @@ class SimMvm {
   //   true: tell the caller to notify the notification wait.
   //   false: no need to notify.
   //
-  zx_status_t SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait);
+  zx_status_t SendCmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd, bool* notify_wait);
 
  private:
   // The buffer size should be determined by the max response size.

@@ -5,6 +5,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-mvm.h"
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-mcc-update.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-scan.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-time-event.h"
 
 extern "C" {
@@ -27,7 +28,7 @@ static void build_response_with_status(SimMvmResponse* resp, uint32_t status) {
   cmd_resp->status = cpu_to_le32(status);
 }
 
-zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
+zx_status_t SimMvm::SendCmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd, bool* notify_wait) {
   INSPECT_HOST_CMD(cmd);
   uint8_t opcode = iwl_cmd_opcode(cmd->id);
   uint8_t group_id = iwl_cmd_groupid(cmd->id);
@@ -80,6 +81,10 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
         case MCAST_FILTER_CMD:
         case REPLY_BEACON_FILTERING_CMD:
           return ZX_OK;
+
+        case SCAN_ABORT_UMAC:
+          ret = HandleScanAbort(trans, cmd);
+          break;
 
         // Commands would return 'status' back to driver.
         case BINDING_CONTEXT_CMD:

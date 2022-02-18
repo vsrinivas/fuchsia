@@ -730,16 +730,18 @@ zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  if (id >= MAX_NUM_MVMVIF) {
+    IWL_ERR(mvm, "the interface id (%d) is invalid\n", id);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   {
     auto lock = std::lock_guard(mvm->mutex);
-
-    if (id >= MAX_NUM_MVMVIF) {
-      IWL_ERR(mvm, "the interface id (%d) is invalid\n", id);
-      return ZX_ERR_INVALID_ARGS;
-    }
-
     mvmvif = mvm->mvmvif[id];
-    if (!mvmvif) {
+    if (mvmvif) {
+      // attempt to stop any ongoing scans.
+      iwl_mvm_scan_stop(mvm, IWL_MVM_SCAN_REGULAR, true);
+    } else {
       IWL_ERR(mvm, "the interface id (%d) has no MAC context\n", id);
       return ZX_ERR_NOT_FOUND;
     }

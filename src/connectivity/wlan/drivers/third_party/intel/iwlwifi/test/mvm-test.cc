@@ -555,6 +555,24 @@ TEST_F(PassiveUmacScanTest, RegPassiveUmacScanAborted) __TA_NO_THREAD_SAFETY_ANA
   EXPECT_EQ(false, scan_result_.success);
 }
 
+// Tests explicit abort of Passive Umac scan in progress.
+TEST_F(PassiveUmacScanTest, RegPassiveUmacAbortScan) __TA_NO_THREAD_SAFETY_ANALYSIS {
+  ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  ASSERT_EQ(nullptr, mvm_->scan_vif);
+
+  ASSERT_EQ(false, scan_result_.sme_notified);
+  ASSERT_EQ(false, scan_result_.success);
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start_passive(&mvmvif_sta_, &passive_scan_args_));
+  EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(&mvmvif_sta_, mvm_->scan_vif);
+
+  // attempt to stop any ongoing scans.
+  iwl_mvm_scan_stop(mvm_, IWL_MVM_SCAN_REGULAR, false);
+  EXPECT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(true, scan_result_.sme_notified);
+  EXPECT_EQ(false, scan_result_.success);
+}
+
 /* Tests for both LMAC and UMAC scans */
 // Tests condition where scan completion timeouts out due to no response from FW.
 TEST_F(PassiveScanTest, RegPassiveScanTimeout) __TA_NO_THREAD_SAFETY_ANALYSIS {

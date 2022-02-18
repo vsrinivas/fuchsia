@@ -1792,6 +1792,9 @@ void iwl_mvm_rx_umac_scan_iter_complete_notif(struct iwl_mvm* mvm, struct iwl_rx
 /* LMAC scan - for testing */
 // 'mvm->scan_cmd' is populated after this function.
 zx_status_t iwl_mvm_scan_lmac(struct iwl_mvm* mvm, struct iwl_mvm_scan_params* params);
+// |type| refers to "enum iwl_scan_status".
+// \notify\ if set to true is meant to notify MLME (unused at this time)
+zx_status_t iwl_mvm_scan_stop(struct iwl_mvm* mvm, int type, bool notify);
 
 /* MVM debugfs */
 #ifdef CPTCFG_IWLWIFI_DEBUGFS

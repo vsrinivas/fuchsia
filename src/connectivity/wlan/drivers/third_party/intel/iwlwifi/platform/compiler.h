@@ -258,6 +258,10 @@ static inline uint8_t hweight8(uint8_t bitmap) {
   return hw;
 }
 
+#define hweight16(w) (hweight8(w) + hweight8((w) >> 8))
+#define hweight32(w) (hweight16(w) + hweight16((w) >> 16))
+#define hweight64(w) (hweight32(w) + hweight32((w) >> 32))
+
 #if defined(__cplusplus)
 }  // extern "C"
 #endif  // defined(__cplusplus)

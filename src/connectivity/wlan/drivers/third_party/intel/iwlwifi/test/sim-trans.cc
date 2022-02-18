@@ -114,7 +114,7 @@ static void iwl_sim_trans_stop_device(struct iwl_trans* trans, bool low_power) {
 
 static zx_status_t iwl_sim_trans_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
   bool notify_wait;
-  zx_status_t ret = IWL_TRANS_GET_SIM_TRANS(trans)->fw->SendCmd(cmd, &notify_wait);
+  zx_status_t ret = IWL_TRANS_GET_SIM_TRANS(trans)->fw->SendCmd(trans, cmd, &notify_wait);
 
   // On real hardware, some particular commands would reply a packet to unblock the wait.
   // However, in the simulated firmware, we don't generate the packet. We unblock it directly.

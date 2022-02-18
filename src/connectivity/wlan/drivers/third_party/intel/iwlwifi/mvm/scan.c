@@ -595,32 +595,34 @@ static bool iwl_mvm_scan_pass_all(struct iwl_mvm* mvm, struct cfg80211_sched_sca
     mvm->sched_scan_pass_all = SCHED_SCAN_PASS_ALL_ENABLED;
     return true;
 }
-
-static int iwl_mvm_lmac_scan_abort(struct iwl_mvm* mvm) {
-    int ret;
-    struct iwl_host_cmd cmd = {
-        .id = SCAN_OFFLOAD_ABORT_CMD,
-    };
-    uint32_t status = CAN_ABORT_STATUS;
-
-    ret = iwl_mvm_send_cmd_status(mvm, &cmd, &status);
-    if (ret) { return ret; }
-
-    if (status != CAN_ABORT_STATUS) {
-        /*
-         * The scan abort will return 1 for success or
-         * 2 for "failure".  A failure condition can be
-         * due to simply not being in an active scan which
-         * can occur if we send the scan abort before the
-         * microcode has notified us that a scan is completed.
-         */
-        IWL_DEBUG_SCAN(mvm, "SCAN OFFLOAD ABORT ret %d.\n", status);
-        ret = -ENOENT;
-    }
-
-    return ret;
-}
 #endif  // NEEDS_PORTING
+
+static zx_status_t iwl_mvm_lmac_scan_abort(struct iwl_mvm* mvm) {
+  zx_status_t status;
+  struct iwl_host_cmd cmd = {
+      .id = SCAN_OFFLOAD_ABORT_CMD,
+  };
+  uint32_t cmd_status = CAN_ABORT_STATUS;
+
+  status = iwl_mvm_send_cmd_status(mvm, &cmd, &cmd_status);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (cmd_status != CAN_ABORT_STATUS) {
+    /*
+     * The scan abort will return 1 for success or
+     * 2 for "failure".  A failure condition can be
+     * due to simply not being in an active scan which
+     * can occur if we send the scan abort before the
+     * microcode has notified us that a scan is completed.
+     */
+    IWL_DEBUG_SCAN(mvm, "SCAN OFFLOAD ABORT ret %d.\n", status);
+    status = ZX_ERR_BAD_STATE;
+  }
+
+  return status;
+}
 
 static void iwl_mvm_scan_fill_tx_cmd(struct iwl_mvm* mvm, struct iwl_scan_req_tx_cmd* tx_cmd,
                                      bool no_cck) {
@@ -1451,68 +1453,75 @@ static zx_status_t iwl_mvm_scan_umac(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_
   return ZX_OK;
 }
 
-#if 0   // NEEDS_PORTING
-static int iwl_mvm_num_scans(struct iwl_mvm* mvm) {
-    return hweight32(mvm->scan_status & IWL_MVM_SCAN_MASK);
+static unsigned int iwl_mvm_num_scans(struct iwl_mvm* mvm) {
+  return hweight32(mvm->scan_status & IWL_MVM_SCAN_MASK);
 }
 
-static int iwl_mvm_check_running_scans(struct iwl_mvm* mvm, int type) {
-    bool unified_image = fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_CNSLDTD_D3_D0_IMG);
+static zx_status_t iwl_mvm_check_running_scans(struct iwl_mvm* mvm, int type) {
+  bool unified_image = fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_CNSLDTD_D3_D0_IMG);
 
-    /* This looks a bit arbitrary, but the idea is that if we run
-     * out of possible simultaneous scans and the userspace is
-     * trying to run a scan type that is already running, we
-     * return -EBUSY.  But if the userspace wants to start a
-     * different type of scan, we stop the opposite type to make
-     * space for the new request.  The reason is backwards
-     * compatibility with old wpa_supplicant that wouldn't stop a
-     * scheduled scan before starting a normal scan.
-     */
+  /* This looks a bit arbitrary, but the idea is that if we run
+   * out of possible simultaneous scans and the userspace is
+   * trying to run a scan type that is already running, we
+   * return -EBUSY.  But if the userspace wants to start a
+   * different type of scan, we stop the opposite type to make
+   * space for the new request.  The reason is backwards
+   * compatibility with old wpa_supplicant that wouldn't stop a
+   * scheduled scan before starting a normal scan.
+   */
 
-    if (iwl_mvm_num_scans(mvm) < mvm->max_scans) { return 0; }
+  if (iwl_mvm_num_scans(mvm) < mvm->max_scans) {
+    return ZX_OK;
+  }
 
-    /* Use a switch, even though this is a bitmask, so that more
-     * than one bits set will fall in default and we will warn.
-     */
-    switch (type) {
+  /* Use a switch, even though this is a bitmask, so that more
+   * than one bits set will fall in default and we will warn.
+   */
+  switch (type) {
     case IWL_MVM_SCAN_REGULAR:
-        if (mvm->scan_status & IWL_MVM_SCAN_REGULAR_MASK) { return -EBUSY; }
-        return iwl_mvm_scan_stop(mvm, IWL_MVM_SCAN_SCHED, true);
+      if (mvm->scan_status & IWL_MVM_SCAN_REGULAR_MASK) {
+        return ZX_ERR_SHOULD_WAIT;
+      }
+      return iwl_mvm_scan_stop(mvm, IWL_MVM_SCAN_SCHED, true);
     case IWL_MVM_SCAN_SCHED:
-        if (mvm->scan_status & IWL_MVM_SCAN_SCHED_MASK) { return -EBUSY; }
-        return iwl_mvm_scan_stop(mvm, IWL_MVM_SCAN_REGULAR, true);
+      if (mvm->scan_status & IWL_MVM_SCAN_SCHED_MASK) {
+        return ZX_ERR_SHOULD_WAIT;
+      }
+      return iwl_mvm_scan_stop(mvm, IWL_MVM_SCAN_REGULAR, true);
     case IWL_MVM_SCAN_NETDETECT:
-        /* For non-unified images, there's no need to stop
-         * anything for net-detect since the firmware is
-         * restarted anyway.  This way, any sched scans that
-         * were running will be restarted when we resume.
-         */
-        if (!unified_image) { return 0; }
+      /* For non-unified images, there's no need to stop
+       * anything for net-detect since the firmware is
+       * restarted anyway.  This way, any sched scans that
+       * were running will be restarted when we resume.
+       */
+      if (!unified_image) {
+        return ZX_OK;
+      }
 
-        /* If this is a unified image and we ran out of scans,
-         * we need to stop something.  Prefer stopping regular
-         * scans, because the results are useless at this
-         * point, and we should be able to keep running
-         * another scheduled scan while suspended.
-         */
-        if (mvm->scan_status & IWL_MVM_SCAN_REGULAR_MASK) {
-            return iwl_mvm_scan_stop(mvm, IWL_MVM_SCAN_REGULAR, true);
-        }
-        if (mvm->scan_status & IWL_MVM_SCAN_SCHED_MASK) {
-            return iwl_mvm_scan_stop(mvm, IWL_MVM_SCAN_SCHED, true);
-        }
+      /* If this is a unified image and we ran out of scans,
+       * we need to stop something.  Prefer stopping regular
+       * scans, because the results are useless at this
+       * point, and we should be able to keep running
+       * another scheduled scan while suspended.
+       */
+      if (mvm->scan_status & IWL_MVM_SCAN_REGULAR_MASK) {
+        return iwl_mvm_scan_stop(mvm, IWL_MVM_SCAN_REGULAR, true);
+      }
+      if (mvm->scan_status & IWL_MVM_SCAN_SCHED_MASK) {
+        return iwl_mvm_scan_stop(mvm, IWL_MVM_SCAN_SCHED, true);
+      }
+      __attribute__((fallthrough));
 
     /* fall through, something is wrong if no scan was
      * running but we ran out of scans.
      */
     default:
-        WARN_ON(1);
-        break;
-    }
+      IWL_WARN(mvm, "No scan in progress but no scan slots available");
+      break;
+  }
 
-    return -EIO;
+  return ZX_ERR_IO;
 }
-#endif  // NEEDS_PORTING
 
 /* TODO(49686): check if there is a dynamic way to derive this value. Currently
  * this is set to 2x the average time it takes to finish scan.
@@ -1593,13 +1602,13 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif, const uint8_t* ch
         IWL_ERR(mvm, "scan while LAR regdomain is not set\n");
         return ZX_ERR_UNAVAILABLE;
     }
-
-    // TODO(43486): Stop passive scan
-    ret = iwl_mvm_check_running_scans(mvm, IWL_MVM_SCAN_REGULAR);
-    if (ret != ZX_OK) {
-      IWL_ERR(mvm, "another scan is running\n");
-      return ret; }
 #endif  // NEEDS_PORTING
+
+  ret = iwl_mvm_check_running_scans(mvm, IWL_MVM_SCAN_REGULAR);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvm, "another scan is running\n");
+    return ret;
+  }
 
   /* we should have failed registration if scan_cmd was NULL */
   if (!mvm->scan_cmd) {
@@ -1861,7 +1870,7 @@ void iwl_mvm_rx_umac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
 #endif  // NEEDS_PORTING
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 void iwl_mvm_rx_umac_scan_iter_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_umac_scan_iter_complete_notif* notif = (void*)pkt->data;
@@ -1880,64 +1889,67 @@ void iwl_mvm_rx_umac_scan_iter_complete_notif(struct iwl_mvm* mvm, struct iwl_rx
     IWL_DEBUG_SCAN(mvm, "UMAC Scan iteration complete: scan started at %llu (TSF)\n",
                    mvm->scan_start);
 }
+#endif
 
-// TODO(43486): Stop passive scan
-static int iwl_mvm_umac_scan_abort(struct iwl_mvm* mvm, int type) {
-    struct iwl_umac_scan_abort cmd = {};
-    int uid, ret;
+static zx_status_t iwl_mvm_umac_scan_abort(struct iwl_mvm* mvm, int type) {
+  struct iwl_umac_scan_abort cmd = {};
+  uint16_t uid;
+  zx_status_t status;
 
-    iwl_assert_lock_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
-    /* We should always get a valid index here, because we already
-     * checked that this type of scan was running in the generic
-     * code.
-     */
-    uid = iwl_mvm_scan_uid_by_status(mvm, type);
-    if (WARN_ON_ONCE(uid < 0)) { return uid; }
+  /* We should always get a valid index here, because we already
+   * checked that this type of scan was running in the generic
+   * code.
+   */
+  status = iwl_mvm_scan_uid_by_status(mvm, type, &uid);
+  if (status != ZX_OK)
+    return status;
 
-    cmd.uid = cpu_to_le32(uid);
+  cmd.uid = cpu_to_le32(uid);
 
-    IWL_DEBUG_SCAN(mvm, "Sending scan abort, uid %u\n", uid);
+  IWL_DEBUG_SCAN(mvm, "Sending scan abort, uid %u\n", uid);
 
-    ret = iwl_mvm_send_cmd_pdu(mvm, iwl_cmd_id(SCAN_ABORT_UMAC, IWL_ALWAYS_LONG_GROUP, 0), 0,
-                               sizeof(cmd), &cmd);
-    if (!ret) { mvm->scan_uid_status[uid] = type << IWL_MVM_SCAN_STOPPING_SHIFT; }
+  status = iwl_mvm_send_cmd_pdu(mvm, iwl_cmd_id(SCAN_ABORT_UMAC, IWL_ALWAYS_LONG_GROUP, 0), 0,
+                                sizeof(cmd), &cmd);
+  if (status != ZX_OK) {
+    mvm->scan_uid_status[uid] = type << IWL_MVM_SCAN_STOPPING_SHIFT;
+  }
 
-    return ret;
+  return status;
 }
 
-static int iwl_mvm_scan_stop_wait(struct iwl_mvm* mvm, int type) {
-    struct iwl_notification_wait wait_scan_done;
-    static const uint16_t scan_done_notif[] = {
-        SCAN_COMPLETE_UMAC,
-        SCAN_OFFLOAD_COMPLETE,
-    };
-    int ret;
+static zx_status_t iwl_mvm_scan_stop_wait(struct iwl_mvm* mvm, int type) {
+  struct iwl_notification_wait wait_scan_done;
+  static const uint16_t scan_done_notif[] = {
+      SCAN_COMPLETE_UMAC,
+      SCAN_OFFLOAD_COMPLETE,
+  };
+  zx_status_t status;
 
-    iwl_assert_lock_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvm->mutex);
 
-    iwl_init_notification_wait(&mvm->notif_wait, &wait_scan_done, scan_done_notif,
-                               ARRAY_SIZE(scan_done_notif), NULL, NULL);
+  iwl_init_notification_wait(&mvm->notif_wait, &wait_scan_done, scan_done_notif,
+                             ARRAY_SIZE(scan_done_notif), NULL, NULL);
 
-    IWL_DEBUG_SCAN(mvm, "Preparing to stop scan, type %x\n", type);
+  if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
+    IWL_DEBUG_SCAN(mvm, "Preparing to stop umac scan, type %x\n", type);
+    status = iwl_mvm_umac_scan_abort(mvm, type);
+  } else {
+    IWL_DEBUG_SCAN(mvm, "Preparing to stop lmac scan, type %x\n", type);
+    status = iwl_mvm_lmac_scan_abort(mvm);
+  }
 
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
-        ret = iwl_mvm_umac_scan_abort(mvm, type);
-    } else {
-        ret = iwl_mvm_lmac_scan_abort(mvm);
-    }
+  if (status != ZX_OK) {
+    IWL_DEBUG_SCAN(mvm, "couldn't stop scan type %d\n", type);
+    iwl_remove_notification(&mvm->notif_wait, &wait_scan_done);
+    return status;
+  }
 
-    if (ret) {
-        IWL_DEBUG_SCAN(mvm, "couldn't stop scan type %d\n", type);
-        iwl_remove_notification(&mvm->notif_wait, &wait_scan_done);
-        return ret;
-    }
+  status = iwl_wait_notification(&mvm->notif_wait, &wait_scan_done, ZX_MSEC(200));
 
-    ret = iwl_wait_notification(&mvm->notif_wait, &wait_scan_done, 1 * HZ);
-
-    return ret;
+  return status;
 }
-#endif  // NEEDS_PORTING
 
 int iwl_mvm_scan_size(struct iwl_mvm* mvm) {
   int base_size = IWL_SCAN_REQ_UMAC_SIZE_V1;
@@ -2014,46 +2026,55 @@ void iwl_mvm_report_scan_aborted(struct iwl_mvm* mvm) {
         }
     }
 }
+#endif  // NEEDS_PORTING
 
-// TODO(43486): Stop passive scan
-int iwl_mvm_scan_stop(struct iwl_mvm* mvm, int type, bool notify) {
-    int ret;
+zx_status_t iwl_mvm_scan_stop(struct iwl_mvm* mvm, int type, bool notify) {
+  zx_status_t ret;
 
-    if (!(mvm->scan_status & type)) { return 0; }
+  if (!(mvm->scan_status & type)) {
+    return 0;
+  }
 
-    if (iwl_mvm_is_radio_killed(mvm)) {
-        ret = 0;
-        goto out;
-    }
+  if (iwl_mvm_is_radio_killed(mvm)) {
+    ret = 0;
+    goto out;
+  }
 
-    ret = iwl_mvm_scan_stop_wait(mvm, type);
-    if (!ret) { mvm->scan_status |= type << IWL_MVM_SCAN_STOPPING_SHIFT; }
+  ret = iwl_mvm_scan_stop_wait(mvm, type);
+  if (ret == ZX_OK) {
+    mvm->scan_status |= type << IWL_MVM_SCAN_STOPPING_SHIFT;
+  }
 out:
-    /* Clear the scan status so the next scan requests will
-     * succeed and mark the scan as stopping, so that the Rx
-     * handler doesn't do anything, as the scan was stopped from
-     * above.
-     */
-    mvm->scan_status &= ~type;
+  /* Clear the scan status so the next scan requests will
+   * succeed and mark the scan as stopping, so that the Rx
+   * handler doesn't do anything, as the scan was stopped from
+   * above.
+   */
+  mvm->scan_status &= ~type;
 
-    if (type == IWL_MVM_SCAN_REGULAR) {
-        /* Since the rx handler won't do anything now, we have
-         * to release the scan reference here.
-         */
-        iwl_mvm_unref(mvm, IWL_MVM_REF_SCAN);
+  if (type == IWL_MVM_SCAN_REGULAR) {
+    /* Since the rx handler won't do anything now, we have
+     * to release the scan reference here.
+     */
+    iwl_mvm_unref(mvm, IWL_MVM_REF_SCAN);
+#if 0  // NEEDS_PORTING
         cancel_delayed_work(&mvm->scan_timeout_dwork);
-        if (notify) {
+#endif
+    if (notify) {
+#if 0  // NEEDS_PORTING
             struct cfg80211_scan_info info = {
                 .aborted = true,
             };
 
             ieee80211_scan_completed(mvm->hw, &info);
-        }
-    } else if (notify) {
-        ieee80211_sched_scan_stopped(mvm->hw);
-        mvm->sched_scan_pass_all = SCHED_SCAN_PASS_ALL_DISABLED;
+#endif
     }
+  } else if (notify) {
+#if 0  // NEEDS_PORTING
+        ieee80211_sched_scan_stopped(mvm->hw);
+#endif
+    mvm->sched_scan_pass_all = SCHED_SCAN_PASS_ALL_DISABLED;
+  }
 
-    return ret;
+  return ret;
 }
-#endif  // NEEDS_PORTING
