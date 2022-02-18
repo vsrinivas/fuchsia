@@ -689,6 +689,8 @@ zx_status_t VPartitionManager::SetPartitionLimitInternal(const uint8_t* guid, ui
     zxlogf(INFO, "Setting partition limit to 0x%" PRIx64 " for partition #%zu", byte_count,
            partition);
     max_partition_sizes_[partition] = byte_count;
+    // Update Inspect diagnostic.
+    diagnostics().UpdateMaxBytes(GetVPartEntryLocked(partition)->name(), byte_count);
     return ZX_OK;
   }
 
