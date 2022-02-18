@@ -49,7 +49,7 @@ class ControllerTest : public ::testing::Test {
   zx_status_t ParseDictionary(const Input& input) { return runner_->ParseDictionary(input); }
 
   void SetError(zx_status_t error) { runner_->set_error(error); }
-  void SetResult(Result result) { runner_->set_result(result); }
+  void SetResult(FuzzResult result) { runner_->set_result(result); }
   void SetResultInput(const Input& input) { runner_->set_result_input(input); }
   void SetStatus(Status status) { runner_->set_status(std::move(status)); }
   void UpdateMonitors(UpdateReason reason) { runner_->UpdateMonitors(reason); }
@@ -273,14 +273,14 @@ TEST_F(ControllerTest, AddMonitor) {
 
 TEST_F(ControllerTest, GetResults) {
   auto controller = Bind();
-  Result result;
+  FuzzResult result;
   FidlInput fidl_input;
   Input result_input({0xde, 0xad, 0xbe, 0xef});
 
-  SetResult(Result::DEATH);
+  SetResult(FuzzResult::DEATH);
   SetResultInput(result_input);
   EXPECT_EQ(controller->GetResults(&result, &fidl_input), ZX_OK);
-  EXPECT_EQ(result, Result::DEATH);
+  EXPECT_EQ(result, FuzzResult::DEATH);
   auto received = Receive(std::move(fidl_input));
   EXPECT_EQ(received.ToHex(), result_input.ToHex());
 }
@@ -296,11 +296,11 @@ TEST_F(ControllerTest, Execute) {
   EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
 
   SetError(ZX_OK);
-  SetResult(Result::OOM);
+  SetResult(FuzzResult::OOM);
   EXPECT_EQ(controller->Execute(Transmit(input), &result), ZX_OK);
   ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
   auto& response = result.response();
-  EXPECT_EQ(response.result, Result::OOM);
+  EXPECT_EQ(response.result, FuzzResult::OOM);
 }
 
 TEST_F(ControllerTest, Minimize) {
@@ -354,12 +354,12 @@ TEST_F(ControllerTest, Fuzz) {
   EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
 
   SetError(ZX_OK);
-  SetResult(Result::CRASH);
+  SetResult(FuzzResult::CRASH);
   SetResultInput(fuzzed);
   EXPECT_EQ(controller->Fuzz(&result), ZX_OK);
   ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
   auto& response = result.response();
-  EXPECT_EQ(response.result, Result::CRASH);
+  EXPECT_EQ(response.result, FuzzResult::CRASH);
   auto received = Receive(std::move(response.error_input));
   EXPECT_EQ(received.ToHex(), fuzzed.ToHex());
 }

@@ -34,7 +34,7 @@ class FakeRunner final : public Runner {
 
   // These overrides forward to the base class, but also stash a copy of their parameters locally in
   // this class. This lets |Run| reapply them after the base class calls |ClearErrors|.
-  void set_result(Result result) override;
+  void set_result(FuzzResult result) override;
   void set_result_input(const Input& input) override;
 
   void AddDefaults(Options* options) override;
@@ -61,7 +61,7 @@ class FakeRunner final : public Runner {
   zx_status_t Run();
 
   zx_status_t error_ = ZX_OK;
-  Result result_;
+  FuzzResult result_;
   Input result_input_;
   Status status_;
   std::vector<Input> seed_corpus_;

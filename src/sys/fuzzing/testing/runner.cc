@@ -87,7 +87,7 @@ zx_status_t SimpleFixedRunner::SyncMinimize(const Input& input) {
       if (i < size - 1) {
         next.Write(&data[i + 1], size - (i + 1));
       }
-      if (TestOne(next) != Result::NO_ERRORS) {
+      if (TestOne(next) != FuzzResult::NO_ERRORS) {
         minimized = std::move(next);
         data = minimized.data();
         size = minimized.size();
@@ -117,7 +117,7 @@ zx_status_t SimpleFixedRunner::SyncCleanse(const Input& input) {
   for (size_t i = 0; i < size; ++i) {
     uint8_t original = data[i];
     data[i] = 0x20;
-    if (TestOne(cleansed) == Result::NO_ERRORS) {
+    if (TestOne(cleansed) == FuzzResult::NO_ERRORS) {
       data[i] = original;
     } else {
       ClearErrors();
@@ -139,7 +139,7 @@ zx_status_t SimpleFixedRunner::SyncFuzz() {
   // Accumulate seed corpus coverage.
   for (size_t offset = 0; offset < num_seed_inputs; ++offset) {
     Input input = ReadFromCorpus(CorpusType::SEED, offset);
-    if (TestOne(input) != Result::NO_ERRORS) {
+    if (TestOne(input) != FuzzResult::NO_ERRORS) {
       // Set |run_| to fall through the subsequent loop.
       run_ = max_runs;
       break;
@@ -175,7 +175,7 @@ zx_status_t SimpleFixedRunner::SyncFuzz() {
         next.Write(&data[i + 1], size - (i + 1));
       }
     }
-    if (TestOne(next) != Result::NO_ERRORS) {
+    if (TestOne(next) != FuzzResult::NO_ERRORS) {
       break;
     }
     if (Measure(next, /* accumulate */ true)) {
@@ -236,7 +236,7 @@ Status SimpleFixedRunner::CollectStatus() {
   return CopyStatus(status_);
 }
 
-Result SimpleFixedRunner::TestOne(const Input& input) {
+FuzzResult SimpleFixedRunner::TestOne(const Input& input) {
   auto* data = input.data();
   auto size = input.size();
   auto pat_size = strlen(kPattern);
@@ -244,7 +244,7 @@ Result SimpleFixedRunner::TestOne(const Input& input) {
   for (size_t i = 0; i < num_candidates; ++i) {
     // Crash if the pattern is found in the data.
     if (memcmp(&data[i], kPattern, pat_size) == 0) {
-      set_result(Result::CRASH);
+      set_result(FuzzResult::CRASH);
       set_result_input(input);
       break;
     }

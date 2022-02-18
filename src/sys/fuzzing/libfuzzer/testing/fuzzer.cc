@@ -18,6 +18,7 @@
 #include <test/fuzzer/cpp/fidl.h>
 
 #include "src/sys/fuzzing/common/options.h"
+#include "src/sys/fuzzing/common/result.h"
 #include "src/sys/fuzzing/common/sancov.h"
 
 namespace fuzzing {
@@ -120,33 +121,33 @@ int TestFuzzer::TestOneInput(const uint8_t *data, size_t size) {
   }
   has_leak_ = false;
   switch (feedback->result) {
-    case Result::NO_ERRORS:
+    case FuzzResult::NO_ERRORS:
       coordinator_.SignalPeer(kFinish);
       break;
-    case Result::BAD_MALLOC:
+    case FuzzResult::BAD_MALLOC:
       printf("DEDUP_TOKEN: BAD_MALLOC\n");
       BadMalloc();
       return -1;
-    case Result::CRASH:
+    case FuzzResult::CRASH:
       printf("DEDUP_TOKEN: CRASH\n");
       Crash();
       return -1;
-    case Result::DEATH:
+    case FuzzResult::DEATH:
       printf("DEDUP_TOKEN: DEATH\n");
       Death();
       return -1;
-    case Result::EXIT:
+    case FuzzResult::EXIT:
       printf("DEDUP_TOKEN: EXIT\n");
       exit(0);
       return -1;
-    case Result::LEAK:
+    case FuzzResult::LEAK:
       has_leak_ = true;
       break;
-    case Result::OOM:
+    case FuzzResult::OOM:
       printf("DEDUP_TOKEN: OOM\n");
       OOM();
       return -1;
-    case Result::TIMEOUT:
+    case FuzzResult::TIMEOUT:
       printf("DEDUP_TOKEN: TIMEOUT\n");
       Timeout();
       return -1;

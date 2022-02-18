@@ -33,9 +33,9 @@ void RunnerTest::SetCoverage(const Input& input, const Coverage& coverage) {
   feedback_[input.ToHex()].coverage = coverage;
 }
 
-Result RunnerTest::GetResult(const Input& input) { return feedback_[input.ToHex()].result; }
+FuzzResult RunnerTest::GetResult(const Input& input) { return feedback_[input.ToHex()].result; }
 
-void RunnerTest::SetResult(const Input& input, Result result) {
+void RunnerTest::SetResult(const Input& input, FuzzResult result) {
   feedback_[input.ToHex()].result = result;
 }
 
@@ -60,7 +60,7 @@ Input RunnerTest::RunOne(const Coverage& coverage) {
   return input;
 }
 
-Input RunnerTest::RunOne(Result result) {
+Input RunnerTest::RunOne(FuzzResult result) {
   EXPECT_TRUE(HasTestInput());
   auto input = GetTestInput();
   SetFeedback(GetCoverage(input), result, HasLeak(input));
@@ -115,16 +115,16 @@ void RunnerTest::ExecuteNoError(Runner* runner) {
   runner->Execute(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
   EXPECT_EQ(RunOne().ToHex(), input.ToHex());
   EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result(), Result::NO_ERRORS);
+  EXPECT_EQ(runner->result(), FuzzResult::NO_ERRORS);
 }
 
 void RunnerTest::ExecuteWithError(Runner* runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x02});
   runner->Execute(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
-  RunOne(Result::BAD_MALLOC);
+  RunOne(FuzzResult::BAD_MALLOC);
   EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result(), Result::BAD_MALLOC);
+  EXPECT_EQ(runner->result(), FuzzResult::BAD_MALLOC);
   EXPECT_EQ(runner->result_input().ToHex(), input.ToHex());
 }
 
@@ -138,9 +138,9 @@ void RunnerTest::ExecuteWithLeak(Runner* runner) {
   SetLeak(input, true);
   runner->Execute(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
   RunOne();
-  RunOne(Result::LEAK);
+  RunOne(FuzzResult::LEAK);
   EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result(), Result::LEAK);
+  EXPECT_EQ(runner->result(), FuzzResult::LEAK);
   EXPECT_EQ(runner->result_input().ToHex(), input.ToHex());
 }
 
@@ -158,7 +158,7 @@ void RunnerTest::MinimizeEmpty(Runner* runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input;
   runner->Minimize(std::move(input), [&](zx_status_t status) { SetStatus(status); });
-  RunOne(Result::CRASH);
+  RunOne(FuzzResult::CRASH);
   EXPECT_EQ(GetStatus(), ZX_OK);
 }
 
@@ -167,7 +167,7 @@ void RunnerTest::MinimizeOneByte(Runner* runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x44});
   runner->Minimize(std::move(input), [&](zx_status_t status) { SetStatus(status); });
-  RunOne(Result::CRASH);
+  RunOne(FuzzResult::CRASH);
   EXPECT_EQ(GetStatus(), ZX_OK);
 }
 
@@ -181,18 +181,18 @@ void RunnerTest::MinimizeReduceByTwo(Runner* runner) {
   runner->Minimize(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
 
   // Simulate a crash on the original input of 6 bytes...
-  auto test_input = RunOne(Result::CRASH);
+  auto test_input = RunOne(FuzzResult::CRASH);
   EXPECT_EQ(input.ToHex(), test_input.ToHex());
 
   // ...and on inputs as small as input of 4 bytes, but no smaller.
   size_t runs = 0;
   for (; test_input.size() > 4 && runs < kRuns; ++runs) {
-    test_input = RunOne(Result::CRASH);
+    test_input = RunOne(FuzzResult::CRASH);
   }
   auto minimized = test_input.Duplicate();
   EXPECT_LE(minimized.size(), 4U);
   for (runs = 0; runs < kRuns; ++runs) {
-    test_input = RunOne(Result::NO_ERRORS);
+    test_input = RunOne(FuzzResult::NO_ERRORS);
   }
 
   EXPECT_EQ(GetStatus(), ZX_OK);
@@ -206,9 +206,9 @@ void RunnerTest::MinimizeNewError(Runner* runner) {
   Input input({0x05, 0x15, 0x25, 0x35});
   runner->Minimize(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
   // Simulate a crash on the original input...
-  auto minimized = RunOne(Result::CRASH);
+  auto minimized = RunOne(FuzzResult::CRASH);
   // ...and a timeout on a smaller input.
-  auto test_input = RunOne(Result::TIMEOUT);
+  auto test_input = RunOne(FuzzResult::TIMEOUT);
   EXPECT_LT(test_input.size(), input.size());
   EXPECT_EQ(GetStatus(), ZX_OK);
   EXPECT_EQ(runner->result_input().ToHex(), minimized.ToHex());
@@ -221,7 +221,7 @@ void RunnerTest::CleanseNoReplacement(Runner* runner) {
   // Simulate no error after cleansing any byte.
   for (size_t i = 0; i < input.size(); ++i) {
     for (size_t j = 0; j < kNumReplacements; ++j) {
-      RunOne(Result::NO_ERRORS);
+      RunOne(FuzzResult::NO_ERRORS);
     }
   }
   EXPECT_EQ(GetStatus(), ZX_OK);
@@ -241,13 +241,13 @@ void RunnerTest::CleanseTwoBytes(Runner* runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
 
   Input input0({0x08, 0x18, 0x28});
-  SetResult(input0, Result::DEATH);
+  SetResult(input0, FuzzResult::DEATH);
 
   Input input1({0x08, 0x18, 0xff});
-  SetResult(input1, Result::DEATH);
+  SetResult(input1, FuzzResult::DEATH);
 
   Input input2({0x20, 0x18, 0xff});
-  SetResult(input2, Result::DEATH);
+  SetResult(input2, FuzzResult::DEATH);
 
   runner->Cleanse(input0.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
 
@@ -275,9 +275,9 @@ void RunnerTest::FuzzUntilError(Runner* runner) {
   RunOne();
   RunOne();
   RunOne();
-  RunOne(Result::EXIT);
+  RunOne(FuzzResult::EXIT);
   EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result(), Result::EXIT);
+  EXPECT_EQ(runner->result(), FuzzResult::EXIT);
 }
 
 void RunnerTest::FuzzUntilRuns(Runner* runner) {
@@ -357,7 +357,7 @@ void RunnerTest::FuzzUntilRuns(Runner* runner) {
 
   // All done.
   EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result(), Result::NO_ERRORS);
+  EXPECT_EQ(runner->result(), FuzzResult::NO_ERRORS);
 
   // All corpus inputs should have been run.
   std::sort(expected.begin(), expected.end());
@@ -382,7 +382,7 @@ void RunnerTest::FuzzUntilTime(Runner* runner) {
   auto elapsed = zx::clock::get_monotonic() - start;
 
   EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result(), Result::NO_ERRORS);
+  EXPECT_EQ(runner->result(), FuzzResult::NO_ERRORS);
   EXPECT_GE(elapsed, zx::msec(100));
 }
 
@@ -392,7 +392,7 @@ void RunnerTest::MergeSeedError(Runner* runner, zx_status_t expected, uint64_t o
   Configure(runner, options);
   runner->AddToCorpus(CorpusType::SEED, Input({0x09}));
   runner->Merge([&](zx_status_t status) { SetStatus(status); });
-  RunOne(Result::OOM);
+  RunOne(FuzzResult::OOM);
   EXPECT_EQ(GetStatus(), expected);
 }
 
@@ -416,7 +416,7 @@ void RunnerTest::Merge(Runner* runner, bool keeps_errors, uint64_t oom_limit) {
 
   // Triggers error => maybe kept.
   Input input2({0x0b});
-  SetResult(input2, Result::OOM);
+  SetResult(input2, FuzzResult::OOM);
   runner->AddToCorpus(CorpusType::LIVE, input2.Duplicate());
   if (keeps_errors) {
     expected_live.push_back(input2.ToHex());
@@ -482,7 +482,7 @@ void RunnerTest::Stop(Runner* runner) {
   runner->Join();
   runner->Join();
   EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result(), Result::NO_ERRORS);
+  EXPECT_EQ(runner->result(), FuzzResult::NO_ERRORS);
   t.join();
 }
 

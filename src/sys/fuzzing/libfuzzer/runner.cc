@@ -511,7 +511,7 @@ bool LibFuzzerRunner::ParseStatus(const std::string_view& line) {
   } else if (reason_str == "REDUCE") {
     reason = UpdateReason::REDUCE;
   } else if (reason_str == "DONE") {
-    set_result(Result::NO_ERRORS);
+    set_result(FuzzResult::NO_ERRORS);
     status_.set_running(false);
     reason = UpdateReason::DONE;
   }
@@ -567,22 +567,22 @@ void LibFuzzerRunner::ParseMessage(const std::string_view& line) {
   if (re2::RE2::Consume(&input, "==\\d+== ERROR: libFuzzer: ")) {
     if (re2::RE2::PartialMatch(input, "fuzz target exited")) {
       // See libFuzzer's |Fuzzer::ExitCallback|.
-      set_result(Result::EXIT);
+      set_result(FuzzResult::EXIT);
     } else if (re2::RE2::PartialMatch(input, "deadly signal")) {
       // See libFuzzer's |Fuzzer::CrashCallback|.
-      set_result(Result::CRASH);
+      set_result(FuzzResult::CRASH);
     } else if (re2::RE2::PartialMatch(input, "timeout after \\d+ seconds")) {
       // See libFuzzer's |Fuzzer::AlarmCallback|.
-      set_result(Result::TIMEOUT);
+      set_result(FuzzResult::TIMEOUT);
     } else if (re2::RE2::PartialMatch(input, "out-of-memory \\(malloc\\(-?\\d+\\)\\)")) {
       // See libFuzzer's |Fuzzer::HandleMalloc|.
-      set_result(Result::BAD_MALLOC);
+      set_result(FuzzResult::BAD_MALLOC);
     } else if (re2::RE2::PartialMatch(input, "out-of-memory \\(used: \\d+Mb; limit: \\d+Mb\\)")) {
       // See libFuzzer's |Fuzzer::RssLimitCallback|.
-      set_result(Result::OOM);
+      set_result(FuzzResult::OOM);
     } else {
       // See libFuzzer's |Fuzzer::DeathCallback|.
-      set_result(Result::DEATH);
+      set_result(FuzzResult::DEATH);
     }
     return;
   }
@@ -590,7 +590,7 @@ void LibFuzzerRunner::ParseMessage(const std::string_view& line) {
   // See libFuzzer's |Fuzzer::TryDetectingAMemoryLeak|.
   // This match is ugly, but it's the only message in current libFuzzer we can rely on for a leak.
   if (line == "INFO: to ignore leaks on libFuzzer side use -detect_leaks=0.") {
-    set_result(Result::LEAK);
+    set_result(FuzzResult::LEAK);
     return;
   }
 

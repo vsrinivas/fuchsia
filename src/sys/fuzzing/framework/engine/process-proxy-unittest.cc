@@ -164,7 +164,7 @@ TEST_F(ProcessProxyTest, DefaultBadMalloc) {
   TestTarget target;
   process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(kDefaultMallocExitcode);
-  EXPECT_EQ(process_proxy->GetResult(), Result::BAD_MALLOC);
+  EXPECT_EQ(process_proxy->GetResult(), FuzzResult::BAD_MALLOC);
 }
 
 TEST_F(ProcessProxyTest, CustomBadMalloc) {
@@ -177,7 +177,7 @@ TEST_F(ProcessProxyTest, CustomBadMalloc) {
   TestTarget target;
   process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(exitcode);
-  EXPECT_EQ(process_proxy->GetResult(), Result::BAD_MALLOC);
+  EXPECT_EQ(process_proxy->GetResult(), FuzzResult::BAD_MALLOC);
 }
 
 TEST_F(ProcessProxyTest, DefaultDeath) {
@@ -187,7 +187,7 @@ TEST_F(ProcessProxyTest, DefaultDeath) {
   TestTarget target;
   process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(kDefaultDeathExitcode);
-  EXPECT_EQ(process_proxy->GetResult(), Result::DEATH);
+  EXPECT_EQ(process_proxy->GetResult(), FuzzResult::DEATH);
 }
 
 TEST_F(ProcessProxyTest, CustomDeath) {
@@ -200,7 +200,7 @@ TEST_F(ProcessProxyTest, CustomDeath) {
   TestTarget target;
   process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(exitcode);
-  EXPECT_EQ(process_proxy->GetResult(), Result::DEATH);
+  EXPECT_EQ(process_proxy->GetResult(), FuzzResult::DEATH);
 }
 
 TEST_F(ProcessProxyTest, Exit) {
@@ -210,7 +210,7 @@ TEST_F(ProcessProxyTest, Exit) {
   TestTarget target;
   process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(1);
-  EXPECT_EQ(process_proxy->GetResult(), Result::EXIT);
+  EXPECT_EQ(process_proxy->GetResult(), FuzzResult::EXIT);
 }
 
 TEST_F(ProcessProxyTest, DefaultLeak) {
@@ -220,7 +220,7 @@ TEST_F(ProcessProxyTest, DefaultLeak) {
   TestTarget target;
   process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(kDefaultLeakExitcode);
-  EXPECT_EQ(process_proxy->GetResult(), Result::LEAK);
+  EXPECT_EQ(process_proxy->GetResult(), FuzzResult::LEAK);
 }
 
 TEST_F(ProcessProxyTest, CustomLeak) {
@@ -233,7 +233,7 @@ TEST_F(ProcessProxyTest, CustomLeak) {
   TestTarget target;
   process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(exitcode);
-  EXPECT_EQ(process_proxy->GetResult(), Result::LEAK);
+  EXPECT_EQ(process_proxy->GetResult(), FuzzResult::LEAK);
 }
 
 TEST_F(ProcessProxyTest, DefaultOom) {
@@ -243,7 +243,7 @@ TEST_F(ProcessProxyTest, DefaultOom) {
   TestTarget target;
   process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(kDefaultOomExitcode);
-  EXPECT_EQ(process_proxy->GetResult(), Result::OOM);
+  EXPECT_EQ(process_proxy->GetResult(), FuzzResult::OOM);
 }
 
 TEST_F(ProcessProxyTest, CustomOom) {
@@ -256,7 +256,7 @@ TEST_F(ProcessProxyTest, CustomOom) {
   TestTarget target;
   process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(exitcode);
-  EXPECT_EQ(process_proxy->GetResult(), Result::OOM);
+  EXPECT_EQ(process_proxy->GetResult(), FuzzResult::OOM);
 }
 
 TEST_F(ProcessProxyTest, Timeout) {

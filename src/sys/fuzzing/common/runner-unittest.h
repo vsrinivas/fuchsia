@@ -47,18 +47,18 @@ class RunnerTest : public ::testing::Test {
 
   // Tests may set fake feedback to be "produced" during calls to |RunOne| with the given |input|.
   void SetCoverage(const Input& input, const Coverage& coverage);
-  void SetResult(const Input& input, Result result);
+  void SetResult(const Input& input, FuzzResult result);
   void SetLeak(const Input& input, bool leak);
 
   const Coverage& GetCoverage(const Input& input);
-  Result GetResult(const Input& input);
+  FuzzResult GetResult(const Input& input);
   bool HasLeak(const Input& input);
 
   // Fakes the interactions needed with the runner to perform a single fuzzing run.
   Input RunOne();
 
   // Like |RunOne()|, but the given parameters overrides any set by |SetResult|.
-  Input RunOne(Result result);
+  Input RunOne(FuzzResult result);
   Input RunOne(const Coverage& coverage);
   Input RunOne(bool leak);
 
@@ -84,7 +84,7 @@ class RunnerTest : public ::testing::Test {
   virtual Input GetTestInput() = 0;
 
   // Sts the feedback for the next run.
-  virtual void SetFeedback(const Coverage& coverage, Result result, bool leak) = 0;
+  virtual void SetFeedback(const Coverage& coverage, FuzzResult result, bool leak) = 0;
 
   // Returns whether |SetStatus| has been called. If true, the workflow is complete and the engine
   // is idle.
@@ -138,7 +138,7 @@ class RunnerTest : public ::testing::Test {
  private:
   struct Feedback {
     Coverage coverage;
-    Result result = Result::NO_ERRORS;
+    FuzzResult result = FuzzResult::NO_ERRORS;
     bool leak = false;
   };
 

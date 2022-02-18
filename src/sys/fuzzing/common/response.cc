@@ -13,7 +13,7 @@ namespace {
 struct CallbackVisitor {
   async_dispatcher_t* dispatcher;
   zx_status_t status = ZX_OK;
-  Result result = Result::NO_ERRORS;
+  FuzzResult result = FuzzResult::NO_ERRORS;
   FidlInput fidl_input;
 
   void operator()(std::monostate& callback) { FX_NOTREACHED(); }
@@ -95,9 +95,9 @@ Response& Response::operator=(Response&& other) noexcept {
   return *this;
 }
 
-void Response::Send(zx_status_t status) { SendImpl(status, Result::NO_ERRORS, FidlInput()); }
+void Response::Send(zx_status_t status) { SendImpl(status, FuzzResult::NO_ERRORS, FidlInput()); }
 
-void Response::Send(zx_status_t status, Result result, Input input) {
+void Response::Send(zx_status_t status, FuzzResult result, Input input) {
   FidlInput fidl_input;
   if (status == ZX_OK) {
     status = transceiver_->Transmit(std::move(input), &fidl_input);
@@ -105,7 +105,7 @@ void Response::Send(zx_status_t status, Result result, Input input) {
   SendImpl(status, result, std::move(fidl_input));
 }
 
-void Response::SendImpl(zx_status_t status, Result result, FidlInput fidl_input) {
+void Response::SendImpl(zx_status_t status, FuzzResult result, FidlInput fidl_input) {
   std::visit(CallbackVisitor{dispatcher_->get(), status, result, std::move(fidl_input)}, callback_);
   callback_ = std::monostate{};
 }

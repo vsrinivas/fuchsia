@@ -22,8 +22,6 @@
 
 namespace fuzzing {
 
-using fuchsia::fuzzer::Result;
-
 // Specializes the generic |RunnerTest| for |RunnerImpl|.
 class RunnerImplTest : public RunnerTest {
  protected:
@@ -31,7 +29,7 @@ class RunnerImplTest : public RunnerTest {
   void Configure(Runner* runner, const std::shared_ptr<Options>& options) override;
   bool HasTestInput(zx::time deadline) override;
   Input GetTestInput() override;
-  void SetFeedback(const Coverage& coverage, Result result, bool leak) override;
+  void SetFeedback(const Coverage& coverage, FuzzResult result, bool leak) override;
 
   // FakeTargetAdapter methods.
   void SetAdapterParameters(const std::vector<std::string>& parameters);

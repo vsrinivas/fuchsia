@@ -104,7 +104,7 @@ class LibFuzzerRunnerTest : public RunnerTest {
     return Input(test_input_buffer_);
   }
 
-  void SetFeedback(const Coverage& coverage, Result result, bool leak) override {
+  void SetFeedback(const Coverage& coverage, FuzzResult result, bool leak) override {
     feedback_.result = result;
     feedback_.leak_suspected = leak;
     feedback_.num_counters = coverage.size();

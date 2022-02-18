@@ -132,7 +132,7 @@ zx_status_t RunnerImpl::SyncExecute(const Input& input) {
 zx_status_t RunnerImpl::SyncMinimize(const Input& input) {
   auto scope = SyncScope();
   TestOne(input);
-  if (result() == Result::NO_ERRORS) {
+  if (result() == FuzzResult::NO_ERRORS) {
     FX_LOGS(WARNING) << "Test input did not trigger an error.";
     return ZX_ERR_INVALID_ARGS;
   }
@@ -162,7 +162,7 @@ zx_status_t RunnerImpl::SyncMinimize(const Input& input) {
     ClearErrors();
     run_ = 0;
     FuzzLoop();
-    if (result() == Result::NO_ERRORS) {
+    if (result() == FuzzResult::NO_ERRORS) {
       FX_LOGS(INFO) << "Did not reduce error input beyond " << minimized.size()
                     << " bytes; exiting.";
       break;
@@ -226,7 +226,7 @@ zx_status_t RunnerImpl::SyncCleanse(const Input& input) {
       /* finish_run */
       [this, &cleansed, &clean, &kClean, &offsets, &left, &mod, &orig](Input* ignored) {
         auto* data = cleansed.data();
-        if (result() != Result::NO_ERRORS) {
+        if (result() != FuzzResult::NO_ERRORS) {
           ClearErrors();
           clean = kClean.begin();
           offsets.pop_front();
@@ -265,7 +265,7 @@ zx_status_t RunnerImpl::SyncMerge() {
   size_t offset = 0;
   Input input;
   TestCorpus(seed_corpus_);
-  if (result() != Result::NO_ERRORS) {
+  if (result() != FuzzResult::NO_ERRORS) {
     FX_LOGS(WARNING) << "Seed corpus input triggered an error.";
     return ZX_ERR_INVALID_ARGS;
   }
@@ -281,7 +281,7 @@ zx_status_t RunnerImpl::SyncMerge() {
       },
       /* finish_run */
       [this, &error_inputs, &inputs](Input* last_input) {
-        if (result() != Result::NO_ERRORS) {
+        if (result() != FuzzResult::NO_ERRORS) {
           FX_LOGS(WARNING) << "Corpus contains an input that triggers an error.";
           error_inputs.push_back(last_input->Duplicate());
           ClearErrors();
@@ -306,7 +306,7 @@ zx_status_t RunnerImpl::SyncMerge() {
       /* finish_run*/
       [this](Input* last_input) {
         size_t unique_features = pool_->Accumulate();
-        if (result() != Result::NO_ERRORS || unique_features) {
+        if (result() != FuzzResult::NO_ERRORS || unique_features) {
           auto status = live_corpus_->Add(std::move(*last_input));
           FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
         }
@@ -665,7 +665,7 @@ bool RunnerImpl::HasError(const Input* last_input) {
     set_result(process_proxy->second->GetResult());
   } else {
     /// .. except for timeouts.
-    set_result(Result::TIMEOUT);
+    set_result(FuzzResult::TIMEOUT);
     constexpr size_t kBufSize = 1ULL << 20;
     auto buf = std::make_unique<char[]>(kBufSize);
     for (auto& process_proxy : process_proxies_) {
@@ -674,7 +674,7 @@ bool RunnerImpl::HasError(const Input* last_input) {
     }
   }
   // If it's an ignored exit(),just remove that one process_proxy and treat it like a signal.
-  if (result() == Result::EXIT && !options_->detect_exits()) {
+  if (result() == FuzzResult::EXIT && !options_->detect_exits()) {
     process_proxies_.erase(error);
     ClearErrors();
     if (pending_signals_) {

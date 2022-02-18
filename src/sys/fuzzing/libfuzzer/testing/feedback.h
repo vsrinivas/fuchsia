@@ -9,9 +9,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace fuzzing {
+#include "src/sys/fuzzing/common/result.h"
 
-using fuchsia::fuzzer::Result;
+namespace fuzzing {
 
 constexpr size_t kMaxNumFeedbackCounters = 256;
 
@@ -24,7 +24,7 @@ struct Counter {
 // Represents the unit test's instructions to the test fuzzer as to what behaviors to emulate.
 // See also |LibFuzzerRunnerTest::setFeedback| and |TestFuzzer::TestOneInput|.
 struct RelayedFeedback {
-  Result result;
+  FuzzResult result;
   bool leak_suspected;
   size_t num_counters;
   Counter counters[kMaxNumFeedbackCounters];

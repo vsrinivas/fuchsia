@@ -16,11 +16,10 @@
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/input.h"
+#include "src/sys/fuzzing/common/result.h"
 #include "src/sys/fuzzing/common/transceiver.h"
 
 namespace fuzzing {
-
-using ::fuchsia::fuzzer::Result;
 
 // This class wraps the various FIDL callbacks for |fuchsia.fuzzer.Controller| and "hides the
 // ugliness", that is, it encapsulates a lot of the details in responding asynchronously via a FIDL
@@ -28,12 +27,12 @@ using ::fuchsia::fuzzer::Result;
 class Response final {
  public:
   using InputCallback = fit::function<void(FidlInput)>;
-  using ResultAndInputCallback = fit::function<void(Result, FidlInput)>;
+  using ResultAndInputCallback = fit::function<void(FuzzResult, FidlInput)>;
   using StatusCallback = fit::function<void(zx_status_t)>;
-  using ResultAndStatusCallback = fit::function<void(fpromise::result<Result, zx_status_t>)>;
+  using ResultAndStatusCallback = fit::function<void(fpromise::result<FuzzResult, zx_status_t>)>;
   using InputAndStatusCallback = fit::function<void(fpromise::result<FidlInput, zx_status_t>)>;
   using FullCallback =
-      fit::function<void(fpromise::result<std::tuple<Result, FidlInput>, zx_status_t>)>;
+      fit::function<void(fpromise::result<std::tuple<FuzzResult, FidlInput>, zx_status_t>)>;
 
   Response() = default;
   Response(Response&& other) noexcept { *this = std::move(other); }
@@ -58,10 +57,10 @@ class Response final {
   // Respond with the appropriate combination of |status|, |result|, and |input|, depending on
   // the callback provided when the object was constructed. It is an error to call either version of
   // |send| after calling this method.
-  void Send(zx_status_t status, Result result, Input input);
+  void Send(zx_status_t status, FuzzResult result, Input input);
 
  private:
-  void SendImpl(zx_status_t status, Result result, FidlInput input);
+  void SendImpl(zx_status_t status, FuzzResult result, FidlInput input);
 
   std::shared_ptr<Dispatcher> dispatcher_;
   std::shared_ptr<Transceiver> transceiver_;

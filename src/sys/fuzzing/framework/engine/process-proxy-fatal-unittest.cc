@@ -22,7 +22,7 @@ TEST_F(ProcessProxyFatalTest, Crash) {
   auto process = target.Launch();
   process_proxy->Connect(IgnoreSentSignals(std::move(process)));
   target.Crash();
-  EXPECT_EQ(process_proxy->GetResult(), Result::CRASH);
+  EXPECT_EQ(process_proxy->GetResult(), FuzzResult::CRASH);
 }
 
 }  // namespace

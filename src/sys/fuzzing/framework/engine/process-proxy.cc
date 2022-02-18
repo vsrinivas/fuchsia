@@ -81,7 +81,7 @@ void ProcessProxyImpl::Connect(InstrumentedProcess instrumented) {
   if (status != ZX_OK) {
     // The process already crashed!
     FX_CHECK(status == ZX_ERR_BAD_STATE);
-    result_ = Result::CRASH;
+    result_ = FuzzResult::CRASH;
   }
   // Start crash handler.
   FX_CHECK(!exception_thread_.joinable());
@@ -98,7 +98,7 @@ void ProcessProxyImpl::Connect(InstrumentedProcess instrumented) {
       // |GetResult| will attempt to determine the reason using the exitcode.
       return;
     }
-    result_ = Result::CRASH;
+    result_ = FuzzResult::CRASH;
   });
   // Wire up signal forwarders.
   auto* eventpair = instrumented.mutable_eventpair();
@@ -159,7 +159,7 @@ zx_status_t ProcessProxyImpl::GetStats(ProcessStats* out) {
   return GetStatsForProcess(process_, out);
 }
 
-Result ProcessProxyImpl::GetResult() {
+FuzzResult ProcessProxyImpl::GetResult() {
   FX_DCHECK(options_);
   Waiter waiter = [this](zx::time deadline) {
     return process_.wait_one(ZX_PROCESS_TERMINATED, deadline, nullptr);
@@ -170,20 +170,20 @@ Result ProcessProxyImpl::GetResult() {
   status = process_.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
   FX_CHECK(status == ZX_OK) << "failed to get process info: " << zx_status_get_string(status);
   FX_CHECK(info.flags & ZX_INFO_PROCESS_FLAG_EXITED);
-  Result result = Result::NO_ERRORS;
+  FuzzResult result = FuzzResult::NO_ERRORS;
   if (info.return_code == options_->malloc_exitcode()) {
-    result = Result::BAD_MALLOC;
+    result = FuzzResult::BAD_MALLOC;
   } else if (info.return_code == options_->death_exitcode()) {
-    result = Result::DEATH;
+    result = FuzzResult::DEATH;
   } else if (info.return_code == options_->leak_exitcode()) {
-    result = Result::LEAK;
+    result = FuzzResult::LEAK;
   } else if (info.return_code == options_->oom_exitcode()) {
-    result = Result::OOM;
+    result = FuzzResult::OOM;
   } else if (info.return_code != 0) {
-    result = Result::EXIT;
+    result = FuzzResult::EXIT;
   }
   // Set the result, unless it was already set.
-  Result previous = Result::NO_ERRORS;
+  FuzzResult previous = FuzzResult::NO_ERRORS;
   return result_.compare_exchange_strong(previous, result) ? result : previous;
 }
 

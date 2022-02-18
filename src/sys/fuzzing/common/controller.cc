@@ -146,7 +146,7 @@ void ControllerImpl::WriteDictionary(FidlInput dictionary, WriteDictionaryCallba
 
 void ControllerImpl::ReadDictionary(ReadDictionaryCallback callback) {
   auto response = NewResponse(std::move(callback));
-  response.Send(ZX_OK, Result::NO_ERRORS, runner_->GetDictionaryAsInput());
+  response.Send(ZX_OK, FuzzResult::NO_ERRORS, runner_->GetDictionaryAsInput());
 }
 
 void ControllerImpl::GetStatus(GetStatusCallback callback) { callback(runner_->CollectStatus()); }

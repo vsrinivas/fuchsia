@@ -37,12 +37,6 @@
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::MonitorPtr;
-using ::fuchsia::fuzzer::Result;
-using ::fuchsia::fuzzer::Status;
-using ::fuchsia::fuzzer::UpdateReason;
-using CorpusType = ::fuchsia::fuzzer::Corpus;
-
 // The concrete implementation of |Runner|.
 class RunnerImpl final : public Runner {
  public:

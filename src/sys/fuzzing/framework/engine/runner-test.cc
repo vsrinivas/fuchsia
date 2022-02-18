@@ -43,7 +43,7 @@ Input RunnerImplTest::GetTestInput() {
   return target_adapter_.test_input();
 }
 
-void RunnerImplTest::SetFeedback(const Coverage& coverage, Result result, bool leak) {
+void RunnerImplTest::SetFeedback(const Coverage& coverage, FuzzResult result, bool leak) {
   // Fake some activity within the process.
   process_.SetCoverage(coverage);
   process_.SetLeak(leak);
@@ -52,31 +52,31 @@ void RunnerImplTest::SetFeedback(const Coverage& coverage, Result result, bool l
   stopped_ = true;
   bool fatal = true;
   switch (result) {
-    case Result::NO_ERRORS:
+    case FuzzResult::NO_ERRORS:
       // Finish the run normally.
       target_adapter_.SignalPeer(kFinish);
       stopped_ = false;
       break;
-    case Result::BAD_MALLOC:
+    case FuzzResult::BAD_MALLOC:
       process_.Exit(options()->malloc_exitcode());
       break;
-    case Result::CRASH:
+    case FuzzResult::CRASH:
       process_.Crash();
       break;
-    case Result::DEATH:
+    case FuzzResult::DEATH:
       process_.Exit(options()->death_exitcode());
       break;
-    case Result::EXIT:
+    case FuzzResult::EXIT:
       process_.Exit(1);
       fatal = options()->detect_exits();
       break;
-    case Result::LEAK:
+    case FuzzResult::LEAK:
       process_.Exit(options()->leak_exitcode());
       break;
-    case Result::OOM:
+    case FuzzResult::OOM:
       process_.Exit(options()->oom_exitcode());
       break;
-    case Result::TIMEOUT:
+    case FuzzResult::TIMEOUT:
       // Don't signal from the target adapter and don't exit the fake process; just... wait.
       // Eventually, the Runner's Timer thread will time out and kill the process.
       break;

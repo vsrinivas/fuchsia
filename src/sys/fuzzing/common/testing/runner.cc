@@ -18,7 +18,7 @@ FakeRunner::FakeRunner() {
 
 void FakeRunner::AddDefaults(Options* options) {}
 
-void FakeRunner::set_result(Result result) {
+void FakeRunner::set_result(FuzzResult result) {
   Runner::set_result(result);
   result_ = result;
 }

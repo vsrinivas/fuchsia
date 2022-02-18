@@ -21,7 +21,6 @@
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::Result;
 using ::fuchsia::fuzzer::Status;
 using CorpusType = ::fuchsia::fuzzer::Corpus;
 
@@ -50,7 +49,7 @@ class SimpleFixedRunner final : public Runner {
   Status CollectStatus() override;
 
  private:
-  Result TestOne(const Input& input);
+  FuzzResult TestOne(const Input& input);
   size_t Measure(const Input& input, bool accumulate);
 
   std::shared_ptr<Options> options_;

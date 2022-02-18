@@ -20,6 +20,7 @@
 #include <unordered_map>
 
 #include "src/sys/fuzzing/common/options.h"
+#include "src/sys/fuzzing/common/result.h"
 #include "src/sys/fuzzing/common/run-once.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
@@ -32,7 +33,6 @@ namespace fuzzing {
 using ::fuchsia::fuzzer::InstrumentedProcess;
 using ::fuchsia::fuzzer::LlvmModule;
 using ::fuchsia::fuzzer::ProcessStats;
-using ::fuchsia::fuzzer::Result;
 
 // This class presents an interface to the engine for a instrumented target process. It tracks the
 // LLVM modules associated with the process and synchronizes coverage collection with fuzzing runs.
@@ -73,7 +73,7 @@ class ProcessProxyImpl final {
 
   // Waits for the process to exit, and returns the fuzzing result determined from its exit code, or
   // previously provided result.
-  Result GetResult();
+  FuzzResult GetResult();
 
   // Dumps information about all threads in a process to the provided buffer. Returns the number of
   // bytes written, not including the null-terminator.
@@ -96,7 +96,7 @@ class ProcessProxyImpl final {
 
   // These are accessed from both the |SignalCoordinator| and the |Runner|.
   std::atomic<bool> leak_suspected_ = false;
-  std::atomic<Result> result_ = Result::NO_ERRORS;
+  std::atomic<FuzzResult> result_ = FuzzResult::NO_ERRORS;
 
   std::atomic<bool> closed_ = false;
 };

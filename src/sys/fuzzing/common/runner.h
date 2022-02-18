@@ -18,13 +18,13 @@
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/monitors.h"
 #include "src/sys/fuzzing/common/options.h"
+#include "src/sys/fuzzing/common/result.h"
 #include "src/sys/fuzzing/common/run-once.h"
 #include "src/sys/fuzzing/common/sync-wait.h"
 
 namespace fuzzing {
 
 using ::fuchsia::fuzzer::MonitorPtr;
-using ::fuchsia::fuzzer::Result;
 using ::fuchsia::fuzzer::Status;
 using ::fuchsia::fuzzer::TargetAdapter;
 using ::fuchsia::fuzzer::UpdateReason;
@@ -42,7 +42,7 @@ class Runner {
   virtual ~Runner();
 
   // Accessors.
-  Result result() const { return result_; }
+  FuzzResult result() const { return result_; }
   Input result_input() const { return result_input_.Duplicate(); }
 
   // Adds default values to unspecified options that are needed by objects of this class.
@@ -92,7 +92,7 @@ class Runner {
  protected:
   Runner();
 
-  virtual void set_result(Result result) { result_ = result; }
+  virtual void set_result(FuzzResult result) { result_ = result; }
   virtual void set_result_input(const Input& input) { result_input_ = input.Duplicate(); }
 
   // Fuzzing workflow implementations.
@@ -140,7 +140,7 @@ class Runner {
   fit::function<void(zx_status_t)> callback_ FXL_GUARDED_BY(mutex_);
 
   // Result variables.
-  Result result_ = Result::NO_ERRORS;
+  FuzzResult result_ = FuzzResult::NO_ERRORS;
   Input result_input_;
   MonitorClients monitors_;
 

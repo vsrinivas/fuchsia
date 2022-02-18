@@ -152,7 +152,7 @@ void Runner::UpdateMonitors(UpdateReason reason) {
 }
 
 void Runner::ClearErrors() {
-  result_ = Result::NO_ERRORS;
+  result_ = FuzzResult::NO_ERRORS;
   result_input_.Clear();
 }
 

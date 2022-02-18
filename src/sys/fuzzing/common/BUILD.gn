@@ -26,6 +26,7 @@ source_set("common") {
     "options.inc",
     "response.cc",
     "response.h",
+    "result.h",
     "run-once.cc",
     "run-once.h",
     "runner.cc",
