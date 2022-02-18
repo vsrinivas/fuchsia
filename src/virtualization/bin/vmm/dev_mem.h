@@ -7,6 +7,7 @@
 
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <set>
 
 class DevMem {
