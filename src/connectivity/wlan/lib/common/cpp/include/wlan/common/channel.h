@@ -8,7 +8,7 @@
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <fuchsia/wlan/common/cpp/fidl.h>
 
 #include <cstdint>
 #include <string>
