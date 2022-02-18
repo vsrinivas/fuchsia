@@ -5,11 +5,11 @@
 mod tests {
     use {cml::reference_doc::MarkdownReferenceDocGenerator, cml_macro::ReferenceDoc};
 
-    /// This is a top-level comment.
-    ///
     /// # Top-level heading
     ///
     /// Hello.
+    ///
+    /// ## Top-level keys
     #[derive(ReferenceDoc)]
     struct ReferenceDocTest {
         /// A field.
@@ -42,12 +42,8 @@ mod tests {
     #[test]
     fn test_reference_doc() {
         assert_eq!(
-            ReferenceDocTest::get_markdown_reference_docs(),
-            r#"# Component manifest (`.cml`) reference
-
-This is a top-level comment.
-
-## Top-level heading
+            ReferenceDocTest::get_reference_doc_markdown(),
+            r#"# Top-level heading
 
 Hello.
 

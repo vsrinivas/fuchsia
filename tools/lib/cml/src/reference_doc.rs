@@ -8,5 +8,5 @@ pub trait MarkdownReferenceDocGenerator {
     /// struct that is derived from `ReferenceDoc`. The returned Markdown
     /// indents any `#` Markdown headers in individual field doc comments
     /// to ensure a well structured final Markdown document.
-    fn get_markdown_reference_docs() -> String;
+    fn get_reference_doc_markdown() -> String;
 }

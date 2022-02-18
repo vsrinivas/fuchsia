@@ -10,6 +10,7 @@ rustc_macro("macro") {
   source_root = "src/lib.rs"
 
   deps = [
+    "//third_party/rust_crates:darling",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:proc-macro2",
     "//third_party/rust_crates:quote",

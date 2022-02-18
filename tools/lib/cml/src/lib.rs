@@ -840,6 +840,8 @@ impl Right {
 
 #[derive(ReferenceDoc, Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
+/// # Component manifest (`.cml`) reference
+///
 /// A `.cml` file contains a single json5 object literal with the keys below.
 ///
 /// Where string values are expected, a list of valid values is generally documented.
@@ -862,6 +864,8 @@ impl Right {
 ///
 /// [doc-static-children]: /docs/concepts/components/v2/realms.md#static-children
 /// [doc-collections]: /docs/concepts/components/v2/realms.md#collections
+///
+/// ## Top-level keys
 pub struct Document {
     /// The optional `include` property describes zero or more other component manifest
     /// files to be merged into this component manifest. For example:

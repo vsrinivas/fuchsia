@@ -32,7 +32,7 @@ mod derive_reference_doc;
 ///      field: i32,
 /// }
 /// ```
-#[proc_macro_derive(ReferenceDoc)]
+#[proc_macro_derive(ReferenceDoc, attributes(reference_doc))]
 pub fn derive_reference_doc(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).expect("could not parse input");
     derive_reference_doc::impl_derive_reference_doc(ast)

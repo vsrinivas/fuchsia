@@ -116,9 +116,9 @@ fn run_cmc() -> Result<(), Error> {
             )?
         }
         opts::Commands::PrintReferenceDocs { output } => {
-            let docs = Document::get_markdown_reference_docs();
+            let docs = Document::get_reference_doc_markdown();
             match &output {
-                None => println!("{}", Document::get_markdown_reference_docs()),
+                None => println!("{}", docs),
                 Some(path) => fs::write(path, docs)?,
             }
         }
