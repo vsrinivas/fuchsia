@@ -193,7 +193,7 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>> ArpPack
     for C
 {
     fn receive_arp_packet(&mut self, device_id: Self::DeviceId, buffer: B) {
-        ArpTimerFrameHandler::handle_frame(self, device_id, (), buffer)
+        ArpTimerFrameHandler::handle_frame(self, device_id, buffer)
     }
 }
 
@@ -364,9 +364,9 @@ pub(super) fn receive_arp_packet<
 }
 
 impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
-    FrameHandler<C, C::DeviceId, (), B> for ArpTimerFrameHandler<D, P>
+    FrameHandler<C, C::DeviceId, B> for ArpTimerFrameHandler<D, P>
 {
-    fn handle_frame(ctx: &mut C, device_id: C::DeviceId, _meta: (), mut buffer: B) {
+    fn handle_frame(ctx: &mut C, device_id: C::DeviceId, mut buffer: B) {
         // TODO(wesleyac) Add support for probe.
         let packet = match buffer.parse::<ArpPacket<_, D::HType, P>>() {
             Ok(packet) => packet,
@@ -1295,7 +1295,7 @@ mod tests {
                     .filter_map(|cfg| {
                         let ArpHostConfig { name, proto_addr: _, hw_addr: _ } = cfg;
                         if !ctx.eq(*name) {
-                            Some((*name, (), (), None))
+                            Some((*name, (), None))
                         } else {
                             None
                         }

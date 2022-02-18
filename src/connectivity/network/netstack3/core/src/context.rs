@@ -442,9 +442,9 @@ pub trait FrameContext<B: BufferMut, Meta> {
 ///
 /// A `FrameHandler` is a type capable of handling the event of a frame being
 /// received.
-pub(crate) trait FrameHandler<Ctx, Id, Meta, B> {
+pub(crate) trait FrameHandler<Ctx, Meta, B> {
     /// Handle a frame being received.
-    fn handle_frame(ctx: &mut Ctx, id: Id, meta: Meta, buffer: B);
+    fn handle_frame(ctx: &mut Ctx, meta: Meta, buffer: B);
 }
 
 /// A context that stores performance counters.
@@ -1196,27 +1196,25 @@ pub(crate) mod testutil {
     }
 
     #[derive(Debug)]
-    struct PendingFrameData<ContextId, DeviceId, Meta> {
+    struct PendingFrameData<ContextId, Meta> {
         dst_context: ContextId,
-        dst_device: DeviceId,
         meta: Meta,
         frame: Vec<u8>,
     }
 
-    type PendingFrame<ContextId, DeviceId, Meta> =
-        InstantAndData<PendingFrameData<ContextId, DeviceId, Meta>>;
+    type PendingFrame<ContextId, Meta> = InstantAndData<PendingFrameData<ContextId, Meta>>;
 
     /// A dummy network, composed of many `DummyCtx`s.
     ///
     /// Provides a utility to have many contexts keyed by `ContextId` that can
     /// exchange frames.
-    pub(crate) struct DummyNetwork<ContextId, S, TimerId, DeviceId, SendMeta, RecvMeta, Links>
+    pub(crate) struct DummyNetwork<ContextId, S, TimerId, SendMeta, RecvMeta, Links>
     where
-        Links: DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId, DeviceId>,
+        Links: DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId>,
     {
         contexts: HashMap<ContextId, DummyCtx<S, TimerId, SendMeta>>,
         current_time: DummyInstant,
-        pending_frames: BinaryHeap<PendingFrame<ContextId, DeviceId, RecvMeta>>,
+        pending_frames: BinaryHeap<PendingFrame<ContextId, RecvMeta>>,
         links: Links,
     }
 
@@ -1225,15 +1223,15 @@ pub(crate) mod testutil {
     /// A `DummyNetworkLinks` represents the set of links in a `DummyNetwork`.
     /// It exposes the link information by providing the ability to map from a
     /// frame's sending metadata - including its context, local state, and
-    /// `SendMeta` - to the set of appropriate receivers, each represented by
-    /// a context ID, device ID, receive metadata, and latency.
-    pub(crate) trait DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId, DeviceId> {
+    /// `SendMeta` - to the set of appropriate receivers, each represented by a
+    /// context ID, receive metadata, and latency.
+    pub(crate) trait DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId> {
         fn map_link(
             &self,
             ctx: ContextId,
             state: &S,
             meta: SendMeta,
-        ) -> Vec<(ContextId, DeviceId, RecvMeta, Option<Duration>)>;
+        ) -> Vec<(ContextId, RecvMeta, Option<Duration>)>;
     }
 
     impl<
@@ -1241,16 +1239,15 @@ pub(crate) mod testutil {
             SendMeta,
             RecvMeta,
             ContextId,
-            DeviceId,
-            F: Fn(ContextId, &S, SendMeta) -> Vec<(ContextId, DeviceId, RecvMeta, Option<Duration>)>,
-        > DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId, DeviceId> for F
+            F: Fn(ContextId, &S, SendMeta) -> Vec<(ContextId, RecvMeta, Option<Duration>)>,
+        > DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId> for F
     {
         fn map_link(
             &self,
             ctx: ContextId,
             state: &S,
             meta: SendMeta,
-        ) -> Vec<(ContextId, DeviceId, RecvMeta, Option<Duration>)> {
+        ) -> Vec<(ContextId, RecvMeta, Option<Duration>)> {
             (self)(ctx, state, meta)
         }
     }
@@ -1289,12 +1286,12 @@ pub(crate) mod testutil {
     #[derive(Debug)]
     pub(crate) struct LoopLimitReachedError;
 
-    impl<ContextId, S, TimerId, DeviceId, SendMeta, RecvMeta, Links>
-        DummyNetwork<ContextId, S, TimerId, DeviceId, SendMeta, RecvMeta, Links>
+    impl<ContextId, S, TimerId, SendMeta, RecvMeta, Links>
+        DummyNetwork<ContextId, S, TimerId, SendMeta, RecvMeta, Links>
     where
         ContextId: Eq + Hash + Copy + Debug,
         TimerId: Copy,
-        Links: DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId, DeviceId>,
+        Links: DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId>,
     {
         /// Creates a new `DummyNetwork`.
         ///
@@ -1376,7 +1373,7 @@ pub(crate) mod testutil {
         /// panic when trying to route frames to their context/device
         /// destinations.
         pub(crate) fn step<
-            FH: FrameHandler<DummyCtx<S, TimerId, SendMeta>, DeviceId, RecvMeta, Buf<Vec<u8>>>,
+            FH: FrameHandler<DummyCtx<S, TimerId, SendMeta>, RecvMeta, Buf<Vec<u8>>>,
         >(
             &mut self,
         ) -> StepResult
@@ -1413,7 +1410,6 @@ pub(crate) mod testutil {
                 let frame = self.pending_frames.pop().unwrap().1;
                 FH::handle_frame(
                     self.context(frame.dst_context),
-                    frame.dst_device,
                     frame.meta,
                     Buf::new(frame.frame, ..),
                 );
@@ -1467,19 +1463,14 @@ pub(crate) mod testutil {
 
             for (src_context, frames) in all_frames.into_iter() {
                 for (send_meta, frame) in frames.into_iter() {
-                    for (dst_context, dst_device, recv_meta, latency) in self.links.map_link(
+                    for (dst_context, recv_meta, latency) in self.links.map_link(
                         src_context,
                         self.contexts.get(&src_context).unwrap().get_ref(),
                         send_meta,
                     ) {
                         self.pending_frames.push(PendingFrame::new(
                             self.current_time + latency.unwrap_or(Duration::from_millis(0)),
-                            PendingFrameData {
-                                frame: frame.clone(),
-                                dst_context,
-                                dst_device,
-                                meta: recv_meta,
-                            },
+                            PendingFrameData { frame: frame.clone(), dst_context, meta: recv_meta },
                         ));
                     }
                 }
