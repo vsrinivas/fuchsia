@@ -6,6 +6,7 @@
 
 #include <lib/fit/defer.h>
 
+#include <algorithm>
 #include <chrono>
 #include <thread>
 

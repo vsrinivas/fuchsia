@@ -4,6 +4,8 @@
 
 #include "fxt_spinel_vk_render.h"
 
+#include <algorithm>
+
 #include "common/vk/find_mem_type_idx.h"
 
 //
