@@ -24,6 +24,7 @@ config("cortex-a53") {
   cflags = [ "-mcpu=cortex-a53" ]
   ldflags = cflags
   asmflags = cflags
+  configs = [ ":no-outline-atomics" ]
 
   # Mitigate Cortex-A53 erratum.
   ldflags += [ "-Wl,--fix-cortex-a53-843419" ]
@@ -31,7 +32,7 @@ config("cortex-a53") {
   # TODO(fxbug.dev/87243): consider the below.
   #rustflags = [ "-Ctarget-cpu=cortex-a53" ]
 
-  configs = [ ":no-outline-atomics" ]
+  rustflags = [ "-Ctarget-feature=+crc,+crypto,+neon" ]
 }
 
 config("no-outline-atomics") {
