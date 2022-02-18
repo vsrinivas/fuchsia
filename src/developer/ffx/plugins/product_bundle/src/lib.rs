@@ -10,11 +10,15 @@ use {
     anyhow::{Context, Result},
     ffx_config::sdk::Sdk,
     ffx_core::ffx_plugin,
-    ffx_product_bundle_args::{GetCommand, ListCommand, ProductBundleCommand, SubCommand},
+    ffx_product_bundle_args::{
+        CreateCommand, GetCommand, ListCommand, ProductBundleCommand, SubCommand,
+    },
     pbms::{get_pbms, get_product_data},
     sdk_metadata::Metadata,
     std::io::{stdout, Write},
 };
+
+mod create;
 
 /// Provide functionality to list product-bundle metadata, fetch metadata, and
 /// pull images and related data.
@@ -36,6 +40,7 @@ where
     match &command.sub {
         SubCommand::List(cmd) => pb_list(sdk, writer, &cmd).await?,
         SubCommand::Get(cmd) => pb_get(sdk, writer, &cmd).await?,
+        SubCommand::Create(cmd) => pb_create(&cmd).await?,
     }
     Ok(())
 }
@@ -55,6 +60,11 @@ async fn pb_list<W: Write + Sync>(_sdk: Sdk, mut writer: W, cmd: &ListCommand) -
 /// `ffx product-bundle get` sub-command.
 async fn pb_get<W: Write + Sync>(_sdk: Sdk, writer: &mut W, cmd: &GetCommand) -> Result<()> {
     get_product_data(&cmd.product_bundle_name, writer).await
+}
+
+/// `ffx product-bundle create` sub-command.
+async fn pb_create(cmd: &CreateCommand) -> Result<()> {
+    create::create_product_bundle(cmd).await
 }
 
 #[cfg(test)]

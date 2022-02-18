@@ -19,7 +19,10 @@ ffx_plugin("ffx_product_bundle") {
     "//src/lib/gcs:lib",
   ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/create.rs",
+    "src/lib.rs",
+  ]
 }
 
 group("product_bundle") {
