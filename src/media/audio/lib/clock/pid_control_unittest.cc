@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <algorithm>
 #include <cmath>
 
 #include <gtest/gtest.h>

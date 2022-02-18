@@ -6,6 +6,7 @@
 
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <iostream>
 #include <limits>
 #include <utility>
