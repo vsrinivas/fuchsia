@@ -4,6 +4,7 @@
 
 use crate::pbm::make_configs;
 use anyhow::{Context, Result};
+use errors::ffx_bail;
 use ffx_core::ffx_plugin;
 use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_engines::EngineBuilder;
@@ -16,7 +17,17 @@ mod pbm;
 pub async fn start(cmd: StartCommand, proxy: TargetCollectionProxy) -> Result<()> {
     let config = FfxConfigWrapper::new();
     let emulator_configuration =
-        make_configs(&cmd, &config).await.context("making configuration from metadata")?;
+        match make_configs(&cmd, &config).await.context("making configuration from metadata") {
+            Ok(config) => config,
+            Err(e) => {
+                ffx_bail!("{:?}",
+                e.context(
+                    "Encountered a problem reading the emulator configuration. This may mean you\n\
+                    don't have an appropriate Product Bundle available. Try `ffx product-bundle`\n\
+                    to list and download available bundles."
+                ));
+            }
+        };
 
     // Initialize an engine of the requested type with the configuration defined in the manifest.
     let result =
@@ -25,8 +36,7 @@ pub async fn start(cmd: StartCommand, proxy: TargetCollectionProxy) -> Result<()
     std::process::exit(match result {
         Ok(mut engine) => engine.start(&proxy).await?,
         Err(e) => {
-            println!("{:?}", e);
-            1
+            ffx_bail!("{:?}", e);
         }
     });
 }

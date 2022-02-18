@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Result};
+use errors::ffx_bail;
 use ffx_core::ffx_plugin;
 use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_engines::{
@@ -69,19 +70,16 @@ pub async fn stop(cmd: StopCommand, proxy: TargetCollectionProxy) -> Result<()> 
                 if !cmd.persist {
                     let cleanup = clean_up_instance_dir(&path).await;
                     if cleanup.is_err() {
-                        eprintln!("{:?}", cleanup.unwrap_err());
-                        std::process::exit(1);
+                        ffx_bail!("{:?}", cleanup.unwrap_err());
                     }
                 }
                 if result.is_err() {
-                    eprintln!("{:?}", result.unwrap_err());
-                    std::process::exit(1);
+                    ffx_bail!("{:?}", result.unwrap_err());
                 }
             }
         }
         Err(e) => {
-            eprintln!("{:?}", e);
-            std::process::exit(1);
+            ffx_bail!("{:?}", e);
         }
     }
     Ok(())

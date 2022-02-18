@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Result};
+use errors::ffx_bail;
 use ffx_core::ffx_plugin;
 use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_engines::{get_all_instances, get_instance_dir, serialization::read_from_disk};
@@ -69,13 +70,11 @@ pub async fn show(cmd: ShowCommand) -> Result<()> {
     match get_instance_name(cmd.name, &ffx_config).await {
         Ok(name) => {
             if let Err(e) = show_internal(&ffx_config, &name).await {
-                eprintln!("{:?}", e);
-                std::process::exit(1);
+                ffx_bail!("{:?}", e);
             }
         }
         Err(e) => {
-            eprintln!("{:?}", e);
-            std::process::exit(1);
+            ffx_bail!("{:?}", e);
         }
     };
 
