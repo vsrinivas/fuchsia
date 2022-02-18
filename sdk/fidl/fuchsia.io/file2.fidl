@@ -56,7 +56,7 @@ protocol File2 {
     ///
     /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_TRANSFER_SIZE`.
     @selector("fuchsia.io/File.Read")
-    Read(struct {
+    Read2(struct {
         count uint64;
     }) -> (struct {
         data Transfer;

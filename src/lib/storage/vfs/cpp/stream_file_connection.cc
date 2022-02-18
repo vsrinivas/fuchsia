@@ -62,8 +62,7 @@ zx_status_t StreamFileConnection::ReadInternal(void* data, size_t len, size_t* o
   return status;
 }
 
-void StreamFileConnection::ReadDeprecated(ReadDeprecatedRequestView request,
-                                          ReadDeprecatedCompleter::Sync& completer) {
+void StreamFileConnection::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
   zx_status_t status = ReadInternal(data, request->count, &actual);
@@ -74,7 +73,7 @@ void StreamFileConnection::ReadDeprecated(ReadDeprecatedRequestView request,
   }
 }
 
-void StreamFileConnection::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+void StreamFileConnection::Read2(Read2RequestView request, Read2Completer::Sync& completer) {
   uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
   zx_status_t status = ReadInternal(data, request->count, &actual);

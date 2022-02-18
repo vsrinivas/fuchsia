@@ -535,7 +535,7 @@ mod tests {
                 .await;
 
         let buf = file
-            .read(fio::MAX_BUF)
+            .read2(fio::MAX_BUF)
             .await
             .expect("FIDL call failed")
             .map_err(Status::from_raw)
@@ -690,7 +690,7 @@ mod tests {
                     .expect("File write was successful");
             } else {
                 let buf = file
-                    .read(8192)
+                    .read2(8192)
                     .await
                     .expect("FIDL call failed")
                     .map_err(Status::from_raw)
@@ -783,7 +783,7 @@ mod tests {
                 .expect("seek was successful");
             assert_eq!(offset, 0);
             let buf = file
-                .read(5)
+                .read2(5)
                 .await
                 .expect("FIDL call failed")
                 .map_err(Status::from_raw)
@@ -799,7 +799,7 @@ mod tests {
                 .expect("seek was successful");
             assert_eq!(offset, 7);
             let buf = file
-                .read(5)
+                .read2(5)
                 .await
                 .expect("FIDL call failed")
                 .map_err(Status::from_raw)
@@ -815,7 +815,7 @@ mod tests {
                 .expect("seek was successful");
             assert_eq!(offset, 7);
             let buf = file
-                .read(5)
+                .read2(5)
                 .await
                 .expect("FIDL call failed")
                 .map_err(Status::from_raw)
@@ -831,7 +831,7 @@ mod tests {
                 .expect("seek was successful");
             assert_eq!(offset, 12);
             let buf = file
-                .read(1)
+                .read2(1)
                 .await
                 .expect("FIDL call failed")
                 .map_err(Status::from_raw)

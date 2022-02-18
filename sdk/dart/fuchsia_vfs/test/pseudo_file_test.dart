@@ -61,11 +61,11 @@ void main() {
   Future<void> _assertRead(FileProxy proxy, int bufSize, String expectedStr,
       {expectedStatus = ZX.OK}) async {
     if (expectedStatus == ZX.OK) {
-      final data = await proxy.read(bufSize);
+      final data = await proxy.read2(bufSize);
       expect(String.fromCharCodes(data), expectedStr);
     } else {
       await expectLater(
-          proxy.read(bufSize),
+          proxy.read2(bufSize),
           throwsA(isA<MethodException>()
               .having((e) => e.value, 'value', equals(expectedStatus))));
     }
@@ -443,7 +443,7 @@ void main() {
       var file = _createReadOnlyFile(
           'test_str', openRightReadable | openFlagNodeReference);
       await expectLater(
-          file.proxy.read(1024),
+          file.proxy.read2(1024),
           throwsA(isA<MethodException>()
               .having((e) => e.value, 'value', equals(ZX.ERR_ACCESS_DENIED))));
 
@@ -712,14 +712,14 @@ void main() {
 
       {
         const c = 5;
-        final data = await proxy.read(5);
+        final data = await proxy.read2(5);
         expect(String.fromCharCodes(data), str.substring(0, c));
       }
 
       var lastOffset = 5;
       {
         const c = 6;
-        final data = await proxy.read(6);
+        final data = await proxy.read2(6);
         expect(String.fromCharCodes(data),
             str.substring(lastOffset, lastOffset + c));
       }
@@ -728,7 +728,7 @@ void main() {
         const c = 10;
         int offsetFromStart = await proxy.seek(SeekOrigin.start, c);
         expect(offsetFromStart, c);
-        final data = await proxy.read(100);
+        final data = await proxy.read2(100);
         expect(String.fromCharCodes(data), str.substring(c));
       }
 
@@ -744,7 +744,7 @@ void main() {
         final offsetFromStart = await proxy.seek(SeekOrigin.current, c);
         expect(offsetFromStart, c + lastOffset);
         lastOffset = offsetFromStart;
-        final data = await proxy.read(100);
+        final data = await proxy.read2(100);
         expect(String.fromCharCodes(data), str.substring(lastOffset));
       }
 
@@ -758,7 +758,7 @@ void main() {
         const c = -3;
         final offsetFromStart = await proxy.seek(SeekOrigin.end, c);
         expect(offsetFromStart, str.length - 1 + c);
-        final data = await proxy.read(100);
+        final data = await proxy.read2(100);
         expect(String.fromCharCodes(data), str.substring(offsetFromStart));
       }
 

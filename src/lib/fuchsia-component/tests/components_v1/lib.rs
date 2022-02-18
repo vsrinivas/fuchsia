@@ -500,7 +500,7 @@ async fn assert_read<'a>(
     length: u64,
     expected: &'a [u8],
 ) -> Result<(), Error> {
-    let read_data = file_proxy.read(length).await?.map_err(zx::Status::from_raw)?;
+    let read_data = file_proxy.read2(length).await?.map_err(zx::Status::from_raw)?;
     assert_eq!(&*read_data, expected);
     Ok(())
 }

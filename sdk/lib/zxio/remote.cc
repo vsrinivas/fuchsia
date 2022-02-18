@@ -614,19 +614,19 @@ zx_status_t zxio_remote_readv(zxio_t* io, const zx_iovec_t* vector, size_t vecto
       rio, vector, vector_count, flags, out_actual,
       [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
-        fidl::SyncClientBuffer<fio::File::Read> fidl_buffer;
+        fidl::SyncClientBuffer<fio::File::Read2> fidl_buffer;
         const fidl::WireUnownedResult result =
             fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
                 .buffer(fidl_buffer.view())
-                ->Read(capacity);
+                ->Read2(capacity);
         if (!result.ok()) {
           return result.status();
         }
         const auto& response = result.value();
         switch (response.result.Which()) {
-          case fio::wire::File2ReadResult::Tag::kErr:
+          case fio::wire::File2Read2Result::Tag::kErr:
             return response.result.err();
-          case fio::wire::File2ReadResult::Tag::kResponse:
+          case fio::wire::File2Read2Result::Tag::kResponse:
             const fidl::VectorView data = result->result.response().data;
             size_t actual = data.count();
             if (actual > capacity) {

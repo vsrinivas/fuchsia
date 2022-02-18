@@ -36,7 +36,7 @@ macro_rules! assert_read {
         use $crate::test_utils::assertions::reexport::Status;
 
         let content = $proxy
-            .read($expected.len() as u64)
+            .read2($expected.len() as u64)
             .await
             .expect("read failed")
             .map_err(Status::from_raw)
@@ -52,7 +52,7 @@ macro_rules! assert_read_err {
     ($proxy:expr, $expected_status:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let result = $proxy.read(100).await.expect("read failed").map_err(Status::from_raw);
+        let result = $proxy.read2(100).await.expect("read failed").map_err(Status::from_raw);
 
         assert_eq!(result, Err($expected_status));
     }};
@@ -62,7 +62,7 @@ macro_rules! assert_read_err {
 #[macro_export]
 macro_rules! assert_read_fidl_err {
     ($proxy:expr, $expected_error:pat) => {{
-        match $proxy.read(100).await {
+        match $proxy.read2(100).await {
             Err($expected_error) => (),
             Err(error) => panic!("read() returned unexpected error: {:?}", error),
             Ok(result) => {
@@ -76,7 +76,7 @@ macro_rules! assert_read_fidl_err {
 #[macro_export]
 macro_rules! assert_read_fidl_err_closed {
     ($proxy:expr) => {{
-        match $proxy.read(100).await {
+        match $proxy.read2(100).await {
             Err(error) if error.is_closed() => (),
             Err(error) => panic!("read() returned unexpected error: {:?}", error),
             Ok(result) => {

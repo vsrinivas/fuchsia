@@ -356,8 +356,8 @@ TEST_F(SessionTest, LaunchBasemgrV1ProvidesConfig) {
                                       file.NewRequest().TakeChannel().get()));
 
         // Read from the startup.config file into |config_str|.
-        fuchsia::io::File2_Read_Result result;
-        file->Read(kReadCount, &result);
+        fuchsia::io::File2_Read2_Result result;
+        file->Read2(kReadCount, &result);
         ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
         const std::vector<uint8_t>& data = result.response().data;
 

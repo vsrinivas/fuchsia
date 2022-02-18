@@ -178,7 +178,7 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
 
   ASSERT_TRUE(fidl::WireCall<TestDevice>(chan_)->AsyncRemoveChild(child_id).ok());
   {
-    const fidl::WireResult read_result = fidl::WireCall<File>(chan)->Read(10);
+    const fidl::WireResult read_result = fidl::WireCall<File>(chan)->Read2(10);
     ASSERT_OK(read_result.status());
     const fidl::WireResponse response = read_result.value();
     ASSERT_TRUE(response.result.is_err());

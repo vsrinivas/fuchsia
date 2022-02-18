@@ -198,7 +198,7 @@ class TestServerChannel final : public CloseCountingFileServer {
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 
-  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override {
+  void Read2(Read2RequestView request, Read2Completer::Sync& completer) override {
     if (request->count > fio::wire::kMaxBuf) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;

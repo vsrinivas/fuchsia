@@ -215,7 +215,7 @@ pub async fn read(file: &FileProxy) -> Result<Vec<u8>, ReadError> {
 
     loop {
         let mut bytes = file
-            .read(MAX_BUF)
+            .read2(MAX_BUF)
             .await?
             .map_err(|s| ReadError::ReadError(zx_status::Status::from_raw(s)))?;
         if bytes.is_empty() {
@@ -237,7 +237,7 @@ pub async fn read_num_bytes(file: &FileProxy, num_bytes: u64) -> Result<Vec<u8>,
     while bytes_left > 0 {
         let bytes_to_read = std::cmp::min(bytes_left, MAX_BUF);
         let mut bytes = file
-            .read(bytes_to_read)
+            .read2(bytes_to_read)
             .await?
             .map_err(|s| ReadError::ReadError(zx_status::Status::from_raw(s)))?;
 
@@ -482,7 +482,7 @@ mod tests {
         let file = open_in_namespace("/pkg/data/file", OPEN_RIGHT_READABLE).unwrap();
 
         // Advance past the first byte.
-        let _: Vec<u8> = file.read(1).await.unwrap().unwrap();
+        let _: Vec<u8> = file.read2(1).await.unwrap().unwrap();
 
         // Verify the rest of the file is read.
         let contents = read(&file).await.unwrap();

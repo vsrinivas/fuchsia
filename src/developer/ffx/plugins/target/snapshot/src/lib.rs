@@ -49,7 +49,7 @@ pub async fn read_data(file: &fidl_fuchsia_io::FileProxy) -> Result<Vec<u8>> {
     let mut queue = FuturesOrdered::new();
 
     for _ in 0..CONCURRENCY {
-        queue.push(file.read(MAX_BUF));
+        queue.push(file.read2(MAX_BUF));
     }
 
     loop {
@@ -65,7 +65,7 @@ pub async fn read_data(file: &fidl_fuchsia_io::FileProxy) -> Result<Vec<u8>> {
         out.append(&mut bytes);
 
         while queue.len() < CONCURRENCY.try_into().unwrap() {
-            queue.push(file.read(MAX_BUF));
+            queue.push(file.read2(MAX_BUF));
         }
     }
 
@@ -243,7 +243,7 @@ mod test {
             let mut cc: u32 = 0;
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    FileRequest::ReadDeprecated { count: _, responder } => {
+                    FileRequest::Read { count: _, responder } => {
                         cc = cc + 1;
                         if cc == 1 {
                             responder
@@ -253,7 +253,7 @@ mod test {
                             responder.send(/*Status*/ 0, &[]).expect("writing file test response");
                         }
                     }
-                    FileRequest::Read { count: _, responder } => {
+                    FileRequest::Read2 { count: _, responder } => {
                         cc = cc + 1;
                         if cc == 1 {
                             responder

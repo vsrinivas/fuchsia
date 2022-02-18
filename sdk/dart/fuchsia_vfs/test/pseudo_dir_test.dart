@@ -776,7 +776,7 @@ void main() {
         await proxy.open(openRightReadable, 0, filePath,
             InterfaceRequest(fileProxy.ctrl.request().passChannel()));
 
-        final data = await fileProxy.read(bufferLen);
+        final data = await fileProxy.read2(bufferLen);
         expect(String.fromCharCodes(data), expectedContent);
       }
 

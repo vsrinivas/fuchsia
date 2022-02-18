@@ -58,7 +58,7 @@ async fn assert_read_max_buffer_success(
     expected_contents: &str,
 ) {
     let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
-    let bytes = file.read(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+    let bytes = file.read2(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 }
 
@@ -72,7 +72,7 @@ async fn assert_read_buffer_success(
 
         let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
         let bytes = file
-            .read(buffer_size.try_into().unwrap())
+            .read2(buffer_size.try_into().unwrap())
             .await
             .unwrap()
             .map_err(zx::Status::from_raw)
@@ -86,10 +86,10 @@ async fn assert_read_buffer_success(
 
 async fn assert_read_past_end(root_dir: &DirectoryProxy, path: &str, expected_contents: &str) {
     let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
-    let bytes = file.read(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+    let bytes = file.read2(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 
-    let bytes = file.read(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+    let bytes = file.read2(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(bytes, &[]);
 }
 
@@ -97,18 +97,18 @@ async fn assert_read_exceeds_buffer_success(root_dir: &DirectoryProxy, path: &st
     let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
 
     // Read the first MAX_BUF contents.
-    let bytes = file.read(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+    let bytes = file.read2(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(
         std::str::from_utf8(&bytes).unwrap(),
         &repeat_by_n('a', fidl_fuchsia_io::MAX_BUF.try_into().unwrap())
     );
 
     // There should be one remaining "a".
-    let bytes = file.read(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+    let bytes = file.read2(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), "a");
 
     // Since we are now at the end of the file, bytes should be empty.
-    let bytes = file.read(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+    let bytes = file.read2(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(bytes, &[]);
 }
 
@@ -299,7 +299,7 @@ async fn assert_seek_affects_read(root_dir: &DirectoryProxy, path: &str, expecte
     for seek_offset in 0..expected.len() {
         let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
         let bytes = file
-            .read(MAX_BUF)
+            .read2(MAX_BUF)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw)
@@ -307,7 +307,7 @@ async fn assert_seek_affects_read(root_dir: &DirectoryProxy, path: &str, expecte
         assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected);
 
         let bytes = file
-            .read(MAX_BUF)
+            .read2(MAX_BUF)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw)
@@ -325,7 +325,7 @@ async fn assert_seek_affects_read(root_dir: &DirectoryProxy, path: &str, expecte
         assert_eq!(position, (expected.len() - seek_offset) as u64);
 
         let bytes = file
-            .read(MAX_BUF)
+            .read2(MAX_BUF)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw)
@@ -349,7 +349,7 @@ async fn assert_seek_past_end(
         .unwrap();
     assert_eq!(expected.len() as u64 + 1, position);
 
-    let bytes = file.read(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+    let bytes = file.read2(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(bytes, &[]);
 }
 
@@ -361,7 +361,7 @@ async fn assert_seek_past_end_end_origin(root_dir: &DirectoryProxy, path: &str, 
         file.seek(SeekOrigin::End, 1).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(expected.len() as u64 + 1, position);
 
-    let bytes = file.read(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+    let bytes = file.read2(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(bytes, &[]);
 }
 
@@ -511,7 +511,7 @@ async fn assert_clone_success(package_root: &DirectoryProxy, path: &str, expecte
     let (clone, server_end) = create_proxy::<fidl_fuchsia_io::FileMarker>().expect("create_proxy");
     let node_request = fidl::endpoints::ServerEnd::new(server_end.into_channel());
     parent.clone(OPEN_RIGHT_READABLE, node_request).expect("cloned node");
-    let bytes = clone.read(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+    let bytes = clone.read2(MAX_BUF).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 }
 

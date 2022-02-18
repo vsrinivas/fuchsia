@@ -68,8 +68,10 @@ impl AsyncRead for AsyncReader {
                     } else {
                         fidl_fuchsia_io::MAX_BUF
                     };
-                    self.state =
-                        State::Forwarding { fut: self.file.read(len), zero_byte_request: len == 0 };
+                    self.state = State::Forwarding {
+                        fut: self.file.read2(len),
+                        zero_byte_request: len == 0,
+                    };
                 }
                 State::Forwarding { ref mut fut, ref zero_byte_request } => {
                     match futures::ready!(Pin::new(fut).poll(cx)) {
@@ -190,7 +192,7 @@ mod tests {
         .await;
 
         match stream.next().await.unwrap().unwrap() {
-            FileRequest::Read { count, .. } => {
+            FileRequest::Read2 { count, .. } => {
                 assert_eq!(count, expected_file_read_size);
             }
             req => panic!("unhandled request {:?}", req),
@@ -236,7 +238,7 @@ mod tests {
             while let Some(req) = stream.try_next().await.unwrap() {
                 file_read_requests += 1;
                 match req {
-                    FileRequest::Read { count, responder } => {
+                    FileRequest::Read2 { count, responder } => {
                         assert_eq!(count, 1);
                         responder.send(&mut Ok(vec![file_read_requests])).unwrap();
                     }
@@ -267,7 +269,7 @@ mod tests {
         // Respond to the three byte File.Read request.
         let () = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                FileRequest::Read2 { count, responder } => {
                     assert_eq!(count, 3);
                     responder.send(&mut Ok(b"012".to_vec())).unwrap();
                 }
@@ -301,7 +303,7 @@ mod tests {
 
         let handle_second_file_request = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                FileRequest::Read2 { count, responder } => {
                     assert_eq!(count, 4);
                     responder.send(&mut Ok(b"3456".to_vec())).unwrap();
                 }
@@ -349,7 +351,7 @@ mod tests {
 
         let failing_file_response = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                FileRequest::Read2 { count, responder } => {
                     assert_eq!(count, 1);
                     responder.send(&mut Err(zx_status::Status::NO_MEMORY.into_raw())).unwrap();
                 }
@@ -367,7 +369,7 @@ mod tests {
 
         let succeeding_file_response = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                FileRequest::Read2 { count, responder } => {
                     assert_eq!(count, 1);
                     responder.send(&mut Ok(b"0".to_vec())).unwrap();
                 }
@@ -395,7 +397,7 @@ mod tests {
 
         // Handle the zero-length File.Read request.
         match stream.next().await.unwrap().unwrap() {
-            FileRequest::Read { count, responder } => {
+            FileRequest::Read2 { count, responder } => {
                 assert_eq!(count, 0);
                 responder.send(&mut Ok(vec![])).unwrap();
             }
@@ -412,7 +414,7 @@ mod tests {
         // not.
         let handle_file_request = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::Read { count, responder } => {
+                FileRequest::Read2 { count, responder } => {
                     assert_eq!(count, 1);
                     responder.send(&mut Ok(vec![1])).unwrap();
                 }
@@ -452,7 +454,7 @@ mod tests {
                     // Respond to the File.Read request with at most as many bytes as the poll_read
                     // requested.
                     match stream.next().await.unwrap().unwrap() {
-                        FileRequest::Read { count, responder } => {
+                        FileRequest::Read2 { count, responder } => {
                             assert_eq!(count, first_poll_read_len.try_into().unwrap());
                             let resp = vec![7u8; min(file_size, first_poll_read_len)];
                             responder.send(&mut Ok(resp)).unwrap();
@@ -469,7 +471,7 @@ mod tests {
                     let handle_conditional_file_request = async {
                         if first_poll_read_len == 0 && second_poll_read_len != 0 {
                             match stream.next().await.unwrap().unwrap() {
-                                FileRequest::Read { count, responder } => {
+                                FileRequest::Read2 { count, responder } => {
                                     assert_eq!(count, second_poll_read_len.try_into().unwrap());
                                     let resp = vec![7u8; min(file_size, second_poll_read_len)];
                                     responder.send(&mut Ok(resp)).unwrap();

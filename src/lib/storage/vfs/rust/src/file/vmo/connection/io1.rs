@@ -421,13 +421,13 @@ impl VmoFileConnection {
                 // it is not supported at the moment.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::ReadDeprecated { count, responder } => {
+            FileRequest::Read { count, responder } => {
                 self.handle_read(count, |status, content| {
                     responder.send(status.into_raw(), content)
                 })
                 .await?;
             }
-            FileRequest::Read { count, responder } => {
+            FileRequest::Read2 { count, responder } => {
                 self.handle_read(count, |status, content| {
                     if status == zx::Status::OK {
                         responder.send(&mut Ok(content.to_vec()))

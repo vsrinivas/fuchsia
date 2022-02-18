@@ -1434,7 +1434,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             }
             FileRequest::SetAttr { responder, .. } => unsupported!(responder)?,
             // FIXME(cramertj) enforce READ rights
-            FileRequest::ReadDeprecated { count, responder } => {
+            FileRequest::Read { count, responder } => {
                 let result = self.handle_read_request(connection, count);
                 match result {
                     Ok(data) => {
@@ -1443,7 +1443,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     Err(s) => responder.send(s.into_raw(), &[])?,
                 }
             }
-            FileRequest::Read { count, responder } => {
+            FileRequest::Read2 { count, responder } => {
                 responder.send(
                     &mut self.handle_read_request(connection, count).map_err(zx::Status::into_raw),
                 )?;

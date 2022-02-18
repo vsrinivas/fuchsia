@@ -111,8 +111,8 @@ void DirConnection::AssertRewind(fuchsia::io::DirectorySyncPtr& ptr, zx_status_t
 
 void DirConnection::AssertRead(fuchsia::io::FileSyncPtr& file, int count,
                                const std::string& expected_str, zx_status_t expected_status) {
-  fuchsia::io::File2_Read_Result result;
-  file->Read(count, &result);
+  fuchsia::io::File2_Read2_Result result;
+  file->Read2(count, &result);
   if (expected_status == ZX_OK) {
     ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     const std::vector<uint8_t>& data = result.response().data;

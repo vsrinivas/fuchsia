@@ -257,8 +257,8 @@ impl<T: 'static + File> FileConnection<T> {
                 let status = self.handle_set_attr(flags, attributes).await;
                 responder.send(status.into_raw())?;
             }
-            FileRequest::ReadDeprecated { count, responder } => {
-                fuchsia_trace::duration!("storage", "File::ReadDeprecated", "bytes" => count);
+            FileRequest::Read { count, responder } => {
+                fuchsia_trace::duration!("storage", "File::Read", "bytes" => count);
                 let advance = match self.handle_read_at(self.seek, count).await {
                     Ok((buffer, bytes_read)) => {
                         responder
@@ -272,8 +272,8 @@ impl<T: 'static + File> FileConnection<T> {
                 };
                 self.seek += advance;
             }
-            FileRequest::Read { count, responder } => {
-                fuchsia_trace::duration!("storage", "File::Read", "bytes" => count);
+            FileRequest::Read2 { count, responder } => {
+                fuchsia_trace::duration!("storage", "File::Read2", "bytes" => count);
                 let advance = match self.handle_read_at(self.seek, count).await {
                     Ok((buffer, bytes_read)) => {
                         responder.send(&mut Ok(buffer[..bytes_read as usize].to_vec()))?;
@@ -818,7 +818,7 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         );
         // Read from original proxy.
-        let _: Vec<u8> = env.proxy.read(6).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+        let _: Vec<u8> = env.proxy.read2(6).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         let (clone_proxy, remote) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
         env.proxy.clone(CLONE_FLAG_SAME_RIGHTS, remote.into_channel().into()).unwrap();
         // Seek and read from clone_proxy.
@@ -828,10 +828,10 @@ mod tests {
             .unwrap()
             .map_err(zx::Status::from_raw)
             .unwrap();
-        let _: Vec<u8> = clone_proxy.read(5).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+        let _: Vec<u8> = clone_proxy.read2(5).await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
         // Read from original proxy.
-        let _: Vec<u8> = env.proxy.read(5).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+        let _: Vec<u8> = env.proxy.read2(5).await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
         let events = env.file.operations.lock().unwrap();
         // Each connection should have an independent seek.
@@ -1007,7 +1007,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_read_succeeds() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
-        let data = env.proxy.read(10).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+        let data = env.proxy.read2(10).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         assert_eq!(data, vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
         let events = env.file.operations.lock().unwrap();
@@ -1023,7 +1023,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_read_not_readable() {
         let env = init_mock_file(Box::new(only_allow_init), OPEN_RIGHT_WRITABLE);
-        let result = env.proxy.read(10).await.unwrap().map_err(zx::Status::from_raw);
+        let result = env.proxy.read2(10).await.unwrap().map_err(zx::Status::from_raw);
         assert_eq!(result, Err(zx::Status::BAD_HANDLE));
     }
 
@@ -1032,7 +1032,7 @@ mod tests {
         let env = init_mock_file(Box::new(only_allow_init), OPEN_RIGHT_READABLE);
         let result = env
             .proxy
-            .read(fidl_fuchsia_io::MAX_BUF + 1)
+            .read2(fidl_fuchsia_io::MAX_BUF + 1)
             .await
             .unwrap()
             .map_err(zx::Status::from_raw);
@@ -1079,7 +1079,7 @@ mod tests {
             .unwrap();
         assert_eq!(offset, 10);
 
-        let data = env.proxy.read(1).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+        let data = env.proxy.read2(1).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         assert_eq!(data, vec![10]);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
@@ -1112,7 +1112,7 @@ mod tests {
             .unwrap();
         assert_eq!(offset, 8);
 
-        let data = env.proxy.read(1).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+        let data = env.proxy.read2(1).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         assert_eq!(data, vec![8]);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
@@ -1144,7 +1144,7 @@ mod tests {
             .unwrap();
         assert_eq!(offset, *MOCK_FILE_SIZE - 4);
 
-        let data = env.proxy.read(1).await.unwrap().map_err(zx::Status::from_raw).unwrap();
+        let data = env.proxy.read2(1).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         assert_eq!(data, vec![(offset % 256) as u8]);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(

@@ -900,7 +900,7 @@ async fn read_file_to_writer<T: Write>(
     // a bandwidth delay product of 800kB.
     const PIPELINED_READ_COUNT: u64 = 100;
     for _n in 0..PIPELINED_READ_COUNT {
-        vector.push_back(file.read(READ_SIZE));
+        vector.push_back(file.read2(READ_SIZE));
     }
     loop {
         let mut buf =
@@ -909,7 +909,7 @@ async fn read_file_to_writer<T: Write>(
             break;
         }
         output.write_all(&mut buf)?;
-        vector.push_back(file.read(READ_SIZE));
+        vector.push_back(file.read2(READ_SIZE));
     }
     Ok(())
 }

@@ -59,8 +59,7 @@ zx_status_t RemoteFileConnection::ReadInternal(void* data, size_t len, size_t* o
   return status;
 }
 
-void RemoteFileConnection::ReadDeprecated(ReadDeprecatedRequestView request,
-                                          ReadDeprecatedCompleter::Sync& completer) {
+void RemoteFileConnection::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
   zx_status_t status = ReadInternal(data, request->count, &actual);
@@ -71,7 +70,7 @@ void RemoteFileConnection::ReadDeprecated(ReadDeprecatedRequestView request,
   }
 }
 
-void RemoteFileConnection::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+void RemoteFileConnection::Read2(Read2RequestView request, Read2Completer::Sync& completer) {
   uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
   zx_status_t status = ReadInternal(data, request->count, &actual);

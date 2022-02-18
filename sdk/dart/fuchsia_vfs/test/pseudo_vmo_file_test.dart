@@ -15,7 +15,7 @@ void main() {
   Future<void> _assertRead(FileProxy proxy) async {
     const bytesToTryCount = 16;
     const bytesExpectedCount = 0;
-    final data = await proxy.read(bytesToTryCount);
+    final data = await proxy.read2(bytesToTryCount);
     expect(data.length, bytesExpectedCount);
   }
 
