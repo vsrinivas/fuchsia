@@ -53,7 +53,11 @@ struct FormatSubCommand {}
 #[derive(FromArgs, PartialEq, Debug)]
 /// Mount
 #[argh(subcommand, name = "mount")]
-struct MountSubCommand {}
+struct MountSubCommand {
+    /// mount the device as read-only
+    #[argh(switch)]
+    readonly: bool,
+}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Fsck
@@ -104,10 +108,10 @@ async fn main() -> Result<(), Error> {
                 .await?;
             Ok(())
         }
-        TopLevel { nested: SubCommand::Mount(_), verbose } => {
+        TopLevel { nested: SubCommand::Mount(MountSubCommand { readonly }), verbose } => {
             let fs = mount::mount_with_options(
-                DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?),
-                OpenOptions { trace: verbose, ..Default::default() },
+                DeviceHolder::new(BlockDevice::new(Box::new(client), readonly).await?),
+                OpenOptions { trace: verbose, read_only: readonly },
             )
             .await?;
             let server = FxfsServer::new(fs, "default", crypt).await?;

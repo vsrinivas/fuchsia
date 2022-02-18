@@ -55,6 +55,9 @@ class RamDisk {
   // Returns the path to the device.
   std::string path() const { return ramdisk_get_path(client_); }
 
+  // Returns a channel to the device.
+  zx::status<zx::channel> channel() const;
+
   zx::status<> SleepAfter(uint64_t block_count) {
     return zx::make_status(ramdisk_sleep_after(client_, block_count));
   }

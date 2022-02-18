@@ -101,7 +101,9 @@ test("fs-management-test") {
   ]
   data_deps = [
     "//src/storage/bin/blobfs",
+    "//src/storage/bin/f2fs",
     "//src/storage/bin/minfs",
+    "//src/storage/fxfs",
     "//zircon/third_party/uapp/fsck-msdosfs",
     "//zircon/third_party/uapp/mkfs-msdosfs",
   ]

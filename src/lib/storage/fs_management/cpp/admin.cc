@@ -43,11 +43,14 @@ zx::status<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::chan
   std::string compression_level;
   std::vector<const char*> argv;
   argv.push_back(binary);
-  if (options.readonly) {
-    argv.push_back("--readonly");
-  }
   if (options.verbose_mount) {
     argv.push_back("--verbose");
+  }
+
+  argv.push_back("mount");
+
+  if (options.readonly) {
+    argv.push_back("--readonly");
   }
   if (options.collect_metrics) {
     argv.push_back("--metrics");
@@ -71,7 +74,6 @@ zx::status<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::chan
   if (options.sandbox_decompression) {
     argv.push_back("--sandbox_decompression");
   }
-  argv.push_back("mount");
   argv.push_back(nullptr);
   int argc = static_cast<int>(argv.size() - 1);
 

@@ -28,7 +28,9 @@ enum State {
   kStarted,
 };
 
-static constexpr InitOptions kReadonlyOptions = {
+constexpr InitOptions kEmptyOptions = {};
+
+constexpr InitOptions kReadonlyOptions = {
     .readonly = true,
     // Remaining options are same as default values.
 };
@@ -41,24 +43,24 @@ class OutgoingDirectoryFixture : public testing::Test {
       : format_(format), options_(options) {}
 
   void SetUp() override {
-    ASSERT_EQ(storage::WaitForRamctl().status_value(), ZX_OK);
-    zx_status_t status;
-    ASSERT_EQ(status = ramdisk_create(512, 1 << 16, &ramdisk_), ZX_OK)
-        << zx_status_get_string(status);
-    const char* ramdisk_path = ramdisk_get_path(ramdisk_);
+    auto ramdisk_or = storage::RamDisk::Create(512, 1 << 17);
+    ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
+    ramdisk_ = std::move(*ramdisk_or);
 
-    ASSERT_EQ(status = Mkfs(ramdisk_path, format_, launch_stdio_sync, MkfsOptions()), ZX_OK)
+    zx_status_t status;
+    ASSERT_EQ(status = Mkfs(ramdisk_.path().c_str(), format_, launch_stdio_sync, MkfsOptions()),
+              ZX_OK)
         << zx_status_get_string(status);
     state_ = kFormatted;
+
+    ASSERT_EQ(status = Fsck(ramdisk_.path().c_str(), format_, FsckOptions(), launch_stdio_sync),
+              ZX_OK)
+        << zx_status_get_string(status);
 
     ASSERT_NO_FATAL_FAILURE(StartFilesystem(options_));
   }
 
-  void TearDown() final {
-    ASSERT_NO_FATAL_FAILURE(StopFilesystem());
-    zx_status_t status;
-    ASSERT_EQ(status = ramdisk_destroy(ramdisk_), ZX_OK) << zx_status_get_string(status);
-  }
+  void TearDown() final { ASSERT_NO_FATAL_FAILURE(StopFilesystem()); }
 
   fidl::WireSyncClient<Directory>& DataRoot() {
     ZX_ASSERT(state_ == kStarted);  // Ensure this isn't used after stopping the filesystem.
@@ -74,17 +76,10 @@ class OutgoingDirectoryFixture : public testing::Test {
   void StartFilesystem(const InitOptions& options) {
     ASSERT_EQ(state_, kFormatted);
 
-    const char* ramdisk_path = ramdisk_get_path(ramdisk_);
-    ASSERT_NE(ramdisk_path, nullptr);
+    auto device_or = ramdisk_.channel();
+    ASSERT_EQ(device_or.status_value(), ZX_OK);
 
-    zx_status_t status;
-    zx::channel device, device_server;
-    ASSERT_EQ(status = zx::channel::create(0, &device, &device_server), ZX_OK)
-        << zx_status_get_string(status);
-    ASSERT_EQ(status = fdio_service_connect(ramdisk_path, device_server.release()), ZX_OK)
-        << zx_status_get_string(status);
-
-    auto export_root = FsInit(std::move(device), format_, options);
+    auto export_root = FsInit(std::move(*device_or), format_, options);
     ASSERT_TRUE(export_root.is_ok()) << export_root.status_string();
     export_client_ = fidl::WireSyncClient<Directory>(std::move(export_root.value()));
 
@@ -99,17 +94,15 @@ class OutgoingDirectoryFixture : public testing::Test {
     if (state_ != kStarted) {
       return;
     }
-    ASSERT_EQ(fs_management::Shutdown(
-                  fidl::UnownedClientEnd<fuchsia_io::Directory>(export_client_.client_end()))
-                  .status_value(),
-              ZX_OK);
+
+    ASSERT_EQ(fs_management::Shutdown(export_client_.client_end().borrow()).status_value(), ZX_OK);
 
     state_ = kFormatted;
   }
 
  private:
   State state_ = kFormatted;
-  ramdisk_client_t* ramdisk_ = nullptr;
+  storage::RamDisk ramdisk_;
   DiskFormat format_;
   InitOptions options_ = {};
   fidl::WireSyncClient<Directory> export_client_;
@@ -123,36 +116,38 @@ struct OutgoingDirectoryTestParameters {
   InitOptions options;
 };
 
-std::ostream& operator<<(std::ostream& out, const OutgoingDirectoryTestParameters& params) {
-  out << DiskFormatString(params.format);
-  if (params.options.readonly) {
+std::string PrintTestSuffix(
+    const testing::TestParamInfo<std::tuple<DiskFormat, InitOptions>> params) {
+  std::stringstream out;
+  out << DiskFormatString(std::get<0>(params.param));
+  if (std::get<1>(params.param).readonly) {
     out << "_readonly";
   }
-  return out;
+  return out.str();
 }
 
 // Generalized outgoing directory tests which should work in both mutable and read-only modes.
-class OutgoingDirectoryTest : public OutgoingDirectoryFixture,
-                              public testing::WithParamInterface<OutgoingDirectoryTestParameters> {
+class OutgoingDirectoryTest
+    : public OutgoingDirectoryFixture,
+      public testing::WithParamInterface<std::tuple<DiskFormat, InitOptions>> {
  public:
-  OutgoingDirectoryTest() : OutgoingDirectoryFixture(GetParam().format, GetParam().options) {}
+  OutgoingDirectoryTest()
+      : OutgoingDirectoryFixture(std::get<0>(GetParam()), std::get<1>(GetParam())) {}
 };
 
 TEST_P(OutgoingDirectoryTest, DataRootIsValid) {
-  std::string_view format_str = DiskFormatString(GetParam().format);
+  std::string_view format_str = DiskFormatString(std::get<0>(GetParam()));
   auto resp = DataRoot()->QueryFilesystem();
   ASSERT_TRUE(resp.ok()) << resp.status_string();
   ASSERT_EQ(resp.value().s, ZX_OK) << zx_status_get_string(resp.value().s);
   ASSERT_STREQ(format_str.data(), reinterpret_cast<char*>(resp.value().info->name.data()));
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    OutgoingDirectoryTest, OutgoingDirectoryTest,
-    testing::Values(OutgoingDirectoryTestParameters{kDiskFormatBlobfs, {}},
-                    OutgoingDirectoryTestParameters{kDiskFormatBlobfs, kReadonlyOptions},
-                    OutgoingDirectoryTestParameters{kDiskFormatMinfs, {}},
-                    OutgoingDirectoryTestParameters{kDiskFormatMinfs, kReadonlyOptions}),
-    testing::PrintToStringParamName());
+INSTANTIATE_TEST_SUITE_P(OutgoingDirectoryTest, OutgoingDirectoryTest,
+                         testing::Combine(testing::Values(kDiskFormatBlobfs, kDiskFormatMinfs,
+                                                          kDiskFormatFxfs, kDiskFormatF2fs),
+                                          testing::Values(kEmptyOptions, kReadonlyOptions)),
+                         PrintTestSuffix);
 
 // Minfs-Specific Tests (can be generalized to work with any mutable filesystem by parameterizing
 // on the disk format if required).
