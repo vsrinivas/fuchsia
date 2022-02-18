@@ -1435,7 +1435,8 @@ mod tests {
             mgmt_writer,
             sequence::SequenceManager,
             test_utils::{
-                fake_capabilities::fake_sta_capabilities, fake_frames::*, fake_stas::IesOverrides,
+                fake_capabilities::fake_client_capabilities, fake_frames::*,
+                fake_stas::IesOverrides,
             },
             timer::{create_timer, TimeStream, Timer},
         },
@@ -1514,7 +1515,7 @@ mod tests {
             BSSID,
             IFACE_MAC,
             TimeUnit::DEFAULT_BEACON_INTERVAL.into(),
-            ClientCapabilities(fake_sta_capabilities()),
+            fake_client_capabilities(),
             false,
         )
     }
@@ -1525,7 +1526,7 @@ mod tests {
             BSSID,
             IFACE_MAC,
             TimeUnit::DEFAULT_BEACON_INTERVAL.into(),
-            ClientCapabilities(fake_sta_capabilities()),
+            fake_client_capabilities(),
             true,
         )
     }
@@ -1548,7 +1549,7 @@ mod tests {
         Association {
             controlled_port_open: false,
             aid: 0,
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
             ap_ht_op: None,
             ap_vht_op: None,
             lost_bss_counter: LostBssCounter::start(
@@ -1619,7 +1620,7 @@ mod tests {
     fn open_authenticating(sta: &mut BoundClient<'_>) -> Authenticating {
         let mut auth = Authenticating {
             algorithm: AkmAlgorithm::open_supplicant(TimeUnit(2 * sta.sta.beacon_period)),
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         };
         auth.algorithm.initiate(sta).expect("Failed to initiate open auth");
         auth
@@ -1649,7 +1650,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = Joined { client_capabilities: ClientCapabilities(fake_sta_capabilities()) };
+        let state = Joined { client_capabilities: fake_client_capabilities() };
         state
             .on_sme_authenticate(&mut sta, 10, fidl_mlme::AuthenticationTypes::OpenSystem)
             .expect("failed authenticating");
@@ -1691,7 +1692,7 @@ mod tests {
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
-        let state = Joined { client_capabilities: ClientCapabilities(fake_sta_capabilities()) };
+        let state = Joined { client_capabilities: fake_client_capabilities() };
         state
             .on_sme_authenticate(&mut sta, 10, fidl_mlme::AuthenticationTypes::OpenSystem)
             .expect_err("should fail authenticating");
@@ -1851,8 +1852,7 @@ mod tests {
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state =
-            Authenticated { client_capabilities: ClientCapabilities(fake_sta_capabilities()) };
+        let state = Authenticated { client_capabilities: fake_client_capabilities() };
 
         assert!(m.fake_device.bss_cfg.is_some());
         state.on_deauth_frame(
@@ -1886,10 +1886,8 @@ mod tests {
 
         assert!(m.fake_device.bss_cfg.is_some());
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
-        let state = Associating {
-            timeout: Some(timeout),
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
-        };
+        let state =
+            Associating { timeout: Some(timeout), client_capabilities: fake_client_capabilities() };
 
         let Associated(Association { aid, controlled_port_open, .. }) = state
             .on_assoc_resp_frame(
@@ -1942,7 +1940,7 @@ mod tests {
             timeout: Some(timeout),
             client_capabilities: ClientCapabilities(StaCapabilities {
                 capability_info: mac::CapabilityInfo(0).with_ess(true).with_ibss(true),
-                ..fake_sta_capabilities()
+                ..fake_client_capabilities().0
             }),
         };
 
@@ -2011,10 +2009,8 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
-        let state = Associating {
-            timeout: Some(timeout),
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
-        };
+        let state =
+            Associating { timeout: Some(timeout), client_capabilities: fake_client_capabilities() };
 
         assert!(m.fake_device.bss_cfg.is_some());
         // Verify authentication was considered successful.
@@ -2052,10 +2048,8 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
-        let state = Associating {
-            timeout: Some(timeout),
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
-        };
+        let state =
+            Associating { timeout: Some(timeout), client_capabilities: fake_client_capabilities() };
 
         assert!(m.fake_device.bss_cfg.is_some());
         state
@@ -2092,10 +2086,8 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
-        let mut state = Associating {
-            timeout: Some(timeout),
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
-        };
+        let mut state =
+            Associating { timeout: Some(timeout), client_capabilities: fake_client_capabilities() };
 
         assert!(m.fake_device.bss_cfg.is_some());
         // Trigger timeout.
@@ -2123,10 +2115,8 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
-        let state = Associating {
-            timeout: Some(timeout),
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
-        };
+        let state =
+            Associating { timeout: Some(timeout), client_capabilities: fake_client_capabilities() };
 
         assert!(m.fake_device.bss_cfg.is_some());
         state.on_deauth_frame(
@@ -2156,10 +2146,8 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
-        let state = Associating {
-            timeout: Some(timeout),
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
-        };
+        let state =
+            Associating { timeout: Some(timeout), client_capabilities: fake_client_capabilities() };
 
         assert!(m.fake_device.bss_cfg.is_some());
         state.on_disassoc_frame(
@@ -2600,7 +2588,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let mut state = States::new_initial(ClientCapabilities(fake_sta_capabilities()));
+        let mut state = States::new_initial(fake_client_capabilities());
         assert_variant!(state, States::Joined(_), "not in joined state");
 
         // Successful: Joined > Authenticating
@@ -2687,7 +2675,7 @@ mod tests {
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let mut state = States::new_initial(ClientCapabilities(fake_sta_capabilities()));
+        let mut state = States::new_initial(fake_client_capabilities());
         assert_variant!(state, States::Joined(_), "not in joined state");
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -2747,7 +2735,7 @@ mod tests {
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Authenticated {
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
 
         // Deauthenticate: Authenticated > Joined
@@ -2826,7 +2814,7 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Associating {
             timeout: None,
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
 
         // Successful: Associating > Associated
@@ -2868,7 +2856,7 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Associating {
             timeout: None,
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -2901,7 +2889,7 @@ mod tests {
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Authenticated {
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -2927,7 +2915,7 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Associating {
             timeout: None,
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -3137,7 +3125,7 @@ mod tests {
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Joined {
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
 
         let eth_frame = &[100; 14]; // long enough for ethernet header.
@@ -3160,7 +3148,7 @@ mod tests {
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Joined {
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -3202,7 +3190,7 @@ mod tests {
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Authenticated {
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -3232,7 +3220,7 @@ mod tests {
         let timeout = sta.ctx.timer.schedule_after(1.seconds(), TimedEvent::Associating);
         let state = States::from(statemachine::testing::new_state(Associating {
             timeout: Some(timeout),
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -3309,7 +3297,7 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state = States::from(statemachine::testing::new_state(Joined {
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req(&exec));
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
@@ -3320,14 +3308,14 @@ mod tests {
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
 
         let state = States::from(statemachine::testing::new_state(Authenticated {
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req(&exec));
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
 
         let state = States::from(statemachine::testing::new_state(Associating {
             timeout: None,
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req(&exec));
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
@@ -3408,7 +3396,7 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state = States::from(statemachine::testing::new_state(Joined {
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
         assert_eq!(m.fake_device.keys.len(), 0);
@@ -3418,14 +3406,14 @@ mod tests {
         assert_eq!(m.fake_device.keys.len(), 0);
 
         let state = States::from(statemachine::testing::new_state(Authenticated {
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
         assert_eq!(m.fake_device.keys.len(), 0);
 
         let state = States::from(statemachine::testing::new_state(Associating {
             timeout: None,
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
         assert_eq!(m.fake_device.keys.len(), 0);
@@ -3552,7 +3540,7 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state = States::from(statemachine::testing::new_state(Joined {
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true, &exec));
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
@@ -3562,14 +3550,14 @@ mod tests {
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
 
         let state = States::from(statemachine::testing::new_state(Authenticated {
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true, &exec));
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
 
         let state = States::from(statemachine::testing::new_state(Associating {
             timeout: None,
-            client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+            client_capabilities: fake_client_capabilities(),
         }));
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true, &exec));
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);

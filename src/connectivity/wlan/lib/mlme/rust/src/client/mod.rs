@@ -1242,7 +1242,7 @@ mod tests {
         wlan_common::{
             assert_variant, fake_fidl_bss_description, ie,
             stats::SignalStrengthAverage,
-            test_utils::{fake_capabilities::fake_sta_capabilities, fake_frames::*},
+            test_utils::{fake_capabilities::fake_client_capabilities, fake_frames::*},
             timer::{create_timer, TimeStream},
             TimeUnit,
         },
@@ -1335,7 +1335,7 @@ mod tests {
             BSSID,
             IFACE_MAC,
             TimeUnit::DEFAULT_BEACON_INTERVAL.0,
-            ClientCapabilities(fake_sta_capabilities()),
+            fake_client_capabilities(),
             false,
         )
     }
@@ -1367,7 +1367,7 @@ mod tests {
                 States::from(wlan_statemachine::testing::new_state(Associated(Association {
                     aid: 42,
                     controlled_port_open: true,
-                    client_capabilities: ClientCapabilities(fake_sta_capabilities()),
+                    client_capabilities: fake_client_capabilities(),
                     ap_ht_op: None,
                     ap_vht_op: None,
                     qos: Qos::Disabled,
@@ -1526,7 +1526,7 @@ mod tests {
             0, 4, // SSID id and length
             115, 115, 105, 100, // SSID
             1, 8, // supp_rates id and length
-            0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // supp_rates
+            0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, // supp_rates
             50, 4, // extended supported rates id and length
             0x30, 0x48, 0x60, 0x6c // extended supported rates
         ][..]);

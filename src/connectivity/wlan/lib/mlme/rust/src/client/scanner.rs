@@ -819,7 +819,7 @@ mod tests {
             0, 3, // SSID id and length
             b'f', b'o', b'o', // SSID
             1, 8, // supp_rates id and length
-            0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // supp_rates
+            0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, // supp_rates
             50, 4, // extended supported rates id and length
             0x30, 0x48, 0x60, 0x6c // extended supported rates
         ][..]);
@@ -836,7 +836,7 @@ mod tests {
             0, 3, // SSID id and length
             b'b', b'a', b'r', // SSID
             1, 8, // supp_rates id and length
-            0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // supp_rates
+            0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, // supp_rates
             50, 4, // extended supported rates id and length
             0x30, 0x48, 0x60, 0x6c // extended supported rates
         ][..]);
@@ -891,7 +891,7 @@ mod tests {
             0, 3, // SSID id and length
             b'f', b'o', b'o', // SSID
             1, 8, // supp_rates id and length
-            0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // supp_rates
+            0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, // supp_rates
             50, 4, // extended supported rates id and length
             0x30, 0x48, 0x60, 0x6c // extended supported rates
         ][..]);
@@ -908,7 +908,7 @@ mod tests {
             0, 3, // SSID id and length
             b'b', b'a', b'r', // SSID
             1, 8, // supp_rates id and length
-            0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // supp_rates
+            0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, // supp_rates
             50, 4, // extended supported rates id and length
             0x30, 0x48, 0x60, 0x6c // extended supported rates
         ][..]);
@@ -1048,7 +1048,7 @@ mod tests {
                     channels: vec![6],
                     ies: vec![ 0x01, // Element ID for Supported Rates
                                0x08, // Length
-                               0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // Supported Rates
+                               0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, // Supported Rates
                                0x32, // Element ID for Extended Supported Rates
                                0x04, // Length
                                0x30, 0x48, 0x60, 0x6c // Extended Supported Rates
@@ -1059,7 +1059,7 @@ mod tests {
                     channels: vec![1, 2, 3, 4, 5],
                     ies: vec![ 0x01, // Element ID for Supported Rates
                                0x08, // Length
-                               0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // Supported Rates
+                               0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, // Supported Rates
                                0x32, // Element ID for Extended Supported Rates
                                0x04, // Length
                                0x30, 0x48, 0x60, 0x6c // Extended Supported Rates
@@ -1079,7 +1079,7 @@ mod tests {
                     channels: vec![1, 2, 3, 4, 5],
                     ies: vec![ 0x01, // Element ID for Supported Rates
                                0x08, // Length
-                               0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // Supported Rates
+                               0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, // Supported Rates
                                0x32, // Element ID for Extended Supported Rates
                                0x04, // Length
                                0x30, 0x48, 0x60, 0x6c // Extended Supported Rates

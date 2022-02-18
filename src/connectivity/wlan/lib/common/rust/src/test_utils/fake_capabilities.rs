@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{capabilities::StaCapabilities, ie, mac::CapabilityInfo},
+    crate::{
+        capabilities::{ClientCapabilities, StaCapabilities},
+        ie,
+        mac::CapabilityInfo,
+    },
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     std::convert::TryInto,
@@ -88,7 +92,7 @@ pub fn fake_2ghz_band_capabilities_vht() -> fidl_mlme::BandCapabilities {
 pub fn fake_2ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
     fidl_mlme::BandCapabilities {
         band: fidl_common::WlanBand::TwoGhz,
-        basic_rates: vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
+        basic_rates: vec![0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
         base_frequency: 2407,
         channels: vec![],
         capability_info: fake_capability_info().0,
@@ -97,12 +101,12 @@ pub fn fake_2ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
     }
 }
 
-pub fn fake_sta_capabilities() -> StaCapabilities {
-    let rates = vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c];
-    StaCapabilities {
+pub fn fake_client_capabilities() -> ClientCapabilities {
+    let rates = vec![0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c];
+    ClientCapabilities(StaCapabilities {
         capability_info: fake_capability_info(),
         rates: rates.into_iter().map(ie::SupportedRate).collect(),
         ht_cap: Some(ie::fake_ht_capabilities()),
         vht_cap: Some(ie::fake_vht_capabilities()),
-    }
+    })
 }
