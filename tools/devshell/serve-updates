@@ -213,7 +213,13 @@ if [[ "${server_mode}" = "pm" ]]; then
 else
   # FIXME(http://fxbug.dev/79636): ffx doesn't yet support incremental package building.
   if is_feature_enabled "incremental"; then
-    fx-error "The feature 'incremental' is not supported yet by ffx"
+    fx-error "The feature 'incremental' is not supported yet by ffx."
+    fx-error "To use the 'incremental' feature, switch to the legacy pm"
+    fx-error "package server with:"
+    fx-error ""
+    fx-error "$ ffx config set repository.server.mode pm"
+    fx-error "$ ffx doctor --restart-daemon"
+    fx-error ""
     fx-error "See http://fxbug.dev/79636 for more details."
     exit 1
   fi
