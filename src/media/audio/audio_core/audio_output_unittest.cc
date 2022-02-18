@@ -8,6 +8,7 @@
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/fake_stream.h"
@@ -102,7 +103,7 @@ class TestAudioOutput : public AudioOutput {
  public:
   TestAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
-      : AudioOutput("", threading_model, registry, link_matrix, clock_factory,
+      : AudioOutput("", MixProfileConfig{}, threading_model, registry, link_matrix, clock_factory,
                     nullptr /* EffectsLoaderV2 */, std::make_unique<StubDriver>(this)) {
     SetPresentationDelay(StubDriver::kSafeWriteDelayDuration);
   }

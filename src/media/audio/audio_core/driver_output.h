@@ -25,23 +25,8 @@ class EffectsLoaderV2;
 
 class DriverOutput : public AudioOutput {
  public:
-  // AudioCore supplies data to audio output devices periodically; when doing so it must stay
-  // safely ahead of the hardware (without adding excessive latency).
-  //
-  // DriverOutput knows where the audio hardware is currently reading in the ring buffer. It sets a
-  // timer to awaken when the amount of unread audio reaches the "low-water" amount, then requests
-  // enough mixed data from its upstream pipeline to fill the ring buffer to the "high-water" level.
-  // Because it can take as long as an entire mix profile period for the thread to be scheduled and
-  // mix the needed audio into the ring buffer, `kDefaultLowWaterDuration` is equal to
-  // `MixProfileConfig::kDefaultPeriod`.
-  //
-  // The output pipeline's total latency will currently be 20 ms + fifo depth + external delay.
-  // TODO(fxbug.dev/94012): Start using `mix_profile` in `audio_core_config.json` instead.
-  static constexpr zx::duration kDefaultLowWaterDuration = MixProfileConfig::kDefaultPeriod;
-  static constexpr zx::duration kDefaultHighWaterDuration =
-      kDefaultLowWaterDuration + MixProfileConfig::kDefaultPeriod;
-
-  DriverOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
+  DriverOutput(const std::string& name, const MixProfileConfig& mix_profile_config,
+               ThreadingModel* threading_model, DeviceRegistry* registry,
                fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
                LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory,
                VolumeCurve volume_curve, EffectsLoaderV2* effects_loader_v2);
@@ -66,9 +51,7 @@ class DriverOutput : public AudioOutput {
   void FinishMixJob(const AudioOutput::FrameSpan& span)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
 
-  zx::duration MixDeadline() const override {
-    return kDefaultHighWaterDuration - kDefaultLowWaterDuration;
-  }
+  zx::duration MixDeadline() const override { return high_water_duration_ - low_water_duration_; }
 
   // AudioDevice implementation
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
@@ -102,6 +85,17 @@ class DriverOutput : public AudioOutput {
   void OnDriverConfigComplete() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   void OnDriverStartComplete() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+
+  // `AudioCore` supplies data to audio output devices periodically; when doing so it must stay
+  // safely ahead of the hardware (without adding excessive latency).
+  //
+  // `DriverOutput` knows where the audio hardware is currently reading in the ring buffer. It sets
+  // a timer to awaken when the amount of unread audio reaches the "low-water" amount, then requests
+  // enough mixed data from its upstream pipeline to fill the ring buffer to the "high-water" level.
+  // It can take as long as an entire mix profile period for the thread to be scheduled and mix the
+  // needed audio into the ring buffer.
+  zx::duration low_water_duration_;
+  zx::duration high_water_duration_;
 
   State state_ = State::Uninitialized;
   zx::channel initial_stream_channel_;

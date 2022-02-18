@@ -9,12 +9,16 @@
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/zx/time.h>
+
+#include "src/media/audio/audio_core/mix_profile_config.h"
 
 namespace media::audio {
 
 class ProfileProvider : public fuchsia::media::ProfileProvider {
  public:
-  ProfileProvider(sys::ComponentContext& context) : context_(context) {}
+  ProfileProvider(sys::ComponentContext& context, const MixProfileConfig& mix_profile_config)
+      : context_(context), mix_profile_period_(mix_profile_config.period) {}
 
   fidl::InterfaceRequestHandler<fuchsia::media::ProfileProvider> GetFidlRequestHandler();
 
@@ -28,6 +32,7 @@ class ProfileProvider : public fuchsia::media::ProfileProvider {
  private:
   fidl::BindingSet<fuchsia::media::ProfileProvider, ProfileProvider*> bindings_;
   sys::ComponentContext& context_;
+  zx::duration mix_profile_period_;
   fuchsia::scheduler::ProfileProviderPtr profile_provider_;
 };
 

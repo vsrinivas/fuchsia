@@ -6,6 +6,7 @@
 
 #include <gmock/gmock.h>
 
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/testing/fake_stream.h"
@@ -46,12 +47,14 @@ class EffectsStageV1Test : public testing::ThreadingModelFixture {
 
   testing::PacketFactory& packet_factory() { return packet_factory_; }
   testing::TestEffectsV1Module& test_effects() { return test_effects_; }
+  const MixProfileConfig& mix_profile_config() const { return mix_profile_config_; }
   VolumeCurve& volume_curve() { return volume_curve_; }
 
  private:
   testing::PacketFactory packet_factory_{dispatcher(), k48k2ChanFloatFormat,
                                          zx_system_get_page_size()};
   testing::TestEffectsV1Module test_effects_ = testing::TestEffectsV1Module::Open();
+  MixProfileConfig mix_profile_config_;
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
 };
 
@@ -75,7 +78,8 @@ TEST_F(EffectsStageV1Test, ApplyEffectsToSourceStream) {
       .effect_name = "add_1.0",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
+  auto effects_stage =
+      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
 
   // Enqueue 10ms of frames in the packet queue.
   stream->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10)));
@@ -118,7 +122,8 @@ TEST_F(EffectsStageV1Test, BlockAlignRequests) {
       .effect_name = "add_1.0",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
+  auto effects_stage =
+      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
 
   EXPECT_EQ(effects_stage->block_size(), kBlockSize);
 
@@ -177,7 +182,8 @@ TEST_F(EffectsStageV1Test, TruncateToMaxBufferSize) {
       .effect_name = "test_effect",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
+  auto effects_stage =
+      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
 
   EXPECT_EQ(effects_stage->block_size(), kBlockSize);
 
@@ -213,7 +219,8 @@ TEST_F(EffectsStageV1Test, CompensateForEffectDelayInStreamTimeline) {
       .effect_name = "effect_with_delay_3",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
+  auto effects_stage =
+      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
 
   // Since our effect introduces 13 frames of latency, the incoming source frame at time 0 can only
   // emerge from the effect in output frame 13.
@@ -254,7 +261,8 @@ TEST_F(EffectsStageV1Test, AddDelayFramesIntoMinLeadTime) {
       .effect_name = "effect_with_delay_3",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
+  auto effects_stage =
+      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
 
   // Check our initial lead time is only the effect delay.
   auto effect_lead_time =
@@ -294,7 +302,8 @@ TEST_F(EffectsStageV1Test, UpdateEffect) {
       .instance_name = kInstanceName,
       .effect_config = kInitialConfig,
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
+  auto effects_stage =
+      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
 
   effects_stage->UpdateEffect(kInstanceName, kConfig);
 
@@ -347,7 +356,8 @@ TEST_F(EffectsStageV1Test, CreateStageWithRechannelization) {
       .instance_name = "incremement_without_upchannel",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
+  auto effects_stage =
+      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   stream->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10)));
@@ -395,7 +405,8 @@ TEST_F(EffectsStageV1Test, ReleasePacketWhenFullyConsumed) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
+  auto effects_stage =
+      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   bool packet_released = false;
@@ -436,7 +447,8 @@ TEST_F(EffectsStageV1Test, ReleasePacketWhenNoLongerReferenced) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
+  auto effects_stage =
+      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   bool packet_released = false;
@@ -484,7 +496,7 @@ TEST_F(EffectsStageV1Test, SendStreamInfoToEffects) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, input, volume_curve());
+  auto effects_stage = EffectsStageV1::Create(effects, input, mix_profile_config(), volume_curve());
 
   constexpr uint32_t kRequestedFrames = 48;
 
@@ -566,7 +578,8 @@ TEST_F(EffectsStageV1Test, SkipRingoutIfDiscontinuous) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
+  auto effects_stage =
+      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
   EXPECT_EQ(2, effects_stage->format().channels());
 
   // Add 48 frames to our source.
@@ -631,7 +644,7 @@ class EffectsStageV1RingoutTest : public EffectsStageV1Test,
 TEST_P(EffectsStageV1RingoutTest, RingoutBuffer) {
   auto ringout_buffer = EffectsStageV1::RingoutBuffer::Create(
       GetParam().format, GetParam().effect_ring_out_frames, GetParam().effect_max_frames_per_buffer,
-      GetParam().effect_block_size);
+      GetParam().effect_block_size, MixProfileConfig::kDefaultPeriod.to_nsecs());
 
   EXPECT_EQ(GetParam().ring_out_block_frames, ringout_buffer.buffer_frames);
   EXPECT_EQ(GetParam().effect_ring_out_frames, ringout_buffer.total_frames);
@@ -662,7 +675,8 @@ TEST_P(EffectsStageV1RingoutTest, RingoutFrames) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, stream_, volume_curve());
+  auto effects_stage =
+      EffectsStageV1::Create(effects, stream_, mix_profile_config(), volume_curve());
   EXPECT_EQ(2, effects_stage->format().channels());
 
   // Add 48 frames to our source.

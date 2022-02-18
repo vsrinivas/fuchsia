@@ -5,10 +5,14 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_TOOLS_OUTPUT_PIPELINE_BENCHMARK_OUTPUT_PIPELINE_BENCHMARK_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_TOOLS_OUTPUT_PIPELINE_BENCHMARK_OUTPUT_PIPELINE_BENCHMARK_H_
 
+#include <optional>
+
 #include <perftest/results.h>
 
 #include "gperftools/profiler.h"
+#include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/audio_core/output_pipeline.h"
+#include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/analysis/generators.h"
@@ -56,6 +60,11 @@ class OutputPipelineBenchmark {
   void Run(Scenario scenario, int64_t runs_per_scenario, zx::duration mix_period,
            perftest::ResultsSet* results, bool print_summary);
 
+  const ProcessConfig& process_config() const {
+    FX_CHECK(process_config_.has_value());
+    return *process_config_;
+  }
+
  private:
   std::shared_ptr<OutputPipeline> CreateOutputPipeline(
       std::unique_ptr<EffectsLoaderV2> effects_loader_v2);
@@ -70,6 +79,7 @@ class OutputPipelineBenchmark {
   sys::ComponentContext& context_;
   std::unique_ptr<EffectsLoaderV2> effects_loader_v2_;
   std::shared_ptr<OutputPipeline> output_pipeline_;
+  std::optional<ProcessConfig> process_config_;
 };
 
 }  // namespace media::audio

@@ -5,6 +5,7 @@
 #include "src/media/audio/audio_core/throttle_output.h"
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/audio_clock.h"
 
@@ -15,7 +16,7 @@ class TestThrottleOutput : public ThrottleOutput {
  public:
   TestThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                      LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
-      : ThrottleOutput(threading_model, registry, link_matrix, clock_factory) {}
+      : ThrottleOutput(MixProfileConfig{}, threading_model, registry, link_matrix, clock_factory) {}
 
   using ThrottleOutput::driver_ref_time_to_frac_presentation_frame;
   using ThrottleOutput::last_sched_time_mono;

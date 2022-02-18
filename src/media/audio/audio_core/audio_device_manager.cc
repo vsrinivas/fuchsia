@@ -473,8 +473,9 @@ void AudioDeviceManager::AddDeviceByChannel(
                                     &link_matrix_, clock_factory_);
   } else {
     new_device = std::make_shared<DriverOutput>(
-        device_name, &threading_model(), this, std::move(stream_config), &link_matrix_,
-        clock_factory_, process_config_.default_volume_curve(), effects_loader_v2_);
+        device_name, process_config_.mix_profile_config(), &threading_model(), this,
+        std::move(stream_config), &link_matrix_, clock_factory_,
+        process_config_.default_volume_curve(), effects_loader_v2_);
   }
 
   if (new_device == nullptr) {

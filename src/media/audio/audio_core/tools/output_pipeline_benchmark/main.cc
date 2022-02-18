@@ -141,7 +141,9 @@ Options ParseCommandLine(int argc, char** argv) {
   return opts;
 }
 
-void RegisterDeadlineProfile(sys::ComponentContext& context, const std::string& prog_name) {
+void RegisterDeadlineProfile(sys::ComponentContext& context,
+                             const MixProfileConfig& mix_profile_config,
+                             const std::string& prog_name) {
   fuchsia::media::ProfileProviderSyncPtr profile_provider;
   if (auto status = context.svc()->Connect(profile_provider.NewRequest()); status != ZX_OK) {
     FX_PLOGS(FATAL, status) << "could not connect to profile provider";
@@ -152,10 +154,9 @@ void RegisterDeadlineProfile(sys::ComponentContext& context, const std::string& 
     FX_PLOGS(FATAL, status) << "could not dup thread handle";
   }
 
-  // TODO(fxbug.dev/94012): Start using `mix_profile` in `audio_core_config.json` instead.
-  int64_t want_period = MixProfileConfig::kDefaultPeriod.get();
-  float want_capacity = static_cast<float>(MixProfileConfig::kDefaultCapacity.get()) /
-                        static_cast<float>(MixProfileConfig::kDefaultPeriod.get());
+  int64_t want_period = mix_profile_config.period.get();
+  float want_capacity = static_cast<float>(mix_profile_config.capacity.get()) /
+                        static_cast<float>(mix_profile_config.period.get());
   int64_t got_period;
   int64_t got_capacity;
   auto status = profile_provider->RegisterHandlerWithCapacity(
@@ -180,13 +181,15 @@ int main(int argc, char** argv) {
   auto opts = ParseCommandLine(argc, argv);
   printf("Audio output pipeline profiling tool\n");
 
-  // Assign a deadline profile to this thread.
   auto context = sys::ComponentContext::Create();
-  RegisterDeadlineProfile(*context, prog_name);
 
   // Prime the output pipeline so the first mix is not artificially slow.
   media::audio::PinExecutableMemory::Singleton();
   OutputPipelineBenchmark benchmark(*context);
+
+  // Assign a deadline profile to this thread.
+  RegisterDeadlineProfile(*context, benchmark.process_config().mix_profile_config(), prog_name);
+
   benchmark.Run(OutputPipelineBenchmark::Scenario::FromString("BMISCU/VC"), 1, zx::msec(10),
                 nullptr, false);
 

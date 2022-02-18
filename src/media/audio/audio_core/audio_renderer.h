@@ -113,6 +113,7 @@ class AudioRenderer : public BaseRenderer,
   };
   std::shared_ptr<PauseRampState> pause_ramp_state_;
   void FinishPauseRamp(std::shared_ptr<PauseRampState> expected_state);
+  zx::duration mix_profile_period_;
 
   std::mutex mutex_;
   bool reference_clock_is_set_ FXL_GUARDED_BY(mutex_) = false;

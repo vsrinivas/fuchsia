@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/process_config_loader.h"
 #include "src/media/audio/audio_core/testing/sine_wave_stream.h"
 
@@ -216,10 +217,11 @@ std::shared_ptr<OutputPipeline> OutputPipelineBenchmark::CreateOutputPipeline(
   auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);
   FX_CHECK(!process_config.is_error())
       << "Failed to load " << kProcessConfigPath << ": " << process_config.error();
+  process_config_ = process_config.take_value();
 
   effects_loader_v2_ = std::move(effects_loader_v2);
 
-  auto device_profile = process_config.value().device_config().output_device_profile(
+  auto device_profile = process_config_->device_config().output_device_profile(
       AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS);
 
   const Format pipeline_format =
@@ -232,8 +234,9 @@ std::shared_ptr<OutputPipeline> OutputPipelineBenchmark::CreateOutputPipeline(
       TimelineFunction(TimelineRate(Fixed(fps).raw_value(), zx::sec(1).to_nsecs()));
 
   return std::make_shared<OutputPipelineImpl>(
-      device_profile.pipeline_config(), device_profile.volume_curve(), effects_loader_v2_.get(),
-      960, ref_time_to_frac_presentation_frame, *device_clock_);
+      device_profile.pipeline_config(), process_config_->mix_profile_config(),
+      device_profile.volume_curve(), effects_loader_v2_.get(), 960,
+      ref_time_to_frac_presentation_frame, *device_clock_);
 }
 
 std::unique_ptr<EffectsLoaderV2> OutputPipelineBenchmark::CreateEffectsLoaderV2(

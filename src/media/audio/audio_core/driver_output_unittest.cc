@@ -27,13 +27,10 @@ using testing::FloatEq;
 
 namespace media::audio {
 namespace {
-constexpr zx::duration kExpectedMixInterval =
-    DriverOutput::kDefaultHighWaterDuration - DriverOutput::kDefaultLowWaterDuration;
+
 constexpr zx::duration kBeyondSubmittedPackets = zx::sec(1);
 
 int64_t RingBufferSizeBytes() { return 8 * zx_system_get_page_size(); }
-
-}  // namespace
 
 class DriverOutputTest : public testing::ThreadingModelFixture {
  protected:
@@ -72,7 +69,8 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
                          /* driver_gain_db */ 0.0, /* software_gain_db */ 0.0)})
                 .SetDefaultVolumeCurve(
                     VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
-                .Build()) {}
+                .Build()),
+        expected_mix_interval_(context().process_config().mix_profile_config().period) {}
 
   void AddChannelSet(fuchsia::hardware::audio::PcmSupportedFormats& formats,
                      size_t number_of_channels) {
@@ -94,11 +92,11 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
 
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
     stream_config.set_channel(std::move(c2));
-    output_ = std::make_shared<DriverOutput>("", &threading_model(), &context().device_manager(),
-                                             std::move(stream_config), &context().link_matrix(),
-                                             context().clock_factory(),
-                                             context().process_config().default_volume_curve(),
-                                             nullptr);  // not using V2 effects
+    output_ = std::make_shared<DriverOutput>(
+        "", context().process_config().mix_profile_config(), &threading_model(),
+        &context().device_manager(), std::move(stream_config), &context().link_matrix(),
+        context().clock_factory(), context().process_config().default_volume_curve(),
+        nullptr);  // not using V2 effects
     ASSERT_NE(output_, nullptr);
 
     ring_buffer_mapper_ = driver_->CreateRingBuffer(RingBufferSizeBytes());
@@ -141,6 +139,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
   }
 
   testing::TestEffectsV1Module test_effects_ = testing::TestEffectsV1Module::Open();
+  zx::duration expected_mix_interval_;
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
   std::unique_ptr<testing::FakeAudioDriver> driver_;
   std::shared_ptr<DriverOutput> output_;
@@ -215,7 +214,7 @@ TEST_F(DriverOutputTest, RendererOutput) {
 
   // Run the loop for just before we expect the mix to occur to validate we're mixing on the correct
   // interval.
-  RunLoopFor(kExpectedMixInterval - zx::nsec(1));
+  RunLoopFor(expected_mix_interval_ - zx::nsec(1));
   const uint32_t kSilentFrame = 0;
   EXPECT_THAT(RingBuffer<uint32_t>(), Each(Eq(kSilentFrame)));
 
@@ -269,8 +268,8 @@ TEST_F(DriverOutputTest, MixAtExpectedInterval) {
       dispatcher(), &context().link_matrix(), context().clock_factory());
   context().link_matrix().LinkObjects(renderer, output_,
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
-  renderer->EnqueueAudioPacket(0.75, kExpectedMixInterval);
-  renderer->EnqueueAudioPacket(-0.75, kExpectedMixInterval);
+  renderer->EnqueueAudioPacket(0.75, expected_mix_interval_);
+  renderer->EnqueueAudioPacket(-0.75, expected_mix_interval_);
 
   // We'll have 4 sections in our ring buffer:
   //  *  Silence during the initial lead time.
@@ -292,7 +291,7 @@ TEST_F(DriverOutputTest, MixAtExpectedInterval) {
   size_t first_silent_frame = first_negative_frame + kMixWindowFrames;
 
   // Run until just before the expected first mix. Expect the ring buffer to be empty.
-  RunLoopFor(kExpectedMixInterval - zx::nsec(1));
+  RunLoopFor(expected_mix_interval_ - zx::nsec(1));
   EXPECT_THAT(RingBuffer<uint32_t>(), Each(Eq(kSilentFrame)));
 
   // Now expect the first mix, which adds the positive samples
@@ -303,7 +302,7 @@ TEST_F(DriverOutputTest, MixAtExpectedInterval) {
   EXPECT_THAT(RingBufferSlice<uint32_t>(first_negative_frame, -1), Each(Eq(kSilentFrame)));
 
   // Run until just before the next mix interval. Expect the ring to be unchanged.
-  RunLoopFor(kExpectedMixInterval - zx::nsec(1));
+  RunLoopFor(expected_mix_interval_ - zx::nsec(1));
   EXPECT_THAT(RingBufferSlice<uint32_t>(0, first_positive_frame), Each(Eq(kSilentFrame)));
   EXPECT_THAT(RingBufferSlice<uint32_t>(first_positive_frame, kMixWindowFrames),
               Each(Eq(kPostiveFrame)));
@@ -357,9 +356,9 @@ TEST_F(DriverOutputTest, DISABLED_WriteSilenceToRingWhenMuted) {
                                       std::make_shared<MappedLoudnessTransform>(volume_curve_));
   bool packet1_released = false;
   bool packet2_released = false;
-  renderer->EnqueueAudioPacket(1.0, kExpectedMixInterval,
+  renderer->EnqueueAudioPacket(1.0, expected_mix_interval_,
                                [&packet1_released] { packet1_released = true; });
-  renderer->EnqueueAudioPacket(-1.0, kExpectedMixInterval,
+  renderer->EnqueueAudioPacket(-1.0, expected_mix_interval_,
                                [&packet2_released] { packet2_released = true; });
 
   // Fill the ring buffer with some bytes so we can detect if we've written to the buffer.
@@ -378,8 +377,8 @@ TEST_F(DriverOutputTest, DISABLED_WriteSilenceToRingWhenMuted) {
   size_t num_silent_frames = kMixWindowFrames * 2;
 
   // Run loop to consume all the frames from the renderer.
-  RunLoopFor(kExpectedMixInterval);
-  RunLoopFor(kExpectedMixInterval);
+  RunLoopFor(expected_mix_interval_);
+  RunLoopFor(expected_mix_interval_);
   EXPECT_THAT(RingBufferSlice<uint32_t>(0, first_silent_frame), Each(Eq(kInitialFrame)));
   EXPECT_THAT(RingBufferSlice<uint32_t>(first_silent_frame, num_silent_frames),
               Each(Eq(kSilentFrame)));
@@ -390,9 +389,9 @@ TEST_F(DriverOutputTest, DISABLED_WriteSilenceToRingWhenMuted) {
   EXPECT_TRUE(packet1_released || packet2_released);
 
   // Run the loop for |presentation_delay| to verify we release our packets. We add
-  // |kExpectedMixInterval| - |zx::nsec(1)| to ensure we run the next |Process()| after this lead
+  // |expected_mix_interval_| - |zx::nsec(1)| to ensure we run the next |Process()| after this lead
   // time has elapsed.
-  RunLoopFor((output_->presentation_delay() + kExpectedMixInterval - zx::nsec(1)));
+  RunLoopFor((output_->presentation_delay() + expected_mix_interval_ - zx::nsec(1)));
   EXPECT_TRUE(packet1_released);
   EXPECT_TRUE(packet2_released);
 
@@ -461,4 +460,5 @@ TEST_F(DriverOutputTest, UseBestAvailableSampleRateAndChannelization) {
   EXPECT_EQ(format.frames_per_second(), kSupportedFrameRate);
 }
 
+}  // namespace
 }  // namespace media::audio

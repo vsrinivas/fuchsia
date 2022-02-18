@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/testing/fake_profile_provider.h"
 
 namespace media::audio {
@@ -17,7 +18,7 @@ namespace media::audio {
 class ProfileProviderTest : public gtest::TestLoopFixture {
   void SetUp() override {
     TestLoopFixture::SetUp();
-    profile_provider_ = std::make_unique<ProfileProvider>(*context());
+    profile_provider_ = std::make_unique<ProfileProvider>(*context(), mix_profile_config_);
 
     auto svc = context_provider_.service_directory_provider();
     ASSERT_EQ(ZX_OK, svc->AddService(fake_profile_provider_.GetHandler()));
@@ -26,6 +27,7 @@ class ProfileProviderTest : public gtest::TestLoopFixture {
  protected:
   sys::ComponentContext* context() { return context_provider_.context(); }
   FakeProfileProvider fake_profile_provider_;
+  MixProfileConfig mix_profile_config_;
   std::unique_ptr<ProfileProvider> profile_provider_;
   sys::testing::ComponentContextProvider context_provider_;
 };
@@ -50,10 +52,10 @@ TEST_F(ProfileProviderTest, CallRegisterHandlerWithCapacityDefaultPeriod) {
   bool called = false;
   zx::thread self;
   ASSERT_EQ(zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &self), ZX_OK);
-  // Request 25% CPU with a 10 ms period, so 2,500us every 10ms.
+  // Request 25% CPU with a default period, so 2,500us every `mix_profile_config_.period`.
   profile_provider_->RegisterHandlerWithCapacity(
-      std::move(self), "test", 0, 0.25, [&called](uint64_t period, uint64_t capacity) {
-        ASSERT_EQ(period, static_cast<uint64_t>(zx::msec(10).get()));
+      std::move(self), "test", 0, 0.25, [this, &called](uint64_t period, uint64_t capacity) {
+        ASSERT_EQ(period, static_cast<uint64_t>(mix_profile_config_.period.get()));
         ASSERT_EQ(capacity, static_cast<uint64_t>(zx::usec(2500).get()));
         called = true;
       });

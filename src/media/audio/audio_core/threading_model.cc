@@ -16,14 +16,16 @@
 #include <string>
 #include <unordered_map>
 
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {
 namespace {
 
-void SetMixDispatcherThreadProfile(async_dispatcher_t* dispatcher) {
+void SetMixDispatcherThreadProfile(const MixProfileConfig& mix_profile_config,
+                                   async_dispatcher_t* dispatcher) {
   zx::profile profile;
-  zx_status_t status = AcquireHighPriorityProfile(&profile);
+  zx_status_t status = AcquireHighPriorityProfile(mix_profile_config, &profile);
   if (status != ZX_OK) {
     FX_LOGS(ERROR)
         << "Unable to acquire high priority profile; mix threads will run at normal priority";
@@ -52,6 +54,9 @@ struct ExecutionDomainHolder {
 
 class ThreadingModelBase : public ThreadingModel {
  public:
+  explicit ThreadingModelBase(MixProfileConfig mix_profile_config)
+      : mix_profile_config_(mix_profile_config) {}
+
   ~ThreadingModelBase() override = default;
 
   // |ThreadingModel|
@@ -67,13 +72,18 @@ class ThreadingModelBase : public ThreadingModel {
     FidlDomain().PostTask([this] { fidl_domain_.loop.Quit(); });
   }
 
+  const MixProfileConfig& mix_profile_config() const { return mix_profile_config_; }
+
  private:
   ExecutionDomainHolder fidl_domain_{&kAsyncLoopConfigAttachToCurrentThread, "fidl"};
   ExecutionDomainHolder io_domain_{"io"};
+  MixProfileConfig mix_profile_config_;
 };
 
 class ThreadingModelMixOnFidlThread : public ThreadingModelBase {
  public:
+  explicit ThreadingModelMixOnFidlThread(MixProfileConfig mix_profile_config)
+      : ThreadingModelBase(mix_profile_config) {}
   ~ThreadingModelMixOnFidlThread() override = default;
 
   // |ThreadingModel|
@@ -84,6 +94,8 @@ class ThreadingModelMixOnFidlThread : public ThreadingModelBase {
 
 class ThreadingModelMixOnSingleThread : public ThreadingModelBase {
  public:
+  explicit ThreadingModelMixOnSingleThread(MixProfileConfig mix_profile_config)
+      : ThreadingModelBase(mix_profile_config) {}
   ~ThreadingModelMixOnSingleThread() override = default;
 
   // |ThreadingModel|
@@ -93,7 +105,7 @@ class ThreadingModelMixOnSingleThread : public ThreadingModelBase {
 
   void RunAndJoinAllThreads() final {
     mix_domain_.loop.StartThread(mix_domain_.domain.name().c_str());
-    SetMixDispatcherThreadProfile(mix_domain_.loop.dispatcher());
+    SetMixDispatcherThreadProfile(mix_profile_config(), mix_domain_.loop.dispatcher());
     ThreadingModelBase::RunAndJoinAllThreads();
     mix_domain_.domain.PostTask([this] { mix_domain_.loop.Quit(); });
     mix_domain_.loop.JoinThreads();
@@ -105,6 +117,8 @@ class ThreadingModelMixOnSingleThread : public ThreadingModelBase {
 
 class ThreadingModelThreadPerMix : public ThreadingModelBase {
  public:
+  explicit ThreadingModelThreadPerMix(MixProfileConfig mix_profile_config)
+      : ThreadingModelBase(mix_profile_config) {}
   ~ThreadingModelThreadPerMix() override = default;
 
   // |ThreadingModel|
@@ -127,7 +141,7 @@ class ThreadingModelThreadPerMix : public ThreadingModelBase {
       FX_DCHECK(inserted);
     }
 
-    SetMixDispatcherThreadProfile(dispatcher);
+    SetMixDispatcherThreadProfile(mix_profile_config(), dispatcher);
     return OwnedDomainPtr(domain, [this](auto* domain) {
       TRACE_DURATION("audio.debug", "ThreadingModelThreadPerMix.delete_domain");
       // We use the IO dispatcher here because the async::Loop dtor will implicitly do a join on
@@ -184,14 +198,15 @@ class ThreadingModelThreadPerMix : public ThreadingModelBase {
 
 }  // namespace
 
-std::unique_ptr<ThreadingModel> ThreadingModel::CreateWithMixStrategy(MixStrategy mix_strategy) {
+std::unique_ptr<ThreadingModel> ThreadingModel::CreateWithMixStrategy(
+    MixStrategy mix_strategy, MixProfileConfig mix_profile_config) {
   switch (mix_strategy) {
     case MixStrategy::kMixOnFidlThread:
-      return std::make_unique<ThreadingModelMixOnFidlThread>();
+      return std::make_unique<ThreadingModelMixOnFidlThread>(mix_profile_config);
     case MixStrategy::kMixOnSingleThread:
-      return std::make_unique<ThreadingModelMixOnSingleThread>();
+      return std::make_unique<ThreadingModelMixOnSingleThread>(mix_profile_config);
     case MixStrategy::kThreadPerMix:
-      return std::make_unique<ThreadingModelThreadPerMix>();
+      return std::make_unique<ThreadingModelThreadPerMix>(mix_profile_config);
   }
 }
 

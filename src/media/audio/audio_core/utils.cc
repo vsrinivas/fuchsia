@@ -431,13 +431,14 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
   return ZX_OK;
 }
 
-zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
+zx_status_t AcquireHighPriorityProfile(const MixProfileConfig& mix_profile_config,
+                                       zx::profile* profile) {
   TRACE_DURATION("audio", "AcquireHighPriorityProfile");
   // Use threadsafe static initialization to get our one-and-only copy of this profile object. Each
   // subsequent call will return a duplicate of that profile handle to ensure sharing of thread
   // pools.
   static zx::profile high_priority_profile;
-  static zx_status_t initial_status = [](zx::profile* profile) {
+  static zx_status_t initial_status = [&mix_profile_config](zx::profile* profile) {
     zx::channel ch0, ch1;
     zx_status_t res = zx::channel::create(0u, &ch0, &ch1);
     if (res != ZX_OK) {
@@ -456,11 +457,9 @@ zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
 
     zx_status_t fidl_status;
     zx::profile res_profile;
-    // TODO(fxbug.dev/94012): Start using `mix_profile` in `audio_core_config.json` instead.
-    res = provider.GetDeadlineProfile(MixProfileConfig::kDefaultCapacity.get(),
-                                      MixProfileConfig::kDefaultDeadline.get(),
-                                      MixProfileConfig::kDefaultPeriod.get(),
-                                      "src/media/audio/audio_core", &fidl_status, &res_profile);
+    res = provider.GetDeadlineProfile(
+        mix_profile_config.capacity.get(), mix_profile_config.deadline.get(),
+        mix_profile_config.period.get(), "src/media/audio/audio_core", &fidl_status, &res_profile);
     if (res != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to create profile, res=" << res;
       return res;

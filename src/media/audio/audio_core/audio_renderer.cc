@@ -12,7 +12,6 @@
 
 #include "fuchsia/media/cpp/fidl.h"
 #include "src/media/audio/audio_core/audio_admin.h"
-#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
@@ -58,7 +57,8 @@ constexpr int64_t kConsecutiveSilenceFramesAllowed = 1;
 
 AudioRenderer::AudioRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request, Context* context)
-    : BaseRenderer(std::move(audio_renderer_request), context) {
+    : BaseRenderer(std::move(audio_renderer_request), context),
+      mix_profile_period_(context->process_config().mix_profile_config().period) {
   context->volume_manager().AddStream(this);
   reporter().SetUsage(RenderUsageFromFidlRenderUsage(usage_));
 }
@@ -364,8 +364,7 @@ void AudioRenderer::PauseInternal(PauseCallback callback) {
   // Before restoring the original gain, wait for a mix to reflect the rampdown. Gain is calculated
   // at the start of each mix. Unless we wait for the next one, our SetGain cancels any ongoing
   // rampdowns, leading to the discontinuities these ramp-downs intend to eliminate.
-  // TODO(fxbug.dev/94012): Start using `mix_profile` in `audio_core_config.json` instead.
-  const zx::duration delay = MixProfileConfig::kDefaultPeriod + kRampDownOnPauseDuration;
+  const zx::duration delay = mix_profile_period_ + kRampDownOnPauseDuration;
   context().threading_model().FidlDomain().PostDelayedTask(std::move(finish_pause_ramp), delay);
 }
 

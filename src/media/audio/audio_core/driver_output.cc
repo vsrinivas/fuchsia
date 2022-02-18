@@ -14,6 +14,7 @@
 
 #include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/audio_core/audio_driver.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/reporter.h"
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
@@ -21,6 +22,8 @@ constexpr bool VERBOSE_TIMING_DEBUG = false;
 namespace media::audio {
 
 namespace {
+
+using ::fuchsia::media::AudioSampleFormat;
 
 // For debugging purposes, dropout checks can be enabled on an OutputProducer. The RMS signal
 // strength is checked over a specified window, and if it fails below the specified value, an error
@@ -33,44 +36,44 @@ namespace {
 // current values were useful while working with half-amplitude white-noise at unity gain/volume.
 //
 // By default these checks should be disabled.
-static constexpr bool kEnableDropoutChecks = false;
+constexpr bool kEnableDropoutChecks = false;
 // Only enable the dropout checks if the ring buffer format fits these dimensions.
-static constexpr fuchsia::media::AudioSampleFormat kPowerCheckerSampleFormat =
-    fuchsia::media::AudioSampleFormat::SIGNED_16;
-static constexpr uint32_t kPowerCheckerChannelCount = 4;
-static constexpr uint32_t kPowerCheckerFrameRate = 96000;
-static constexpr size_t kRmsWindowFrames = 512;
-static constexpr double kRmsLevelMin = 0.085;
-static constexpr int64_t kMaxPermittedSilentFrames = 2;
+constexpr AudioSampleFormat kPowerCheckerSampleFormat = AudioSampleFormat::SIGNED_16;
+constexpr uint32_t kPowerCheckerChannelCount = 4;
+constexpr uint32_t kPowerCheckerFrameRate = 96000;
+constexpr size_t kRmsWindowFrames = 512;
+constexpr double kRmsLevelMin = 0.085;
+constexpr int64_t kMaxPermittedSilentFrames = 2;
+
+constexpr AudioSampleFormat kDefaultAudioFmt = AudioSampleFormat::SIGNED_24_IN_32;
+constexpr zx::duration kDefaultMaxRetentionNsec = zx::msec(60);
+constexpr zx::duration kDefaultRetentionGapNsec = zx::msec(10);
+constexpr zx::duration kUnderflowCooldown = zx::msec(1000);
+
+std::atomic<zx_txid_t> TXID_GEN(1);
+thread_local zx_txid_t TXID = TXID_GEN.fetch_add(1);
+// WAV file location: FilePathName+final_mix_instance_num_+FileExtension
+constexpr const char* kDefaultWavFilePathName = "/tmp/final_mix_";
+constexpr const char* kWavFileExtension = ".wav";
 
 }  // namespace
-
-static constexpr fuchsia::media::AudioSampleFormat kDefaultAudioFmt =
-    fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
-static constexpr zx::duration kDefaultMaxRetentionNsec = zx::msec(60);
-static constexpr zx::duration kDefaultRetentionGapNsec = zx::msec(10);
-static constexpr zx::duration kUnderflowCooldown = zx::msec(1000);
-
-static std::atomic<zx_txid_t> TXID_GEN(1);
-static thread_local zx_txid_t TXID = TXID_GEN.fetch_add(1);
 
 // Consts used if kEnableFinalMixWavWriter is set:
 //
 // This atomic is only used when the final-mix wave-writer is enabled --
 // specifically to generate unique ids for each final-mix WAV file.
 std::atomic<uint32_t> DriverOutput::final_mix_instance_num_(0u);
-// WAV file location: FilePathName+final_mix_instance_num_+FileExtension
-constexpr const char* kDefaultWavFilePathName = "/tmp/final_mix_";
-constexpr const char* kWavFileExtension = ".wav";
 
-DriverOutput::DriverOutput(const std::string& name, ThreadingModel* threading_model,
-                           DeviceRegistry* registry,
+DriverOutput::DriverOutput(const std::string& name, const MixProfileConfig& mix_profile_config,
+                           ThreadingModel* threading_model, DeviceRegistry* registry,
                            fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
                            LinkMatrix* link_matrix,
                            std::shared_ptr<AudioClockFactory> clock_factory,
                            VolumeCurve volume_curve, EffectsLoaderV2* effects_loader_v2)
-    : AudioOutput(name, threading_model, registry, link_matrix, clock_factory, effects_loader_v2,
-                  std::make_unique<AudioDriver>(this)),
+    : AudioOutput(name, mix_profile_config, threading_model, registry, link_matrix, clock_factory,
+                  effects_loader_v2, std::make_unique<AudioDriver>(this)),
+      low_water_duration_(mix_profile_config.period),
+      high_water_duration_(low_water_duration_ + mix_profile_config.period),
       initial_stream_channel_(channel.TakeChannel()),
       volume_curve_(volume_curve) {}
 
@@ -222,7 +225,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
   // We want to fill up to be HighWaterNsec ahead of the current safe write
   // pointer position.  Add HighWaterNsec to our concept of "now" and run it
   // through our transformation to figure out what frame number this.
-  int64_t fill_target = RefTimeToSafeWriteFrame(ref_time + kDefaultHighWaterDuration);
+  int64_t fill_target = RefTimeToSafeWriteFrame(ref_time + high_water_duration_);
 
   // Are we in the middle of an underflow cooldown? If so, check whether we have recovered yet.
   if (underflow_start_time_mono_.get()) {
@@ -395,9 +398,9 @@ void DriverOutput::OnDriverInfoFetched() {
 
   uint32_t pref_fps = static_cast<uint32_t>(pipeline_format.frames_per_second());
   uint32_t pref_chan = static_cast<uint32_t>(pipeline_format.channels());
-  fuchsia::media::AudioSampleFormat pref_fmt = kDefaultAudioFmt;
+  AudioSampleFormat pref_fmt = kDefaultAudioFmt;
   zx::duration min_rb_duration =
-      kDefaultHighWaterDuration + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
+      high_water_duration_ + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
 
   res = driver()->SelectBestFormat(&pref_fps, &pref_chan, &pref_fmt);
 
@@ -523,7 +526,7 @@ void DriverOutput::OnDriverConfigComplete() {
   // Driver is configured, we have all the needed info to compute the presentation
   // delay for this output.
   SetPresentationDelay(driver()->external_delay() + driver()->fifo_depth_duration() +
-                       kDefaultHighWaterDuration);
+                       high_water_duration_);
 
   // Fill our brand new ring buffer with silence
   FX_DCHECK(driver_writable_ring_buffer() != nullptr);
@@ -591,7 +594,7 @@ void DriverOutput::OnDriverStartComplete() {
   // the point where we are only this number of frames ahead of the safe write
   // position, we need to wake up and fill up to our high water mark.
   const TimelineRate rate = FramesPerRefTick();
-  low_water_frames_ = rate.Scale(kDefaultLowWaterDuration.get());
+  low_water_frames_ = rate.Scale(low_water_duration_.get());
 
   // We started with a buffer full of silence.  Set up our bookkeeping so we
   // consider ourselves to have generated and sent up to our low-water mark's

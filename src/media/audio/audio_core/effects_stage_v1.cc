@@ -88,26 +88,25 @@ std::pair<int64_t, uint32_t> AlignBufferRequest(Fixed frame, uint32_t length, ui
 }  // namespace
 
 EffectsStageV1::RingoutBuffer EffectsStageV1::RingoutBuffer::Create(
-    const Format& format, const EffectsProcessorV1& processor) {
+    const Format& format, const EffectsProcessorV1& processor,
+    const MixProfileConfig& mix_profile_config) {
   return RingoutBuffer::Create(format, processor.ring_out_frames(), processor.max_batch_size(),
-                               processor.block_size());
+                               processor.block_size(), mix_profile_config.period.to_nsecs());
 }
 
-EffectsStageV1::RingoutBuffer EffectsStageV1::RingoutBuffer::Create(const Format& format,
-                                                                    uint32_t ringout_frames,
-                                                                    uint32_t max_batch_size,
-                                                                    uint32_t block_size) {
+EffectsStageV1::RingoutBuffer EffectsStageV1::RingoutBuffer::Create(
+    const Format& format, uint32_t ringout_frames, uint32_t max_batch_size, uint32_t block_size,
+    int64_t mix_profile_period_nsecs) {
   uint32_t buffer_frames = 0;
   std::vector<float> buffer;
   if (ringout_frames) {
     // Target our ringout buffer as no larger than a single mix job of frames.
-    // TODO(fxbug.dev/94012): Start using `mix_profile` in `audio_core_config.json` instead.
-    const uint32_t kTargetRingoutBufferFrames =
-        format.frames_per_ns().Scale(MixProfileConfig::kDefaultPeriod.to_nsecs());
+    const uint32_t target_ringout_buffer_frames =
+        format.frames_per_ns().Scale(mix_profile_period_nsecs);
 
     // If the ringout frames is less than our target buffer size, we'll lower it to our ringout
     // frames. Also ensure we do not exceed the max batch size for the effect.
-    buffer_frames = std::min(ringout_frames, kTargetRingoutBufferFrames);
+    buffer_frames = std::min(ringout_frames, target_ringout_buffer_frames);
     if (max_batch_size) {
       buffer_frames = std::min(buffer_frames, max_batch_size);
     }
@@ -128,7 +127,7 @@ EffectsStageV1::RingoutBuffer EffectsStageV1::RingoutBuffer::Create(const Format
 // static
 std::shared_ptr<EffectsStageV1> EffectsStageV1::Create(
     const std::vector<PipelineConfig::EffectV1>& effects, std::shared_ptr<ReadableStream> source,
-    VolumeCurve volume_curve) {
+    const MixProfileConfig& mix_profile_config, VolumeCurve volume_curve) {
   TRACE_DURATION("audio", "EffectsStageV1::Create");
   if (source->format().sample_format() != fuchsia::media::AudioSampleFormat::FLOAT) {
     FX_LOGS(ERROR) << "EffectsStageV1 can only be added to streams with FLOAT samples";
@@ -160,7 +159,7 @@ std::shared_ptr<EffectsStageV1> EffectsStageV1::Create(
   }
 
   return std::make_shared<EffectsStageV1>(std::move(source), std::move(processor),
-                                          std::move(volume_curve));
+                                          mix_profile_config, std::move(volume_curve));
 }
 
 Format ComputeFormat(const Format& source_format, const EffectsProcessorV1& processor) {
@@ -175,12 +174,12 @@ Format ComputeFormat(const Format& source_format, const EffectsProcessorV1& proc
 
 EffectsStageV1::EffectsStageV1(std::shared_ptr<ReadableStream> source,
                                std::unique_ptr<EffectsProcessorV1> effects_processor,
-                               VolumeCurve volume_curve)
+                               const MixProfileConfig& mix_profile_config, VolumeCurve volume_curve)
     : ReadableStream(ComputeFormat(source->format(), *effects_processor)),
       source_(std::move(source)),
       effects_processor_(std::move(effects_processor)),
       volume_curve_(std::move(volume_curve)),
-      ringout_(RingoutBuffer::Create(source_->format(), *effects_processor_)) {
+      ringout_(RingoutBuffer::Create(source_->format(), *effects_processor_, mix_profile_config)) {
   // Initialize our lead time. Passing 0 here will resolve to our effect's lead time
   // in our |SetPresentationDelay| override.
   SetPresentationDelay(zx::duration(0));

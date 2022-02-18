@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "src/media/audio/audio_core/cached_readable_stream_buffer.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/volume_curve.h"
@@ -21,9 +22,11 @@ namespace media::audio {
 class EffectsStageV1 : public ReadableStream {
  public:
   struct RingoutBuffer {
-    static RingoutBuffer Create(const Format& format, const EffectsProcessorV1& processor);
+    static RingoutBuffer Create(const Format& format, const EffectsProcessorV1& processor,
+                                const MixProfileConfig& mix_profile_config);
     static RingoutBuffer Create(const Format& format, uint32_t ringout_frames,
-                                uint32_t max_batch_size, uint32_t block_size);
+                                uint32_t max_batch_size, uint32_t block_size,
+                                int64_t mix_profile_period_nsecs);
 
     const uint32_t total_frames = 0;
     const uint32_t buffer_frames = 0;
@@ -32,10 +35,11 @@ class EffectsStageV1 : public ReadableStream {
 
   static std::shared_ptr<EffectsStageV1> Create(
       const std::vector<PipelineConfig::EffectV1>& effects, std::shared_ptr<ReadableStream> source,
-      VolumeCurve volume_curve);
+      const MixProfileConfig& mix_profile_config, VolumeCurve volume_curve);
 
   EffectsStageV1(std::shared_ptr<ReadableStream> source,
-                 std::unique_ptr<EffectsProcessorV1> effects_processor, VolumeCurve volume_curve);
+                 std::unique_ptr<EffectsProcessorV1> effects_processor,
+                 const MixProfileConfig& mix_profile_config, VolumeCurve volume_curve);
 
   int64_t block_size() const { return effects_processor_->block_size(); }
 

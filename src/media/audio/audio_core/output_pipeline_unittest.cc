@@ -6,6 +6,7 @@
 
 #include <gmock/gmock.h>
 
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/testing/fake_stream.h"
@@ -99,7 +100,8 @@ class OutputPipelineTest : public testing::ThreadingModelFixture {
     };
 
     auto pipeline_config = PipelineConfig(root);
-    return std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve,
+    auto mix_profile_config = MixProfileConfig{};
+    return std::make_shared<OutputPipelineImpl>(pipeline_config, mix_profile_config, volume_curve,
                                                 nullptr /* EffectsLoaderV2 */, 128,
                                                 kDefaultTransform, *device_clock_);
   }
@@ -311,10 +313,11 @@ TEST_F(OutputPipelineTest, Loopback) {
       .output_channels = 2,
   };
   auto pipeline_config = PipelineConfig(root);
+  auto mix_profile_config = MixProfileConfig{};
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve,
-                                                       nullptr /* EffectsLoaderV2 */, 128,
-                                                       kDefaultTransform, *device_clock_);
+  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, mix_profile_config,
+                                                       volume_curve, nullptr /* EffectsLoaderV2 */,
+                                                       128, kDefaultTransform, *device_clock_);
 
   // Add an input into our pipeline so that we have some frames to mix.
   const auto stream_usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA);
@@ -406,10 +409,11 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
       .output_channels = 2,
   };
   auto pipeline_config = PipelineConfig(root);
+  auto mix_profile_config = MixProfileConfig{};
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve,
-                                                       nullptr /* EffectsLoaderV2 */, 128,
-                                                       kDefaultTransform, *device_clock_);
+  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, mix_profile_config,
+                                                       volume_curve, nullptr /* EffectsLoaderV2 */,
+                                                       128, kDefaultTransform, *device_clock_);
 
   // Add an input into our pipeline so that we have some frames to mix.
   const auto stream_usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA);
@@ -493,10 +497,11 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
       .output_channels = 2,
   };
   auto pipeline_config = PipelineConfig(root);
+  auto mix_profile_config = MixProfileConfig{};
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve,
-                                                       nullptr /* EffectsLoaderV2 */, 128,
-                                                       kDefaultTransform, *device_clock_);
+  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, mix_profile_config,
+                                                       volume_curve, nullptr /* EffectsLoaderV2 */,
+                                                       128, kDefaultTransform, *device_clock_);
 
   // Add an input into our pipeline so that we have some frames to mix.
   const auto stream_usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA);
@@ -571,10 +576,11 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
       .output_channels = 2,
   };
   auto pipeline_config = PipelineConfig(root);
+  auto mix_profile_config = MixProfileConfig{};
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(
-      pipeline_config, volume_curve, nullptr /* EffectsLoaderV2 */, 128, kDefaultTransform,
-      *device_clock_, Mixer::Resampler::SampleAndHold);
+      pipeline_config, mix_profile_config, volume_curve, nullptr /* EffectsLoaderV2 */, 128,
+      kDefaultTransform, *device_clock_, Mixer::Resampler::SampleAndHold);
 
   // Add 2 streams, one with a MEDIA usage and one with COMMUNICATION usage. These should receive
   // different lead times since they have different effects (with different latencies) applied.
@@ -668,10 +674,11 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   }
 
   auto pipeline_config = PipelineConfig(root);
+  auto mix_profile_config = MixProfileConfig{};
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   auto pipeline = std::make_shared<OutputPipelineImpl>(
-      pipeline_config, volume_curve, nullptr /* EffectsLoaderV2 */, 480, kDefaultTransform,
-      *device_clock_, resampler);
+      pipeline_config, mix_profile_config, volume_curve, nullptr /* EffectsLoaderV2 */, 480,
+      kDefaultTransform, *device_clock_, resampler);
 
   pipeline->AddInput(stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA), std::nullopt,
                      resampler);
@@ -793,10 +800,11 @@ TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {
       .output_channels = 2,
   };
   auto pipeline_config = PipelineConfig(root);
+  auto mix_profile_config = MixProfileConfig{};
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve,
-                                                       nullptr /* EffectsLoaderV2 */, 128,
-                                                       kDefaultTransform, *device_clock_);
+  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, mix_profile_config,
+                                                       volume_curve, nullptr /* EffectsLoaderV2 */,
+                                                       128, kDefaultTransform, *device_clock_);
 
   // Verify the pipeline format includes the rechannel effect.
   EXPECT_EQ(4, pipeline->format().channels());
@@ -849,10 +857,11 @@ TEST_F(OutputPipelineTest, LoopbackClock) {
       .output_channels = 2,
   };
   auto pipeline_config = PipelineConfig(root);
+  auto mix_profile_config = MixProfileConfig{};
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve,
-                                                       nullptr /* EffectsLoaderV2 */, 128,
-                                                       kDefaultTransform, *device_clock_);
+  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, mix_profile_config,
+                                                       volume_curve, nullptr /* EffectsLoaderV2 */,
+                                                       128, kDefaultTransform, *device_clock_);
 
   clock::testing::VerifyReadOnlyRights(pipeline->reference_clock());
   clock::testing::VerifyAdvances(pipeline->reference_clock(), context().clock_factory());
@@ -922,10 +931,11 @@ TEST_F(OutputPipelineTest, PipelineWithEffectsV2) {
       .output_channels = 2,
   };
   auto pipeline_config = PipelineConfig(root);
+  auto mix_profile_config = MixProfileConfig{};
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
-  auto pipeline = std::make_shared<OutputPipelineImpl>(pipeline_config, volume_curve,
-                                                       effects_loader_v2.value().get(), 128,
-                                                       kDefaultTransform, *device_clock_);
+  auto pipeline = std::make_shared<OutputPipelineImpl>(
+      pipeline_config, mix_profile_config, volume_curve, effects_loader_v2.value().get(), 128,
+      kDefaultTransform, *device_clock_);
 
   // Add an input into our pipeline so that we have some frames to mix.
   const auto stream_usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA);

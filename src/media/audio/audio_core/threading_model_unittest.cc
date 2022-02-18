@@ -8,6 +8,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/media/audio/audio_core/mix_profile_config.h"
+
 namespace media::audio {
 namespace {
 
@@ -41,7 +43,8 @@ void ValidateThreadingModel(ThreadingModel* threading_model) {
 }
 
 TEST(ThreadingModelTest, MixOnFidlThreadModel) {
-  auto threading_model = ThreadingModel::CreateWithMixStrategy(MixStrategy::kMixOnFidlThread);
+  auto threading_model =
+      ThreadingModel::CreateWithMixStrategy(MixStrategy::kMixOnFidlThread, MixProfileConfig{});
 
   // Expect |AcquireMixDomain| to be the same dispatcher as |FidlDomain().dispatcher|.
   {
@@ -62,7 +65,8 @@ TEST(ThreadingModelTest, MixOnFidlThreadModel) {
 }
 
 TEST(ThreadingModelTest, MixOnSingleThreadModel) {
-  auto threading_model = ThreadingModel::CreateWithMixStrategy(MixStrategy::kMixOnSingleThread);
+  auto threading_model =
+      ThreadingModel::CreateWithMixStrategy(MixStrategy::kMixOnSingleThread, MixProfileConfig{});
 
   // Expect all dispatchers to be unique.
   {
@@ -86,7 +90,8 @@ TEST(ThreadingModelTest, MixOnSingleThreadModel) {
 }
 
 TEST(ThreadingModelTest, ThreadPerMixModel) {
-  auto threading_model = ThreadingModel::CreateWithMixStrategy(MixStrategy::kThreadPerMix);
+  auto threading_model =
+      ThreadingModel::CreateWithMixStrategy(MixStrategy::kThreadPerMix, MixProfileConfig{});
 
   // Expect all dispatchers to be unique.
   {

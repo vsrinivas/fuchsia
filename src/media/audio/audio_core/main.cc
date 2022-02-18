@@ -25,19 +25,12 @@ namespace media::audio {
 constexpr char kProcessConfigPath[] = "/config/data/audio_core_config.json";
 
 static int StartAudioCore(const fxl::CommandLine& cl) {
-  auto threading_model = ThreadingModel::CreateWithMixStrategy(MixStrategy::kThreadPerMix);
-  trace::TraceProviderWithFdio trace_provider(threading_model->FidlDomain().dispatcher());
-
   syslog::SetLogSettings({.min_log_level = syslog::LOG_INFO}, {"audio_core"});
 
   FX_LOGS(INFO) << "AudioCore starting up";
 
   // Page in and pin our executable.
   PinExecutableMemory::Singleton();
-
-  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  auto enable_cobalt = !cl.HasOption("disable-cobalt");
-  Reporter::InitializeSingleton(*component_context, *threading_model, enable_cobalt);
 
   auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);
   if (process_config.is_error()) {
@@ -51,6 +44,14 @@ static int StartAudioCore(const fxl::CommandLine& cl) {
   FX_CHECK(process_config);
   auto config_handle = ProcessConfig::set_instance(process_config.value());
 
+  auto threading_model = ThreadingModel::CreateWithMixStrategy(
+      MixStrategy::kThreadPerMix, process_config.value().mix_profile_config());
+  trace::TraceProviderWithFdio trace_provider(threading_model->FidlDomain().dispatcher());
+
+  auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  auto enable_cobalt = !cl.HasOption("disable-cobalt");
+  Reporter::InitializeSingleton(*component_context, *threading_model, enable_cobalt);
+
   auto context = Context::Create(std::move(threading_model), std::move(component_context),
                                  PlugDetector::Create(), process_config.take_value(),
                                  std::make_shared<AudioClockFactory>());
@@ -59,7 +60,8 @@ static int StartAudioCore(const fxl::CommandLine& cl) {
   auto thermal_agent = ThermalAgent::CreateAndServe(context.get());
   auto ultrasound_factory = UltrasoundFactory::CreateAndServe(context.get());
 
-  ProfileProvider profile_provider(context->component_context());
+  ProfileProvider profile_provider(context->component_context(),
+                                   context->process_config().mix_profile_config());
   context->component_context().outgoing()->AddPublicService(
       profile_provider.GetFidlRequestHandler());
 

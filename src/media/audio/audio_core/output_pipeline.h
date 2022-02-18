@@ -13,6 +13,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/media/audio/audio_core/effects_stage_v1.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/mix_stage.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
@@ -66,8 +67,9 @@ class OutputPipelineImpl : public OutputPipeline {
   //
   // The |sampler| is optionally used to select the type of sampler to be used when joining
   // mix stages together.
-  OutputPipelineImpl(const PipelineConfig& config, const VolumeCurve& volume_curve,
-                     EffectsLoaderV2* effects_loader_v2, uint32_t max_block_size_frames,
+  OutputPipelineImpl(const PipelineConfig& config, const MixProfileConfig& mix_profile_config,
+                     const VolumeCurve& volume_curve, EffectsLoaderV2* effects_loader_v2,
+                     uint32_t max_block_size_frames,
                      TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& audio_clock,
                      Mixer::Resampler sampler = Mixer::Resampler::Default);
   ~OutputPipelineImpl() override = default;
@@ -112,14 +114,14 @@ class OutputPipelineImpl : public OutputPipeline {
 
  private:
   struct State {
-    State(const PipelineConfig& config, const VolumeCurve& curve,
-          EffectsLoaderV2* effects_loader_v2, uint32_t max_block_size_frames,
-          TimelineFunction ref_clock_to_fractional_frame, AudioClock& clock,
-          Mixer::Resampler sampler);
+    State(const PipelineConfig& config, const MixProfileConfig& mix_profile_config,
+          const VolumeCurve& curve, EffectsLoaderV2* effects_loader_v2,
+          uint32_t max_block_size_frames, TimelineFunction ref_clock_to_fractional_frame,
+          AudioClock& clock, Mixer::Resampler sampler);
 
     std::shared_ptr<ReadableStream> CreateMixStage(
-        const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve,
-        EffectsLoaderV2* effects_loader_v2, uint32_t block_size,
+        const PipelineConfig::MixGroup& spec, const MixProfileConfig& mix_profile_config,
+        const VolumeCurve& volume_curve, EffectsLoaderV2* effects_loader_v2, uint32_t block_size,
         fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_output_frame, AudioClock& clock,
         uint32_t* usage_mask, Mixer::Resampler sampler);
 

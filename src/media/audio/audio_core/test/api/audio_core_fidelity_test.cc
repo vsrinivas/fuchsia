@@ -52,7 +52,7 @@ class AudioCoreFidelityTest : public HermeticFidelityTest {
 
  private:
   static size_t LeadTimeFramesFromSourceRate(int32_t source_rate) {
-    return static_cast<size_t>(source_rate * DriverOutput::kDefaultHighWaterDuration.to_nsecs() /
+    return static_cast<size_t>(2l * source_rate * MixProfileConfig::kDefaultPeriod.to_nsecs() /
                                zx::sec(1).to_nsecs());
   }
 };

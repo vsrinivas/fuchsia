@@ -15,6 +15,8 @@
 #include <memory>
 #include <string>
 
+#include "src/media/audio/audio_core/mix_profile_config.h"
+
 namespace media::audio {
 
 // ThreadToken and ScopedThreadToken are small (empty) objects which are intended to be used with
@@ -23,7 +25,7 @@ namespace media::audio {
 // async operation submitted to that threads dispatcher, users may assert at compile time that they
 // are only touching members from a single thread.
 //
-// This requires that the |async_dispatcher_t| backing any async waits is single threaded since this
+// This requires that the `async_dispatcher_t` backing any async waits is single threaded since this
 // class does not do any actual locking.
 struct __TA_CAPABILITY("role") ThreadToken {};
 
@@ -52,7 +54,7 @@ class ExecutionDomain {
   // The name of this domain.
   const std::string& name() const { return name_; }
 
-  // The |ThreadToken| that can be used to use static analysis to assert certain data members
+  // The `ThreadToken` that can be used to use static analysis to assert certain data members
   // are only accessed on this thread.
   //
   // Ex:
@@ -61,11 +63,11 @@ class ExecutionDomain {
   //    void TouchData() {
   //      async::PostTask(domain_->dispatcher(), [] {
   //        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, domain_);
-  //        // This is now allowed since we've obtained the capability guarding |data_|.
+  //        // This is now allowed since we've obtained the capability guarding `data_`.
   //        data_.Mutate();
   //      });
   //      // This would be a compile-time error as we have not acquired the capability guarding
-  //      // |data_|.
+  //      // `data_`.
   //      //
   //      // data_.Touch();
   //    }
@@ -114,47 +116,48 @@ enum class MixStrategy {
   // All mixing will happen on a single thread that is distinct from the thread used to run the
   // FIDL services.
   kMixOnSingleThread,
-  // A new message loop will be allocated for each and every call to |AcquireMixDomain|.
+  // A new message loop will be allocated for each and every call to `AcquireMixDomain`.
   kThreadPerMix,
 };
 
 class ThreadingModel {
  public:
-  // Creates a |ThreadingModel| with a provided |MixStrategy|, which configures the behavior of
-  // |AcquireMixDomain|.
+  // Creates a `ThreadingModel` with a provided `MixStrategy`, which configures the behavior of
+  // `AcquireMixDomain`, and a `MixProfileConfig`.
   //
-  // See |MixStrategy| for more details on possible strategies.
-  static std::unique_ptr<ThreadingModel> CreateWithMixStrategy(MixStrategy mix_strategy);
+  // See `MixStrategy` for more details on possible strategies.
+  static std::unique_ptr<ThreadingModel> CreateWithMixStrategy(MixStrategy mix_strategy,
+                                                               MixProfileConfig mix_profile_config);
 
   virtual ~ThreadingModel() = default;
 
-  // Returns the |ExecutionDomain| used to run the primary |fuchsia::media::AudioCore| FIDL
+  // Returns the `ExecutionDomain` used to run the primary |fuchsia::media::AudioCore| FIDL
   // service. This domain will be valid for the lifetime of this object.
   //
   // This is a single-threaded dispatcher.
   virtual ExecutionDomain& FidlDomain() = 0;
 
-  // Returns the |ExecutionDomain| used to run blocking IO. This domain will be valid for the
+  // Returns the `ExecutionDomain` used to run blocking IO. This domain will be valid for the
   // the lifetime of this object.
   //
   // This is a single-threaded dispatcher.
   virtual ExecutionDomain& IoDomain() = 0;
 
   // We use a unique_ptr with a custom deleter to allow implementations to customize how the
-  // |ExecutionDomain| is vended to clients. For example, with the |kMixOnFidlThread| mix strategy,
+  // `ExecutionDomain` is vended to clients. For example, with the `kMixOnFidlThread` mix strategy,
   // the returned domain will just be a pointer to the FIDL domain with a no-op deleter (since the
-  // pointer is not actually backed by a unique allocation). Conversely with the |kThreadPerMix|
+  // pointer is not actually backed by a unique allocation). Conversely with the `kThreadPerMix`
   // strategy, a new thread/dispatcher will be allocated for each acquired domain. In this situation
   // the message loop will be free'd by the deleter.
   using OwnedDomainPtr = std::unique_ptr<ExecutionDomain, fit::function<void(ExecutionDomain*)>>;
 
-  // Acquires an |ExecutionDomain| to use for mixing. The returned domain will live as long as the
+  // Acquires an `ExecutionDomain` to use for mixing. The returned domain will live as long as the
   // returned pointer.
   //
-  // It is implementation defined if tasks will still execute after the returned |OwnedDomainPtr| is
+  // It is implementation defined if tasks will still execute after the returned `OwnedDomainPtr` is
   // released; for shared dispatcher implementations these tasks will still run, while
   // implementations that provide a unique dispatcher may choose to immediately shutdown the loop in
-  // response to the |OwnedDomainPtr| being released.
+  // response to the `OwnedDomainPtr` being released.
   //
   // This is a single-threaded dispatcher.
   virtual OwnedDomainPtr AcquireMixDomain(const std::string& name_hint) = 0;
@@ -165,8 +168,8 @@ class ThreadingModel {
   // When this method returns, all threads will be joined and all dispatchers stopped.
   virtual void RunAndJoinAllThreads() = 0;
 
-  // Shuts down all |ExecutionDomains| provided by this |ThreadingModel|, causing
-  // |RunAndJoinAllThreads| to eventually return.
+  // Shuts down all `ExecutionDomains` provided by this `ThreadingModel`, causing
+  // `RunAndJoinAllThreads` to eventually return.
   //
   // This posts the quit operation to all message loops managed by this object, meaning all
   // currently runnable tasks in each loop will have an opportunity to run before the loop exits.

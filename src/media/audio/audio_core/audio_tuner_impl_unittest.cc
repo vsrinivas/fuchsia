@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/audio_clock_factory.h"
@@ -76,8 +77,8 @@ void ExpectEq(const PipelineConfig::MixGroup& expected,
 class TestDevice : public AudioOutput {
  public:
   TestDevice(std::unique_ptr<Context>& context)
-      : AudioOutput("", &context->threading_model(), &context->device_manager(),
-                    &context->link_matrix(), context->clock_factory(),
+      : AudioOutput("", context->process_config().mix_profile_config(), &context->threading_model(),
+                    &context->device_manager(), &context->link_matrix(), context->clock_factory(),
                     nullptr /* EffectsLoaderV2 */, std::make_unique<AudioDriver>(this)) {
     zx::channel c1, c2;
     ZX_ASSERT(ZX_OK == zx::channel::create(0, &c1, &c2));

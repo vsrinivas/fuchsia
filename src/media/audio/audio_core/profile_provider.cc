@@ -24,8 +24,7 @@ void ProfileProvider::RegisterHandlerWithCapacity(zx::thread thread_handle, std:
   if (!profile_provider_) {
     profile_provider_ = context_.svc()->Connect<fuchsia::scheduler::ProfileProvider>();
   }
-  // TODO(fxbug.dev/94012): Start using `mix_profile` in `audio_core_config.json` instead.
-  zx::duration interval = period ? zx::duration(period) : MixProfileConfig::kDefaultPeriod;
+  zx::duration interval = period ? zx::duration(period) : mix_profile_period_;
   zx::duration capacity(interval.to_nsecs() * capacity_weight);
   profile_provider_->GetDeadlineProfile(
       capacity.get(), interval.get(), interval.get(), name,

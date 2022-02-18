@@ -6,6 +6,7 @@
 
 #include "src/media/audio/audio_core/effects_stage_v1.h"
 #include "src/media/audio/audio_core/effects_stage_v2.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
 #include "src/media/audio/audio_core/tap_stage.h"
 #include "src/media/audio/audio_core/thermal_agent.h"
@@ -36,27 +37,31 @@ const Format FormatForMixGroup(const PipelineConfig::MixGroup& mix_group) {
 }  // namespace
 
 OutputPipelineImpl::OutputPipelineImpl(const PipelineConfig& config,
+                                       const MixProfileConfig& mix_profile_config,
                                        const VolumeCurve& volume_curve,
                                        EffectsLoaderV2* effects_loader_v2,
                                        uint32_t max_block_size_frames,
                                        TimelineFunction ref_pts_to_fractional_frame,
                                        AudioClock& clock, Mixer::Resampler sampler)
-    : OutputPipelineImpl(State(config, volume_curve, effects_loader_v2, max_block_size_frames,
-                               ref_pts_to_fractional_frame, clock, sampler)) {}
+    : OutputPipelineImpl(State(config, mix_profile_config, volume_curve, effects_loader_v2,
+                               max_block_size_frames, ref_pts_to_fractional_frame, clock,
+                               sampler)) {}
 
 OutputPipelineImpl::OutputPipelineImpl(State state)
     : OutputPipeline(state.stream->format()), state_(std::move(state)) {}
 
-OutputPipelineImpl::State::State(const PipelineConfig& config, const VolumeCurve& volume_curve,
+OutputPipelineImpl::State::State(const PipelineConfig& config,
+                                 const MixProfileConfig& mix_profile_config,
+                                 const VolumeCurve& volume_curve,
                                  EffectsLoaderV2* effects_loader_v2, uint32_t max_block_size_frames,
                                  TimelineFunction ref_pts_to_fractional_frame, AudioClock& clock,
                                  Mixer::Resampler sampler)
     : audio_clock(clock) {
   uint32_t usage_mask = 0;
-  stream =
-      CreateMixStage(config.root(), volume_curve, effects_loader_v2, max_block_size_frames,
-                     fbl::MakeRefCounted<VersionedTimelineFunction>(ref_pts_to_fractional_frame),
-                     clock, &usage_mask, sampler);
+  stream = CreateMixStage(
+      config.root(), mix_profile_config, volume_curve, effects_loader_v2, max_block_size_frames,
+      fbl::MakeRefCounted<VersionedTimelineFunction>(ref_pts_to_fractional_frame), clock,
+      &usage_mask, sampler);
 }
 
 std::shared_ptr<Mixer> OutputPipelineImpl::AddInput(std::shared_ptr<ReadableStream> stream,
@@ -91,8 +96,9 @@ fpromise::result<void, fuchsia::media::audio::UpdateEffectError> OutputPipelineI
 }
 
 std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
-    const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve,
-    EffectsLoaderV2* effects_loader_v2, uint32_t max_block_size_frames,
+    const PipelineConfig::MixGroup& spec, const MixProfileConfig& mix_profile_config,
+    const VolumeCurve& volume_curve, EffectsLoaderV2* effects_loader_v2,
+    uint32_t max_block_size_frames,
     fbl::RefPtr<VersionedTimelineFunction> ref_pts_to_fractional_frame, AudioClock& audio_clock,
     uint32_t* usage_mask, Mixer::Resampler sampler) {
   auto output_format = FormatForMixGroup(spec);
@@ -109,7 +115,8 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
   // If we have effects, we should add that stage in now.
   std::shared_ptr<ReadableStream> root = stage;
   if (!spec.effects_v1.empty()) {
-    auto effects_stage = EffectsStageV1::Create(spec.effects_v1, root, volume_curve);
+    auto effects_stage =
+        EffectsStageV1::Create(spec.effects_v1, root, mix_profile_config, volume_curve);
     if (effects_stage) {
       effects_stages_v1.push_back(effects_stage);
       root = std::move(effects_stage);
@@ -158,8 +165,9 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
         // we align frames between intermediate mix stages to integral frame numbers.
         timeline_function.subject_time(), timeline_function.reference_time(),
         TimelineRate(frac_fps, zx::sec(1).to_nsecs())));
-    auto substage = CreateMixStage(input, volume_curve, effects_loader_v2, max_block_size_frames,
-                                   function, audio_clock, usage_mask, sampler);
+    auto substage =
+        CreateMixStage(input, mix_profile_config, volume_curve, effects_loader_v2,
+                       max_block_size_frames, function, audio_clock, usage_mask, sampler);
     stage->AddInput(substage, std::nullopt, sampler);
   }
   return root;
