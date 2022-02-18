@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 // ignore_for_file: import_of_legacy_library_into_null_safe
+@Timeout(Duration(minutes: 2))
+
 import 'dart:math';
 
 import 'package:ermine_driver/ermine_driver.dart';
@@ -10,7 +12,7 @@ import 'package:fidl_fuchsia_input/fidl_async.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
-const chromeUrl = 'fuchsia-pkg://fuchsia.com/chrome#meta/chrome_v1.cmx';
+const chromiumUrl = 'fuchsia-pkg://fuchsia.com/chrome#meta/chrome_v1.cmx';
 const testserverUrl =
     'fuchsia-pkg://fuchsia.com/ermine_testserver#meta/ermine_testserver.cmx';
 
@@ -45,12 +47,12 @@ void main() {
     await ermine.driver.waitUntilNoTransientCallbacks();
     print('Launched the test server.');
 
-    await ermine.launch(chromeUrl);
+    await ermine.launch(chromiumUrl);
     await ermine.driver.waitUntilNoTransientCallbacks();
     print('Launched Chrome');
 
-    final snapshot = await ermine.waitForView(chromeUrl, testForFocus: true);
-    expect(snapshot.url, chromeUrl);
+    final snapshot = await ermine.waitForView(chromiumUrl, testForFocus: true);
+    expect(snapshot.url, chromiumUrl);
     print('A Chrome view is presented');
 
     const blueUrl = 'http://127.0.0.1:8080/blue.html';
@@ -76,16 +78,23 @@ void main() {
     }, timeout: Duration(minutes: 2));
 
     expect(isBlue, isTrue);
+    print('Verified the expected background color');
 
-    // Close the Chrome view.
+    // Close Chromium
+    print('Closing the Chromium View');
     await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
     await ermine.driver.waitUntilNoTransientCallbacks();
-    expect(await ermine.waitForViewAbsent(chromeUrl), true);
-    print('Closed Chrome');
+    await ermine.waitForAction('close');
+    print('Verified that Ermine took CLOSE action');
+    expect(await ermine.waitForViewAbsent(chromiumUrl), true);
+    print('Closed Chromium');
 
     // Close the test server.
+    print('Closing the test server');
     await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
     await ermine.driver.waitUntilNoTransientCallbacks();
+    await ermine.waitForAction('close');
+    print('Verified that Ermine took CLOSE action');
     expect(await ermine.waitForViewAbsent(testserverUrl), true);
     print('Closed test server');
   }, timeout: Timeout(Duration(minutes: 3)));
