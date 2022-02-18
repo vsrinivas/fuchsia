@@ -42,8 +42,8 @@ pub use symlink_node::*;
 pub use vmo_file::*;
 
 pub mod buffers;
-pub mod devfs;
 pub mod devpts;
+pub mod devtmpfs;
 pub mod eventfd;
 pub mod ext4;
 pub mod fuchsia;

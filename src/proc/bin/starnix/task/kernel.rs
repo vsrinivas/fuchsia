@@ -39,7 +39,7 @@ pub struct Kernel {
     pub pipe_fs: OnceCell<FileSystemHandle>,
     /// Owned by socket.rs
     pub socket_fs: OnceCell<FileSystemHandle>,
-    // Owned by devfs.rs
+    // Owned by devtmpfs.rs
     pub dev_tmp_fs: OnceCell<FileSystemHandle>,
     // Owned by procfs.rs
     pub proc_fs: OnceCell<FileSystemHandle>,

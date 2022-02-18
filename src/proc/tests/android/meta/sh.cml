@@ -7,7 +7,7 @@
             "/:ext4:data/system.img",
             "/data:remotefs:data",
             "/data/tmp:tmpfs",
-            "/dev:devfs",
+            "/dev:devtmpfs",
             "/proc:proc",
         ],
         apex_hack: [ "com.android.runtime" ],

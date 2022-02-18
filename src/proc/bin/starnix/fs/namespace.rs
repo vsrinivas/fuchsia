@@ -10,8 +10,8 @@ use std::sync::{Arc, Weak};
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 
-use super::devfs::dev_tmp_fs;
 use super::devpts::DevptsFs;
+use super::devtmpfs::dev_tmp_fs;
 use super::proc::proc_fs;
 use super::sysfs::sys_fs;
 use super::tmpfs::TmpFs;
@@ -118,7 +118,7 @@ pub fn create_filesystem(
 ) -> Result<WhatToMount, Errno> {
     use WhatToMount::*;
     Ok(match fs_type {
-        b"devfs" => Fs(dev_tmp_fs(kernel).clone()),
+        b"devtmpfs" => Fs(dev_tmp_fs(kernel).clone()),
         b"devpts" => Fs(DevptsFs::new()),
         b"proc" => Fs(proc_fs(kernel.clone())),
         b"selinuxfs" => Fs(selinux_fs(kernel).clone()),

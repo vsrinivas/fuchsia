@@ -5,7 +5,7 @@
         args: [ "-i" ],
         mounts: [
             "/:ext4:data/system.img",
-            "/dev:devfs",
+            "/dev:devtmpfs",
             "/tmp:tmpfs",
         ],
     },

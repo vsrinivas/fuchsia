@@ -8,10 +8,10 @@ use crate::task::*;
 use crate::types::*;
 
 pub fn dev_tmp_fs(kernel: &Kernel) -> &FileSystemHandle {
-    kernel.dev_tmp_fs.get_or_init(init_devfs)
+    kernel.dev_tmp_fs.get_or_init(init_devtmpfs)
 }
 
-fn init_devfs() -> FileSystemHandle {
+fn init_devtmpfs() -> FileSystemHandle {
     let fs = TmpFs::new();
     let root = fs.root();
 

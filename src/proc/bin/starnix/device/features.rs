@@ -27,8 +27,8 @@ pub fn run_features<'a>(entries: &'a Vec<String>, current_task: &CurrentTask) ->
                 device_registry.register_chrdev(DevBinder::new())?;
 
                 // Add a device file to /dev
-                let devfs = crate::fs::devfs::dev_tmp_fs(&*kernel);
-                devfs.root().create_node(
+                let devtmpfs = crate::fs::devtmpfs::dev_tmp_fs(&*kernel);
+                devtmpfs.root().create_node(
                     b"binder",
                     FileMode::IFCHR | FileMode::from_bits(0o666),
                     DevBinder::DEVICE_ID,
