@@ -1855,6 +1855,15 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1, 1> {
 };
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          MemberOnlyAppearsInImportingLibrary>::value &&
+          internal::NaturalIsMemcpyCompatible<bool>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1880,6 +1889,17 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::OnlyAppearsInImportingLibrary, 1, 1> {
 };
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>::
+              value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1907,6 +1927,15 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response,
           4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBinding_OnlyDenySyzkaller_Response>::value &&
+          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1934,6 +1963,17 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse,
           24, 16> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBindingOnlyDenySyzkallerTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_bindingsdenylist::
+                  DenyEachBinding_OnlyDenySyzkaller_Result>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1960,6 +2000,15 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response,
                 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBinding_OnlyDenyRust_Response>::value &&
+          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1986,6 +2035,17 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse,
                 24, 16> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBindingOnlyDenyRustTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>::
+              value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2013,6 +2073,15 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response,
           4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBinding_OnlyDenyLibfuzzer_Response>::value &&
+          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2040,6 +2109,17 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse,
           24, 16> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBindingOnlyDenyLibfuzzerTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_bindingsdenylist::
+                  DenyEachBinding_OnlyDenyLibfuzzer_Result>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2066,6 +2146,15 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response, 4, 4> {
 };
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBinding_OnlyDenyGo_Response>::value &&
+          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2091,6 +2180,17 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse,
                 24, 16> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBindingOnlyDenyGoTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>::
+              value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2117,6 +2217,15 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response,
                 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBinding_OnlyDenyDart_Response>::value &&
+          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2143,6 +2252,17 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse,
                 24, 16> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBindingOnlyDenyDartTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>::
+              value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2170,6 +2290,15 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1,
           1> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBindingOnlyDenySyzkallerRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<bool>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2195,6 +2324,15 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1, 1> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBindingOnlyDenyRustRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<bool>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2222,6 +2360,15 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1,
           1> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBindingOnlyDenyLibfuzzerRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<bool>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2247,6 +2394,15 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1, 1> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBindingOnlyDenyGoRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<bool>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2272,6 +2428,15 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1, 1> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_bindingsdenylist::
+                          DenyEachBindingOnlyDenyDartRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<bool>::value> {};
+
 #endif  // __Fuchsia__
 
 template <>

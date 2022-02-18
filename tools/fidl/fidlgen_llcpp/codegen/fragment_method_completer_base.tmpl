@@ -150,7 +150,7 @@ struct {{ .NaturalMethodTypes }} {
 void {{ .NaturalCompleterBase.NoLeading }}::Reply(
     {{- template "Method:NaturalReplySignature:Helper" . }}) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{ {{ .OrdinalName }} };
+  ::fidl::internal::NaturalMessageEncoder _encoder{ {{ .OrdinalName }} };
   _messenger.SendReply(
       {{- if .HasResponsePayload -}}
         &{{ .Response.WireCodingTable }}

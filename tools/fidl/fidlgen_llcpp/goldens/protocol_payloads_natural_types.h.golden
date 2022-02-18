@@ -1737,6 +1737,18 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse,
           24, 16> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_protocolpayloads::
+                  MainProtocolTwoWayImportWithErrorTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_protocolpayloads::
+                  MainProtocol_TwoWayImportWithError_Result>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1764,6 +1776,15 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Response, 8,
           8> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Response>
+    : public internal::BoolConstant<
+          !HasPadding<::test_protocolpayloads::
+                          MainProtocol_TwoWayAnonWithError_Response>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1791,6 +1812,17 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse,
           24, 16> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test_protocolpayloads::
+                          MainProtocolTwoWayAnonWithErrorTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_protocolpayloads::
+                  MainProtocol_TwoWayAnonWithError_Result>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1816,6 +1848,17 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest,
                 24, 16> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_protocolpayloads::
+                          MainProtocolOnImportWithErrorRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_protocolpayloads::MainProtocol_OnImportWithError_Result>::
+              value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1842,6 +1885,15 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::MainProtocol_OnAnonWithError_Response,
                 8, 8> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::MainProtocol_OnAnonWithError_Response>
+    : public internal::BoolConstant<
+          !HasPadding<::test_protocolpayloads::
+                          MainProtocol_OnAnonWithError_Response>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1868,6 +1920,17 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest, 24, 16> {
 };
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_protocolpayloads::
+                          MainProtocolOnAnonWithErrorRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result>::
+              value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1894,6 +1957,15 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest,
                 8, 8> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_protocolpayloads::
+                          MainProtocolTwoWayAnonWithErrorRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1919,6 +1991,15 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse, 8, 8> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test_protocolpayloads::
+                          MainProtocolTwoWayAnonTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1944,6 +2025,15 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::MainProtocolTwoWayAnonRequest, 8, 8> {
 };
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::MainProtocolTwoWayAnonRequest>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_protocolpayloads::MainProtocolTwoWayAnonRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1969,6 +2059,15 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::MainProtocolOneWayAnonRequest, 8, 8> {
 };
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::MainProtocolOneWayAnonRequest>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_protocolpayloads::MainProtocolOneWayAnonRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1993,6 +2092,15 @@ struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::MainProtocolOnAnonRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::MainProtocolOnAnonRequest, 8, 8> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::MainProtocolOnAnonRequest>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_protocolpayloads::MainProtocolOnAnonRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2015,6 +2123,14 @@ struct internal::NaturalCodingTraits<
     ::test_protocolpayloads::LocalStructPayload>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::LocalStructPayload, 8, 8> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::LocalStructPayload>
+    : public internal::BoolConstant<
+          !HasPadding<::test_protocolpayloads::LocalStructPayload>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2042,6 +2158,17 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse,
           24, 16> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test_protocolpayloads::
+                          MainProtocolTwoWayLocalWithErrorTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_protocolpayloads::
+                  MainProtocol_TwoWayLocalWithError_Result>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2067,6 +2194,17 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest,
                 24, 16> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_protocolpayloads::
+                          MainProtocolOnLocalWithErrorRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result>::
+              value> {};
+
 #endif  // __Fuchsia__
 
 template <>

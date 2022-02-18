@@ -54,8 +54,8 @@ template <>
 struct IsMemcpyCompatible<::test::vectors::ExampleUseOfVectors>
     : public internal::BoolConstant<
           !HasPadding<::test::vectors::ExampleUseOfVectors>::value &&
-          IsMemcpyCompatible<::std::vector<::std::vector<bool>>>::value &&
-          IsMemcpyCompatible<::std::vector<uint8_t>>::value> {};
+          IsMemcpyCompatible<::std::vector<uint8_t>>::value &&
+          IsMemcpyCompatible<::std::vector<::std::vector<bool>>>::value> {};
 
 inline zx_status_t Clone(const ::test::vectors::ExampleUseOfVectors& value,
                          ::test::vectors::ExampleUseOfVectors* result) {

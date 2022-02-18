@@ -157,7 +157,7 @@ template<>
 struct IsMemcpyCompatible<{{ . }}> : public internal::BoolConstant<
     !HasPadding<{{ . }}>::value
 {{- range .FullDeclMemcpyCompatibleDeps }}
-    && IsMemcpyCompatible<{{ . }}>::value
+    && IsMemcpyCompatible<{{ .HLCPP }}>::value
   {{- end -}}
 > {};
 {{ end }}

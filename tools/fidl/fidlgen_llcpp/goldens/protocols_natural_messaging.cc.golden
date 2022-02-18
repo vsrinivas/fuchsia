@@ -18,7 +18,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::
         ::fidl::ClientCallback<
             ::test_protocols::HandleRightsProtocol::ResponseMethod>&& _callback)
         const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::
@@ -39,7 +39,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::
         ::fidl::ClientResponseCallback<
             ::test_protocols::HandleRightsProtocol::ResponseMethod>&& _callback)
         const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::
@@ -59,7 +59,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::
     NaturalClientImpl<::test_protocols::HandleRightsProtocol>::NoResponseMethod(
         ::test_protocols::HandleRightsProtocolNoResponseMethodRequest&& payload)
         const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_protocols::
@@ -107,7 +107,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalWeakEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(
         ::test_protocols::HandleRightsProtocolAnEventRequest payload) {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::test_protocols_HandleRightsProtocolAnEventRequestTable,
@@ -122,7 +122,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(
         ::test_protocols::HandleRightsProtocolAnEventRequest payload) {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::test_protocols_HandleRightsProtocolAnEventRequestTable,
@@ -142,7 +142,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_protocols::HandleRightsProtocolResponseMethodTopResponse&&
               payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal};
   _messenger.SendReply(
       &::test_protocols::
@@ -261,7 +261,7 @@ void fidl::internal::NaturalClientImpl<
     NoRequestEmptyResponse(
         ::fidl::ClientCallback<::test_protocols::WithAndWithoutRequestResponse::
                                    NoRequestEmptyResponse>&& _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal};
   return messenger().TwoWay(
@@ -282,7 +282,7 @@ void fidl::internal::NaturalClientImpl<
     NoRequestEmptyResponse(::fidl::ClientResponseCallback<
                            ::test_protocols::WithAndWithoutRequestResponse::
                                NoRequestEmptyResponse>&& _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal};
   return messenger().TwoWay(
@@ -304,7 +304,7 @@ void fidl::internal::NaturalClientImpl<
     NoRequestWithResponse(
         ::fidl::ClientCallback<::test_protocols::WithAndWithoutRequestResponse::
                                    NoRequestWithResponse>&& _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal};
   return messenger().TwoWay(
@@ -325,7 +325,7 @@ void fidl::internal::NaturalClientImpl<
     NoRequestWithResponse(::fidl::ClientResponseCallback<
                           ::test_protocols::WithAndWithoutRequestResponse::
                               NoRequestWithResponse>&& _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal};
   return messenger().TwoWay(
@@ -351,7 +351,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<::test_protocols::WithAndWithoutRequestResponse::
                                    WithRequestEmptyResponse>&& _callback)
         const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal};
   return messenger().TwoWay(
@@ -378,7 +378,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientResponseCallback<
             ::test_protocols::WithAndWithoutRequestResponse::
                 WithRequestEmptyResponse>&& _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal};
   return messenger().TwoWay(
@@ -405,7 +405,7 @@ void fidl::internal::NaturalClientImpl<
                 payload,
         ::fidl::ClientCallback<::test_protocols::WithAndWithoutRequestResponse::
                                    WithRequestWithResponse>&& _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal};
   return messenger().TwoWay(
@@ -432,7 +432,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientResponseCallback<
             ::test_protocols::WithAndWithoutRequestResponse::
                 WithRequestWithResponse>&& _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal};
   return messenger().TwoWay(
@@ -454,7 +454,7 @@ void fidl::internal::NaturalClientImpl<
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
     ::test_protocols::WithAndWithoutRequestResponse>::NoRequestNoResponse()
     const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal};
   ::fidl::Result result = messenger().OneWay(
@@ -469,7 +469,7 @@ void fidl::internal::NaturalClientImpl<
         ::test_protocols::
             WithAndWithoutRequestResponseWithRequestNoResponseRequest&& payload)
         const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal};
   ::fidl::Result result = messenger().OneWay(
@@ -536,7 +536,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 
 ::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       nullptr,
@@ -549,7 +549,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
 
 ::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       nullptr,
@@ -566,7 +566,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
     OnWithResponse(
         ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest
             payload) {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::
@@ -584,7 +584,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
     OnWithResponse(
         ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest
             payload) {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::
@@ -604,7 +604,7 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::
     Reply() {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal};
   _messenger.SendReply(
@@ -618,7 +618,7 @@ void fidl::internal::NaturalCompleterBase<
               WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&
                   payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal};
   _messenger.SendReply(
@@ -632,7 +632,7 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::
     Reply() {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal};
   _messenger.SendReply(
@@ -646,7 +646,7 @@ void fidl::internal::NaturalCompleterBase<
               WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&&
                   payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::
           kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal};
   _messenger.SendReply(
@@ -861,7 +861,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::Request(
     ::test_protocols::TransitionalRequestRequest&& payload,
     ::fidl::ClientCallback<::test_protocols::Transitional::Request>&& _callback)
     const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kTransitional_Request_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::test_protocols_TransitionalRequestRequestTable,
@@ -877,7 +877,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::Request(
     ::test_protocols::TransitionalRequestRequest&& payload,
     ::fidl::ClientResponseCallback<::test_protocols::Transitional::Request>&&
         _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kTransitional_Request_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::test_protocols_TransitionalRequestRequestTable,
@@ -894,7 +894,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::Request(
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::OneWay(
     ::test_protocols::TransitionalOneWayRequest&& payload) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kTransitional_OneWay_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_protocols::test_protocols_TransitionalOneWayRequestTable,
@@ -938,7 +938,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional>::Event(
     ::test_protocols::TransitionalEventRequest payload) {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kTransitional_Event_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::test_protocols_TransitionalEventRequestTable,
@@ -953,7 +953,7 @@ fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional>::Event(
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalEventSender<::test_protocols::Transitional>::Event(
     ::test_protocols::TransitionalEventRequest payload) {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kTransitional_Event_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::test_protocols_TransitionalEventRequestTable,
@@ -972,7 +972,7 @@ void fidl::internal::
     NaturalCompleterBase<::test_protocols::Transitional::Request>::Reply(
         ::test_protocols::TransitionalRequestTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kTransitional_Request_Ordinal};
   _messenger.SendReply(
       &::test_protocols::test_protocols_TransitionalRequestTopResponseTable,
@@ -1060,7 +1060,7 @@ namespace test_protocols {
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalClientImpl<::test_protocols::MethodWithUnion>::UnionMethod(
         ::test_protocols::MethodWithUnionUnionMethodRequest&& payload) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_protocols::test_protocols_MethodWithUnionUnionMethodRequestTable,
@@ -1152,7 +1152,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::
         ::test_protocols::WithProtocolEndsClientEndsRequest&& payload,
         ::fidl::ClientCallback<::test_protocols::WithProtocolEnds::ClientEnds>&&
             _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::test_protocols_WithProtocolEndsClientEndsRequestTable,
@@ -1170,7 +1170,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::
         ::test_protocols::WithProtocolEndsClientEndsRequest&& payload,
         ::fidl::ClientResponseCallback<
             ::test_protocols::WithProtocolEnds::ClientEnds>&& _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::test_protocols_WithProtocolEndsClientEndsRequestTable,
@@ -1189,7 +1189,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::
         ::test_protocols::WithProtocolEndsServerEndsRequest&& payload,
         ::fidl::ClientCallback<::test_protocols::WithProtocolEnds::ServerEnds>&&
             _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::test_protocols_WithProtocolEndsServerEndsRequestTable,
@@ -1207,7 +1207,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::
         ::test_protocols::WithProtocolEndsServerEndsRequest&& payload,
         ::fidl::ClientResponseCallback<
             ::test_protocols::WithProtocolEnds::ServerEnds>&& _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::test_protocols_WithProtocolEndsServerEndsRequestTable,
@@ -1227,7 +1227,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::
         ::fidl::ClientCallback<
             ::test_protocols::WithProtocolEnds::StructContainingEnds>&&
             _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::
@@ -1248,7 +1248,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::
         ::fidl::ClientResponseCallback<
             ::test_protocols::WithProtocolEnds::StructContainingEnds>&&
             _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::
@@ -1285,7 +1285,7 @@ void fidl::internal::
     NaturalCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds>::Reply(
         ::test_protocols::WithProtocolEndsClientEndsTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal};
   _messenger.SendReply(
       &::test_protocols::
@@ -1298,7 +1298,7 @@ void fidl::internal::
     NaturalCompleterBase<::test_protocols::WithProtocolEnds::ServerEnds>::Reply(
         ::test_protocols::WithProtocolEndsServerEndsTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal};
   _messenger.SendReply(
       &::test_protocols::
@@ -1312,7 +1312,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_protocols::WithProtocolEndsStructContainingEndsTopResponse&&
               payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal};
   _messenger.SendReply(
       &::test_protocols::
@@ -1429,7 +1429,7 @@ namespace test_protocols {
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocols::ManyParameters>::Fifteen(
     ::test_protocols::ManyParametersFifteenRequest&& payload) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kManyParameters_Fifteen_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_protocols::test_protocols_ManyParametersFifteenRequestTable,
@@ -1520,7 +1520,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
     ResponseAsStruct(::fidl::ClientCallback<
                      ::test_protocols::WithErrorSyntax::ResponseAsStruct>&&
                          _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal};
   return messenger().TwoWay(
       nullptr,
@@ -1536,7 +1536,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
     ResponseAsStruct(::fidl::ClientResponseCallback<
                      ::test_protocols::WithErrorSyntax::ResponseAsStruct>&&
                          _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal};
   return messenger().TwoWay(
       nullptr,
@@ -1553,7 +1553,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
     ErrorAsPrimitive(::fidl::ClientCallback<
                      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>&&
                          _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal};
   return messenger().TwoWay(
       nullptr,
@@ -1569,7 +1569,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
     ErrorAsPrimitive(::fidl::ClientResponseCallback<
                      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>&&
                          _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal};
   return messenger().TwoWay(
       nullptr,
@@ -1586,7 +1586,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
     ErrorAsEnum(
         ::fidl::ClientCallback<::test_protocols::WithErrorSyntax::ErrorAsEnum>&&
             _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal};
   return messenger().TwoWay(
       nullptr,
@@ -1602,7 +1602,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
     ErrorAsEnum(
         ::fidl::ClientResponseCallback<
             ::test_protocols::WithErrorSyntax::ErrorAsEnum>&& _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal};
   return messenger().TwoWay(
       nullptr,
@@ -1619,7 +1619,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
     HandleInResult(::fidl::ClientCallback<
                    ::test_protocols::WithErrorSyntax::HandleInResult>&&
                        _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal};
   return messenger().TwoWay(
       nullptr,
@@ -1635,7 +1635,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
     HandleInResult(::fidl::ClientResponseCallback<
                    ::test_protocols::WithErrorSyntax::HandleInResult>&&
                        _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal};
   return messenger().TwoWay(
       nullptr,
@@ -1670,7 +1670,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_protocols::WithErrorSyntaxResponseAsStructTopResponse&&
               payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal};
   _messenger.SendReply(
       &::test_protocols::
@@ -1684,7 +1684,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse&&
               payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal};
   _messenger.SendReply(
       &::test_protocols::
@@ -1697,7 +1697,7 @@ void fidl::internal::
     NaturalCompleterBase<::test_protocols::WithErrorSyntax::ErrorAsEnum>::Reply(
         ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal};
   _messenger.SendReply(
       &::test_protocols::
@@ -1711,7 +1711,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(
         ::test_protocols::WithErrorSyntaxHandleInResultTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal};
   _messenger.SendReply(
       &::test_protocols::
@@ -1850,7 +1850,7 @@ namespace test_protocols {
 }  // namespace test_protocols
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
     ::test_protocols::DiscoverableProtocol>::Method() const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kDiscoverableProtocol_Method_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       nullptr,
@@ -1946,7 +1946,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::
     MethodB(::test_protocols::ChannelProtocolMethodBRequest&& payload,
             ::fidl::ClientCallback<::test_protocols::ChannelProtocol::MethodB>&&
                 _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_MethodB_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::test_protocols_ChannelProtocolMethodBRequestTable,
@@ -1962,7 +1962,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::
     MethodB(::test_protocols::ChannelProtocolMethodBRequest&& payload,
             ::fidl::ClientResponseCallback<
                 ::test_protocols::ChannelProtocol::MethodB>&& _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_MethodB_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::test_protocols_ChannelProtocolMethodBRequestTable,
@@ -1981,7 +1981,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::
         ::test_protocols::ChannelProtocolTakeHandleRequest&& payload,
         ::fidl::ClientCallback<::test_protocols::ChannelProtocol::TakeHandle>&&
             _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_TakeHandle_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::test_protocols_ChannelProtocolTakeHandleRequestTable,
@@ -1999,7 +1999,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::
         ::test_protocols::ChannelProtocolTakeHandleRequest&& payload,
         ::fidl::ClientResponseCallback<
             ::test_protocols::ChannelProtocol::TakeHandle>&& _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_TakeHandle_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::test_protocols_ChannelProtocolTakeHandleRequestTable,
@@ -2018,7 +2018,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::
                  ::fidl::ClientCallback<
                      ::test_protocols::ChannelProtocol::MutateSocket>&&
                      _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_MutateSocket_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::test_protocols_ChannelProtocolMutateSocketRequestTable,
@@ -2036,7 +2036,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::
                  ::fidl::ClientResponseCallback<
                      ::test_protocols::ChannelProtocol::MutateSocket>&&
                      _callback) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_MutateSocket_Ordinal};
   return messenger().TwoWay(
       &::test_protocols::test_protocols_ChannelProtocolMutateSocketRequestTable,
@@ -2053,7 +2053,7 @@ void fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::MethodA(
     ::test_protocols::ChannelProtocolMethodARequest&& payload) const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_MethodA_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_protocols::test_protocols_ChannelProtocolMethodARequestTable,
@@ -2097,7 +2097,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalWeakEventSender<::test_protocols::ChannelProtocol>::EventA(
         ::test_protocols::ChannelProtocolEventARequest payload) {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_EventA_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::test_protocols_ChannelProtocolEventARequestTable,
@@ -2112,7 +2112,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>::EventA(
     ::test_protocols::ChannelProtocolEventARequest payload) {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_EventA_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocols::test_protocols_ChannelProtocolEventARequestTable,
@@ -2131,7 +2131,7 @@ void fidl::internal::
     NaturalCompleterBase<::test_protocols::ChannelProtocol::MethodB>::Reply(
         ::test_protocols::ChannelProtocolMethodBTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_MethodB_Ordinal};
   _messenger.SendReply(
       &::test_protocols::test_protocols_ChannelProtocolMethodBTopResponseTable,
@@ -2142,7 +2142,7 @@ void fidl::internal::
 void fidl::internal::NaturalCompleterBase<
     ::test_protocols::ChannelProtocol::TakeHandle>::Reply() {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_TakeHandle_Ordinal};
   _messenger.SendReply(
       nullptr,
@@ -2153,7 +2153,7 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocols::ChannelProtocol::MutateSocket>::
     Reply(::test_protocols::ChannelProtocolMutateSocketTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_protocols::kChannelProtocol_MutateSocket_Ordinal};
   _messenger.SendReply(
       &::test_protocols::

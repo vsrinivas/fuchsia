@@ -92,6 +92,14 @@ template <>
 struct internal::NaturalCodingTraits<::test_escaping::DocCommentWithQuotes>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_escaping::DocCommentWithQuotes, 1, 1> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_escaping::DocCommentWithQuotes>
+    : public internal::BoolConstant<
+          !HasPadding<::test_escaping::DocCommentWithQuotes>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

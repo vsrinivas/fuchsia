@@ -503,8 +503,8 @@ template <>
 struct IsMemcpyCompatible<::test::padding::Padding7ByteMiddle>
     : public internal::BoolConstant<
           !HasPadding<::test::padding::Padding7ByteMiddle>::value &&
-          IsMemcpyCompatible<uint64_t>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+          IsMemcpyCompatible<uint8_t>::value &&
+          IsMemcpyCompatible<uint64_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding7ByteMiddle& value,
                          ::test::padding::Padding7ByteMiddle* result) {
@@ -601,8 +601,8 @@ template <>
 struct IsMemcpyCompatible<::test::padding::Padding6ByteEnd>
     : public internal::BoolConstant<
           !HasPadding<::test::padding::Padding6ByteEnd>::value &&
-          IsMemcpyCompatible<uint16_t>::value &&
-          IsMemcpyCompatible<uint64_t>::value> {};
+          IsMemcpyCompatible<uint64_t>::value &&
+          IsMemcpyCompatible<uint16_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding6ByteEnd& value,
                          ::test::padding::Padding6ByteEnd* result) {
@@ -636,8 +636,8 @@ struct IsMemcpyCompatible<::test::padding::Padding5ByteMiddle>
     : public internal::BoolConstant<
           !HasPadding<::test::padding::Padding5ByteMiddle>::value &&
           IsMemcpyCompatible<uint16_t>::value &&
-          IsMemcpyCompatible<uint64_t>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+          IsMemcpyCompatible<uint8_t>::value &&
+          IsMemcpyCompatible<uint64_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding5ByteMiddle& value,
                          ::test::padding::Padding5ByteMiddle* result) {
@@ -671,8 +671,8 @@ template <>
 struct IsMemcpyCompatible<::test::padding::Padding5ByteEnd>
     : public internal::BoolConstant<
           !HasPadding<::test::padding::Padding5ByteEnd>::value &&
-          IsMemcpyCompatible<uint16_t>::value &&
           IsMemcpyCompatible<uint64_t>::value &&
+          IsMemcpyCompatible<uint16_t>::value &&
           IsMemcpyCompatible<uint8_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding5ByteEnd& value,
@@ -741,8 +741,8 @@ template <>
 struct IsMemcpyCompatible<::test::padding::Padding4ByteEnd>
     : public internal::BoolConstant<
           !HasPadding<::test::padding::Padding4ByteEnd>::value &&
-          IsMemcpyCompatible<uint32_t>::value &&
-          IsMemcpyCompatible<uint64_t>::value> {};
+          IsMemcpyCompatible<uint64_t>::value &&
+          IsMemcpyCompatible<uint32_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding4ByteEnd& value,
                          ::test::padding::Padding4ByteEnd* result) {
@@ -775,9 +775,9 @@ template <>
 struct IsMemcpyCompatible<::test::padding::Padding4ByteAlignmentLength12>
     : public internal::BoolConstant<
           !HasPadding<::test::padding::Padding4ByteAlignmentLength12>::value &&
-          IsMemcpyCompatible<uint16_t>::value &&
           IsMemcpyCompatible<uint32_t>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+          IsMemcpyCompatible<uint8_t>::value &&
+          IsMemcpyCompatible<uint16_t>::value> {};
 
 inline zx_status_t Clone(
     const ::test::padding::Padding4ByteAlignmentLength12& value,
@@ -818,8 +818,8 @@ template <>
 struct IsMemcpyCompatible<::test::padding::Padding3ByteMiddle>
     : public internal::BoolConstant<
           !HasPadding<::test::padding::Padding3ByteMiddle>::value &&
-          IsMemcpyCompatible<uint32_t>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+          IsMemcpyCompatible<uint8_t>::value &&
+          IsMemcpyCompatible<uint32_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding3ByteMiddle& value,
                          ::test::padding::Padding3ByteMiddle* result) {
@@ -916,8 +916,8 @@ template <>
 struct IsMemcpyCompatible<::test::padding::Padding2ByteEnd>
     : public internal::BoolConstant<
           !HasPadding<::test::padding::Padding2ByteEnd>::value &&
-          IsMemcpyCompatible<uint16_t>::value &&
-          IsMemcpyCompatible<uint32_t>::value> {};
+          IsMemcpyCompatible<uint32_t>::value &&
+          IsMemcpyCompatible<uint16_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding2ByteEnd& value,
                          ::test::padding::Padding2ByteEnd* result) {
@@ -950,8 +950,8 @@ template <>
 struct IsMemcpyCompatible<::test::padding::Padding2ByteAlignmentLength6>
     : public internal::BoolConstant<
           !HasPadding<::test::padding::Padding2ByteAlignmentLength6>::value &&
-          IsMemcpyCompatible<uint16_t>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+          IsMemcpyCompatible<uint8_t>::value &&
+          IsMemcpyCompatible<uint16_t>::value> {};
 
 inline zx_status_t Clone(
     const ::test::padding::Padding2ByteAlignmentLength6& value,
@@ -989,8 +989,8 @@ template <>
 struct IsMemcpyCompatible<::test::padding::Padding1ByteMiddle>
     : public internal::BoolConstant<
           !HasPadding<::test::padding::Padding1ByteMiddle>::value &&
-          IsMemcpyCompatible<uint16_t>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+          IsMemcpyCompatible<uint8_t>::value &&
+          IsMemcpyCompatible<uint16_t>::value> {};
 
 inline zx_status_t Clone(const ::test::padding::Padding1ByteMiddle& value,
                          ::test::padding::Padding1ByteMiddle* result) {

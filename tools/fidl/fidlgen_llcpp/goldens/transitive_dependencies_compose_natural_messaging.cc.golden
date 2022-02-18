@@ -13,7 +13,7 @@ void fidl::internal::
         ::fidl::ClientCallback<
             ::test_transitivedependenciescompose::Top::GetFoo>&& _callback)
         const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
   return messenger().TwoWay(
       nullptr,
@@ -30,7 +30,7 @@ void fidl::internal::
         ::fidl::ClientResponseCallback<
             ::test_transitivedependenciescompose::Top::GetFoo>&& _callback)
         const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
   return messenger().TwoWay(
       nullptr,
@@ -65,7 +65,7 @@ void fidl::internal::NaturalCompleterBase<
     ::test_transitivedependenciescompose::Top::GetFoo>::
     Reply(::test_bottom::BottomGetFooTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal};
   _messenger.SendReply(
       &::test_transitivedependenciescompose::

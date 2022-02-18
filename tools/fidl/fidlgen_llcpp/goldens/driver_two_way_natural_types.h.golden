@@ -154,6 +154,14 @@ template <>
 struct internal::NaturalCodingTraits<::test_drivertwoway::TwoWayAddTopResponse>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_drivertwoway::TwoWayAddTopResponse, 2, 2> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_drivertwoway::TwoWayAddTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test_drivertwoway::TwoWayAddTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -175,6 +183,14 @@ template <>
 struct internal::NaturalCodingTraits<::test_drivertwoway::TwoWayAddRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_drivertwoway::TwoWayAddRequest, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_drivertwoway::TwoWayAddRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_drivertwoway::TwoWayAddRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

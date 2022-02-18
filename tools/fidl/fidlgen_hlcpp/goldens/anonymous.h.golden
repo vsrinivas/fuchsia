@@ -1359,9 +1359,9 @@ template <>
 struct IsMemcpyCompatible<::test::anonymous::OverrideTest>
     : public internal::BoolConstant<
           !HasPadding<::test::anonymous::OverrideTest>::value &&
+          IsMemcpyCompatible<::test::anonymous::Op>::value &&
           IsMemcpyCompatible<
-              ::std::unique_ptr<::test::anonymous::Expression>>::value &&
-          IsMemcpyCompatible<::test::anonymous::Op>::value> {};
+              ::std::unique_ptr<::test::anonymous::Expression>>::value> {};
 
 inline zx_status_t Clone(const ::test::anonymous::OverrideTest& value,
                          ::test::anonymous::OverrideTest* result) {

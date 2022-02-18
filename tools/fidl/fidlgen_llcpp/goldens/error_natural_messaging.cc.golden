@@ -11,7 +11,8 @@ namespace test_error {
 void fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(
     ::test_error::ExampleFooRequest&& payload,
     ::fidl::ClientCallback<::test_error::Example::Foo>&& _callback) const {
-  ::fidl::MessageEncoder _encoder{::test_error::kExample_foo_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      ::test_error::kExample_foo_Ordinal};
   return messenger().TwoWay(
       &::test_error::test_error_ExampleFooRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -25,7 +26,8 @@ void fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(
     ::test_error::ExampleFooRequest&& payload,
     ::fidl::ClientResponseCallback<::test_error::Example::Foo>&& _callback)
     const {
-  ::fidl::MessageEncoder _encoder{::test_error::kExample_foo_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      ::test_error::kExample_foo_Ordinal};
   return messenger().TwoWay(
       &::test_error::test_error_ExampleFooRequestTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
@@ -56,7 +58,8 @@ fidl::internal::NaturalEventDispatcher<::test_error::Example>::DispatchEvent(
 void fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>::Reply(
     ::test_error::ExampleFooTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::MessageEncoder _encoder{::test_error::kExample_foo_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      ::test_error::kExample_foo_Ordinal};
   _messenger.SendReply(
       &::test_error::test_error_ExampleFooTopResponseTable,
       ::fidl::internal::EncodeTransactionalMessageWithoutValidating(

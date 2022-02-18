@@ -230,10 +230,7 @@ template <>
 struct IsMemcpyCompatible<::test::handles::Handles>
     : public internal::BoolConstant<
           !HasPadding<::test::handles::Handles>::value &&
-          IsMemcpyCompatible<
-              ::fidl::InterfaceHandle<::test::handles::SomeProtocol>>::value &&
-          IsMemcpyCompatible<
-              ::fidl::InterfaceRequest<::test::handles::SomeProtocol>>::value &&
+          IsMemcpyCompatible<::zx::handle>::value &&
           IsMemcpyCompatible<::zx::bti>::value &&
           IsMemcpyCompatible<::zx::channel>::value &&
           IsMemcpyCompatible<::zx::clock>::value &&
@@ -243,7 +240,6 @@ struct IsMemcpyCompatible<::test::handles::Handles>
           IsMemcpyCompatible<::zx::exception>::value &&
           IsMemcpyCompatible<::zx::fifo>::value &&
           IsMemcpyCompatible<::zx::guest>::value &&
-          IsMemcpyCompatible<::zx::handle>::value &&
           IsMemcpyCompatible<::zx::interrupt>::value &&
           IsMemcpyCompatible<::zx::iommu>::value &&
           IsMemcpyCompatible<::zx::job>::value &&
@@ -259,7 +255,12 @@ struct IsMemcpyCompatible<::test::handles::Handles>
           IsMemcpyCompatible<::zx::timer>::value &&
           IsMemcpyCompatible<::zx::vcpu>::value &&
           IsMemcpyCompatible<::zx::vmar>::value &&
-          IsMemcpyCompatible<::zx::vmo>::value> {};
+          IsMemcpyCompatible<::zx::vmo>::value &&
+          IsMemcpyCompatible<
+              ::fidl::InterfaceHandle<::test::handles::SomeProtocol>>::value &&
+          IsMemcpyCompatible<
+              ::fidl::InterfaceRequest<::test::handles::SomeProtocol>>::value> {
+};
 
 inline zx_status_t Clone(const ::test::handles::Handles& value,
                          ::test::handles::Handles* result) {
