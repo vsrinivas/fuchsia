@@ -6,11 +6,6 @@
         "url": "fuchsia-pkg://fuchsia.com/chrome#meta/chrome.cm"
     },
     {
-        "icon": "images/SimpleBrowser-icon-2x.png",
-        "title": "Simple Browser",
-        "url": "fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx"
-    },
-    {
         "icon": "images/SpinningSquare-icon-2x.png",
         "title": "Spinning Square",
         "url": "fuchsia-pkg://fuchsia.com/spinning-square-rs#meta/spinning-square-rs.cmx"
