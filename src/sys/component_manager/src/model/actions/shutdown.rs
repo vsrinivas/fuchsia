@@ -50,7 +50,7 @@ impl Action for ShutdownAction {
 /// A DependencyNode represents a provider or user of a capability. This
 /// may be either a component or a component collection.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
-pub enum DependencyNode {
+enum DependencyNode {
     Parent,
     Child(String),
     Collection(String),
@@ -138,38 +138,25 @@ impl ShutdownJob {
         instance: &Arc<ComponentInstance>,
         state: &ResolvedInstanceState,
     ) -> ShutdownJob {
-        // `dependency_map` represents the dependency relationships between the nodes in this
-        // realm (the children, and the parent), as expressed in the component's declaration.
-        // This representation must be reconciled with the runtime state of the
-        // component. This means mapping children in the declaration with the one
-        // or more children that may exist in collections and one or more
-        // instances with a matching ChildMoniker that may exist.
-        // `dependency_map` maps server => clients (aka provider => consumers, or source => targets)
+        // `dependency_map` represents the dependency relationships between the
+        // nodes in this realm (the children, and the parent).
+        // `dependency_map` maps server => clients (a.k.a. provider => consumers,
+        // or source => targets)
         let dependency_map = process_component_dependencies(state);
         let mut source_to_targets: HashMap<ParentOrChildMoniker, ShutdownInfo> = HashMap::new();
 
         for (source, targets) in dependency_map {
-            let dependents = get_shutdown_monikers(&targets, state);
+            let component = match &source {
+                ParentOrChildMoniker::Parent => instance.clone(),
+                ParentOrChildMoniker::ChildMoniker(moniker) => {
+                    state.get_child(&moniker).expect("component not found in children").clone()
+                }
+            };
 
-            let singleton_source = hashset![source];
-            // The shutdown target may be a collection, if so this will expand
-            // the collection out into a list of all its members, otherwise it
-            // contains a single component.
-            let matching_sources: Vec<_> =
-                get_shutdown_monikers(&singleton_source, state).into_iter().collect();
-            for source in matching_sources {
-                let component = match &source {
-                    ParentOrChildMoniker::Parent => instance.clone(),
-                    ParentOrChildMoniker::ChildMoniker(moniker) => {
-                        state.get_child(&moniker).expect("component not found in children").clone()
-                    }
-                };
-
-                source_to_targets.insert(
-                    source.clone(),
-                    ShutdownInfo { moniker: source, dependents: dependents.clone(), component },
-                );
-            }
+            source_to_targets.insert(
+                source.clone(),
+                ShutdownInfo { moniker: source, dependents: targets, component },
+            );
         }
         // `target_to_sources` is the inverse of `source_to_targets`, and maps a target to all of
         // its dependencies. This inverse mapping gives us a way to do quick lookups when updating
@@ -317,8 +304,12 @@ async fn do_shutdown(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
     Ok(())
 }
 
+/// Identifies a component in this realm. This can either be the component
+/// itself, or one of its children, identified by an instanced moniker.
+///
+/// TODO(fxbug.dev/94048): Replace "parent" with "self" here and elsewhere.
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
-enum ParentOrChildMoniker {
+pub enum ParentOrChildMoniker {
     Parent,
     ChildMoniker(InstancedChildMoniker),
 }
@@ -443,19 +434,21 @@ fn get_shutdown_monikers(
 }
 
 /// Maps a dependency node (parent, child or collection) to the nodes that depend on it.
-pub type DependencyMap = HashMap<DependencyNode, HashSet<DependencyNode>>;
+type DependencyMap = HashMap<DependencyNode, HashSet<DependencyNode>>;
 
-/// For a given Component, identify capability dependencies between static
-/// children and collections in the ComponentDecl. A map is returned which maps
-/// from a child to a set of other children to which that child provides
-/// capabilities. The siblings to which the child offers capabilities must be
-/// shut down before that child. This function panics if there is a capability
-/// routing where either the source or target is not present in this
-/// ComponentDecl. Panics are not expected because ComponentDecls should be
-/// validated before this function is called.
+/// For a given Component, identify capability dependencies between the
+/// component itself and its children. A map is returned which maps from a
+/// "source" component (represented by a `ParentOrChildMoniker`) to a set of
+/// "target" components to which the source component provides capabilities. The
+/// targets must be shut down before the source.
 ///
-/// TODO(fxbug.dev/84678): This function ignores dynamic children and offers.
-pub fn process_component_dependencies(instance: &impl Component) -> DependencyMap {
+/// This function panics if there is a capability routing where either the
+/// source or target is not present among the Component's children. Panics are
+/// not expected because Component should be validated before this function is
+/// called.
+pub fn process_component_dependencies(
+    instance: &impl Component,
+) -> HashMap<ParentOrChildMoniker, HashSet<ParentOrChildMoniker>> {
     let mut dependency_map: DependencyMap = instance
         .static_children()
         .iter()
@@ -472,7 +465,24 @@ pub fn process_component_dependencies(instance: &impl Component) -> DependencyMa
     get_dependencies_from_offers(instance, &mut dependency_map);
     get_dependencies_from_environments(instance, &mut dependency_map);
     get_dependencies_from_uses(instance, &mut dependency_map);
-    dependency_map
+
+    let mut expanded = HashMap::new();
+
+    for (source, targets) in dependency_map {
+        let expanded_targets = get_shutdown_monikers(&targets, instance);
+
+        let singleton_source = hashset![source];
+        // The shutdown target may be a collection, if so this will expand
+        // the collection out into a list of all its members, otherwise it
+        // contains a single component.
+        let matching_sources: Vec<_> =
+            get_shutdown_monikers(&singleton_source, instance).into_iter().collect();
+        for source in matching_sources {
+            expanded.insert(source.clone(), expanded_targets.clone());
+        }
+    }
+
+    expanded
 }
 
 /// Loops through all the use declarations to determine if parents depend on child capabilities,
@@ -911,6 +921,7 @@ mod tests {
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
         },
         fidl_fuchsia_component_decl as fdecl,
+        maplit::{hashmap, hashset},
         moniker::ChildMoniker,
         std::collections::HashMap,
         std::{convert::TryFrom, sync::Weak},
@@ -973,24 +984,10 @@ mod tests {
 
     // TODO(jmatt) Add tests for all capability types
 
-    /// Validates that actual looks like expected and panics if they don't.
-    /// `expected` must be sorted and so must the second member of each
-    /// tuple in the vec.
-    fn validate_results(
-        expected: Vec<(DependencyNode, Vec<DependencyNode>)>,
-        mut actual: HashMap<DependencyNode, HashSet<DependencyNode>>,
-    ) {
-        let mut actual_sorted: Vec<(DependencyNode, Vec<DependencyNode>)> = actual
-            .drain()
-            .map(|(k, v)| {
-                let mut new_vec = Vec::new();
-                new_vec.extend(v.into_iter());
-                new_vec.sort_unstable();
-                (k, new_vec)
-            })
-            .collect();
-        actual_sorted.sort_unstable();
-        assert_eq!(expected, actual_sorted);
+    /// Returns a `ParentOrChildMoniker` for a child by parsing the moniker.
+    /// Panics if the moniker is malformed.
+    fn child(moniker: &str) -> ParentOrChildMoniker {
+        ParentOrChildMoniker::ChildMoniker(InstancedChildMoniker::from(moniker))
     }
 
     #[test]
@@ -1013,10 +1010,13 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childA".to_string())]));
-        expected.push((DependencyNode::Child("childA".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0")],
+                child("childA:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test_case(DependencyType::Weak)]
@@ -1040,10 +1040,13 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childA".to_string())]));
-        expected.push((DependencyNode::Child("childA".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0")],
+                child("childA:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -1065,10 +1068,13 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childA".to_string())]));
-        expected.push((DependencyNode::Child("childA".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0")],
+                child("childA:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -1108,21 +1114,14 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        let mut v = vec![DependencyNode::Child(child_a.name.clone())];
-        v.sort_unstable();
-        expected.push((DependencyNode::Child(child_b.name.clone()), v));
-        expected.push((DependencyNode::Child(child_a.name.clone()), vec![]));
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child(child_a.name.clone()),
-                DependencyNode::Child(child_b.name.clone()),
-            ],
-        ));
-        expected.sort_unstable();
-
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                child("childA:0") => hashset![],
+                child("childB:0") => hashset![child("childA:0")],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -1143,17 +1142,14 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child("childA".to_string()),
-                DependencyNode::Child("childB".to_string()),
-            ],
-        ));
-        expected.push((DependencyNode::Child("childA".to_string()), vec![]));
-        expected.push((DependencyNode::Child("childB".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                child("childA:0") => hashset![],
+                child("childB:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -1174,20 +1170,14 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child("childA".to_string()),
-                DependencyNode::Child("childB".to_string()),
-            ],
-        ));
-        expected.push((
-            DependencyNode::Child("childA".to_string()),
-            vec![DependencyNode::Child("childB".to_string())],
-        ));
-        expected.push((DependencyNode::Child("childB".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                child("childA:0") => hashset![child("childB:0")],
+                child("childB:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -1202,23 +1192,46 @@ mod tests {
                 })
                 .build()],
             collections: vec![CollectionDeclBuilder::new().name("coll").environment("env").build()],
+            children: vec![ChildDeclBuilder::new_lazy_child("childA").build()],
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child("childA".to_string()),
-                DependencyNode::Collection("coll".to_string()),
+        let instance = FakeComponent {
+            decl,
+            dynamic_children: vec![
+                // NOTE: The environment must be set in the `Child`, even though
+                // it can theoretically be inferred from the collection
+                // declaration.
+                Child {
+                    moniker: "coll:dyn1:0".into(),
+                    environment_name: Some("env".to_string()),
+                    is_live: true,
+                },
+                Child {
+                    moniker: "coll:dyn2:1".into(),
+                    environment_name: Some("env".to_string()),
+                    is_live: true,
+                },
             ],
-        ));
-        expected.push((
-            DependencyNode::Child("childA".to_string()),
-            vec![DependencyNode::Collection("coll".to_string())],
-        ));
-        expected.push((DependencyNode::Collection("coll".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+            dynamic_offers: vec![],
+        };
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("childA:0"),
+                    child("coll:dyn1:0"),
+                    child("coll:dyn2:1"),
+                ],
+                child("childA:0") => hashset![
+                    child("coll:dyn1:0"),
+                    child("coll:dyn2:1"),
+                ],
+                child("coll:dyn1:0") => hashset![],
+                child("coll:dyn2:1") => hashset![],
+            },
+            process_component_dependencies(&instance)
+        )
     }
 
     #[test]
@@ -1250,25 +1263,19 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child("childA".to_string()),
-                DependencyNode::Child("childB".to_string()),
-                DependencyNode::Child("childC".to_string()),
-            ],
-        ));
-        expected.push((
-            DependencyNode::Child("childA".to_string()),
-            vec![DependencyNode::Child("childB".to_string())],
-        ));
-        expected.push((
-            DependencyNode::Child("childB".to_string()),
-            vec![DependencyNode::Child("childC".to_string())],
-        ));
-        expected.push((DependencyNode::Child("childC".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("childA:0"),
+                    child("childB:0"),
+                    child("childC:0")
+                ],
+                child("childA:0") => hashset![child("childB:0")],
+                child("childB:0") => hashset![child("childC:0")],
+                child("childC:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -1297,25 +1304,19 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child("childA".to_string()),
-                DependencyNode::Child("childB".to_string()),
-                DependencyNode::Child("childC".to_string()),
-            ],
-        ));
-        expected.push((
-            DependencyNode::Child("childA".to_string()),
-            vec![DependencyNode::Child("childB".to_string())],
-        ));
-        expected.push((
-            DependencyNode::Child("childB".to_string()),
-            vec![DependencyNode::Child("childC".to_string())],
-        ));
-        expected.push((DependencyNode::Child("childC".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("childA:0"),
+                    child("childB:0"),
+                    child("childC:0")
+                ],
+                child("childA:0") => hashset![child("childB:0")],
+                child("childB:0") => hashset![child("childC:0")],
+                child("childC:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -1335,17 +1336,15 @@ mod tests {
             ],
             ..default_component_decl()
         };
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child("childA".to_string()),
-                DependencyNode::Child("childB".to_string()),
-            ],
-        ));
-        expected.push((DependencyNode::Child("childA".to_string()), vec![]));
-        expected.push((DependencyNode::Child("childB".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                child("childA:0") => hashset![],
+                child("childB:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -1365,20 +1364,15 @@ mod tests {
             ],
             ..default_component_decl()
         };
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child("childA".to_string()),
-                DependencyNode::Child("childB".to_string()),
-            ],
-        ));
-        expected.push((
-            DependencyNode::Child("childA".to_string()),
-            vec![DependencyNode::Child("childB".to_string())],
-        ));
-        expected.push((DependencyNode::Child("childB".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                child("childA:0") => hashset![child("childB:0")],
+                child("childB:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     // add test where B depends on A via environment and C depends on B via environment
@@ -1411,25 +1405,20 @@ mod tests {
             ],
             ..default_component_decl()
         };
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child("childA".to_string()),
-                DependencyNode::Child("childB".to_string()),
-                DependencyNode::Child("childC".to_string()),
-            ],
-        ));
-        expected.push((
-            DependencyNode::Child("childA".to_string()),
-            vec![DependencyNode::Child("childB".to_string())],
-        ));
-        expected.push((
-            DependencyNode::Child("childB".to_string()),
-            vec![DependencyNode::Child("childC".to_string())],
-        ));
-        expected.push((DependencyNode::Child("childC".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("childA:0"),
+                    child("childB:0"),
+                    child("childC:0")
+                ],
+                child("childA:0") => hashset![child("childB:0")],
+                child("childB:0") => hashset![child("childC:0")],
+                child("childC:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -1455,25 +1444,20 @@ mod tests {
             ],
             ..default_component_decl()
         };
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child("childA".to_string()),
-                DependencyNode::Child("childB".to_string()),
-                DependencyNode::Child("childC".to_string()),
-            ],
-        ));
-        expected.push((
-            DependencyNode::Child("childA".to_string()),
-            vec![DependencyNode::Child("childC".to_string())],
-        ));
-        expected.push((
-            DependencyNode::Child("childB".to_string()),
-            vec![DependencyNode::Child("childC".to_string())],
-        ));
-        expected.push((DependencyNode::Child("childC".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("childA:0"),
+                    child("childB:0"),
+                    child("childC:0")
+                ],
+                child("childA:0") => hashset![child("childC:0")],
+                child("childB:0") => hashset![child("childC:0")],
+                child("childC:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -1494,20 +1478,39 @@ mod tests {
                 .build()],
             ..default_component_decl()
         };
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child("childA".to_string()),
-                DependencyNode::Collection("coll".to_string()),
+
+        let instance = FakeComponent {
+            decl,
+            dynamic_children: vec![
+                // NOTE: The environment must be set in the `Child`, even though
+                // it can theoretically be inferred from the collection declaration.
+                Child {
+                    moniker: "coll:dyn1:0".into(),
+                    environment_name: Some("resolver_env".to_string()),
+                    is_live: true,
+                },
+                Child {
+                    moniker: "coll:dyn2:1".into(),
+                    environment_name: Some("resolver_env".to_string()),
+                    is_live: true,
+                },
             ],
-        ));
-        expected.push((
-            DependencyNode::Child("childA".to_string()),
-            vec![DependencyNode::Collection("coll".to_string())],
-        ));
-        expected.push((DependencyNode::Collection("coll".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+            dynamic_offers: vec![],
+        };
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("childA:0"),
+                    child("coll:dyn1:0"),
+                    child("coll:dyn2:1"),
+                ],
+                child("childA:0") => hashset![child("coll:dyn1:0"), child("coll:dyn2:1")],
+                child("coll:dyn1:0") => hashset![],
+                child("coll:dyn2:1") => hashset![],
+            },
+            process_component_dependencies(&instance)
+        )
     }
 
     #[test_case(DependencyType::Weak)]
@@ -1548,19 +1551,14 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child(child_a.name.clone()),
-                DependencyNode::Child(child_b.name.clone()),
-            ],
-        ));
-        expected.push((DependencyNode::Child(child_b.name.clone()), vec![]));
-        expected.push((DependencyNode::Child(child_a.name.clone()), vec![]));
-        expected.sort_unstable();
-
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                child("childA:0") => hashset![],
+                child("childB:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -1607,21 +1605,14 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        let mut v = vec![DependencyNode::Child(child_a.name.clone())];
-        v.sort_unstable();
-        expected.push((DependencyNode::Child(child_b.name.clone()), v));
-        expected.push((DependencyNode::Child(child_a.name.clone()), vec![]));
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child(child_a.name.clone()),
-                DependencyNode::Child(child_b.name.clone()),
-            ],
-        ));
-        expected.sort_unstable();
-
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                child("childA:0") => hashset![],
+                child("childB:0") => hashset![child("childA:0")],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -1669,25 +1660,19 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        let mut v = vec![
-            DependencyNode::Child(child_a.name.clone()),
-            DependencyNode::Child(child_c.name.clone()),
-        ];
-        v.sort_unstable();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child(child_a.name.clone()),
-                DependencyNode::Child(child_b.name.clone()),
-                DependencyNode::Child(child_c.name.clone()),
-            ],
-        ));
-        expected.push((DependencyNode::Child(child_b.name.clone()), v));
-        expected.push((DependencyNode::Child(child_a.name.clone()), vec![]));
-        expected.push((DependencyNode::Child(child_c.name.clone()), vec![]));
-        expected.sort_unstable();
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("childA:0"),
+                    child("childB:0"),
+                    child("childC:0"),
+                ],
+                child("childA:0") => hashset![],
+                child("childB:0") => hashset![child("childA:0"), child("childC:0")],
+                child("childC:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test_case(DependencyType::Weak)]
@@ -1742,27 +1727,19 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child(child_a.name.clone()),
-                DependencyNode::Child(child_b.name.clone()),
-                DependencyNode::Child(child_c.name.clone()),
-            ],
-        ));
-        expected.push((
-            DependencyNode::Child(child_b.name.clone()),
-            vec![DependencyNode::Child(child_c.name.clone())],
-        ));
-        expected.push((
-            DependencyNode::Child(child_a.name.clone()),
-            vec![DependencyNode::Child(child_c.name.clone())],
-        ));
-        expected.push((DependencyNode::Child(child_c.name.clone()), vec![]));
-        expected.sort_unstable();
-
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("childA:0"),
+                    child("childB:0"),
+                    child("childC:0"),
+                ],
+                child("childA:0") => hashset![child("childC:0")],
+                child("childB:0") => hashset![child("childC:0")],
+                child("childC:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -1809,26 +1786,19 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child(child_a.name.clone()),
-                DependencyNode::Child(child_b.name.clone()),
-                DependencyNode::Child(child_c.name.clone()),
-            ],
-        ));
-        expected.push((
-            DependencyNode::Child(child_a.name.clone()),
-            vec![DependencyNode::Child(child_b.name.clone())],
-        ));
-        expected.push((
-            DependencyNode::Child(child_b.name.clone()),
-            vec![DependencyNode::Child(child_c.name.clone())],
-        ));
-        expected.push((DependencyNode::Child(child_c.name.clone()), vec![]));
-        expected.sort_unstable();
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("childA:0"),
+                    child("childB:0"),
+                    child("childC:0"),
+                ],
+                child("childA:0") => hashset![child("childB:0")],
+                child("childB:0") => hashset![child("childC:0")],
+                child("childC:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     /// Tests a graph that looks like the below, tildes indicate a
@@ -1925,39 +1895,23 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((
-            DependencyNode::Parent,
-            vec![
-                DependencyNode::Child(child_a.name.clone()),
-                DependencyNode::Child(child_b.name.clone()),
-                DependencyNode::Child(child_c.name.clone()),
-                DependencyNode::Child(child_d.name.clone()),
-                DependencyNode::Child(child_e.name.clone()),
-            ],
-        ));
-        expected.push((
-            DependencyNode::Child(child_a.name.clone()),
-            vec![
-                DependencyNode::Child(child_b.name.clone()),
-                DependencyNode::Child(child_c.name.clone()),
-            ],
-        ));
-        expected.push((
-            DependencyNode::Child(child_b.name.clone()),
-            vec![DependencyNode::Child(child_d.name.clone())],
-        ));
-        expected.push((
-            DependencyNode::Child(child_c.name.clone()),
-            vec![
-                DependencyNode::Child(child_d.name.clone()),
-                DependencyNode::Child(child_e.name.clone()),
-            ],
-        ));
-        expected.push((DependencyNode::Child(child_d.name.clone()), vec![]));
-        expected.push((DependencyNode::Child(child_e.name.clone()), vec![]));
-        expected.sort_unstable();
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                   child("childA:0"),
+                   child("childB:0"),
+                   child("childC:0"),
+                   child("childD:0"),
+                   child("childE:0"),
+                ],
+                child("childA:0") => hashset![child("childB:0"), child("childC:0")],
+                child("childB:0") => hashset![child("childD:0")],
+                child("childC:0") => hashset![child("childD:0"), child("childE:0")],
+                child("childD:0") => hashset![],
+                child("childE:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -2038,10 +1992,13 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((DependencyNode::Parent, vec![]));
-        expected.push((DependencyNode::Child("childA".to_string()), vec![DependencyNode::Parent]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![],
+                child("childA:0") => hashset![ParentOrChildMoniker::Parent],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -2079,13 +2036,16 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        // childB is a dependent because we consider all children dependent, unless the parent
-        // uses something from the child.
-        expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childB".to_string())]));
-        expected.push((DependencyNode::Child("childA".to_string()), vec![DependencyNode::Parent]));
-        expected.push((DependencyNode::Child("childB".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                // childB is a dependent because we consider all children
+                // dependent, unless the parent uses something from the child.
+                ParentOrChildMoniker::Parent => hashset![child("childB:0")],
+                child("childA:0") => hashset![ParentOrChildMoniker::Parent],
+                child("childB:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        );
     }
 
     #[test]
@@ -2146,14 +2106,14 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((DependencyNode::Parent, vec![]));
-        expected.push((DependencyNode::Child("childA".to_string()), vec![DependencyNode::Parent]));
-        expected.push((
-            DependencyNode::Child("childB".to_string()),
-            vec![DependencyNode::Child("childA".to_string())],
-        ));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![],
+                child("childA:0") => hashset![ParentOrChildMoniker::Parent],
+                child("childB:0") => hashset![child("childA:0")],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -2182,10 +2142,13 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childA".to_string())]));
-        expected.push((DependencyNode::Child("childA".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0")],
+                child("childA:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -2231,12 +2194,15 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
-        // childB is a dependent because its use-from-child has a 'weak' dependency.
-        expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childB".to_string())]));
-        expected.push((DependencyNode::Child("childA".to_string()), vec![DependencyNode::Parent]));
-        expected.push((DependencyNode::Child("childB".to_string()), vec![]));
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                // childB is a dependent because its use-from-child has a 'weak' dependency.
+                ParentOrChildMoniker::Parent => hashset![child("childB:0")],
+                child("childA:0") => hashset![ParentOrChildMoniker::Parent],
+                child("childB:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[test]
@@ -2266,22 +2232,14 @@ mod tests {
             ..default_component_decl()
         };
 
-        let mut expected = vec![
-            (
-                DependencyNode::Parent,
-                vec![
-                    DependencyNode::Child(child_a.name.clone()),
-                    DependencyNode::Child(child_b.name.clone()),
-                ],
-            ),
-            (
-                DependencyNode::Child(child_a.name.clone()),
-                vec![DependencyNode::Child(child_b.name.clone())],
-            ),
-            (DependencyNode::Child(child_b.name.clone()), vec![]),
-        ];
-        expected.sort_unstable();
-        validate_results(expected, process_component_dependencies(&FakeComponent::from_decl(decl)));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                child("childA:0") => hashset![child("childB:0")],
+                child("childB:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
     }
 
     #[fuchsia::test]
