@@ -256,10 +256,12 @@ int main(int argc, char** argv) {
         // Check if the power button is pressed, and request a poweroff if so.
         const size_t byte_index = info.has_report_id_byte + info.bit_offset / 8;
         if (report[byte_index] & (1u << (info.bit_offset % 8))) {
-          was_pressed = true;
-          for (auto& binding : bindings) {
-            monitor.SendButtonEvent(binding.second,
-                                    fuchsia_power_button::wire::PowerButtonEvent::kPress);
+          if (!was_pressed) {
+            was_pressed = true;
+            for (auto& binding : bindings) {
+              monitor.SendButtonEvent(binding.second,
+                                      fuchsia_power_button::wire::PowerButtonEvent::kPress);
+            }
           }
 
           auto status = monitor.DoAction();
