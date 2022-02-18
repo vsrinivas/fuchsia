@@ -6,9 +6,10 @@ use {
     crate::{
         object_store::{
             crypt::Crypt,
-            filesystem::{Info, OpenFxFilesystem},
+            filesystem::{Filesystem, Info, OpenFxFilesystem},
             volume::root_volume,
         },
+        server::inspect::{FsInspect, FsInspectTree, InfoData, UsageData, VolumeData},
         server::volume::FxVolumeAndRoot,
     },
     anyhow::{Context, Error},
@@ -35,6 +36,7 @@ pub mod device;
 pub mod directory;
 pub mod errors;
 pub mod file;
+mod inspect;
 pub mod node;
 pub mod volume;
 
@@ -48,9 +50,11 @@ pub const TOTAL_NODES: u64 = i64::MAX as u64;
 
 pub const VFS_TYPE_FXFS: u32 = 0x73667866;
 
+pub const FXFS_INFO_NAME: &'static str = "fxfs";
+
 // An array used to initialize the FilesystemInfo |name| field. This just spells "fxfs" 0-padded to
 // 32 bytes.
-pub const FXFS_INFO_NAME: [i8; 32] = [
+pub const FXFS_INFO_NAME_FIDL: [i8; 32] = [
     0x66, 0x78, 0x66, 0x73, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0,
 ];
@@ -73,7 +77,7 @@ pub struct FxfsServer {
 
     /// Unique identifier for this filesystem instance (not preserved across reboots) based on
     /// the kernel object ID to guarantee uniqueness within the system.
-    _unique_id: zx::Event,
+    unique_id: zx::Event,
 }
 
 impl FxfsServer {
@@ -82,7 +86,7 @@ impl FxfsServer {
         fs: OpenFxFilesystem,
         volume_name: &str,
         crypt: Arc<dyn Crypt>,
-    ) -> Result<Self, Error> {
+    ) -> Result<Arc<Self>, Error> {
         let root_volume = root_volume(&fs).await?;
         let unique_id = zx::Event::create().expect("Failed to create event");
         let volume = FxVolumeAndRoot::new(
@@ -93,10 +97,10 @@ impl FxfsServer {
             unique_id.get_koid()?.raw_koid(),
         )
         .await?;
-        Ok(Self { fs, volume, closed: AtomicBool::new(false), _unique_id: unique_id })
+        Ok(Arc::new(Self { fs, volume, closed: AtomicBool::new(false), unique_id }))
     }
 
-    pub async fn run(self, outgoing_chan: zx::Channel) -> Result<(), Error> {
+    pub async fn run(self: Arc<Self>, outgoing_chan: zx::Channel) -> Result<(), Error> {
         // VFS initialization.
         let registry = token_registry::Simple::new();
         let scope = ExecutionScope::build().token_registry(registry).new();
@@ -112,10 +116,21 @@ impl FxfsServer {
             server.into_channel().into(),
         );
 
+        // Since fshost currently exports all filesystem inspect trees under its own diagnostics
+        // directory, in order to work properly with Lapis, each filesystem must use a uniquely
+        // named root node.
+        let root_fs_node = fuchsia_inspect::component::inspector().root().create_child("fxfs");
+
+        // The Inspect nodes will remain live until `_fs_inspect_nodes` goes out of scope.
+        let self_weak = Arc::downgrade(&self);
+        let _fs_inspect_nodes = FsInspectTree::new(self_weak, &root_fs_node);
+
         // Export the root directory in our outgoing directory.
         let mut fs = ServiceFs::new();
         fs.add_remote("root", proxy);
         fs.dir("svc").add_fidl_service(Services::Admin).add_fidl_service(Services::Query);
+        // Serve static Inspect instance from fuchsia_inspect::component to diagnostic directory.
+        inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
         fs.serve_connection(outgoing_chan)?;
 
         // Handle all ServiceFs connections. VFS connections will be spawned as separate tasks.
@@ -201,7 +216,47 @@ impl Info {
             max_filename_size: MAX_FILENAME as u32,
             fs_type: VFS_TYPE_FXFS,
             padding: 0,
-            name: FXFS_INFO_NAME,
+
+            // Convert filesystem name into it's resulting FIDL wire type (fixed-size array of i8).
+            name: FXFS_INFO_NAME_FIDL,
+        }
+    }
+}
+
+impl FsInspect for FxfsServer {
+    fn get_info_data(&self) -> InfoData {
+        InfoData {
+            id: self.unique_id.get_koid().unwrap().raw_koid(),
+            fs_type: VFS_TYPE_FXFS.into(),
+            name: FXFS_INFO_NAME.into(),
+            version_major: 0,        // TODO(fxbug.dev/93770)
+            version_minor: 0,        // TODO(fxbug.dev/93770)
+            oldest_minor_version: 0, // TODO(fxbug.dev/93770)
+            block_size: self.fs.get_info().block_size.into(),
+            max_filename_length: MAX_FILENAME,
+        }
+    }
+
+    fn get_usage_data(&self) -> UsageData {
+        let info = self.fs.get_info();
+        let object_count = self.volume.volume().store().object_count();
+        UsageData {
+            total_bytes: info.total_bytes,
+            used_bytes: info.used_bytes,
+            total_nodes: TOTAL_NODES,
+            used_nodes: object_count,
+        }
+    }
+
+    fn get_volume_data(&self) -> VolumeData {
+        // Since we're not using FVM these values should all be set to zero.
+        VolumeData {
+            size_bytes: 0,
+            size_limit_bytes: 0,
+            available_space_bytes: 0,
+            // TODO(fxbug.dev/93770): Handle out of space events.
+            // TODO(fxbug.dev/85419): Move out_of_space_events to fs.usage.
+            out_of_space_events: 0,
         }
     }
 }

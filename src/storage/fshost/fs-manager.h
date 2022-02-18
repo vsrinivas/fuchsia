@@ -102,7 +102,8 @@ class FsManager {
   // Creates a new subdirectory in the fshost diagnostics directory by the name of
   // |diagnostics_dir_name|, which forwards the diagnostics dir exposed in the export root directory
   // of the given filesystem previously installed via |InstallFs()| at |point|.
-  zx_status_t ForwardFsDiagnosticsDirectory(MountPoint point, const char* diagnostics_dir_name);
+  zx_status_t ForwardFsDiagnosticsDirectory(MountPoint point,
+                                            std::string_view diagnostics_dir_name);
 
   // Creates a new subdirectory in the fshost svc directory by the name of
   // |service_name|, which forwards the service by the same name exposed in the outgoing service

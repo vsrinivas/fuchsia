@@ -379,7 +379,7 @@ const char* FsManager::MountPointPath(FsManager::MountPoint point) {
 }
 
 zx_status_t FsManager::ForwardFsDiagnosticsDirectory(MountPoint point,
-                                                     const char* diagnostics_dir_name) {
+                                                     std::string_view diagnostics_dir_name) {
   // The diagnostics directory may not be initialized in tests.
   if (diagnostics_dir_ == nullptr) {
     return ZX_ERR_INTERNAL;

@@ -169,6 +169,7 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
       default: {
         FX_LOGS(INFO) << "Device format '" << fs_management::DiskFormatString(format)
                       << "'. Defaulting to minfs.";
+        format = fs_management::kDiskFormatMinfs;
         binary_path = kMinfsPath;
       }
     }
@@ -188,10 +189,11 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
     return result.error_value();
   }
 
-  if (zx_status_t status =
-          fshost_.ForwardFsDiagnosticsDirectory(FsManager::MountPoint::kData, "minfs");
+  if (zx_status_t status = fshost_.ForwardFsDiagnosticsDirectory(
+          FsManager::MountPoint::kData, fs_management::DiskFormatString(format));
       status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to add diagnostic directory for minfs: "
+    FX_LOGS(ERROR) << "failed to add diagnostic directory for "
+                   << fs_management::DiskFormatString(format) << ": "
                    << zx_status_get_string(status);
   }
 

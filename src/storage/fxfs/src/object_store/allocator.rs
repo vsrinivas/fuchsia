@@ -1282,7 +1282,7 @@ mod tests {
             iter.advance().await.expect("advance failed");
         }
         // Make sure the total we found adds up to what we expect.
-        assert_eq!(found, expected_allocations.iter().map(|r| r.length().unwrap()).sum());
+        assert_eq!(found, expected_allocations.iter().map(|r| r.length().unwrap()).sum::<u64>());
     }
 
     async fn test_fs() -> (Arc<FakeFilesystem>, Arc<SimpleAllocator>, Arc<ObjectStore>) {
