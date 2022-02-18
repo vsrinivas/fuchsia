@@ -441,8 +441,18 @@ impl TestCallManager {
     /// Arguments:
     ///     `remote`: The number associated with the remote party. This can be any string formatted
     ///     number (e.g. +1-555-555-5555).
-    pub async fn incoming_call(&self, remote: &str) -> Result<CallId, Error> {
+    pub async fn incoming_ringing_call(&self, remote: &str) -> Result<CallId, Error> {
         self.new_call(remote, FidlCallState::IncomingRinging, CallDirection::MobileTerminated).await
+    }
+
+    /// Notify HFP of an incoming waiting call. Simulates a new call from the network in the
+    /// "incoming waiting" state.
+    ///
+    /// Arguments:
+    ///     `remote`: The number associated with the remote party. This can be any string formatted
+    ///     number (e.g. +1-555-555-5555).
+    pub async fn incoming_waiting_call(&self, remote: &str) -> Result<CallId, Error> {
+        self.new_call(remote, FidlCallState::IncomingWaiting, CallDirection::MobileTerminated).await
     }
 
     /// Notify HFP of an outgoing call. Simulates a new call to the network in the

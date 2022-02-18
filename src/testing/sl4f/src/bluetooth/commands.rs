@@ -771,7 +771,12 @@ impl Facade for HfpFacade {
             }
             "IncomingCall" => {
                 let remote = parse_arg!(args, as_str, "remote")?;
-                let result = self.incoming_call(&remote).await?;
+                let result = self.incoming_ringing_call(&remote).await?;
+                Ok(to_value(result)?)
+            }
+            "IncomingWaitingCall" => {
+                let remote = parse_arg!(args, as_str, "remote")?;
+                let result = self.incoming_waiting_call(&remote).await?;
                 Ok(to_value(result)?)
             }
             "OutgoingCall" => {
