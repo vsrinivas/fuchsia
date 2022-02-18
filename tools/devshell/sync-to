@@ -14,9 +14,6 @@
 # pylint: disable=pointless-string-statement
 ''''exec "$FUCHSIA_DIR/scripts/hermetic-env" python3 -u -- "$0" ${1+"$@"} # '''
 
-# TODO(olivernewman): Delete the old version of `fx sync-to` and replace it with
-# this one once feature parity is reached.
-
 #### CATEGORY=Source tree
 ### Sync the local Fuchsia source tree to a given state
 
@@ -353,7 +350,7 @@ class SyncToCommand:
                 f" checkout remote {local_remote!r}."
                 "\nIf this is a public build, you may need to create a"
                 " separate public checkout for the public source code:"
-                " https://fuchsia.dev/fuchsia-src/get-started/get_fuchsia_source"
+                "\nhttps://fuchsia.dev/fuchsia-src/get-started/get_fuchsia_source#download-the-fuchsia-source-code"
             )
 
     def assert_correct_integration_manifest(self, checkout_info: dict) -> None:
