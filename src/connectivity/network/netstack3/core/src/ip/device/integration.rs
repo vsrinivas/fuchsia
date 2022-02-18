@@ -6,19 +6,25 @@
 
 use net_types::{
     ip::{AddrSubnet, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
-    LinkLocalUnicastAddr,
+    LinkLocalUnicastAddr, MulticastAddr, SpecifiedAddr, Witness as _,
 };
-use packet::{EmptyBuf, Serializer};
+use packet::{BufferMut, EmptyBuf, Serializer};
 
 use crate::{
     context::{FrameContext, InstantContext},
     ip::{
-        device::{get_ipv4_addr_subnet, get_ipv6_device_state, BufferIpDeviceContext},
+        self,
+        device::{
+            self, get_ipv4_addr_subnet, get_ipv4_device_state, get_ipv6_device_state,
+            is_ipv4_routing_enabled, is_ipv6_routing_enabled, send_ip_frame, state::AddressState,
+            BufferIpDeviceContext, IpDeviceIpExt,
+        },
         gmp::{
             igmp::{IgmpContext, IgmpGroupState, IgmpPacketMetadata},
             mld::{MldContext, MldFrameMetadata, MldGroupState},
             MulticastGroupSet,
         },
+        AddressStatus, IpLayerIpExt, Ipv6PresentAddressStatus,
     },
 };
 
@@ -85,6 +91,63 @@ impl<C: BufferIpDeviceContext<Ipv6, EmptyBuf>> MldContext for C {
     }
 }
 
+impl<C: device::IpDeviceContext<Ipv4>> ip::IpDeviceContext<Ipv4> for C {
+    fn address_status(
+        &self,
+        device_id: C::DeviceId,
+        dst_ip: SpecifiedAddr<Ipv4Addr>,
+    ) -> AddressStatus<()> {
+        let dev_state = get_ipv4_device_state(self, device_id);
+        if dev_state
+            .iter_addrs()
+            .map(|addr| addr.addr_subnet())
+            .any(|(addr, subnet)| addr == dst_ip || dst_ip.get() == subnet.broadcast())
+            || dst_ip.is_limited_broadcast()
+            || MulticastAddr::from_witness(dst_ip)
+                .map_or(false, |addr| dev_state.multicast_groups.contains(&addr))
+        {
+            AddressStatus::Present(())
+        } else {
+            AddressStatus::Unassigned
+        }
+    }
+
+    fn is_device_routing_enabled(&self, device_id: C::DeviceId) -> bool {
+        is_ipv4_routing_enabled(self, device_id)
+    }
+}
+
+impl<C: device::IpDeviceContext<Ipv6>> ip::IpDeviceContext<Ipv6> for C {
+    fn address_status(
+        &self,
+        device_id: C::DeviceId,
+        addr: SpecifiedAddr<Ipv6Addr>,
+    ) -> AddressStatus<Ipv6PresentAddressStatus> {
+        let dev_state = get_ipv6_device_state(&*self, device_id);
+        if MulticastAddr::new(addr.get())
+            .map_or(false, |addr| dev_state.multicast_groups.contains(&addr))
+        {
+            AddressStatus::Present(Ipv6PresentAddressStatus::Multicast)
+        } else {
+            dev_state.find_addr(&addr).map(|addr| addr.state).map_or(
+                AddressStatus::Unassigned,
+                |state| match state {
+                    AddressState::Assigned | AddressState::Deprecated => {
+                        AddressStatus::Present(Ipv6PresentAddressStatus::UnicastAssigned)
+                    }
+                    AddressState::Tentative { dad_transmits_remaining: _ } => {
+                        AddressStatus::Present(Ipv6PresentAddressStatus::UnicastTentative)
+                    }
+                },
+            )
+        }
+    }
+
+    fn is_device_routing_enabled(&self, device_id: C::DeviceId) -> bool {
+        is_ipv6_routing_enabled(self, device_id)
+    }
+}
+
 impl<C: BufferIpDeviceContext<Ipv6, EmptyBuf>> FrameContext<EmptyBuf, MldFrameMetadata<C::DeviceId>>
     for C
 {
@@ -94,5 +157,21 @@ impl<C: BufferIpDeviceContext<Ipv6, EmptyBuf>> FrameContext<EmptyBuf, MldFrameMe
         body: S,
     ) -> Result<(), S> {
         C::send_ip_frame(self, meta.device, meta.dst_ip.into_specified(), body)
+    }
+}
+
+impl<
+        I: IpLayerIpExt + IpDeviceIpExt<C::Instant, C::DeviceId>,
+        B: BufferMut,
+        C: BufferIpDeviceContext<I, B>,
+    > ip::BufferIpDeviceContext<I, B> for C
+{
+    fn send_ip_frame<S: Serializer<Buffer = B>>(
+        &mut self,
+        device_id: C::DeviceId,
+        next_hop: SpecifiedAddr<I::Addr>,
+        packet: S,
+    ) -> Result<(), S> {
+        send_ip_frame(self, device_id, next_hop, packet)
     }
 }

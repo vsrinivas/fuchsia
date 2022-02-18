@@ -399,7 +399,7 @@ impl<I: IpExt, D> IpSocket<I> for IpSock<I, D> {
 /// `update_all_ipv4_sockets` applies the given socket update to all IPv4
 /// sockets in existence. It does this by delegating to every module that is
 /// responsible for storing IPv4 sockets.
-pub(crate) fn update_all_ipv4_sockets<D: EventDispatcher>(
+pub(super) fn update_all_ipv4_sockets<D: EventDispatcher>(
     ctx: &mut Ctx<D>,
     update: IpSockUpdate<Ipv4>,
 ) {
@@ -411,7 +411,7 @@ pub(crate) fn update_all_ipv4_sockets<D: EventDispatcher>(
 /// `update_all_ipv6_sockets` applies the given socket update to all IPv6
 /// sockets in existence. It does this by delegating to every module that is
 /// responsible for storing IPv6 sockets.
-pub(crate) fn update_all_ipv6_sockets<D: EventDispatcher>(
+pub(super) fn update_all_ipv6_sockets<D: EventDispatcher>(
     ctx: &mut Ctx<D>,
     update: IpSockUpdate<Ipv6>,
 ) {
@@ -1241,7 +1241,10 @@ pub(crate) mod testutil {
 mod tests {
     use alloc::vec;
 
-    use net_types::{ip::AddrSubnet, Witness};
+    use net_types::{
+        ip::{AddrSubnet, SubnetEither},
+        Witness,
+    };
     use packet::{Buf, InnerPacketBuilder, ParseBuffer};
     use packet_formats::{
         ip::IpPacket,
@@ -1346,8 +1349,13 @@ mod tests {
                 panic!("remote_ip_type cannot be unspecified")
             }
             AddressType::Unroutable => {
-                crate::ip::del_device_route(&mut ctx, subnet)
-                    .expect("failed to delete route to subnet");
+                match subnet.into() {
+                    SubnetEither::V4(subnet) => crate::ip::del_route::<Ipv4, _>(&mut ctx, subnet)
+                        .expect("failed to delete IPv4 device route"),
+                    SubnetEither::V6(subnet) => crate::ip::del_route::<Ipv6, _>(&mut ctx, subnet)
+                        .expect("failed to delete IPv6 device route"),
+                }
+
                 (remote_ip, NextHop::Remote(remote_ip))
             }
         };
@@ -1595,7 +1603,16 @@ mod tests {
             AddrSubnet::new(remote_ip.get(), 16).unwrap(),
         )
         .unwrap();
-        crate::ip::add_device_route(&mut ctx, subnet, device_id.into()).unwrap();
+        match subnet.into() {
+            SubnetEither::V4(subnet) => {
+                crate::ip::add_device_route::<Ipv4, _>(&mut ctx, subnet, device_id)
+                    .expect("install IPv4 device route on a fresh stack without routes")
+            }
+            SubnetEither::V6(subnet) => {
+                crate::ip::add_device_route::<Ipv6, _>(&mut ctx, subnet, device_id)
+                    .expect("install IPv6 device route on a fresh stack without routes")
+            }
+        }
 
         let (expected_from_ip, from_ip) = match from_addr_type {
             AddressType::LocallyOwned => (local_ip, Some(local_ip)),

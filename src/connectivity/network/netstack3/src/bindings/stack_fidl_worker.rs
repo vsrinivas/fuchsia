@@ -21,8 +21,8 @@ use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
 use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
-    add_ip_addr_subnet, add_route, del_device_route, del_ip_addr, get_all_routes,
-    initialize_device, Ctx, EntryEither,
+    add_ip_addr_subnet, add_route, del_ip_addr, del_route, get_all_routes, initialize_device, Ctx,
+    EntryEither,
 };
 
 pub(crate) struct StackFidlWorker<C> {
@@ -320,7 +320,7 @@ where
         subnet: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
         if let Ok(subnet) = subnet.try_into_core() {
-            del_device_route(&mut self.ctx, subnet).map_err(IntoFidl::into_fidl)
+            del_route(&mut self.ctx, subnet).map_err(IntoFidl::into_fidl)
         } else {
             Err(fidl_net_stack::Error::InvalidArgs)
         }

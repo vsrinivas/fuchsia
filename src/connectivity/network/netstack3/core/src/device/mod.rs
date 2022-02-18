@@ -54,7 +54,6 @@ use crate::{
             },
             BufferIpDeviceContext, IpDeviceContext, Ipv6DeviceContext,
         },
-        socket::IpSockUpdate,
         IpDeviceIdContext,
     },
     BufferDispatcher, Ctx, EventDispatcher, Instant, StackState,
@@ -880,11 +879,11 @@ pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     match addr_sub.into() {
         AddrSubnetEither::V4(addr_sub) => {
             crate::ip::device::add_ipv4_addr_subnet(ctx, device, addr_sub)
-                .map(|()| crate::ip::socket::update_all_ipv4_sockets(ctx, IpSockUpdate::new()))
+                .map(|()| crate::ip::on_routing_state_updated::<Ipv4, _>(ctx))
         }
         AddrSubnetEither::V6(addr_sub) => {
             crate::ip::device::add_ipv6_addr_subnet(ctx, device, addr_sub, AddrConfig::Manual)
-                .map(|()| crate::ip::socket::update_all_ipv6_sockets(ctx, IpSockUpdate::new()))
+                .map(|()| crate::ip::on_routing_state_updated::<Ipv6, _>(ctx))
         }
     }
 }
@@ -906,9 +905,9 @@ pub(crate) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
 
     match Into::into(*addr) {
         IpAddr::V4(addr) => crate::ip::device::del_ipv4_addr(ctx, device, &addr)
-            .map(|()| crate::ip::socket::update_all_ipv4_sockets(ctx, IpSockUpdate::new())),
+            .map(|()| crate::ip::on_routing_state_updated::<Ipv4, _>(ctx)),
         IpAddr::V6(addr) => crate::ip::device::del_ipv6_addr(ctx, device, &addr)
-            .map(|()| crate::ip::socket::update_all_ipv6_sockets(ctx, IpSockUpdate::new())),
+            .map(|()| crate::ip::on_routing_state_updated::<Ipv6, _>(ctx)),
     }
 }
 

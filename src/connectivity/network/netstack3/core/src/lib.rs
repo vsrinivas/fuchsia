@@ -141,10 +141,23 @@ macro_rules! map_addr_version {
             $ty::V6($addr) => $expr,
         }
     };
+    ($addr:ident: $ty:tt; $expr_v4:expr, $expr_v6:expr) => {
+        match $addr {
+            $ty::V4($addr) => $expr_v4,
+            $ty::V6($addr) => $expr_v6,
+        }
+    };
     (( $( $addr:ident : $ty:tt ),+ ); $match:expr, $mismatch:expr) => {
         match ( $( $addr ),+ ) {
             ( $( $ty::V4( $addr ) ),+ ) => $match,
             ( $( $ty::V6( $addr ) ),+ ) => $match,
+            _ => $mismatch,
+        }
+    };
+    (( $( $addr:ident : $ty:tt ),+ ); $match_v4:expr, $match_v6:expr, $mismatch:expr) => {
+        match ( $( $addr ),+ ) {
+            ( $( $ty::V4( $addr ) ),+ ) => $match_v4,
+            ( $( $ty::V6( $addr ) ),+ ) => $match_v6,
             _ => $mismatch,
         }
     };
@@ -505,29 +518,31 @@ pub fn add_route<D: EventDispatcher>(
     match dest {
         EntryDest::Local { device } => map_addr_version!(
             subnet: SubnetEither;
-            crate::ip::add_device_route(ctx, subnet, device)
-        )
-        .map_err(From::from),
+            crate::ip::add_device_route::<Ipv4, _>(ctx, subnet, device),
+            crate::ip::add_device_route::<Ipv6, _>(ctx, subnet, device)
+        ),
         EntryDest::Remote { next_hop } => {
             let next_hop = next_hop.into();
             map_addr_version!(
                 (subnet: SubnetEither, next_hop: IpAddr);
-                crate::ip::add_route(ctx, subnet, next_hop),
-                unreachable!(),
+                crate::ip::add_route::<Ipv4, _>(ctx, subnet, next_hop),
+                crate::ip::add_route::<Ipv6, _>(ctx, subnet, next_hop),
+                unreachable!()
             )
-            .map_err(From::from)
         }
     }
+    .map_err(From::from)
 }
 
 /// Delete a route from the forwarding table, returning `Err` if no
 /// route was found to be deleted.
-pub fn del_device_route<D: EventDispatcher>(
-    ctx: &mut Ctx<D>,
-    subnet: SubnetEither,
-) -> error::Result<()> {
-    map_addr_version!(subnet: SubnetEither; crate::ip::del_device_route(ctx, subnet))
-        .map_err(From::from)
+pub fn del_route<D: EventDispatcher>(ctx: &mut Ctx<D>, subnet: SubnetEither) -> error::Result<()> {
+    map_addr_version!(
+        subnet: SubnetEither;
+        crate::ip::del_route::<Ipv4, _>(ctx, subnet),
+        crate::ip::del_route::<Ipv6, _>(ctx, subnet)
+    )
+    .map_err(From::from)
 }
 
 /// Get all the routes.

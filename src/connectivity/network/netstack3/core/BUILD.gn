@@ -33,6 +33,7 @@ lib_sources = [
   "src/ip/gmp/mld.rs",
   "src/ip/gmp/mod.rs",
   "src/ip/icmp.rs",
+  "src/ip/integration.rs",
   "src/ip/ipv6.rs",
   "src/ip/mod.rs",
   "src/ip/path_mtu.rs",

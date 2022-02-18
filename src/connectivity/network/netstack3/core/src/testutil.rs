@@ -31,12 +31,13 @@ use crate::{
         InstantContext, RngContext, TimerContext,
     },
     device::{DeviceId, DeviceLayerEventDispatcher},
+    handle_timer,
     ip::{
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
         socket::IpSockCreationError,
     },
     transport::udp::{BufferUdpContext, UdpContext},
-    {handle_timer, Ctx, EventDispatcher, Instant, StackStateBuilder, TimerId},
+    Ctx, EntryDest, EntryEither, EventDispatcher, Instant, StackStateBuilder, TimerId,
 };
 
 /// Utilities to allow running benchmarks as tests.
@@ -569,25 +570,20 @@ impl DummyEventDispatcherBuilder {
         }
         for (subnet, idx) in device_routes {
             let device = *idx_to_device_id.get(&idx).unwrap();
-            match subnet {
-                SubnetEither::V4(subnet) => {
-                    crate::ip::add_device_route(&mut ctx, subnet, device).unwrap()
-                }
-                SubnetEither::V6(subnet) => {
-                    crate::ip::add_device_route(&mut ctx, subnet, device).unwrap()
-                }
-            };
+            crate::add_route(
+                &mut ctx,
+                EntryEither::new(subnet, EntryDest::Local { device })
+                    .expect("valid forwarding table entry"),
+            )
+            .expect("add device route");
         }
         for (subnet, next_hop) in routes {
-            match (subnet, next_hop.into()) {
-                (SubnetEither::V4(subnet), IpAddr::V4(next_hop)) => {
-                    crate::ip::add_route(&mut ctx, subnet, next_hop).unwrap()
-                }
-                (SubnetEither::V6(subnet), IpAddr::V6(next_hop)) => {
-                    crate::ip::add_route(&mut ctx, subnet, next_hop).unwrap()
-                }
-                _ => unreachable!(),
-            };
+            crate::add_route(
+                &mut ctx,
+                EntryEither::new(subnet, EntryDest::Remote { next_hop })
+                    .expect("valid forwarding table entry"),
+            )
+            .expect("add remote route");
         }
 
         ctx

@@ -18,7 +18,6 @@ use packet::{BufferMut, EmptyBuf, Serializer};
 
 use crate::{
     context::{InstantContext, RngContext, TimerContext, TimerHandler},
-    device::DeviceId,
     error::{ExistsError, NotFoundError},
     ip::{
         device::state::{
@@ -29,9 +28,9 @@ use crate::{
         gmp::{
             igmp::IgmpTimerId, mld::MldReportDelay, GmpHandler, GroupJoinResult, GroupLeaveResult,
         },
-        Destination, IpDeviceIdContext,
+        IpDeviceIdContext,
     },
-    Ctx, EventDispatcher, Instant,
+    Instant,
 };
 
 /// A timer ID for IPv4 devices.
@@ -315,44 +314,6 @@ pub(crate) fn get_mtu<I: IpDeviceIpExt<C::Instant, C::DeviceId>, C: IpDeviceCont
     ctx.get_mtu(device_id)
 }
 
-impl<D: EventDispatcher> crate::ip::socket::IpSocketContext<Ipv4> for Ctx<D> {
-    fn lookup_route(
-        &self,
-        addr: SpecifiedAddr<Ipv4Addr>,
-    ) -> Option<Destination<Ipv4Addr, DeviceId>> {
-        crate::ip::lookup_route(self, addr)
-    }
-
-    fn get_ip_device_state(&self, device: DeviceId) -> &IpDeviceState<D::Instant, Ipv4> {
-        get_ipv4_device_state(self, device)
-    }
-
-    fn iter_devices(
-        &self,
-    ) -> Box<dyn Iterator<Item = (DeviceId, &IpDeviceState<D::Instant, Ipv4>)> + '_> {
-        Box::new(iter_ipv4_devices(self))
-    }
-}
-
-impl<D: EventDispatcher> crate::ip::socket::IpSocketContext<Ipv6> for Ctx<D> {
-    fn lookup_route(
-        &self,
-        addr: SpecifiedAddr<Ipv6Addr>,
-    ) -> Option<Destination<Ipv6Addr, DeviceId>> {
-        crate::ip::lookup_route(self, addr)
-    }
-
-    fn get_ip_device_state(&self, device: DeviceId) -> &IpDeviceState<D::Instant, Ipv6> {
-        get_ipv6_device_state(self, device)
-    }
-
-    fn iter_devices(
-        &self,
-    ) -> Box<dyn Iterator<Item = (DeviceId, &IpDeviceState<D::Instant, Ipv6>)> + '_> {
-        Box::new(iter_ipv6_devices(self))
-    }
-}
-
 /// Adds `device_id` to a multicast group `multicast_addr`.
 ///
 /// Calling `join_ip_multicast` multiple times is completely safe. A counter
@@ -542,7 +503,7 @@ mod tests {
         crate::device::initialize_device(&mut ctx, device);
         // Verify that there is a single assigned address - the MAC-derived
         // link-local.
-        let state = <Ctx<_> as IpDeviceContext<Ipv6>>::get_ip_device_state(&ctx, device);
+        let state = IpDeviceContext::<Ipv6>::get_ip_device_state(&ctx, device);
         assert_eq!(
             state.ip_state.iter_addrs().map(|entry| entry.addr_sub().addr()).collect::<Vec<_>>(),
             [config.local_mac.to_ipv6_link_local().addr().get()]
