@@ -436,6 +436,8 @@ mod tests {
         let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             HashSet::<mouse_binding::MouseButton>::new(),
@@ -497,6 +499,8 @@ mod tests {
         let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             HashSet::<mouse_binding::MouseButton>::new(),
@@ -556,6 +560,8 @@ mod tests {
         let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             HashSet::<mouse_binding::MouseButton>::new(),
@@ -635,6 +641,8 @@ mod tests {
         let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             HashSet::<mouse_binding::MouseButton>::new(),
@@ -694,6 +702,8 @@ mod tests {
         let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event_with_handled(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             HashSet::<mouse_binding::MouseButton>::new(),
@@ -737,6 +747,8 @@ mod tests {
         let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             HashSet::<mouse_binding::MouseButton>::new(),

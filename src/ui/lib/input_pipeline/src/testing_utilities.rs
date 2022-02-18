@@ -285,10 +285,14 @@ pub fn create_consumer_controls_event(
 /// - `location`: The movement or position of the mouse report, in input device coordinates.
 ///     [`MouseLocation::Relative`] represents movement, and
 ///     [`MouseLocation::Absolute`] represents position.
+/// - `wheel_delta_v`: The wheel delta in vertical.
+/// - `wheel_delta_h`: The wheel delta in horizontal.
 /// - `buttons`: The buttons to report as pressed in the mouse report.
 /// - `event_time`: The time of event.
 pub fn create_mouse_input_report(
     location: mouse_binding::MouseLocation,
+    scroll_v: Option<i64>,
+    scroll_h: Option<i64>,
     buttons: Vec<u8>,
     event_time: i64,
 ) -> fidl_input_report::InputReport {
@@ -312,8 +316,8 @@ pub fn create_mouse_input_report(
                 mouse_binding::MouseLocation::Absolute(Position { y, .. }) => Some(y as i64),
                 _ => None,
             },
-            scroll_h: None,
-            scroll_v: None,
+            scroll_v: scroll_v,
+            scroll_h: scroll_h,
             pressed_buttons: Some(buttons),
             ..fidl_input_report::MouseInputReport::EMPTY
         }),
@@ -329,12 +333,16 @@ pub fn create_mouse_input_report(
 ///
 /// # Parameters
 /// - `location`: The mouse location to report in the event.
+/// - `wheel_delta_v`: The wheel delta in vertical.
+/// - `wheel_delta_h`: The wheel delta in horizontal.
 /// - `phase`: The phase of the buttons in the event.
 /// - `buttons`: The buttons to report in the event.
 /// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
 pub fn create_mouse_event_with_handled(
     location: mouse_binding::MouseLocation,
+    _wheel_delta_v: Option<i64>,
+    _wheel_delta_h: Option<i64>,
     phase: mouse_binding::MousePhase,
     affected_buttons: HashSet<mouse_binding::MouseButton>,
     pressed_buttons: HashSet<mouse_binding::MouseButton>,
@@ -365,6 +373,8 @@ pub fn create_mouse_event_with_handled(
 /// - `device_descriptor`: The device descriptor to add to the event.
 pub fn create_mouse_event(
     location: mouse_binding::MouseLocation,
+    wheel_delta_v: Option<i64>,
+    wheel_delta_h: Option<i64>,
     phase: mouse_binding::MousePhase,
     affected_buttons: HashSet<mouse_binding::MouseButton>,
     pressed_buttons: HashSet<mouse_binding::MouseButton>,
@@ -373,6 +383,8 @@ pub fn create_mouse_event(
 ) -> input_device::InputEvent {
     create_mouse_event_with_handled(
         location,
+        wheel_delta_v,
+        wheel_delta_h,
         phase,
         affected_buttons,
         pressed_buttons,
@@ -389,20 +401,24 @@ pub fn create_mouse_event(
 /// - `contact`: The touch contact to create the event for.
 /// - `position`: The position of the contact in the viewport space.
 /// - `relative_motion`: The relative motion fopr the event.
+/// - `wheel_delta_v`: The wheel delta in vertical.
+/// - `wheel_delta_h`: The wheel delta in horizontal.
 /// - `event_time`: The time in nanoseconds when the event was first recorded.
 pub fn create_mouse_pointer_sample_event(
     phase: pointerinjector::EventPhase,
     buttons: Vec<mouse_binding::MouseButton>,
     position: crate::utils::Position,
     relative_motion: Option<[f32; 2]>,
+    wheel_delta_v: Option<i64>,
+    wheel_delta_h: Option<i64>,
     event_time: zx::Time,
 ) -> pointerinjector::Event {
     let pointer_sample = pointerinjector::PointerSample {
         pointer_id: Some(0),
         phase: Some(phase),
         position_in_viewport: Some([position.x, position.y]),
-        scroll_v: None,
-        scroll_h: None,
+        scroll_v: wheel_delta_v,
+        scroll_h: wheel_delta_h,
         pressed_buttons: Some(buttons),
         relative_motion,
         ..pointerinjector::PointerSample::EMPTY

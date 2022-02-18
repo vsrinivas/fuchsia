@@ -440,13 +440,20 @@ mod tests {
     async fn movement_without_button() {
         let location = MouseLocation::Relative(Position { x: 10.0, y: 16.0 });
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
-        let first_report =
-            testing_utilities::create_mouse_input_report(location, vec![], event_time_i64);
+        let first_report = testing_utilities::create_mouse_input_report(
+            location,
+            None, /* scroll_v */
+            None, /* scroll_h */
+            vec![],
+            event_time_i64,
+        );
         let descriptor = mouse_device_descriptor(DEVICE_ID);
 
         let input_reports = vec![first_report];
         let expected_events = vec![testing_utilities::create_mouse_event(
             location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             MousePhase::Move,
             HashSet::new(),
             HashSet::new(),
@@ -469,6 +476,8 @@ mod tests {
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let first_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
             vec![mouse_button],
             event_time_i64,
         );
@@ -477,6 +486,8 @@ mod tests {
         let input_reports = vec![first_report];
         let expected_events = vec![testing_utilities::create_mouse_event(
             MouseLocation::Relative(Position::zero()),
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             MousePhase::Down,
             HashSet::from_iter(vec![mouse_button].into_iter()),
             HashSet::from_iter(vec![mouse_button].into_iter()),
@@ -501,6 +512,8 @@ mod tests {
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let first_report = testing_utilities::create_mouse_input_report(
             location,
+            None, /* scroll_v */
+            None, /* scroll_h */
             vec![mouse_button],
             event_time_i64,
         );
@@ -510,6 +523,8 @@ mod tests {
         let expected_events = vec![
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Down,
                 HashSet::from_iter(vec![mouse_button].into_iter()),
                 HashSet::from_iter(vec![mouse_button].into_iter()),
@@ -518,6 +533,8 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 location,
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Move,
                 HashSet::from_iter(vec![mouse_button].into_iter()),
                 HashSet::from_iter(vec![mouse_button].into_iter()),
@@ -541,11 +558,15 @@ mod tests {
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let first_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
             vec![button],
             event_time_i64,
         );
         let second_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
             vec![],
             event_time_i64,
         );
@@ -555,6 +576,8 @@ mod tests {
         let expected_events = vec![
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::from_iter(vec![button].into_iter()),
@@ -563,6 +586,8 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::new(),
@@ -588,17 +613,26 @@ mod tests {
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let first_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
             vec![button],
             event_time_i64,
         );
-        let second_report =
-            testing_utilities::create_mouse_input_report(location, vec![], event_time_i64);
+        let second_report = testing_utilities::create_mouse_input_report(
+            location,
+            None, /* scroll_v */
+            None, /* scroll_h */
+            vec![],
+            event_time_i64,
+        );
         let descriptor = mouse_device_descriptor(DEVICE_ID);
 
         let input_reports = vec![first_report, second_report];
         let expected_events = vec![
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::from_iter(vec![button].into_iter()),
@@ -607,6 +641,8 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 location,
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Move,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::from_iter(vec![button].into_iter()),
@@ -615,6 +651,8 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::new(),
@@ -642,13 +680,22 @@ mod tests {
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let first_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
             vec![button],
             event_time_i64,
         );
-        let second_report =
-            testing_utilities::create_mouse_input_report(location, vec![button], event_time_i64);
+        let second_report = testing_utilities::create_mouse_input_report(
+            location,
+            None, /* scroll_v */
+            None, /* scroll_h */
+            vec![button],
+            event_time_i64,
+        );
         let third_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
             vec![],
             event_time_i64,
         );
@@ -658,6 +705,8 @@ mod tests {
         let expected_events = vec![
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::from_iter(vec![button].into_iter()),
@@ -666,6 +715,8 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 location,
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Move,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::from_iter(vec![button].into_iter()),
@@ -674,6 +725,8 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::new(),
@@ -697,10 +750,17 @@ mod tests {
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let descriptor = mouse_device_descriptor(DEVICE_ID);
 
-        let input_reports =
-            vec![testing_utilities::create_mouse_input_report(location, vec![], event_time_i64)];
+        let input_reports = vec![testing_utilities::create_mouse_input_report(
+            location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
+            vec![],
+            event_time_i64,
+        )];
         let expected_events = vec![testing_utilities::create_mouse_event(
             location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             MousePhase::Move,
             HashSet::new(),
             HashSet::new(),
@@ -748,6 +808,8 @@ mod tests {
         }];
         let expected_events = vec![testing_utilities::create_mouse_event(
             expected_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             MousePhase::Move,
             HashSet::new(),
             HashSet::new(),
@@ -773,11 +835,15 @@ mod tests {
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let first_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
             vec![primary_button],
             event_time_i64,
         );
         let second_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
             vec![primary_button, secondary_button],
             event_time_i64,
         );
@@ -787,6 +853,8 @@ mod tests {
         let expected_events = vec![
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Down,
                 HashSet::from_iter(vec![primary_button].into_iter()),
                 HashSet::from_iter(vec![primary_button].into_iter()),
@@ -795,6 +863,8 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Down,
                 HashSet::from_iter(vec![secondary_button].into_iter()),
                 HashSet::from_iter(vec![primary_button, secondary_button].into_iter()),
@@ -828,21 +898,29 @@ mod tests {
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let first_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
             vec![primary_button],
             event_time_i64,
         );
         let second_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
             vec![primary_button, secondary_button],
             event_time_i64,
         );
         let third_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
             vec![secondary_button],
             event_time_i64,
         );
         let fourth_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
             vec![],
             event_time_i64,
         );
@@ -852,6 +930,8 @@ mod tests {
         let expected_events = vec![
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Down,
                 HashSet::from_iter(vec![primary_button].into_iter()),
                 HashSet::from_iter(vec![primary_button].into_iter()),
@@ -860,6 +940,8 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Down,
                 HashSet::from_iter(vec![secondary_button].into_iter()),
                 HashSet::from_iter(vec![primary_button, secondary_button].into_iter()),
@@ -868,6 +950,8 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Up,
                 HashSet::from_iter(vec![primary_button].into_iter()),
                 HashSet::from_iter(vec![secondary_button].into_iter()),
@@ -876,6 +960,8 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 MousePhase::Up,
                 HashSet::from_iter(vec![secondary_button].into_iter()),
                 HashSet::new(),

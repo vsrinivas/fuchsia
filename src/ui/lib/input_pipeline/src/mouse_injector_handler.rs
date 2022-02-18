@@ -870,6 +870,8 @@ mod tests {
         let event_time = zx::Time::get_monotonic();
         let input_event = create_mouse_event(
             move_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             HashSet::<mouse_binding::MouseButton>::new(),
@@ -884,7 +886,9 @@ mod tests {
                 pointerinjector::EventPhase::Add,
                 vec![],
                 expected_position,
-                None,
+                None, /*relative_motion*/
+                None, /*wheel_delta_v*/
+                None, /*wheel_delta_h*/
                 event_time,
             ),
             create_mouse_pointer_sample_event(
@@ -892,6 +896,8 @@ mod tests {
                 vec![],
                 expected_position,
                 Some(expected_relative_motion),
+                None, /*wheel_delta_v*/
+                None, /*wheel_delta_h*/
                 event_time,
             ),
         ];
@@ -981,6 +987,8 @@ mod tests {
             });
         let input_event = create_mouse_event(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             HashSet::<mouse_binding::MouseButton>::new(),
@@ -996,14 +1004,18 @@ mod tests {
                 pointerinjector::EventPhase::Add,
                 vec![],
                 expected_position,
-                None,
+                None, /*relative_motion*/
+                None, /*wheel_delta_v*/
+                None, /*wheel_delta_h*/
                 event_time,
             ),
             create_mouse_pointer_sample_event(
                 pointerinjector::EventPhase::Change,
                 vec![],
                 expected_position,
-                None,
+                None, /*relative_motion*/
+                None, /*wheel_delta_v*/
+                None, /*wheel_delta_h*/
                 event_time,
             ),
         ];
@@ -1080,6 +1092,8 @@ mod tests {
 
         let input_event = create_mouse_event(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             phase,
             HashSet::from_iter(affected_buttons.clone()),
             HashSet::from_iter(pressed_buttons.clone()),
@@ -1095,14 +1109,18 @@ mod tests {
                 pointerinjector::EventPhase::Add,
                 pressed_buttons.clone(),
                 expected_position,
-                None,
+                None, /*relative_motion*/
+                None, /*wheel_delta_v*/
+                None, /*wheel_delta_h*/
                 event_time,
             ),
             create_mouse_pointer_sample_event(
                 pointerinjector::EventPhase::Change,
                 pressed_buttons.clone(),
                 expected_position,
-                None,
+                None, /*relative_motion*/
+                None, /*wheel_delta_v*/
+                None, /*wheel_delta_h*/
                 event_time,
             ),
         ];
@@ -1169,6 +1187,8 @@ mod tests {
 
         let event1 = create_mouse_event(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
@@ -1178,6 +1198,8 @@ mod tests {
 
         let event2 = create_mouse_event(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![1]),
             HashSet::new(),
@@ -1209,14 +1231,18 @@ mod tests {
                     pointerinjector::EventPhase::Add,
                     vec![1],
                     expected_position,
-                    None,
+                    None, /*relative_motion*/
+                    None, /*wheel_delta_v*/
+                    None, /*wheel_delta_h*/
                     event_time,
                 ),
                 create_mouse_pointer_sample_event(
                     pointerinjector::EventPhase::Change,
                     vec![1],
                     expected_position,
-                    None,
+                    None, /*relative_motion*/
+                    None, /*wheel_delta_v*/
+                    None, /*wheel_delta_h*/
                     event_time,
                 )
             ])
@@ -1230,7 +1256,9 @@ mod tests {
                 pointerinjector::EventPhase::Change,
                 vec![],
                 expected_position,
-                None,
+                None, /*relative_motion*/
+                None, /*wheel_delta_v*/
+                None, /*wheel_delta_h*/
                 event_time,
             )])
         );
@@ -1286,6 +1314,8 @@ mod tests {
 
         let event1 = create_mouse_event(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
@@ -1294,6 +1324,8 @@ mod tests {
         );
         let event2 = create_mouse_event(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![2]),
             HashSet::from_iter(vec![1, 2]),
@@ -1302,6 +1334,8 @@ mod tests {
         );
         let event3 = create_mouse_event(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![2]),
@@ -1310,6 +1344,8 @@ mod tests {
         );
         let event4 = create_mouse_event(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![2]),
             HashSet::new(),
@@ -1341,14 +1377,18 @@ mod tests {
                     pointerinjector::EventPhase::Add,
                     vec![1],
                     expected_position,
-                    None,
+                    None, /*relative_motion*/
+                    None, /*wheel_delta_v*/
+                    None, /*wheel_delta_h*/
                     event_time,
                 ),
                 create_mouse_pointer_sample_event(
                     pointerinjector::EventPhase::Change,
                     vec![1],
                     expected_position,
-                    None,
+                    None, /*relative_motion*/
+                    None, /*wheel_delta_v*/
+                    None, /*wheel_delta_h*/
                     event_time,
                 )
             ])
@@ -1401,7 +1441,9 @@ mod tests {
                 pointerinjector::EventPhase::Change,
                 vec![2],
                 expected_position,
-                None,
+                None, /*relative_motion*/
+                None, /*wheel_delta_v*/
+                None, /*wheel_delta_h*/
                 event_time,
             )])
         );
@@ -1414,7 +1456,9 @@ mod tests {
                 pointerinjector::EventPhase::Change,
                 vec![],
                 expected_position,
-                None,
+                None, /*relative_motion*/
+                None, /*wheel_delta_v*/
+                None, /*wheel_delta_h*/
                 event_time,
             )])
         );
@@ -1463,6 +1507,8 @@ mod tests {
         let expected_relative_motion = [10.0, 15.0];
         let event1 = create_mouse_event(
             mouse_binding::MouseLocation::Absolute(Position { x: 0.0, y: 0.0 }),
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
@@ -1471,6 +1517,8 @@ mod tests {
         );
         let event2 = create_mouse_event(
             mouse_binding::MouseLocation::Relative(Position { x: 10.0, y: 15.0 }),
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
@@ -1479,6 +1527,8 @@ mod tests {
         );
         let event3 = create_mouse_event(
             mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: 0.0 }),
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![]),
@@ -1508,14 +1558,18 @@ mod tests {
                     pointerinjector::EventPhase::Add,
                     vec![1],
                     zero_position,
-                    None,
+                    None, /*relative_motion*/
+                    None, /*wheel_delta_v*/
+                    None, /*wheel_delta_h*/
                     event_time,
                 ),
                 create_mouse_pointer_sample_event(
                     pointerinjector::EventPhase::Change,
                     vec![1],
                     zero_position,
-                    None,
+                    None, /*relative_motion*/
+                    None, /*wheel_delta_v*/
+                    None, /*wheel_delta_h*/
                     event_time,
                 )
             ])
@@ -1541,6 +1595,8 @@ mod tests {
                 vec![1],
                 expected_position,
                 Some(expected_relative_motion),
+                None, /*wheel_delta_v*/
+                None, /*wheel_delta_h*/
                 event_time,
             )])
         );
@@ -1564,7 +1620,9 @@ mod tests {
                 pointerinjector::EventPhase::Change,
                 vec![],
                 expected_position,
-                None,
+                None, /*relative_motion*/
+                None, /*wheel_delta_v*/
+                None, /*wheel_delta_h*/
                 event_time,
             )])
         );
@@ -1610,6 +1668,8 @@ mod tests {
         let event_time = zx::Time::get_monotonic();
         let input_events = vec![create_mouse_event_with_handled(
             cursor_location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             HashSet::<mouse_binding::MouseButton>::new(),
