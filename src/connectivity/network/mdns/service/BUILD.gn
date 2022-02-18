@@ -62,6 +62,8 @@ source_set("source_set") {
     "mdns_addresses.cc",
     "mdns_addresses.h",
     "mdns_agent.h",
+    "mdns_deprecated_service_impl.cc",
+    "mdns_deprecated_service_impl.h",
     "mdns_fidl_util.cc",
     "mdns_fidl_util.h",
     "mdns_interface_transceiver.cc",

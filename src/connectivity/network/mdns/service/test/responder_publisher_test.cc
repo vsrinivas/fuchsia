@@ -6,7 +6,7 @@
 
 #include <queue>
 
-#include "src/connectivity/network/mdns/service/mdns_service_impl.h"
+#include "src/connectivity/network/mdns/service/mdns_deprecated_service_impl.h"
 
 namespace mdns {
 namespace test {
@@ -59,7 +59,7 @@ TEST_F(ResponderPublisherTest, FlowControl) {
   Bind(responder.NewRequest());
 
   bool deleter_called = false;
-  MdnsServiceImpl::ResponderPublisher under_test(
+  MdnsDeprecatedServiceImpl::ResponderPublisher under_test(
       std::move(responder),
       [](fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result) {},
       [&deleter_called]() { deleter_called = true; });
