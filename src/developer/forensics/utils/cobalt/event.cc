@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/utils/cobalt/event.h"
 
+#include <algorithm>
 #include <sstream>
 
 #include "src/lib/fxl/strings/string_printf.h"
