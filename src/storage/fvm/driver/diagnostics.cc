@@ -62,9 +62,19 @@ void Diagnostics::UpdatePartitionMetrics(const std::string& partition_name, size
   partition->second.total_slices_reserved.Set(num_slices);
 }
 
+void Diagnostics::UpdateMaxBytes(const std::string& partition_name, size_t max_bytes) {
+  auto partition = per_partition_.find(partition_name);
+  if (partition == per_partition_.end()) {
+    AddPerPartitionMetrics(std::string(partition_name), 0u);
+    partition = per_partition_.find(partition_name);
+  }
+  partition->second.max_bytes.Set(max_bytes);
+}
+
 void Diagnostics::AddPerPartitionMetrics(std::string name, uint64_t num_slices) {
   Diagnostics::PerPartitionMetrics metrics{.root = per_partition_node_.CreateChild(name)};
   metrics.total_slices_reserved = metrics.root.CreateUint("total_slices_reserved", num_slices);
+  metrics.max_bytes = metrics.root.CreateUint("max_bytes", 0);
   per_partition_.insert(
       std::pair<std::string, PerPartitionMetrics>(std::move(name), std::move(metrics)));
 }
