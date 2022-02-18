@@ -201,10 +201,10 @@ impl Connection {
             FileRequest::ReadAt2 { offset: _, count: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
-            FileRequest::Write { data: _, responder } => {
+            FileRequest::WriteDeprecated { data: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED, 0)?;
             }
-            FileRequest::Write2 { data: _, responder } => {
+            FileRequest::Write { data: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
             FileRequest::WriteAt { offset: _, data: _, responder } => {

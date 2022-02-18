@@ -164,9 +164,12 @@ TEST_F(PtyTestCase, Write) {
 
   fidl::WireSyncClient<fuchsia_hardware_pty::Device> client;
   ASSERT_NO_FATAL_FAILURE(Connect(&client));
-  auto result = client->Write(fidl::VectorView<uint8_t>::FromExternal(kWrittenData));
+  const fidl::WireResult result =
+      client->Write(fidl::VectorView<uint8_t>::FromExternal(kWrittenData));
   ASSERT_OK(result.status());
-  ASSERT_EQ(result->actual, sizeof(kWrittenData));
+  const fidl::WireResponse response = result.value();
+  ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
+  ASSERT_EQ(response.result.response().actual_count, sizeof(kWrittenData));
 
   // We should not have seen an ordinal dispatch
   ASSERT_EQ(state()->last_seen_ordinal.load(), 0);

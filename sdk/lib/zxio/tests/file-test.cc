@@ -236,7 +236,7 @@ class TestServerChannel final : public CloseCountingFileServer {
     completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buffer, actual));
   }
 
-  void Write2(Write2RequestView request, Write2Completer::Sync& completer) override {
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override {
     if (request->data.count() > fio::wire::kMaxBuf) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;

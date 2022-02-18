@@ -76,11 +76,12 @@ void NullPtyDeviceImpl::Read(ReadRequestView request, ReadCompleter::Sync& compl
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+void NullPtyDeviceImpl::WriteDeprecated(WriteDeprecatedRequestView request,
+                                        WriteDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Write2(Write2RequestView request, Write2Completer::Sync& completer) {
+void NullPtyDeviceImpl::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

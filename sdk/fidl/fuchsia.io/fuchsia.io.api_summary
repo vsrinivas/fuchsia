@@ -193,10 +193,10 @@ protocol/member fuchsia.io/File.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/File.SyncDeprecated() -> (int32 s)
 protocol/member fuchsia.io/File.Truncate(uint64 length) -> (int32 s)
 protocol/member fuchsia.io/File.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
-protocol/member fuchsia.io/File.Write(vector<uint8>:8192 data) -> (int32 s,uint64 actual)
-protocol/member fuchsia.io/File.Write2(vector<uint8>:8192 data) -> (fuchsia.io/File2_Write2_Result result)
+protocol/member fuchsia.io/File.Write(vector<uint8>:8192 data) -> (fuchsia.io/File2_Write_Result result)
 protocol/member fuchsia.io/File.WriteAt(vector<uint8>:8192 data,uint64 offset) -> (int32 s,uint64 actual)
 protocol/member fuchsia.io/File.WriteAt2(vector<uint8>:8192 data,uint64 offset) -> (fuchsia.io/File2_WriteAt2_Result result)
+protocol/member fuchsia.io/File.WriteDeprecated(vector<uint8>:8192 data) -> (int32 s,uint64 actual)
 protocol fuchsia.io/File
 protocol/member fuchsia.io/File1.Clone(uint32 flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/File1.Close() -> (fuchsia.io/Node2_Close_Result result)
@@ -223,8 +223,8 @@ protocol/member fuchsia.io/File1.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/File1.SyncDeprecated() -> (int32 s)
 protocol/member fuchsia.io/File1.Truncate(uint64 length) -> (int32 s)
 protocol/member fuchsia.io/File1.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
-protocol/member fuchsia.io/File1.Write(vector<uint8>:8192 data) -> (int32 s,uint64 actual)
 protocol/member fuchsia.io/File1.WriteAt(vector<uint8>:8192 data,uint64 offset) -> (int32 s,uint64 actual)
+protocol/member fuchsia.io/File1.WriteDeprecated(vector<uint8>:8192 data) -> (int32 s,uint64 actual)
 protocol fuchsia.io/File1
 protocol/member fuchsia.io/File2.AdvisoryLock(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)
 protocol/member fuchsia.io/File2.Close() -> (fuchsia.io/Node2_Close_Result result)
@@ -239,7 +239,7 @@ protocol/member fuchsia.io/File2.Resize(uint64 length) -> (fuchsia.io/File2_Resi
 protocol/member fuchsia.io/File2.Seek(fuchsia.io/SeekOrigin origin,int64 offset) -> (fuchsia.io/File2_Seek_Result result)
 protocol/member fuchsia.io/File2.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/File2.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
-protocol/member fuchsia.io/File2.Write2(vector<uint8>:8192 data) -> (fuchsia.io/File2_Write2_Result result)
+protocol/member fuchsia.io/File2.Write(vector<uint8>:8192 data) -> (fuchsia.io/File2_Write_Result result)
 protocol/member fuchsia.io/File2.WriteAt2(vector<uint8>:8192 data,uint64 offset) -> (fuchsia.io/File2_WriteAt2_Result result)
 protocol fuchsia.io/File2
 struct/member fuchsia.io/File2_GetBackingMemory_Response.vmo zx/handle:VMO
@@ -266,16 +266,16 @@ struct fuchsia.io/File2_Seek_Response
 union/member fuchsia.io/File2_Seek_Result.err int32
 union/member fuchsia.io/File2_Seek_Result.response fuchsia.io/File2_Seek_Response
 strict union fuchsia.io/File2_Seek_Result
-struct/member fuchsia.io/File2_Write2_Response.actual_count uint64
-struct fuchsia.io/File2_Write2_Response
-union/member fuchsia.io/File2_Write2_Result.err int32
-union/member fuchsia.io/File2_Write2_Result.response fuchsia.io/File2_Write2_Response
-strict union fuchsia.io/File2_Write2_Result
 struct/member fuchsia.io/File2_WriteAt2_Response.actual_count uint64
 struct fuchsia.io/File2_WriteAt2_Response
 union/member fuchsia.io/File2_WriteAt2_Result.err int32
 union/member fuchsia.io/File2_WriteAt2_Result.response fuchsia.io/File2_WriteAt2_Response
 strict union fuchsia.io/File2_WriteAt2_Result
+struct/member fuchsia.io/File2_Write_Response.actual_count uint64
+struct fuchsia.io/File2_Write_Response
+union/member fuchsia.io/File2_Write_Result.err int32
+union/member fuchsia.io/File2_Write_Result.response fuchsia.io/File2_Write_Response
+strict union fuchsia.io/File2_Write_Result
 table/member fuchsia.io/FileInfo.is_append bool
 table/member fuchsia.io/FileInfo.observer zx/handle:EVENT
 table/member fuchsia.io/FileInfo.stream zx/handle:STREAM

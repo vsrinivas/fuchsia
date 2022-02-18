@@ -184,10 +184,15 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
     ASSERT_TRUE(response.result.is_err());
     ASSERT_STATUS(response.result.err(), ZX_ERR_IO_NOT_PRESENT);
   }
-  std::array<uint8_t, 5> array;
-  ASSERT_EQ(
-      fidl::WireCall<File>(chan)->Write(fidl::VectorView<uint8_t>::FromExternal(array)).value().s,
-      ZX_ERR_IO_NOT_PRESENT);
+  {
+    std::array<uint8_t, 5> array;
+    const fidl::WireResult write_result =
+        fidl::WireCall<File>(chan)->Write(fidl::VectorView<uint8_t>::FromExternal(array));
+    ASSERT_OK(write_result.status());
+    const fidl::WireResponse response = write_result.value();
+    ASSERT_TRUE(response.result.is_err());
+    ASSERT_STATUS(response.result.err(), ZX_ERR_IO_NOT_PRESENT);
+  }
   int fd2 = open("sys/platform/11:10:0/ddk-lifecycle-test/ddk-lifecycle-test-child", O_RDWR);
   ASSERT_EQ(fd2, -1);
   ASSERT_EQ(fidl::WireCall<Device>(fidl::UnownedClientEnd<Device>(chan.channel().borrow()))

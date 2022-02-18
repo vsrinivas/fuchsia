@@ -459,12 +459,12 @@ impl Blob {
 
     async fn handle_write(&mut self, status: Status) -> Vec<u8> {
         match self.stream.next().await {
-            Some(Ok(FileRequest::Write { data, responder })) => {
+            Some(Ok(FileRequest::WriteDeprecated { data, responder })) => {
                 responder.send(status.into_raw(), data.len() as u64).unwrap();
 
                 data
             }
-            Some(Ok(FileRequest::Write2 { data, responder })) => {
+            Some(Ok(FileRequest::Write { data, responder })) => {
                 if status == Status::OK {
                     responder.send(&mut Ok(data.len() as u64)).unwrap();
                 } else {

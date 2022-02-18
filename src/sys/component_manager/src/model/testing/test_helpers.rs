@@ -235,9 +235,12 @@ pub async fn write_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str, conte
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE,
     )
     .expect("Failed to open file.");
-    let (s, _) = file_proxy.write(contents.as_bytes()).await.expect("Unable to write file.");
-    let s = zx::Status::from_raw(s);
-    assert_eq!(s, zx::Status::OK, "Write failed");
+    let _: u64 = file_proxy
+        .write(contents.as_bytes())
+        .await
+        .expect("Unable to write file.")
+        .map_err(zx::Status::from_raw)
+        .expect("Write failed");
 }
 
 pub async fn call_echo<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> String {

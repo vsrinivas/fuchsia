@@ -380,8 +380,13 @@ mod test {
         )
         .await
         .unwrap();
-        bad_file.write(&b"foo bar 2".to_vec()).await.unwrap();
-        bad_file.close().await.unwrap().unwrap();
+        bad_file
+            .write(&b"foo bar 2".to_vec())
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw)
+            .unwrap();
+        bad_file.close().await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
         let mut plt = PersistentLookupTable::new(dir);
 
@@ -437,8 +442,13 @@ mod test {
         )
         .await
         .unwrap();
-        stale_file.write(&b"stale_file_content".to_vec()).await.unwrap();
-        stale_file.close().await.unwrap().unwrap();
+        stale_file
+            .write(&b"stale_file_content".to_vec())
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw)
+            .unwrap();
+        stale_file.close().await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
         // Inititalize and cleanup stale files for TEST_LABEL.
         let mut plt = PersistentLookupTable::new(dir);

@@ -462,7 +462,12 @@ mod tests {
                     .expect("failed to send truncate FIDL"),
             )
             .expect("failed to truncate file");
-            test_file.write(&content).await.expect("failed to write to test file");
+            let _: u64 = test_file
+                .write(&content)
+                .await
+                .expect("failed to write to test file")
+                .map_err(Status::from_raw)
+                .expect("write error");
         }
 
         // check against the snapshot FilesystemInfo
@@ -616,7 +621,12 @@ mod tests {
             )
             .await
             .expect("failed to create test file");
-            test_file.write(&content).await.expect("failed to write to test file");
+            let _: u64 = test_file
+                .write(&content)
+                .await
+                .expect("failed to write to test file")
+                .map_err(Status::from_raw)
+                .expect("write error");
         }
 
         // check against the snapshot FilesystemInfo

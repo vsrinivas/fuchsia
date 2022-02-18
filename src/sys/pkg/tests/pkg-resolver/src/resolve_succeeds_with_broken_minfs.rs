@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_io::{
         DirectoryControlHandle, DirectoryProxy, DirectoryRequest, DirectoryRequestStream,
         FileControlHandle, FileEvent, FileMarker, FileProxy, FileRequest, FileRequestStream,
-        FileWrite2Responder, FileWriteResponder, NodeMarker,
+        FileWriteDeprecatedResponder, FileWriteResponder, NodeMarker,
     },
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fidl_fuchsia_pkg_rewrite_ext::Rule,
@@ -272,7 +272,11 @@ impl FailingWriteFileStreamHandler {
         self.writes_should_fail.load(std::sync::atomic::Ordering::SeqCst)
     }
 
-    async fn handle_write(self: &Arc<Self>, data: Vec<u8>, responder: FileWriteResponder) {
+    async fn handle_write_deprecated(
+        self: &Arc<Self>,
+        data: Vec<u8>,
+        responder: FileWriteDeprecatedResponder,
+    ) {
         if self.writes_should_fail() {
             self.write_fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             responder.send(Status::NO_MEMORY.into_raw(), 0u64).expect("send on write");
@@ -280,11 +284,11 @@ impl FailingWriteFileStreamHandler {
         }
 
         // Don't fail, actually do the write.
-        let (status, bytes_written) = self.backing_file.write(&data).await.unwrap();
+        let (status, bytes_written) = self.backing_file.write_deprecated(&data).await.unwrap();
         responder.send(status, bytes_written).unwrap();
     }
 
-    async fn handle_write2(self: &Arc<Self>, data: Vec<u8>, responder: FileWrite2Responder) {
+    async fn handle_write(self: &Arc<Self>, data: Vec<u8>, responder: FileWriteResponder) {
         if self.writes_should_fail() {
             self.write_fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             responder.send(&mut Err(Status::NO_MEMORY.into_raw())).expect("send on write");
@@ -292,7 +296,7 @@ impl FailingWriteFileStreamHandler {
         }
 
         // Don't fail, actually do the write.
-        let mut result = self.backing_file.write2(&data).await.unwrap();
+        let mut result = self.backing_file.write(&data).await.unwrap();
         responder.send(&mut result).unwrap();
     }
 
@@ -327,11 +331,11 @@ impl FailingWriteFileStreamHandler {
 
             while let Some(req) = stream.next().await {
                 match req.unwrap() {
+                    FileRequest::WriteDeprecated { data, responder } => {
+                        self.handle_write_deprecated(data, responder).await
+                    }
                     FileRequest::Write { data, responder } => {
                         self.handle_write(data, responder).await
-                    }
-                    FileRequest::Write2 { data, responder } => {
-                        self.handle_write2(data, responder).await
                     }
                     FileRequest::GetAttr { responder } => {
                         let (status, mut attrs) = self.backing_file.get_attr().await.unwrap();

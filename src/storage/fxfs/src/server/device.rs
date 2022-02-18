@@ -973,7 +973,12 @@ mod tests {
                     .await
                     .expect("open file failed");
                     file.truncate(content.len() as u64).await.expect("truncate file failed");
-                    file.write(&content).await.expect("write to file failed");
+                    let _: u64 = file
+                        .write(&content)
+                        .await
+                        .expect("write to file failed")
+                        .map_err(zx::Status::from_raw)
+                        .expect("write to file error");
                 }
                 // Check that blobfs can be successfully unmounted
                 let blobfs = serving.shutdown().await.expect("shutdown blobfs failed");

@@ -164,7 +164,7 @@ where
 
     while !data.is_empty() {
         let bytes_written = file
-            .write2(&data[..std::cmp::min(MAX_BUF as usize, data.len())])
+            .write(&data[..std::cmp::min(MAX_BUF as usize, data.len())])
             .await?
             .map_err(|s| WriteError::WriteError(zx_status::Status::from_raw(s)))?;
 

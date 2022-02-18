@@ -77,7 +77,8 @@ protocol File1 {
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
     @selector("fuchsia.io1/File.Write")
-    Write(struct {
+    @deprecated("replaced by File2.Write")
+    WriteDeprecated(struct {
         data vector<uint8>:MAX_BUF;
     }) -> (struct {
         s zx.status;

@@ -384,8 +384,12 @@ mod tests {
                 assert_eq!(file_name, read_file(&file_proxy).await.expect("failed to read file"));
             }
             if flags & OPEN_RIGHT_WRITABLE != 0 {
-                let (s, _) = file_proxy.write(b"write_only").await?;
-                assert_eq!(zx_status::Status::OK, zx_status::Status::from_raw(s));
+                let _: u64 = file_proxy
+                    .write(b"write_only")
+                    .await
+                    .expect("write failed")
+                    .map_err(zx_status::Status::from_raw)
+                    .expect("write error");
             }
             assert_eq!(file_proxy.close().await?, Ok(()));
         }

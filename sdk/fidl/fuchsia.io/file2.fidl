@@ -83,9 +83,8 @@ protocol File2 {
     ///   is still updated if in append mode.
     ///
     /// This method requires the [`Rights.WRITE_BYTES`] right.
-    @transitional
     @selector("fuchsia.io/File.Write")
-    Write2(struct {
+    Write(struct {
         data Transfer;
     }) -> (struct {
         actual_count uint64;

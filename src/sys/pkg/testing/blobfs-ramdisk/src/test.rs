@@ -106,8 +106,7 @@ async fn open_blob(
 }
 
 async fn write_blob(blob: &FileProxy, bytes: &[u8]) -> Result<(), Error> {
-    let (status, n) = blob.write(bytes).await?;
-    Status::ok(status)?;
+    let n = blob.write(bytes).await?.map_err(zx::Status::from_raw)?;
     assert_eq!(n, bytes.len() as u64);
     Ok(())
 }

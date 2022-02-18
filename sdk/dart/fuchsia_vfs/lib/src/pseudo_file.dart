@@ -524,7 +524,7 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<File$Write$Response> write(Uint8List data) async {
+  Future<File$WriteDeprecated$Response> writeDeprecated(Uint8List data) async {
     var response = _handleWrite(seekPos, data);
     if (response.s == ZX.OK) {
       seekPos += response.actual;
@@ -533,7 +533,7 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<int> write2(Uint8List data) async {
+  Future<int> write(Uint8List data) async {
     var response = _handleWrite(seekPos, data);
     if (response.s != ZX.OK) {
       throw fidl.MethodException(response.s);
@@ -582,25 +582,25 @@ class _FileConnection extends File {
     return File$ReadDeprecated$Response(ZX.OK, b);
   }
 
-  File$Write$Response _handleWrite(int offset, Uint8List data) {
+  File$WriteDeprecated$Response _handleWrite(int offset, Uint8List data) {
     if ((flags & openRightWritable) == 0) {
-      return File$Write$Response(ZX.ERR_ACCESS_DENIED, 0);
+      return File$WriteDeprecated$Response(ZX.ERR_ACCESS_DENIED, 0);
     }
     if (file._writeFn == null) {
-      return File$Write$Response(ZX.ERR_NOT_SUPPORTED, 0);
+      return File$WriteDeprecated$Response(ZX.ERR_NOT_SUPPORTED, 0);
     }
     if (offset >= capacity) {
-      return File$Write$Response(ZX.ERR_OUT_OF_RANGE, 0);
+      return File$WriteDeprecated$Response(ZX.ERR_OUT_OF_RANGE, 0);
     }
     if (offset > _currentLen) {
-      return File$Write$Response(ZX.ERR_OUT_OF_RANGE, 0);
+      return File$WriteDeprecated$Response(ZX.ERR_OUT_OF_RANGE, 0);
     }
 
     var actual = min(data.length, capacity - offset);
     _buffer.setRange(offset, offset + actual, data.getRange(0, actual));
     _wasWritten = true;
     _currentLen = offset + actual;
-    return File$Write$Response(ZX.OK, actual);
+    return File$WriteDeprecated$Response(ZX.OK, actual);
   }
 
   @override

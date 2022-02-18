@@ -119,9 +119,13 @@ macro_rules! assert_write {
     ($proxy:expr, $content:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let (status, len_written) = $proxy.write($content.as_bytes()).await.expect("write failed");
+        let len_written = $proxy
+            .write($content.as_bytes())
+            .await
+            .expect("write failed")
+            .map_err(Status::from_raw)
+            .expect("write error");
 
-        assert_eq!(Status::from_raw(status), Status::OK);
         assert_eq!(len_written, $content.len() as u64);
     }};
 }
@@ -132,10 +136,13 @@ macro_rules! assert_write_err {
     ($proxy:expr, $content:expr, $expected_status:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let (status, len_written) = $proxy.write($content.as_bytes()).await.expect("write failed");
+        let result = $proxy
+            .write($content.as_bytes())
+            .await
+            .expect("write failed")
+            .map_err(Status::from_raw);
 
-        assert_eq!(Status::from_raw(status), $expected_status);
-        assert_eq!(len_written, 0);
+        assert_eq!(result, Err($expected_status));
     }};
 }
 
@@ -146,8 +153,8 @@ macro_rules! assert_write_fidl_err {
         match $proxy.write($content.as_bytes()).await {
             Err($expected_error) => (),
             Err(error) => panic!("write() returned unexpected error: {:?}", error),
-            Ok((status, actual)) => {
-                panic!("Write succeeded: status: {:?}, actual: '{:?}'", status, actual)
+            Ok(result) => {
+                panic!("Write succeeded: {:?}", result)
             }
         }
     };
@@ -160,8 +167,8 @@ macro_rules! assert_write_fidl_err_closed {
         match $proxy.write($content.as_bytes()).await {
             Err(error) if error.is_closed() => (),
             Err(error) => panic!("write() returned unexpected error: {:?}", error),
-            Ok((status, actual)) => {
-                panic!("Write succeeded: status: {:?}, actual: '{:?}'", status, actual)
+            Ok(result) => {
+                panic!("Write succeeded: {:?}", result)
             }
         }
     };

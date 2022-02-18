@@ -218,11 +218,11 @@ async fn handle_file_req_fail_write(call_count: Arc<AtomicU64>, req: FileRequest
         FileRequest::Close { responder } => {
             let _ = responder.send(&mut Ok(()));
         }
-        FileRequest::Write { data: _data, responder } => {
+        FileRequest::WriteDeprecated { data: _data, responder } => {
             call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             responder.send(Status::NO_MEMORY.into_raw(), 0).expect("send write response");
         }
-        FileRequest::Write2 { data: _data, responder } => {
+        FileRequest::Write { data: _data, responder } => {
             call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             responder.send(&mut Err(Status::NO_MEMORY.into_raw())).expect("send write response");
         }

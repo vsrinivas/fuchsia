@@ -375,10 +375,15 @@ pub mod test {
                 | fidl_fuchsia_io::OPEN_FLAG_CREATE,
         )
         .expect(&format!("create file {}", path.display()));
-        file.write(data).await.expect(&format!("write file {}", path.display()));
+        file.write(data)
+            .await
+            .expect(&format!("write file {}", path.display()))
+            .map_err(zx::Status::from_raw)
+            .expect(&format!("write file {}", path.display()));
         file.close()
             .await
             .expect(&format!("close file {}", path.display()))
+            .map_err(zx::Status::from_raw)
             .expect(&format!("close file {}", path.display()));
     }
 

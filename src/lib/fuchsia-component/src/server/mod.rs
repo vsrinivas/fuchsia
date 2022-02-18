@@ -1462,8 +1462,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                         .map_err(zx::Status::into_raw),
                 )?;
             }
-            FileRequest::Write { responder, .. } => unsupported!(responder, 0)?,
-            FileRequest::Write2 { responder, .. } => unsupported2!(responder)?,
+            FileRequest::WriteDeprecated { responder, .. } => unsupported!(responder, 0)?,
+            FileRequest::Write { responder, .. } => unsupported2!(responder)?,
             FileRequest::WriteAt { responder, .. } => unsupported!(responder, 0)?,
             FileRequest::WriteAt2 { responder, .. } => unsupported2!(responder)?,
             FileRequest::SeekDeprecated { offset, start, responder } => {

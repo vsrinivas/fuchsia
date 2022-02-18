@@ -47,9 +47,15 @@ void main() {
   Future<void> _assertWrite(FileProxy proxy, Uint8List content,
       {int expectedStatus = ZX.OK, int? expectedSize}) async {
     expectedSize ??= content.length;
-    var writeResponse = await proxy.write(content);
-    expect(writeResponse.s, expectedStatus);
-    expect(writeResponse.actual, expectedSize);
+    if (expectedStatus == ZX.OK) {
+      final actualCount = await proxy.write(content);
+      expect(actualCount, expectedSize);
+    } else {
+      await expectLater(
+          proxy.write(content),
+          throwsA(isA<MethodException>()
+              .having((e) => e.value, 'value', equals(expectedStatus))));
+    }
   }
 
   Future<void> _assertRead(FileProxy proxy, int bufSize, String expectedStr,

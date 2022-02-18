@@ -452,7 +452,7 @@ mod tests {
 
         assert!(fs.filesystem().dirty_task.lock().unwrap().is_none());
         let file = FileProxy::new(proxy.into_channel().unwrap());
-        file.write("hello there".as_bytes()).await.unwrap();
+        file.write("hello there".as_bytes()).await.unwrap().map_err(Status::from_raw).unwrap();
         {
             let fs_lock = fs.filesystem().lock().unwrap();
             // fs should be dirty until the timer expires.

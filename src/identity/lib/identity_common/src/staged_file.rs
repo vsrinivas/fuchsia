@@ -103,7 +103,7 @@ impl<'a> StagedFile<'a> {
     /// This file is not guaranteed to be persisted until commit is called,
     /// at which point it will be renamed to |target_filename|.
     pub async fn write(&mut self, data: &[u8]) -> Result<(), StagedFileError> {
-        self.file_proxy.write(data).await?;
+        let () = io_util::file::write(&self.file_proxy, data).await?;
         Ok(())
     }
 
@@ -232,7 +232,7 @@ mod test {
         )
         .await
         .expect("could not open test file");
-        file_proxy.write(data).await.expect("could not write test file data");
+        io_util::file::write(&file_proxy, data).await.expect("could not write test file data")
     }
 
     async fn file_exists_with_data(

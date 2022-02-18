@@ -146,7 +146,7 @@ mod test {
 
             // Writing the file should succeed
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Write2 { data, responder })) = request {
+            if let Ok(Some(FileRequest::Write { data, responder })) = request {
                 assert_eq!(data, DATA);
                 responder.send(&mut Ok(data.len() as u64)).unwrap();
             } else {

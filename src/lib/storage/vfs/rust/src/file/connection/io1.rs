@@ -314,13 +314,13 @@ impl<T: 'static + File> FileConnection<T> {
                     Err(status) => responder.send(&mut Err(status.into_raw()))?,
                 }
             }
-            FileRequest::Write { data, responder } => {
-                fuchsia_trace::duration!("storage", "File::Write", "bytes" => data.len() as u64);
+            FileRequest::WriteDeprecated { data, responder } => {
+                fuchsia_trace::duration!("storage", "File::WriteDeprecated", "bytes" => data.len() as u64);
                 let (status, actual) = self.handle_write(&data).await;
                 responder.send(status.into_raw(), actual)?;
             }
-            FileRequest::Write2 { data, responder } => {
-                fuchsia_trace::duration!("storage", "File::Write2", "bytes" => data.len() as u64);
+            FileRequest::Write { data, responder } => {
+                fuchsia_trace::duration!("storage", "File::Write", "bytes" => data.len() as u64);
                 let (status, actual) = self.handle_write(&data).await;
                 if status == zx::Status::OK {
                     responder.send(&mut Ok(actual))?;
@@ -1234,8 +1234,7 @@ mod tests {
     async fn test_write() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_WRITABLE);
         let data = "Hello, world!".as_bytes();
-        let (status, count) = env.proxy.write(data).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let count = env.proxy.write(data).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         assert_eq!(count, data.len() as u64);
         let events = env.file.operations.lock().unwrap();
         assert_matches!(
@@ -1256,8 +1255,8 @@ mod tests {
     async fn test_write_no_perms() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let data = "Hello, world!".as_bytes();
-        let (status, _count) = env.proxy.write(data).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
+        let result = env.proxy.write(data).await.unwrap().map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::BAD_HANDLE));
         let events = env.file.operations.lock().unwrap();
         assert_eq!(*events, vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE },]);
     }
@@ -1291,8 +1290,7 @@ mod tests {
             OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND,
         );
         let data = "Hello, world!".as_bytes();
-        let (status, count) = env.proxy.write(data).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let count = env.proxy.write(data).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         assert_eq!(count, data.len() as u64);
         let offset = env
             .proxy

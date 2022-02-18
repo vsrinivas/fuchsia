@@ -627,8 +627,12 @@ mod tests {
         let inputs = vec!["hello, ", "world!"];
         let expected_output = "hello, world!";
         for input in inputs {
-            let (status, bytes_written) = file.write(input.as_bytes()).await.expect("write failed");
-            Status::ok(status).expect("File write was successful");
+            let bytes_written = file
+                .write(input.as_bytes())
+                .await
+                .expect("write failed")
+                .map_err(Status::from_raw)
+                .expect("File write was successful");
             assert_eq!(bytes_written as usize, input.as_bytes().len());
         }
 
@@ -674,9 +678,12 @@ mod tests {
             let file = open_file_checked(&root, flags, MODE_TYPE_FILE, "foo").await;
 
             if i == 0 {
-                let (status, _) =
-                    file.write(&vec![0xaa as u8; 8192]).await.expect("FIDL call failed");
-                Status::ok(status).expect("File write was successful");
+                let _: u64 = file
+                    .write(&vec![0xaa as u8; 8192])
+                    .await
+                    .expect("FIDL call failed")
+                    .map_err(Status::from_raw)
+                    .expect("File write was successful");
             } else {
                 let buf = file
                     .read(8192)
@@ -713,9 +720,12 @@ mod tests {
             )
             .await;
 
-            let (status, bytes_written) =
-                file.write(input.as_bytes()).await.expect("FIDL call failed");
-            Status::ok(status).expect("File write was successful");
+            let bytes_written = file
+                .write(input.as_bytes())
+                .await
+                .expect("FIDL call failed")
+                .map_err(Status::from_raw)
+                .expect("File write was successful");
             assert_eq!(bytes_written as usize, input.as_bytes().len());
             close_file_checked(file).await;
         }
@@ -749,9 +759,12 @@ mod tests {
         .await;
 
         let input = "hello, world!";
-        let (status, _bytes_written) =
-            file.write(input.as_bytes()).await.expect("FIDL call failed");
-        Status::ok(status).expect("File write was successful");
+        let _: u64 = file
+            .write(input.as_bytes())
+            .await
+            .expect("FIDL call failed")
+            .map_err(Status::from_raw)
+            .expect("File write was successful");
 
         {
             let offset = file
@@ -838,9 +851,12 @@ mod tests {
         let input = "hello, world!";
         let len: usize = 16 * 1024;
 
-        let (status, _bytes_written) =
-            file.write(input.as_bytes()).await.expect("FIDL call failed");
-        Status::ok(status).expect("File write was successful");
+        let _: u64 = file
+            .write(input.as_bytes())
+            .await
+            .expect("FIDL call failed")
+            .map_err(Status::from_raw)
+            .expect("File write was successful");
 
         let offset = file
             .seek(SeekOrigin::Start, 0)
@@ -1041,7 +1057,12 @@ mod tests {
                         "foo",
                     )
                     .await;
-                    file.write(b"hello").await.expect("write failed");
+                    let _: u64 = file
+                        .write(b"hello")
+                        .await
+                        .expect("write failed")
+                        .map_err(Status::from_raw)
+                        .expect("write error");
                 }
             }),
             fasync::Task::spawn(async move {
@@ -1054,7 +1075,12 @@ mod tests {
                         "foo",
                     )
                     .await;
-                    file.write(b"hello").await.expect("write failed");
+                    let _: u64 = file
+                        .write(b"hello")
+                        .await
+                        .expect("write failed")
+                        .map_err(Status::from_raw)
+                        .expect("write error");
                 }
             }),
             fasync::Task::spawn(async move {

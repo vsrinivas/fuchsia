@@ -520,8 +520,12 @@ mod tests {
                 assert_eq!(crate::file::read_to_string(&file).await.unwrap(), file_name);
             }
             if flags & OPEN_RIGHT_WRITABLE != 0 {
-                let (s, _) = file.write(b"write_only").await.unwrap();
-                assert_eq!(zx_status::Status::ok(s), Ok(()));
+                let _: u64 = file
+                    .write(b"write_only")
+                    .await
+                    .unwrap()
+                    .map_err(zx_status::Status::from_raw)
+                    .unwrap();
             }
             crate::file::close(file).await.unwrap();
 
@@ -533,8 +537,12 @@ mod tests {
                         assert_eq!(crate::file::read_to_string(&file).await.unwrap(), file_name);
                     }
                     if flags & OPEN_RIGHT_WRITABLE != 0 {
-                        let (s, _) = file.write(b"write_only").await.unwrap();
-                        assert_eq!(zx_status::Status::ok(s), Ok(()));
+                        let _: u64 = file
+                            .write(b"write_only")
+                            .await
+                            .unwrap()
+                            .map_err(zx_status::Status::from_raw)
+                            .unwrap();
                     }
                     crate::file::close(file).await.unwrap();
                 }

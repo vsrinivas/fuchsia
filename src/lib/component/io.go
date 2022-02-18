@@ -640,12 +640,12 @@ func (fState *fileState) ReadAt2(_ fidl.Context, count uint64, offset uint64) (i
 	}), err
 }
 
-func (*fileState) Write(_ fidl.Context, data []uint8) (int32, uint64, error) {
+func (*fileState) WriteDeprecated(_ fidl.Context, data []uint8) (int32, uint64, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (*fileState) Write2(_ fidl.Context, data []uint8) (io.File2Write2Result, error) {
-	return io.File2Write2ResultWithErr(int32(zx.ErrNotSupported)), nil
+func (*fileState) Write(_ fidl.Context, data []uint8) (io.File2WriteResult, error) {
+	return io.File2WriteResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (*fileState) WriteAt(_ fidl.Context, data []uint8, offset uint64) (int32, uint64, error) {

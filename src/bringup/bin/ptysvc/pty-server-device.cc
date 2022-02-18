@@ -57,11 +57,12 @@ void PtyServerDevice::Read(ReadRequestView request, ReadCompleter::Sync& complet
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+void PtyServerDevice::WriteDeprecated(WriteDeprecatedRequestView request,
+                                      WriteDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Write2(Write2RequestView request, Write2Completer::Sync& completer) {
+void PtyServerDevice::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

@@ -598,17 +598,17 @@ func (f *fileWrapper) ReadAt2(_ fidl.Context, count, offset uint64) (io.File2Rea
 	return io.File2ReadAt2ResultWithResponse(io.File2ReadAt2Response{Data: buf[:r]}), nil
 }
 
-func (f *fileWrapper) Write(_ fidl.Context, data []uint8) (int32, uint64, error) {
+func (f *fileWrapper) WriteDeprecated(_ fidl.Context, data []uint8) (int32, uint64, error) {
 	r, err := f.file.Write(data, 0, fs.WhenceFromCurrent)
 	return int32(errorToZx(err)), uint64(r), nil
 }
 
-func (f *fileWrapper) Write2(_ fidl.Context, data []uint8) (io.File2Write2Result, error) {
+func (f *fileWrapper) Write(_ fidl.Context, data []uint8) (io.File2WriteResult, error) {
 	r, err := f.file.Write(data, 0, fs.WhenceFromCurrent)
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
-		return io.File2Write2ResultWithErr(int32(zxErr)), nil
+		return io.File2WriteResultWithErr(int32(zxErr)), nil
 	}
-	return io.File2Write2ResultWithResponse(io.File2Write2Response{ActualCount: uint64(r)}), nil
+	return io.File2WriteResultWithResponse(io.File2WriteResponse{ActualCount: uint64(r)}), nil
 }
 
 func (f *fileWrapper) WriteAt(_ fidl.Context, data []uint8, offset uint64) (int32, uint64, error) {

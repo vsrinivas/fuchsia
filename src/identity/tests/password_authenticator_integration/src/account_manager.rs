@@ -444,8 +444,12 @@ async fn deprecated_provision_new_account_formats_directory() {
         .await
         .expect("create file");
 
-        let (status, bytes_written) = file.write(expected_content).await.expect("file write");
-        Status::ok(status).expect("failed to write content");
+        let bytes_written = file
+            .write(expected_content)
+            .await
+            .expect("file write")
+            .map_err(Status::from_raw)
+            .expect("failed to write content");
         assert_eq!(bytes_written, expected_content.len() as u64);
     }
 
@@ -505,8 +509,12 @@ async fn locked_account_can_be_unlocked_again() {
         .await
         .expect("create file");
 
-        let (status, bytes_written) = file.write(expected_content).await.expect("file write");
-        Status::ok(status).expect("failed to write content");
+        let bytes_written = file
+            .write(expected_content)
+            .await
+            .expect("file write")
+            .map_err(Status::from_raw)
+            .expect("failed to write content");
         assert_eq!(bytes_written, expected_content.len() as u64);
         root
     };

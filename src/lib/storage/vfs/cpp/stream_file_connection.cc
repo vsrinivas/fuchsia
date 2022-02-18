@@ -153,13 +153,14 @@ zx_status_t StreamFileConnection::WriteInternal(const void* data, size_t len, si
   return status;
 }
 
-void StreamFileConnection::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+void StreamFileConnection::WriteDeprecated(WriteDeprecatedRequestView request,
+                                           WriteDeprecatedCompleter::Sync& completer) {
   size_t actual = 0u;
   zx_status_t status = WriteInternal(request->data.data(), request->data.count(), &actual);
   completer.Reply(status, actual);
 }
 
-void StreamFileConnection::Write2(Write2RequestView request, Write2Completer::Sync& completer) {
+void StreamFileConnection::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   size_t actual = 0u;
   zx_status_t status = WriteInternal(request->data.data(), request->data.count(), &actual);
   if (status != ZX_OK) {

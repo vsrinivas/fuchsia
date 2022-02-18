@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package pkgfs
@@ -232,21 +233,16 @@ func (f *installFile) open() error {
 }
 
 func (f *installFile) Write(p []byte, off int64, whence int) (int, error) {
-	var err error
-	n := 0
-
 	if whence != fs.WhenceFromCurrent || off != 0 {
-		err = &zx.Error{Status: zx.ErrNotSupported}
-		return n, goErrToFSErr(err)
+		return 0, goErrToFSErr(&zx.Error{Status: zx.ErrNotSupported})
 	}
 
 	// It is illegal to write past the truncated size of a blob.
 	if f.written > f.size {
-		err = &zx.Error{Status: zx.ErrInvalidArgs}
-		return n, goErrToFSErr(err)
+		return 0, goErrToFSErr(&zx.Error{Status: zx.ErrInvalidArgs})
 	}
 
-	n, err = f.blob.Write(p)
+	n, err := f.blob.Write(p)
 	f.written += uint64(n)
 
 	if f.written >= f.size && err == nil {

@@ -213,11 +213,11 @@ impl MockBlob {
 
     async fn handle_write(&mut self, status: Status) -> Vec<u8> {
         match self.stream.next().await {
-            Some(Ok(FileRequest::Write { data, responder })) => {
+            Some(Ok(FileRequest::WriteDeprecated { data, responder })) => {
                 responder.send(status.into_raw(), data.len() as u64).unwrap();
                 data
             }
-            Some(Ok(FileRequest::Write2 { data, responder })) => {
+            Some(Ok(FileRequest::Write { data, responder })) => {
                 if status == Status::OK {
                     responder.send(&mut Ok(data.len() as u64)).unwrap();
                 } else {
@@ -483,7 +483,11 @@ impl Blob<NeedsData> {
     /// Returns the number of bytes written (which may be less than the buffer's size) or the error
     /// encountered during the write.
     async fn write_some(&mut self, buf: &[u8]) -> Result<usize, BlobWriteError> {
-        let fut = self.proxy.write(buf);
+        // TODO(https://fxbug.dev/88872): The ALREADY_EXISTS special case below relies on write
+        // semantics (both status and count always present) that are not possible now that write
+        // uses FIDL error syntax. This is bad. We hope pkgfs is not long for this world; see the
+        // referenced bug for removal plans.
+        let fut = self.proxy.write_deprecated(buf);
 
         let (status, actual) = fut.await.map_err(BlobWriteError::Fidl)?;
 

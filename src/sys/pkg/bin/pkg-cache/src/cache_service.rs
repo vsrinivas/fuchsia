@@ -872,7 +872,7 @@ async fn serve_write_blob(
                     }
                 }
 
-                (FileRequest::Write { data, responder }, State::ExpectData(blob)) => {
+                (FileRequest::WriteDeprecated { data, responder }, State::ExpectData(blob)) => {
                     let res = blob.write(&data).await;
 
                     let _ =
@@ -884,7 +884,7 @@ async fn serve_write_blob(
                     }
                 }
 
-                (FileRequest::Write2 { data, responder }, State::ExpectData(blob)) => {
+                (FileRequest::Write { data, responder }, State::ExpectData(blob)) => {
                     let res = blob.write(&data).await;
 
                     let _ = responder.send(&mut match write_result_to_status(&res) {
@@ -2501,7 +2501,7 @@ mod serve_write_blob_tests {
         let ((), o) = future::join(
             async move {
                 serve_fidl_request!(stream, {
-                    FileRequest::Write2 { data: actual_data, responder } => {
+                    FileRequest::Write { data: actual_data, responder } => {
                         assert_eq!(data, actual_data);
                         if blobfs_response == zx::Status::OK {
                             responder.send(&mut Ok(data.len() as u64)).unwrap();
@@ -2521,12 +2521,13 @@ mod serve_write_blob_tests {
                 }
             },
             async move {
-                let (s, len) =
-                    proxy.write(data).await.map(|(s, len)| (Status::from_raw(s), len)).unwrap();
-                if s == Status::OK {
-                    assert_eq!(len, data.len() as u64);
+                match proxy.write(data).await.unwrap().map_err(Status::from_raw) {
+                    Ok(len) => {
+                        assert_eq!(len, data.len() as u64);
+                        Status::OK
+                    }
+                    Err(status) => status,
                 }
-                s
             },
         )
         .await;

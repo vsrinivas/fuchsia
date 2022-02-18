@@ -1046,8 +1046,10 @@ pub mod capability_util {
         .await;
         match expected_res {
             ExpectedResult::Ok => {
-                let (s, _) = res.expect("failed to write file");
-                assert_matches!(zx::Status::from_raw(s), zx::Status::OK);
+                let _: u64 = res
+                    .expect("failed to write file")
+                    .map_err(zx::Status::from_raw)
+                    .expect("write error");
             }
             ExpectedResult::Err(s) => {
                 res.expect_err("unexpectedly succeeded writing file");

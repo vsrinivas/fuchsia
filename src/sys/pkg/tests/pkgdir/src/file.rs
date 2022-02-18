@@ -652,9 +652,8 @@ async fn unsupported_per_package_source(source: PackageSource) {
         let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
 
         // Verify write() fails.
-        let (status, bytes_written) = file.write(b"potato").await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), expected_status);
-        assert_eq!(bytes_written, 0);
+        let result = file.write(b"potato").await.unwrap().map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(expected_status));
 
         // Verify writeAt() fails.
         let (status, bytes_written) = file.write_at(b"potato", 0).await.unwrap();

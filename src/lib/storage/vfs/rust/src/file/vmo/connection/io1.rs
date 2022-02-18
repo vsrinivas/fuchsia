@@ -453,13 +453,13 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::Write { data, responder } => {
+            FileRequest::WriteDeprecated { data, responder } => {
                 self.handle_write(&data, |status, actual| {
                     responder.send(status.into_raw(), actual)
                 })
                 .await?;
             }
-            FileRequest::Write2 { data, responder } => {
+            FileRequest::Write { data, responder } => {
                 self.handle_write(&data, |status, actual| {
                     if status == zx::Status::OK {
                         responder.send(&mut Ok(actual))
