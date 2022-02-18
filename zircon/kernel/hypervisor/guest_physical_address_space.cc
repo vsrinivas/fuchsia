@@ -113,31 +113,34 @@ zx_status_t GuestPhysicalAddressSpace::GetPage(zx_gpaddr_t guest_paddr, zx_paddr
 }
 
 zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
-  fbl::RefPtr<VmMapping> mapping = FindMapping(RootVmar(), guest_paddr);
-  if (!mapping) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  // In order to avoid re-faulting if the guest changes how it accesses guest
-  // physical memory, and to avoid the need for invalidation of the guest
-  // physical address space on x86 (through the use of INVEPT), we fault the
-  // page with the maximum allowable permissions of the mapping.
-  Guard<Mutex> guard{mapping->lock()};
-  uint pf_flags = VMM_PF_FLAG_GUEST | VMM_PF_FLAG_HW_FAULT;
-  uint mmu_flags = mapping->arch_mmu_flags_locked(guest_paddr);
-  if (mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) {
-    pf_flags |= VMM_PF_FLAG_WRITE;
-  }
-  if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
-    pf_flags |= VMM_PF_FLAG_INSTRUCTION;
-  }
+  // TOOD(fxb/94078): Enforce no other locks are held here since we may wait on the page request.
+  __UNINITIALIZED LazyPageRequest page_request;
 
   zx_status_t status = ZX_OK;
-  // TOOD(fxb/94078): Avoid holding |guard| when calling Wait below, and enforce no other locks
-  // are held here.
-  __UNINITIALIZED LazyPageRequest page_request;
   do {
-    status = mapping->PageFault(guest_paddr, pf_flags, &page_request);
+    fbl::RefPtr<VmMapping> mapping = FindMapping(RootVmar(), guest_paddr);
+    if (!mapping) {
+      return ZX_ERR_NOT_FOUND;
+    }
+
+    // In order to avoid re-faulting if the guest changes how it accesses guest
+    // physical memory, and to avoid the need for invalidation of the guest
+    // physical address space on x86 (through the use of INVEPT), we fault the
+    // page with the maximum allowable permissions of the mapping.
+    {
+      Guard<Mutex> guard{mapping->lock()};
+      uint pf_flags = VMM_PF_FLAG_GUEST | VMM_PF_FLAG_HW_FAULT;
+      uint mmu_flags = mapping->arch_mmu_flags_locked(guest_paddr);
+      if (mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) {
+        pf_flags |= VMM_PF_FLAG_WRITE;
+      }
+      if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
+        pf_flags |= VMM_PF_FLAG_INSTRUCTION;
+      }
+
+      status = mapping->PageFault(guest_paddr, pf_flags, &page_request);
+    }
+
     if (status == ZX_ERR_SHOULD_WAIT) {
       zx_status_t st = page_request->Wait();
       if (st != ZX_OK) {
