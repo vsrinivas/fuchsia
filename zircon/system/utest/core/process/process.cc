@@ -19,6 +19,7 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <climits>

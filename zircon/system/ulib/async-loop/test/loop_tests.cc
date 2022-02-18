@@ -26,6 +26,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 
+#include <algorithm>
 #include <atomic>
 #include <random>
 #include <utility>

@@ -6,6 +6,7 @@
 
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <string_view>
 
 #include "tools/kazoo/string_util.h"
