@@ -523,12 +523,13 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     StageMetricsTimer timer("Mixer::Mix");
     timer.Start();
 
-    consumed_source = mixer.Mix(buf, dest_frames_left, &dest_offset, source_buffer.payload(),
-                                source_buffer.length(), &source_offset, cur_mix_job_.accumulate);
+    mixer.Mix(buf, dest_frames_left, &dest_offset, source_buffer.payload(), source_buffer.length(),
+              &source_offset, cur_mix_job_.accumulate);
 
     timer.Stop();
     cur_mix_job_.read_lock_ctx->AddStageMetrics(timer.Metrics());
 
+    consumed_source = (source_offset + mixer.pos_filter_width()) >= Fixed(source_buffer.length());
     if (consumed_source) {
       FX_DCHECK(source_offset + pos_width >= Fixed(source_buffer.length()))
           << "source_offset (" << ffl::String::DecRational << source_offset << ") plus pos_width ("

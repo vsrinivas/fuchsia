@@ -24,7 +24,7 @@ class PointSamplerImpl : public PointSampler {
       : PointSampler(Fixed::FromRaw(kFracPositiveFilterWidth),
                      Fixed::FromRaw(kFracNegativeFilterWidth), gain_limits) {}
 
-  bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
+  void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
            const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
            bool accumulate) override;
 
@@ -74,7 +74,7 @@ class PointSamplerImpl : public PointSampler {
   }
 
   template <ScalerType ScaleType, bool DoAccumulate>
-  static inline bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
+  static inline void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
                          const void* source_void_ptr, int64_t source_frames,
                          Fixed* source_offset_ptr, Bookkeeping* info);
 };
@@ -89,7 +89,7 @@ class NxNPointSamplerImpl : public PointSampler {
                      Fixed::FromRaw(kFracNegativeFilterWidth), gain_limits),
         chan_count_(chan_count) {}
 
-  bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
+  void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
            const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
            bool accumulate) override;
 
@@ -105,7 +105,7 @@ class NxNPointSamplerImpl : public PointSampler {
   }
 
   template <ScalerType ScaleType, bool DoAccumulate>
-  static inline bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
+  static inline void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
                          const void* source_void_ptr, int64_t source_frames,
                          Fixed* source_offset_ptr, Bookkeeping* info, int32_t chan_count);
   int32_t chan_count_ = 0;
@@ -115,7 +115,7 @@ class NxNPointSamplerImpl : public PointSampler {
 // buffers are cleared before usage; we optimize accordingly.
 template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 template <ScalerType ScaleType, bool DoAccumulate>
-inline bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
+inline void PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
     float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
     int64_t source_frames, Fixed* source_offset_ptr, Bookkeeping* info) {
   TRACE_DURATION("audio", "PointSamplerImpl::MixInternal");
@@ -137,11 +137,12 @@ inline bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
   // Source_offset can be as large as source_frames. All samplers should produce no output and
   // return true; those with significant history can also "prime" (cache) previous data as needed.
   if (frac_source_offset >= frac_source_end) {
-    return true;
+    return;
   }
 
-  auto frames_to_mix =
+  const auto frames_to_mix =
       std::min<int64_t>(Ceiling(frac_source_end - frac_source_offset), dest_frames - dest_offset);
+
   if constexpr (ScaleType != ScalerType::MUTED) {
     Gain::AScale amplitude_scale = Gain::kUnityScale;
     if constexpr (ScaleType == ScalerType::NE_UNITY) {
@@ -173,9 +174,6 @@ inline bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
   frac_source_offset += (frames_to_mix << Fixed::Format::FractionalBits);
   *source_offset_ptr = Fixed::FromRaw(frac_source_offset);
   *dest_offset_ptr = dest_offset + static_cast<uint32_t>(frames_to_mix);
-
-  // If we passed the last valid source subframe, then we exhausted this source.
-  return (frac_source_offset >= frac_source_end);
 }
 
 // Regarding ScalerType::MUTED - in that specialization, the mixer simply skips over the appropriate
@@ -185,7 +183,7 @@ inline bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
 // DoAccumulate is still valuable in the non-mute case, as it saves a read+FADD per sample.
 //
 template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
-bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
+void PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
     float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
     int64_t source_frames, Fixed* source_offset_ptr, bool accumulate) {
   TRACE_DURATION("audio", "PointSamplerImpl::Mix");
@@ -236,7 +234,7 @@ bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
 // buffers are cleared before usage; we optimize accordingly.
 template <typename SourceSampleType>
 template <ScalerType ScaleType, bool DoAccumulate>
-inline bool NxNPointSamplerImpl<SourceSampleType>::Mix(
+inline void NxNPointSamplerImpl<SourceSampleType>::Mix(
     float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
     int64_t source_frames, Fixed* source_offset_ptr, Bookkeeping* info, int32_t chan_count) {
   TRACE_DURATION("audio", "NxNPointSamplerImpl::MixInternal");
@@ -258,11 +256,12 @@ inline bool NxNPointSamplerImpl<SourceSampleType>::Mix(
   // Source_offset can be as large as source_frames. All samplers should produce no output and
   // return true; those with significant history can also "prime" (cache) previous data as needed.
   if (frac_source_offset >= frac_source_end) {
-    return true;
+    return;
   }
 
-  auto frames_to_mix =
+  const auto frames_to_mix =
       std::min<int64_t>(Ceiling(frac_source_end - frac_source_offset), dest_frames - dest_offset);
+
   if constexpr (ScaleType != ScalerType::MUTED) {
     Gain::AScale amplitude_scale = Gain::kUnityScale;
     if constexpr (ScaleType == ScalerType::NE_UNITY) {
@@ -292,13 +291,10 @@ inline bool NxNPointSamplerImpl<SourceSampleType>::Mix(
   frac_source_offset += (frames_to_mix << Fixed::Format::FractionalBits);
   *source_offset_ptr = Fixed::FromRaw(frac_source_offset);
   *dest_offset_ptr = dest_offset + static_cast<uint32_t>(frames_to_mix);
-
-  // If we passed the last valid source subframe, then we exhausted this source.
-  return (frac_source_offset >= frac_source_end);
 }
 
 template <typename SourceSampleType>
-bool NxNPointSamplerImpl<SourceSampleType>::Mix(float* dest_ptr, int64_t dest_frames,
+void NxNPointSamplerImpl<SourceSampleType>::Mix(float* dest_ptr, int64_t dest_frames,
                                                 int64_t* dest_offset_ptr,
                                                 const void* source_void_ptr, int64_t source_frames,
                                                 Fixed* source_offset_ptr, bool accumulate) {

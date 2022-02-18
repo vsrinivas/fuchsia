@@ -199,7 +199,6 @@ TEST_F(SincSamplerOutputTest, UnityConstant) {
   ASSERT_NE(mixer, nullptr);
 
   bool do_not_accum = false;
-  bool source_is_consumed;
 
   constexpr int32_t kDestLen = 512;
   int64_t dest_offset = 0;
@@ -216,18 +215,16 @@ TEST_F(SincSamplerOutputTest, UnityConstant) {
   bk.step_size = kOneFrame;
 
   // Mix the first half of the destination
-  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
-                                  &source_offset, do_not_accum);
-  EXPECT_TRUE(source_is_consumed) << ffl::String::DecRational << source_offset;
+  mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen, &source_offset,
+             do_not_accum);
   EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
   EXPECT_EQ(source_offset.Floor(), dest_offset);
   auto first_half_dest = dest_offset;
 
   // Now mix the rest
   source_offset -= Fixed(kSourceLen);
-  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
-                                  &source_offset, do_not_accum);
-  EXPECT_TRUE(source_is_consumed) << ffl::String::DecRational << source_offset;
+  mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen, &source_offset,
+             do_not_accum);
   EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
 
   // The "seam" between buffers should be invisible
@@ -245,7 +242,6 @@ TEST_F(SincSamplerOutputTest, DownSampleConstant) {
   ASSERT_NE(mixer, nullptr);
 
   bool do_not_accum = false;
-  bool source_is_consumed;
 
   constexpr int32_t kDestLen = 512;
   int64_t dest_offset = 0;
@@ -264,17 +260,15 @@ TEST_F(SincSamplerOutputTest, DownSampleConstant) {
       Fixed(kOneFrame * kSourceRate - bk.step_size * kDestRate).raw_value(), kDestRate);
 
   // Mix the first half of the destination
-  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
-                                  &source_offset, do_not_accum);
-  EXPECT_TRUE(source_is_consumed) << ffl::String::DecRational << source_offset;
+  mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen, &source_offset,
+             do_not_accum);
   EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
   auto first_half_dest = dest_offset;
 
   // Now mix the rest
   source_offset -= Fixed(kSourceLen);
-  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
-                                  &source_offset, do_not_accum);
-  EXPECT_TRUE(source_is_consumed) << ffl::String::DecRational << source_offset;
+  mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen, &source_offset,
+             do_not_accum);
   EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
 
   // The "seam" between buffers should be invisible
@@ -292,7 +286,6 @@ TEST_F(SincSamplerOutputTest, UpSampleConstant) {
   ASSERT_NE(mixer, nullptr);
 
   bool do_not_accum = false;
-  bool source_is_consumed;
 
   constexpr int32_t kDestLen = 1024;
   int64_t dest_offset = 0;
@@ -311,18 +304,16 @@ TEST_F(SincSamplerOutputTest, UpSampleConstant) {
       kOneFrame.raw_value() * kSourceRate - bk.step_size.raw_value() * kDestRate, kDestRate);
 
   // Mix the first half of the destination
-  source_is_consumed = mixer->Mix(dest.get(), kDestLen / 2, &dest_offset, source.get(), kSourceLen,
-                                  &source_offset, do_not_accum);
-  EXPECT_TRUE(source_is_consumed) << ffl::String::DecRational << source_offset;
+  mixer->Mix(dest.get(), kDestLen / 2, &dest_offset, source.get(), kSourceLen, &source_offset,
+             do_not_accum);
   EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
   EXPECT_EQ(Fixed(source_offset * 4).Floor(), dest_offset);
   auto first_half_dest = dest_offset;
 
   // Now mix the rest
   source_offset -= Fixed(kSourceLen);
-  source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
-                                  &source_offset, do_not_accum);
-  EXPECT_TRUE(source_is_consumed) << ffl::String::DecRational << source_offset;
+  mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen, &source_offset,
+             do_not_accum);
   EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
 
   // The two samples before and after the "seam" between buffers should be invisible
@@ -345,9 +336,7 @@ float SincSamplerOutputTest::MixOneFrame(std::unique_ptr<Mixer>& mixer, Fixed so
   int64_t dest_offset = 0;
   int64_t source_frames = pos_width + 1;
 
-  bool source_is_consumed = mixer->Mix(&dest, 1, &dest_offset, &(kSource[neg_width]), source_frames,
-                                       &source_offset, false);
-  EXPECT_TRUE(source_is_consumed);
+  mixer->Mix(&dest, 1, &dest_offset, &(kSource[neg_width]), source_frames, &source_offset, false);
   EXPECT_EQ(dest_offset, 1u) << "No output frame was produced";
 
   FX_LOGS(INFO) << "Coefficients " << std::setprecision(12) << kSource[12] << " " << kSource[13]
@@ -383,9 +372,7 @@ TEST_F(SincSamplerOutputTest, MixOneWithCache) {
   auto source_frames = neg_width;
   Fixed source_offset = Fixed(source_frames) - kMixOneFrameSourceOffset;
 
-  bool source_is_consumed =
-      mixer->Mix(&dest, 1, &dest_offset, &(kSource[0]), source_frames, &source_offset, false);
-  EXPECT_TRUE(source_is_consumed);
+  mixer->Mix(&dest, 1, &dest_offset, &(kSource[0]), source_frames, &source_offset, false);
   EXPECT_EQ(source_offset, Fixed(source_frames) - kMixOneFrameSourceOffset);
   EXPECT_EQ(dest_offset, 0u) << "Unexpectedly produced output " << dest;
 
@@ -412,9 +399,7 @@ TEST_F(SincSamplerOutputTest, MixFrameByFrameCached) {
   Fixed source_offset = Fixed(source_frames) - kMixOneFrameSourceOffset;
 
   for (auto neg_idx = 0u; neg_idx < neg_width; ++neg_idx) {
-    bool source_is_consumed = mixer->Mix(&dest, 1, &dest_offset, &(kSource[neg_idx]), source_frames,
-                                         &source_offset, false);
-    EXPECT_TRUE(source_is_consumed);
+    mixer->Mix(&dest, 1, &dest_offset, &(kSource[neg_idx]), source_frames, &source_offset, false);
     EXPECT_EQ(source_offset, Fixed(source_frames) - kMixOneFrameSourceOffset);
     EXPECT_EQ(dest_offset, 0u) << "Unexpectedly produced output " << dest;
   }
@@ -470,9 +455,8 @@ TEST_F(SincSamplerPositionTest, SameFrameRate) {
   int64_t expect_dest_offset = dest_offset + expect_advance;
 
   // Pass in 20 frames
-  bool source_is_consumed = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
-                                       source_frames, &source_offset, false);
-  EXPECT_TRUE(source_is_consumed);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             false);
   EXPECT_EQ(dest_offset, expect_dest_offset);
   EXPECT_EQ(source_offset, expect_source_offset);
 }
@@ -510,10 +494,9 @@ void SincSamplerPositionTest::TestFractionalPositionAtFrameBoundary(bool mute) {
 
   auto& bk = mixer->bookkeeping();
   bk.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
-  bool mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
-                               source_frames, &source_offset, true);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             true);
 
-  EXPECT_TRUE(mix_result);
   EXPECT_EQ(dest_offset, expect_dest_offset);
   EXPECT_EQ(source_offset, expect_source_offset) << ffl::String::DecRational << source_offset;
 }
@@ -547,10 +530,9 @@ void SincSamplerPositionTest::TestFractionalPositionJustBeforeFrameBoundary(bool
 
   auto& bk = mixer->bookkeeping();
   bk.gain.SetSourceMute(mute);
-  bool mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
-                               source_frames, &source_offset, true);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             true);
 
-  EXPECT_TRUE(mix_result);
   EXPECT_EQ(dest_offset, expect_dest_offset);
   EXPECT_EQ(source_offset, expect_source_offset) << ffl::String::DecRational << source_offset;
 }
@@ -582,8 +564,8 @@ void SincSamplerPositionTest::TestSourceOffsetAtEnd(bool mute) {
   bk.step_size = kOneFrame;
 
   bk.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
-  EXPECT_TRUE(mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames,
-                         &source_offset, false));
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             false);
   EXPECT_EQ(dest_offset, 0);
   EXPECT_EQ(source_offset, initial_source_offset);
   EXPECT_EQ(accum[0], 0.0f);

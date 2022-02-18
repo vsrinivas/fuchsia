@@ -69,10 +69,10 @@ class SamplerDeathTest : public testing::TestWithParam<Resampler> {
     };
   }
 
-  bool MixWithParams(MixParams& mix_params) {
-    return mixer_->Mix(mix_params.dest.data(), mix_params.dest_frames, &mix_params.dest_offset,
-                       mix_params.source.data(), mix_params.source_frames,
-                       &mix_params.source_offset, mix_params.accum);
+  void MixWithParams(MixParams& mix_params) {
+    mixer_->Mix(mix_params.dest.data(), mix_params.dest_frames, &mix_params.dest_offset,
+                mix_params.source.data(), mix_params.source_frames, &mix_params.source_offset,
+                mix_params.accum);
   }
 
   std::unique_ptr<Mixer> mixer_;
@@ -80,7 +80,7 @@ class SamplerDeathTest : public testing::TestWithParam<Resampler> {
 
 TEST_P(SamplerDeathTest, BaselineShouldSucceed) {
   auto mix_params = SamplerDeathTest::DefaultMixParams();
-  EXPECT_TRUE(MixWithParams(mix_params)) << "Mix with default parameters returned false";
+  MixWithParams(mix_params);  // don't crash
 }
 
 // Incoming dest_offset cannot be negative.

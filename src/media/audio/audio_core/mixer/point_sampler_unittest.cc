@@ -76,12 +76,11 @@ class PointSamplerTest : public testing::Test {
     auto& bk = mixer->bookkeeping();
     bk.gain.SetSourceGain(gain_db);
 
-    bool mix_result = mixer->Mix(accum_buf, num_frames, &dest_offset, source_buf, num_frames,
-                                 &source_offset, accumulate);
+    mixer->Mix(accum_buf, num_frames, &dest_offset, source_buf, num_frames, &source_offset,
+               accumulate);
 
-    EXPECT_TRUE(mix_result);
     EXPECT_EQ(dest_offset, num_frames);
-    EXPECT_EQ(source_offset, Fixed(dest_offset));
+    EXPECT_EQ(source_offset, Fixed(num_frames));
   }
 };
 
@@ -723,8 +722,6 @@ class PointSamplerPositionTest : public PointSamplerTest {};
 
 // Check: source supply equals destination demand.
 TEST_F(PointSamplerPositionTest, BasicEqualSourceDest) {
-  bool mix_result;
-
   auto mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
   ASSERT_NE(mixer, nullptr);
 
@@ -742,10 +739,9 @@ TEST_F(PointSamplerPositionTest, BasicEqualSourceDest) {
   ShiftRightBy(accum, 15);
   ShiftRightBy(expect, 15);
 
-  mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames,
-                          &source_offset, true);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             true);
 
-  EXPECT_TRUE(mix_result);
   EXPECT_EQ(dest_offset, dest_frames);
   EXPECT_EQ(source_offset, Fixed(source_frames)) << std::hex << source_offset.raw_value();
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
@@ -753,8 +749,6 @@ TEST_F(PointSamplerPositionTest, BasicEqualSourceDest) {
 
 // Check: source supply exceeds destination demand.
 TEST_F(PointSamplerPositionTest, BasicSourceExceedsDemand) {
-  bool mix_result;
-
   auto mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
   ASSERT_NE(mixer, nullptr);
 
@@ -772,10 +766,9 @@ TEST_F(PointSamplerPositionTest, BasicSourceExceedsDemand) {
   ShiftRightBy(accum, 15);
   ShiftRightBy(expect, 15);
 
-  mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames,
-                          &source_offset, true);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             true);
 
-  EXPECT_FALSE(mix_result);
   EXPECT_EQ(dest_offset, dest_frames);
   EXPECT_EQ(source_offset, Fixed(2)) << std::hex << source_offset.raw_value();
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
@@ -783,8 +776,6 @@ TEST_F(PointSamplerPositionTest, BasicSourceExceedsDemand) {
 
 // Check: destination demand exceeds source supply.
 TEST_F(PointSamplerPositionTest, BasicDestExceedsSource) {
-  bool mix_result;
-
   auto mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
   ASSERT_NE(mixer, nullptr);
 
@@ -802,10 +793,9 @@ TEST_F(PointSamplerPositionTest, BasicDestExceedsSource) {
   ShiftRightBy(accum, 15);
   ShiftRightBy(expect, 15);
 
-  mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames,
-                          &source_offset, true);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             true);
 
-  EXPECT_TRUE(mix_result);
   EXPECT_EQ(dest_offset, 1);
   EXPECT_EQ(source_offset, Fixed(source_frames)) << std::hex << source_offset.raw_value();
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
@@ -841,10 +831,9 @@ TEST_F(PointSamplerPositionTest, FractionalPositionAtFrameBoundary) {
   ShiftRightBy(accum, 15);
   ShiftRightBy(expect, 15);
 
-  bool mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
-                               source_frames, &source_offset, true);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             true);
 
-  EXPECT_FALSE(mix_result);
   EXPECT_EQ(dest_offset, dest_frames);
   EXPECT_EQ(source_offset, expect_source_offset) << std::hex << source_offset.raw_value();
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
@@ -873,10 +862,9 @@ TEST_F(PointSamplerPositionTest, FractionalPositionJustBeforeFrameBoundary) {
   ShiftRightBy(accum, 15);
   ShiftRightBy(expect, 15);
 
-  bool mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
-                               source_frames, &source_offset, true);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             true);
 
-  EXPECT_FALSE(mix_result);
   EXPECT_EQ(dest_offset, dest_frames);
   EXPECT_EQ(source_offset, expect_source_offset) << std::hex << source_offset.raw_value();
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
@@ -899,8 +887,9 @@ TEST_F(PointSamplerPositionTest, SourceOffsetAtEnd) {
   auto& bk = mixer->bookkeeping();
   bk.step_size = kOneFrame;
 
-  EXPECT_TRUE(mixer->Mix(accum.data(), accum.size(), &dest_offset, source.data(), source.size(),
-                         &source_offset, false));
+  mixer->Mix(accum.data(), accum.size(), &dest_offset, source.data(), source.size(), &source_offset,
+             false);
+
   EXPECT_EQ(dest_offset, 0);
   EXPECT_EQ(source_offset, initial_source_offset);
   EXPECT_EQ(accum[0], 0.0f);

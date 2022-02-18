@@ -238,15 +238,16 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   auto& bk = mixer->bookkeeping();
   bk.gain.SetSourceGain(-6.0205999f);
 
-  EXPECT_TRUE(mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
-                         kFreqTestBufSize, &source_offset, false));
+  mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
+             kFreqTestBufSize, &source_offset, false);
+  EXPECT_EQ(source_offset, Fixed(kFreqTestBufSize));
 
   // Accumulate the same (reference-frequency) wave.
   dest_offset = 0;
   source_offset = Fixed(0);
 
-  EXPECT_TRUE(mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
-                         kFreqTestBufSize, &source_offset, true));
+  mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
+             kFreqTestBufSize, &source_offset, true);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
   EXPECT_EQ(source_offset, Fixed(dest_offset));
 

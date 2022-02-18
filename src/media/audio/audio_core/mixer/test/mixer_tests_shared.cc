@@ -69,10 +69,9 @@ void DoMix(Mixer* mixer, const void* source_buf, float* accum_buf, bool accumula
   auto& bk = mixer->bookkeeping();
   bk.gain.SetSourceGain(gain_db);
 
-  bool mix_result = mixer->Mix(accum_buf, num_frames, &dest_offset, source_buf, num_frames,
-                               &source_offset, accumulate);
+  mixer->Mix(accum_buf, num_frames, &dest_offset, source_buf, num_frames, &source_offset,
+             accumulate);
 
-  EXPECT_TRUE(mix_result);
   EXPECT_EQ(dest_offset, num_frames);
   EXPECT_EQ(source_offset, Fixed(dest_offset));
 }

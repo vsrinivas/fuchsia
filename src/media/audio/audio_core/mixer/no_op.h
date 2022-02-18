@@ -13,7 +13,7 @@ class NoOp : public Mixer {
  public:
   NoOp() : Mixer(Fixed(0), Fixed(0), Gain::Limits{}) {}
 
-  bool Mix(float* dest, int64_t dest_frames, int64_t* dest_offset, const void* source_void_ptr,
+  void Mix(float* dest, int64_t dest_frames, int64_t* dest_offset, const void* source_void_ptr,
            int64_t source_frames, Fixed* source_offset_ptr, bool accumulate) override;
 };
 

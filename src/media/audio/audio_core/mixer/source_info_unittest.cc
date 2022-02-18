@@ -17,7 +17,7 @@ class StubMixer : public Mixer {
  public:
   StubMixer() : Mixer(Fixed(0), Fixed(0), Gain::Limits{}) {}
 
-  bool Mix(float*, int64_t, int64_t*, const void*, int64_t, Fixed*, bool) final { return false; }
+  void Mix(float*, int64_t, int64_t*, const void*, int64_t, Fixed*, bool) final {}
 };
 
 class SourceInfoTest : public testing::Test {
@@ -161,6 +161,7 @@ TEST_F(SourceInfoTest, UpdateRunningPositions_WithRateModulo) {
 }
 
 // Also validate AdvanceAllPositionsTo for negative offsets.
+// TODO(fxbug.dev/73306): remove when disallowed
 void SourceInfoTest::TestPositionAdvanceNegative(bool advance_source_pos_modulo) {
   auto& bookkeeping = mixer_.bookkeeping();
   bookkeeping.step_size = kOneFrame + Fixed::FromRaw(2);

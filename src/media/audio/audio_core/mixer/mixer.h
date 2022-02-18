@@ -505,20 +505,18 @@ class Mixer {
   // A pointer to the offset from start of source buffer, at which the first source
   // frame should be sampled. When Mix has finished, source_offset will be updated
   // to indicate the offset of the sampling position of the next frame to be sampled.
+  // When Mix has finished, frames before source_offset are no longer needed and can
+  // be discarded.
   //
   // @param accumulate
   // When true, Mix will accumulate into the destination buffer (sum the mix
   // results with existing values in the dest buffer). When false, Mix will
   // overwrite any existing destination buffer values with its mix output.
   //
-  // @return True if the mixer is finished with this source data and will not
-  // need it in the future. False if the mixer has not consumed the entire
-  // source buffer and will need more of it in the future.
-  //
   // Within Mix(), the following source/dest/rate constraints are enforced:
   //  * source_frames           must be at least 1
   //  * source_offset           must be at least -pos_filter_width
-  //                            cannot exceed frac_source_frames
+  //                            cannot exceed source_frames
   //
   //  * dest_offset             cannot exceed dest_frames
   //
@@ -526,9 +524,10 @@ class Mixer {
   //  * rate_modulo             must be either zero or less than denominator
   //  * source_position_modulo  must be either zero or less than denominator
   //
-  virtual bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
+  virtual void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
                    const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
                    bool accumulate) = 0;
+
   //
   // Reset
   //

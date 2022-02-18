@@ -51,9 +51,8 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   int64_t dest_offset = 0;
   auto source_frames = kFreqTestBufSize;
   auto source_offset = Fixed(0);
-  auto source_is_consumed = mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset,
-                                       &source.samples()[0], source_frames, &source_offset, false);
-  EXPECT_TRUE(source_is_consumed);
+  mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
+             source_frames, &source_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
   EXPECT_EQ(source_offset, Fixed(source_frames));
 
@@ -268,21 +267,18 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* leve
     // these frames are exactly what would have immediately preceded the first data in the buffer.
     // This enables resamplers with significant side width to perform as they would in steady-state.
     auto source_offset = Fixed(source_frames);
-    auto source_is_consumed =
-        mixer->Mix(&accum.samples()[0], num_dest_frames, &dest_offset, &source.samples()[0],
-                   source_frames, &source_offset, false);
-    EXPECT_TRUE(source_is_consumed);
+    mixer->Mix(&accum.samples()[0], num_dest_frames, &dest_offset, &source.samples()[0],
+               source_frames, &source_offset, false);
     EXPECT_EQ(dest_offset, 0u);
     EXPECT_EQ(source_offset, Fixed(source_frames));
 
     // Now resample source to accum. (Why in pieces? See kResamplerTestNumPackets: frequency_set.h)
     source_offset = Fixed(0);
-    bool consumed_source;
     for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
       dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
-      consumed_source = mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset,
-                                   &source.samples()[0], source_frames, &source_offset, false);
-      if (consumed_source) {
+      mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0],
+                 source_frames, &source_offset, false);
+      if (source_offset + mixer->pos_filter_width() >= Fixed(source_frames)) {
         source_offset -= Fixed(source_frames);
       }
     }
@@ -731,9 +727,8 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   // This enables resamplers with significant side width to perform as they would in steady-state.
 
   auto source_offset = Fixed(source_frames);
-  auto source_is_consumed = mixer->Mix(&accum.samples()[0], num_dest_frames, &dest_offset,
-                                       &source.samples()[0], source_frames, &source_offset, false);
-  EXPECT_TRUE(source_is_consumed);
+  mixer->Mix(&accum.samples()[0], num_dest_frames, &dest_offset, &source.samples()[0],
+             source_frames, &source_offset, false);
   EXPECT_EQ(dest_offset, 0u);
   EXPECT_EQ(source_offset, Fixed(source_frames));
 

@@ -488,14 +488,13 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
 
     while (dest_offset < dest_frame_count) {
       previous_dest_offset = dest_offset;
-      bool buffer_consumed =
-          mixer->Mix(accum.get(), dest_frame_count, &dest_offset, &source.samples()[0],
-                     source_frames, &source_offset, cfg.accumulate);
+      mixer->Mix(accum.get(), dest_frame_count, &dest_offset, &source.samples()[0], source_frames,
+                 &source_offset, cfg.accumulate);
 
       // Mix() might process less than all of accum, so Advance() after each.
       bk.gain.Advance(dest_offset - previous_dest_offset, TimelineRate(cfg.source_rate, ZX_SEC(1)));
 
-      if (buffer_consumed) {
+      if (source_offset + mixer->pos_filter_width() >= source_frames_fixed) {
         source_offset -= source_frames_fixed;
       }
     }

@@ -27,10 +27,9 @@ TEST(NoOpMixer, PassThru) {
   int64_t dest_offset = 0;
   auto source_offset = Fixed(0);
 
-  bool mix_result = no_op_mixer->Mix(accum, std::size(accum), &dest_offset, source,
-                                     std::size(source), &source_offset, false);
+  no_op_mixer->Mix(accum, std::size(accum), &dest_offset, source, std::size(source), &source_offset,
+                   false);
 
-  EXPECT_FALSE(mix_result);
   EXPECT_EQ(dest_offset, 0u);
   EXPECT_EQ(source_offset, Fixed(0));
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));

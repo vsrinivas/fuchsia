@@ -49,7 +49,7 @@ class SincSamplerImpl : public SincSampler {
         << " long to support SRC ratio " << source_frame_rate << "/" << dest_frame_rate;
   }
 
-  bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
+  void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
            const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
            bool accumulate) override;
 
@@ -81,7 +81,7 @@ class SincSamplerImpl : public SincSampler {
   static constexpr int64_t kDataCacheFracLength = kDataCacheLength << Fixed::Format::FractionalBits;
 
   template <ScalerType ScaleType, bool DoAccumulate>
-  inline bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
+  inline void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
                   const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr);
 
   static inline void PopulateFramesToChannelStrip(const void* source_void_ptr,
@@ -132,7 +132,7 @@ SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::PopulateFrame
 // buffers are cleared before usage; we optimize accordingly.
 template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 template <ScalerType ScaleType, bool DoAccumulate>
-inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
+inline void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
     float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
     int64_t source_frames, Fixed* source_offset_ptr) {
   TRACE_DURATION("audio", "SincSamplerImpl::MixInternal", "source_rate", source_rate_, "dest_rate",
@@ -169,14 +169,14 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
         working_data_.ShiftBy(Ceiling(frac_source_offset));
       }
 
+      // Calculate and store the last few source frames to start of channel_strip, for next time.
+      // If muted, this is unnecessary because we've already shifted in zeroes (silence).
       if constexpr (ScaleType != ScalerType::MUTED) {
-        // Calculate and store the last few source frames to start of channel_strip, for next time
         PopulateFramesToChannelStrip(source_void_ptr, next_source_idx_to_copy, frames_needed,
                                      &working_data_, next_cache_idx_to_fill);
-      }  // otherwise leave the shifted-in zeroes (silence), because we're muted.
-      return true;
+      }
     }
-    return false;
+    return;
   }
 
   if constexpr (ScaleType != ScalerType::MUTED) {
@@ -249,11 +249,10 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
   }
 
   position_.UpdateOffsets();
-  return position_.SourceIsConsumed();
 }
 
 template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
-bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
+void SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
     float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
     int64_t source_frames, Fixed* source_offset_ptr, bool accumulate) {
   auto info = &bookkeeping();
