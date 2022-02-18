@@ -4,8 +4,7 @@
 
 use crate::context::LowpanCtlContext;
 use crate::invocation::CommandEnum;
-use anyhow::{format_err, Error};
-use argh::FromArgs;
+use crate::prelude::*;
 use fuchsia_async::{Time, Timer};
 use fuchsia_zircon::Duration;
 

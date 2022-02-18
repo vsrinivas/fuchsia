@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 use crate::context::LowpanCtlContext;
-use anyhow::{format_err, Context, Error};
-use argh::FromArgs;
+use crate::prelude::*;
 use fidl_fuchsia_lowpan::{Credential, Identity, ProvisioningParams};
-use hex;
 use std::u16;
 
 const PROVISION_CMD_NAME_LEN: usize = 63;

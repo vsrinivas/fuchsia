@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::context::LowpanCtlContext;
-use anyhow::{Context, Error};
-use argh::{CommandInfo, EarlyExit, FromArgs, SubCommand};
+use crate::prelude::*;
+use argh::{CommandInfo, EarlyExit, SubCommand};
 
 #[derive(PartialEq, Debug)]
 pub struct MfgCommand(String);

@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use crate::context::LowpanCtlContext;
-use anyhow::{format_err, Context as _, Error};
-use argh::FromArgs;
+use crate::prelude::*;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_lowpan::ConnectivityState;
 use fidl_fuchsia_lowpan_device::{

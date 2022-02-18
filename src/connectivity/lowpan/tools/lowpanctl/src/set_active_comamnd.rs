@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use crate::context::LowpanCtlContext;
-use anyhow::{Context as _, Error};
-use argh::FromArgs;
+use crate::prelude::*;
 
 /// Contains the arguments decoded for the `set-active` command.
 #[derive(FromArgs, PartialEq, Debug)]

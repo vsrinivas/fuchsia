@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
-use fuchsia_async as fasync;
-
 pub mod context;
 pub mod dataset_command;
 pub mod energy_scan_command;
@@ -35,8 +32,23 @@ pub mod status_command;
 pub mod unregister_external_route_command;
 pub mod unregister_on_mesh_net_command;
 
+#[macro_use]
+mod prelude {
+    #![allow(unused_imports)]
+
+    pub use futures::prelude::*;
+
+    pub use anyhow::{format_err, Context as _, Error};
+    pub use argh::FromArgs;
+    pub use fidl::endpoints::create_endpoints;
+    pub use fuchsia_async as fasync;
+    pub use fuchsia_component::client::connect_to_protocol;
+    pub use std::convert::TryInto as _;
+}
+
 use context::*;
 use invocation::*;
+use prelude::*;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {

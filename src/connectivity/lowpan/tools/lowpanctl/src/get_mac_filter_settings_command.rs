@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 use crate::context::LowpanCtlContext;
-use anyhow::{Context as _, Error};
-use argh::FromArgs;
+use crate::prelude::*;
 use fidl_fuchsia_lowpan_test::*;
-//use hex;
 
 /// Contains the arguments decoded for the `get-mac-filter-settings` command.
 #[derive(FromArgs, PartialEq, Debug)]

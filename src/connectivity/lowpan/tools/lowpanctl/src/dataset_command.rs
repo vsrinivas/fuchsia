@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use crate::context::LowpanCtlContext;
-use anyhow::{Context, Error};
-use argh::FromArgs;
+use crate::prelude::*;
 use openthread::ot;
 
 /// Contains the arguments decoded for the `dataset` command.

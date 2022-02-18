@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use crate::context::LowpanCtlContext;
-use anyhow::{Context, Error};
-use argh::FromArgs;
+use crate::prelude::*;
 use fidl_fuchsia_lowpan_device::RoutePreference;
 
 /// Contains the arguments decoded for the `get-on-mesh-nets` command.

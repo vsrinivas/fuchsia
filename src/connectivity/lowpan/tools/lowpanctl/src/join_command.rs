@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use crate::context::LowpanCtlContext;
-use anyhow::{format_err, Context, Error};
-use argh::FromArgs;
-use fidl::endpoints::create_endpoints;
+use crate::prelude::*;
 use fidl_fuchsia_lowpan::{
     Credential, Identity, JoinParams, JoinerCommissioningParams, ProvisioningParams,
 };

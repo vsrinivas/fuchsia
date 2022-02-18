@@ -3,12 +3,9 @@
 // found in the LICENSE file.
 
 use crate::context::LowpanCtlContext;
-use anyhow::{format_err, Context, Error};
-use argh::FromArgs;
-use fidl::endpoints::create_endpoints;
+use crate::prelude::*;
 use fidl_fuchsia_lowpan::{Credential, Identity, ProvisioningParams};
 use fidl_fuchsia_lowpan_device::{ProvisioningMonitorMarker, ProvisioningProgress};
-use hex;
 
 const PROVISION_CMD_NAME_LEN: usize = 63;
 const PROVISION_CMD_XPANID_LEN: usize = 8;

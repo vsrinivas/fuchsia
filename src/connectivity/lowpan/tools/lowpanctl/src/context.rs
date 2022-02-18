@@ -3,18 +3,11 @@
 // found in the LICENSE file.
 
 use crate::invocation::*;
-use anyhow::{format_err, Context as _, Error};
-use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_factory_lowpan::{FactoryDeviceMarker, FactoryDeviceProxy, FactoryLookupMarker};
-use fidl_fuchsia_lowpan_device::{
-    CountersMarker, CountersProxy, DeviceExtraMarker, DeviceExtraProxy, DeviceMarker, DeviceProxy,
-    DeviceRouteExtraMarker, DeviceRouteExtraProxy, DeviceRouteMarker, DeviceRouteProxy,
-    LookupMarker, LookupProxy, Protocols,
-};
-use fidl_fuchsia_lowpan_test::{DeviceTestMarker, DeviceTestProxy};
+use crate::prelude::*;
+use fidl_fuchsia_factory_lowpan::*;
+use fidl_fuchsia_lowpan_device::*;
+use fidl_fuchsia_lowpan_test::*;
 use fidl_fuchsia_lowpan_thread::*;
-use fuchsia_component::client::connect_to_protocol;
-use futures::prelude::*;
 
 /// This struct contains all of the transient state that can
 /// be kept between invocations of commands when `lowpanctl` is
