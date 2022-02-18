@@ -1968,11 +1968,12 @@ impl Requesting {
             // Not expected as top level status.
             v6::StatusCode::NoAddrsAvail
             | v6::StatusCode::NoPrefixAvail
-            // Expected in Reply to Renew/Rebind, but not to Request.
             | v6::StatusCode::NoBinding => {
                 log::debug!(
-                    "received error status code option {:?} in Reply message in response to Request", status_code,
-                        );
+                    "received top level error status code {:?} in Reply to
+                    Request",
+                    status_code,
+                );
                 return request_from_alternate_server_or_restart_server_discovery(
                     client_id,
                     AddressToRequest::to_configured_addresses(addresses_to_request),
