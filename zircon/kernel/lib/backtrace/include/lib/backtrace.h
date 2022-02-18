@@ -22,6 +22,9 @@ class Backtrace {
   // Returns the number of elements in this backtrace.
   size_t size() const { return size_; }
 
+  // Returns a pointer to the underlying elements.
+  const vaddr_t* data() const { return pc_; }
+
   // Resets the size to 0.
   void reset() { size_ = 0; }
 

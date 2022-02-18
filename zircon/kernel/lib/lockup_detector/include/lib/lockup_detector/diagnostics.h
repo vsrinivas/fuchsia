@@ -19,6 +19,20 @@
 
 namespace lockup_internal {
 
+#if defined(__aarch64__)
+// Using the supplied DAP state, obtain a backtrace, taking care to not fault.
+//
+// Resets |out_bt| and then fills it in as much as possible.  The backtrace may be truncated if the
+// SCS crosses a page boundary.  The contents of |out_bt| are valid even on error.
+//
+// Errors:
+//   ZX_ERR_BAD_STATE - if the CPU is not in kernel mode.
+//   ZX_ERR_INVALID_ARGS - if the SCSP pointer is null or unaligned.
+//   ZX_ERR_OUT_OF_RANGE - if the stack is outside kernel address space.
+//   ZX_ERR_NOT_FOUND - if the stack is not mapped.
+zx_status_t GetBacktraceFromDapState(const arm64_dap_processor_state& state, Backtrace& out_bt);
+#endif  // __aarch64__
+
 void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target);
 
 enum class FailureSeverity { Oops, Fatal };

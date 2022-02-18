@@ -8,7 +8,6 @@
 
 #include <inttypes.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/version.h>
 
 #include <ktl/bit.h>
 #include <object/process_dispatcher.h>
@@ -16,6 +15,7 @@
 
 #if defined(__aarch64__)
 #include <arch/arm64/dap.h>
+#include <arch/arm64/mmu.h>
 #endif
 
 #if defined(__x86_64__)
@@ -25,6 +25,63 @@
 namespace lockup_internal {
 
 #if defined(__aarch64__)
+
+zx_status_t GetBacktraceFromDapState(const arm64_dap_processor_state& state, Backtrace& out_bt) {
+  // Don't attempt to do any backtracing unless this looks like the thread is in the kernel right
+  // now.  The PC might be completely bogus, but even if it is in a legit user mode process, I'm not
+  // sure of a good way to print the symbolizer context for that process, or to figure out if the
+  // process is using a shadow call stack or not.
+  if (state.get_el_level() != 1u) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Build a backtrace using the PC as frame 0's address and the LR as frame 1's address.
+  out_bt.reset();
+  out_bt.push_back(state.pc);
+  out_bt.push_back(state.r[30]);
+
+  // Is the Shadow Call Stack Pointer (x18) properly aligned?
+  constexpr size_t kPtrSize = sizeof(void*);
+  uintptr_t scsp = state.r[18];
+  if (scsp & (kPtrSize - 1)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // SCSP has post-increment semantics so back up one slot so that it points to a stored value.
+  if (scsp == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  scsp -= kPtrSize;
+
+  // Is the address in the kernel's address space?
+  if (!is_kernel_address(scsp)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  // And is it mapped?
+  paddr_t pa_unused;
+  zx_status_t status = arm64_mmu_translate(scsp, &pa_unused, /*user=*/false, /*write=*/false);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // The SCSP looks legit.  Copy the return address values, but don't cross a page boundary.
+  while (out_bt.size() < Backtrace::kMaxSize) {
+    vaddr_t ret_addr = *reinterpret_cast<vaddr_t*>(scsp);
+    out_bt.push_back(ret_addr);
+
+    // Are we about to cross a page boundary?
+    static_assert(ktl::has_single_bit(static_cast<uint64_t>(PAGE_SIZE)),
+                  "PAGE_SIZE is not a power of 2!  Wut??");
+    if ((scsp & (PAGE_SIZE - 1)) == 0) {
+      break;
+    }
+    scsp -= kPtrSize;
+  }
+
+  return ZX_OK;
+}
+
 void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
   arm64_dap_processor_state state;
   // TODO(maniscalco): Update the DAP to make use of lockup_detector_diagnostic_query_timeout_ms.
@@ -40,47 +97,26 @@ void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
   fprintf(output_target, "\n");
 
   if constexpr (__has_feature(shadow_call_stack)) {
-    constexpr const char* bt_fmt = "{{{bt:%u:%p}}}\n";
-    uint32_t n = 0;
-
-    // Don't attempt to do any backtracking unless this looks like the thread is
-    // in the kernel right now.  The PC might be completely bogus, but even if
-    // it is in a legit user mode process, I'm not sure of a good way to print
-    // the symbolizer context for that process, or to figure out if the process
-    // is using a shadow call stack or not.
-    if (state.get_el_level() != 1u) {
-      fprintf(output_target, "Skipping backtrace, CPU-%u EL is %u, not 1\n", cpu,
-              state.get_el_level());
-      return;
-    }
-
-    // Print the symbolizer context, and then the PC as frame 0's address, and
-    // the LR as frame 1's address.
-    PrintSymbolizerContext(output_target);
-    fprintf(output_target, bt_fmt, n++, reinterpret_cast<void*>(state.pc));
-    fprintf(output_target, bt_fmt, n++, reinterpret_cast<void*>(state.r[30]));
-
-    constexpr size_t PtrSize = sizeof(void*);
-    uintptr_t ret_addr_ptr = state.r[18];
-    if (ret_addr_ptr & (PtrSize - 1)) {
-      fprintf(output_target, "Halting backtrace, x18 (0x%" PRIu64 ") is not %zu byte aligned.\n",
-              ret_addr_ptr, PtrSize);
-      return;
-    }
-
-    constexpr uint32_t MAX_BACKTRACE = 32;
-    for (; n < MAX_BACKTRACE; ++n) {
-      // Attempt to back up one level.  Never cross a page boundary when we do this.
-      static_assert(ktl::has_single_bit(static_cast<uint64_t>(PAGE_SIZE)),
-                    "PAGE_SIZE is not a power of 2!  Wut??");
-      if ((ret_addr_ptr & (PAGE_SIZE - 1)) == 0) {
+    Backtrace bt;
+    zx_status_t status = GetBacktraceFromDapState(state, bt);
+    switch (status) {
+      case ZX_ERR_BAD_STATE:
+        fprintf(output_target, "DAP backtrace: CPU-%u not in kernel mode.\n", cpu);
         break;
-      }
-
-      ret_addr_ptr -= PtrSize;
-
-      // Print out this level
-      fprintf(output_target, bt_fmt, n, reinterpret_cast<void**>(ret_addr_ptr)[0]);
+      case ZX_ERR_INVALID_ARGS:
+        fprintf(output_target, "DAP backtrace: invalid SCSP.\n");
+        break;
+      case ZX_ERR_OUT_OF_RANGE:
+        fprintf(output_target, "DAP backtrace: not a kernel address.\n");
+        break;
+      case ZX_ERR_NOT_FOUND:
+        fprintf(output_target, "DAP backtrace: not mapped.\n");
+        break;
+      default:
+        fprintf(output_target, "DAP backtrace: %d\n", status);
+    }
+    if (bt.size() > 0) {
+      bt.PrintWithoutVersion(output_target);
     }
   }
 }
