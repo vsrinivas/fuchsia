@@ -1,0 +1,39 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_unittest_package.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":vaapi_tests_package" ]
+}
+
+executable("vaapi_tests") {
+  testonly = true
+
+  sources = [ "h264_vaapi_test.cc" ]
+
+  deps = [
+    "..:codec_runner_vaapi",
+    "../../test:test_codec_packets",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+resource("bear_h264") {
+  sources = [
+    "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
+  ]
+  outputs = [ "data/bear.h264" ]
+}
+
+fuchsia_unittest_package("vaapi_tests_package") {
+  package_name = "vaapi_tests"
+
+  deps = [
+    ":bear_h264",
+    ":vaapi_tests",
+  ]
+}
