@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "bin:tests",
+    "fastboot-tcp:tests",
     "gigaboot:tests",
     "lib/abr/test",
     "lib/fastboot/test",
