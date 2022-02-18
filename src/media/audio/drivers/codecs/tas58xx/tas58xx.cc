@@ -86,7 +86,6 @@ Tas58xx::Tas58xx(zx_device_t* device, const ddk::I2cChannel& i2c)
 }
 
 zx_status_t Tas58xx::Stop() {
-  fbl::AutoLock lock(&lock_);
   // Datasheet states it is required to go to HiZ before going to Deep sleep when coming from Play.
   zx_status_t status = UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsHiZ);
   if (status != ZX_OK) {
@@ -101,7 +100,6 @@ zx_status_t Tas58xx::Stop() {
 }
 
 zx_status_t Tas58xx::Start() {
-  fbl::AutoLock lock(&lock_);
   // Datasheet states it is required to go to HiZ before going to Play when coming from Deep sleep.
   zx_status_t status = UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsHiZ);
   if (status != ZX_OK) {
@@ -119,67 +117,63 @@ zx_status_t Tas58xx::Start() {
 }
 
 zx_status_t Tas58xx::Reset() {
-  {  // Limit scope of lock, SetGainState will grab it again below.
-    fbl::AutoLock lock(&lock_);
-    // From the reference manual:
-    // "9.5.3.1 Startup Procedures
-    // 1. Configure ADR/FAULT pin with proper settings for I2C device address.
-    // 2. Bring up power supplies (it does not matter if PVDD or DVDD comes up first).
-    // 3. Once power supplies are stable, bring up PDN to High and wait 5ms at least, then start
-    // SCLK, LRCLK.
-    // 4. Once I2S clocks are stable, set the device into HiZ state and enable DSP via the I2C
-    // control port.
-    // 5. Wait 5ms at least. Then initialize the DSP Coefficient, then set the device to Play state.
-    // 6. The device is now in normal operation."
-    // Steps 4+ are execute below.
+  // From the reference manual:
+  // "9.5.3.1 Startup Procedures
+  // 1. Configure ADR/FAULT pin with proper settings for I2C device address.
+  // 2. Bring up power supplies (it does not matter if PVDD or DVDD comes up first).
+  // 3. Once power supplies are stable, bring up PDN to High and wait 5ms at least, then start
+  // SCLK, LRCLK.
+  // 4. Once I2S clocks are stable, set the device into HiZ state and enable DSP via the I2C
+  // control port.
+  // 5. Wait 5ms at least. Then initialize the DSP Coefficient, then set the device to Play state.
+  // 6. The device is now in normal operation."
+  // Steps 4+ are execute below.
 
-    // Run the first init sequence from metadata if available otherwise kDefaultsStart.
-    if (metadata_.number_of_writes1) {
-      for (size_t i = 0; i < metadata_.number_of_writes1; ++i) {
-        auto status =
-            WriteReg(metadata_.init_sequence1[i].address, metadata_.init_sequence1[i].value);
-        if (status != ZX_OK) {
-          zxlogf(ERROR, "Failed to write I2C register 0x%02X", metadata_.init_sequence1[i].address);
-          return status;
-        }
-      }
-    } else {
-      constexpr uint8_t kDefaultsStart[][2] = {
-          {kRegSelectPage, 0x00},
-          {kRegSelectBook, 0x00},
-          {kRegDeviceCtrl2, kRegDeviceCtrl2BitsHiZ},  // Enables DSP.
-          {kRegReset, kRegResetRegsAndModulesCtrl},
-      };
-      for (auto& i : kDefaultsStart) {
-        auto status = WriteReg(i[0], i[1]);
-        if (status != ZX_OK) {
-          zxlogf(ERROR, "Failed to write I2C register 0x%02X", i[0]);
-          return status;
-        }
+  // Run the first init sequence from metadata if available otherwise kDefaultsStart.
+  if (metadata_.number_of_writes1) {
+    for (size_t i = 0; i < metadata_.number_of_writes1; ++i) {
+      auto status =
+          WriteReg(metadata_.init_sequence1[i].address, metadata_.init_sequence1[i].value);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "Failed to write I2C register 0x%02X", metadata_.init_sequence1[i].address);
+        return status;
       }
     }
-
-    // Per datasheet, 5ms "for device settle down" after kRegDeviceCtrl2 is set to
-    // kRegDeviceCtrl2BitsHiZ before it is set to kRegDeviceCtrl2BitsPlay during startup.
-    zx::nanosleep(zx::deadline_after(zx::msec(5)));
-
-    const uint8_t kDefaultsEnd[][2] = {
+  } else {
+    constexpr uint8_t kDefaultsStart[][2] = {
         {kRegSelectPage, 0x00},
         {kRegSelectBook, 0x00},
-        {kRegDeviceCtrl1,
-         static_cast<uint8_t>((metadata_.bridged ? kRegDeviceCtrl1BitsPbtlMode : 0) |
-                              kRegDeviceCtrl1Bits1SpwMode)},
-
-        {kRegDeviceCtrl2, kRegDeviceCtrl2BitsPlay},
-        {kRegSelectPage, 0x00},
-        {kRegSelectBook, 0x00},
-        {kRegClearFault, kRegClearFaultBitsAnalog}};
-    for (auto& i : kDefaultsEnd) {
+        {kRegDeviceCtrl2, kRegDeviceCtrl2BitsHiZ},  // Enables DSP.
+        {kRegReset, kRegResetRegsAndModulesCtrl},
+    };
+    for (auto& i : kDefaultsStart) {
       auto status = WriteReg(i[0], i[1]);
       if (status != ZX_OK) {
         zxlogf(ERROR, "Failed to write I2C register 0x%02X", i[0]);
         return status;
       }
+    }
+  }
+
+  // Per datasheet, 5ms "for device settle down" after kRegDeviceCtrl2 is set to
+  // kRegDeviceCtrl2BitsHiZ before it is set to kRegDeviceCtrl2BitsPlay during startup.
+  zx::nanosleep(zx::deadline_after(zx::msec(5)));
+
+  const uint8_t kDefaultsEnd[][2] = {
+      {kRegSelectPage, 0x00},
+      {kRegSelectBook, 0x00},
+      {kRegDeviceCtrl1, static_cast<uint8_t>((metadata_.bridged ? kRegDeviceCtrl1BitsPbtlMode : 0) |
+                                             kRegDeviceCtrl1Bits1SpwMode)},
+
+      {kRegDeviceCtrl2, kRegDeviceCtrl2BitsPlay},
+      {kRegSelectPage, 0x00},
+      {kRegSelectBook, 0x00},
+      {kRegClearFault, kRegClearFaultBitsAnalog}};
+  for (auto& i : kDefaultsEnd) {
+    auto status = WriteReg(i[0], i[1]);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to write I2C register 0x%02X", i[0]);
+      return status;
     }
   }
   constexpr float kDefaultGainDb = -30.f;
@@ -206,7 +200,6 @@ zx_status_t Tas58xx::Create(zx_device_t* parent) {
 }
 
 Info Tas58xx::GetInfo() {
-  fbl::AutoLock lock(&lock_);
   uint8_t die_id = 0;
   zx_status_t status = ReadReg(kRegDieId, &die_id);
   if (status != ZX_OK) {
@@ -289,6 +282,30 @@ zx_status_t Tas58xx::SetEqualizerProcessingElement(audio_fidl::ProcessingElement
   if (state.has_enabled()) {
     equalizer_enabled_ = state.enabled();
   }
+
+  // Update device control and equalizer enable before any other I2C configuration.
+  zx_status_t status = ZX_OK;
+  if (started_) {
+    status = UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsHiZ);
+    if (status != ZX_OK) {
+      return status;
+    }
+    zx::nanosleep(zx::deadline_after(zx::msec(5)));
+  }
+
+  auto cleanup = fit::defer([this]() {
+    // Update device control enable after equalizer bands I2C configuration.
+    if (started_) {
+      UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsPlay);
+    }
+  });
+
+  // The equalizer_enabled_ state is applied regardless of any previous state and potentially
+  // invalid parameters checked below.
+  status = WriteReg(kRegDspMisc, 0x06 | !equalizer_enabled_);  // Enable/disable bypass EQ.
+  if (status != ZX_OK) {
+    return status;
+  }
   if (has_valid_equalizer_specific_state) {
     auto& bands_state = state.state().equalizer().bands_state();
     for (size_t i = 0; i < bands_state.size(); ++i) {
@@ -320,31 +337,8 @@ zx_status_t Tas58xx::SetEqualizerProcessingElement(audio_fidl::ProcessingElement
       gains_[band.id()] = gain;
       band_enabled_[band.id()] = enable;
     }
-  } else {
-    // In this case we have no valid equalizer specific state, but the PE is still be valid.
-    // For instance in the case when the client wants to disable the equalizer PE but does not want
-    // to change any other equalizer specific state.
-    // The equalizer_enabled_ state is applied regardless of any previous state.
-    fbl::AutoLock lock(&lock_);
-    zx_status_t status = ZX_OK;
-    if (started_) {
-      status = UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsHiZ);
-      if (status != ZX_OK) {
-        return status;
-      }
-      zx::nanosleep(zx::deadline_after(zx::msec(5)));
-    }
-    status = WriteReg(kRegDspMisc, 0x06 | !equalizer_enabled_);  // Enable/disable bypass EQ.
-    if (status != ZX_OK) {
-      return status;
-    }
-    if (started_) {
-      status = UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsPlay);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
   }
+
   if (equalizer_callback_.has_value()) {
     SendWatchReply(std::move(equalizer_callback_.value()));
     equalizer_callback_.reset();
@@ -362,7 +356,6 @@ void Tas58xx::SetAutomaticGainControlProcessingElement(audio_fidl::ProcessingEle
   }
   bool enable_agl = state.enabled();
 
-  fbl::AutoLock lock(&lock_);
   TRACE_DURATION_BEGIN("tas58xx", "SetAgl", "Enable AGL", enable_agl != last_agl_);
   if (enable_agl != last_agl_) {
     const uint8_t agl_value = 0x40 | (enable_agl ? kRegAglEnableBitByte0 : 0);
@@ -433,7 +426,6 @@ void Tas58xx::WatchProcessingElementState(
     uint64_t processing_element_id,
     audio_fidl::SignalProcessing::WatchProcessingElementStateCallback callback) {
   if (processing_element_id == kAglPeId) {
-    fbl::AutoLock lock(&lock_);
     if (!last_reported_agl_.has_value() || last_reported_agl_.value() != last_agl_) {
       audio_fidl::ProcessingElementState state;
       state.set_enabled(last_agl_);
@@ -577,7 +569,6 @@ zx::status<CodecFormatInfo> Tas58xx::SetDaiFormat(const DaiFormat& format) {
       (format.bits_per_sample == 32 ? kRegSapCtrl1Bits32bits : kRegSapCtrl1Bits16bits) |
       (format.frame_format == FrameFormat::I2S ? 0x00 : kRegSapCtrl1BitsTdmSmallFs);
 
-  fbl::AutoLock lock(&lock_);
   auto status = WriteReg(kRegSapCtrl1, reg_value);
   if (status != ZX_OK) {
     return zx::error(status);
@@ -616,7 +607,6 @@ GainFormat Tas58xx::GetGainFormat() {
 }
 
 void Tas58xx::SetGainState(GainState gain_state) {
-  fbl::AutoLock lock(&lock_);
   float gain = std::clamp(gain_state.gain, kMinGain, kMaxGain);
   uint8_t gain_reg = static_cast<uint8_t>(48 - gain * 2);
   zx_status_t status = WriteReg(kRegDigitalVol, gain_reg);
@@ -775,29 +765,14 @@ zx_status_t Tas58xx::SetBand(bool enable, size_t index, uint32_t frequency, floa
       0,
   };
 
-  //  Now we are ready to write both the coefficients for the band and for the gain adjustment.
-  fbl::AutoLock lock(&lock_);
-  zx_status_t status = ZX_OK;
-  if (started_) {
-    status = UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsHiZ);
-    if (status != ZX_OK) {
-      return status;
-    }
-    zx::nanosleep(zx::deadline_after(zx::msec(5)));
-  }
-  status = WriteReg(kRegDspMisc, 0x06 | !equalizer_enabled_);  // Enable/disable bypass EQ.
-  if (status != ZX_OK) {
-    return status;
-  }
-
+  // Now we are ready to write both the coefficients for the band and for the gain adjustment.
   auto cleanup = fit::defer([this]() {
     // Attempt to go back to book 0 in case we exit early.
-    fbl::AutoLock lock(&lock_);
     WriteReg(kRegSelectPage, 0x00);
     WriteReg(kRegSelectBook, 0x00);
   });
 
-  status = WriteReg(kRegSelectPage, 0x00);
+  zx_status_t status = WriteReg(kRegSelectPage, 0x00);
   if (status != ZX_OK) {
     return status;
   }
@@ -870,20 +845,10 @@ zx_status_t Tas58xx::SetBand(bool enable, size_t index, uint32_t frequency, floa
   }
   cleanup.cancel();
 
-  if (started_) {
-    status = UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsPlay);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
   return ZX_OK;
 }
 
-GainState Tas58xx::GetGainState() {
-  fbl::AutoLock lock(&lock_);
-  return gain_state_;
-}
+GainState Tas58xx::GetGainState() { return gain_state_; }
 
 zx_status_t Tas58xx::WriteReg(uint8_t reg, uint8_t value) {
   uint8_t write_buf[2];

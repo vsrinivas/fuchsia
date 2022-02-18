@@ -973,9 +973,10 @@ TEST(Tas58xxTest, SetEqualizerBandDisabled) {
 
   // Control the EQ by disable the first band.
 
+  mock_i2c.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
+
   // We expect reset of the hardware parameters for the band.
   mock_i2c
-      .ExpectWriteStop({0x66, 0x06})    // Disable bypass EQ.
       .ExpectWriteStop({0x00, 0x00})    // page 0.
       .ExpectWriteStop({0x7f, 0xaa})    // book 0xaa.
       .ExpectWriteStop({0x00, 0x24})    // page 0x24.
@@ -1057,9 +1058,10 @@ TEST(Tas58xxTest, SetEqualizerDifferentRequests) {
 
   // 1. Band does not have an enabled field. The processing element does, but not the band.
   {
+    mock_i2c.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
+
     // We expect reset of the hardware parameters for the band since we default to disabled.
     mock_i2c
-        .ExpectWriteStop({0x66, 0x06})    // Disable bypass EQ.
         .ExpectWriteStop({0x00, 0x00})    // page 0.
         .ExpectWriteStop({0x7f, 0xaa})    // book 0xaa.
         .ExpectWriteStop({0x00, 0x24})    // page 0x24.
@@ -1097,6 +1099,7 @@ TEST(Tas58xxTest, SetEqualizerDifferentRequests) {
 
   // 2. Control a band with bad request. Band has a bad id.
   {
+    mock_i2c.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
     audio_fidl::SignalProcessing_SetProcessingElementState_Result result_enable;
     audio_fidl::ProcessingElementState control;
     control.set_enabled(true);
@@ -1117,6 +1120,7 @@ TEST(Tas58xxTest, SetEqualizerDifferentRequests) {
 
   // 3. Control a band with bad request. Band control requests an unsupported frequency.
   {
+    mock_i2c.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
     audio_fidl::SignalProcessing_SetProcessingElementState_Result result_enable;
     audio_fidl::ProcessingElementState control;
     control.set_enabled(true);
@@ -1423,7 +1427,6 @@ TEST(Tas58xxTest, SetEqualizerOverflows) {
 
   // Band setup 1.
   mock_i2c
-      .ExpectWriteStop({0x66, 0x06})             // Disable bypass EQ.
       .ExpectWriteStop({0x00, 0x00})             // page 0.
       .ExpectWriteStop({0x7f, 0xaa})             // book 0xaa.
       .ExpectWriteStop({0x00, 0x24})             // page 0x24.
@@ -1442,7 +1445,6 @@ TEST(Tas58xxTest, SetEqualizerOverflows) {
 
   // Band setup 2.
   mock_i2c
-      .ExpectWriteStop({0x66, 0x06})             // Disable bypass EQ.
       .ExpectWriteStop({0x00, 0x00})             // page 0.
       .ExpectWriteStop({0x7f, 0xaa})             // book 0xaa.
       .ExpectWriteStop({0x00, 0x24})             // page 0x24.

@@ -16,7 +16,6 @@
 #include <memory>
 
 #include <ddktl/device.h>
-#include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <ti/ti-audio.h>
 
@@ -83,27 +82,26 @@ class Tas58xx : public SimpleCodecServer, public fuchsia::hardware::audio::Signa
   static constexpr float kEqualizerMaxGainDb = 5.f;
   static constexpr float kSupportedQ = 1.f;
 
-  zx_status_t WriteReg(uint8_t reg, uint8_t value) TA_REQ(lock_);
-  zx_status_t WriteRegs(uint8_t* regs, size_t count) TA_REQ(lock_);
-  zx_status_t ReadReg(uint8_t reg, uint8_t* value) TA_REQ(lock_);
-  zx_status_t UpdateReg(uint8_t reg, uint8_t mask, uint8_t value) TA_REQ(lock_);
+  zx_status_t WriteReg(uint8_t reg, uint8_t value);
+  zx_status_t WriteRegs(uint8_t* regs, size_t count);
+  zx_status_t ReadReg(uint8_t reg, uint8_t* value);
+  zx_status_t UpdateReg(uint8_t reg, uint8_t mask, uint8_t value);
   zx_status_t SetEqualizerProcessingElement(fuchsia::hardware::audio::ProcessingElementState state);
   void SetAutomaticGainControlProcessingElement(
       fuchsia::hardware::audio::ProcessingElementState state);
   void SendWatchReply(
       fuchsia::hardware::audio::SignalProcessing::WatchProcessingElementStateCallback callback);
 
-  ddk::I2cChannel i2c_ TA_GUARDED(lock_);
-  GainState gain_state_ TA_GUARDED(lock_) = {};
-  fbl::Mutex lock_;
+  ddk::I2cChannel i2c_;
+  GainState gain_state_ = {};
   metadata::ti::TasConfig metadata_ = {};
   bool started_ = false;
   uint32_t number_of_channels_ = 2;
   uint32_t rate_ = 48'000;
 
   // AGL.
-  bool last_agl_ TA_GUARDED(lock_) = false;
-  std::optional<bool> last_reported_agl_ TA_GUARDED(lock_);
+  bool last_agl_ = false;
+  std::optional<bool> last_reported_agl_;
   std::optional<fidl::Binding<fuchsia::hardware::audio::SignalProcessing>>
       signal_processing_binding_;
   std::optional<fuchsia::hardware::audio::SignalProcessing::WatchProcessingElementStateCallback>
