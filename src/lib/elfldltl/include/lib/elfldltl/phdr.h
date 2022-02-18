@@ -8,6 +8,7 @@
 #include <lib/stdcompat/bit.h>
 #include <lib/stdcompat/span.h>
 
+#include <algorithm>
 #include <limits>
 #include <optional>
 #include <string_view>
