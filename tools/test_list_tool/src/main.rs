@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! tlg is the Test List Generator.
+//! test_list_tool generates test-list.json.
 
 use {
     anyhow::Error,
+    fidl::encoding::decode_persistent,
+    fidl_fuchsia_component_decl::Component,
+    fidl_fuchsia_data as fdata, fuchsia_archive, fuchsia_pkg,
+    fuchsia_url::pkg_url::PkgUrl,
     serde::{Deserialize, Serialize},
     serde_json,
     std::{
@@ -19,6 +23,11 @@ use {
     test_list::{TestList, TestListEntry, TestTag},
 };
 
+const META_FAR_PREFIX: &'static str = "meta/";
+const TEST_TYPE_FACET: &'static str = "fuchsia.test.type";
+const HERMETIC_TEST_TYPE: &'static str = "hermetic";
+
+mod error;
 mod opts;
 
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -32,26 +41,78 @@ struct TestEntry {
     label: String,
     cpu: String,
     os: String,
+    package_url: Option<String>,
+    package_manifests: Option<Vec<String>>,
 }
 
-fn test_list_from_tests_json(tests_json: Vec<TestsJsonEntry>) -> TestList {
-    let mut test_list = TestList { tests: vec![] };
-    for entry in tests_json {
-        let t = entry.test;
-        test_list.tests.push(TestListEntry {
-            name: t.name,
-            labels: vec![t.label],
-            tags: vec![
-                TestTag { key: "cpu".to_string(), value: t.cpu },
-                TestTag { key: "os".to_string(), value: t.os },
-            ],
-        });
+fn find_meta_far(build_dir: &PathBuf, manifest_path: String) -> Result<PathBuf, Error> {
+    let mut buffer = String::new();
+    fs::File::open(build_dir.join(&manifest_path))?.read_to_string(&mut buffer)?;
+    let package_manifest: fuchsia_pkg::PackageManifest = serde_json::from_str(&buffer)?;
+
+    for blob in package_manifest.blobs() {
+        if blob.path.eq(META_FAR_PREFIX) {
+            return Ok(build_dir.join(&blob.source_path));
+        }
     }
-    test_list
+    Err(error::TestListToolError::MissingMetaBlob(manifest_path).into())
+}
+
+fn cm_decl_from_meta_far(meta_far_path: &PathBuf, cm_path: &str) -> Result<Component, Error> {
+    let mut meta_far = fs::File::open(meta_far_path)?;
+    let mut far_reader = fuchsia_archive::Reader::new(&mut meta_far)?;
+    let cm_contents = far_reader.read_file(cm_path)?;
+    let decl: Component = decode_persistent(&cm_contents)?;
+    Ok(decl)
+}
+
+fn tags_from_facets(facets: &fdata::Dictionary) -> Result<Vec<TestTag>, Error> {
+    for facet in facets.entries.as_ref().unwrap_or(&vec![]) {
+        // TODO(rudymathu): CFv1 tests should not have a hermetic tag.
+        if facet.key.eq(TEST_TYPE_FACET) {
+            let val = facet
+                .value
+                .as_ref()
+                .ok_or(error::TestListToolError::NullFacet(facet.key.clone()))?;
+            match &**val {
+                fdata::DictionaryValue::Str(s) => {
+                    return Ok(vec![
+                        TestTag { key: "realm".to_string(), value: s.to_string() },
+                        TestTag {
+                            key: "hermetic".to_string(),
+                            value: s.eq(HERMETIC_TEST_TYPE).to_string(),
+                        },
+                    ]);
+                }
+                _ => {
+                    return Err(error::TestListToolError::InvalidFacetValue(
+                        facet.key.clone(),
+                        format!("{:?}", val),
+                    )
+                    .into());
+                }
+            }
+        }
+    }
+    Ok(vec![
+        TestTag { key: "realm".to_string(), value: HERMETIC_TEST_TYPE.to_string() },
+        TestTag { key: "hermetic".to_string(), value: "true".to_string() },
+    ])
+}
+
+fn to_test_list_entry(test_entry: &TestEntry) -> TestListEntry {
+    TestListEntry {
+        name: test_entry.name.clone(),
+        labels: vec![test_entry.label.clone()],
+        tags: vec![
+            TestTag { key: "cpu".to_string(), value: test_entry.cpu.clone() },
+            TestTag { key: "os".to_string(), value: test_entry.os.clone() },
+        ],
+    }
 }
 
 fn main() -> Result<(), Error> {
-    run_tlg()
+    run_tool()
 }
 
 fn read_tests_json(file: &PathBuf) -> Result<Vec<TestsJsonEntry>, Error> {
@@ -61,11 +122,41 @@ fn read_tests_json(file: &PathBuf) -> Result<Vec<TestsJsonEntry>, Error> {
     Ok(t)
 }
 
-fn run_tlg() -> Result<(), Error> {
+fn tags_from_manifest(
+    build_dir: &PathBuf,
+    package_url: String,
+    manifest: String,
+) -> Result<Vec<TestTag>, Error> {
+    let pkg_url = PkgUrl::parse(&package_url)?;
+    let cm_path =
+        pkg_url.resource().ok_or(error::TestListToolError::InvalidPackageURL(package_url))?;
+    let meta_far_path = find_meta_far(build_dir, manifest.clone())?;
+    let decl = cm_decl_from_meta_far(&meta_far_path, cm_path)?;
+    tags_from_facets(&decl.facets.unwrap_or(fdata::Dictionary::EMPTY))
+}
+
+fn run_tool() -> Result<(), Error> {
     let opt = opts::Opt::from_args();
     opt.validate()?;
     let tests_json = read_tests_json(&opt.input)?;
-    let test_list = test_list_from_tests_json(tests_json);
+    let mut test_list = TestList { tests: vec![] };
+    for entry in tests_json {
+        // Construct the base TestListEntry.
+        let mut test_list_entry = to_test_list_entry(&entry.test);
+        let manifests = entry.test.package_manifests.unwrap_or(vec![]);
+
+        // Aggregate any tags from the component manifest of the test.
+        if entry.test.package_url.is_some() && manifests.len() > 0 {
+            let pkg_url = entry.test.package_url.unwrap();
+            match tags_from_manifest(&opt.build_dir, pkg_url.clone(), manifests[0].clone()) {
+                Ok(mut tags) => test_list_entry.tags.append(&mut tags),
+                Err(e) => {
+                    println!("error processing manifest for package URL {}: {:?}", &pkg_url, e)
+                }
+            }
+        }
+        test_list.tests.push(test_list_entry);
+    }
     let test_list_json = serde_json::to_string(&test_list)?;
     fs::write(opt.output, test_list_json)?;
     Ok(())
@@ -76,27 +167,135 @@ mod tests {
     use {super::*, tempfile::tempdir};
 
     #[test]
-    fn test_test_list_from_tests_json() {
-        let tests_json = vec![TestsJsonEntry {
-            test: TestEntry {
-                name: "test-name".to_string(),
-                label: "test-label".to_string(),
-                cpu: "x64".to_string(),
-                os: "linux".to_string(),
-            },
-        }];
-        let tests_list = test_list_from_tests_json(tests_json);
+    fn test_find_meta_far() {
+        let build_dir = tempdir().expect("failed to get tempdir");
+        let package_manifest_path = "package_manifest.json";
+
+        // Test the working case.
+        let mut contents = r#"
+            {
+                "version": "1",
+                "repository": "fuchsia.com",
+                "package": {
+                    "name": "echo-integration-test",
+                    "version": "0"
+                },
+                "blobs": [
+                    {
+                        "source_path": "obj/build/components/tests/echo-integration-test/meta.far",
+                        "path": "meta/",
+                        "merkle": "0ec72cdf55fec3e0cc3dd47e86b95ee62c974ebaebea1d05769fea3fc4edca0b",
+                        "size": 36864
+                    }
+                ]
+            }"#;
+        fs::write(build_dir.path().join(package_manifest_path), contents)
+            .expect("failed to write fake package manifest");
         assert_eq!(
-            tests_list,
-            TestList {
-                tests: vec![TestListEntry {
-                    name: "test-name".to_string(),
-                    labels: vec!["test-label".to_string()],
-                    tags: vec![
-                        TestTag { key: "cpu".to_string(), value: "x64".to_string() },
-                        TestTag { key: "os".to_string(), value: "linux".to_string() },
-                    ],
-                },],
+            find_meta_far(&build_dir.path().to_path_buf(), package_manifest_path.into()).unwrap(),
+            build_dir.path().join("obj/build/components/tests/echo-integration-test/meta.far"),
+        );
+
+        // Test the error case.
+        contents = r#"
+            {
+                "version": "1",
+                "repository": "fuchsia.com",
+                "package": {
+                    "name": "echo-integration-test",
+                    "version": "0"
+                },
+                "blobs": []
+            }"#;
+        fs::write(build_dir.path().join(package_manifest_path), contents)
+            .expect("failed to write fake package manifest");
+        let err = find_meta_far(&build_dir.path().to_path_buf(), package_manifest_path.into())
+            .expect_err("find_meta_far failed unexpectedly");
+        match err.downcast_ref::<error::TestListToolError>() {
+            Some(error::TestListToolError::MissingMetaBlob(path)) => {
+                assert_eq!(package_manifest_path.to_string(), *path)
+            }
+            Some(e) => panic!("find_meta_far returned incorrect TestListToolError: {:?}", e),
+            None => panic!("find_meta_far returned non TestListToolError: {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_tags_from_facets() {
+        // Test that empty facets return the hermetic tags.
+        let mut facets = fdata::Dictionary::EMPTY;
+        let mut tags = tags_from_facets(&facets).expect("failed get tags in tags_from_facets");
+        let hermetic_tags = vec![
+            TestTag { key: "realm".to_string(), value: HERMETIC_TEST_TYPE.to_string() },
+            TestTag { key: "hermetic".to_string(), value: "true".to_string() },
+        ];
+        assert_eq!(tags, hermetic_tags);
+
+        // Test that a facet of fuchsia.test: tests returns hermetic tags.
+        facets.entries = Some(vec![fdata::DictionaryEntry {
+            key: TEST_TYPE_FACET.to_string(),
+            value: Some(Box::new(fdata::DictionaryValue::Str(HERMETIC_TEST_TYPE.to_string()))),
+        }]);
+        tags = tags_from_facets(&facets).expect("failed get tags in tags_from_facets");
+        assert_eq!(tags, hermetic_tags);
+
+        // Test that a null fuchsia.test facet returns a NullFacet error.
+        facets.entries =
+            Some(vec![fdata::DictionaryEntry { key: TEST_TYPE_FACET.to_string(), value: None }]);
+        let err =
+            tags_from_facets(&facets).expect_err("tags_from_facets succeeded on null facet value");
+        match err.downcast_ref::<error::TestListToolError>() {
+            Some(error::TestListToolError::NullFacet(key)) => {
+                assert_eq!(*key, TEST_TYPE_FACET.to_string());
+            }
+            Some(e) => panic!("tags_from_facets returned incorrect TestListToolError: {:?}", e),
+            None => panic!("tags_from_facets returned non-TestListToolError: {:?}", err),
+        }
+
+        // Test that an invalid fuchsia.test facet returns an InvalidFacetValue error.
+        facets.entries = Some(vec![fdata::DictionaryEntry {
+            key: TEST_TYPE_FACET.to_string(),
+            value: Some(Box::new(fdata::DictionaryValue::StrVec(vec![
+                HERMETIC_TEST_TYPE.to_string()
+            ]))),
+        }]);
+        let err =
+            tags_from_facets(&facets).expect_err("tags_from_facets succeeded on null facet value");
+        match err.downcast_ref::<error::TestListToolError>() {
+            Some(error::TestListToolError::InvalidFacetValue(k, _)) => {
+                assert_eq!(*k, TEST_TYPE_FACET.to_string());
+            }
+            Some(e) => panic!("tags_from_facets returned incorrect TestListToolError: {:?}", e),
+            None => panic!("tags_from_facets returned non-TestListToolError: {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_to_test_list_entry() {
+        let test_entry = TestEntry {
+            name: "test-name".to_string(),
+            label: "test-label".to_string(),
+            cpu: "x64".to_string(),
+            os: "linux".to_string(),
+            package_url: Some(
+                "fuchsia-pkg://fuchsia.com/echo-integration-test#meta/echo-client-test.cm"
+                    .to_string(),
+            ),
+            package_manifests: Some(vec![
+                "obj/build/components/tests/echo-integration-test/package_manifest.json"
+                    .to_string(),
+            ]),
+        };
+        let test_list_entry = to_test_list_entry(&test_entry);
+        assert_eq!(
+            test_list_entry,
+            TestListEntry {
+                name: "test-name".to_string(),
+                labels: vec!["test-label".to_string()],
+                tags: vec![
+                    TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                    TestTag { key: "os".to_string(), value: "linux".to_string() },
+                ],
             }
         )
     }
@@ -135,6 +334,10 @@ mod tests {
                         label: "//build/components/tests:echo-integration-test_test_echo-client-test(//build/toolchain/fuchsia:x64)".to_string(),
                         cpu: "x64".to_string(),
                         os: "fuchsia".to_string(),
+                        package_url: Some("fuchsia-pkg://fuchsia.com/echo-integration-test#meta/echo-client-test.cm".to_string()),
+                        package_manifests: Some(vec![
+                            "obj/build/components/tests/echo-integration-test/package_manifest.json".to_string(),
+                        ]),
                     },
                 }
             ],
