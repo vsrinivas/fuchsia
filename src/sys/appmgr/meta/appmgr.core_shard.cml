@@ -134,6 +134,8 @@
                 "fuchsia.logger.Log",
                 "fuchsia.paver.Paver",
                 "fuchsia.power.profile.Watcher",
+                "fuchsia.power.systemmode.ClientConfigurator",
+                "fuchsia.power.systemmode.Requester",
                 "fuchsia.process.Launcher",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sys2.CrashIntrospect",
