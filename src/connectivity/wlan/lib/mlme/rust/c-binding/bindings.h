@@ -128,6 +128,22 @@ typedef struct {
    */
   wlan_softmac_info_t (*get_wlan_softmac_info)(void *device);
   /**
+   * Get discovery features supported by this WLAN interface
+   */
+  discovery_support_t (*get_discovery_support)(void *device);
+  /**
+   * Get MAC sublayer features supported by this WLAN interface
+   */
+  mac_sublayer_support_t (*get_mac_sublayer_support)(void *device);
+  /**
+   * Get security features supported by this WLAN interface
+   */
+  security_support_t (*get_security_support)(void *device);
+  /**
+   * Get spectrum management features supported by this WLAN interface
+   */
+  spectrum_management_support_t (*get_spectrum_management_support)(void *device);
+  /**
    * Configure the device's BSS.
    * |cfg| is mutable because the underlying API does not take a const bss_config_t.
    */

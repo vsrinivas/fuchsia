@@ -71,6 +71,10 @@ class DeviceInterface {
 
   virtual fbl::RefPtr<DeviceState> GetState() = 0;
   virtual const wlan_softmac_info_t& GetWlanSoftmacInfo() const = 0;
+  virtual const discovery_support_t& GetDiscoverySupport() const = 0;
+  virtual const mac_sublayer_support_t& GetMacSublayerSupport() const = 0;
+  virtual const security_support_t& GetSecuritySupport() const = 0;
+  virtual const spectrum_management_support_t& GetSpectrumManagementSupport() const = 0;
 };
 
 }  // namespace wlan

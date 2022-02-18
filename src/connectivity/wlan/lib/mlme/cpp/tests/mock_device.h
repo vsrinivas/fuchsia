@@ -117,6 +117,10 @@ struct MockDevice : public DeviceInterface {
     wlan_softmac_info.band_cap_list[0] = test_utils::FakeBandCapability(WLAN_BAND_TWO_GHZ);
     wlan_softmac_info.band_cap_list[1] = test_utils::FakeBandCapability(WLAN_BAND_FIVE_GHZ);
     wlan_softmac_info.caps = 0;
+
+    mac_sublayer_support.data_plane.data_plane_type = DATA_PLANE_TYPE_ETHERNET_DEVICE;
+    mac_sublayer_support.device.mac_implementation_type = MAC_IMPLEMENTATION_TYPE_SOFTMAC;
+
     state->set_channel({
         .primary = 1,
         .cbw = CHANNEL_BANDWIDTH_CBW20,
@@ -215,6 +219,16 @@ struct MockDevice : public DeviceInterface {
 
   const wlan_softmac_info_t& GetWlanSoftmacInfo() const final { return wlan_softmac_info; }
 
+  const discovery_support_t& GetDiscoverySupport() const final { return discovery_support; }
+
+  const mac_sublayer_support_t& GetMacSublayerSupport() const final { return mac_sublayer_support; }
+
+  const security_support_t& GetSecuritySupport() const final { return security_support; }
+
+  const spectrum_management_support_t& GetSpectrumManagementSupport() const final {
+    return spectrum_management_support;
+  }
+
   // Convenience methods.
 
   wlan_channel_t GetChannel() { return state->channel(); }
@@ -291,6 +305,10 @@ struct MockDevice : public DeviceInterface {
 
   fbl::RefPtr<DeviceState> state;
   wlan_softmac_info_t wlan_softmac_info;
+  discovery_support_t discovery_support;
+  mac_sublayer_support_t mac_sublayer_support;
+  security_support_t security_support;
+  spectrum_management_support_t spectrum_management_support;
   PacketList wlan_queue;
   std::vector<std::vector<uint8_t>> svc_queue;
   std::vector<std::vector<uint8_t>> eth_queue;

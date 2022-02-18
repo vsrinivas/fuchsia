@@ -30,7 +30,6 @@ pub use {ddk_converter::*, wlan_common as common};
 
 use {
     anyhow::{anyhow, bail, Error},
-    banjo_fuchsia_hardware_wlan_phyinfo as ddk_wlaninfo,
     banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
     banjo_fuchsia_wlan_common as banjo_common,
     device::{Device, DeviceInterface},
@@ -198,12 +197,8 @@ pub struct Mlme<T: MlmeImpl> {
     minstrel_time_stream: common::timer::TimeStream<()>,
 }
 
-fn should_enable_minstrel(features: &ddk_wlaninfo::WlanInfoDriverFeature) -> bool {
-    let supports_tx_status_report =
-        features.0 & ddk_wlaninfo::WlanInfoDriverFeature::TX_STATUS_REPORT.0 != 0;
-    let rate_selection_in_fw =
-        features.0 & ddk_wlaninfo::WlanInfoDriverFeature::RATE_SELECTION.0 != 0;
-    supports_tx_status_report && !rate_selection_in_fw
+fn should_enable_minstrel(mac_sublayer: &banjo_common::MacSublayerSupport) -> bool {
+    mac_sublayer.device.tx_status_report_supported && !mac_sublayer.rate_selection_offload.supported
 }
 
 const MINSTREL_UPDATE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(100);
@@ -337,15 +332,14 @@ impl<T: 'static + MlmeImpl> Mlme<T> {
             }
         };
 
-        let device_info = device.wlan_softmac_info();
+        let device_mac_sublayer_support = device.mac_sublayer_support();
         let (minstrel_timer, minstrel_time_stream) = common::timer::create_timer();
-        let update_interval =
-            if device_info.driver_features.0 & ddk_wlaninfo::WlanInfoDriverFeature::SYNTH.0 != 0 {
-                MINSTREL_UPDATE_INTERVAL_HW_SIM
-            } else {
-                MINSTREL_UPDATE_INTERVAL
-            };
-        let minstrel = if should_enable_minstrel(&device_info.driver_features) {
+        let update_interval = if device_mac_sublayer_support.device.is_synthetic {
+            MINSTREL_UPDATE_INTERVAL_HW_SIM
+        } else {
+            MINSTREL_UPDATE_INTERVAL
+        };
+        let minstrel = if should_enable_minstrel(&device_mac_sublayer_support) {
             let timer_manager = MinstrelTimer { timer: minstrel_timer, current_timer: None };
             let probe_sequence = probe_sequence::ProbeSequence::random_new();
             Some(Arc::new(Mutex::new(minstrel::MinstrelRateSelector::new(

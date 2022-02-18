@@ -158,6 +158,22 @@ impl Device {
         self.raw_device.wlan_softmac_info()
     }
 
+    pub fn discovery_support(&self) -> banjo_common::DiscoverySupport {
+        self.raw_device.discovery_support()
+    }
+
+    pub fn mac_sublayer_support(&self) -> banjo_common::MacSublayerSupport {
+        self.raw_device.mac_sublayer_support()
+    }
+
+    pub fn security_support(&self) -> banjo_common::SecuritySupport {
+        self.raw_device.security_support()
+    }
+
+    pub fn spectrum_management_support(&self) -> banjo_common::SpectrumManagementSupport {
+        self.raw_device.spectrum_management_support()
+    }
+
     pub fn configure_bss(&self, cfg: BssConfig) -> Result<(), zx::Status> {
         self.raw_device.configure_bss(cfg)
     }
@@ -406,6 +422,16 @@ pub struct DeviceInterface {
     ) -> zx::sys::zx_status_t,
     /// Get information and capabilities of this WLAN interface
     get_wlan_softmac_info: extern "C" fn(device: *mut c_void) -> WlanSoftmacInfo,
+    /// Get discovery features supported by this WLAN interface
+    get_discovery_support: extern "C" fn(device: *mut c_void) -> banjo_common::DiscoverySupport,
+    /// Get MAC sublayer features supported by this WLAN interface
+    get_mac_sublayer_support:
+        extern "C" fn(device: *mut c_void) -> banjo_common::MacSublayerSupport,
+    /// Get security features supported by this WLAN interface
+    get_security_support: extern "C" fn(device: *mut c_void) -> banjo_common::SecuritySupport,
+    /// Get spectrum management features supported by this WLAN interface
+    get_spectrum_management_support:
+        extern "C" fn(device: *mut c_void) -> banjo_common::SpectrumManagementSupport,
     /// Configure the device's BSS.
     /// |cfg| is mutable because the underlying API does not take a const bss_config_t.
     configure_bss: extern "C" fn(device: *mut c_void, cfg: *mut BssConfig) -> i32,
@@ -522,6 +548,22 @@ impl DeviceInterface {
         (self.get_wlan_softmac_info)(self.device)
     }
 
+    pub fn discovery_support(&self) -> banjo_common::DiscoverySupport {
+        (self.get_discovery_support)(self.device)
+    }
+
+    pub fn mac_sublayer_support(&self) -> banjo_common::MacSublayerSupport {
+        (self.get_mac_sublayer_support)(self.device)
+    }
+
+    pub fn security_support(&self) -> banjo_common::SecuritySupport {
+        (self.get_security_support)(self.device)
+    }
+
+    pub fn spectrum_management_support(&self) -> banjo_common::SpectrumManagementSupport {
+        (self.get_spectrum_management_support)(self.device)
+    }
+
     fn configure_bss(&self, mut cfg: BssConfig) -> Result<(), zx::Status> {
         let status = (self.configure_bss)(self.device, &mut cfg as *mut BssConfig);
         zx::ok(status)
@@ -630,6 +672,10 @@ pub(crate) mod test_utils {
         pub captured_passive_scan_args: Option<CapturedWlanSoftmacPassiveScanArgs>,
         pub captured_active_scan_args: Option<ActiveScanArgs>,
         pub info: WlanSoftmacInfo,
+        pub discovery_support: banjo_common::DiscoverySupport,
+        pub mac_sublayer_support: banjo_common::MacSublayerSupport,
+        pub security_support: banjo_common::SecuritySupport,
+        pub spectrum_management_support: banjo_common::SpectrumManagementSupport,
         pub bss_cfg: Option<BssConfig>,
         pub bcn_cfg: Option<(Vec<u8>, usize, TimeUnit)>,
         pub link_status: LinkStatus,
@@ -656,6 +702,10 @@ pub(crate) mod test_utils {
                 captured_passive_scan_args: None,
                 captured_active_scan_args: None,
                 info: fake_wlan_softmac_info(),
+                discovery_support: fake_discovery_support(),
+                mac_sublayer_support: fake_mac_sublayer_support(),
+                security_support: fake_security_support(),
+                spectrum_management_support: fake_spectrum_management_support(),
                 keys: vec![],
                 bss_cfg: None,
                 bcn_cfg: None,
@@ -809,6 +859,30 @@ pub(crate) mod test_utils {
             unsafe { (*(device as *const Self)).info }
         }
 
+        pub extern "C" fn get_discovery_support(
+            device: *mut c_void,
+        ) -> banjo_common::DiscoverySupport {
+            unsafe { (*(device as *const Self)).discovery_support }
+        }
+
+        pub extern "C" fn get_mac_sublayer_support(
+            device: *mut c_void,
+        ) -> banjo_common::MacSublayerSupport {
+            unsafe { (*(device as *const Self)).mac_sublayer_support }
+        }
+
+        pub extern "C" fn get_security_support(
+            device: *mut c_void,
+        ) -> banjo_common::SecuritySupport {
+            unsafe { (*(device as *const Self)).security_support }
+        }
+
+        pub extern "C" fn get_spectrum_management_support(
+            device: *mut c_void,
+        ) -> banjo_common::SpectrumManagementSupport {
+            unsafe { (*(device as *const Self)).spectrum_management_support }
+        }
+
         pub extern "C" fn configure_bss(device: *mut c_void, cfg: *mut BssConfig) -> i32 {
             unsafe {
                 (*(device as *mut Self)).bss_cfg.replace((*cfg).clone());
@@ -899,6 +973,10 @@ pub(crate) mod test_utils {
                 start_passive_scan: Self::start_passive_scan,
                 start_active_scan: Self::start_active_scan,
                 get_wlan_softmac_info: Self::get_wlan_softmac_info,
+                get_discovery_support: Self::get_discovery_support,
+                get_mac_sublayer_support: Self::get_mac_sublayer_support,
+                get_security_support: Self::get_security_support,
+                get_spectrum_management_support: Self::get_spectrum_management_support,
                 configure_bss: Self::configure_bss,
                 enable_beaconing: Self::enable_beaconing,
                 disable_beaconing: Self::disable_beaconing,
@@ -1017,6 +1095,47 @@ pub(crate) mod test_utils {
             caps: WlanInfoHardwareCapability(0),
             band_cap_list,
             band_cap_count,
+        }
+    }
+
+    fn fake_discovery_support() -> banjo_common::DiscoverySupport {
+        banjo_common::DiscoverySupport {
+            scan_offload: banjo_common::ScanOffloadExtension { supported: false },
+            probe_response_offload: banjo_common::ProbeResponseOffloadExtension {
+                supported: false,
+            },
+        }
+    }
+
+    fn fake_mac_sublayer_support() -> banjo_common::MacSublayerSupport {
+        banjo_common::MacSublayerSupport {
+            rate_selection_offload: banjo_common::RateSelectionOffloadExtension {
+                supported: false,
+            },
+            data_plane: banjo_common::DataPlaneExtension {
+                data_plane_type: banjo_common::DataPlaneType::ETHERNET_DEVICE,
+            },
+            device: banjo_common::DeviceExtension {
+                is_synthetic: true,
+                mac_implementation_type: banjo_common::MacImplementationType::SOFTMAC,
+                tx_status_report_supported: true,
+            },
+        }
+    }
+
+    fn fake_security_support() -> banjo_common::SecuritySupport {
+        banjo_common::SecuritySupport {
+            mfp: banjo_common::MfpFeature { supported: false },
+            sae: banjo_common::SaeFeature {
+                supported: false,
+                handler: banjo_common::SaeHandler::SME,
+            },
+        }
+    }
+
+    fn fake_spectrum_management_support() -> banjo_common::SpectrumManagementSupport {
+        banjo_common::SpectrumManagementSupport {
+            dfs: banjo_common::DfsFeature { supported: true },
         }
     }
 

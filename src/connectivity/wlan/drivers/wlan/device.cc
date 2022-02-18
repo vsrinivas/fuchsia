@@ -92,6 +92,11 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     return status;
   }
 
+  wlan_softmac_proxy_.QueryDiscoverySupport(&discovery_support_);
+  wlan_softmac_proxy_.QueryMacSublayerSupport(&mac_sublayer_support_);
+  wlan_softmac_proxy_.QuerySecuritySupport(&security_support_);
+  wlan_softmac_proxy_.QuerySpectrumManagementSupport(&spectrum_management_support_);
+
   state_->set_address(common::MacAddr(wlan_softmac_info_.sta_addr));
 
   switch (wlan_softmac_info_.mac_role) {
@@ -398,6 +403,18 @@ zx_status_t Device::ClearAssoc(const uint8_t peer_addr[fuchsia_wlan_ieee80211_MA
 fbl::RefPtr<DeviceState> Device::GetState() { return state_; }
 
 const wlan_softmac_info_t& Device::GetWlanSoftmacInfo() const { return wlan_softmac_info_; }
+
+const discovery_support_t& Device::GetDiscoverySupport() const { return discovery_support_; }
+
+const mac_sublayer_support_t& Device::GetMacSublayerSupport() const {
+  return mac_sublayer_support_;
+}
+
+const security_support_t& Device::GetSecuritySupport() const { return security_support_; }
+
+const spectrum_management_support_t& Device::GetSpectrumManagementSupport() const {
+  return spectrum_management_support_;
+}
 
 zx_status_t ValidateWlanSoftmacInfo(const wlan_softmac_info& wlan_softmac_info) {
   for (uint8_t i = 0; i < wlan_softmac_info.band_cap_count; i++) {

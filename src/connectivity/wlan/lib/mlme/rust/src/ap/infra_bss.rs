@@ -15,7 +15,6 @@ use {
         key::KeyConfig,
     },
     anyhow::format_err,
-    banjo_fuchsia_hardware_wlan_phyinfo::WlanInfoDriverFeature,
     banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
     ieee80211::{MacAddr, Ssid},
@@ -315,8 +314,7 @@ impl InfraBss {
 
         let mgmt_subtype = *&{ mgmt_hdr.frame_ctrl }.mgmt_subtype();
         if mgmt_subtype == mac::MgmtSubtype::PROBE_REQ {
-            let driver_features = ctx.device.wlan_softmac_info().driver_features;
-            if (driver_features & WlanInfoDriverFeature::PROBE_RESP_OFFLOAD).0 != 0 {
+            if ctx.device.discovery_support().probe_response_offload.supported {
                 // We expected the probe response to be handled by hardware.
                 return Err(Rejection::Error(format_err!(
                     "driver indicates probe response offload but MLME received a probe response!"
@@ -2119,7 +2117,7 @@ mod tests {
     fn handle_probe_req_has_offload() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
-        fake_device.info.driver_features |= WlanInfoDriverFeature::PROBE_RESP_OFFLOAD;
+        fake_device.discovery_support.probe_response_offload.supported = true;
 
         let (mut ctx, _) = make_context(fake_device.as_device());
         let mut bss = InfraBss::new(

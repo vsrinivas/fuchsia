@@ -65,6 +65,18 @@ zx_status_t ApMlme::Init() {
       .get_wlan_softmac_info = [](void* mlme) -> wlan_softmac_info_t {
         return MLME(mlme)->device_->GetWlanSoftmacInfo();
       },
+      .get_discovery_support = [](void* mlme) -> discovery_support_t {
+        return MLME(mlme)->device_->GetDiscoverySupport();
+      },
+      .get_mac_sublayer_support = [](void* mlme) -> mac_sublayer_support_t {
+        return MLME(mlme)->device_->GetMacSublayerSupport();
+      },
+      .get_security_support = [](void* mlme) -> security_support_t {
+        return MLME(mlme)->device_->GetSecuritySupport();
+      },
+      .get_spectrum_management_support = [](void* mlme) -> spectrum_management_support_t {
+        return MLME(mlme)->device_->GetSpectrumManagementSupport();
+      },
       .configure_bss = [](void* mlme, bss_config_t* cfg) -> zx_status_t {
         return MLME(mlme)->device_->ConfigureBss(cfg);
       },

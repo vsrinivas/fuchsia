@@ -93,6 +93,18 @@ zx_status_t ClientMlme::Init() {
       .get_wlan_softmac_info = [](void* device) -> wlan_softmac_info_t {
         return DEVICE(device)->GetWlanSoftmacInfo();
       },
+      .get_discovery_support = [](void* device) -> discovery_support_t {
+        return DEVICE(device)->GetDiscoverySupport();
+      },
+      .get_mac_sublayer_support = [](void* device) -> mac_sublayer_support_t {
+        return DEVICE(device)->GetMacSublayerSupport();
+      },
+      .get_security_support = [](void* device) -> security_support_t {
+        return DEVICE(device)->GetSecuritySupport();
+      },
+      .get_spectrum_management_support = [](void* device) -> spectrum_management_support_t {
+        return DEVICE(device)->GetSpectrumManagementSupport();
+      },
       .configure_bss = [](void* device, bss_config_t* cfg) -> zx_status_t {
         return DEVICE(device)->ConfigureBss(cfg);
       },

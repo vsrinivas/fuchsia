@@ -1234,7 +1234,6 @@ mod tests {
             device::FakeDevice,
             test_utils::{fake_control_handle, MockWlanRxInfo},
         },
-        banjo_fuchsia_hardware_wlan_phyinfo as banjo_ddk_wlanphyinfo,
         fidl::endpoints::create_proxy_and_stream,
         fuchsia_async as fasync,
         futures::{task::Poll, StreamExt},
@@ -2558,8 +2557,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
 
         // Configure the fake device to offload scan
-        m.fake_device.info.driver_features |=
-            banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        m.fake_device.discovery_support.scan_offload.supported = true;
         let mut me = m.make_mlme();
         me.make_client_station();
 
@@ -2609,8 +2607,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
 
         // Configure the fake device to offload scan
-        m.fake_device.info.driver_features |=
-            banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        m.fake_device.discovery_support.scan_offload.supported = true;
         let mut me = m.make_mlme();
 
         me.make_client_station();
@@ -2639,8 +2636,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
 
         // Configure the fake device to offload scan and fail on passive scans
-        m.fake_device.info.driver_features |=
-            banjo_ddk_wlanphyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        m.fake_device.discovery_support.scan_offload.supported = true;
         let device = m.fake_device.as_device_fail_start_passive_scan();
         let mut me = m.make_mlme_with_device(device);
 

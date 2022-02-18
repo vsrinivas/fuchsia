@@ -70,6 +70,10 @@ class Device : public DeviceInterface {
                               uint64_t* out_scan_id) final;
   fbl::RefPtr<DeviceState> GetState() final;
   const wlan_softmac_info_t& GetWlanSoftmacInfo() const final;
+  const discovery_support_t& GetDiscoverySupport() const final;
+  const mac_sublayer_support_t& GetMacSublayerSupport() const final;
+  const security_support_t& GetSecuritySupport() const final;
+  const spectrum_management_support_t& GetSpectrumManagementSupport() const final;
 
  private:
   enum class DevicePacket : uint64_t {
@@ -112,6 +116,10 @@ class Device : public DeviceInterface {
   std::unique_ptr<wlan_softmac_ifc_protocol_ops_t> wlan_softmac_ifc_protocol_ops_;
 
   wlan_softmac_info_t wlan_softmac_info_ = {};
+  discovery_support_t discovery_support_ = {};
+  mac_sublayer_support_t mac_sublayer_support_ = {};
+  security_support_t security_support_ = {};
+  spectrum_management_support_t spectrum_management_support_ = {};
   fbl::RefPtr<DeviceState> state_;
 
   std::unique_ptr<Mlme> mlme_;

@@ -16,7 +16,6 @@ use {
         error::Error,
     },
     anyhow::format_err,
-    banjo_fuchsia_hardware_wlan_phyinfo as banjo_wlan_phyinfo,
     banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
     banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
@@ -165,15 +164,12 @@ impl<'a> BoundScanner<'a> {
         }
 
         let wlan_softmac_info = self.ctx.device.wlan_softmac_info();
+        let discovery_support = self.ctx.device.discovery_support();
 
         // The else of this branch is an "MLME scan" which is implemented by calling SetChannel
         // multiple times to visit each channel. It's only used in hw-sim tests and is not supported
         // by any SoftMAC device drivers.
-        let offload_scan = (wlan_softmac_info.driver_features
-            & banjo_wlan_phyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD)
-            .0
-            > 0;
-        if offload_scan {
+        if discovery_support.scan_offload.supported {
             match req.scan_type {
                 fidl_mlme::ScanTypes::Passive => self.start_passive_scan(req),
                 fidl_mlme::ScanTypes::Active => self.start_active_scan(req, &wlan_softmac_info),
@@ -988,8 +984,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
-        m.fake_device.info.driver_features |=
-            banjo_wlan_phyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        m.fake_device.discovery_support.scan_offload.supported = true;
         let mut scanner = Scanner::new(IFACE_MAC);
         let test_start_timestamp_nanos = zx::Time::get_monotonic().into_nanos();
 
@@ -1099,8 +1094,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
-        m.fake_device.info.driver_features |=
-            banjo_wlan_phyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        m.fake_device.discovery_support.scan_offload.supported = true;
         let mut scanner = Scanner::new(IFACE_MAC);
         let test_start_timestamp_nanos = zx::Time::get_monotonic().into_nanos();
 
@@ -1188,8 +1182,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let device = m.fake_device.as_device_fail_start_passive_scan();
         let mut ctx = m.make_ctx_with_device(device);
-        m.fake_device.info.driver_features |=
-            banjo_wlan_phyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        m.fake_device.discovery_support.scan_offload.supported = true;
         let mut scanner = Scanner::new(IFACE_MAC);
 
         let result = scanner.bind(&mut ctx).on_sme_scan(
@@ -1212,8 +1205,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let device = m.fake_device.as_device_fail_start_active_scan();
         let mut ctx = m.make_ctx_with_device(device);
-        m.fake_device.info.driver_features |=
-            banjo_wlan_phyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        m.fake_device.discovery_support.scan_offload.supported = true;
         let mut scanner = Scanner::new(IFACE_MAC);
 
         let result = scanner.bind(&mut ctx).on_sme_scan(
@@ -1235,8 +1227,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
-        m.fake_device.info.driver_features |=
-            banjo_wlan_phyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        m.fake_device.discovery_support.scan_offload.supported = true;
         let mut scanner = Scanner::new(IFACE_MAC);
         let test_start_timestamp_nanos = zx::Time::get_monotonic().into_nanos();
 
@@ -1284,8 +1275,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
-        m.fake_device.info.driver_features |=
-            banjo_wlan_phyinfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
+        m.fake_device.discovery_support.scan_offload.supported = true;
         let mut scanner = Scanner::new(IFACE_MAC);
         let test_start_timestamp_nanos = zx::Time::get_monotonic().into_nanos();
 
