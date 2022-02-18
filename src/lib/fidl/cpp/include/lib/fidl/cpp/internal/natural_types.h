@@ -342,13 +342,9 @@ struct NaturalUnionCodingTraits {
   static void Decode(Decoder* decoder, T* value, size_t offset) {
     fidl_xunion_v2_t* xunion = decoder->GetPtr<fidl_xunion_v2_t>(offset);
     const size_t index = T::TagToIndex(static_cast<typename T::Tag>(xunion->tag));
+    ZX_ASSERT(index > 0);
     const size_t envelope_offset = offset + offsetof(fidl_xunion_t, envelope);
-    if (index > 0) {
-      DecodeMember(decoder, value, envelope_offset, index);
-    } else {
-      *value = T();
-      // TODO: do I need to skip the envelope contents somehow here?
-    }
+    DecodeMember(decoder, value, envelope_offset, index);
   }
 
   template <size_t I = 1>

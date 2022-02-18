@@ -36,6 +36,31 @@ source_set("hlcpp_client_app") {
   ]
 }
 
+## CPP (unified bindings / natural types) Test Server
+
+executable("cpp_server") {
+  output_name = "cpp-server"
+  output_dir = target_out_dir
+
+  sources = [ "cpp_server.cc" ]
+
+  deps = [
+    ":fidl_service_cpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("cpp-server") {
+  manifest = "meta/cpp-server.cmx"
+  deps = [ ":cpp_server" ]
+}
+
 ## HLCPP Test Server
 
 executable("hlcpp_server") {
@@ -190,6 +215,7 @@ fidl_compatibility_tests = [
 ]
 
 fidl_compatibilty_test_servers = [
+  "cpp",
   "hlcpp",
   "go",
   "llcpp",
@@ -251,6 +277,7 @@ fuchsia_test_package("fidl_compatibility_test_package") {
   package_deps_for_infra_only = [ dart_default_build_cfg.runner_dep ]
   package_name = "fidl-compatibility-test"
   deps = [
+    ":cpp-server",
     ":dart-server",
     ":hlcpp-server",
     ":llcpp-server",
