@@ -64,7 +64,7 @@ class Mixer {
     // Used by custom code when debugging.
     std::string PositionsToString(std::string tag = "") {
       return tag + ": next_dest " + std::to_string(next_dest_frame) + ", next_source " +
-             std::to_string(next_source_frame.raw_value()) + ", pos_err " +
+             ffl::String(next_source_frame, ffl::String::DecRational).c_str() + ", pos_err " +
              std::to_string(source_pos_error.get());
     }
 
@@ -258,21 +258,34 @@ class Mixer {
     // Per-job state, used by the MixStage around a loop of potentially multiple calls to Mix().
     int64_t frames_produced;
 
-    // Maintained since the stream started, relative to dest or source reference clocks.
+    // These fields track our position in the destination and source streams. It may seem
+    // sufficient to track next_dest_frame and use that to compute our source position:
     //
-    // This tracks the upcoming destination frame number, for this stream. This should match the
-    // frame value passed to callers of Mix(), via ReadLock. If this is not the case, then there has
-    // been a discontinuity in the destination stream and our running positions should be reset.
+    //   next_source_frame =
+    //       dest_frames_to_frac_source_frames.Apply(next_dest_frame)
+    //
+    // In practice, there are two reasons this is not sufficient:
+    //
+    //   1. Since next_source_frame typically increments by a fractional step size, it needs
+    //      to be updated with more precision than supported by a Fixed alone. The full-precision
+    //      next_source_frame is actually:
+    //
+    //          next_source_frame + bookkeeping.next_src_pos_modulo / bookkeeping.denominator
+    //
+    //      Where the full-precision step size is:
+    //
+    //          bookkeeping.step_size + bookkeeping.rate_modulo / bookkeeping.denominator
+    //
+    //   2. When reconciling clocks using micro SRC, next_source_frame may deviate from the ideal
+    //      position (as determined by dest_frames_to_frac_source_frames) until the clocks are
+    //      synchronized and source_pos_error = 0.
+    //
+    // We use the dest_frames_to_frac_source_frames transformation only at discontinuities in the
+    // source stream.
     int64_t next_dest_frame = 0;
-
-    // This tracks the upcoming source fractional frame value for this stream. This value will be
-    // incremented by the amount of source consumed by each Mix() call, an amount is determined by
-    // step_size and rate_modulo/denominator. If next_dest_frame does not match the requested dest
-    // frame value, this stream's running position is reset by recalculating next_source_frame
-    // from the dest_frames_to_frac_source_frames TimelineFunction.
     Fixed next_source_frame{0};
 
-    // This field represents the difference between next_frac_souce_frame (maintained on a relative
+    // This field represents the difference between next_source_frame (maintained on a relative
     // basis after each Mix() call), and the clock-derived absolute source position (calculated from
     // the dest_frames_to_frac_source_frames TimelineFunction). Upon a dest frame discontinuity,
     // next_source_frame is reset to that clock-derived value, and this field is set to zero. This
