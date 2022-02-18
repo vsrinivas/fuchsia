@@ -150,7 +150,6 @@ protocol File2 {
     /// as if it was zeroed.
     ///
     /// This method requires the [`Rights.WRITE_BYTES`] right.
-    @transitional
     @selector("fuchsia.io/File.Resize")
     Resize(struct {
         length uint64;

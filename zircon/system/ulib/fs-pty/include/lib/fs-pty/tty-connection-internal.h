@@ -47,6 +47,7 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
                       SeekDeprecatedCompleter::Sync& completer) final;
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
   void Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) final;
+  void Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) final;
   void GetFlagsDeprecatedUseNode(GetFlagsDeprecatedUseNodeRequestView request,
                                  GetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;
   void SetFlagsDeprecatedUseNode(SetFlagsDeprecatedUseNodeRequestView request,

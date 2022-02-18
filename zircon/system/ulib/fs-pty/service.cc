@@ -153,6 +153,10 @@ void NullPtyDeviceImpl::Truncate(TruncateRequestView request, TruncateCompleter:
   ZX_ASSERT(false);
 }
 
+void NullPtyDeviceImpl::Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void NullPtyDeviceImpl::SetFlagsDeprecatedUseNode(
     SetFlagsDeprecatedUseNodeRequestView request,
     SetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
