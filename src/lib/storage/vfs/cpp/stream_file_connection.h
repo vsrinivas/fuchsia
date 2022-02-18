@@ -42,8 +42,9 @@ class StreamFileConnection final : public FileConnection {
   void WriteDeprecated(WriteDeprecatedRequestView request,
                        WriteDeprecatedCompleter::Sync& completer) final;
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
+  void WriteAtDeprecated(WriteAtDeprecatedRequestView request,
+                         WriteAtDeprecatedCompleter::Sync& completer) final;
   void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) final;
-  void WriteAt2(WriteAt2RequestView request, WriteAt2Completer::Sync& completer) final;
   void SeekDeprecated(SeekDeprecatedRequestView request,
                       SeekDeprecatedCompleter::Sync& completer) final;
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;

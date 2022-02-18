@@ -648,12 +648,12 @@ func (*fileState) Write(_ fidl.Context, data []uint8) (io.File2WriteResult, erro
 	return io.File2WriteResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (*fileState) WriteAt(_ fidl.Context, data []uint8, offset uint64) (int32, uint64, error) {
+func (*fileState) WriteAtDeprecated(_ fidl.Context, data []uint8, offset uint64) (int32, uint64, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (*fileState) WriteAt2(_ fidl.Context, data []uint8, offset uint64) (io.File2WriteAt2Result, error) {
-	return io.File2WriteAt2ResultWithErr(int32(zx.ErrNotSupported)), nil
+func (*fileState) WriteAt(_ fidl.Context, data []uint8, offset uint64) (io.File2WriteAtResult, error) {
+	return io.File2WriteAtResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (fState *fileState) SeekDeprecated(_ fidl.Context, offset int64, start io.SeekOrigin) (int32, uint64, error) {

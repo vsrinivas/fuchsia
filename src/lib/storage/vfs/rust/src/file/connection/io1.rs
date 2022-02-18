@@ -328,20 +328,20 @@ impl<T: 'static + File> FileConnection<T> {
                     responder.send(&mut Err(status.into_raw()))?;
                 }
             }
-            FileRequest::WriteAt { offset, data, responder } => {
+            FileRequest::WriteAtDeprecated { offset, data, responder } => {
                 fuchsia_trace::duration!(
                     "storage",
-                    "File::WriteAt",
+                    "File::WriteAtDeprecated",
                     "offset" => offset,
                     "bytes" => data.len() as u64
                 );
                 let (status, actual) = self.handle_write_at(offset, &data).await;
                 responder.send(status.into_raw(), actual)?;
             }
-            FileRequest::WriteAt2 { offset, data, responder } => {
+            FileRequest::WriteAt { offset, data, responder } => {
                 fuchsia_trace::duration!(
                     "storage",
-                    "File::WriteAt2",
+                    "File::WriteAt",
                     "offset" => offset,
                     "bytes" => data.len() as u64
                 );
@@ -1269,8 +1269,8 @@ mod tests {
     async fn test_write_at() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_WRITABLE);
         let data = "Hello, world!".as_bytes();
-        let (status, count) = env.proxy.write_at(data, 10).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let count =
+            env.proxy.write_at(data, 10).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         assert_eq!(count, data.len() as u64);
         let events = env.file.operations.lock().unwrap();
         assert_matches!(

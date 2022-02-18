@@ -887,9 +887,12 @@ mod tests {
         // Write something at the end of the gap.
         expected_buf[len - 1..].copy_from_slice("a".as_bytes());
 
-        let (status, _bytes_written) =
-            file.write_at("a".as_bytes(), (len - 1) as u64).await.expect("FIDL call failed");
-        Status::ok(status).expect("File write was successful");
+        let _: u64 = file
+            .write_at("a".as_bytes(), (len - 1) as u64)
+            .await
+            .expect("FIDL call failed")
+            .map_err(Status::from_raw)
+            .expect("File write was successful");
 
         let offset = file
             .seek(SeekOrigin::Start, 0)

@@ -732,19 +732,19 @@ zx_status_t zxio_remote_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t*
       rio, vector, vector_count, flags, out_actual,
       [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
-        fidl::SyncClientBuffer<fio::File::WriteAt2> fidl_buffer;
+        fidl::SyncClientBuffer<fio::File::WriteAt> fidl_buffer;
         const fidl::WireUnownedResult result =
             fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
                 .buffer(fidl_buffer.view())
-                ->WriteAt2(fidl::VectorView<uint8_t>::FromExternal(buffer, capacity), offset);
+                ->WriteAt(fidl::VectorView<uint8_t>::FromExternal(buffer, capacity), offset);
         if (!result.ok()) {
           return result.status();
         }
         const auto& response = result.value();
         switch (response.result.Which()) {
-          case fio::wire::File2WriteAt2Result::Tag::kErr:
+          case fio::wire::File2WriteAtResult::Tag::kErr:
             return response.result.err();
-          case fio::wire::File2WriteAt2Result::Tag::kResponse:
+          case fio::wire::File2WriteAtResult::Tag::kResponse:
             const size_t actual = response.result.response().actual_count;
             if (actual > capacity) {
               return ZX_ERR_IO;

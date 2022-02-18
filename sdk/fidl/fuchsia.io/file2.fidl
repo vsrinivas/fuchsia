@@ -134,9 +134,8 @@ protocol File2 {
     ///   ensuring write access without mutating the file.
     ///
     /// This method requires the [`Rights.WRITE_BYTES`] right.
-    @transitional
     @selector("fuchsia.io/File.WriteAt")
-    WriteAt2(struct {
+    WriteAt(struct {
         data Transfer;
         offset uint64;
     }) -> (struct {

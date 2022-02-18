@@ -148,11 +148,12 @@ void PtyClientDevice::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& c
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
+void PtyClientDevice::WriteAtDeprecated(WriteAtDeprecatedRequestView request,
+                                        WriteAtDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::WriteAt2(WriteAt2RequestView request, WriteAt2Completer::Sync& completer) {
+void PtyClientDevice::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

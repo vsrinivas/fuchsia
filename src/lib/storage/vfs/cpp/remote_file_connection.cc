@@ -187,15 +187,15 @@ zx_status_t RemoteFileConnection::WriteAtInternal(const void* data, size_t len, 
   return status;
 }
 
-void RemoteFileConnection::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
+void RemoteFileConnection::WriteAtDeprecated(WriteAtDeprecatedRequestView request,
+                                             WriteAtDeprecatedCompleter::Sync& completer) {
   size_t actual = 0;
   zx_status_t status =
       WriteAtInternal(request->data.data(), request->data.count(), request->offset, &actual);
   completer.Reply(status, actual);
 }
 
-void RemoteFileConnection::WriteAt2(WriteAt2RequestView request,
-                                    WriteAt2Completer::Sync& completer) {
+void RemoteFileConnection::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
   size_t actual = 0;
   zx_status_t status =
       WriteAtInternal(request->data.data(), request->data.count(), request->offset, &actual);

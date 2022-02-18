@@ -148,11 +148,13 @@ TEST(VmoFile, ReadOnlyNoSharing) {
   ASSERT_TRUE(file_ptr.is_bound());
 
   // Writes should fail, since the VMO is read-only.
-  std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-  zx_status_t status;
-  size_t actual;
-  EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &status, &actual));
-  EXPECT_NE(ZX_OK, status);
+  {
+    std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
+    fuchsia::io::File2_WriteAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
+    EXPECT_TRUE(result.is_err());
+    EXPECT_EQ(ZX_ERR_BAD_HANDLE, result.err());
+  }
 
   // Reading the VMO from offset 24 should match reading the file from offset 0.
   {
@@ -183,12 +185,13 @@ TEST(VmoFile, WritableNoSharing) {
   ASSERT_TRUE(file_ptr.is_bound());
 
   // Writes should succeed.
-  std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-  zx_status_t status;
-  size_t actual;
-  EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &status, &actual));
-  EXPECT_EQ(ZX_OK, status);
-  EXPECT_EQ(4u, actual);
+  {
+    std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
+    fuchsia::io::File2_WriteAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
+    EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    EXPECT_EQ(value.size(), result.response().actual_count);
+  }
 
   // Reading the VMO from offset 24 should match reading the file from offset 0.
   {
@@ -219,11 +222,13 @@ TEST(VmoFile, ReadOnlyDuplicate) {
   ASSERT_TRUE(file_ptr.is_bound());
 
   // Writes should fail, since the VMO is read-only.
-  std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-  zx_status_t status;
-  size_t actual;
-  EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &status, &actual));
-  EXPECT_NE(ZX_OK, status);
+  {
+    std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
+    fuchsia::io::File2_WriteAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
+    EXPECT_TRUE(result.is_err());
+    EXPECT_EQ(ZX_ERR_BAD_HANDLE, result.err());
+  }
 
   // Reading the VMO from offset 24 should match reading the file from offset 0.
   {
@@ -258,12 +263,13 @@ TEST(VmoFile, WritableDuplicate) {
   ASSERT_TRUE(file_ptr.is_bound());
 
   // Writes should succeed.
-  std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-  zx_status_t status;
-  size_t actual;
-  EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &status, &actual));
-  EXPECT_EQ(ZX_OK, status);
-  EXPECT_EQ(4u, actual);
+  {
+    std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
+    fuchsia::io::File2_WriteAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
+    EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    EXPECT_EQ(value.size(), result.response().actual_count);
+  }
 
   // Reading the VMO from offset 24 should match reading the file from offset 0.
   {
@@ -303,11 +309,13 @@ TEST(VmoFile, ReadOnlyCopyOnWrite) {
   ASSERT_TRUE(file_ptr.is_bound());
 
   // Writes should fail, since the VMO is read-only.
-  std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-  zx_status_t status;
-  size_t actual;
-  EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &status, &actual));
-  EXPECT_NE(ZX_OK, status);
+  {
+    std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
+    fuchsia::io::File2_WriteAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
+    EXPECT_TRUE(result.is_err());
+    EXPECT_EQ(ZX_ERR_BAD_HANDLE, result.err());
+  }
 
   // Reading the VMO should match reading the file.
   {
@@ -344,12 +352,13 @@ TEST(VmoFile, WritableCopyOnWrite) {
   ASSERT_TRUE(file_ptr.is_bound());
 
   // Writes should succeed.
-  std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-  zx_status_t status;
-  size_t actual;
-  EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &status, &actual));
-  EXPECT_EQ(ZX_OK, status);
-  EXPECT_EQ(4u, actual);
+  {
+    std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
+    fuchsia::io::File2_WriteAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
+    EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    EXPECT_EQ(value.size(), result.response().actual_count);
+  }
 
   // Reading the VMO should match reading the file.
   {
@@ -390,11 +399,13 @@ TEST(VmoFile, VmoWithNoRights) {
   ASSERT_TRUE(file_ptr.is_bound());
 
   // Writes should fail.
-  std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-  zx_status_t status;
-  size_t actual;
-  EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &status, &actual));
-  EXPECT_NE(ZX_OK, status);
+  {
+    std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
+    fuchsia::io::File2_WriteAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
+    EXPECT_TRUE(result.is_err());
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, result.err());
+  }
 
   // Reading should fail.
   {
@@ -423,12 +434,13 @@ TEST(VmoFile, UnalignedCopyOnWrite) {
   ASSERT_TRUE(file_ptr.is_bound());
 
   // Writes should succeed.
-  std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-  zx_status_t status;
-  size_t actual;
-  EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &status, &actual));
-  EXPECT_EQ(ZX_OK, status);
-  EXPECT_EQ(4u, actual);
+  {
+    std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
+    fuchsia::io::File2_WriteAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
+    EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    EXPECT_EQ(value.size(), result.response().actual_count);
+  }
 
   // Reading the VMO from offset 24 should match reading the file from offset 0.
   {

@@ -207,10 +207,10 @@ impl Connection {
             FileRequest::Write { data: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
-            FileRequest::WriteAt { offset: _, data: _, responder } => {
+            FileRequest::WriteAtDeprecated { offset: _, data: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED, 0)?;
             }
-            FileRequest::WriteAt2 { offset: _, data: _, responder } => {
+            FileRequest::WriteAt { offset: _, data: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
             FileRequest::SeekDeprecated { offset: _, start: _, responder } => {

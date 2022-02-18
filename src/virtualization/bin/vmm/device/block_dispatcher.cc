@@ -88,10 +88,10 @@ class FileBlockDispatcher : public BlockDispatcher {
       queue_.Dispatch([this, io_guard, len, off, at,
                        buf = std::move(buf)](RequestQueue::Request request) mutable {
         auto write_complete = [io_guard = std::move(io_guard), len, request = std::move(request)](
-                                  zx_status_t status, uint64_t actual) mutable {
-          if (status != ZX_OK) {
-            io_guard->SetStatus(status);
-          } else if (actual != len) {
+                                  fuchsia::io::File2_WriteAt_Result result) mutable {
+          if (result.is_err()) {
+            io_guard->SetStatus(result.err());
+          } else if (result.response().actual_count != len) {
             io_guard->SetStatus(ZX_ERR_IO);
           }
         };

@@ -122,14 +122,19 @@ class PseudoFileTest : public gtest::RealLoopFixture {
 
   void AssertWriteAt(fuchsia::io::FileSyncPtr& file, const std::string& str, int offset,
                      zx_status_t expected_status = ZX_OK, int expected_actual = -1) {
-    zx_status_t status;
-    uint64_t actual;
     std::vector<uint8_t> buffer;
     buffer.resize(str.length());
     std::copy(str.begin(), str.end(), buffer.begin());
-    file->WriteAt(buffer, offset, &status, &actual);
-    ASSERT_EQ(expected_status, status);
-    ASSERT_EQ(expected_actual == -1 ? str.length() : expected_actual, actual);
+    fuchsia::io::File2_WriteAt_Result result;
+    file->WriteAt(buffer, offset, &result);
+    if (expected_status == ZX_OK) {
+      ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+      ASSERT_EQ(expected_actual == -1 ? str.length() : expected_actual,
+                result.response().actual_count);
+    } else {
+      ASSERT_TRUE(result.is_err());
+      ASSERT_EQ(expected_status, result.err());
+    }
   }
 
   void AssertWrite(fuchsia::io::FileSyncPtr& file, const std::string& str,

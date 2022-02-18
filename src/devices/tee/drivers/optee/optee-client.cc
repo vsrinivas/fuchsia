@@ -1466,24 +1466,24 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
   while (bytes_left > 0) {
     uint64_t write_chunk_request = std::min(bytes_left, fuchsia_io::wire::kMaxBuf);
 
-    auto result = fidl::WireCall(file)->WriteAt(
+    const fidl::WireResult result = fidl::WireCall(file)->WriteAt(
         fidl::VectorView<uint8_t>::FromExternal(buffer, write_chunk_request), offset);
     if (!result.ok()) {
       LOG(ERROR, "failed to write to file (FIDL error: %s)", result.FormatDescription().c_str());
       message->set_return_code(TEEC_ERROR_GENERIC);
       return result.status();
     }
-
-    zx_status_t io_status = result->s;
-    if (io_status != ZX_OK) {
-      LOG(ERROR, "failed to write to file (IO status: %d)", io_status);
+    const fidl::WireResponse response = result.value();
+    if (response.result.is_err()) {
+      LOG(ERROR, "failed to write to file (IO status: %s)",
+          zx_status_get_string(response.result.err()));
       message->set_return_code(TEEC_ERROR_GENERIC);
-      return io_status;
+      return response.result.err();
     }
 
-    buffer += result->actual;
-    offset += result->actual;
-    bytes_left -= result->actual;
+    buffer += response.result.response().actual_count;
+    offset += response.result.response().actual_count;
+    bytes_left -= response.result.response().actual_count;
   }
 
   message->set_return_code(TEEC_SUCCESS);

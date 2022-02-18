@@ -666,9 +666,8 @@ async fn unsupported_per_package_source(source: PackageSource) {
         assert_eq!(result, Err(expected_status));
 
         // Verify writeAt() fails.
-        let (status, bytes_written) = file.write_at(b"potato", 0).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), expected_status);
-        assert_eq!(bytes_written, 0);
+        let status = file.write_at(b"potato", 0).await.unwrap().map_err(zx::Status::from_raw);
+        assert_eq!(status, Err(expected_status));
 
         // Verify setAttr() fails.
         assert_eq!(

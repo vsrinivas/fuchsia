@@ -45,8 +45,9 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void ReadAt(uint64_t count, uint64_t offset, ReadAtCallback callback) override;
   void WriteDeprecated(std::vector<uint8_t> data, WriteDeprecatedCallback callback) override;
   void Write(std::vector<uint8_t> data, WriteCallback callback) override;
+  void WriteAtDeprecated(std::vector<uint8_t> data, uint64_t offset,
+                         WriteAtDeprecatedCallback callback) override;
   void WriteAt(std::vector<uint8_t> data, uint64_t offset, WriteAtCallback callback) override;
-  void WriteAt2(std::vector<uint8_t> data, uint64_t offset, WriteAt2Callback callback) override;
   void SeekDeprecated(int64_t offset, fuchsia::io::SeekOrigin start,
                       SeekDeprecatedCallback callback) override;
   void Seek(fuchsia::io::SeekOrigin start, int64_t offset, SeekCallback callback) override;

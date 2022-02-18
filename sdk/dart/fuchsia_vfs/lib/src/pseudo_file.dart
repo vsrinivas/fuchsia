@@ -544,13 +544,14 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<File$WriteAt$Response> writeAt(Uint8List data, int offset) async {
+  Future<File$WriteAtDeprecated$Response> writeAtDeprecated(
+      Uint8List data, int offset) async {
     var response = _handleWrite(offset, data);
-    return File$WriteAt$Response(response.s, response.actual);
+    return File$WriteAtDeprecated$Response(response.s, response.actual);
   }
 
   @override
-  Future<int> writeAt2(Uint8List data, int offset) async {
+  Future<int> writeAt(Uint8List data, int offset) async {
     var response = _handleWrite(offset, data);
     if (response.s != ZX.OK) {
       throw fidl.MethodException(response.s);

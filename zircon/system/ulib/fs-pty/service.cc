@@ -131,11 +131,12 @@ void NullPtyDeviceImpl::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync&
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
+void NullPtyDeviceImpl::WriteAtDeprecated(WriteAtDeprecatedRequestView request,
+                                          WriteAtDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::WriteAt2(WriteAt2RequestView request, WriteAt2Completer::Sync& completer) {
+void NullPtyDeviceImpl::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

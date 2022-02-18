@@ -1464,8 +1464,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             }
             FileRequest::WriteDeprecated { responder, .. } => unsupported!(responder, 0)?,
             FileRequest::Write { responder, .. } => unsupported2!(responder)?,
-            FileRequest::WriteAt { responder, .. } => unsupported!(responder, 0)?,
-            FileRequest::WriteAt2 { responder, .. } => unsupported2!(responder)?,
+            FileRequest::WriteAtDeprecated { responder, .. } => unsupported!(responder, 0)?,
+            FileRequest::WriteAt { responder, .. } => unsupported2!(responder)?,
             FileRequest::SeekDeprecated { offset, start, responder } => {
                 let new_offset = self.handle_seek_request(connection, start, offset);
                 responder.send(zx::sys::ZX_OK, new_offset)?;

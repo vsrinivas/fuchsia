@@ -23,13 +23,18 @@ namespace fio = fuchsia_io;
 namespace {
 
 void TryFilesystemOperations(fidl::UnownedClientEnd<fio::File> client_end) {
-  const char* golden = "foobar";
-  fidl::VectorView payload = fidl::VectorView<uint8_t>::FromExternal(
-      const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(golden)), strlen(golden));
-  auto write_result = fidl::WireCall(client_end)->WriteAt(payload, 0);
+  constexpr std::string_view payload("foobar");
+  const fidl::WireResult write_result =
+      fidl::WireCall(client_end)
+          ->WriteAt(
+              fidl::VectorView<uint8_t>::FromExternal(
+                  reinterpret_cast<uint8_t*>(const_cast<char*>(payload.data())), payload.size()),
+              0);
   ASSERT_EQ(write_result.status(), ZX_OK);
-  ASSERT_EQ(write_result->s, ZX_OK);
-  ASSERT_EQ(write_result->actual, strlen(golden));
+  const fidl::WireResponse write_response = write_result.value();
+  ASSERT_TRUE(write_response.result.is_response(), "%s",
+              zx_status_get_string(write_response.result.err()));
+  ASSERT_EQ(write_response.result.response().actual_count, payload.size());
 
   const fidl::WireResult read_result = fidl::WireCall(client_end)->ReadAt(256, 0);
   ASSERT_OK(read_result.status());
@@ -37,8 +42,7 @@ void TryFilesystemOperations(fidl::UnownedClientEnd<fio::File> client_end) {
   ASSERT_TRUE(read_response.result.is_response(), "%s",
               zx_status_get_string(read_response.result.err()));
   const fidl::VectorView data = read_result->result.response().data;
-  ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
-            std::string_view(golden));
+  ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()), payload);
 }
 
 void TryFilesystemOperations(zx::unowned_channel channel) {

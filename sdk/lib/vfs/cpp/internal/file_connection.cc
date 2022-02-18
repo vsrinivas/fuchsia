@@ -138,7 +138,8 @@ void FileConnection::Write(std::vector<uint8_t> data, WriteCallback callback) {
   });
 }
 
-void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset, WriteAtCallback callback) {
+void FileConnection::WriteAtDeprecated(std::vector<uint8_t> data, uint64_t offset,
+                                       WriteAtDeprecatedCallback callback) {
   if (!Flags::IsWritable(flags())) {
     callback(ZX_ERR_BAD_HANDLE, 0);
     return;
@@ -148,16 +149,16 @@ void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset, WriteAt
   callback(status, actual);
 }
 
-void FileConnection::WriteAt2(std::vector<uint8_t> data, uint64_t offset,
-                              WriteAt2Callback callback) {
-  WriteAt(data, offset, [callback = std::move(callback)](zx_status_t status, uint64_t actual) {
-    if (status != ZX_OK) {
-      callback(fpromise::error(status));
-    } else {
-      callback(fuchsia::io::File2_WriteAt2_Result::WithResponse(
-          fuchsia::io::File2_WriteAt2_Response(actual)));
-    }
-  });
+void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset, WriteAtCallback callback) {
+  WriteAtDeprecated(data, offset,
+                    [callback = std::move(callback)](zx_status_t status, uint64_t actual) {
+                      if (status != ZX_OK) {
+                        callback(fpromise::error(status));
+                      } else {
+                        callback(fuchsia::io::File2_WriteAt_Result::WithResponse(
+                            fuchsia::io::File2_WriteAt_Response(actual)));
+                      }
+                    });
 }
 
 void FileConnection::SeekDeprecated(int64_t new_offset, fuchsia::io::SeekOrigin seek,

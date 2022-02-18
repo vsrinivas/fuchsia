@@ -183,10 +183,13 @@ macro_rules! assert_write_at {
     ($proxy:expr, $offset:expr, $content:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let (status, len_written) =
-            $proxy.write_at($content.as_bytes(), $offset).await.expect("write failed");
+        let len_written = $proxy
+            .write_at($content.as_bytes(), $offset)
+            .await
+            .expect("write failed")
+            .map_err(Status::from_raw)
+            .expect("write error");
 
-        assert_eq!(Status::from_raw(status), Status::OK);
         assert_eq!(len_written, $content.len() as u64);
     }};
 }
@@ -197,11 +200,13 @@ macro_rules! assert_write_at_err {
     ($proxy:expr, $offset:expr, $content:expr, $expected_status:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let (status, len_written) =
-            $proxy.write_at($content.as_bytes(), $offset).await.expect("write failed");
+        let result = $proxy
+            .write_at($content.as_bytes(), $offset)
+            .await
+            .expect("write failed")
+            .map_err(Status::from_raw);
 
-        assert_eq!(Status::from_raw(status), $expected_status);
-        assert_eq!(len_written, 0);
+        assert_eq!(result, Err($expected_status));
     }};
 }
 

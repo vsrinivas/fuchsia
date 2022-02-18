@@ -254,7 +254,7 @@ class TestServerChannel final : public CloseCountingFileServer {
     completer.ReplySuccess(actual);
   }
 
-  void WriteAt2(WriteAt2RequestView request, WriteAt2Completer::Sync& completer) override {
+  void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) override {
     if (request->data.count() > fio::wire::kMaxBuf) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;

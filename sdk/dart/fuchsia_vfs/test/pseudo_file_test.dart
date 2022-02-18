@@ -88,9 +88,15 @@ void main() {
   Future<void> _assertWriteAt(
       FileProxy proxy, Uint8List content, int offset, int expectedWrittenLen,
       {expectedStatus = ZX.OK}) async {
-    var writeAtResponse = await proxy.writeAt(content, offset);
-    expect(writeAtResponse.s, expectedStatus);
-    expect(writeAtResponse.actual, expectedWrittenLen);
+    if (expectedStatus == ZX.OK) {
+      final actualCount = await proxy.writeAt(content, offset);
+      expect(actualCount, expectedWrittenLen);
+    } else {
+      await expectLater(
+          proxy.writeAt(content, offset),
+          throwsA(isA<MethodException>()
+              .having((e) => e.value, 'value', equals(expectedStatus))));
+    }
   }
 
   group('pseudo file creation validation: ', () {

@@ -469,7 +469,7 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::WriteAt { offset, data, responder } => {
+            FileRequest::WriteAtDeprecated { offset, data, responder } => {
                 self.handle_write_at(offset, &data, |status, actual| {
                     // Seems like our API is not really designed for 128 bit machines. If data
                     // contains more than 16EB, we may not be returning the correct number here.
@@ -477,7 +477,7 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::WriteAt2 { offset, data, responder } => {
+            FileRequest::WriteAt { offset, data, responder } => {
                 self.handle_write_at(offset, &data, |status, actual| {
                     // Seems like our API is not really designed for 128 bit machines. If data
                     // contains more than 16EB, we may not be returning the correct number here.

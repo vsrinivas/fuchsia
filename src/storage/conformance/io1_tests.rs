@@ -1021,8 +1021,12 @@ async fn file_write_at_with_sufficient_rights() {
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
-        let (status, _actual) = file.write_at("".as_bytes(), 0).await.expect("write_at failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let _: u64 = file
+            .write_at("".as_bytes(), 0)
+            .await
+            .expect("write_at failed")
+            .map_err(zx::Status::from_raw)
+            .expect("write_at error");
     }
 }
 
@@ -1035,8 +1039,12 @@ async fn file_write_at_with_insufficient_rights() {
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
-        let (status, _actual) = file.write_at("".as_bytes(), 0).await.expect("write_at failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
+        let result = file
+            .write_at("".as_bytes(), 0)
+            .await
+            .expect("write_at failed")
+            .map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::BAD_HANDLE));
     }
 }
 

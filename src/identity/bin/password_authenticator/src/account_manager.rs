@@ -1514,8 +1514,12 @@ mod test {
         )
         .await
         .expect("create file");
-        let (status, bytes_written) = file.write_at(expected_content, 0).await.expect("file write");
-        Status::ok(status).expect("file write failed");
+        let bytes_written = file
+            .write_at(expected_content, 0)
+            .await
+            .expect("file write")
+            .map_err(Status::from_raw)
+            .expect("file write failed");
         assert_eq!(bytes_written, expected_content.len() as u64);
 
         let actual_content = io_util::file::read(&file).await.expect("read file");
@@ -1552,8 +1556,12 @@ mod test {
         )
         .await
         .expect("create file");
-        let (status, bytes_written) = file.write_at(expected_content, 0).await.expect("file write");
-        Status::ok(status).expect("file write failed");
+        let bytes_written = file
+            .write_at(expected_content, 0)
+            .await
+            .expect("file write")
+            .map_err(Status::from_raw)
+            .expect("file write failed");
         assert_eq!(bytes_written, expected_content.len() as u64);
 
         let actual_content = io_util::file::read(&file).await.expect("read file");
