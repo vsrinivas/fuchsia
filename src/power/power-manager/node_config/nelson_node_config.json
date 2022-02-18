@@ -119,5 +119,9 @@
         "thermistor_audio"
       ]
     }
+  },
+  {
+    "type": "SystemPowerModeHandler",
+    "name": "system_power_mode_handler"
   }
 ]
