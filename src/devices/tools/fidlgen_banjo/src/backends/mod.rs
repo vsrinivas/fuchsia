@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::fidl::FidlIr, anyhow::Error, std::io};
+use {anyhow::Error, fidl_ir_lib::fidl::FidlIr, std::io};
 
 pub use self::c::CBackend;
 pub use self::cpp::CppBackend;

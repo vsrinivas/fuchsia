@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::fidl::{self, *},
     anyhow::{anyhow, Error},
+    fidl_ir_lib::fidl::{self, *},
     heck::SnakeCase,
     std::iter,
 };

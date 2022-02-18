@@ -14,7 +14,8 @@ macro_rules! codegen_test {
     ( $id:ident, $backend: ident, $golden_file:expr ) => {
         #[test]
         fn $id() -> Result<(), anyhow::Error> {
-            use fidlgen_banjo_lib::{backends, fidl::FidlIr};
+            use fidl_ir_lib::fidl::FidlIr;
+            use fidlgen_banjo_lib::backends;
             use pretty_assertions::assert_eq;
 
             let mut ir: FidlIr = serde_json::from_str(test_irs::$id::IR)?;

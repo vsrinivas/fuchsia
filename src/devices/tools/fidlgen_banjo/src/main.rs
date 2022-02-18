@@ -4,7 +4,8 @@
 
 use {
     anyhow::Error,
-    fidlgen_banjo_lib::{backends::*, fidl::FidlIr},
+    fidl_ir_lib::fidl::*,
+    fidlgen_banjo_lib::backends::*,
     std::{fs::File, io::BufReader, path::PathBuf, str::FromStr},
     structopt::StructOpt,
 };

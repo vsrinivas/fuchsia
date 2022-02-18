@@ -11,8 +11,8 @@ use {
         },
         Backend,
     },
-    crate::fidl::*,
     anyhow::{anyhow, Context, Error},
+    fidl_ir_lib::fidl::*,
     std::io,
     std::iter,
 };

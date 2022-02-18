@@ -14,7 +14,7 @@ rustc_binary("parser_bin") {
   source_root = "main.rs"
 
   deps = [
-    "//src/devices/tools/fidlgen_banjo:lib",
+    "//src/devices/lib/fidl-ir:lib",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",

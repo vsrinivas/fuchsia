@@ -7,8 +7,8 @@ use {
         util::{get_declarations, name_buffer, name_size, to_c_name, Decl},
         Backend,
     },
-    crate::fidl::*,
     anyhow::{anyhow, Error},
+    fidl_ir_lib::fidl::*,
     std::collections::HashSet,
     std::io,
 };

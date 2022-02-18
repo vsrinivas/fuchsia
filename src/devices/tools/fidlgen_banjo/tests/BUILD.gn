@@ -58,6 +58,7 @@ if (current_toolchain == host_toolchain) {
     deps = [
       ":irs",
       "..:lib",
+      "//src/devices/lib/fidl-ir:lib",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:pretty_assertions",
       "//third_party/rust_crates:serde_json",

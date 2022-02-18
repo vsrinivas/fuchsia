@@ -1,0 +1,26 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("lib") {
+  name = "fidl_ir_lib"
+
+  with_unit_tests = true
+
+  sources = [
+    "src/fidl.rs",
+    "src/lib.rs",
+  ]
+
+  source_root = "src/lib.rs"
+
+  deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:heck",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:serde",
+  ]
+}

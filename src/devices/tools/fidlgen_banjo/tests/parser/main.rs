@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    fidlgen_banjo_lib::fidl::FidlIr,
+    fidl_ir_lib::fidl::FidlIr,
     std::{
         fs::{write, File},
         path::PathBuf,

@@ -29,6 +29,7 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
+    "//src/devices/lib/fidl-ir:lib",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:structopt",
@@ -49,7 +50,6 @@ rustc_library("lib") {
     "src/backends/mod.rs",
     "src/backends/rust.rs",
     "src/backends/util.rs",
-    "src/fidl.rs",
     "src/lib.rs",
   ]
 
@@ -86,6 +86,7 @@ rustc_library("lib") {
   source_root = "src/lib.rs"
 
   deps = [
+    "//src/devices/lib/fidl-ir:lib",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:heck",
     "//third_party/rust_crates:lazy_static",

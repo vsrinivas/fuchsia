@@ -4,8 +4,8 @@
 
 use {
     super::{util::*, *},
-    crate::fidl::*,
     anyhow::Error,
+    fidl_ir_lib::fidl::*,
     std::collections::HashSet,
     std::io,
     std::iter,
