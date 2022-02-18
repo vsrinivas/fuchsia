@@ -417,13 +417,14 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<File$ReadAt$Response> readAt(int count, int offset) async {
+  Future<File$ReadAtDeprecated$Response> readAtDeprecated(
+      int count, int offset) async {
     var response = _handleRead(count, offset);
-    return File$ReadAt$Response(response.s, response.data);
+    return File$ReadAtDeprecated$Response(response.s, response.data);
   }
 
   @override
-  Future<Uint8List> readAt2(int count, int offset) async {
+  Future<Uint8List> readAt(int count, int offset) async {
     var response = _handleRead(count, offset);
     if (response.s != ZX.OK) {
       throw fidl.MethodException(response.s);

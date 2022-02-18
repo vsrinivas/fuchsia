@@ -626,16 +626,16 @@ func (fState *fileState) readAt(count uint64, offset uint64) (int32, []uint8, er
 	return int32(zx.ErrOk), b, nil
 }
 
-func (fState *fileState) ReadAt(_ fidl.Context, count uint64, offset uint64) (int32, []uint8, error) {
+func (fState *fileState) ReadAtDeprecated(_ fidl.Context, count uint64, offset uint64) (int32, []uint8, error) {
 	return fState.readAt(count, offset)
 }
 
-func (fState *fileState) ReadAt2(_ fidl.Context, count uint64, offset uint64) (io.File2ReadAt2Result, error) {
+func (fState *fileState) ReadAt(_ fidl.Context, count uint64, offset uint64) (io.File2ReadAtResult, error) {
 	s, b, err := fState.readAt(count, offset)
 	if s != int32(zx.ErrOk) {
-		return io.File2ReadAt2ResultWithErr(s), err
+		return io.File2ReadAtResultWithErr(s), err
 	}
-	return io.File2ReadAt2ResultWithResponse(io.File2ReadAt2Response{
+	return io.File2ReadAtResultWithResponse(io.File2ReadAtResponse{
 		Data: b,
 	}), err
 }

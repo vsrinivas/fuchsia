@@ -208,7 +208,7 @@ class TestServerChannel final : public TestServerBase {
     completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buffer, actual));
   }
 
-  void ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) override {
+  void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) override {
     if (request->count > fio::wire::kMaxTransferSize) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;

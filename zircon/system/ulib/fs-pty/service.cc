@@ -122,11 +122,12 @@ void NullPtyDeviceImpl::GetFlagsDeprecatedUseNode(
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
+void NullPtyDeviceImpl::ReadAtDeprecated(ReadAtDeprecatedRequestView request,
+                                         ReadAtDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) {
+void NullPtyDeviceImpl::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

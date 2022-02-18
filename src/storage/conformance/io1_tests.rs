@@ -951,8 +951,12 @@ async fn file_read_at_with_sufficient_rights() {
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
-        let (status, _data) = file.read_at(0, 0).await.expect("read_at failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let _: Vec<u8> = file
+            .read_at(0, 0)
+            .await
+            .expect("read_at failed")
+            .map_err(zx::Status::from_raw)
+            .expect("read_at error");
     }
 }
 
@@ -966,8 +970,9 @@ async fn file_read_at_with_insufficient_rights() {
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
-        let (status, _data) = file.read_at(0, 0).await.expect("read_at failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
+        let result =
+            file.read_at(0, 0).await.expect("read_at failed").map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::BAD_HANDLE))
     }
 }
 

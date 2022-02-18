@@ -1448,14 +1448,14 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     &mut self.handle_read_request(connection, count).map_err(zx::Status::into_raw),
                 )?;
             }
-            FileRequest::ReadAt { count, offset, responder } => {
+            FileRequest::ReadAtDeprecated { count, offset, responder } => {
                 let result = self.handle_read_at_request(connection, count, offset);
                 match result {
                     Ok(data) => responder.send(zx::sys::ZX_OK, &data)?,
                     Err(s) => responder.send(s.into_raw(), &[])?,
                 }
             }
-            FileRequest::ReadAt2 { count, offset, responder } => {
+            FileRequest::ReadAt { count, offset, responder } => {
                 responder.send(
                     &mut self
                         .handle_read_at_request(connection, count, offset)

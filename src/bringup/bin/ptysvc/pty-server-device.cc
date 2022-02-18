@@ -102,11 +102,12 @@ void PtyServerDevice::GetFlagsDeprecatedUseNode(
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
+void PtyServerDevice::ReadAtDeprecated(ReadAtDeprecatedRequestView request,
+                                       ReadAtDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) {
+void PtyServerDevice::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

@@ -109,7 +109,8 @@ zx_status_t StreamFileConnection::ReadAtInternal(void* data, size_t len, size_t 
   return status;
 }
 
-void StreamFileConnection::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
+void StreamFileConnection::ReadAtDeprecated(ReadAtDeprecatedRequestView request,
+                                            ReadAtDeprecatedCompleter::Sync& completer) {
   uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
   zx_status_t status = ReadAtInternal(data, request->count, request->offset, &actual);
@@ -120,7 +121,7 @@ void StreamFileConnection::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sy
   }
 }
 
-void StreamFileConnection::ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) {
+void StreamFileConnection::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
   uint8_t data[fio::wire::kMaxBuf];
   size_t actual = 0;
   zx_status_t status = ReadAtInternal(data, request->count, request->offset, &actual);

@@ -153,12 +153,13 @@ void BlockDeviceAdapter::WriteAt(const fbl::Array<uint8_t>& data, uint64_t offse
 }
 
 void BlockDeviceAdapter::ReadAt(uint64_t offset, fbl::Array<uint8_t>* out_data) {
-  fidl::WireResult<fuchsia_io::File::ReadAt> result =
+  const fidl::WireResult result =
       fidl::WireCall<fuchsia_io::File>(device()->channel())->ReadAt(out_data->size(), offset);
-
   ASSERT_OK(result.status(), "Failed to communicate with block device.");
-  ASSERT_OK(result->s);
-  memcpy(out_data->data(), result->data.data(), result->data.count());
+  const fidl::WireResponse response = result.value();
+  ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
+  const fidl::VectorView data = response.result.response().data;
+  memcpy(out_data->data(), data.data(), data.count());
 }
 
 void BlockDeviceAdapter::CheckContentsAt(const fbl::Array<uint8_t>& data, uint64_t offset) {

@@ -195,10 +195,10 @@ impl Connection {
             FileRequest::Read { count: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
-            FileRequest::ReadAt { offset: _, count: _, responder } => {
+            FileRequest::ReadAtDeprecated { offset: _, count: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED, &[])?;
             }
-            FileRequest::ReadAt2 { offset: _, count: _, responder } => {
+            FileRequest::ReadAt { offset: _, count: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
             FileRequest::WriteDeprecated { data: _, responder } => {

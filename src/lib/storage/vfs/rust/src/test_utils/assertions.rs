@@ -92,10 +92,13 @@ macro_rules! assert_read_at {
     ($proxy:expr, $offset:expr, $expected:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let (status, content) =
-            $proxy.read_at($expected.len() as u64, $offset).await.expect("read failed");
+        let content = $proxy
+            .read_at($expected.len() as u64, $offset)
+            .await
+            .expect("read failed")
+            .map_err(Status::from_raw)
+            .expect("read error");
 
-        assert_eq!(Status::from_raw(status), Status::OK);
         assert_eq!(content.as_slice(), $expected.as_bytes());
     }};
 }
@@ -106,10 +109,10 @@ macro_rules! assert_read_at_err {
     ($proxy:expr, $offset:expr, $expected_status:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let (status, content) = $proxy.read_at(100, $offset).await.expect("read failed");
+        let result =
+            $proxy.read_at(100, $offset).await.expect("read failed").map_err(Status::from_raw);
 
-        assert_eq!(Status::from_raw(status), $expected_status);
-        assert_eq!(content.len(), 0);
+        assert_eq!(result, Err($expected_status));
     }};
 }
 

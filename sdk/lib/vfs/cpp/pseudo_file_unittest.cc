@@ -151,13 +151,17 @@ class PseudoFileTest : public gtest::RealLoopFixture {
 
   void AssertReadAt(fuchsia::io::FileSyncPtr& file, int offset, int count,
                     const std::string& expected_str, zx_status_t expected_status = ZX_OK) {
-    zx_status_t status;
-    std::vector<uint8_t> buffer;
-    file->ReadAt(count, offset, &status, &buffer);
-    ASSERT_EQ(expected_status, status);
-    std::string str(buffer.size(), 0);
-    std::copy(buffer.begin(), buffer.end(), str.begin());
-    ASSERT_EQ(expected_str, str);
+    fuchsia::io::File2_ReadAt_Result result;
+    file->ReadAt(count, offset, &result);
+    if (expected_status == ZX_OK) {
+      ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+      const std::vector<uint8_t>& data = result.response().data;
+      ASSERT_EQ(expected_str,
+                std::string_view(reinterpret_cast<const char*>(data.data()), data.size()));
+    } else {
+      ASSERT_TRUE(result.is_err());
+      ASSERT_EQ(expected_status, result.err());
+    }
   }
 
   void AssertRead(fuchsia::io::FileSyncPtr& file, int count, const std::string& expected_str,

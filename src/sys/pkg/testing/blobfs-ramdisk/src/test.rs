@@ -113,8 +113,11 @@ async fn write_blob(blob: &FileProxy, bytes: &[u8]) -> Result<(), Error> {
 
 /// Verify the contents of a blob, or return any non-ok zx status encountered along the way.
 async fn verify_blob(blob: &FileProxy, expected_bytes: &[u8]) -> Result<(), Status> {
-    let (status, actual_bytes) = blob.read_at(expected_bytes.len() as u64 + 1, 0).await.unwrap();
-    Status::ok(status)?;
+    let actual_bytes = blob
+        .read_at(expected_bytes.len() as u64 + 1, 0)
+        .await
+        .unwrap()
+        .map_err(Status::from_raw)?;
     assert_eq!(actual_bytes, expected_bytes);
     Ok(())
 }
@@ -315,9 +318,9 @@ async fn open_truncate_open_read_fails() -> Result<(), Error> {
     let (blob1, _) =
         open_blob(&root_dir, BLOB_MERKLE, fidl_fuchsia_io::OPEN_RIGHT_READABLE).await?;
 
-    let (status, _actual_bytes) = blob1.read_at(1, 0).await?;
+    let result = blob1.read_at(1, 0).await?.map_err(zx::Status::from_raw);
 
-    assert_eq!(Status::from_raw(status), zx::Status::BAD_STATE);
+    assert_eq!(result, Err(zx::Status::BAD_STATE));
 
     blobfs_server.stop().await
 }

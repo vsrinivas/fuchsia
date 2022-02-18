@@ -55,17 +55,20 @@ class FileBlockDispatcher : public BlockDispatcher {
     for (uint64_t at = 0; at < size; at += fuchsia::io::MAX_BUF) {
       auto len = std::min<uint64_t>(size - at, fuchsia::io::MAX_BUF);
       queue_.Dispatch([this, io_guard, len, addr, at, off](RequestQueue::Request request) mutable {
-        auto read_complete = [io_guard = std::move(io_guard), len, begin = addr + at,
-                              request = std::move(request)](zx_status_t status,
-                                                            std::vector<uint8_t> buf) mutable {
-          if (status != ZX_OK) {
-            io_guard->SetStatus(status);
-          } else if (buf.size() != len) {
-            io_guard->SetStatus(ZX_ERR_IO);
-          } else {
-            memcpy(begin, buf.data(), buf.size());
-          }
-        };
+        auto read_complete =
+            [io_guard = std::move(io_guard), len, begin = addr + at,
+             request = std::move(request)](fuchsia::io::File2_ReadAt_Result result) mutable {
+              if (result.is_err()) {
+                io_guard->SetStatus(result.err());
+              } else {
+                const std::vector<uint8_t>& buf = result.response().data;
+                if (buf.size() != len) {
+                  io_guard->SetStatus(ZX_ERR_IO);
+                } else {
+                  memcpy(begin, buf.data(), buf.size());
+                }
+              }
+            };
         file_->ReadAt(len, off + at, std::move(read_complete));
       });
     }

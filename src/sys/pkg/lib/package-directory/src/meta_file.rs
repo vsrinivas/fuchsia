@@ -4,7 +4,7 @@
 
 use {
     crate::root_dir::RootDir,
-    anyhow::{anyhow, Context as _},
+    anyhow::Context as _,
     async_trait::async_trait,
     fidl::{endpoints::ServerEnd, HandleBased as _},
     fidl_fuchsia_io::{
@@ -124,15 +124,20 @@ impl vfs::file::File for MetaFile {
             crate::usize_to_u64_safe(buffer.len()),
             self.location.length - offset_chunk,
         );
-        let (status, bytes) =
-            self.root_dir.meta_far.read_at(count, offset_far).await.map_err(|e| {
-                fx_log_err!("meta.far read_at fidl error: {:#}", anyhow!(e));
+        let bytes = self
+            .root_dir
+            .meta_far
+            .read_at(count, offset_far)
+            .await
+            .map_err(|e: fidl::Error| {
+                fx_log_err!("meta.far read_at fidl error: {:#}", e);
                 zx::Status::INTERNAL
+            })?
+            .map_err(zx::Status::from_raw)
+            .map_err(|e: zx::Status| {
+                fx_log_err!("meta.far read_at protocol error: {:#}", e);
+                e
             })?;
-        let () = zx::Status::ok(status).map_err(|e| {
-            fx_log_err!("meta.far read_at protocol error: {:#}", anyhow!(e.clone()));
-            e
-        })?;
         let () = buffer[..bytes.len()].copy_from_slice(&bytes);
         Ok(crate::usize_to_u64_safe(bytes.len()))
     }
@@ -154,8 +159,8 @@ impl vfs::file::File for MetaFile {
             return Err(zx::Status::NOT_SUPPORTED);
         }
 
-        let vmo = self.vmo().await.map_err(|e| {
-            fx_log_err!("Failed to get MetaFile VMO during get_buffer: {:#}", anyhow!(e));
+        let vmo = self.vmo().await.map_err(|e: anyhow::Error| {
+            fx_log_err!("Failed to get MetaFile VMO during get_buffer: {:#}", e);
             zx::Status::INTERNAL
         })?;
 
@@ -166,11 +171,8 @@ impl vfs::file::File for MetaFile {
                     0, /*offset*/
                     self.location.length,
                 )
-                .map_err(|e| {
-                    fx_log_err!(
-                        "Failed to create private child VMO during get_buffer: {:#}",
-                        anyhow!(e.clone())
-                    );
+                .map_err(|e: zx::Status| {
+                    fx_log_err!("Failed to create private child VMO during get_buffer: {:#}", e);
                     e
                 })?;
             Ok(fidl_fuchsia_mem::Buffer { vmo, size: self.location.length })
@@ -179,11 +181,8 @@ impl vfs::file::File for MetaFile {
                 | zx::Rights::MAP
                 | zx::Rights::PROPERTY
                 | if flags & VMO_FLAG_READ != 0 { zx::Rights::READ } else { zx::Rights::NONE };
-            let vmo = vmo.duplicate_handle(rights).map_err(|e| {
-                fx_log_err!(
-                    "Failed to clone VMO handle during get_buffer: {:#}",
-                    anyhow!(e.clone())
-                );
+            let vmo = vmo.duplicate_handle(rights).map_err(|e: zx::Status| {
+                fx_log_err!("Failed to clone VMO handle during get_buffer: {:#}", e);
                 e
             })?;
             Ok(fidl_fuchsia_mem::Buffer { vmo, size: self.location.length })

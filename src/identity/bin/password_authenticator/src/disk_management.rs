@@ -360,9 +360,11 @@ impl DevBlockDevice {
         let file_proxy = self.0.clone_as::<FileMarker>()?;
         // Issue a read of block_size bytes, since block devices only like being read along block
         // boundaries.
-        let res = file_proxy.read_at(block_size, 0).await?;
-        zx::Status::ok(res.0).map_err(DiskError::ReadBlockHeaderFailed)?;
-        Ok(res.1)
+        file_proxy
+            .read_at(block_size, 0)
+            .await?
+            .map_err(zx::Status::from_raw)
+            .map_err(DiskError::ReadBlockHeaderFailed)
     }
 
     async fn block_size(&self) -> Result<u64, DiskError> {
@@ -688,18 +690,17 @@ pub mod test {
                             // Only the first
                             assert_eq!(offset, 0, "only the first block should be read");
 
-                            match &self.first_block {
-                                Ok(data) => {
-                                    assert_eq!(
-                                        data.len(),
-                                        BLOCK_SIZE,
-                                        "mock block data must be of size BLOCK_SIZE"
-                                    );
-                                    responder.send(0, data)
-                                }
-                                Err(s) => responder.send(*s, &[0; 0]),
+                            if let Ok(data) = &self.first_block {
+                                assert_eq!(
+                                    data.len(),
+                                    BLOCK_SIZE,
+                                    "mock block data must be of size BLOCK_SIZE"
+                                );
                             }
-                            .expect("failed to send File.ReadAt response");
+                            // Silly clone required because FIDL bindings want mutability.
+                            responder
+                                .send(&mut self.first_block.clone())
+                                .expect("failed to send File.ReadAt response");
                         }
 
                         // fuchsia.io.Node methods

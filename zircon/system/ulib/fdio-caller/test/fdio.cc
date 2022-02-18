@@ -24,21 +24,21 @@ namespace {
 
 void TryFilesystemOperations(fidl::UnownedClientEnd<fio::File> client_end) {
   const char* golden = "foobar";
-  auto write_result =
-      fidl::WireCall(client_end)
-          ->WriteAt(
-              fidl::VectorView<uint8_t>::FromExternal(
-                  const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(golden)), strlen(golden)),
-              0);
+  fidl::VectorView payload = fidl::VectorView<uint8_t>::FromExternal(
+      const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(golden)), strlen(golden));
+  auto write_result = fidl::WireCall(client_end)->WriteAt(payload, 0);
   ASSERT_EQ(write_result.status(), ZX_OK);
   ASSERT_EQ(write_result->s, ZX_OK);
   ASSERT_EQ(write_result->actual, strlen(golden));
 
-  auto read_result = fidl::WireCall(client_end)->ReadAt(256, 0);
-  ASSERT_EQ(read_result.status(), ZX_OK);
-  ASSERT_EQ(read_result->s, ZX_OK);
-  ASSERT_EQ(read_result->data.count(), strlen(golden));
-  ASSERT_EQ(memcmp(read_result->data.data(), golden, strlen(golden)), 0);
+  const fidl::WireResult read_result = fidl::WireCall(client_end)->ReadAt(256, 0);
+  ASSERT_OK(read_result.status());
+  const fidl::WireResponse read_response = read_result.value();
+  ASSERT_TRUE(read_response.result.is_response(), "%s",
+              zx_status_get_string(read_response.result.err()));
+  const fidl::VectorView data = read_result->result.response().data;
+  ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
+            std::string_view(golden));
 }
 
 void TryFilesystemOperations(zx::unowned_channel channel) {

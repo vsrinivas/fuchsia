@@ -32,8 +32,9 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
   void ReadDeprecated(ReadDeprecatedRequestView request,
                       ReadDeprecatedCompleter::Sync& completer) final;
   void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
+  void ReadAtDeprecated(ReadAtDeprecatedRequestView request,
+                        ReadAtDeprecatedCompleter::Sync& completer) final;
   void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) final;
-  void ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) final;
 
   void WriteDeprecated(WriteDeprecatedRequestView request,
                        WriteDeprecatedCompleter::Sync& completer) final;

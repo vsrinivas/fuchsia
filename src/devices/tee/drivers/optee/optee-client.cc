@@ -1405,22 +1405,22 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
     uint64_t read_chunk_request = std::min(bytes_left, fuchsia_io::wire::kMaxBuf);
     uint64_t read_chunk_actual = 0;
 
-    auto result =
+    const fidl::WireUnownedResult result =
         fidl::WireCall(file).buffer(fidl_buffer.view())->ReadAt(read_chunk_request, offset);
     if (!result.ok()) {
       LOG(ERROR, "failed to read from file (FIDL error: %s)", result.FormatDescription().c_str());
       message->set_return_code(TEEC_ERROR_GENERIC);
       return result.status();
     }
-
-    zx_status_t io_status = result->s;
-    if (io_status != ZX_OK) {
-      LOG(ERROR, "failed to read from file (IO status: %d)", io_status);
+    const fidl::WireResponse response = result.value();
+    if (response.result.is_err()) {
+      LOG(ERROR, "failed to read from file (IO status: %s)",
+          zx_status_get_string(response.result.err()));
       message->set_return_code(TEEC_ERROR_GENERIC);
-      return io_status;
+      return response.result.err();
     }
 
-    const auto& data = result->data;
+    const auto& data = response.result.response().data;
     read_chunk_actual = data.count();
     memcpy(buffer, data.begin(), read_chunk_actual);
     buffer += read_chunk_actual;

@@ -223,12 +223,12 @@ mod tests {
         };
         let handle_requests = async {
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::ReadAt { count, offset, responder } => {
+                FileRequest::ReadAtDeprecated { count, offset, responder } => {
                     assert_eq!(count, 50);
                     assert_eq!(offset, 20);
                     responder.send(zx_status::Status::OK.into_raw(), &contents[..20]).unwrap();
                 }
-                FileRequest::ReadAt2 { count, offset, responder } => {
+                FileRequest::ReadAt { count, offset, responder } => {
                     assert_eq!(count, 50);
                     assert_eq!(offset, 20);
                     responder.send(&mut Ok(contents[..20].to_vec())).unwrap();
@@ -236,12 +236,12 @@ mod tests {
                 req => panic!("unhandled request {:?}", req),
             }
             match stream.next().await.unwrap().unwrap() {
-                FileRequest::ReadAt { count, offset, responder } => {
+                FileRequest::ReadAtDeprecated { count, offset, responder } => {
                     assert_eq!(count, 30);
                     assert_eq!(offset, 40);
                     responder.send(zx_status::Status::OK.into_raw(), &contents[20..]).unwrap();
                 }
-                FileRequest::ReadAt2 { count, offset, responder } => {
+                FileRequest::ReadAt { count, offset, responder } => {
                     assert_eq!(count, 30);
                     assert_eq!(offset, 40);
                     responder.send(&mut Ok(contents[20..].to_vec())).unwrap();

@@ -286,10 +286,10 @@ impl<T: 'static + File> FileConnection<T> {
                 };
                 self.seek += advance;
             }
-            FileRequest::ReadAt { offset, count, responder } => {
+            FileRequest::ReadAtDeprecated { offset, count, responder } => {
                 fuchsia_trace::duration!(
                     "storage",
-                    "File::ReadAt",
+                    "File::ReadAtDeprecated",
                     "offset" => offset,
                     "bytes" => count
                 );
@@ -300,10 +300,10 @@ impl<T: 'static + File> FileConnection<T> {
                     Err(status) => responder.send(status.into_raw(), &[0u8; 0])?,
                 }
             }
-            FileRequest::ReadAt2 { offset, count, responder } => {
+            FileRequest::ReadAt { offset, count, responder } => {
                 fuchsia_trace::duration!(
                     "storage",
-                    "File::ReadAt2",
+                    "File::ReadAt",
                     "offset" => offset,
                     "bytes" => count
                 );
@@ -1042,8 +1042,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_read_at_succeeds() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
-        let (status, data) = env.proxy.read_at(5, 10).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let data = env.proxy.read_at(5, 10).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         assert_eq!(data, vec![10, 11, 12, 13, 14]);
 
         let events = env.file.operations.lock().unwrap();
@@ -1059,8 +1058,13 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_read_at_validates_count() {
         let env = init_mock_file(Box::new(only_allow_init), OPEN_RIGHT_READABLE);
-        let (status, _data) = env.proxy.read_at(fidl_fuchsia_io::MAX_BUF + 1, 0).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OUT_OF_RANGE);
+        let result = env
+            .proxy
+            .read_at(fidl_fuchsia_io::MAX_BUF + 1, 0)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::OUT_OF_RANGE));
     }
 
     #[fasync::run_singlethreaded(test)]

@@ -63,7 +63,8 @@ protocol File1 {
     ///
     /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_BUF`.
     @selector("fuchsia.io1/File.ReadAt")
-    ReadAt(struct {
+    @deprecated("replaced by File2.ReadAt")
+    ReadAtDeprecated(struct {
         count uint64;
         offset uint64;
     }) -> (struct {

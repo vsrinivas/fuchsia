@@ -409,13 +409,13 @@ impl Blob {
                     responder.send(&mut Ok(data[pos..pos + count].to_vec())).unwrap();
                     pos += count;
                 }
-                Some(Ok(FileRequest::ReadAt { count, offset, responder })) => {
+                Some(Ok(FileRequest::ReadAtDeprecated { count, offset, responder })) => {
                     let pos: usize = offset.try_into().unwrap();
                     let avail = data.len() - pos;
                     let count = min(count.try_into().unwrap(), avail);
                     responder.send(Status::OK.into_raw(), &data[pos..pos + count]).unwrap();
                 }
-                Some(Ok(FileRequest::ReadAt2 { count, offset, responder })) => {
+                Some(Ok(FileRequest::ReadAt { count, offset, responder })) => {
                     let pos: usize = offset.try_into().unwrap();
                     let avail = data.len() - pos;
                     let count = min(count.try_into().unwrap(), avail);

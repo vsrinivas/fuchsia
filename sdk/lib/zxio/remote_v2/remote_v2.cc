@@ -413,19 +413,19 @@ zx_status_t zxio_remote_v2_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_
   return zxio_remote_do_vector(
       rio, vector, vector_count, flags, out_actual,
       [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
-        fidl::SyncClientBuffer<fio::File2::ReadAt2> fidl_buffer;
+        fidl::SyncClientBuffer<fio::File2::ReadAt> fidl_buffer;
         const fidl::WireUnownedResult result =
             fidl::WireCall(fidl::UnownedClientEnd<fio::File2>(control))
                 .buffer(fidl_buffer.view())
-                ->ReadAt2(capacity, offset);
+                ->ReadAt(capacity, offset);
         if (!result.ok()) {
           return result.status();
         }
         const auto& response = result.value();
         switch (response.result.Which()) {
-          case fio::wire::File2ReadAt2Result::Tag::kErr:
+          case fio::wire::File2ReadAtResult::Tag::kErr:
             return response.result.err();
-          case fio::wire::File2ReadAt2Result::Tag::kResponse:
+          case fio::wire::File2ReadAtResult::Tag::kResponse:
             const fidl::VectorView data = response.result.response().data;
             const size_t actual = data.count();
             if (actual > capacity) {

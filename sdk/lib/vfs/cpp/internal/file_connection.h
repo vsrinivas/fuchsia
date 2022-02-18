@@ -40,8 +40,9 @@ class FileConnection final : public Connection, public fuchsia::io::File {
                SetAttrCallback callback) override;
   void ReadDeprecated(uint64_t count, ReadDeprecatedCallback callback) override;
   void Read(uint64_t count, ReadCallback callback) override;
+  void ReadAtDeprecated(uint64_t count, uint64_t offset,
+                        ReadAtDeprecatedCallback callback) override;
   void ReadAt(uint64_t count, uint64_t offset, ReadAtCallback callback) override;
-  void ReadAt2(uint64_t count, uint64_t offset, ReadAt2Callback callback) override;
   void WriteDeprecated(std::vector<uint8_t> data, WriteDeprecatedCallback callback) override;
   void Write(std::vector<uint8_t> data, WriteCallback callback) override;
   void WriteAt(std::vector<uint8_t> data, uint64_t offset, WriteAtCallback callback) override;

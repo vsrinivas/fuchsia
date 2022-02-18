@@ -437,13 +437,13 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::ReadAt { count, offset, responder } => {
+            FileRequest::ReadAtDeprecated { count, offset, responder } => {
                 self.handle_read_at(offset, count, |status, content| {
                     responder.send(status.into_raw(), content)
                 })
                 .await?;
             }
-            FileRequest::ReadAt2 { count, offset, responder } => {
+            FileRequest::ReadAt { count, offset, responder } => {
                 self.handle_read_at(offset, count, |status, content| {
                     if status == zx::Status::OK {
                         responder.send(&mut Ok(content.to_vec()))

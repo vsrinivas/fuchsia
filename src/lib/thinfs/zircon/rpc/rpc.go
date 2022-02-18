@@ -580,7 +580,7 @@ func (f *fileWrapper) Read(_ fidl.Context, count uint64) (io.File2ReadResult, er
 	return io.File2ReadResultWithResponse(io.File2ReadResponse{Data: buf[:r]}), nil
 }
 
-func (f *fileWrapper) ReadAt(_ fidl.Context, count, offset uint64) (int32, []uint8, error) {
+func (f *fileWrapper) ReadAtDeprecated(_ fidl.Context, count, offset uint64) (int32, []uint8, error) {
 	buf := make([]byte, count)
 	r, err := f.file.Read(buf, int64(offset), fs.WhenceFromStart)
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
@@ -589,13 +589,13 @@ func (f *fileWrapper) ReadAt(_ fidl.Context, count, offset uint64) (int32, []uin
 	return int32(zx.ErrOk), buf[:r], nil
 }
 
-func (f *fileWrapper) ReadAt2(_ fidl.Context, count, offset uint64) (io.File2ReadAt2Result, error) {
+func (f *fileWrapper) ReadAt(_ fidl.Context, count, offset uint64) (io.File2ReadAtResult, error) {
 	buf := make([]byte, count)
 	r, err := f.file.Read(buf, int64(offset), fs.WhenceFromStart)
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
-		return io.File2ReadAt2ResultWithErr(int32(zxErr)), nil
+		return io.File2ReadAtResultWithErr(int32(zxErr)), nil
 	}
-	return io.File2ReadAt2ResultWithResponse(io.File2ReadAt2Response{Data: buf[:r]}), nil
+	return io.File2ReadAtResultWithResponse(io.File2ReadAtResponse{Data: buf[:r]}), nil
 }
 
 func (f *fileWrapper) WriteDeprecated(_ fidl.Context, data []uint8) (int32, uint64, error) {

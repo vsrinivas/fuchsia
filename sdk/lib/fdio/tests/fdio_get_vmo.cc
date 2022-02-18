@@ -96,7 +96,7 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
                            });
   }
 
-  void ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) override {
+  void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) override {
     if (!context->supports_read_at) {
       completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
       return;

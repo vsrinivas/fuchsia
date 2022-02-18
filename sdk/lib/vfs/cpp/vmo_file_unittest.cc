@@ -155,11 +155,13 @@ TEST(VmoFile, ReadOnlyNoSharing) {
   EXPECT_NE(ZX_OK, status);
 
   // Reading the VMO from offset 24 should match reading the file from offset 0.
-  std::vector<uint8_t> result;
-  std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
-  EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &status, &result));
-  EXPECT_EQ(vmo_result.size(), result.size());
-  EXPECT_EQ(vmo_result, result);
+  {
+    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
+    fuchsia::io::File2_ReadAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &result));
+    EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    EXPECT_EQ(vmo_result, result.response().data);
+  }
 
   // The file should appear as a regular file, the fact that a VMO is backing it
   // is hidden.
@@ -189,12 +191,14 @@ TEST(VmoFile, WritableNoSharing) {
   EXPECT_EQ(4u, actual);
 
   // Reading the VMO from offset 24 should match reading the file from offset 0.
-  std::vector<uint8_t> result;
-  std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
-  EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &status, &result));
-  EXPECT_EQ(vmo_result.size(), result.size());
-  EXPECT_EQ(vmo_result, result);
-  EXPECT_EQ('a', result[0]);
+  {
+    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
+    fuchsia::io::File2_ReadAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &result));
+    EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    EXPECT_EQ(vmo_result, result.response().data);
+    EXPECT_EQ('a', result.response().data[0]);
+  }
 
   // The file should appear as a regular file, the fact that a VMO is backing it
   // is hidden.
@@ -222,11 +226,13 @@ TEST(VmoFile, ReadOnlyDuplicate) {
   EXPECT_NE(ZX_OK, status);
 
   // Reading the VMO from offset 24 should match reading the file from offset 0.
-  std::vector<uint8_t> result;
-  std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
-  EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &status, &result));
-  EXPECT_EQ(vmo_result.size(), result.size());
-  EXPECT_EQ(vmo_result, result);
+  {
+    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
+    fuchsia::io::File2_ReadAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &result));
+    EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    EXPECT_EQ(vmo_result, result.response().data);
+  }
 
   // Describing the VMO duplicates the handle, and we can access the entire VMO.
   fuchsia::io::NodeInfo info;
@@ -260,12 +266,14 @@ TEST(VmoFile, WritableDuplicate) {
   EXPECT_EQ(4u, actual);
 
   // Reading the VMO from offset 24 should match reading the file from offset 0.
-  std::vector<uint8_t> result;
-  std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
-  EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &status, &result));
-  EXPECT_EQ(vmo_result.size(), result.size());
-  EXPECT_EQ(vmo_result, result);
-  EXPECT_EQ('a', result[0]);
+  {
+    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
+    fuchsia::io::File2_ReadAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &result));
+    EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    EXPECT_EQ(vmo_result, result.response().data);
+    EXPECT_EQ('a', result.response().data[0]);
+  }
 
   // Describing the VMO duplicates the handle, and we can access the entire VMO.
   fuchsia::io::NodeInfo info;
@@ -301,12 +309,14 @@ TEST(VmoFile, ReadOnlyCopyOnWrite) {
   EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &status, &actual));
   EXPECT_NE(ZX_OK, status);
 
-  // Reading the VMO shuld match reading the file.
-  std::vector<uint8_t> result;
-  std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 0, 4096);
-  EXPECT_EQ(ZX_OK, file_ptr->ReadAt(4096, 0, &status, &result));
-  EXPECT_EQ(vmo_result.size(), result.size());
-  EXPECT_EQ(vmo_result, result);
+  // Reading the VMO should match reading the file.
+  {
+    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 0, 4096);
+    fuchsia::io::File2_ReadAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(4096, 0, &result));
+    EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    EXPECT_EQ(vmo_result, result.response().data);
+  }
 
   // Describing the VMO clones the handle, and we can access the entire VMO.
   fuchsia::io::NodeInfo info;
@@ -342,12 +352,14 @@ TEST(VmoFile, WritableCopyOnWrite) {
   EXPECT_EQ(4u, actual);
 
   // Reading the VMO should match reading the file.
-  std::vector<uint8_t> result;
-  std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 0, 4096);
-  EXPECT_EQ(ZX_OK, file_ptr->ReadAt(4096, 0, &status, &result));
-  EXPECT_EQ(vmo_result.size(), result.size());
-  EXPECT_EQ(vmo_result, result);
-  EXPECT_EQ('a', result[0]);
+  {
+    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 0, 4096);
+    fuchsia::io::File2_ReadAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(4096, 0, &result));
+    EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    EXPECT_EQ(vmo_result, result.response().data);
+    EXPECT_EQ('a', result.response().data[0]);
+  }
 
   // Describing the VMO duplicates the handle, and we can access the entire VMO.
   fuchsia::io::NodeInfo info;
@@ -385,10 +397,12 @@ TEST(VmoFile, VmoWithNoRights) {
   EXPECT_NE(ZX_OK, status);
 
   // Reading should fail.
-  std::vector<uint8_t> result;
-  std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
-  EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &status, &result));
-  EXPECT_NE(ZX_OK, status);
+  {
+    fuchsia::io::File2_ReadAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &result));
+    EXPECT_TRUE(result.is_err());
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, result.err());
+  }
 
   // Describing the VMO should close the connection.
   fuchsia::io::NodeInfo info;
@@ -417,12 +431,14 @@ TEST(VmoFile, UnalignedCopyOnWrite) {
   EXPECT_EQ(4u, actual);
 
   // Reading the VMO from offset 24 should match reading the file from offset 0.
-  std::vector<uint8_t> result;
-  std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
-  EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &status, &result));
-  EXPECT_EQ(vmo_result.size(), result.size());
-  EXPECT_EQ(vmo_result, result);
-  EXPECT_EQ('a', result[0]);
+  {
+    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
+    fuchsia::io::File2_ReadAt_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &result));
+    EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    EXPECT_EQ(vmo_result, result.response().data);
+    EXPECT_EQ('a', result.response().data[0]);
+  }
 
   // Describing the VMO should close the connection.
   fuchsia::io::NodeInfo info;

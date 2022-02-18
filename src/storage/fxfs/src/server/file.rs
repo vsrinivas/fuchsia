@@ -636,8 +636,12 @@ mod tests {
             assert_eq!(bytes_written as usize, input.as_bytes().len());
         }
 
-        let (status, buf) = file.read_at(fio::MAX_BUF, 0).await.expect("read_at failed");
-        Status::ok(status).expect("File read was successful");
+        let buf = file
+            .read_at(fio::MAX_BUF, 0)
+            .await
+            .expect("read_at failed")
+            .map_err(Status::from_raw)
+            .expect("File read was successful");
         assert_eq!(buf.len(), expected_output.as_bytes().len());
         assert!(buf.iter().eq(expected_output.as_bytes().iter()));
 
@@ -731,8 +735,12 @@ mod tests {
         }
 
         let file = open_file_checked(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo").await;
-        let (status, buf) = file.read_at(fio::MAX_BUF, 0).await.expect("FIDL call failed");
-        Status::ok(status).expect("File read was successful");
+        let buf = file
+            .read_at(fio::MAX_BUF, 0)
+            .await
+            .expect("FIDL call failed")
+            .map_err(Status::from_raw)
+            .expect("File read was successful");
         assert_eq!(buf.len(), expected_output.as_bytes().len());
         assert_eq!(&buf[..], expected_output.as_bytes());
 

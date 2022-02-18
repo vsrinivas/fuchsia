@@ -739,9 +739,8 @@ async_test_with_vmo_file![
 
         let read_at_count = 10usize;
         let read_at_offset = 4usize;
-        let (status, read_at_data) =
-            file_proxy.read_at(read_at_count as u64, read_at_offset as u64).await?;
-        zx::Status::ok(status)?;
+        let read_at_data =
+            file_proxy.read_at(read_at_count as u64, read_at_offset as u64).await?.map_err(zx::Status::from_raw)?;
         assert_eq!(&*read_at_data, &file_data[read_at_offset..(read_at_offset + read_at_count)]);
 
         drop(file_proxy);

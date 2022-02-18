@@ -127,9 +127,8 @@ async fn read_at_per_package_source(source: PackageSource) {
                 TEST_PKG_HASH
             } else {
                 let file = open_file(&source.dir, "meta", OPEN_RIGHT_READABLE).await.unwrap();
-                let (status, bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
-                assert_eq!(zx::Status::ok(status), Err(zx::Status::NOT_SUPPORTED));
-                assert_eq!(bytes, &[]);
+                let result = file.read_at(MAX_BUF, 0).await.unwrap().map_err(zx::Status::from_raw);
+                assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
                 continue;
             }
         } else {
@@ -149,8 +148,7 @@ async fn assert_read_at_max_buffer_success(
     expected_contents: &str,
 ) {
     let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
-    let (status, bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
-    let () = zx::Status::ok(status).unwrap();
+    let bytes = file.read_at(MAX_BUF, 0).await.unwrap().map_err(zx::Status::from_raw).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 }
 
@@ -165,12 +163,15 @@ async fn assert_read_at_success(
             let expected_contents = &full_expected_contents[offset..end];
 
             let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
-            let (status, bytes) =
-                file.read_at(count.try_into().unwrap(), offset.try_into().unwrap()).await.unwrap();
-            let () = zx::Status::ok(status).expect(&format!(
-                "path: {}, offset: {}, count: {}, expected_contents: {}",
-                path, offset, count, expected_contents
-            ));
+            let bytes = file
+                .read_at(count.try_into().unwrap(), offset.try_into().unwrap())
+                .await
+                .unwrap()
+                .map_err(zx::Status::from_raw)
+                .expect(&format!(
+                    "path: {}, offset: {}, count: {}, expected_contents: {}",
+                    path, offset, count, expected_contents
+                ));
             assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
         }
     }
@@ -188,9 +189,12 @@ async fn assert_read_at_does_not_affect_seek_offset(root_dir: &DirectoryProxy, p
             .expect(&format!("path: {}, seek_offset: {}", path, seek_offset));
         assert_eq!(position, seek_offset as u64);
 
-        let (status, _bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
-        let () =
-            zx::Status::ok(status).expect(&format!("path: {}, seek_offset: {}", path, seek_offset));
+        let _: Vec<u8> = file
+            .read_at(MAX_BUF, 0)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw)
+            .expect(&format!("path: {}, seek_offset: {}", path, seek_offset));
 
         // get seek offset
         let position = file
@@ -207,9 +211,12 @@ async fn assert_read_at_is_unaffected_by_seek(root_dir: &DirectoryProxy, path: &
     for seek_offset in 0..path.len() as i64 {
         let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
 
-        let (status, first_read_bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
-        let () =
-            zx::Status::ok(status).expect(&format!("path: {}, seek_offset: {}", path, seek_offset));
+        let first_read_bytes = file
+            .read_at(MAX_BUF, 0)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw)
+            .expect(&format!("path: {}, seek_offset: {}", path, seek_offset));
 
         let position = file
             .seek(SeekOrigin::Start, seek_offset)
@@ -219,9 +226,12 @@ async fn assert_read_at_is_unaffected_by_seek(root_dir: &DirectoryProxy, path: &
             .expect(&format!("path: {}, seek_offset: {}", path, seek_offset));
         assert_eq!(position, seek_offset as u64);
 
-        let (status, second_read_bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
-        let () =
-            zx::Status::ok(status).expect(&format!("path: {}, seek_offset: {}", path, seek_offset));
+        let second_read_bytes = file
+            .read_at(MAX_BUF, 0)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw)
+            .expect(&format!("path: {}, seek_offset: {}", path, seek_offset));
         assert_eq!(
             std::str::from_utf8(&first_read_bytes).unwrap(),
             std::str::from_utf8(&second_read_bytes).unwrap()
@@ -507,18 +517,18 @@ async fn assert_clone_success(package_root: &DirectoryProxy, path: &str, expecte
 
 async fn assert_clone_sends_on_open_event(package_root: &DirectoryProxy, path: &str) {
     async fn verify_file_clone_sends_on_open_event(file: FileProxy) -> Result<(), Error> {
-        match file.take_event_stream().next().await {
+        return match file.take_event_stream().next().await {
             Some(Ok(FileEvent::OnOpen_ { s, info: Some(boxed) })) => {
                 assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
                 match *boxed {
-                    NodeInfo::File(_) => return Ok(()),
-                    _ => return Err(anyhow!("wrong NodeInfo returned")),
+                    NodeInfo::File(_) => Ok(()),
+                    _ => Err(anyhow!("wrong NodeInfo returned")),
                 }
             }
-            Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
-            Some(Err(e)) => return Err(e).context("failed to call onopen"),
-            None => return Err(anyhow!("no events!")),
-        }
+            Some(Ok(other)) => Err(anyhow!("wrong node type returned: {:?}", other)),
+            Some(Err(e)) => Err(e).context("failed to call onopen"),
+            None => Err(anyhow!("no events!")),
+        };
     }
 
     let parent =

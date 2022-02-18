@@ -74,9 +74,15 @@ void main() {
   Future<void> _assertReadAt(
       FileProxy proxy, int bufSize, int offset, String expectedStr,
       {expectedStatus = ZX.OK}) async {
-    var readAtResponse = await proxy.readAt(bufSize, offset);
-    expect(readAtResponse.s, expectedStatus);
-    expect(String.fromCharCodes(readAtResponse.data), expectedStr);
+    if (expectedStatus == ZX.OK) {
+      final data = await proxy.readAt(bufSize, offset);
+      expect(String.fromCharCodes(data), expectedStr);
+    } else {
+      await expectLater(
+          proxy.readAt(bufSize, offset),
+          throwsA(isA<MethodException>()
+              .having((e) => e.value, 'value', equals(expectedStatus))));
+    }
   }
 
   Future<void> _assertWriteAt(
@@ -435,8 +441,10 @@ void main() {
           throwsA(isA<MethodException>()
               .having((e) => e.value, 'value', equals(ZX.ERR_ACCESS_DENIED))));
 
-      var readAtResponse = await file.proxy.readAt(0, 1024);
-      expect(readAtResponse.s, ZX.ERR_ACCESS_DENIED);
+      await expectLater(
+          file.proxy.readAt(0, 1024),
+          throwsA(isA<MethodException>()
+              .having((e) => e.value, 'value', equals(ZX.ERR_ACCESS_DENIED))));
     });
 
     Future<void> _resetSeek(FileProxy proxy, [int? offset]) async {
