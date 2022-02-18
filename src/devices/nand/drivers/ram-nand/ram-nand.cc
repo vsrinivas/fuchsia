@@ -102,7 +102,8 @@ fbl::Array<char> ExtractPartitionMap(const fuchsia_hardware_nand::wire::RamNandI
 }  // namespace
 
 NandDevice::NandDevice(const NandParams& params, zx_device_t* parent)
-    : DeviceType(parent), params_(params), export_nand_config_{} {}
+    : DeviceType(parent), params_(params), export_nand_config_ {}
+{}
 
 NandDevice::~NandDevice() {
   if (thread_created_) {
@@ -118,10 +119,9 @@ NandDevice::~NandDevice() {
 }
 
 zx_status_t NandDevice::Bind(fuchsia_hardware_nand::wire::RamNandInfo& info) {
-  char name[fuchsia_hardware_nand::wire::kNameLen];
-  zx_status_t status = Init(name, std::move(info.vmo));
-  if (status != ZX_OK) {
-    return status;
+  zx::status<DeviceNameType> device_name = Init(std::move(info.vmo));
+  if (device_name.is_error()) {
+    return device_name.status_value();
   }
 
   if (info.export_nand_config) {
@@ -141,7 +141,7 @@ zx_status_t NandDevice::Bind(fuchsia_hardware_nand::wire::RamNandInfo& info) {
     zxlogf(INFO, "fail-after: %lu", fail_after_);
   }
 
-  return DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
+  return DdkAdd(ddk::DeviceAddArgs(device_name->data()).set_props(props));
 }
 
 void NandDevice::DdkInit(ddk::InitTxn txn) {
@@ -163,10 +163,12 @@ void NandDevice::DdkInit(ddk::InitTxn txn) {
   return txn.Reply(ZX_OK);
 }
 
-zx_status_t NandDevice::Init(char name[NAME_MAX], zx::vmo vmo) {
+zx::status<NandDevice::DeviceNameType> NandDevice::Init(zx::vmo vmo) {
   ZX_DEBUG_ASSERT(!thread_created_);
   static uint64_t dev_count = 0;
-  snprintf(name, NAME_MAX, "ram-nand-%" PRIu64, dev_count++);
+
+  DeviceNameType name;
+  snprintf(name.data(), name.size(), "ram-nand-%" PRIu64, dev_count++);
 
   zx_status_t status;
   const bool use_vmo = vmo.is_valid();
@@ -176,33 +178,33 @@ zx_status_t NandDevice::Init(char name[NAME_MAX], zx::vmo vmo) {
     uint64_t size;
     status = vmo_.get_size(&size);
     if (status != ZX_OK) {
-      return status;
+      return zx::error(status);
     }
     if (size < DdkGetSize()) {
-      return ZX_ERR_INVALID_ARGS;
+      return zx::error(ZX_ERR_INVALID_ARGS);
     }
   } else {
     status = zx::vmo::create(DdkGetSize(), 0, &vmo_);
     if (status != ZX_OK) {
-      return status;
+      return zx::error(status);
     }
   }
 
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_.get(), 0,
                        DdkGetSize(), &mapped_addr_);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
   if (!use_vmo) {
     memset(reinterpret_cast<char*>(mapped_addr_), 0xff, DdkGetSize());
   }
 
   if (thrd_create(&worker_, WorkerThreadStub, this) != thrd_success) {
-    return ZX_ERR_NO_RESOURCES;
+    return zx::error(ZX_ERR_NO_RESOURCES);
   }
   thread_created_ = true;
 
-  return ZX_OK;
+  return zx::ok(name);
 }
 
 void NandDevice::DdkUnbind(ddk::UnbindTxn txn) {

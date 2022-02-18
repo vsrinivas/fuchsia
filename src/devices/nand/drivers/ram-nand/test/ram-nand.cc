@@ -34,18 +34,19 @@ fuchsia_hardware_nand::wire::RamNandInfo BuildConfig() {
 
 TEST(RamNandTest, TrivialLifetime) {
   NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);  // 6 bits of ECC, no OOB.
-  char name[NAME_MAX];
   {
     NandDevice device(params);
 
-    ASSERT_OK(device.Init(name, zx::vmo()));
-    EXPECT_STREQ("ram-nand-0", name);
+    auto device_name = device.Init();
+    ASSERT_TRUE(device_name.is_ok());
+    EXPECT_STREQ("ram-nand-0", device_name->data());
   }
   {
     NandDevice device(params);
 
-    ASSERT_OK(device.Init(name, zx::vmo()));
-    EXPECT_STREQ("ram-nand-1", name);
+    auto device_name = device.Init();
+    ASSERT_TRUE(device_name.is_ok());
+    EXPECT_STREQ("ram-nand-1", device_name->data());
   }
 }
 
@@ -206,8 +207,7 @@ std::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
     device->NandQuery(&info, operation_size);
   }
 
-  char name[NAME_MAX];
-  if (device->Init(name, zx::vmo()) != ZX_OK) {
+  if (device->Init().is_error()) {
     return nullptr;
   }
   return device;

@@ -17,6 +17,7 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <optional>
 
 #include <ddk/metadata/nand.h>
@@ -57,23 +58,25 @@ using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Initializable, 
 class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
  public:
   explicit NandDevice(const NandParams& params, zx_device_t* parent = nullptr);
-  ~NandDevice();
+  ~NandDevice() override;
+
+  using DeviceNameType = std::array<char, fuchsia_hardware_nand::wire::kNameLen>;
+
+  // Perform object initialization, and return a unique null-terminated name of this device.
+  // If `vmo` is not provided or is not valid, the device will create its own buffer, and
+  // initialize it to be empty (all 1s).
+  zx::status<DeviceNameType> Init(zx::vmo vmo = {});
 
   zx_status_t Bind(fuchsia_hardware_nand::wire::RamNandInfo& info);
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease() { delete this; }
-
-  // Performs the object initialization, returning the required data to create
-  // an actual device (to call device_add()). The provided callback will be
-  // called when this device must be removed from the system.
-  zx_status_t Init(char name[NAME_MAX], zx::vmo vmo);
 
   // Device protocol implementation.
   zx_off_t DdkGetSize() { return params_.GetSize(); }
   void DdkUnbind(ddk::UnbindTxn txn);
 
   // Fidl RamNand implementation.
-  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer);
+  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override;
 
   // NAND protocol implementation.
   void NandQuery(nand_info_t* info_out, size_t* nand_op_size_out);
