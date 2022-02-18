@@ -201,6 +201,7 @@ pub fn transaction_id() -> [u8; 3] {
 pub enum ClientTimerType {
     Retransmission,
     Refresh,
+    Renew,
 }
 
 /// Possible actions that need to be taken for a state transition to happen successfully.
@@ -1116,6 +1117,12 @@ mod private {
             }
             Some(Self { ia, configured_address })
         }
+
+        /// Returns the address within the IA.
+        pub(crate) fn address(&self) -> Ipv6Addr {
+            let IdentityAssociation { address, preferred_lifetime: _, valid_lifetime: _ } = self.ia;
+            address
+        }
     }
 }
 
@@ -2021,13 +2028,6 @@ impl Requesting {
                 addresses.entry(iaid).or_insert(AddressEntry::ToRequest(address_to_request));
         }
 
-        let actions =
-            IntoIterator::into_iter([Action::CancelTimer(ClientTimerType::Retransmission)])
-                .chain(
-                    dns_servers.clone().map(|server_addrs| Action::UpdateDnsServers(server_addrs)),
-                )
-                .collect::<Vec<_>>();
-
         // If not set or 0, choose a value for T1 and T2, per RFC 8415, section
         // 18.2.4:
         //
@@ -2064,7 +2064,6 @@ impl Requesting {
                 };
                 compute_t(min, T1_MIN_LIFETIME_RATIO)
             }
-            // TODO(https://fxbug.dev/76765): set renew timer.
             v6::TimeValue::NonZero(t) => t,
         };
         // T2 must be >= T1, compute its value based on T1.
@@ -2079,6 +2078,27 @@ impl Requesting {
                 }
             }
         };
+        let actions = std::iter::once(Action::CancelTimer(ClientTimerType::Retransmission))
+            .chain(dns_servers.clone().map(Action::UpdateDnsServers))
+            // Set timer to start renewing addresses, per RFC 8415, section
+            // 18.2.4:
+            //
+            //    At time T1, the client initiates a Renew/Reply message
+            //    exchange to extend the lifetimes on any leases in the IA.
+            //
+            // Addresses are not renewed if T1 is infinity, per RFC 8415,
+            // section 7.7:
+            //
+            //    A client will never attempt to extend the lifetimes of any
+            //    addresses in an IA with T1 set to 0xffffffff.
+            .chain(std::iter::once(t1).filter_map(|t1| match t1 {
+                v6::NonZeroTimeValue::Finite(t1_val) => Some(Action::ScheduleTimer(
+                    ClientTimerType::Renew,
+                    Duration::from_secs(t1_val.get().into()),
+                )),
+                v6::NonZeroTimeValue::Infinity => None,
+            }))
+            .collect::<Vec<_>>();
 
         // TODO(https://fxbug.dev/72701) Send AddressWatcher update with
         // assigned addresses.
@@ -2128,6 +2148,18 @@ impl AddressEntry {
     ) -> AddressEntry {
         AddressEntry::ToRequest(AddressToRequest::new(address, configured_address))
     }
+
+    fn address(&self) -> Option<Ipv6Addr> {
+        match self {
+            AddressEntry::Configured(IdentityAssociation {
+                address,
+                preferred_lifetime: _,
+                valid_lifetime: _,
+            }) => Some(*address),
+            AddressEntry::NonConfigured(non_conf_ia) => Some(non_conf_ia.address()),
+            AddressEntry::ToRequest(address) => address.address(),
+        }
+    }
 }
 
 /// Provides methods for handling state transitions from address assigned
@@ -2160,6 +2192,180 @@ struct AddressAssigned {
     solicit_max_rt: Duration,
 }
 
+impl AddressAssigned {
+    /// Handles renew timer, following [RFC 8415, Section 18.2.4].
+    ///
+    /// [RFC 8415, Section 18.2.4]: https://tools.ietf.org/html/rfc8415#section-18.2.4
+    fn renew_timer_expired(self, options_to_request: &[v6::OptionCode]) -> Transition {
+        let Self { client_id, addresses, server_id, t1, t2, dns_servers, solicit_max_rt } = self;
+        let t1 = match t1 {
+            v6::NonZeroTimeValue::Finite(t1_val) => t1_val,
+            v6::NonZeroTimeValue::Infinity => {
+                // The renew timer is not set if T1 is Infinity.
+                std::unreachable!("addresses are not renewed for T1 Infinity.");
+            }
+        };
+        // Start renewing addresses, per RFC 8415, section 18.2.4:
+        //
+        //    At time T1, the client initiates a Renew/Reply message
+        //    exchange to extend the lifetimes on any leases in the IA.
+        Renewing::start(
+            transaction_id(),
+            client_id,
+            addresses,
+            server_id,
+            options_to_request,
+            t1,
+            t2,
+            dns_servers,
+            solicit_max_rt,
+        )
+    }
+}
+
+#[derive(Debug)]
+struct Renewing {
+    /// [Client Identifier](https://datatracker.ietf.org/doc/html/rfc8415#section-21.2)
+    /// used for uniquely identifying the client in communication with servers.
+    client_id: [u8; CLIENT_ID_LEN],
+    /// The addresses the client is initially configured to solicit, used when
+    /// server discovery is restarted.
+    addresses: HashMap<v6::IAID, AddressEntry>,
+    /// [Server Identifier](https://datatracker.ietf.org/doc/html/rfc8415#section-21.2)
+    /// of the server selected during server discovery.
+    server_id: Vec<u8>,
+    /// The time interval after which the client contacts the server that
+    /// assigned addresses to the client, to extend the lifetimes of the
+    /// assigned addresses.
+    t1: v6::NonZeroOrMaxU32,
+    /// The time interval after which the client contacts any server to extend
+    /// the lifetimes of the assigned addresses.
+    t2: v6::NonZeroTimeValue,
+    /// Stores the DNS servers received from the reply.
+    dns_servers: Vec<Ipv6Addr>,
+    /// [elapsed time](https://datatracker.ietf.org/doc/html/rfc8415#section-21.9).
+    first_renew_time: Option<Instant>,
+    /// The renew retransmission timeout.
+    retrans_timeout: Duration,
+    /// The [SOL_MAX_RT](https://datatracker.ietf.org/doc/html/rfc8415#section-21.24)
+    /// used by the client.
+    solicit_max_rt: Duration,
+}
+
+impl Renewing {
+    /// Starts renewing, following [RFC 8415, Section 18.2.4].
+    ///
+    /// [RFC 8415, Section 18.2.4]: https://tools.ietf.org/html/rfc8415#section-18.2.4
+    fn start(
+        transaction_id: [u8; 3],
+        client_id: [u8; CLIENT_ID_LEN],
+        addresses: HashMap<v6::IAID, AddressEntry>,
+        server_id: Vec<u8>,
+        options_to_request: &[v6::OptionCode],
+        t1: v6::NonZeroOrMaxU32,
+        t2: v6::NonZeroTimeValue,
+        dns_servers: Vec<Ipv6Addr>,
+        solicit_max_rt: Duration,
+    ) -> Transition {
+        Self {
+            client_id,
+            addresses,
+            server_id,
+            t1,
+            t2,
+            dns_servers,
+            first_renew_time: None,
+            retrans_timeout: Duration::default(),
+            solicit_max_rt,
+        }
+        .send_and_schedule_retransmission(transaction_id, options_to_request)
+    }
+
+    /// Returns a transition back to Renewing, with actions to send a Renew and
+    /// schedule retransmission.
+    fn send_and_schedule_retransmission(
+        self,
+        transaction_id: [u8; 3],
+        options_to_request: &[v6::OptionCode],
+    ) -> Transition {
+        let Self {
+            client_id,
+            addresses,
+            server_id,
+            t1,
+            t2,
+            dns_servers,
+            first_renew_time,
+            retrans_timeout,
+            solicit_max_rt,
+        } = self;
+        let (start_time, elapsed_time) = match first_renew_time {
+            None => (Instant::now(), 0),
+            Some(start_time) => (start_time, elapsed_time_in_centisecs(start_time)),
+        };
+
+        let oro = std::iter::once(v6::OptionCode::SolMaxRt)
+            .chain(options_to_request.iter().cloned())
+            .collect::<Vec<_>>();
+
+        let mut options = vec![
+            v6::DhcpOption::ServerId(&server_id),
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ElapsedTime(elapsed_time),
+            v6::DhcpOption::Oro(&oro),
+        ];
+
+        // TODO(https://fxbug.dev/86945): remove `iaaddr_options` construction
+        // once `IanaSerializer::new()` takes options by value.
+        let mut iaaddr_options = HashMap::new();
+        // TODO(https://fxbug.dev/74324): all addresses in the map should be
+        // valid; invalid addresses to be removed part of the
+        // AddressStateProvider work.
+        for (iaid, addr_entry) in &addresses {
+            assert_matches!(
+                iaaddr_options.insert(
+                    *iaid,
+                    addr_entry.address().map(|addr| {
+                        [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
+                    }),
+                ),
+                None
+            );
+        }
+        for (iaid, iaaddr_opt) in &iaaddr_options {
+            options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                *iaid,
+                0,
+                0,
+                iaaddr_opt.as_ref().map_or(&[], AsRef::as_ref),
+            )));
+        }
+
+        let builder = v6::MessageBuilder::new(v6::MessageType::Renew, transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+
+        Transition {
+            state: ClientState::Renewing(Renewing {
+                client_id,
+                addresses,
+                server_id,
+                t1,
+                t2,
+                dns_servers,
+                first_renew_time: Some(start_time),
+                retrans_timeout,
+                solicit_max_rt,
+            }),
+            actions: vec![
+                Action::SendMessage(buf),
+                // TODO(): schedule Renew retransmission.
+            ],
+            transaction_id: Some(transaction_id),
+        }
+    }
+}
+
 /// All possible states of a DHCPv6 client.
 ///
 /// States not found in this enum are not supported yet.
@@ -2180,6 +2386,8 @@ enum ClientState {
     Requesting(Requesting),
     /// Client is waiting to renew, after receiving a valid reply to a previous request.
     AddressAssigned(AddressAssigned),
+    /// Creating and (re)transmitting a renew message, and awaiting reply.
+    Renewing(Renewing),
 }
 
 /// State transition, containing the next state, and the actions the client
@@ -2206,7 +2414,8 @@ impl ClientState {
             ClientState::InformationRequesting(_)
             | ClientState::InformationReceived(_)
             | ClientState::Requesting(_)
-            | ClientState::AddressAssigned(_) => {
+            | ClientState::AddressAssigned(_)
+            | ClientState::Renewing(_) => {
                 Transition { state: self, actions: vec![], transaction_id: None }
             }
         }
@@ -2224,7 +2433,9 @@ impl ClientState {
             ClientState::Requesting(s) => s.reply_message_received(options_to_request, rng, msg),
             ClientState::InformationReceived(_)
             | ClientState::ServerDiscovery(_)
-            | ClientState::AddressAssigned(_) => {
+            | ClientState::AddressAssigned(_)
+            // TODO(https://fxbug.dev/76765): process Reply to Renew.
+            | ClientState::Renewing(_) => {
                 Transition { state: self, actions: vec![], transaction_id: None }
             }
         }
@@ -2247,7 +2458,10 @@ impl ClientState {
             ClientState::Requesting(s) => {
                 s.retransmission_timer_expired(transaction_id, options_to_request, rng)
             }
-            ClientState::InformationReceived(_) | ClientState::AddressAssigned(_) => {
+            ClientState::InformationReceived(_)
+            | ClientState::AddressAssigned(_)
+            // TODO(https://fxbug.dev/76765): handle Renew retransmission timeout.
+            | ClientState::Renewing(_) => {
                 Transition { state: self, actions: vec![], transaction_id: None }
             }
         }
@@ -2267,8 +2481,23 @@ impl ClientState {
             ClientState::InformationRequesting(_)
             | ClientState::ServerDiscovery(_)
             | ClientState::Requesting(_)
-            | ClientState::AddressAssigned(_) => {
+            | ClientState::AddressAssigned(_)
+            | ClientState::Renewing(_) => {
                 Transition { state: self, actions: vec![], transaction_id: None }
+            }
+        }
+    }
+
+    /// Handles renew timeout.
+    fn renew_timer_expired(self, options_to_request: &[v6::OptionCode]) -> Transition {
+        match self {
+            ClientState::AddressAssigned(s) => s.renew_timer_expired(options_to_request),
+            ClientState::InformationRequesting(_)
+            | ClientState::InformationReceived(_)
+            | ClientState::ServerDiscovery(_)
+            | ClientState::Requesting(_)
+            | ClientState::Renewing(_) => {
+                unreachable!("received unexpected renew timeout in state {:?}.", self);
             }
         }
     }
@@ -2306,6 +2535,17 @@ impl ClientState {
                 first_request_time: _,
                 retrans_timeout: _,
                 retrans_count: _,
+                solicit_max_rt: _,
+            })
+            | ClientState::Renewing(Renewing {
+                client_id: _,
+                addresses: _,
+                server_id: _,
+                t1: _,
+                t2: _,
+                dns_servers: _,
+                first_renew_time: _,
+                retrans_timeout: _,
                 solicit_max_rt: _,
             }) => Vec::new(),
         }
@@ -2417,6 +2657,7 @@ impl<R: Rng> ClientStateMachine<R> {
                 ClientTimerType::Refresh => {
                     old_state.refresh_timer_expired(*transaction_id, &options_to_request, rng)
                 }
+                ClientTimerType::Renew => old_state.renew_timer_expired(&options_to_request),
             };
         *state = Some(new_state);
         *transaction_id = new_transaction_id.unwrap_or(*transaction_id);
@@ -2551,12 +2792,9 @@ pub(crate) mod testutil {
 
         // Start of server discovery should send a solicit and schedule a
         // retransmission timer.
-        let mut buf = match &actions[..] {
-            [Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_SOLICIT_TIMEOUT)] => {
-                buf
-            }
-            actions => panic!("unexpected actions {:?}", actions),
-        };
+        let mut buf = assert_matches!( &actions[..],
+            [Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_SOLICIT_TIMEOUT)] => buf
+        );
 
         assert_outgoing_stateful_message(
             &mut buf,
@@ -2628,9 +2866,9 @@ pub(crate) mod testutil {
     }
 
     /// Creates a stateful client and exchanges messages to assign the
-    /// configured addresses. Returns the client in AddressAssigned state, and
-    /// asserts the state and the actions associated with transitioning to this
-    /// state.
+    /// configured addresses.  Returns the client in AddressAssigned state and
+    /// the actions returned on transitioning to the AddressAssigned state.
+    /// Asserts the content of the client state.
     ///
     /// # Panics
     ///
@@ -2639,6 +2877,7 @@ pub(crate) mod testutil {
         client_id: [u8; CLIENT_ID_LEN],
         addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_dns_servers: &[Ipv6Addr],
+        expected_t1: v6::NonZeroTimeValue,
         rng: R,
     ) -> (ClientStateMachine<R>, Actions) {
         let transaction_id = [0, 1, 2];
@@ -2772,16 +3011,16 @@ pub(crate) mod testutil {
                 client_id: got_client_id,
                 addresses,
                 server_id: got_server_id,
-                // Because T1 and T2 are calculated based on the input
-                // configured addresses, they are not checked here to avoid
-                // duplicating the logic in the test covering T1/T2 calculation.
-                t1: _,
+                t1,
+                // TODO(https://fxbug.dev/76766) check T2 when Rebind is
+                // implemented.
                 t2: _,
                 dns_servers,
                 solicit_max_rt,
             })) if *got_client_id == client_id &&
                    *addresses == expected_addresses &&
                    *got_server_id == server_id &&
+                   *t1 == expected_t1 &&
                    dns_servers == expected_dns_servers &&
                    *solicit_max_rt == MAX_SOLICIT_TIMEOUT
         );
@@ -3840,7 +4079,10 @@ mod tests {
                 solicit_max_rt: _,
             }) if server_id == vec![1, 2, 3] &&
                   addresses == expected_addresses);
-        assert_matches!(&actions[..], [Action::CancelTimer(ClientTimerType::Retransmission),]);
+        let expected_t1 = Duration::from_secs(t1.into());
+        assert_matches!(&actions[..],
+            [Action::CancelTimer(ClientTimerType::Retransmission), Action::ScheduleTimer(ClientTimerType::Renew, t1)] if *t1 == expected_t1
+        );
         assert!(transaction_id.is_none());
     }
 
@@ -4268,6 +4510,12 @@ mod tests {
     fn assign_addresses() {
         const T1: u32 = 50;
         const T2: u32 = 80;
+        let t1_time_value = v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(T1).expect("should succeed for non-zero or u32::MAX values"),
+        );
+        let t2_time_value = v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(T2).expect("should succeed for non-zero or u32::MAX values"),
+        );
         let (client, actions) = testutil::assign_addresses_and_assert(
             v6::duid_uuid(),
             vec![
@@ -4281,14 +4529,8 @@ mod tests {
                         v6::NonZeroOrMaxU32::new(120)
                             .expect("should succeed for non-zero or u32::MAX values"),
                     )),
-                    t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                        v6::NonZeroOrMaxU32::new(T1)
-                            .expect("should succeed for non-zero or u32::MAX values"),
-                    )),
-                    t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                        v6::NonZeroOrMaxU32::new(T2)
-                            .expect("should succeed for non-zero or u32::MAX values"),
-                    )),
+                    t1: v6::TimeValue::NonZero(t1_time_value),
+                    t2: v6::TimeValue::NonZero(t2_time_value),
                 },
                 TestIdentityAssociation {
                     address: std_ip_v6!("::ffff:c00a:2ff"),
@@ -4300,17 +4542,12 @@ mod tests {
                         v6::NonZeroOrMaxU32::new(180)
                             .expect("should succeed for non-zero or u32::MAX values"),
                     )),
-                    t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                        v6::NonZeroOrMaxU32::new(T1)
-                            .expect("should succeed for non-zero or u32::MAX values"),
-                    )),
-                    t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                        v6::NonZeroOrMaxU32::new(T2)
-                            .expect("should succeed for non-zero or u32::MAX values"),
-                    )),
+                    t1: v6::TimeValue::NonZero(t1_time_value),
+                    t2: v6::TimeValue::NonZero(t2_time_value),
                 },
             ],
             &[],
+            t1_time_value,
             StepRng::new(std::u64::MAX / 2, 0),
         );
 
@@ -4322,19 +4559,28 @@ mod tests {
                 client_id: _,
                 addresses: _,
                 server_id: _,
-                t1: got_t1,
+                t1: _,
                 t2: got_t2,
                 dns_servers: _,
                 solicit_max_rt: _,
-            })) if *got_t1 == v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(T1).expect("should succeed")) &&
-                   *got_t2 == v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(T2).expect("should succeed"))
+            })) if *got_t2 == v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(T2).expect("should succeed"))
         );
-        assert_matches!(&actions[..], [Action::CancelTimer(ClientTimerType::Retransmission)]);
+        assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::ScheduleTimer(ClientTimerType::Renew, t1)
+            ] if *t1 == Duration::from_secs(T1.into())
+        );
     }
 
     #[test]
     fn address_assigned_get_dns_servers() {
         let dns_servers = [std_ip_v6!("ff01::0102"), std_ip_v6!("ff01::0304")];
+        const T1: u32 = 70;
+        let t1_time_value = v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(T1).expect("should succeed for non-zero or u32::MAX values"),
+        );
         let (client, actions) = testutil::assign_addresses_and_assert(
             v6::duid_uuid(),
             vec![TestIdentityAssociation {
@@ -4347,24 +4593,24 @@ mod tests {
                     v6::NonZeroOrMaxU32::new(120)
                         .expect("should succeed for non-zero or u32::MAX values"),
                 )),
-                t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(60)
-                        .expect("should succeed for non-zero or u32::MAX values"),
-                )),
+                t1: v6::TimeValue::NonZero(t1_time_value),
                 t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                     v6::NonZeroOrMaxU32::new(90)
                         .expect("should succeed for non-zero or u32::MAX values"),
                 )),
             }],
             &dns_servers,
+            t1_time_value,
             StepRng::new(std::u64::MAX / 2, 0),
         );
         assert_matches!(
             &actions[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::UpdateDnsServers(got_dns_servers)
-            ] if got_dns_servers[..] == dns_servers
+                Action::UpdateDnsServers(got_dns_servers),
+                Action::ScheduleTimer(ClientTimerType::Renew, t1)
+            ] if got_dns_servers[..] == dns_servers &&
+                 *t1 == Duration::from_secs(T1.into())
         );
         assert_eq!(client.get_dns_servers()[..], dns_servers);
     }
@@ -4494,6 +4740,149 @@ mod tests {
                     solicit_max_rt,
             }) if *solicit_max_rt == Duration::from_secs(received_sol_max_rt.into())
         );
+    }
+
+    #[test]
+    fn send_renew() {
+        let client_id = v6::duid_uuid();
+        const T1: u32 = 60;
+        let preferred_lifetime_time_value = v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(100).expect("should succeed for non-zero or u32::MAX values"),
+        );
+        let valid_lifetime_time_value = v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"),
+        );
+        let t1_time_value = v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(T1).expect("should succeed for non-zero or u32::MAX values"),
+        );
+        let t2_time_value = v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(80).expect("should succeed for non-zero or u32::MAX values"),
+        );
+        let address1 = std_ip_v6!("::ffff:c00a:1ff");
+        let address2 = std_ip_v6!("::ffff:c00a:2ff");
+        let (mut client, actions) = testutil::assign_addresses_and_assert(
+            client_id.clone(),
+            vec![
+                TestIdentityAssociation {
+                    address: address1,
+                    preferred_lifetime: v6::TimeValue::NonZero(preferred_lifetime_time_value),
+                    valid_lifetime: v6::TimeValue::NonZero(valid_lifetime_time_value),
+                    t1: v6::TimeValue::NonZero(t1_time_value),
+                    t2: v6::TimeValue::NonZero(t2_time_value),
+                },
+                TestIdentityAssociation {
+                    address: address2,
+                    preferred_lifetime: v6::TimeValue::NonZero(preferred_lifetime_time_value),
+                    valid_lifetime: v6::TimeValue::NonZero(valid_lifetime_time_value),
+                    t1: v6::TimeValue::NonZero(t1_time_value),
+                    t2: v6::TimeValue::NonZero(t2_time_value),
+                },
+            ],
+            &[],
+            t1_time_value,
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
+        let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
+        let old_transaction_id = *transaction_id;
+        let (expected_client_id, expected_server_id, expected_t1, expected_t2) = match state {
+            Some(ClientState::AddressAssigned(AddressAssigned {
+                client_id,
+                addresses: _,
+                server_id,
+                t1: v6::NonZeroTimeValue::Finite(t1_val),
+                t2,
+                dns_servers: _,
+                solicit_max_rt: _,
+            })) => (client_id.clone(), server_id.clone(), *t1_val, *t2),
+            state => panic!("unexpected state {:?}", state),
+        };
+        assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::ScheduleTimer(ClientTimerType::Renew, t1)
+            ] if *t1 == Duration::from_secs(T1.into())
+
+        );
+
+        // Renew timeout should trigger a transition to Renewing and send a renew.
+        let actions = client.handle_timeout(ClientTimerType::Renew);
+        let mut buf = match &actions[..] {
+            [Action::SendMessage(buf)] => buf,
+            actions => panic!("unexpected actions {:?}", actions),
+        };
+        let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
+        // Assert that sending a renew starts a new transaction.
+        assert_ne!(*transaction_id, old_transaction_id);
+        assert_matches!(
+            state,
+            Some(ClientState::Renewing(Renewing {
+                client_id,
+                addresses: _,
+                server_id,
+                t1,
+                t2,
+                dns_servers,
+                first_renew_time: _,
+                retrans_timeout: _,
+                solicit_max_rt,
+            })) if *client_id == expected_client_id &&
+                   *server_id == expected_server_id &&
+                   *t1 == expected_t1 &&
+                   *t2 == expected_t2 &&
+                   *dns_servers == Vec::<Ipv6Addr>::new() &&
+                   *solicit_max_rt == MAX_SOLICIT_TIMEOUT
+        );
+        let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> =
+            (0..).map(v6::IAID::new).zip(vec![Some(address1), Some(address2)]).collect();
+        testutil::assert_outgoing_stateful_message(
+            &mut buf,
+            v6::MessageType::Renew,
+            &client_id,
+            Some(&expected_server_id),
+            &[],
+            &expected_addresses_to_renew,
+        );
+    }
+
+    #[test]
+    fn do_not_renew_for_t1_infinity() {
+        let client_id = v6::duid_uuid();
+        let expected_t1 = v6::NonZeroTimeValue::Infinity;
+        let (client, actions) = testutil::assign_addresses_and_assert(
+            client_id.clone(),
+            vec![TestIdentityAssociation {
+                address: std_ip_v6!("::ffff:c00a:1ff"),
+                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(100)
+                        .expect("should succeed for non-zero or u32::MAX values"),
+                )),
+                valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(120)
+                        .expect("should succeed for non-zero or u32::MAX values"),
+                )),
+                t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
+                t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
+            }],
+            &[],
+            expected_t1,
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        assert_matches!(state,
+            Some(ClientState::AddressAssigned(AddressAssigned {
+                    client_id: _,
+                    addresses: _,
+                    server_id: _,
+                    t1,
+                    t2: _,
+                    dns_servers:_,
+                    solicit_max_rt: _,
+            })) if *t1 == expected_t1
+        );
+        // Asserts that the actions do not include scheduling the renew timer.
+        assert_matches!(&actions[..], [Action::CancelTimer(ClientTimerType::Retransmission)]);
     }
 
     #[test]
