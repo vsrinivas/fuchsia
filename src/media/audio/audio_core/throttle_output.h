@@ -103,9 +103,14 @@ class ThrottleOutput : public AudioOutput {
     return std::nullopt;
   }
 
-  void FinishMixJob(const AudioOutput::FrameSpan& span, const float* buffer) override {
+  void WriteMixOutput(int64_t start, int64_t length, const float* payload) override {
     // Since we never start any jobs, this should never be called.
-    FX_DCHECK(false);
+    FX_CHECK(false);
+  }
+
+  void FinishMixJob(const AudioOutput::FrameSpan& span) override {
+    // Since we never start any jobs, this should never be called.
+    FX_CHECK(false);
   }
 
   zx::duration MixDeadline() const override {

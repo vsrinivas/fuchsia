@@ -33,7 +33,10 @@ class TestOutputPipeline : public OutputPipeline {
       : OutputPipeline(format),
         audio_clock_(clock_factory->CreateClientFixed(clock::AdjustableCloneOfMonotonic())) {}
 
-  void Enqueue(ReadableStream::Buffer buffer) { buffers_.push_back(std::move(buffer)); }
+  void EnqueueBuffer(Fixed start_frame, int64_t frame_count, void* payload) {
+    buffers_.emplace_back(start_frame, frame_count, payload, true, StreamUsageMask(),
+                          Gain::kUnityGainDb);
+  }
 
   // |media::audio::ReadableStream|
   std::optional<ReadableStream::Buffer> ReadLock(ReadLockContext& ctx, Fixed frame,
@@ -131,11 +134,18 @@ class TestAudioOutput : public AudioOutput {
     start_mix_delegate_ = std::move(delegate);
   }
 
+  // Allow a test to provide a delegate to handle |AudioOutput::WriteMixJob| invocations.
+  using WriteMixDelegate = fit::function<void(int64_t start, int64_t length, const float* payload)>;
+  void set_write_mix_delegate(WriteMixDelegate delegate) {
+    write_mix_delegate_ = std::move(delegate);
+  }
+
   // Allow a test to provide a delegate to handle |AudioOutput::FinishMixJob| invocations.
-  using FinishMixDelegate = fit::function<void(const AudioOutput::FrameSpan&, const float* buffer)>;
+  using FinishMixDelegate = fit::function<void(const AudioOutput::FrameSpan&)>;
   void set_finish_mix_delegate(FinishMixDelegate delegate) {
     finish_mix_delegate_ = std::move(delegate);
   }
+
   void set_output_pipeline(std::unique_ptr<OutputPipeline> output_pipeline) {
     output_pipeline_ = std::move(output_pipeline);
   }
@@ -148,9 +158,14 @@ class TestAudioOutput : public AudioOutput {
       return std::nullopt;
     }
   }
-  void FinishMixJob(const AudioOutput::FrameSpan& span, const float* buffer) override {
+  void WriteMixOutput(int64_t start, int64_t length, const float* buffer) override {
+    if (write_mix_delegate_) {
+      write_mix_delegate_(start, length, buffer);
+    }
+  }
+  void FinishMixJob(const AudioOutput::FrameSpan& span) override {
     if (finish_mix_delegate_) {
-      finish_mix_delegate_(span, buffer);
+      finish_mix_delegate_(span);
     }
   }
   zx::duration MixDeadline() const override { return zx::msec(10); }
@@ -163,6 +178,7 @@ class TestAudioOutput : public AudioOutput {
 
  private:
   StartMixDelegate start_mix_delegate_;
+  WriteMixDelegate write_mix_delegate_;
   FinishMixDelegate finish_mix_delegate_;
   std::unique_ptr<OutputPipeline> output_pipeline_;
 };
@@ -276,12 +292,20 @@ TEST_F(AudioOutputTest, ProcessRequestsSilenceIfNoSourceBuffer) {
     };
   });
 
+  int64_t frames_written = 0;
+  audio_output_->set_write_mix_delegate([&frames_written](auto start, auto length, auto payload) {
+    EXPECT_EQ(start, 0);
+    EXPECT_EQ(length, 100);
+    EXPECT_EQ(payload, nullptr);  // null means silent
+    frames_written += length;
+  });
+
   bool finish_called = false;
-  audio_output_->set_finish_mix_delegate([&finish_called](auto span, auto buffer) {
+  audio_output_->set_finish_mix_delegate([&frames_written, &finish_called](auto span) {
     EXPECT_EQ(span.start, 0);
-    EXPECT_EQ(span.length, 100u);
-    EXPECT_TRUE(span.is_mute);
-    EXPECT_EQ(buffer, nullptr);
+    EXPECT_EQ(span.length, 100);
+    EXPECT_FALSE(span.is_mute);
+    EXPECT_EQ(frames_written, 100);
     finish_called = true;
   });
 
@@ -290,8 +314,8 @@ TEST_F(AudioOutputTest, ProcessRequestsSilenceIfNoSourceBuffer) {
   EXPECT_TRUE(finish_called);
 }
 
-// Verify we call StartMixJob multiple times if FinishMixJob does not fill buffer.
-TEST_F(AudioOutputTest, ProcessMultipleMixJobs) {
+// Test a case where ReadLock's first buffer is smaller than mix_job.length.
+TEST_F(AudioOutputTest, ProcessSmallReadLocks) {
   const Format format =
       Format::Create({
                          .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
@@ -306,46 +330,115 @@ TEST_F(AudioOutputTest, ProcessMultipleMixJobs) {
   audio_output_->set_output_pipeline(std::move(pipeline_owned));
   SetupMixTask();
 
-  const uint32_t kBufferFrames = 25;
-  const uint32_t kBufferSamples = kBufferFrames * 2;
-  const uint32_t kNumBuffers = 4;
+  static constexpr int64_t kBufferFrames = 10;
+  static constexpr int64_t kBufferSamples = kBufferFrames * 2;
+  static constexpr int64_t kNumBuffers = 4;
   // Setup our buffer with data that is just the value of frame 'N' is 'N'.
   std::vector<float> buffer(kBufferSamples);
   for (size_t sample = 0; sample < kBufferSamples; ++sample) {
     buffer[sample] = static_cast<float>(sample);
   }
   // Enqueue several buffers, each with the same payload buffer.
-  for (size_t i = 0; i < kNumBuffers; ++i) {
-    pipeline->Enqueue(ReadableStream::Buffer(Fixed(i * kBufferFrames), kBufferFrames, buffer.data(),
-                                             true, StreamUsageMask(), Gain::kUnityGainDb));
+  for (auto i = 0; i < kNumBuffers; ++i) {
+    pipeline->EnqueueBuffer(Fixed(i * kBufferFrames), kBufferFrames, buffer.data());
   }
 
-  // Return some valid, non-silent frame range from StartMixJob.
-  uint32_t mix_jobs = 0;
-  uint32_t frames_finished = 0;
-  audio_output_->set_start_mix_delegate([&frames_finished, &mix_jobs](zx::time now) {
-    ++mix_jobs;
-    return TestAudioOutput::FrameSpan{
-        .start = frames_finished,
-        .length = (kBufferFrames * kNumBuffers) - frames_finished,
-        .is_mute = false,
-    };
+  // The mix job covers all four buffers.
+  static constexpr auto kMixJob = TestAudioOutput::FrameSpan{
+      .start = 0,
+      .length = kBufferFrames * kNumBuffers,
+      .is_mute = false,
+  };
+  audio_output_->set_start_mix_delegate([](zx::time now) { return kMixJob; });
+
+  int64_t frames_written = 0;
+  audio_output_->set_write_mix_delegate([&frames_written](auto start, auto length, auto payload) {
+    EXPECT_EQ(start, frames_written);
+    EXPECT_EQ(length, kBufferFrames);
+    EXPECT_NE(payload, nullptr);
+    for (auto sample = 0; sample < length; ++sample) {
+      EXPECT_FLOAT_EQ(static_cast<float>(sample), payload[sample]);
+    }
+    frames_written += length;
   });
 
-  audio_output_->set_finish_mix_delegate([&frames_finished](auto span, auto buffer) {
-    EXPECT_EQ(span.start, frames_finished);
-    EXPECT_FALSE(span.is_mute);
-    EXPECT_NE(buffer, nullptr);
-    for (size_t sample = 0; sample < kBufferSamples; ++sample) {
-      EXPECT_FLOAT_EQ(static_cast<float>(sample), buffer[sample]);
-    }
-    frames_finished += span.length;
+  bool called_finish_mix = false;
+  audio_output_->set_finish_mix_delegate([&frames_written, &called_finish_mix](auto span) {
+    EXPECT_EQ(span.start, kMixJob.start);
+    EXPECT_EQ(span.length, kMixJob.length);
+    EXPECT_EQ(span.is_mute, kMixJob.is_mute);
+    EXPECT_EQ(frames_written, kMixJob.length);
+    called_finish_mix = true;
   });
 
   // Now do a mix.
   audio_output_->Process();
-  EXPECT_EQ(frames_finished, kNumBuffers * kBufferFrames);
-  EXPECT_EQ(mix_jobs, kNumBuffers);
+  EXPECT_TRUE(called_finish_mix);
+}
+
+// Test a case where ReadLock's first buffer has a gap after mix_job.start.
+TEST_F(AudioOutputTest, ProcessReadLockWithGap) {
+  const Format format =
+      Format::Create({
+                         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                         .channels = 2,
+                         .frames_per_second = 48000,
+                     })
+          .take_value();
+
+  // Use an output pipeline that will always return nullopt from ReadLock.
+  auto pipeline_owned = std::make_unique<TestOutputPipeline>(format, context().clock_factory());
+  auto pipeline = pipeline_owned.get();
+  audio_output_->set_output_pipeline(std::move(pipeline_owned));
+  SetupMixTask();
+
+  static constexpr int64_t kBufferOffset = 5;
+  static constexpr int64_t kBufferFrames = 10;
+  static constexpr int64_t kBufferSamples = kBufferFrames * 2;
+  // Setup our buffer with data that is just the value of frame 'N' is 'N'.
+  std::vector<float> buffer(kBufferSamples);
+  for (size_t sample = 0; sample < kBufferSamples; ++sample) {
+    buffer[sample] = static_cast<float>(sample);
+  }
+  pipeline->EnqueueBuffer(Fixed(kBufferOffset), kBufferFrames, buffer.data());
+
+  // The mix job covers all four buffers.
+  static constexpr auto kMixJob = TestAudioOutput::FrameSpan{
+      .start = 0,
+      .length = kBufferOffset + kBufferFrames,
+      .is_mute = false,
+  };
+  audio_output_->set_start_mix_delegate([](zx::time now) { return kMixJob; });
+
+  int64_t frames_written = 0;
+  audio_output_->set_write_mix_delegate([&frames_written](auto start, auto length, auto payload) {
+    if (start == 0) {
+      EXPECT_EQ(length, kBufferOffset);
+      EXPECT_EQ(payload, nullptr);
+    } else {
+      EXPECT_EQ(frames_written, kBufferOffset);
+      EXPECT_EQ(start, kBufferOffset);
+      EXPECT_EQ(length, kBufferFrames);
+      EXPECT_NE(payload, nullptr);
+      for (auto sample = 0; sample < length; ++sample) {
+        EXPECT_FLOAT_EQ(static_cast<float>(sample), payload[sample]);
+      }
+    }
+    frames_written += length;
+  });
+
+  bool called_finish_mix = false;
+  audio_output_->set_finish_mix_delegate([&frames_written, &called_finish_mix](auto span) {
+    EXPECT_EQ(span.start, kMixJob.start);
+    EXPECT_EQ(span.length, kMixJob.length);
+    EXPECT_EQ(span.is_mute, kMixJob.is_mute);
+    EXPECT_EQ(frames_written, kMixJob.length);
+    called_finish_mix = true;
+  });
+
+  // Now do a mix.
+  audio_output_->Process();
+  EXPECT_TRUE(called_finish_mix);
 }
 
 // Verify AudioOutput loudness transform is updated with the |volume_curve| used in SetupMixTask.

@@ -61,7 +61,9 @@ class DriverOutput : public AudioOutput {
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
   std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time ref_time)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
-  void FinishMixJob(const AudioOutput::FrameSpan& span, const float* buffer)
+  void WriteMixOutput(int64_t start, int64_t length, const float* payload)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
+  void FinishMixJob(const AudioOutput::FrameSpan& span)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
 
   zx::duration MixDeadline() const override {
@@ -100,16 +102,6 @@ class DriverOutput : public AudioOutput {
   void OnDriverConfigComplete() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   void OnDriverStartComplete() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-
-  // Uses |writer| to populate the frames specified by |span|.
-  //
-  // Writer will be called iteratively with a |offset| frame, a |length| (also in frames), and
-  // a |dest_buf|, which is the pointer into the ring buffer for the frame |start|.
-  //
-  // Note: here |offset| is relative to |span.start|. The absolute frame for the write is simply
-  // |span.start + offset|.
-  void WriteToRing(const AudioOutput::FrameSpan& span, const float* buffer)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   State state_ = State::Uninitialized;
   zx::channel initial_stream_channel_;

@@ -71,49 +71,13 @@ void AudioOutput::Process() {
     StageMetricsTimer timer("AudioOutput::Process");
     timer.Start();
 
-    uint32_t frames_remaining;
-
-    do {
-      float* payload = nullptr;
-      auto mix_frames = StartMixJob(ref_now);
-      // If we have frames to mix that are non-silent, we should do the mix now.
-      if (mix_frames && !mix_frames->is_mute) {
-        auto buf = pipeline_->ReadLock(ctx, Fixed(mix_frames->start), mix_frames->length);
-        if (buf) {
-          // We have a buffer so call FinishMixJob on this region and perform another MixJob if
-          // we did not mix enough data. This can happen if our pipeline is unable to produce the
-          // entire requested frame region in a single pass.
-          FX_DCHECK(buf->start().Floor() == mix_frames->start);
-          FX_DCHECK(pipeline_->format().sample_format() ==
-                    fuchsia::media::AudioSampleFormat::FLOAT);
-          payload = reinterpret_cast<float*>(buf->payload());
-
-          // Reduce the frame range if we did not fill the entire requested frame region.
-          FX_CHECK(buf->length() > 0);
-          uint64_t valid_frames =
-              std::min(mix_frames->length, static_cast<uint64_t>(buf->length()));
-          frames_remaining = mix_frames->length - valid_frames;
-          mix_frames->length = valid_frames;
-        } else {
-          // If the mix pipeline has no frames for this range, we treat this region as silence.
-          // FinishMixJob will be responsible for filling this region of the ring with silence.
-          mix_frames->is_mute = true;
-          payload = nullptr;
-          frames_remaining = 0;
-        }
-      } else {
-        // If we did not |ReadLock| on this region of the pipeline, we should instead trim now to
-        // ensure any client packets that otherwise would have been mixed are still released.
-        pipeline_->Trim(Fixed::FromRaw(
-            driver_ref_time_to_frac_safe_read_or_write_frame().Apply(ref_now.get())));
-        frames_remaining = 0;
-      }
-
-      // If we have a mix job, we need to call |FinishMixJob| to commit these bytes to the hardware.
-      if (mix_frames) {
-        FinishMixJob(*mix_frames, payload);
-      }
-    } while (frames_remaining > 0);
+    if (auto mix_frames = StartMixJob(ref_now); mix_frames) {
+      ProcessMixJob(ctx, *mix_frames);
+      FinishMixJob(*mix_frames);
+    } else {
+      pipeline_->Trim(
+          Fixed::FromRaw(driver_ref_time_to_frac_safe_read_or_write_frame().Apply(ref_now.get())));
+    }
 
     auto mono_end = async::Now(mix_domain().dispatcher());
     if (auto dt = mono_end - mono_now; dt > MixDeadline()) {
@@ -155,6 +119,42 @@ void AudioOutput::Process() {
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to schedule mix";
     ShutdownSelf();
+  }
+}
+
+void AudioOutput::ProcessMixJob(ReadableStream::ReadLockContext& ctx, FrameSpan mix_span) {
+  // If the span is muted, the output is muted, so we can write silence and trim the pipeline.
+  if (mix_span.is_mute) {
+    WriteMixOutput(mix_span.start, mix_span.length, nullptr);
+    pipeline_->Trim(Fixed(mix_span.start + mix_span.length));
+    return;
+  }
+
+  while (mix_span.length > 0) {
+    auto buf = pipeline_->ReadLock(ctx, Fixed(mix_span.start), mix_span.length);
+    if (!buf) {
+      // The pipeline has no data for this range, so write silence.
+      WriteMixOutput(mix_span.start, mix_span.length, nullptr);
+      return;
+    }
+
+    // Although the ReadLock API allows it, in practice an OutputPipeline pipeline should never
+    // return a buffer with a fractional start frame.
+    FX_CHECK(buf->start().Fraction() == Fixed(0));
+    int64_t buf_start = buf->start().Floor();
+
+    // Write silence before the buffer, if any.
+    if (int64_t gap = buf_start - mix_span.start; gap > 0) {
+      WriteMixOutput(mix_span.start, gap, nullptr);
+    }
+
+    // Write the buffer. OutputPipelines always produce float samples.
+    WriteMixOutput(buf_start, buf->length(), reinterpret_cast<float*>(buf->payload()));
+
+    // ReadLock is not required to return the full range.
+    int64_t frames_advanced = (buf_start + buf->length()) - mix_span.start;
+    mix_span.start += frames_advanced;
+    mix_span.length -= frames_advanced;
   }
 }
 
@@ -224,6 +224,9 @@ void AudioOutput::SetupMixTask(const DeviceConfig::OutputDeviceProfile& profile,
   pipeline_ =
       CreateOutputPipeline(profile.pipeline_config(), profile.volume_curve(), max_block_size_frames,
                            device_reference_clock_to_fractional_frame, reference_clock());
+
+  // OutputPipelines must always produce float samples.
+  FX_CHECK(pipeline_->format().sample_format() == fuchsia::media::AudioSampleFormat::FLOAT);
 
   // In case the pipeline needs shared libraries, ensure those are paged in.
   PinExecutableMemory::Singleton().Pin();

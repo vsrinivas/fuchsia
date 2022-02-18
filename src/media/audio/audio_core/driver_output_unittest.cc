@@ -386,9 +386,8 @@ TEST_F(DriverOutputTest, DISABLED_WriteSilenceToRingWhenMuted) {
   EXPECT_THAT(RingBufferSlice<uint32_t>(first_silent_frame + num_silent_frames, -1),
               Each(Eq(kInitialFrame)));
 
-  // We expect to have mixed these packets, but we want to hold onto them until the corresponding
-  // frames would have been played back.
-  EXPECT_FALSE(packet1_released || packet2_released);
+  // Since these packets are mixed they are no longer needed.
+  EXPECT_TRUE(packet1_released || packet2_released);
 
   // Run the loop for |presentation_delay| to verify we release our packets. We add
   // |kExpectedMixInterval| - |zx::nsec(1)| to ensure we run the next |Process()| after this lead

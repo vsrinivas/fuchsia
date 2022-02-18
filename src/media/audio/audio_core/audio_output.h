@@ -46,7 +46,6 @@ class AudioOutput : public AudioDevice {
               LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory,
               EffectsLoaderV2* effects_loader_v2, std::unique_ptr<AudioDriver>);
 
-  void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   Reporter::OutputDevice& reporter() { return *reporter_; }
   EffectsLoaderV2* effects_loader_v2() const { return effects_loader_v2_; }
 
@@ -80,43 +79,41 @@ class AudioOutput : public AudioDevice {
 
   struct FrameSpan {
     int64_t start;
-    uint64_t length;
+    int64_t length;
     bool is_mute;
   };
+
+  void Process() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+  void ProcessMixJob(ReadableStream::ReadLockContext& ctx, FrameSpan mix_span)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   // Start mixing frames for a periodic mix job. This is called internally during the periodic mix
   // task for this output. Implementations can control mix behavior in the following ways:
   //
   // If |std::nullopt| is returned, then no frames will be mixed. Instead all inputs will be trimmed
-  // such that any client audio packets that will have been fully consumed by |device_ref_time| will
-  // still be released. There will be no call to |FinishMixJob|.
+  // such that any client audio packets that would have been fully consumed by the end of this mix
+  // job will be released. There will be no call to |FinishMixJob|.
   //
   // If the returned optional contains a FrameSpan with |is_mute| set to true, then no frames will
-  // be mixed. Instead all inputs will be trimmed such that any client audio packets that will have
-  // been fully consumed by |device_ref_time| will still be released. |FinishMixJob| will be called
-  // with the returned FrameSpan and a null payload buffer. It is the responsibility of
-  // |FinishMixJob| to produce the silence for the FrameSpan.
+  // be mixed. Instead all inputs will be trimmed such that any client audio packets that would have
+  // been fully consumed by the end of this mix job will be released. |WriteMixOutput| will be
+  // called to write silence. |FinishMixJob| will be called with the returned FrameSpan.
   //
   // If the returned optional contains a FrameSpan with |is_mute| set to false, then the mix
-  // pipeline will be advanced by the requested frame region. |FinishMixJob| will be called with a
-  // FrameSpan that is 'at most' as long as the span in |StartMixJob|, but this length may be
-  // reduced if the pipeline is unable to fill a single, contiguous buffer will all the frames
-  // requested. If the entire region in StartMixJob is unable to be populated in a single pass, then
-  // StartMixJob will be called again to process any remaining frames.
+  // pipeline will be advanced by the requested frame region. |WriteMixOutput| will be called one
+  // or more times to write the mixed output. |FinishMixJob| will be called with the returned
+  // FrameSpan.
   virtual std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time device_ref_time)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
 
-  // Finish a mix job by moving the frame range span |span| into the hardware ring buffer using
-  // |buffer| as a source. |span.start| should be a value that was provided in |StartMixJob| and
-  // |span.length| should be at most the value returned from |StartMixJob|, but may be adjusted
-  // downwards if the full range cannot be produced.
-  //
-  // If |span.is_mute| is false, |buffer| must contain |span.length * channels| floating point
-  // samples of audio data.
-  //
-  // If |span.is_mute| is true, then |buffer| is ignored and instead silence will be inserted
-  // into the ring buffer for the frame range in |span|.
-  virtual void FinishMixJob(const AudioOutput::FrameSpan& span, const float* buffer)
+  // Writes frames in the given region. The start and end will intersect the FrameSpan returned from
+  // a prior |StartMixJob|. Write the given |payload|, or silence if |payload| is nullptr.
+  virtual void WriteMixOutput(int64_t start, int64_t length, const float* payload)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
+
+  // This is called at the end of a mix job to update internal state. |span| is the same span
+  // returned by the last call to StartMixJob.
+  virtual void FinishMixJob(const AudioOutput::FrameSpan& span)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
 
   // The maximum amount of time it can take to run all pending mix jobs when a device

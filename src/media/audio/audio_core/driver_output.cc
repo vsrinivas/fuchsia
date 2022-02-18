@@ -272,26 +272,24 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
   };
 }
 
-void DriverOutput::WriteToRing(const AudioOutput::FrameSpan& span, const float* buffer) {
+void DriverOutput::WriteMixOutput(int64_t start, int64_t frames_left, const float* buffer) {
   TRACE_DURATION("audio", "DriverOutput::WriteToRing");
   const auto& rb = driver_writable_ring_buffer();
   FX_DCHECK(rb != nullptr);
 
-  size_t frames_left = span.length;
-  size_t offset = 0;
+  int64_t offset = 0;
   while (frames_left > 0) {
-    uint32_t wr_ptr = (span.start + offset) % rb->frames();
-    uint32_t contig_space = rb->frames() - wr_ptr;
-    uint32_t to_send = frames_left;
+    int64_t wr_ptr = (start + offset) % rb->frames();
+    int64_t contig_space = rb->frames() - wr_ptr;
+    int64_t to_send = frames_left;
     if (to_send > contig_space) {
       to_send = contig_space;
     }
     void* dest_buf = rb->virt() + (rb->format().bytes_per_frame() * wr_ptr);
 
-    if (span.is_mute) {
+    if (!buffer) {
       output_producer_->FillWithSilence(dest_buf, to_send);
     } else {
-      FX_DCHECK(buffer != nullptr);
       auto job_buf_offset = offset * output_producer_->channels();
       output_producer_->ProduceOutput(buffer + job_buf_offset, dest_buf, to_send);
 
@@ -312,13 +310,13 @@ void DriverOutput::WriteToRing(const AudioOutput::FrameSpan& span, const float* 
     frames_left -= to_send;
     offset += to_send;
   }
-  frames_sent_ += offset;
 }
 
-void DriverOutput::FinishMixJob(const AudioOutput::FrameSpan& span, const float* buffer) {
+void DriverOutput::FinishMixJob(const AudioOutput::FrameSpan& span) {
   TRACE_DURATION("audio", "DriverOutput::FinishMixJob", "start", span.start, "length", span.length,
                  "is_mute", span.is_mute);
-  WriteToRing(span, buffer);
+
+  frames_sent_ = span.start + span.length;
 
   if (VERBOSE_TIMING_DEBUG) {
     auto now = async::Now(mix_domain().dispatcher());
@@ -329,6 +327,7 @@ void DriverOutput::FinishMixJob(const AudioOutput::FrameSpan& span, const float*
     FX_LOGS(INFO) << "PLead [" << std::setw(4) << playback_lead_start << ", " << std::setw(4)
                   << playback_lead_end << "]";
   }
+
   ScheduleNextLowWaterWakeup();
 }
 
