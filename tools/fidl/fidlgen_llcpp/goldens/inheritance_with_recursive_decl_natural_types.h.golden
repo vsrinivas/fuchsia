@@ -156,16 +156,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_inheritancewithrecursivedecl::ParentFirstRequest, 4, 4> {
 };
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_inheritancewithrecursivedecl::ParentFirstRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test_inheritancewithrecursivedecl::ParentFirstRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<::fidl::ServerEnd<
-              ::test_inheritancewithrecursivedecl::Parent>>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -194,16 +184,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_inheritancewithrecursivedecl::ChildSecondRequest, 4, 4> {
 };
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_inheritancewithrecursivedecl::ChildSecondRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test_inheritancewithrecursivedecl::ChildSecondRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<::fidl::ServerEnd<
-              ::test_inheritancewithrecursivedecl::Parent>>::value> {};
-
 #endif  // __Fuchsia__
 
 }  // namespace fidl

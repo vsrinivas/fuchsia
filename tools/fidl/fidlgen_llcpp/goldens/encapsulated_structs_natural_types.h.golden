@@ -437,17 +437,6 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::NonInlineStructTestStruct, 16, 16> {
 };
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_encapsulatedstructs::NonInlineStructTestStruct>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test_encapsulatedstructs::NonInlineStructTestStruct>::value &&
-          internal::NaturalIsMemcpyCompatible<::std::unique_ptr<
-              ::test_encapsulatedstructs::Int16Int8>>::value &&
-          internal::NaturalIsMemcpyCompatible<::zx::handle>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -469,15 +458,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_encapsulatedstructs::Int8Int32>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::Int8Int32, 8, 8> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_encapsulatedstructs::Int8Int32>
-    : public internal::BoolConstant<
-          !HasPadding<::test_encapsulatedstructs::Int8Int32>::value &&
-          internal::NaturalIsMemcpyCompatible<int8_t>::value &&
-          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -499,15 +479,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_encapsulatedstructs::Int16Int8>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::Int16Int8, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_encapsulatedstructs::Int16Int8>
-    : public internal::BoolConstant<
-          !HasPadding<::test_encapsulatedstructs::Int16Int8>::value &&
-          internal::NaturalIsMemcpyCompatible<int16_t>::value &&
-          internal::NaturalIsMemcpyCompatible<int8_t>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -529,16 +500,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_encapsulatedstructs::ArrayInt16Int8>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::ArrayInt16Int8, 12, 12> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_encapsulatedstructs::ArrayInt16Int8>
-    : public internal::BoolConstant<
-          !HasPadding<::test_encapsulatedstructs::ArrayInt16Int8>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::array<::test_encapsulatedstructs::Int16Int8, 3>>::value> {
-};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -563,20 +524,6 @@ struct internal::NaturalCodingTraits<
     ::test_encapsulatedstructs::StructPaddingTestStruct>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::StructPaddingTestStruct, 24, 24> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_encapsulatedstructs::StructPaddingTestStruct>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test_encapsulatedstructs::StructPaddingTestStruct>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_encapsulatedstructs::Int16Int8>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_encapsulatedstructs::Int8Int32>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_encapsulatedstructs::ArrayInt16Int8>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -601,17 +548,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_encapsulatedstructs::TopLevelStruct>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::TopLevelStruct, 40, 40> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_encapsulatedstructs::TopLevelStruct>
-    : public internal::BoolConstant<
-          !HasPadding<::test_encapsulatedstructs::TopLevelStruct>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_encapsulatedstructs::StructPaddingTestStruct>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_encapsulatedstructs::NonInlineStructTestStruct>::value> {};
-
 #endif  // __Fuchsia__
 
 }  // namespace fidl

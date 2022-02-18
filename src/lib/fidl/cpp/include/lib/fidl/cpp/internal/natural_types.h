@@ -28,7 +28,7 @@ using Error = Result;
 namespace internal {
 
 template <typename F>
-void NaturalEnvelopeEncode(NaturalEncoder* encoder, F* value, size_t offset,
+void NaturalEnvelopeEncode(::fidl::Encoder* encoder, F* value, size_t offset,
                            std::optional<fidl::internal::NaturalHandleInformation> handle_info) {
   if (value == nullptr) {
     // Nothing to encode.
@@ -79,7 +79,7 @@ void NaturalEnvelopeEncode(NaturalEncoder* encoder, F* value, size_t offset,
 
 template <typename F>
 void NaturalEnvelopeEncodeOptional(
-    NaturalEncoder* encoder, std::optional<F>* value, size_t offset,
+    ::fidl::Encoder* encoder, std::optional<F>* value, size_t offset,
     std::optional<fidl::internal::NaturalHandleInformation> handle_info) {
   if (!value->has_value()) {
     // Nothing to encode.
@@ -89,7 +89,7 @@ void NaturalEnvelopeEncodeOptional(
 }
 
 template <typename F>
-void NaturalEnvelopeDecodeOptional(NaturalDecoder* decoder, std::optional<F>* value,
+void NaturalEnvelopeDecodeOptional(::fidl::Decoder* decoder, std::optional<F>* value,
                                    size_t offset) {
   fidl_envelope_v2_t* envelope = decoder->GetPtr<fidl_envelope_v2_t>(offset);
   if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
@@ -101,7 +101,7 @@ void NaturalEnvelopeDecodeOptional(NaturalDecoder* decoder, std::optional<F>* va
 }
 
 template <typename F>
-bool NaturalEnvelopeDecode(NaturalDecoder* decoder, F* value, size_t offset) {
+bool NaturalEnvelopeDecode(::fidl::Decoder* decoder, F* value, size_t offset) {
   fidl_envelope_v2_t* envelope = decoder->GetPtr<fidl_envelope_v2_t>(offset);
   if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
     fidl::internal::NaturalDecode(decoder, value, decoder->EnvelopeValueOffset(envelope));
@@ -195,7 +195,8 @@ struct NaturalStructCodingTraits {
   static constexpr size_t inline_size_v1_no_ee = V1;
   static constexpr size_t inline_size_v2 = V2;
 
-  static void Encode(NaturalEncoder* encoder, T* value, size_t offset,
+  template <class EncoderImpl>
+  static void Encode(EncoderImpl* encoder, T* value, size_t offset,
                      cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
     const auto wire_format = encoder->wire_format();
     MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) -> void {
@@ -207,7 +208,8 @@ struct NaturalStructCodingTraits {
     });
   }
 
-  static void Decode(NaturalDecoder* decoder, T* value, size_t offset) {
+  template <class DecoderImpl>
+  static void Decode(DecoderImpl* decoder, T* value, size_t offset) {
     MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) {
       fidl::internal::NaturalDecode(decoder, member, offset + member_info.offset_v2);
     });
@@ -279,7 +281,8 @@ struct NaturalTableCodingTraits {
     }
   }
 
-  static void Decode(NaturalDecoder* decoder, T* value, size_t offset) {
+  template <class DecoderImpl>
+  static void Decode(DecoderImpl* decoder, T* value, size_t offset) {
     fidl_vector_t* encoded = decoder->template GetPtr<fidl_vector_t>(offset);
 
     if (!encoded->data) {
@@ -319,7 +322,7 @@ struct NaturalUnionCodingTraits {
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
-      NaturalEncoder* encoder, T* value, size_t offset,
+      Encoder* encoder, T* value, size_t offset,
       cpp17::optional<::fidl::internal::NaturalHandleInformation> maybe_handle_info) {
     const size_t index = value->storage_->index();
     ZX_ASSERT(index > 0);
@@ -336,7 +339,7 @@ struct NaturalUnionCodingTraits {
     xunion->tag = static_cast<fidl_union_tag_t>(T::IndexToTag(index));
   }
 
-  static void Decode(NaturalDecoder* decoder, T* value, size_t offset) {
+  static void Decode(Decoder* decoder, T* value, size_t offset) {
     fidl_xunion_v2_t* xunion = decoder->GetPtr<fidl_xunion_v2_t>(offset);
     const size_t index = T::TagToIndex(static_cast<typename T::Tag>(xunion->tag));
     ZX_ASSERT(index > 0);
@@ -345,8 +348,7 @@ struct NaturalUnionCodingTraits {
   }
 
   template <size_t I = 1>
-  static void DecodeMember(NaturalDecoder* decoder, T* value, size_t envelope_offset,
-                           const size_t index) {
+  static void DecodeMember(Decoder* decoder, T* value, size_t envelope_offset, const size_t index) {
     static_assert(I > 0);
     if constexpr (I < std::variant_size_v<typename T::Storage_>) {
       if (I == index) {

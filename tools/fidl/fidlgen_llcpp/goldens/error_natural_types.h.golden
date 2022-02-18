@@ -299,13 +299,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_error::Example_foo_Response> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_error::Example_foo_Response, 8, 8> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_error::Example_foo_Response>
-    : public internal::BoolConstant<
-          !HasPadding<::test_error::Example_foo_Response>::value &&
-          internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -326,14 +319,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_error::ExampleFooTopResponse> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_error::ExampleFooTopResponse, 24, 16> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_error::ExampleFooTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<::test_error::ExampleFooTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_error::Example_foo_Result>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -353,13 +338,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_error::ExampleFooRequest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_error::ExampleFooRequest, 16, 16> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_error::ExampleFooRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_error::ExampleFooRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
-
 #endif  // __Fuchsia__
 
 template <>

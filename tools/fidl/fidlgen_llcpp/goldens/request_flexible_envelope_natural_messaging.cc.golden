@@ -18,7 +18,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<::test_requestflexibleenvelope::Protocol::
                                    RequestStrictResponseFlexible>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_requestflexibleenvelope::
           kProtocol_RequestStrictResponseFlexible_Ordinal};
   return messenger().TwoWay(
@@ -43,7 +43,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientResponseCallback<
             ::test_requestflexibleenvelope::Protocol::
                 RequestStrictResponseFlexible>&& _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_requestflexibleenvelope::
           kProtocol_RequestStrictResponseFlexible_Ordinal};
   return messenger().TwoWay(
@@ -70,7 +70,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<::test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_requestflexibleenvelope::
           kProtocol_RequestFlexibleResponseStrict_Ordinal};
   return messenger().TwoWay(
@@ -95,7 +95,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientResponseCallback<
             ::test_requestflexibleenvelope::Protocol::
                 RequestFlexibleResponseStrict>&& _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_requestflexibleenvelope::
           kProtocol_RequestFlexibleResponseStrict_Ordinal};
   return messenger().TwoWay(
@@ -137,7 +137,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_requestflexibleenvelope::
               ProtocolRequestStrictResponseFlexibleTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_requestflexibleenvelope::
           kProtocol_RequestStrictResponseFlexible_Ordinal};
   _messenger.SendReply(
@@ -152,7 +152,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_requestflexibleenvelope::
               ProtocolRequestFlexibleResponseStrictTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_requestflexibleenvelope::
           kProtocol_RequestFlexibleResponseStrict_Ordinal};
   _messenger.SendReply(

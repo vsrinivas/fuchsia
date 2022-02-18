@@ -127,16 +127,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_byteandbytes::ByteAndBytes> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_byteandbytes::ByteAndBytes, 56, 56> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_byteandbytes::ByteAndBytes>
-    : public internal::BoolConstant<
-          !HasPadding<::test_byteandbytes::ByteAndBytes>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
-          internal::NaturalIsMemcpyCompatible<::std::vector<uint8_t>>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::cpp17::optional<::std::vector<uint8_t>>>::value> {};
-
 #endif  // __Fuchsia__
 
 }  // namespace fidl

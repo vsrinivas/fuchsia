@@ -3665,8 +3665,8 @@ template <>
 struct IsMemcpyCompatible<::test::union_::UnionSandwich>
     : public internal::BoolConstant<
           !HasPadding<::test::union_::UnionSandwich>::value &&
-          IsMemcpyCompatible<uint32_t>::value &&
-          IsMemcpyCompatible<::test::union_::ExplicitXUnion>::value> {};
+          IsMemcpyCompatible<::test::union_::ExplicitXUnion>::value &&
+          IsMemcpyCompatible<uint32_t>::value> {};
 
 inline zx_status_t Clone(const ::test::union_::UnionSandwich& value,
                          ::test::union_::UnionSandwich* result) {

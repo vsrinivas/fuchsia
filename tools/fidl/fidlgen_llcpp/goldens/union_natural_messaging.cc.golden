@@ -18,7 +18,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
             ::test_union::TestProtocol::
                 StrictXUnionHenceResponseMayBeStackAllocated>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_union::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
   return messenger().TwoWay(
@@ -40,7 +40,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
             ::test_union::TestProtocol::
                 StrictXUnionHenceResponseMayBeStackAllocated>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_union::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
   return messenger().TwoWay(
@@ -63,7 +63,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
             ::test_union::TestProtocol::
                 FlexibleXUnionHenceResponseMustBeHeapAllocated>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_union::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
   return messenger().TwoWay(
@@ -85,7 +85,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
             ::test_union::TestProtocol::
                 FlexibleXUnionHenceResponseMustBeHeapAllocated>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_union::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
   return messenger().TwoWay(
@@ -126,7 +126,7 @@ void fidl::internal::NaturalCompleterBase<
             TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&&
                 payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_union::
           kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
   _messenger.SendReply(
@@ -144,7 +144,7 @@ void fidl::internal::NaturalCompleterBase<
             TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&&
                 payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_union::
           kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
   _messenger.SendReply(

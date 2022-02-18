@@ -76,12 +76,14 @@ using {{ .Name }} = {{ .Unified }};
     static constexpr size_t inline_size_v1_no_ee = sizeof({{ .Type }});
     static constexpr size_t inline_size_v2 = sizeof({{ .Type }});
 
-    static void Encode(internal::NaturalEncoder* encoder, {{ . }}* value, size_t offset,
+    template <class EncoderImpl>
+    static void Encode(EncoderImpl* encoder, {{ . }}* value, size_t offset,
                       cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
       ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
       *encoder->template GetPtr<{{ . }}>(offset) = *value;
     }
-    static void Decode(internal::NaturalDecoder* decoder, {{ . }}* value, size_t offset) {
+    template <typename DecoderImpl>
+    static void Decode(DecoderImpl* decoder, {{ . }}* value, size_t offset) {
       *value = *decoder->template GetPtr<{{ . }}>(offset);
     }
   };

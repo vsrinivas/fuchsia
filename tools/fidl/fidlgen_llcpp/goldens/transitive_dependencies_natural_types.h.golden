@@ -89,13 +89,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_transitivedependencies::Baz> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_transitivedependencies::Baz, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_transitivedependencies::Baz>
-    : public internal::BoolConstant<
-          !HasPadding<::test_transitivedependencies::Baz>::value &&
-          internal::NaturalIsMemcpyCompatible<::test_middle::Bar>::value> {};
-
 #endif  // __Fuchsia__
 
 }  // namespace fidl

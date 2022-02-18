@@ -124,11 +124,11 @@ template <>
 struct IsMemcpyCompatible<::test::typealiases::ExampleOfUseOfAliases>
     : public internal::BoolConstant<
           !HasPadding<::test::typealiases::ExampleOfUseOfAliases>::value &&
-          IsMemcpyCompatible<uint32_t>::value &&
           IsMemcpyCompatible<::std::vector<::std::string>>::value &&
           IsMemcpyCompatible<
               ::std::vector<::test::someotherlibrary::ReferenceMe>>::value &&
-          IsMemcpyCompatible<::zx::channel>::value> {};
+          IsMemcpyCompatible<::zx::channel>::value &&
+          IsMemcpyCompatible<uint32_t>::value> {};
 
 inline zx_status_t Clone(
     const ::test::typealiases::ExampleOfUseOfAliases& value,

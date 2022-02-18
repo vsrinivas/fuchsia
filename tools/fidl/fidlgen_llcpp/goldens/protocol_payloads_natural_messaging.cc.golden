@@ -52,7 +52,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
         ::fidl::ClientCallback<
             ::test_protocolpayloads::MainProtocol::TwoWayComposed>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::
@@ -73,7 +73,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
         ::fidl::ClientResponseCallback<
             ::test_protocolpayloads::MainProtocol::TwoWayComposed>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::
@@ -95,7 +95,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
         ::fidl::ClientCallback<
             ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::
@@ -117,7 +117,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
         ::fidl::ClientResponseCallback<
             ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::
@@ -139,7 +139,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
                 ::fidl::ClientCallback<
                     ::test_protocolpayloads::MainProtocol::TwoWayLocal>&&
                     _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable,
@@ -157,7 +157,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
                 ::fidl::ClientResponseCallback<
                     ::test_protocolpayloads::MainProtocol::TwoWayLocal>&&
                     _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable,
@@ -177,7 +177,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
         ::fidl::ClientCallback<
             ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable,
@@ -197,7 +197,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
         ::fidl::ClientResponseCallback<
             ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable,
@@ -218,7 +218,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
         ::fidl::ClientCallback<
             ::test_protocolpayloads::MainProtocol::TwoWayImport>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::
@@ -238,7 +238,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
         ::fidl::ClientResponseCallback<
             ::test_protocolpayloads::MainProtocol::TwoWayImport>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::
@@ -259,7 +259,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
         ::fidl::ClientCallback<
             ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::
@@ -280,7 +280,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
         ::fidl::ClientResponseCallback<
             ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::
@@ -301,7 +301,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
                ::fidl::ClientCallback<
                    ::test_protocolpayloads::MainProtocol::TwoWayAnon>&&
                    _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::
@@ -320,7 +320,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
                ::fidl::ClientResponseCallback<
                    ::test_protocolpayloads::MainProtocol::TwoWayAnon>&&
                    _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::
@@ -342,7 +342,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
         ::fidl::ClientCallback<
             ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::
@@ -364,7 +364,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
         ::fidl::ClientResponseCallback<
             ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal};
   return messenger().TwoWay(
       &::test_protocolpayloads::
@@ -383,7 +383,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalClientImpl<::test_protocolpayloads::MainProtocol>::OneWayComposed(
         ::test_protocolpayloads_imported::ImportStructPayload&& payload) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OneWayComposed_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_protocolpayloads::
@@ -396,7 +396,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalClientImpl<::test_protocolpayloads::MainProtocol>::OneWayLocal(
         ::test_protocolpayloads::LocalStructPayload&& payload) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OneWayLocal_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable,
@@ -408,7 +408,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalClientImpl<::test_protocolpayloads::MainProtocol>::OneWayImport(
         ::test_protocolpayloads_imported::ImportStructPayload&& payload) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OneWayImport_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_protocolpayloads::
@@ -422,7 +422,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::
     NaturalClientImpl<::test_protocolpayloads::MainProtocol>::OneWayAnon(
         ::test_protocolpayloads::MainProtocolOneWayAnonRequest&& payload)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OneWayAnon_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_protocolpayloads::
@@ -578,7 +578,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocolpayloads::MainProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnComposed(
         ::test_protocolpayloads_imported::ImportStructPayload payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -594,7 +594,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocolpayloads::MainProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnComposed(
         ::test_protocolpayloads_imported::ImportStructPayload payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -613,7 +613,7 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
     OnComposedWithError(
         ::test_protocolpayloads_imported::
             ComposedProtocolOnComposedWithErrorRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -631,7 +631,7 @@ fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
     OnComposedWithError(
         ::test_protocolpayloads_imported::
             ComposedProtocolOnComposedWithErrorRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -648,7 +648,7 @@ fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnLocal(
         ::test_protocolpayloads::LocalStructPayload payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable,
@@ -663,7 +663,7 @@ fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnLocal(
         ::test_protocolpayloads::LocalStructPayload payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable,
@@ -680,7 +680,7 @@ fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
 fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
     OnLocalWithError(
         ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -696,7 +696,7 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnLocalWithError(
         ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -713,7 +713,7 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnImport(
         ::test_protocolpayloads_imported::ImportStructPayload payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -729,7 +729,7 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnImport(
         ::test_protocolpayloads_imported::ImportStructPayload payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -747,7 +747,7 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
 fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
     OnImportWithError(
         ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -764,7 +764,7 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
 fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
     OnImportWithError(
         ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -781,7 +781,7 @@ fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::OnAnon(
         ::test_protocolpayloads::MainProtocolOnAnonRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -797,7 +797,7 @@ fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnAnon(
         ::test_protocolpayloads::MainProtocolOnAnonRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -815,7 +815,7 @@ fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol>::
 fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
     OnAnonWithError(
         ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -831,7 +831,7 @@ fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProtocol>::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalEventSender<::test_protocolpayloads::MainProtocol>::OnAnonWithError(
         ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_protocolpayloads::
@@ -851,7 +851,7 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>::
     Reply(::test_protocolpayloads_imported::ImportStructPayload&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal};
   _messenger.SendReply(
       &::test_protocolpayloads::
@@ -865,7 +865,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_protocolpayloads_imported::
               ComposedProtocolTwoWayComposedWithErrorTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal};
   _messenger.SendReply(
       &::test_protocolpayloads::
@@ -878,7 +878,7 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocolpayloads::MainProtocol::TwoWayLocal>::
     Reply(::test_protocolpayloads::LocalStructPayload&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal};
   _messenger.SendReply(
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable,
@@ -891,7 +891,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse&&
               payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal};
   _messenger.SendReply(
       &::test_protocolpayloads::
@@ -904,7 +904,7 @@ void fidl::internal::NaturalCompleterBase<
     ::test_protocolpayloads::MainProtocol::TwoWayImport>::
     Reply(::test_protocolpayloads_imported::ImportStructPayload&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal};
   _messenger.SendReply(
       &::test_protocolpayloads::
@@ -919,7 +919,7 @@ void fidl::internal::NaturalCompleterBase<
         ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse&&
             payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal};
   _messenger.SendReply(
       &::test_protocolpayloads::
@@ -933,7 +933,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(
         ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal};
   _messenger.SendReply(
       &::test_protocolpayloads::
@@ -947,7 +947,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse&&
               payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal};
   _messenger.SendReply(
       &::test_protocolpayloads::

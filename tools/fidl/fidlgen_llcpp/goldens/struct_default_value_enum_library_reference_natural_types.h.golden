@@ -97,16 +97,6 @@ struct internal::NaturalCodingTraits<
     ::test_structdefaultvalueenumlibraryreference::Foo>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_structdefaultvalueenumlibraryreference::Foo, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_structdefaultvalueenumlibraryreference::Foo>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test_structdefaultvalueenumlibraryreference::Foo>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_dependent::MyEnum>::value> {};
-
 #endif  // __Fuchsia__
 
 }  // namespace fidl

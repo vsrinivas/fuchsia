@@ -97,13 +97,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_importedconstvalues::MyStruct> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_importedconstvalues::MyStruct, 1, 1> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_importedconstvalues::MyStruct>
-    : public internal::BoolConstant<
-          !HasPadding<::test_importedconstvalues::MyStruct>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
-
 #endif  // __Fuchsia__
 
 }  // namespace fidl

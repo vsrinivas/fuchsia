@@ -18,7 +18,7 @@ void fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::
         ::fidl::ClientCallback<
             ::test_emptystruct::EmptyProtocol::SendAndReceive>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
   return messenger().TwoWay(
       &::test_emptystruct::
@@ -38,7 +38,7 @@ void fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::
         ::fidl::ClientResponseCallback<
             ::test_emptystruct::EmptyProtocol::SendAndReceive>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
   return messenger().TwoWay(
       &::test_emptystruct::
@@ -56,7 +56,7 @@ void fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::Send(
     ::test_emptystruct::EmptyProtocolSendRequest&& payload) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_emptystruct::kEmptyProtocol_Send_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_emptystruct::test_emptystruct_EmptyProtocolSendRequestTable,
@@ -100,7 +100,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 ::fitx::result<::fidl::Error> fidl::internal::
     NaturalWeakEventSender<::test_emptystruct::EmptyProtocol>::Receive(
         ::test_emptystruct::EmptyProtocolReceiveRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_emptystruct::kEmptyProtocol_Receive_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_emptystruct::test_emptystruct_EmptyProtocolReceiveRequestTable,
@@ -115,7 +115,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>::Receive(
     ::test_emptystruct::EmptyProtocolReceiveRequest payload) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_emptystruct::kEmptyProtocol_Receive_Ordinal};
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       &::test_emptystruct::test_emptystruct_EmptyProtocolReceiveRequestTable,
@@ -135,7 +135,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(
         ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse&& payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal};
   _messenger.SendReply(
       &::test_emptystruct::

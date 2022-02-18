@@ -535,18 +535,6 @@ struct internal::NaturalCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestStrictResponseFlexibleRequest,
                 24, 16> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestStrictResponseFlexibleRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test_requestflexibleenvelope::
-                  ProtocolRequestStrictResponseFlexibleRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_requestflexibleenvelope::StrictFoo>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -576,18 +564,6 @@ struct internal::NaturalCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestFlexibleResponseStrictTopResponse,
                 24, 16> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestFlexibleResponseStrictTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test_requestflexibleenvelope::
-                  ProtocolRequestFlexibleResponseStrictTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_requestflexibleenvelope::StrictFoo>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -617,18 +593,6 @@ struct internal::NaturalCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestStrictResponseFlexibleTopResponse,
                 24, 16> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestStrictResponseFlexibleTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test_requestflexibleenvelope::
-                  ProtocolRequestStrictResponseFlexibleTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_requestflexibleenvelope::FlexibleFoo>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -658,18 +622,6 @@ struct internal::NaturalCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestFlexibleResponseStrictRequest,
                 24, 16> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_requestflexibleenvelope::
-        ProtocolRequestFlexibleResponseStrictRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test_requestflexibleenvelope::
-                  ProtocolRequestFlexibleResponseStrictRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_requestflexibleenvelope::FlexibleFoo>::value> {};
-
 #endif  // __Fuchsia__
 
 template <>

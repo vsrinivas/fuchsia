@@ -59,7 +59,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                    LibfuzzerNeedsNonemptyProtocol>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::
           kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal};
   return messenger().TwoWay(
@@ -80,7 +80,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientResponseCallback<
             ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                 LibfuzzerNeedsNonemptyProtocol>&& _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::
           kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal};
   return messenger().TwoWay(
@@ -119,7 +119,7 @@ void fidl::internal::NaturalCompleterBase<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
         LibfuzzerNeedsNonemptyProtocol>::Reply() {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::
           kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal};
   _messenger.SendReply(
@@ -241,7 +241,7 @@ namespace test_bindingsdenylist {
 }  // namespace test_bindingsdenylist
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
     ::test_bindingsdenylist::ImportsSameNameContext>::Unattributed() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       nullptr,
@@ -252,7 +252,7 @@ namespace test_bindingsdenylist {
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
     ::test_bindingsdenylist::ImportsSameNameContext>::
     AlwaysAppearsInImportingLibrary() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::
           kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal};
   ::fidl::Result result = messenger().OneWay(
@@ -381,7 +381,7 @@ void fidl::internal::
         ::fidl::ClientCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal};
   return messenger().TwoWay(
       &::test_bindingsdenylist::
@@ -402,7 +402,7 @@ void fidl::internal::
         ::fidl::ClientResponseCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal};
   return messenger().TwoWay(
       &::test_bindingsdenylist::
@@ -424,7 +424,7 @@ void fidl::internal::
         ::fidl::ClientCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal};
   return messenger().TwoWay(
       &::test_bindingsdenylist::
@@ -445,7 +445,7 @@ void fidl::internal::
         ::fidl::ClientResponseCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal};
   return messenger().TwoWay(
       &::test_bindingsdenylist::
@@ -469,7 +469,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal};
   return messenger().TwoWay(
       &::test_bindingsdenylist::
@@ -492,7 +492,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientResponseCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal};
   return messenger().TwoWay(
       &::test_bindingsdenylist::
@@ -514,7 +514,7 @@ void fidl::internal::
         ::fidl::ClientCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal};
   return messenger().TwoWay(
       &::test_bindingsdenylist::
@@ -535,7 +535,7 @@ void fidl::internal::
         ::fidl::ClientResponseCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal};
   return messenger().TwoWay(
       &::test_bindingsdenylist::
@@ -559,7 +559,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal};
   return messenger().TwoWay(
       &::test_bindingsdenylist::
@@ -582,7 +582,7 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientResponseCallback<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal};
   return messenger().TwoWay(
       &::test_bindingsdenylist::
@@ -621,7 +621,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse&&
               payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal};
   _messenger.SendReply(
       &::test_bindingsdenylist::
@@ -635,7 +635,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse&&
               payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal};
   _messenger.SendReply(
       &::test_bindingsdenylist::
@@ -649,7 +649,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse&&
               payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal};
   _messenger.SendReply(
       &::test_bindingsdenylist::
@@ -663,7 +663,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse&&
               payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal};
   _messenger.SendReply(
       &::test_bindingsdenylist::
@@ -677,7 +677,7 @@ void fidl::internal::NaturalCompleterBase<
     Reply(::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse&&
               payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal};
   _messenger.SendReply(
       &::test_bindingsdenylist::

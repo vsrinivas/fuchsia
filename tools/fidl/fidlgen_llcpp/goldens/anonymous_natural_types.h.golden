@@ -823,13 +823,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_anonymous::TableData> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_anonymous::TableData, 1, 1> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_anonymous::TableData>
-    : public internal::BoolConstant<
-          !HasPadding<::test_anonymous::TableData>::value &&
-          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -853,17 +846,6 @@ struct internal::NaturalCodingTraits<
     ::test_anonymous::SomeProtocolSomeMethodRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_anonymous::SomeProtocolSomeMethodRequest, 40, 32> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_anonymous::SomeProtocolSomeMethodRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_anonymous::SomeProtocolSomeMethodRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_anonymous::UnionMember>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_anonymous::TableMember>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -883,15 +865,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_anonymous::OverrideTest> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_anonymous::OverrideTest, 56, 40> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_anonymous::OverrideTest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_anonymous::OverrideTest>::value &&
-          internal::NaturalIsMemcpyCompatible<::test_anonymous::Op>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::unique_ptr<::test_anonymous::Expression>>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -916,16 +889,6 @@ struct internal::NaturalCodingTraits<
     ::test_anonymous::SomeProtocol_SomeMethod_Response>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_anonymous::SomeProtocol_SomeMethod_Response, 4, 4> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_anonymous::SomeProtocol_SomeMethod_Response>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test_anonymous::SomeProtocol_SomeMethod_Response>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_anonymous::BitsMember>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -950,16 +913,6 @@ struct internal::NaturalCodingTraits<
     ::test_anonymous::SomeProtocolSomeMethodTopResponse>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_anonymous::SomeProtocolSomeMethodTopResponse, 24, 16> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<
-    ::test_anonymous::SomeProtocolSomeMethodTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::test_anonymous::SomeProtocolSomeMethodTopResponse>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_anonymous::SomeProtocol_SomeMethod_Result>::value> {};
-
 #endif  // __Fuchsia__
 
 template <>
@@ -1017,15 +970,17 @@ struct internal::NaturalCodingTraits<::test_anonymous::Flags> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint16_t);
   static constexpr size_t inline_size_v2 = sizeof(uint16_t);
 
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_anonymous::Flags* value, size_t offset,
+  template <class EncoderImpl>
+  static void Encode(EncoderImpl* encoder, ::test_anonymous::Flags* value,
+                     size_t offset,
                      cpp17::optional<NaturalHandleInformation>
                          maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_anonymous::Flags>(offset) = *value;
   }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_anonymous::Flags* value, size_t offset) {
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder, ::test_anonymous::Flags* value,
+                     size_t offset) {
     *value = *decoder->template GetPtr<::test_anonymous::Flags>(offset);
   }
 };
@@ -1034,15 +989,17 @@ struct internal::NaturalCodingTraits<::test_anonymous::BitsMember> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_anonymous::BitsMember* value, size_t offset,
+  template <class EncoderImpl>
+  static void Encode(EncoderImpl* encoder, ::test_anonymous::BitsMember* value,
+                     size_t offset,
                      cpp17::optional<NaturalHandleInformation>
                          maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_anonymous::BitsMember>(offset) = *value;
   }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_anonymous::BitsMember* value, size_t offset) {
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder, ::test_anonymous::BitsMember* value,
+                     size_t offset) {
     *value = *decoder->template GetPtr<::test_anonymous::BitsMember>(offset);
   }
 };
@@ -1053,7 +1010,8 @@ struct internal::NaturalCodingTraits<
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
-  static void Encode(internal::NaturalEncoder* encoder,
+  template <class EncoderImpl>
+  static void Encode(EncoderImpl* encoder,
                      ::test_anonymous::SomeProtocol_SomeMethod_Error* value,
                      size_t offset,
                      cpp17::optional<NaturalHandleInformation>
@@ -1062,7 +1020,8 @@ struct internal::NaturalCodingTraits<
     *encoder->template GetPtr<::test_anonymous::SomeProtocol_SomeMethod_Error>(
         offset) = *value;
   }
-  static void Decode(internal::NaturalDecoder* decoder,
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
                      ::test_anonymous::SomeProtocol_SomeMethod_Error* value,
                      size_t offset) {
     *value =
@@ -1076,15 +1035,17 @@ struct internal::NaturalCodingTraits<::test_anonymous::Op> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
-  static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_anonymous::Op* value, size_t offset,
+  template <class EncoderImpl>
+  static void Encode(EncoderImpl* encoder, ::test_anonymous::Op* value,
+                     size_t offset,
                      cpp17::optional<NaturalHandleInformation>
                          maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_anonymous::Op>(offset) = *value;
   }
-  static void Decode(internal::NaturalDecoder* decoder,
-                     ::test_anonymous::Op* value, size_t offset) {
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder, ::test_anonymous::Op* value,
+                     size_t offset) {
     *value = *decoder->template GetPtr<::test_anonymous::Op>(offset);
   }
 };

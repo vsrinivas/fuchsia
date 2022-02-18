@@ -10,7 +10,7 @@ namespace test_service {
 }  // namespace test_service
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
     ::test_service::SecondProtocol>::MethodOnSecond() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_service::kSecondProtocol_MethodOnSecond_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       nullptr,
@@ -93,7 +93,7 @@ namespace test_service {
 }  // namespace test_service
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
     ::test_service::FirstProtocol>::MethodOnFirst() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
+  ::fidl::MessageEncoder _encoder{
       ::test_service::kFirstProtocol_MethodOnFirst_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       nullptr,

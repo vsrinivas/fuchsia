@@ -108,15 +108,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_vectors::ExampleUseOfVectors> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_vectors::ExampleUseOfVectors, 32, 32> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_vectors::ExampleUseOfVectors>
-    : public internal::BoolConstant<
-          !HasPadding<::test_vectors::ExampleUseOfVectors>::value &&
-          internal::NaturalIsMemcpyCompatible<::std::vector<uint8_t>>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::vector<::std::vector<bool>>>::value> {};
-
 #endif  // __Fuchsia__
 
 }  // namespace fidl

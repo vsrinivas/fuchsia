@@ -403,14 +403,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_arrays::StructSmallArray> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_arrays::StructSmallArray, 8, 8> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_arrays::StructSmallArray>
-    : public internal::BoolConstant<
-          !HasPadding<::test_arrays::StructSmallArray>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::array<uint32_t, 2>>::value> {};
-
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -430,14 +422,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_arrays::StructLargeArray> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_arrays::StructLargeArray, 400, 400> {};
-
-template <>
-struct internal::NaturalIsMemcpyCompatible<::test_arrays::StructLargeArray>
-    : public internal::BoolConstant<
-          !HasPadding<::test_arrays::StructLargeArray>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::array<uint32_t, 100>>::value> {};
-
 #endif  // __Fuchsia__
 
 template <>
