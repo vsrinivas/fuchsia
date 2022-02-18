@@ -26,6 +26,7 @@ LIB_FASYNC_IGNORE_CPP14_COMPAT_END
 #include <lib/stdcompat/type_traits.h>
 #include <lib/stdcompat/variant.h>
 
+#include <algorithm>
 #include <tuple>
 #include <type_traits>
 #include <utility>
