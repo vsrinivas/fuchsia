@@ -435,7 +435,7 @@ destroyed after the test finishes execution.
 | ------------------ | ----------- | ---- |
 |  `data` | Isolated data storage directory | `/data` |
 |  `cache` | Isolated cache storage directory | `/cache` |
-|  `temp` | Isolated in-memory [temporary storage directory](#temporary_storage) | `/tmp` |
+|  `tmp` | Isolated in-memory [temporary storage directory](#temporary_storage) | `/tmp` |
 
 Add a use declaration in test's manifest file to use these capabilities.
 
