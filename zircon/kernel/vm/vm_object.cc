@@ -434,6 +434,24 @@ zx_status_t VmObject::RoundSize(uint64_t size, uint64_t* out_size) {
   return ZX_OK;
 }
 
+zx_status_t VmObject::GetPageBlocking(uint64_t offset, uint pf_flags, list_node* alloc_list,
+                                      vm_page_t** page, paddr_t* pa) {
+  zx_status_t status = ZX_OK;
+  // TOOD(fxb/94078): Enforce no locks held as this might wait whilst holding a lock.
+  __UNINITIALIZED LazyPageRequest page_request;
+  do {
+    status = GetPage(offset, pf_flags, alloc_list, &page_request, page, pa);
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      zx_status_t st = page_request->Wait();
+      if (st != ZX_OK) {
+        return st;
+      }
+    }
+  } while (status == ZX_ERR_SHOULD_WAIT);
+
+  return status;
+}
+
 VmHierarchyBase::VmHierarchyBase(fbl::RefPtr<VmHierarchyState> state)
     : lock_(state->lock_ref()), hierarchy_state_ptr_(ktl::move(state)) {}
 

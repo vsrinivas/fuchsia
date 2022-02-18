@@ -1351,7 +1351,7 @@ static bool vmo_move_pages_on_access_test() {
 
   PageRequest request;
   // If we lookup the page then it should be moved to specifically the first page queue.
-  status = vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr);
+  status = vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, status);
   size_t queue;
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
@@ -1363,7 +1363,7 @@ static bool vmo_move_pages_on_access_test() {
   EXPECT_EQ(1u, queue);
 
   // Touching the page should move it back to the first queue.
-  status = vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr);
+  status = vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, status);
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
@@ -1374,14 +1374,14 @@ static bool vmo_move_pages_on_access_test() {
                             true, &child);
   ASSERT_EQ(ZX_OK, status);
 
-  status = child->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr);
+  status = child->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, status);
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
   pmm_page_queues()->RotatePagerBackedQueues();
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(1u, queue);
-  status = child->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr);
+  status = child->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, status);
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
@@ -1451,7 +1451,7 @@ static bool vmo_eviction_hints_test() {
   EXPECT_EQ(1u, queue);
 
   // Touching the page should move it back to the first queue.
-  status = vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr);
+  status = vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr);
   EXPECT_EQ(ZX_OK, status);
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
@@ -2251,7 +2251,7 @@ static bool vmo_attribution_dedup_test() {
   EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 2u));
 
   vm_page_t* page;
-  status = vmo->GetPage(0, 0, nullptr, nullptr, &page, nullptr);
+  status = vmo->GetPageBlocking(0, 0, nullptr, &page, nullptr);
   ASSERT_EQ(ZX_OK, status);
 
   // Dedupe the first page. This should increment the generation count.
@@ -2261,7 +2261,7 @@ static bool vmo_attribution_dedup_test() {
   EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 1u));
 
   // Dedupe the second page. This should increment the generation count.
-  status = vmo->GetPage(PAGE_SIZE, 0, nullptr, nullptr, &page, nullptr);
+  status = vmo->GetPageBlocking(PAGE_SIZE, 0, nullptr, &page, nullptr);
   ASSERT_EQ(ZX_OK, status);
   ASSERT_TRUE(vmop->DebugGetCowPages()->DedupZeroPage(page, PAGE_SIZE));
   ++expected_gen_count;
@@ -2795,47 +2795,44 @@ static bool vmo_lookup_pages_test() {
 
   VmObject::LookupInfo info;
 
-  {
-    Guard<Mutex> guard_{vmo->lock()};
-    // Lookup the exact range we committed.
-    EXPECT_OK(vmo->LookupPagesLocked(0, 0, VmObject::DirtyTrackingAction::None,
-                                     VmObject::LookupInfo::kMaxPages / 2, nullptr, nullptr, &info));
-    EXPECT_EQ(info.num_pages, VmObject::LookupInfo::kMaxPages / 2);
-    EXPECT_TRUE(info.writable);
+  // Lookup the exact range we committed.
+  EXPECT_OK(vmo_lookup_pages(vmo.get(), 0, 0, VmObject::DirtyTrackingAction::None,
+                             VmObject::LookupInfo::kMaxPages / 2, nullptr, &info));
+  EXPECT_EQ(info.num_pages, VmObject::LookupInfo::kMaxPages / 2);
+  EXPECT_TRUE(info.writable);
 
-    // Attempt to lookup more, should see the truncated actual committed range.
-    EXPECT_OK(vmo->LookupPagesLocked(0, 0, VmObject::DirtyTrackingAction::None,
-                                     VmObject::LookupInfo::kMaxPages, nullptr, nullptr, &info));
-    EXPECT_EQ(info.num_pages, VmObject::LookupInfo::kMaxPages / 2);
-    EXPECT_TRUE(info.writable);
+  // Attempt to lookup more, should see the truncated actual committed range.
+  EXPECT_OK(vmo_lookup_pages(vmo.get(), 0, 0, VmObject::DirtyTrackingAction::None,
+                             VmObject::LookupInfo::kMaxPages, nullptr, &info));
+  EXPECT_EQ(info.num_pages, VmObject::LookupInfo::kMaxPages / 2);
+  EXPECT_TRUE(info.writable);
 
-    // Perform a lookup so that there's only a single committed page visible.
-    EXPECT_OK(vmo->LookupPagesLocked(kSize / 4 - PAGE_SIZE, 0, VmObject::DirtyTrackingAction::None,
-                                     VmObject::LookupInfo::kMaxPages, nullptr, nullptr, &info));
-    EXPECT_EQ(info.num_pages, 1ul);
-    EXPECT_TRUE(info.writable);
+  // Perform a lookup so that there's only a single committed page visible.
+  EXPECT_OK(vmo_lookup_pages(vmo.get(), kSize / 4 - PAGE_SIZE, 0,
+                             VmObject::DirtyTrackingAction::None, VmObject::LookupInfo::kMaxPages,
+                             nullptr, &info));
+  EXPECT_EQ(info.num_pages, 1ul);
+  EXPECT_TRUE(info.writable);
 
-    // Writing shouldn't commit later pages once the first has been satisfied.
-    EXPECT_OK(vmo->LookupPagesLocked(kSize / 4 - PAGE_SIZE,
-                                     VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT,
-                                     VmObject::DirtyTrackingAction::None,
-                                     VmObject::LookupInfo::kMaxPages / 2, nullptr, nullptr, &info));
-    EXPECT_EQ(info.num_pages, 1ul);
-    EXPECT_TRUE(info.writable);
+  // Writing shouldn't commit later pages once the first has been satisfied.
+  EXPECT_OK(vmo_lookup_pages(
+      vmo.get(), kSize / 4 - PAGE_SIZE, VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT,
+      VmObject::DirtyTrackingAction::None, VmObject::LookupInfo::kMaxPages / 2, nullptr, &info));
+  EXPECT_EQ(info.num_pages, 1ul);
+  EXPECT_TRUE(info.writable);
 
-    // If there is no page then writing without a fault should fail.
-    EXPECT_EQ(
-        ZX_ERR_NOT_FOUND,
-        vmo->LookupPagesLocked(kSize / 4, VMM_PF_FLAG_WRITE, VmObject::DirtyTrackingAction::None,
-                               VmObject::LookupInfo::kMaxPages, nullptr, nullptr, &info));
+  // If there is no page then writing without a fault should fail.
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, vmo_lookup_pages(vmo.get(), kSize / 4, VMM_PF_FLAG_WRITE,
+                                               VmObject::DirtyTrackingAction::None,
+                                               VmObject::LookupInfo::kMaxPages, nullptr, &info));
 
-    // Then should be able to fault it in.
-    EXPECT_OK(vmo->LookupPagesLocked(kSize / 4, VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT,
-                                     VmObject::DirtyTrackingAction::None,
-                                     VmObject::LookupInfo::kMaxPages, nullptr, nullptr, &info));
-    EXPECT_EQ(info.num_pages, 1ul);
-    EXPECT_TRUE(info.writable);
-  }
+  // Then should be able to fault it in.
+  EXPECT_OK(vmo_lookup_pages(vmo.get(), kSize / 4, VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT,
+                             VmObject::DirtyTrackingAction::None, VmObject::LookupInfo::kMaxPages,
+                             nullptr, &info));
+  EXPECT_EQ(info.num_pages, 1ul);
+  EXPECT_TRUE(info.writable);
+
   // Create a hierarchy now to do some more interesting read lookups.
   fbl::RefPtr<VmObject> child1;
   ASSERT_OK(
@@ -2845,28 +2842,24 @@ static bool vmo_lookup_pages_test() {
   ASSERT_OK(child1->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, kSize, false,
                                 &child2));
 
-  {
-    Guard<Mutex> guard{child2->lock()};
+  // Should be able to get runs of pages up to the intermediate page in child1.
+  EXPECT_OK(vmo_lookup_pages(child2.get(), 0, 0, VmObject::DirtyTrackingAction::None,
+                             VmObject::LookupInfo::kMaxPages, nullptr, &info));
+  EXPECT_EQ(info.num_pages, VmObject::LookupInfo::kMaxPages / 4);
+  EXPECT_FALSE(info.writable);
 
-    // Should be able to get runs of pages up to the intermediate page in child1.
-    EXPECT_OK(child2->LookupPagesLocked(0, 0, VmObject::DirtyTrackingAction::None,
-                                        VmObject::LookupInfo::kMaxPages, nullptr, nullptr, &info));
-    EXPECT_EQ(info.num_pages, VmObject::LookupInfo::kMaxPages / 4);
-    EXPECT_FALSE(info.writable);
+  // The single page in child1
+  EXPECT_OK(vmo_lookup_pages(child2.get(), kSize / 8, 0, VmObject::DirtyTrackingAction::None,
+                             VmObject::LookupInfo::kMaxPages, nullptr, &info));
+  EXPECT_EQ(info.num_pages, 1ul);
+  EXPECT_FALSE(info.writable);
 
-    // The single page in child1
-    EXPECT_OK(child2->LookupPagesLocked(kSize / 8, 0, VmObject::DirtyTrackingAction::None,
-                                        VmObject::LookupInfo::kMaxPages, nullptr, nullptr, &info));
-    EXPECT_EQ(info.num_pages, 1ul);
-    EXPECT_FALSE(info.writable);
-
-    // Then the remainder of the run.
-    EXPECT_OK(child2->LookupPagesLocked(kSize / 8 + PAGE_SIZE, 0,
-                                        VmObject::DirtyTrackingAction::None,
-                                        VmObject::LookupInfo::kMaxPages, nullptr, nullptr, &info));
-    EXPECT_EQ(info.num_pages, VmObject::LookupInfo::kMaxPages / 4);
-    EXPECT_FALSE(info.writable);
-  }
+  // Then the remainder of the run.
+  EXPECT_OK(vmo_lookup_pages(child2.get(), kSize / 8 + PAGE_SIZE, 0,
+                             VmObject::DirtyTrackingAction::None, VmObject::LookupInfo::kMaxPages,
+                             nullptr, &info));
+  EXPECT_EQ(info.num_pages, VmObject::LookupInfo::kMaxPages / 4);
+  EXPECT_FALSE(info.writable);
 
   END_TEST;
 }
@@ -2888,16 +2881,16 @@ static bool vmo_write_does_not_commit_test() {
                             &clone);
 
   // Querying the page for read in the clone should return it.
-  EXPECT_OK(clone->GetPage(0, 0, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_OK(clone->GetPageBlocking(0, 0, nullptr, nullptr, nullptr));
 
   // Querying for write, without any fault flags, should not work as the page is not committed in
   // the clone.
   EXPECT_EQ(ZX_ERR_NOT_FOUND,
-            clone->GetPage(0, VMM_PF_FLAG_WRITE, nullptr, nullptr, nullptr, nullptr));
+            clone->GetPageBlocking(0, VMM_PF_FLAG_WRITE, nullptr, nullptr, nullptr));
 
   // Adding a fault flag should cause the lookup to succeed.
-  EXPECT_OK(clone->GetPage(0, VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr,
-                           nullptr));
+  EXPECT_OK(clone->GetPageBlocking(0, VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT, nullptr, nullptr,
+                                   nullptr));
 
   END_TEST;
 }
@@ -3040,7 +3033,7 @@ static bool vmo_dirty_pages_test() {
   EXPECT_EQ(1u, queue);
 
   // Accessing the page should move it back to the first queue.
-  EXPECT_OK(vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_OK(vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
@@ -3054,7 +3047,7 @@ static bool vmo_dirty_pages_test() {
       page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // Accessing the page again should not move the page out of the dirty queue.
-  EXPECT_OK(vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_OK(vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr));
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
@@ -3094,7 +3087,7 @@ static bool vmo_dirty_pages_writeback_test() {
       page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // Accessing the page should not move the page out of the dirty queue either.
-  ASSERT_OK(vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr));
+  ASSERT_OK(vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr));
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 

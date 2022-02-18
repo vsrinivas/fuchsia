@@ -11,6 +11,7 @@
 #include <kernel/range_check.h>
 #include <ktl/move.h>
 #include <vm/fault.h>
+#include <vm/page_source.h>
 #include <vm/vm_object_physical.h>
 
 static constexpr uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;
@@ -108,7 +109,7 @@ zx_status_t GuestPhysicalAddressSpace::GetPage(zx_gpaddr_t guest_paddr, zx_paddr
 
   // Lookup the physical address of this page in the VMO.
   zx_gpaddr_t offset = guest_paddr - mapping->base();
-  return mapping->vmo()->GetPage(offset, kPfFlags, nullptr, nullptr, nullptr, host_paddr);
+  return mapping->vmo()->GetPageBlocking(offset, kPfFlags, nullptr, nullptr, host_paddr);
 }
 
 zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
@@ -130,7 +131,22 @@ zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
   if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
     pf_flags |= VMM_PF_FLAG_INSTRUCTION;
   }
-  return mapping->PageFault(guest_paddr, pf_flags, nullptr);
+
+  zx_status_t status = ZX_OK;
+  // TOOD(fxb/94078): Avoid holding |guard| when calling Wait below, and enforce no other locks
+  // are held here.
+  __UNINITIALIZED LazyPageRequest page_request;
+  do {
+    status = mapping->PageFault(guest_paddr, pf_flags, &page_request);
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      zx_status_t st = page_request->Wait();
+      if (st != ZX_OK) {
+        return st;
+      }
+    }
+  } while (status == ZX_ERR_SHOULD_WAIT);
+
+  return status;
 }
 
 zx_status_t GuestPhysicalAddressSpace::QueryFlags(zx_gpaddr_t guest_paddr, uint* mmu_flags) {

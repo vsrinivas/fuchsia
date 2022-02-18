@@ -1840,6 +1840,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
   DEBUG_ASSERT(!is_hidden_locked());
   DEBUG_ASSERT(out);
   DEBUG_ASSERT(max_out_pages > 0);
+  DEBUG_ASSERT(page_request || !(pf_flags & VMM_PF_FLAG_FAULT_MASK));
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
 
   if (offset >= size_) {
