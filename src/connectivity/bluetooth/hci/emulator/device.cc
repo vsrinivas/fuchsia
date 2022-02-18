@@ -110,6 +110,15 @@ static bt_hci_protocol_ops_t hci_protocol_ops = {
     .open_acl_data_channel = [](void* ctx, zx_handle_t chan) -> zx_status_t {
       return DEV(ctx)->OpenChan(Channel::ACL, chan);
     },
+    .open_sco_channel = [](void* ctx, zx_handle_t channel) -> zx_status_t {
+      zx_handle_close(channel);
+      return ZX_ERR_NOT_SUPPORTED;
+    },
+    .configure_sco = [](void* ctx, sco_coding_format_t coding_format, sco_encoding_t encoding,
+                        sco_sample_rate_t sample_rate, bt_hci_configure_sco_callback callback,
+                        void* cookie) { callback(cookie, ZX_ERR_NOT_SUPPORTED); },
+    .reset_sco = [](void* ctx, bt_hci_reset_sco_callback callback,
+                    void* cookie) { callback(cookie, ZX_ERR_NOT_SUPPORTED); },
     .open_snoop_channel = [](void* ctx, zx_handle_t chan) -> zx_status_t {
       return DEV(ctx)->OpenChan(Channel::SNOOP, chan);
     },
