@@ -242,11 +242,16 @@ TEST_F(VPartitionManagerTest, InspectVmoPopulatedWithInitialState) {
   ASSERT_TRUE(hierarchy.is_ok());
   const inspect::Hierarchy* mount_time = hierarchy.value().GetByPath({"fvm", "mount_time"});
   ASSERT_NE(mount_time, nullptr);
-  EXPECT_EQ(mount_time->node().get_property<inspect::UintPropertyValue>("major_version")->value(),
-            kCurrentMajorVersion);
-  EXPECT_EQ(
-      mount_time->node().get_property<inspect::UintPropertyValue>("oldest_minor_version")->value(),
-      kCurrentMinorVersion);
+
+  auto* major_version =
+      mount_time->node().get_property<inspect::UintPropertyValue>("major_version");
+  ASSERT_NE(major_version, nullptr);
+  EXPECT_EQ(major_version->value(), kCurrentMajorVersion);
+
+  auto* oldest_minor_version =
+      mount_time->node().get_property<inspect::UintPropertyValue>("oldest_minor_version");
+  ASSERT_NE(oldest_minor_version, nullptr);
+  EXPECT_EQ(oldest_minor_version->value(), kCurrentMinorVersion);
 }
 
 TEST_F(VPartitionManagerTest, InspectVmoTracksSliceAllocations) {
@@ -259,9 +264,10 @@ TEST_F(VPartitionManagerTest, InspectVmoTracksSliceAllocations) {
     ASSERT_TRUE(hierarchy.is_ok());
     const inspect::Hierarchy* node = hierarchy.value().GetByPath({"fvm", "partitions", "part1"});
     ASSERT_NE(node, nullptr);
-    EXPECT_EQ(
-        node->node().get_property<inspect::UintPropertyValue>("total_slices_reserved")->value(),
-        3u);
+    auto* total_slices_reserved =
+        node->node().get_property<inspect::UintPropertyValue>("total_slices_reserved");
+    ASSERT_NE(total_slices_reserved, nullptr);
+    EXPECT_EQ(total_slices_reserved->value(), 3u);
   }
 
   ASSERT_EQ(device_->AllocateSlices(partition_or.value().get(), 0x100000, 1), ZX_OK);
@@ -272,9 +278,61 @@ TEST_F(VPartitionManagerTest, InspectVmoTracksSliceAllocations) {
     ASSERT_TRUE(hierarchy.is_ok());
     const inspect::Hierarchy* node = hierarchy.value().GetByPath({"fvm", "partitions", "part1"});
     ASSERT_NE(node, nullptr);
-    EXPECT_EQ(
-        node->node().get_property<inspect::UintPropertyValue>("total_slices_reserved")->value(),
-        4u);
+    auto* total_slices_reserved =
+        node->node().get_property<inspect::UintPropertyValue>("total_slices_reserved");
+    ASSERT_NE(total_slices_reserved, nullptr);
+    EXPECT_EQ(total_slices_reserved->value(), 4u);
+  }
+}
+
+TEST_F(VPartitionManagerTest, InspectVmoTracksPartitionLimit) {
+  constexpr uint64_t kNewSliceLimit = 4u;
+  static_assert(kNewSliceLimit > 0, "Slice limit must be greater than zero for test to be valid.");
+  static_assert(sizeof(guid_t) == fvm::kGuidSize, "GUID size mismatch!");
+
+  const std::string kPartitionName = "part1";
+
+  auto partition_or = AllocatePartition(kPartitionName, 3u);
+  ASSERT_TRUE(partition_or.is_ok());
+
+  guid_t partition_guid;
+  ASSERT_EQ(partition_or->BlockPartitionGetGuid(GUIDTYPE_INSTANCE, &partition_guid), ZX_OK);
+  const uint8_t* guid_as_bytes = reinterpret_cast<const uint8_t*>(&partition_guid);
+
+  {
+    // Initial limit should be set to zero.
+    uint64_t slice_limit;
+    ASSERT_EQ(device_->GetPartitionLimitInternal(guid_as_bytes, &slice_limit), ZX_OK);
+    EXPECT_EQ(slice_limit, 0u);
+
+    fpromise::result<inspect::Hierarchy> hierarchy =
+        inspect::ReadFromVmo(device_->diagnostics().DuplicateVmo());
+    ASSERT_TRUE(hierarchy.is_ok());
+    const inspect::Hierarchy* node =
+        hierarchy.value().GetByPath({"fvm", "partitions", kPartitionName});
+    ASSERT_NE(node, nullptr);
+    auto* max_bytes = node->node().get_property<inspect::UintPropertyValue>("max_bytes");
+    ASSERT_NE(max_bytes, nullptr);
+    EXPECT_EQ(max_bytes->value(), 0u);
+  }
+
+  device_->SetPartitionLimitInternal(guid_as_bytes, kNewSliceLimit);
+
+  {
+    // Check that the partition limit was set and is updated in Inspect.
+    uint64_t slice_limit;
+    ASSERT_EQ(device_->GetPartitionLimitInternal(guid_as_bytes, &slice_limit), ZX_OK);
+    EXPECT_EQ(slice_limit, kNewSliceLimit);
+
+    fpromise::result<inspect::Hierarchy> hierarchy =
+        inspect::ReadFromVmo(device_->diagnostics().DuplicateVmo());
+    ASSERT_TRUE(hierarchy.is_ok());
+    const inspect::Hierarchy* node =
+        hierarchy.value().GetByPath({"fvm", "partitions", kPartitionName});
+    ASSERT_NE(node, nullptr);
+    auto* max_bytes = node->node().get_property<inspect::UintPropertyValue>("max_bytes");
+    ASSERT_NE(max_bytes, nullptr);
+    EXPECT_EQ(max_bytes->value(), kNewSliceLimit * device_->slice_size());
   }
 }
 

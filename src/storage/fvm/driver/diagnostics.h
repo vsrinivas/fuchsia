@@ -61,6 +61,9 @@ class Diagnostics {
   // Reports the metrics stored for a partition.
   void UpdatePartitionMetrics(const std::string& partition_name, size_t num_slices);
 
+  // Update the partition's size limit metric.
+  void UpdateMaxBytes(const std::string& partition_name, size_t max_bytes);
+
   // Returns a read-only duplicate of the VMO this object writes to. Suitable for giving out to an
   // external process which would like to subscribe to FVM's diagnostics.
   zx::vmo DuplicateVmo() { return inspector_.DuplicateVmo(); }
@@ -93,6 +96,7 @@ class Diagnostics {
     inspect::Node root;
 
     inspect::UintProperty total_slices_reserved;
+    inspect::UintProperty max_bytes;
   };
   inspect::Node per_partition_node_;
   // Maps vpartition names to an object holding metrics for that vpartition.
