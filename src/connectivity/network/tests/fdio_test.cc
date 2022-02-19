@@ -16,6 +16,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <array>
 #include <thread>
 
