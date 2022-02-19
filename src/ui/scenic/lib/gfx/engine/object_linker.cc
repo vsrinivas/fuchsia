@@ -8,6 +8,7 @@
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <algorithm>
 #include <functional>
 
 #include "src/lib/fsl/handles/object_info.h"
