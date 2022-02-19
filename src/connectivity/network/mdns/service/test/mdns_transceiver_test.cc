@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/network/mdns/service/mdns_transceiver.h"
+#include "src/connectivity/network/mdns/service/transport/mdns_transceiver.h"
 
 #include <fuchsia/hardware/network/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
@@ -10,7 +10,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "src/connectivity/network/mdns/service/mdns_addresses.h"
+#include "src/connectivity/network/mdns/service/common/mdns_addresses.h"
 #include "src/lib/testing/predicates/status.h"
 
 namespace mdns::test {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/network/mdns/service/address_responder.h"
+#include "src/connectivity/network/mdns/service/agents/address_responder.h"
 
 #include <lib/zx/time.h>
 

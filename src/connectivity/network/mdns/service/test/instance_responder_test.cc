@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/network/mdns/service/instance_responder.h"
+#include "src/connectivity/network/mdns/service/agents/instance_responder.h"
 
 #include <lib/zx/time.h>
 
 #include <gtest/gtest.h>
 
-#include "src/connectivity/network/mdns/service/mdns_names.h"
+#include "src/connectivity/network/mdns/service/common/mdns_names.h"
 #include "src/connectivity/network/mdns/service/test/agent_test.h"
 
 namespace mdns {

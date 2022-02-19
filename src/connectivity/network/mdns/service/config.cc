@@ -8,7 +8,7 @@
 
 #include <sstream>
 
-#include "src/connectivity/network/mdns/service/mdns_names.h"
+#include "src/connectivity/network/mdns/service/common/mdns_names.h"
 #include "src/lib/json_parser/rapidjson_validation.h"
 
 namespace mdns {

@@ -18,9 +18,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include "src/connectivity/network/mdns/service/dns_message.h"
-#include "src/connectivity/network/mdns/service/mdns_agent.h"
-#include "src/connectivity/network/mdns/service/mdns_interface_transceiver.h"
+#include "src/connectivity/network/mdns/service/agents/mdns_agent.h"
+#include "src/connectivity/network/mdns/service/encoding/dns_message.h"
+#include "src/connectivity/network/mdns/service/transport/mdns_interface_transceiver.h"
 #include "src/lib/inet/socket_address.h"
 
 namespace mdns {

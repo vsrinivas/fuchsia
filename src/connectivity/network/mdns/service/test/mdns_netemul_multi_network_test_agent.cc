@@ -17,8 +17,8 @@
 #include <unordered_map>
 
 #include "lib/fidl/cpp/interface_handle.h"
-#include "src/connectivity/network/mdns/service/dns_message.h"
-#include "src/connectivity/network/mdns/service/mdns_transceiver.h"
+#include "src/connectivity/network/mdns/service/encoding/dns_message.h"
+#include "src/connectivity/network/mdns/service/transport/mdns_transceiver.h"
 #include "src/lib/inet/ip_address.h"
 
 const std::string kLocalArgument = "--local";

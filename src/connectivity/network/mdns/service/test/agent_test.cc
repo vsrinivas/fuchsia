@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include "src/connectivity/network/mdns/service/dns_formatting.h"
+#include "src/connectivity/network/mdns/service/encoding/dns_formatting.h"
 
 namespace mdns {
 

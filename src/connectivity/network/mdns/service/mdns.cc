@@ -14,17 +14,17 @@
 #include <limits>
 #include <unordered_set>
 
-#include "src/connectivity/network/mdns/service/address_prober.h"
-#include "src/connectivity/network/mdns/service/address_responder.h"
-#include "src/connectivity/network/mdns/service/dns_formatting.h"
-#include "src/connectivity/network/mdns/service/host_name_resolver.h"
-#include "src/connectivity/network/mdns/service/instance_prober.h"
-#include "src/connectivity/network/mdns/service/instance_requestor.h"
-#include "src/connectivity/network/mdns/service/instance_responder.h"
-#include "src/connectivity/network/mdns/service/mdns_addresses.h"
-#include "src/connectivity/network/mdns/service/mdns_names.h"
-#include "src/connectivity/network/mdns/service/resource_renewer.h"
-#include "src/connectivity/network/mdns/service/service_instance_resolver.h"
+#include "src/connectivity/network/mdns/service/agents/address_prober.h"
+#include "src/connectivity/network/mdns/service/agents/address_responder.h"
+#include "src/connectivity/network/mdns/service/agents/host_name_resolver.h"
+#include "src/connectivity/network/mdns/service/agents/instance_prober.h"
+#include "src/connectivity/network/mdns/service/agents/instance_requestor.h"
+#include "src/connectivity/network/mdns/service/agents/instance_responder.h"
+#include "src/connectivity/network/mdns/service/agents/resource_renewer.h"
+#include "src/connectivity/network/mdns/service/agents/service_instance_resolver.h"
+#include "src/connectivity/network/mdns/service/common/mdns_addresses.h"
+#include "src/connectivity/network/mdns/service/common/mdns_names.h"
+#include "src/connectivity/network/mdns/service/encoding/dns_formatting.h"
 
 namespace mdns {
 

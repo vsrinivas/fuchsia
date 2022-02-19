@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/connectivity/network/mdns/service/mdns_names.h"
+#include "src/connectivity/network/mdns/service/common/mdns_names.h"
 
 namespace mdns {
 namespace test {

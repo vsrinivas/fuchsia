@@ -8,8 +8,8 @@
 #include <optional>
 
 #include "rapidjson/document.h"
+#include "src/connectivity/network/mdns/service/common/mdns_addresses.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
-#include "src/connectivity/network/mdns/service/mdns_addresses.h"
 #include "src/lib/json_parser/json_parser.h"
 
 namespace mdns {

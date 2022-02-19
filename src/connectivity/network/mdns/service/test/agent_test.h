@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/connectivity/network/mdns/service/mdns_agent.h"
+#include "src/connectivity/network/mdns/service/agents/mdns_agent.h"
 
 namespace mdns {
 namespace test {

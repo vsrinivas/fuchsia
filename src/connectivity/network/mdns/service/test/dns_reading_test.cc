@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/network/mdns/service/dns_reading.h"
+#include "src/connectivity/network/mdns/service/encoding/dns_reading.h"
 
 #include <gtest/gtest.h>
 
-#include "src/connectivity/network/mdns/service/packet_reader.h"
+#include "src/connectivity/network/mdns/service/encoding/packet_reader.h"
 
 namespace mdns {
 namespace test {

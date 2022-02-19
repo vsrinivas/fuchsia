@@ -11,7 +11,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/connectivity/network/mdns/service/mdns_interface_transceiver.h"
+#include "src/connectivity/network/mdns/service/transport/mdns_interface_transceiver.h"
 #include "src/lib/fostr/hex_dump.h"
 
 namespace mdns {

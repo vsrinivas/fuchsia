@@ -6,7 +6,7 @@
 
 #include <queue>
 
-#include "src/connectivity/network/mdns/service/mdns_deprecated_service_impl.h"
+#include "src/connectivity/network/mdns/service/services/mdns_deprecated_service_impl.h"
 
 namespace mdns {
 namespace test {
