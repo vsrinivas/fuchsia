@@ -39,7 +39,7 @@ const (
 func DefaultConnectBackoff() retry.Backoff {
 	// NOTE: This retry strategy was somewhat arbitrarily chosen and can be
 	// changed if there's a compelling reason to choose a different strategy.
-	return retry.WithMaxDuration(&retry.ZeroBackoff{}, totalConnectTimeout)
+	return retry.WithMaxDuration(retry.NewConstantBackoff(time.Second), totalConnectTimeout)
 }
 
 // ConnectionError is an all-purpose error indicating that a client has become
