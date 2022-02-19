@@ -16,7 +16,6 @@ use net_types::{SpecifiedAddr, UnicastAddr};
 use packet::{Buf, BufferMut, Either, SerializeError, Serializer};
 use packet_formats::ip::{Ipv4Proto, Ipv6Proto};
 use packet_formats::{ipv4::Ipv4PacketBuilder, ipv6::Ipv6PacketBuilder};
-use rand::Rng;
 use thiserror::Error;
 
 use crate::{
@@ -27,7 +26,7 @@ use crate::{
             AddressState, AssignedAddress as _, IpDeviceState, IpDeviceStateIpExt, Ipv6AddressEntry,
         },
         forwarding::{Destination, ForwardingTable},
-        IpDeviceIdContext, IpExt, Ipv6SocketData,
+        IpDeviceIdContext, IpExt,
     },
     socket::Socket,
     BufferDispatcher, Ctx, EventDispatcher,
@@ -323,7 +322,6 @@ struct IpSockDefinition<I: IpExt> {
     proto: I::Proto,
     #[cfg_attr(not(test), allow(unused))]
     unroutable_behavior: UnroutableBehavior,
-    per_proto_data: I::SocketData,
 }
 
 #[derive(Clone, PartialEq)]
@@ -555,9 +553,8 @@ fn compute_ipv6_cached_info<C: IpSocketContext<Ipv6>>(
                 NextHop::Remote(dst.next_hop)
             };
 
-            let mut builder =
+            let builder =
                 Ipv6PacketBuilder::new(defn.local_ip, defn.remote_ip, defn.hop_limit, defn.proto);
-            builder.flowlabel(defn.per_proto_data.flow_label);
 
             Ok(CachedInfo { builder, device: dst.device, next_hop })
         },
@@ -602,7 +599,6 @@ impl<C: IpSocketContext<Ipv4>> IpSocketHandler<Ipv4> for C {
             hop_limit: builder.ttl.unwrap_or(super::DEFAULT_TTL).get(),
             proto,
             unroutable_behavior,
-            per_proto_data: (),
         };
         let cached = compute_ipv4_cached_info(self, &defn)?;
         Ok(IpSock { defn, cached: Ok(cached) })
@@ -674,21 +670,10 @@ impl<C: IpSocketContext<Ipv6>> IpSocketHandler<Ipv6> for C {
             hop_limit: builder.hop_limit.unwrap_or(super::DEFAULT_TTL.get()),
             proto,
             unroutable_behavior,
-            per_proto_data: Ipv6SocketData { flow_label: gen_ipv6_flowlabel(self.rng_mut()) },
         };
         let cached = compute_ipv6_cached_info(self, &defn)?;
         Ok(IpSock { defn, cached: Ok(cached) })
     }
-}
-
-/// Generates a new IPv6 flow label using the provided random number generator.
-///
-/// As specified by [RFC 6437 Section 2], flow labels should be non-zero,
-/// 20 bits in length, and generated from a discrete uniform distribution.
-///
-/// [RFC 6437 Section 2]: https://tools.ietf.org/html/rfc6437#section-2
-fn gen_ipv6_flowlabel<R: Rng>(rng: &mut R) -> u32 {
-    rng.gen_range(1..1 << Ipv6::FLOW_LABEL_BITS)
 }
 
 impl<
@@ -1277,22 +1262,10 @@ mod tests {
     #[specialize_ip]
     fn test_new<I: Ip>(test_case: NewSocketTestCase) {
         #[ipv4]
-        let (cfg, proto, per_proto_data) = (DUMMY_CONFIG_V4, Ipv4Proto::Icmp, ());
+        let (cfg, proto) = (DUMMY_CONFIG_V4, Ipv4Proto::Icmp);
 
         #[ipv6]
-        let (cfg, proto, per_proto_data, with_flow_label) = (
-            DUMMY_CONFIG_V6,
-            Ipv6Proto::Icmpv6,
-            Ipv6SocketData { flow_label: 0 },
-            |mut template: IpSock<Ipv6, DeviceId>, flow_label| -> IpSock<Ipv6, DeviceId> {
-                let IpSock::<Ipv6, DeviceId> { defn, cached } = &mut template;
-                defn.per_proto_data = Ipv6SocketData { flow_label };
-                let CachedInfo::<Ipv6, DeviceId> { builder, device: _, next_hop: _ } =
-                    cached.as_mut().unwrap();
-                builder.flowlabel(flow_label);
-                template
-            },
-        );
+        let (cfg, proto) = (DUMMY_CONFIG_V6, Ipv6Proto::Icmpv6);
 
         let DummyEventDispatcherConfig { local_ip, remote_ip, subnet, local_mac: _, remote_mac: _ } =
             cfg;
@@ -1369,16 +1342,11 @@ mod tests {
         );
 
         #[ipv6]
-        let (builder, mut rng) = (
-            Ipv6PacketBuilder::new(
-                expected_from_ip,
-                to_ip,
-                crate::ip::DEFAULT_TTL.get(),
-                Ipv6Proto::Icmpv6,
-            ),
-            // Since the dispatcher's random number generator is deterministic, we can
-            // use a clone to assert on the sequence of flow labels it will produce.
-            ctx.dispatcher.rng().clone(),
+        let builder = Ipv6PacketBuilder::new(
+            expected_from_ip,
+            to_ip,
+            crate::ip::DEFAULT_TTL.get(),
+            Ipv6Proto::Icmpv6,
         );
 
         let get_expected_result = |template| expected_result.map(|()| template);
@@ -1390,7 +1358,6 @@ mod tests {
                 proto,
                 hop_limit: crate::ip::DEFAULT_TTL.get(),
                 unroutable_behavior: UnroutableBehavior::Close,
-                per_proto_data,
             },
             cached: Ok(CachedInfo {
                 builder,
@@ -1398,9 +1365,6 @@ mod tests {
                 device: DeviceId::new_ethernet(0),
             }),
         };
-
-        #[ipv6]
-        let template = with_flow_label(template, gen_ipv6_flowlabel(&mut rng));
 
         let res = IpSocketHandler::<I>::new_ip_socket(
             &mut ctx,
@@ -1460,8 +1424,6 @@ mod tests {
                     let builder =
                         Ipv6PacketBuilder::new(expected_from_ip, to_ip, SPECIFIED_HOP_LIMIT, proto);
                     cached.as_mut().unwrap().builder = builder;
-                    let template_with_hop_limit =
-                        with_flow_label(template_with_hop_limit, gen_ipv6_flowlabel(&mut rng));
                     get_expected_result(template_with_hop_limit)
                 }
             );
