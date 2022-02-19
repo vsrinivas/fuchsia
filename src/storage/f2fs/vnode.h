@@ -103,6 +103,10 @@ class VnodeF2fs : public fs::Vnode,
   void VmoRead(uint64_t offset, uint64_t length) override {
     FX_LOGS(ERROR) << "Unsupported VmoRead in VnodeF2fs. This method should be overridden.";
   }
+
+  void VmoDirty(uint64_t offset, uint64_t length) override {
+    FX_LOGS(ERROR) << "Unsupported VmoDirty in VnodeF2fs. This method should be overridden.";
+  }
 #endif  // __Fuchsia__
 
 #if 0  // porting needed

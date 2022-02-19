@@ -4,6 +4,8 @@
 
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 
+#include <zircon/syscalls-next.h>
+
 #include <fbl/auto_lock.h>
 
 #include "src/lib/storage/vfs/cpp/paged_vnode.h"
@@ -77,12 +79,17 @@ zx::status<> PagedVfs::SupplyPages(const zx::vmo& node_vmo, uint64_t offset, uin
   return zx::make_status(pager_.supply_pages(node_vmo, offset, length, aux_vmo, aux_offset));
 }
 
+zx::status<> PagedVfs::DirtyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length) {
+  return zx::make_status(pager_.op_range(ZX_PAGER_OP_DIRTY, node_vmo, offset, length, 0));
+}
+
 zx::status<> PagedVfs::ReportPagerError(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
                                         zx_status_t err) {
   return zx::make_status(pager_.op_range(ZX_PAGER_OP_FAIL, node_vmo, offset, length, err));
 }
 
-zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(PagedVnode* node, uint64_t size) {
+zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(PagedVnode* node, uint64_t size,
+                                                                 uint32_t options) {
   // Register this node with a unique ID to associated it with pager requests.
   VmoCreateInfo create_info;
   {
@@ -96,7 +103,7 @@ zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(PagedVnode* nod
 
   // Create the VMO itself outside the lock.
   if (auto status =
-          pager_.create_vmo(0, pager_pool_->port(), create_info.id, size, &create_info.vmo);
+          pager_.create_vmo(options, pager_pool_->port(), create_info.id, size, &create_info.vmo);
       status != ZX_OK) {
     // Undo the previous insert.
     std::lock_guard lock(live_nodes_lock_);
@@ -148,6 +155,26 @@ void PagedVfs::PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length) 
 
   // Handle the request outside the lock while holding a reference to the node.
   node->VmoRead(offset, length);
+}
+
+void PagedVfs::PagerVmoDirty(uint64_t node_id, uint64_t offset, uint64_t length) {
+  // Hold a reference to the object to ensure it doesn't go out of scope during processing.
+  fbl::RefPtr<PagedVnode> node;
+
+  {
+    std::lock_guard lock(live_nodes_lock_);
+
+    auto found = paged_nodes_.find(node_id);
+    if (found == paged_nodes_.end()) {
+      // Ignore stale dirty request as in VmoRead().
+      return;
+    }
+
+    node = fbl::RefPtr<PagedVnode>(found->second);
+  }
+
+  // Handle the request outside the lock while holding a reference to the node.
+  node->VmoDirty(offset, length);
 }
 
 size_t PagedVfs::GetRegisteredPagedVmoCount() const {

@@ -6,9 +6,15 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
+#include <lib/fdio/fdio_unistd.h>
+#include <lib/fdio/internal.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmar.h>
+#include <zircon/syscalls-next.h>
 
+#include <algorithm>
 #include <condition_variable>
 #include <iostream>
 #include <mutex>
@@ -23,6 +29,8 @@
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/lib/storage/vfs/cpp/paged_vnode.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+
+namespace fio = fuchsia_io;
 
 namespace fs {
 
@@ -76,6 +84,9 @@ class PagingTestFile : public PagedVnode {
   // Controls the success or failure that VmoRead() will report. Defaults to success (ZX_OK).
   void set_read_status(zx_status_t status) { vmo_read_status_ = status; }
 
+  // Controls the success or failure that VmoDirty() will report. Defaults to success (ZX_OK).
+  void set_dirty_status(zx_status_t status) { vmo_dirty_status_ = status; }
+
   // Public locked version of PagedVnode::has_clones().
   bool HasClones() const {
     std::lock_guard lock(mutex_);
@@ -105,6 +116,20 @@ class PagingTestFile : public PagedVnode {
     ASSERT_TRUE(paged_vfs()->SupplyPages(paged_vmo(), offset, length, transfer, 0).is_ok());
   }
 
+  void VmoDirty(uint64_t offset, uint64_t length) override {
+    std::lock_guard lock(mutex_);
+
+    if (vmo_dirty_status_ != ZX_OK) {
+      // We're supposed to report errors.
+      EXPECT_TRUE(paged_vfs()
+                      ->ReportPagerError(paged_vmo(), offset, length, ZX_ERR_IO_DATA_INTEGRITY)
+                      .is_ok());
+      return;
+    }
+
+    ASSERT_TRUE(paged_vfs()->DirtyPages(paged_vmo(), offset, length).is_ok());
+  }
+
   // Vnode implementation:
   VnodeProtocolSet GetProtocols() const override { return fs::VnodeProtocol::kFile; }
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights,
@@ -122,11 +147,10 @@ class PagingTestFile : public PagedVnode {
     // We need to signal after the VMO was mapped that it changed.
     bool becoming_mapped = !paged_vmo();
 
-    if (auto result = EnsureCreatePagedVmo(data_.size()); result.is_error())
+    if (auto result = EnsureCreatePagedVmo(data_.size(), ZX_VMO_TRAP_DIRTY); result.is_error())
       return result.error_value();
 
-    if (zx_status_t status = paged_vmo().create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0,
-                                                      data_.size(), out_vmo);
+    if (zx_status_t status = paged_vmo().create_child(ZX_VMO_CHILD_SLICE, 0, data_.size(), out_vmo);
         status != ZX_OK)
       return status;
     DidClonePagedVmo();
@@ -169,6 +193,7 @@ class PagingTestFile : public PagedVnode {
   std::shared_ptr<SharedFileState> shared_;
   std::vector<uint8_t> data_;
   zx_status_t vmo_read_status_ = ZX_OK;
+  zx_status_t vmo_dirty_status_ = ZX_OK;
 };
 
 // This file has many pages and end in a non-page-boundary.
@@ -177,6 +202,7 @@ constexpr size_t kFile1Size = 4096 * 17 + 87;
 
 // This file is the one that always reports errors.
 const char kFileErrName[] = "file_err";
+const char kFileDirtyErrName[] = "file_dirty_err";
 
 class PagingTest : public zxtest::Test {
  public:
@@ -235,6 +261,12 @@ class PagingTest : public zxtest::Test {
     file_err_->set_read_status(ZX_ERR_IO_DATA_INTEGRITY);
     root_->AddEntry(kFileErrName, file_err_);
 
+    file_dirty_err_shared_ = std::make_shared<SharedFileState>();
+    file_dirty_err_ =
+        fbl::MakeRefCounted<PagingTestFile>(vfs_.get(), file_dirty_err_shared_, file1_contents_);
+    file_dirty_err_->set_dirty_status(ZX_ERR_IO_DATA_INTEGRITY);
+    root_->AddEntry(kFileDirtyErrName, file_dirty_err_);
+
     // Connect to the root.
     zx::status directory_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_OK(directory_endpoints.status_value());
@@ -252,10 +284,12 @@ class PagingTest : public zxtest::Test {
 
   std::shared_ptr<SharedFileState> file1_shared_;
   std::shared_ptr<SharedFileState> file_err_shared_;
+  std::shared_ptr<SharedFileState> file_dirty_err_shared_;
   std::vector<uint8_t> file1_contents_;
 
   fbl::RefPtr<PagingTestFile> file1_;
   fbl::RefPtr<PagingTestFile> file_err_;
+  fbl::RefPtr<PagingTestFile> file_dirty_err_;
 
  private:
   // The VFS needs to run on a separate thread to handle the FIDL requests from the test because
@@ -359,6 +393,147 @@ TEST_F(PagingTest, ReadError) {
   // All reads should be errors.
   uint8_t buf[8];
   EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, vmo.read(buf, 0, std::size(buf)));
+}
+
+TEST_F(PagingTest, Write) {
+  fbl::unique_fd root_dir_fd(CreateVfs(1));
+  ASSERT_TRUE(root_dir_fd);
+
+  fbl::unique_fd file1_fd(openat(root_dir_fd.get(), kFile1Name, O_RDWR, S_IRWXU));
+  ASSERT_TRUE(file1_fd);
+
+  // With no VMO requests, there should be no mappings of the VMO in the file.
+  ASSERT_FALSE(file1_shared_->GetVmoPresent());
+  EXPECT_FALSE(file1_->HasClones());
+  EXPECT_EQ(0u, vfs_->GetRegisteredPagedVmoCount());
+
+  // Gets the VMO for file1, it should now have a VMO.
+  zx::vmo vmo;
+  // TODO: Add fdio_get_vmo_write() to fdio
+  fdio_t* io = fdio_unsafe_fd_to_io(static_cast<int>(file1_fd.get()));
+  ASSERT_EQ(ZX_OK,
+            zxio_vmo_get(&io->zxio_storage().io, fio::wire::kVmoFlagRead | fio::wire::kVmoFlagWrite,
+                         vmo.reset_and_get_address(), nullptr));
+  fdio_unsafe_release(io);
+  ASSERT_TRUE(file1_shared_->WaitForChangedVmoPresence());
+  EXPECT_TRUE(file1_->HasClones());
+  EXPECT_EQ(1u, vfs_->GetRegisteredPagedVmoCount());
+
+  // Map the data and validate the result can be read.
+  zx_vaddr_t mapped_addr = 0;
+  size_t mapped_len = RoundUp<uint64_t>(kFile1Size, zx_system_get_page_size());
+  ASSERT_EQ(ZX_OK, zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0,
+                                              mapped_len, &mapped_addr));
+  ASSERT_TRUE(mapped_addr);
+
+  // Clear the VMO so the code below also validates that the mapped memory works even when the
+  // VMO is freed. The mapping stores an implicit reference to the vmo.
+  vmo.reset();
+
+  std::vector<uint8_t> write_contents;
+  write_contents.resize(kFile1Size);
+  // Generate write contents pattern
+  constexpr uint8_t kMaxByte = 251;
+  uint8_t cur = 6;
+  for (size_t i = 0; i < kFile1Size; i++) {
+    if (cur >= kMaxByte)
+      cur = 0;
+    write_contents[i] = cur;
+    cur++;
+  }
+
+  // Write to mmaped memory. This memory access trigger VmoDirty().
+  uint8_t* mapped = reinterpret_cast<uint8_t*>(mapped_addr);
+  for (size_t i = 0; i < kFile1Size; i++) {
+    mapped[i] = write_contents[i];
+  }
+
+  // The vmo should still be valid.
+  ASSERT_TRUE(file1_shared_->GetVmoPresent());
+  EXPECT_TRUE(file1_->HasClones());
+
+  // Mmap to another adderss space and verify data in mmaped memory.
+  io = fdio_unsafe_fd_to_io(static_cast<int>(file1_fd.get()));
+  ASSERT_EQ(ZX_OK, zxio_vmo_get(&io->zxio_storage().io, fio::wire::kVmoFlagRead,
+                                vmo.reset_and_get_address(), nullptr));
+  fdio_unsafe_release(io);
+
+  // Map the data and validate the result can be read.
+  zx_vaddr_t mapped_addr_2 = 0;
+  ASSERT_EQ(ZX_OK,
+            zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, vmo, 0, mapped_len, &mapped_addr_2));
+  ASSERT_TRUE(mapped_addr_2);
+  ASSERT_NE(mapped_addr, mapped_addr_2);
+  vmo.reset();
+
+  const uint8_t* mapped_2 = reinterpret_cast<const uint8_t*>(mapped_addr_2);
+  for (size_t i = 0; i < kFile1Size; i++) {
+    ASSERT_EQ(mapped_2[i], write_contents[i]);
+  }
+
+  // Unmap the memory. This should notify the vnode which should free its vmo_ reference.
+  ASSERT_EQ(ZX_OK, zx::vmar::root_self()->unmap(mapped_addr, mapped_len));
+  ASSERT_EQ(ZX_OK, zx::vmar::root_self()->unmap(mapped_addr_2, mapped_len));
+  ASSERT_FALSE(file1_shared_->WaitForChangedVmoPresence());
+  EXPECT_FALSE(file1_->HasClones());
+  EXPECT_EQ(0u, vfs_->GetRegisteredPagedVmoCount());
+}
+
+TEST_F(PagingTest, VmoDirty) {
+  fbl::unique_fd root_dir_fd(CreateVfs(1));
+  ASSERT_TRUE(root_dir_fd);
+
+  // Open file1 and get the VMO.
+  fbl::unique_fd file1_fd(openat(root_dir_fd.get(), kFile1Name, O_RDWR, S_IRWXU));
+  ASSERT_TRUE(file1_fd);
+  zx::vmo vmo;
+  // TODO: Add fdio_get_vmo_write() to fdio
+  fdio_t* io = fdio_unsafe_fd_to_io(static_cast<int>(file1_fd.get()));
+  ASSERT_EQ(ZX_OK,
+            zxio_vmo_get(&io->zxio_storage().io, fio::wire::kVmoFlagRead | fio::wire::kVmoFlagWrite,
+                         vmo.reset_and_get_address(), nullptr));
+  fdio_unsafe_release(io);
+
+  // Test that zx_vmo_write works on the file's VMO.
+  std::vector<uint8_t> write_contents;
+  write_contents.resize(kFile1Size);
+  // Generate write contents pattern
+  constexpr uint8_t kMaxByte = 251;
+  uint8_t cur = 6;
+  for (size_t i = 0; i < kFile1Size; i++) {
+    if (cur >= kMaxByte)
+      cur = 0;
+    write_contents[i] = cur;
+    cur++;
+  }
+  ASSERT_EQ(ZX_OK, vmo.write(&write_contents[0], 0, kFile1Size));
+
+  // Verify file contents
+  std::vector<uint8_t> read;
+  read.resize(kFile1Size);
+  ASSERT_EQ(ZX_OK, vmo.read(&read[0], 0, kFile1Size));
+  for (size_t i = 0; i < kFile1Size; i++) {
+    ASSERT_EQ(read[i], write_contents[i]);
+  }
+}
+
+TEST_F(PagingTest, WriteError) {
+  fbl::unique_fd root_dir_fd(CreateVfs(1));
+  ASSERT_TRUE(root_dir_fd);
+
+  // Open the "error" file and get the VMO.
+  fbl::unique_fd file_err_fd(openat(root_dir_fd.get(), kFileDirtyErrName, O_RDWR, S_IRWXU));
+  ASSERT_TRUE(file_err_fd);
+  zx::vmo vmo;
+  // TODO: Add fdio_get_vmo_write() to fdio
+  fdio_t* io = fdio_unsafe_fd_to_io(static_cast<int>(file_err_fd.get()));
+  ASSERT_EQ(ZX_OK,
+            zxio_vmo_get(&io->zxio_storage().io, fio::wire::kVmoFlagRead | fio::wire::kVmoFlagWrite,
+                         vmo.reset_and_get_address(), nullptr));
+  fdio_unsafe_release(io);
+  // All writes should be errors.
+  uint8_t buf[8];
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, vmo.write(buf, 0, std::size(buf)));
 }
 
 TEST_F(PagingTest, FreeWhileClonesExist) {

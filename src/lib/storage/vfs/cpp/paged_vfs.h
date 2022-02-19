@@ -42,6 +42,11 @@ class PagedVfs : public ManagedVfs {
   zx::status<> SupplyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
                            const zx::vmo& aux_vmo, uint64_t aux_offset) __TA_EXCLUDES(vfs_lock_);
 
+  // Called in response to a successful PagedVnode::VmoDirty() request, this transits page state
+  // from clean to dirty. See zx_pager_op_range() documentation for more.
+  zx::status<> DirtyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length)
+      __TA_EXCLUDES(vfs_lock_);
+
   // Called in response to a failed PagedVnode::VmoRead() request, this reports that there was an
   // error populating page data. See zx_pager_op_range() documentation for more, only certain
   // values are permitted for err.
@@ -58,14 +63,16 @@ class PagedVfs : public ManagedVfs {
   //
   // This function is for internal use by PagedVnode. Most callers should use
   // PagedVnode::EnsureCreateVmo().
+  //
+  // |options| must be zero or a combination of ZX_VMO_RESIZABLE and ZX_VMO_TRAP_DIRTY.
   struct VmoCreateInfo {
     zx::vmo vmo;
 
     // Unique identifier for the VMO that can be used in FreePagedVmo().
     uint64_t id = 0;
   };
-  zx::status<VmoCreateInfo> CreatePagedNodeVmo(PagedVnode* node, uint64_t size)
-      __TA_EXCLUDES(vfs_lock_);
+  zx::status<VmoCreateInfo> CreatePagedNodeVmo(PagedVnode* node, uint64_t size,
+                                               uint32_t options = 0) __TA_EXCLUDES(vfs_lock_);
 
   // When there is a VMO clone is alive, the PagedVnode should be registered with the VFS to handle
   // the paging requests for it.
@@ -82,6 +89,8 @@ class PagedVfs : public ManagedVfs {
   // Callback that the PagerThreadPool uses to notify us of pager events. These calls will get
   // issued on arbitrary threads.
   void PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length) __TA_EXCLUDES(vfs_lock_)
+      __TA_EXCLUDES(live_nodes_lock_);
+  void PagerVmoDirty(uint64_t node_id, uint64_t offset, uint64_t length) __TA_EXCLUDES(vfs_lock_)
       __TA_EXCLUDES(live_nodes_lock_);
 
   // Returns the number of VMOs registered for notifications. Used for testing.

@@ -25,6 +25,7 @@ namespace fs {
 //     - Call DidCloneVmo() to start tracking the clone.
 //     - Populate the GetVmo() out parameter with the child VMO.
 //  - Implement VmoRead() to fill the VMO data when requested.
+//  - Implement VmoDirty() to deal with the transition of the VMO page state from clean to dirty.
 //
 // To unregister from pager requests:
 //
@@ -65,6 +66,29 @@ class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
   // all page requests should be fulfilled to the extent possible to avoid accumulating failed state
   // in the kernel (See OnNoPagedVmoClones() for more).
   virtual void VmoRead(uint64_t offset, uint64_t length) = 0;
+
+  // Called by the paging system in response to a kernel request to transit page state.
+  //
+  //  - On success, calls vfs()->DirtyPages() with the requested data range.
+  //  - On failure, calls vfs()->ReportPagerError() with the error information.
+  //
+  // The success or failure cases can happen synchronously. Failure to report success or failure
+  // will hang the requesting process.
+  //
+  // Note that offset + length will be page-aligned so can extend beyond the end of the file.
+  //
+  // Race conditions
+  // ---------------
+  //
+  // The consideration of race condition with OnNoPagedVmoClones() is the same as VmoRead().
+  //
+  // Theoretically, VmoDirty() requests can be handled with freed VMO. This unnecessarily changes
+  // the page state from clean to dirty. In this case, there is no problem with data integrity
+  // because the data on the dirty page has not been changed.
+  //
+  // |mutex_| lock should be held inside VmoDirty() to avoid race condition with
+  // CreatePagedNodeVmo().
+  virtual void VmoDirty(uint64_t offset, uint64_t length);
 
  protected:
   friend fbl::RefPtr<PagedVnode>;
@@ -107,7 +131,7 @@ class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
   //
   // When a mapping is requested, the derived class should call this function, create a
   // clone of the paged_vmo_ with the desired flags, and then call DidCloneVmo().
-  zx::status<> EnsureCreatePagedVmo(uint64_t size) __TA_REQUIRES(mutex_);
+  zx::status<> EnsureCreatePagedVmo(uint64_t size, uint32_t options = 0) __TA_REQUIRES(mutex_);
 
   // Call after successfully creating a paged_vmo() clone. This will ensure that the tracking
   // information for clones is set up:

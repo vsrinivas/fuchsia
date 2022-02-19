@@ -234,7 +234,10 @@ test("fs-connection-test") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_llcpp",
+    "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/zxio",
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs:cpp",

@@ -14,14 +14,18 @@ PagedVnode::PagedVnode(PagedVfs* vfs) : Vnode(vfs), clone_watcher_(this) {}
 
 PagedVnode::~PagedVnode() {}
 
-zx::status<> PagedVnode::EnsureCreatePagedVmo(uint64_t size) {
+void PagedVnode::VmoDirty(uint64_t offset, uint64_t length) {
+  ZX_ASSERT_MSG(false, "Filesystem does not support VmoDirty() (maybe read-only filesystem).");
+}
+
+zx::status<> PagedVnode::EnsureCreatePagedVmo(uint64_t size, uint32_t options) {
   if (paged_vmo())
     return zx::ok();
 
   if (!paged_vfs())
     return zx::error(ZX_ERR_BAD_STATE);  // Currently shutting down.
 
-  auto info_or = paged_vfs()->CreatePagedNodeVmo(this, size);
+  auto info_or = paged_vfs()->CreatePagedNodeVmo(this, size, options);
   if (info_or.is_error())
     return info_or.take_error();
   paged_vmo_info_ = std::move(info_or).value();

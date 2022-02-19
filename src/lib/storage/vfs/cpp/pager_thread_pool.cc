@@ -5,6 +5,7 @@
 #include "src/lib/storage/vfs/cpp/pager_thread_pool.h"
 
 #include <zircon/assert.h>
+#include <zircon/syscalls-next.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/syscalls/types.h>
 #include <zircon/threads.h>
@@ -75,6 +76,9 @@ void PagerThreadPool::ThreadProc() {
     switch (packet.page_request.command) {
       case ZX_PAGER_VMO_READ:
         vfs_.PagerVmoRead(packet.key, packet.page_request.offset, packet.page_request.length);
+        break;
+      case ZX_PAGER_VMO_DIRTY:
+        vfs_.PagerVmoDirty(packet.key, packet.page_request.offset, packet.page_request.length);
         break;
       case ZX_PAGER_VMO_COMPLETE:
         // We don't currently do anything on "complete" requests. This is issued by the kernel in
