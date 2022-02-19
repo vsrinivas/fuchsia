@@ -297,14 +297,15 @@ variant("hwasan") {
   }
   rustflags = []
   foreach(hwasan, needed_hwasan_libs) {
-    libclang_rt_hwasan =
-        exec_script("/usr/bin/env",
-                    [
-                      "${rebased_clang_prefix}/clang",
-                      "--target=${current_target_tuple}",
-                      "-print-file-name=libclang_rt.${hwasan}${extension}",
-                    ],
-                    "trim string")
+    libclang_rt_hwasan = rebase_path(
+            exec_script("/usr/bin/env",
+                        [
+                          "${rebased_clang_prefix}/clang",
+                          "--target=${current_target_tuple}",
+                          "-print-file-name=libclang_rt.${hwasan}${extension}",
+                        ],
+                        "trim string"),
+            root_build_dir)
     rustflags += [ "-Clink-arg=${libclang_rt_hwasan}" ]
   }
   if (is_fuchsia) {
