@@ -290,6 +290,12 @@ where
     }
 }
 
+/// An IP device ID.
+pub trait IpDeviceId: Copy + Display + Debug + PartialEq + Send + Sync {
+    /// Returns true if the device is a loopback device.
+    fn is_loopback(&self) -> bool;
+}
+
 /// An execution context which provides a `DeviceId` type for various IP
 /// internals to share.
 ///
@@ -299,7 +305,7 @@ where
 /// require lots of verbose type bounds when they need to be interoperable (such
 /// as when ICMP delivers an MLD packet to the `mld` module for processing).
 pub trait IpDeviceIdContext<I: Ip> {
-    type DeviceId: Copy + Display + Debug + PartialEq + Send + Sync + 'static;
+    type DeviceId: IpDeviceId + 'static;
 }
 
 /// The status of an IP address on an interface.
@@ -576,6 +582,13 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferTransportContext<Ipv6, B> for C
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 #[cfg(test)]
 pub(crate) struct DummyDeviceId;
+
+#[cfg(test)]
+impl IpDeviceId for DummyDeviceId {
+    fn is_loopback(&self) -> bool {
+        false
+    }
+}
 
 #[cfg(test)]
 impl<I: Ip, S, Id, Meta> IpDeviceIdContext<I> for crate::context::testutil::DummyCtx<S, Id, Meta> {
@@ -2251,7 +2264,8 @@ mod tests {
 
     use crate::{
         context::testutil::DummyInstant,
-        device::{receive_frame, set_routing_enabled, FrameDestination},
+        device::{receive_frame, FrameDestination},
+        ip::device::set_routing_enabled,
         testutil::*,
         {assert_empty, DeviceId, Mac, StackStateBuilder},
     };
@@ -3563,9 +3577,9 @@ mod tests {
 
         // Receive packet destined to a remote address when forwarding is
         // enabled both globally and on the inbound device.
-        crate::device::set_routing_enabled::<_, Ipv4>(&mut ctx, v4_dev, true)
+        set_routing_enabled::<_, Ipv4>(&mut ctx, v4_dev, true)
             .expect("error setting routing enabled");
-        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, v6_dev, true)
+        set_routing_enabled::<_, Ipv6>(&mut ctx, v6_dev, true)
             .expect("error setting routing enabled");
         assert_eq!(
             receive_ipv4_packet_action(&mut ctx, v4_dev, v4_config.remote_ip),

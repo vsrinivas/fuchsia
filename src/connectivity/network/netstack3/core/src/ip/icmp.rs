@@ -2343,11 +2343,14 @@ mod tests {
     use crate::{
         assert_empty,
         context::testutil::{DummyCtx, DummyInstant},
-        device::{set_routing_enabled, DeviceId, FrameDestination, IpFrameMeta},
+        device::{DeviceId, FrameDestination, IpFrameMeta},
         ip::{
-            device::state::IpDeviceStateIpExt, gmp::mld::MldPacketHandler,
-            path_mtu::testutil::DummyPmtuState, receive_ipv4_packet, receive_ipv6_packet,
-            socket::testutil::DummyIpSocketCtx, DummyDeviceId,
+            device::{set_routing_enabled, state::IpDeviceStateIpExt},
+            gmp::mld::MldPacketHandler,
+            path_mtu::testutil::DummyPmtuState,
+            receive_ipv4_packet, receive_ipv6_packet,
+            socket::testutil::DummyIpSocketCtx,
+            DummyDeviceId,
         },
         testutil::{
             get_counter_val, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,

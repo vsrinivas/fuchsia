@@ -10,6 +10,8 @@ pub(crate) mod state;
 use alloc::boxed::Box;
 use core::num::NonZeroU8;
 
+#[cfg(test)]
+use net_types::ip::{Ip, IpVersion};
 use net_types::{
     ip::{AddrSubnet, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
     LinkLocalAddress as _, MulticastAddr, SpecifiedAddr, UnicastAddr, Witness as _,
@@ -32,6 +34,8 @@ use crate::{
     },
     Instant,
 };
+#[cfg(test)]
+use crate::{error::NotSupportedError, ip::IpDeviceId as _};
 
 /// A timer ID for IPv4 devices.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
@@ -173,6 +177,16 @@ pub(crate) trait Ipv6DeviceContext: IpDeviceContext<Ipv6> {
         device_id: Self::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
     );
+
+    /// Starts soliciting routers.
+    // TODO(https://fxbug.dev/72378): Remove this method once DAD operates at
+    // L3.
+    fn start_soliciting_routers(&mut self, device_id: Self::DeviceId);
+
+    /// Stops soliciting routers.
+    // TODO(https://fxbug.dev/72378): Remove this method once DAD operates at
+    // L3.
+    fn stop_soliciting_routers(&mut self, device_id: Self::DeviceId);
 }
 
 /// The execution context for an IP device with a buffer.
@@ -302,6 +316,74 @@ pub(crate) fn is_ipv6_routing_enabled<C: IpDeviceContext<Ipv6>>(
     device_id: C::DeviceId,
 ) -> bool {
     get_ipv6_device_state(ctx, device_id).routing_enabled
+}
+
+/// Enables or disables IP packet routing on `device`.
+#[cfg(test)]
+pub(crate) fn set_routing_enabled<
+    C: IpDeviceContext<Ipv4> + Ipv6DeviceContext + GmpHandler<Ipv6>,
+    I: Ip,
+>(
+    ctx: &mut C,
+    device: <C as IpDeviceIdContext<Ipv6>>::DeviceId,
+    enabled: bool,
+) -> Result<(), NotSupportedError>
+where
+    C: IpDeviceIdContext<Ipv6, DeviceId = <C as IpDeviceIdContext<Ipv4>>::DeviceId>,
+{
+    match I::VERSION {
+        IpVersion::V4 => set_ipv4_routing_enabled(ctx, device, enabled),
+        IpVersion::V6 => set_ipv6_routing_enabled(ctx, device, enabled),
+    }
+}
+
+/// Enables or disables IPv4 packet routing on `device_id`.
+#[cfg(test)]
+fn set_ipv4_routing_enabled<C: IpDeviceContext<Ipv4>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
+    enabled: bool,
+) -> Result<(), NotSupportedError> {
+    if device_id.is_loopback() {
+        return Err(NotSupportedError);
+    }
+
+    ctx.get_ip_device_state_mut(device_id).ip_state.routing_enabled = enabled;
+    Ok(())
+}
+
+/// Enables or disables IPv4 packet routing on `device_id`.
+///
+/// When routing is enabled/disabled, the interface will leave/join the all
+/// routers link-local multicast group and stop/start soliciting routers.
+///
+/// Does nothing if the routing status does not change as a consequence of this
+/// call.
+#[cfg(test)]
+pub(crate) fn set_ipv6_routing_enabled<C: Ipv6DeviceContext + GmpHandler<Ipv6>>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
+    enabled: bool,
+) -> Result<(), NotSupportedError> {
+    if device_id.is_loopback() {
+        return Err(NotSupportedError);
+    }
+
+    if is_ipv6_routing_enabled(ctx, device_id) == enabled {
+        return Ok(());
+    }
+
+    if enabled {
+        ctx.stop_soliciting_routers(device_id);
+        ctx.get_ip_device_state_mut(device_id).ip_state.routing_enabled = true;
+        join_ip_multicast(ctx, device_id, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
+    } else {
+        leave_ip_multicast(ctx, device_id, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
+        ctx.get_ip_device_state_mut(device_id).ip_state.routing_enabled = false;
+        ctx.start_soliciting_routers(device_id);
+    }
+
+    Ok(())
 }
 
 /// Gets the MTU for a device.

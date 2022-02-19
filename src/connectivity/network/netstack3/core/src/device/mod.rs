@@ -21,8 +21,8 @@ use log::{debug, trace};
 use net_types::{
     ethernet::Mac,
     ip::{
-        AddrSubnet, AddrSubnetEither, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6,
-        Ipv6Addr, Ipv6SourceAddr,
+        AddrSubnet, AddrSubnetEither, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
+        Ipv6SourceAddr,
     },
     MulticastAddr, SpecifiedAddr, UnicastAddr,
 };
@@ -54,7 +54,7 @@ use crate::{
             },
             BufferIpDeviceContext, IpDeviceContext, Ipv6DeviceContext,
         },
-        IpDeviceIdContext,
+        IpDeviceId, IpDeviceIdContext,
     },
     BufferDispatcher, Ctx, EventDispatcher, Instant, StackState,
 };
@@ -397,6 +397,24 @@ impl<D: EventDispatcher> Ipv6DeviceContext for Ctx<D> {
             DeviceIdInner::Loopback => {}
         }
     }
+
+    fn start_soliciting_routers(&mut self, device_id: Self::DeviceId) {
+        match device_id.inner() {
+            DeviceIdInner::Ethernet(id) => {
+                NdpHandler::<EthernetLinkDevice>::start_soliciting_routers(self, id)
+            }
+            DeviceIdInner::Loopback => {}
+        }
+    }
+
+    fn stop_soliciting_routers(&mut self, device_id: Self::DeviceId) {
+        match device_id.inner() {
+            DeviceIdInner::Ethernet(id) => {
+                NdpHandler::<EthernetLinkDevice>::stop_soliciting_routers(self, id)
+            }
+            DeviceIdInner::Loopback => {}
+        }
+    }
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpDeviceContext<Ipv6, B> for Ctx<D> {
@@ -510,8 +528,10 @@ impl DeviceId {
         let DeviceId(id) = self;
         id
     }
+}
 
-    pub(crate) fn is_loopback(&self) -> bool {
+impl IpDeviceId for DeviceId {
+    fn is_loopback(&self) -> bool {
         match self.inner() {
             DeviceIdInner::Loopback => true,
             DeviceIdInner::Ethernet(_) => false,
@@ -1017,47 +1037,6 @@ fn get_common_device_state_mut<D: EventDispatcher>(
         }
         DeviceIdInner::Loopback => {
             &mut state.device.loopback.as_mut().expect("no loopback device").common
-        }
-    }
-}
-
-/// Enables or disables IP packet routing on `device`.
-///
-/// `set_routing_enabled` does nothing if the new routing status, `enabled`, is
-/// the same as the current routing status.
-///
-/// Note, enabling routing does not mean that `device` will immediately start
-/// routing IP packets. It only means that `device` is allowed to route packets.
-/// To route packets, this netstack must be configured to allow IP packets to be
-/// routed if it was not destined for this node.
-#[cfg_attr(not(test), allow(dead_code))]
-pub(crate) fn set_routing_enabled<D: EventDispatcher, I: Ip>(
-    ctx: &mut Ctx<D>,
-    device: DeviceId,
-    enabled: bool,
-) -> Result<(), NotSupportedError> {
-    let is_routing_enabled = match I::VERSION {
-        IpVersion::V4 => crate::ip::device::is_ipv4_routing_enabled(ctx, device),
-        IpVersion::V6 => crate::ip::device::is_ipv6_routing_enabled(ctx, device),
-    };
-
-    if is_routing_enabled == enabled {
-        trace!(
-            "set_routing_enabled: {:?} routing status unchanged for device {:?}",
-            I::VERSION,
-            device
-        );
-        return Ok(());
-    }
-
-    match device.inner() {
-        DeviceIdInner::Ethernet(id) => {
-            Ok(self::ethernet::set_routing_enabled::<_, I>(ctx, id, enabled))
-        }
-        DeviceIdInner::Loopback => {
-            // TODO(https://fxbug.dev/72378): Disallow changing route status on
-            // loopback at IP device layer;
-            Err(NotSupportedError)
         }
     }
 }

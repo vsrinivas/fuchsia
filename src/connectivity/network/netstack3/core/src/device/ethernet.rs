@@ -12,7 +12,7 @@ use log::{debug, trace};
 use net_types::{
     ethernet::Mac,
     ip::{
-        AddrSubnet, Ip, IpAddr, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
+        AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
         UnicastOrMulticastIpv6Addr,
     },
     BroadcastAddress, MulticastAddr, MulticastAddress, SpecifiedAddr, UnicastAddr, UnicastAddress,
@@ -708,41 +708,6 @@ pub(super) fn get_mtu<C: EthernetIpLinkDeviceContext>(ctx: &C, device_id: C::Dev
     ctx.get_state_with(device_id).link.mtu
 }
 
-pub(super) fn set_routing_enabled<C: EthernetIpLinkDeviceContext, I: Ip>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    enabled: bool,
-) {
-    match I::VERSION {
-        IpVersion::V4 => {
-            ctx.get_state_mut_with(device_id).ip.ipv4.ip_state.routing_enabled = enabled;
-        }
-        IpVersion::V6 => {
-            if enabled {
-                trace!(
-                    "set_ipv6_routing_enabled: enabling IPv6 routing for device {:?}",
-                    device_id
-                );
-
-                ctx.stop_soliciting_routers(device_id);
-                ctx.get_state_mut_with(device_id).ip.ipv6.ip_state.routing_enabled = true;
-                // Now that `device` is a router, join the all-routers multicast
-                // group.
-                ctx.join_ipv6_multicast(device_id, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
-            } else {
-                trace!(
-                    "set_ipv6_routing_enabled: disabling IPv6 routing for device {:?}",
-                    device_id
-                );
-
-                ctx.leave_ipv6_multicast(device_id, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
-                ctx.get_state_mut_with(device_id).ip.ipv6.ip_state.routing_enabled = false;
-                ctx.start_soliciting_routers(device_id);
-            }
-        }
-    }
-}
-
 /// Insert a static entry into this device's ARP table.
 ///
 /// This will cause any conflicting dynamic entry to be removed, and
@@ -1106,6 +1071,7 @@ mod tests {
     use alloc::vec;
 
     use assert_matches::assert_matches;
+    use net_types::ip::IpVersion;
     use packet::Buf;
     use packet_formats::{
         icmp::{IcmpDestUnreachable, IcmpIpExt},
@@ -1123,11 +1089,14 @@ mod tests {
     use crate::{
         context::{testutil::DummyInstant, DualStateContext},
         device::{
-            arp::ArpHandler, set_routing_enabled, testutil::DeviceTestIpExt, DeviceId,
-            DeviceIdInner, EthernetDeviceId, IpLinkDeviceState,
+            arp::ArpHandler, testutil::DeviceTestIpExt, DeviceId, DeviceIdInner, EthernetDeviceId,
+            IpLinkDeviceState,
         },
         ip::{
-            device::{is_ipv4_routing_enabled, is_ipv6_routing_enabled, state::AssignedAddress},
+            device::{
+                is_ipv4_routing_enabled, is_ipv6_routing_enabled, set_routing_enabled,
+                state::AssignedAddress,
+            },
             dispatch_receive_ip_packet_name, receive_ip_packet, DummyDeviceId,
         },
         testutil::{

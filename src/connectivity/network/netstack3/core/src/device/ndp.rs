@@ -2785,12 +2785,11 @@ mod tests {
         device::{
             add_ip_addr_subnet, del_ip_addr,
             ethernet::{EthernetLinkDevice, EthernetTimerId},
-            set_routing_enabled, DeviceId, DeviceIdInner, DeviceLayerTimerId,
-            DeviceLayerTimerIdInner, EthernetDeviceId,
+            DeviceId, DeviceIdInner, DeviceLayerTimerId, DeviceLayerTimerIdInner, EthernetDeviceId,
         },
         ip::device::{
             get_assigned_ipv6_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
-            is_ipv6_routing_enabled, state::Ipv6AddressEntry,
+            is_ipv6_routing_enabled, set_ipv6_routing_enabled, state::Ipv6AddressEntry,
         },
         testutil::{
             self, get_counter_val, run_for, set_logger_for_test, trigger_next_timer,
@@ -4686,8 +4685,7 @@ mod tests {
         assert_eq!(timers.len(), 1);
 
         // Enable routing on device.
-        set_routing_enabled::<_, Ipv6>(&mut ctx, device, true)
-            .expect("error setting routing enabled");
+        set_ipv6_routing_enabled(&mut ctx, device, true).expect("error setting routing enabled");
         assert!(is_ipv6_routing_enabled(&ctx, device));
 
         // Should have not sent any new packets, but unset the router
@@ -4696,8 +4694,7 @@ mod tests {
         assert_empty(ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id));
 
         // Unsetting routing should succeed.
-        set_routing_enabled::<_, Ipv6>(&mut ctx, device, false)
-            .expect("error setting routing enabled");
+        set_ipv6_routing_enabled(&mut ctx, device, false).expect("error setting routing enabled");
         assert!(!is_ipv6_routing_enabled(&ctx, device));
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         let timers: Vec<(&DummyInstant, &TimerId)> =
@@ -5229,8 +5226,7 @@ mod tests {
             .build_with(state_builder, DummyEventDispatcher::default());
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
-        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true)
-            .expect("error setting routing enabled");
+        set_ipv6_routing_enabled(&mut ctx, device, true).expect("error setting routing enabled");
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
