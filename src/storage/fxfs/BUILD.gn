@@ -287,5 +287,6 @@ group("tests") {
     ":fxfs-slow-fs-tests",
     ":fxfs-tests",
     ":lib_test($host_toolchain)",
+    "//src/storage/fxfs/tools:tests",
   ]
 }

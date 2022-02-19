@@ -3,39 +3,24 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{bail, Error},
+    anyhow::Error,
     argh::FromArgs,
-    chrono::{TimeZone, Utc},
     fuchsia_async as fasync,
     fxfs::{
         mkfs, mount,
-        object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
         object_store::{
             crypt::{Crypt, InsecureCrypt},
-            directory::replace_child,
-            filesystem::OpenFxFilesystem,
             fsck::{self},
-            transaction::{Options, TransactionHandler},
-            volume::root_volume,
-            Directory, HandleOptions, ObjectDescriptor, ObjectStore,
         },
     },
-    std::{
-        io::{Read, Write},
-        path::Path,
-        sync::Arc,
-    },
+    std::{io::Read, path::Path, sync::Arc},
     storage_device::{file_backed_device::FileBackedDevice, DeviceHolder},
+    tools::ops,
 };
-
-const DEFAULT_VOLUME: &str = "default";
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// fxfs
 struct TopLevel {
-    /// path to the image file to read or write
-    #[argh(option, short = 'i')]
-    image: String,
     /// whether to run the tool verbosely
     #[argh(switch, short = 'v')]
     verbose: bool,
@@ -46,6 +31,24 @@ struct TopLevel {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
 enum SubCommand {
+    ImageEdit(ImageEditCommand),
+    CreateGolden(CreateGoldenSubCommand),
+    CheckGolden(CheckGoldenSubCommand),
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "image", description = "disk image manipulation commands")]
+struct ImageEditCommand {
+    /// path to the image file to read or write
+    #[argh(option, short = 'f')]
+    file: String,
+    #[argh(subcommand)]
+    subcommand: ImageSubCommand,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand)]
+enum ImageSubCommand {
     Format(FormatSubCommand),
     Fsck(FsckSubCommand),
     Get(GetSubCommand),
@@ -125,6 +128,20 @@ struct RmdirSubCommand {
     path: String,
 }
 
+#[derive(FromArgs, PartialEq, Debug)]
+/// Create a golden image at current filesystem version.
+#[argh(subcommand, name = "create_golden")]
+struct CreateGoldenSubCommand {}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Check all golden images at current filesystem version.
+#[argh(subcommand, name = "check_golden")]
+struct CheckGoldenSubCommand {
+    #[argh(option)]
+    /// path to golden images directory. derived from FUCHSIA_DIR if not set.
+    images_dir: Option<String>,
+}
+
 struct SimpleLogger;
 
 impl log::Log for SimpleLogger {
@@ -147,221 +164,86 @@ impl log::Log for SimpleLogger {
 
 const LOGGER: SimpleLogger = SimpleLogger {};
 
-async fn print_ls(dir: &Directory<ObjectStore>) -> Result<(), Error> {
-    const DATE_FMT: &str = "%b %d %Y %T+00";
-    let layer_set = dir.store().tree().layer_set();
-    let mut merger = layer_set.merger();
-    let mut iter = dir.iter(&mut merger).await?;
-    while let Some((name, object_id, descriptor)) = iter.get() {
-        match descriptor {
-            ObjectDescriptor::File => {
-                let handle = ObjectStore::open_object(
-                    dir.owner(),
-                    object_id,
-                    HandleOptions::default(),
-                    None,
-                )
-                .await?;
-                let properties = handle.get_properties().await?;
-                let size = properties.data_attribute_size;
-                let mtime = Utc.timestamp(
-                    properties.modification_time.secs as i64,
-                    properties.modification_time.nanos,
-                );
-                println!(
-                    "-rwx------    1 nobody   nogroup    {:>8} {:>12} {}",
-                    size,
-                    mtime.format(DATE_FMT),
-                    name
-                );
-            }
-            ObjectDescriptor::Directory => {
-                let mtime = Utc.timestamp(0, 0);
-                println!(
-                    "d---------    1 nobody   nogroup           0 {:>12} {}",
-                    mtime.format(DATE_FMT),
-                    name
-                );
-            }
-            ObjectDescriptor::Volume => unimplemented!(),
-        }
-        iter.advance().await?;
-    }
-    Ok(())
-}
-
-/// Opens a volume on a device and returns a Directory to it's root.
-async fn open_volume(
-    fs: &OpenFxFilesystem,
-    crypt: Arc<dyn Crypt>,
-) -> Result<Directory<ObjectStore>, Error> {
-    let root_volume = root_volume(fs).await.unwrap();
-    let store = root_volume.open_or_create_volume(DEFAULT_VOLUME, crypt).await?;
-    Directory::open(&store, store.root_directory_object_id()).await
-}
-
-/// Walks a directory path from a given root.
-async fn walk_dir(
-    path: &Path,
-    mut dir: Directory<ObjectStore>,
-) -> Result<Directory<ObjectStore>, Error> {
-    for path in path.to_str().unwrap().split('/') {
-        if path.len() == 0 {
-            continue;
-        }
-        if let Some((object_id, descriptor)) = dir.lookup(&path).await? {
-            if descriptor != ObjectDescriptor::Directory {
-                bail!("Not a directory: {}", path);
-            }
-            dir = Directory::open(&dir.owner(), object_id).await?;
-        } else {
-            bail!("Not found: {}", path);
-        }
-    }
-    Ok(dir)
-}
-
-async fn unlink(fs: &OpenFxFilesystem, crypt: Arc<dyn Crypt>, path: &Path) -> Result<(), Error> {
-    let dir = walk_dir(path.parent().unwrap(), open_volume(&fs, crypt).await?).await?;
-    let mut transaction = (*fs).clone().new_transaction(&[], Options::default()).await?;
-    replace_child(&mut transaction, None, (&dir, path.file_name().unwrap().to_str().unwrap()))
-        .await?;
-    transaction.commit().await?;
-    Ok(())
-}
-
-// Used to fsck after mutating operations.
-async fn fsck(fs: OpenFxFilesystem, crypt: Arc<dyn Crypt>, verbose: bool) -> Result<(), Error> {
-    // Re-open the filesystem to ensure it's locked.
-    let fs = mount::mount(fs.take_device().await).await?;
-    let options = fsck::FsckOptions {
-        fail_on_warning: false,
-        halt_on_error: false,
-        do_slow_passes: true,
-        on_error: |err| eprintln!("{:?}", err.to_string()),
-        verbose,
-    };
-    fsck::fsck_with_options(&fs, Some(crypt), options).await
-}
-
 #[fasync::run(10)]
 async fn main() -> Result<(), Error> {
     log::set_logger(&LOGGER)?;
     log::debug!("fxfs {:?}", std::env::args());
 
     let args: TopLevel = argh::from_env();
-
-    // TODO(jfsulliv): Add support for side-loaded encryption keys.
-    let crypt: Arc<dyn Crypt> = Arc::new(InsecureCrypt::new());
-    let device = DeviceHolder::new(FileBackedDevice::new(
-        std::fs::OpenOptions::new().read(true).write(true).open(args.image)?,
-    ));
-
     match args.subcommand {
-        SubCommand::Rm(rmargs) => {
-            let fs = mount::mount(device).await?;
-            unlink(&fs, crypt.clone(), &Path::new(&rmargs.path)).await?;
-            fs.close().await?;
-            fsck(fs, crypt, args.verbose).await
-        }
-        SubCommand::Get(getargs) => {
-            let fs = mount::mount(device).await?;
-            let src = Path::new(&getargs.src);
-            let dir = walk_dir(src.parent().unwrap(), open_volume(&fs, crypt).await?).await?;
-            if let Some((object_id, descriptor)) =
-                dir.lookup(&src.file_name().unwrap().to_str().unwrap()).await?
-            {
-                if descriptor != ObjectDescriptor::File {
-                    bail!("Expected File. Found {:?}", descriptor);
+        SubCommand::ImageEdit(cmd) => {
+            // TODO(jfsulliv): Add support for side-loaded encryption keys.
+            let crypt: Arc<dyn Crypt> = Arc::new(InsecureCrypt::new());
+            let device = DeviceHolder::new(FileBackedDevice::new(
+                std::fs::OpenOptions::new().read(true).write(true).open(cmd.file)?,
+            ));
+            match cmd.subcommand {
+                ImageSubCommand::Rm(rmargs) => {
+                    let fs = mount::mount(device).await?;
+                    let vol = ops::open_volume(&fs, crypt.clone()).await?;
+                    ops::unlink(&fs, &vol, &Path::new(&rmargs.path)).await?;
+                    fs.close().await?;
+                    ops::fsck(&fs, crypt, args.verbose).await
                 }
-                let handle = ObjectStore::open_object(
-                    dir.owner(),
-                    object_id,
-                    HandleOptions::default(),
-                    None,
-                )
-                .await?;
-                let mut writer = std::fs::File::create(getargs.dst)?;
-                let mut buf = handle.allocate_buffer(handle.block_size() as usize);
-                let mut ofs = 0;
-                loop {
-                    let bytes = handle.read(ofs, buf.as_mut()).await?;
-                    ofs += bytes as u64;
-                    writer.write(&buf.as_ref().as_slice()[..bytes])?;
-                    if bytes as u64 != handle.block_size() {
-                        break;
-                    }
+                ImageSubCommand::Get(getargs) => {
+                    let fs = mount::mount(device).await?;
+                    let vol = ops::open_volume(&fs, crypt).await?;
+                    let data = ops::get(&vol, &Path::new(&getargs.src)).await?;
+                    let mut reader = std::io::Cursor::new(&data);
+                    let mut writer = std::fs::File::create(getargs.dst)?;
+                    std::io::copy(&mut reader, &mut writer)?;
+                    Ok(())
                 }
-            } else {
-                println!("File not found {}", getargs.src);
+                ImageSubCommand::Put(putargs) => {
+                    let fs = mount::mount(device).await?;
+                    let vol = ops::open_volume(&fs, crypt.clone()).await?;
+                    let mut data = Vec::new();
+                    std::fs::File::open(&putargs.src)?.read_to_end(&mut data)?;
+                    ops::put(&fs, &vol, &Path::new(&putargs.dst), data).await?;
+                    fs.close().await?;
+                    ops::fsck(&fs, crypt, args.verbose).await
+                }
+                ImageSubCommand::Format(_) => {
+                    log::set_max_level(log::LevelFilter::Info);
+                    mkfs::mkfs(device, crypt).await?;
+                    Ok(())
+                }
+                ImageSubCommand::Fsck(_) => {
+                    log::set_max_level(log::LevelFilter::Info);
+                    let fs = mount::mount(device).await?;
+                    let options = fsck::FsckOptions {
+                        fail_on_warning: false,
+                        halt_on_error: false,
+                        do_slow_passes: true,
+                        on_error: |err| eprintln!("{:?}", err.to_string()),
+                        verbose: args.verbose,
+                    };
+                    fsck::fsck_with_options(&fs, Some(crypt), options).await
+                }
+                ImageSubCommand::Ls(lsargs) => {
+                    let fs = mount::mount(device).await?;
+                    let vol = ops::open_volume(&fs, crypt).await?;
+                    let dir = ops::walk_dir(&vol, &Path::new(&lsargs.path)).await?;
+                    ops::print_ls(&dir).await?;
+                    Ok(())
+                }
+                ImageSubCommand::Mkdir(mkdirargs) => {
+                    let fs = mount::mount(device).await?;
+                    let vol = ops::open_volume(&fs, crypt.clone()).await?;
+                    ops::mkdir(&fs, &vol, &Path::new(&mkdirargs.path)).await?;
+                    fs.close().await?;
+                    ops::fsck(&fs, crypt, args.verbose).await
+                }
+                ImageSubCommand::Rmdir(rmdirargs) => {
+                    let fs = mount::mount(device).await?;
+                    let vol = ops::open_volume(&fs, crypt.clone()).await?;
+                    ops::unlink(&fs, &vol, &Path::new(&rmdirargs.path)).await?;
+                    fs.close().await?;
+                    ops::fsck(&fs, crypt, args.verbose).await
+                }
             }
-            Ok(())
         }
-        SubCommand::Put(putargs) => {
-            let fs = mount::mount(device).await?;
-            let dst = Path::new(&putargs.dst);
-            let dir =
-                walk_dir(dst.parent().unwrap(), open_volume(&fs, crypt.clone()).await?).await?;
-            let filename = dst.file_name().unwrap().to_str().unwrap();
-            let mut transaction = fs.clone().new_transaction(&[], Options::default()).await?;
-            if let Some(_) = dir.lookup(filename).await? {
-                bail!("{} already exists", filename);
-            }
-            let handle = dir.create_child_file(&mut transaction, &filename).await?;
-            transaction.commit().await?;
-            let mut data = Vec::new();
-            std::fs::File::open(&putargs.src)?.read_to_end(&mut data)?;
-            let mut buf = handle.allocate_buffer(data.len());
-            buf.as_mut_slice().copy_from_slice(&data);
-            handle.write_or_append(Some(0), buf.as_ref()).await?;
-            handle.flush().await?;
-            fs.close().await?;
-            fsck(fs, crypt, args.verbose).await
-        }
-        SubCommand::Format(_) => {
-            log::set_max_level(log::LevelFilter::Info);
-            mkfs::mkfs(device, crypt).await?;
-            Ok(())
-        }
-        SubCommand::Fsck(_) => {
-            log::set_max_level(log::LevelFilter::Info);
-            let fs = mount::mount(device).await?;
-            let options = fsck::FsckOptions {
-                fail_on_warning: false,
-                halt_on_error: false,
-                do_slow_passes: true,
-                on_error: |err| eprintln!("{:?}", err.to_string()),
-                verbose: args.verbose,
-            };
-            fsck::fsck_with_options(&fs, Some(crypt), options).await
-        }
-        SubCommand::Ls(lsargs) => {
-            let path = Path::new(&lsargs.path);
-            let fs = mount::mount(device).await?;
-            let dir = walk_dir(&path, open_volume(&fs, crypt).await?).await?;
-            print_ls(&dir).await?;
-            Ok(())
-        }
-        SubCommand::Mkdir(mkdirargs) => {
-            let fs = mount::mount(device).await?;
-            let path = Path::new(&mkdirargs.path);
-            let dir =
-                walk_dir(path.parent().unwrap(), open_volume(&fs, crypt.clone()).await?).await?;
-            let filename = path.file_name().unwrap().to_str().unwrap();
-            let mut transaction = fs.clone().new_transaction(&[], Options::default()).await?;
-            if let Some(_) = dir.lookup(filename).await? {
-                bail!("{} already exists", filename);
-            }
-            dir.create_child_dir(&mut transaction, &filename).await?;
-            transaction.commit().await?;
-            fs.close().await?;
-            fsck(fs, crypt, args.verbose).await
-        }
-        SubCommand::Rmdir(rmdirargs) => {
-            let fs = mount::mount(device).await?;
-            unlink(&fs, crypt.clone(), &Path::new(&rmdirargs.path)).await?;
-            fs.close().await?;
-            fsck(fs, crypt, args.verbose).await
-        }
+        SubCommand::CreateGolden(_) => tools::golden::create_image().await,
+        SubCommand::CheckGolden(args) => tools::golden::check_images(args.images_dir).await,
     }
 }

@@ -1,0 +1,16 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/host_test_data.gni")
+
+if (is_host) {
+  # We need to bundle images with our test to run on CQ but GN doesn't support wildcards.
+  # The workaround is to regenerate a gni file containing all images
+  # whenever `fx fxfs create_golden` is run.
+  import("images.gni")
+  host_test_data("golden_images") {
+    sources = fxfs_golden_images
+    outputs = [ "$root_out_dir/fxfs_golden_images/{{source_file_part}}" ]
+  }
+}
