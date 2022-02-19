@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_SHELL_PARSER_PARSER_H_
 #define SRC_DEVELOPER_SHELL_PARSER_PARSER_H_
 
+#include <memory>
 #include <string_view>
 
 namespace shell::parser {
