@@ -88,9 +88,10 @@ class UntypedEnvelope {
   Envelope<T>& As() {
     return *reinterpret_cast<Envelope<T>*>(this);
   }
+  bool IsZeroEnvelope() const { return header_ == 0; }
 
  private:
-  [[maybe_unused]] uint64_t unused_ = 0;
+  uint64_t header_ = 0;
 };
 
 static_assert(sizeof(Envelope<uint8_t>) == sizeof(fidl_envelope_v2_t),

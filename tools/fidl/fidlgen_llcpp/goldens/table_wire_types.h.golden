@@ -55,6 +55,8 @@ struct ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes> final {
  private:
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
   ::fidl::Envelope<int64_t> x_;
 
   friend class ::test_table::wire::TableWithAttributes;
@@ -68,6 +70,9 @@ class TableWithAttributes final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
@@ -160,6 +165,8 @@ struct ::fidl::WireTableFrame<::test_table::wire::SimpleTable> final {
  private:
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
   ::fidl::Envelope<int64_t> x_;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_2_;
@@ -177,6 +184,9 @@ class SimpleTable final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
@@ -301,6 +311,8 @@ struct ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable> final {
  private:
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
   ::fidl::Envelope<int64_t> z_;
   ::fidl::Envelope<int64_t> y_;
   ::fidl::Envelope<int64_t> x_;
@@ -316,6 +328,9 @@ class ReverseOrdinalTable final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   const int64_t& z() const {
     ZX_ASSERT(has_z());
@@ -478,6 +493,8 @@ struct ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable> final {
  private:
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
   ::fidl::Envelope<int64_t> x_;
 
   friend class ::test_table::wire::OlderSimpleTable;
@@ -491,6 +508,9 @@ class OlderSimpleTable final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
@@ -582,6 +602,8 @@ struct ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable> final {
  private:
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
   ::fidl::Envelope<int64_t> x_;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_2_;
@@ -600,6 +622,9 @@ class NewerSimpleTable final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   const int64_t& x() const {
     ZX_ASSERT(has_x());
@@ -762,6 +787,8 @@ struct ::fidl::WireTableFrame<::test_table::wire::ExtensionTable> final {
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
+  bool HasUnknownData() const;
+
   friend class ::test_table::wire::ExtensionTable;
 };
 
@@ -773,6 +800,9 @@ class ExtensionTable final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   ExtensionTable() = default;
   explicit ExtensionTable(::fidl::AnyArena& allocator)
@@ -826,6 +856,8 @@ struct ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable> final {
  private:
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
   ::fidl::Envelope<int64_t> v1_;
   ::fidl::Envelope<int64_t> v2_;
   ::fidl::Envelope<int64_t> v3_;
@@ -902,6 +934,9 @@ class SixtyFourOrdinalTable final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   const int64_t& v1() const {
     ZX_ASSERT(has_v1());
@@ -3331,6 +3366,8 @@ struct ::fidl::WireTableFrame<::test_table::wire::EmptyTable> final {
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
+  bool HasUnknownData() const;
+
   friend class ::test_table::wire::EmptyTable;
 };
 
@@ -3342,6 +3379,9 @@ class EmptyTable final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   EmptyTable() = default;
   explicit EmptyTable(::fidl::AnyArena& allocator)

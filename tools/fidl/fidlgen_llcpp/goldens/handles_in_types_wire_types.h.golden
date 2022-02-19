@@ -51,6 +51,8 @@ struct ::fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle>
  private:
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
   ::fidl::Envelope<::zx::vmo> h_;
 
   friend class ::test_handlesintypes::wire::TableWithHandle;
@@ -64,6 +66,9 @@ class TableWithHandle final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   const ::zx::vmo& h() const {
     ZX_ASSERT(has_h());

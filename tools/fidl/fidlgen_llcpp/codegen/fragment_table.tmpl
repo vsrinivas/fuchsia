@@ -32,6 +32,8 @@ struct {{ .WireTableFrame }} final {
   {{ .WireTableFrame.Self }}({{ .WireTableFrame.Self }}&&) noexcept = default;
   {{ .WireTableFrame.Self }}& operator=({{ .WireTableFrame.Self }}&&) noexcept = default;
 
+  bool HasUnknownData() const;
+
   {{- range $index, $item := .FrameItems }}
     {{- if $item }}
   ::fidl::Envelope<{{ $item.Type }}> {{ $item.Name }}_;
@@ -54,6 +56,9 @@ public:
 
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
 {{- range .Members }}
 {{ "" }}
@@ -144,12 +149,36 @@ public:
 {{ end }}
 {{- end }}
 
-{{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
-     emulated handles for C++. */}}
 {{- define "Table:WireTypesSource" }}
 {{ if .IsResourceType }}
-{{ EnsureNamespace "" }}
+{{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
+     emulated handles for C++. */}}
 {{- IfdefFuchsia -}}
+{{- end }}
+
+{{ EnsureNamespace "" }}
+bool {{ .WireTableFrame }}::HasUnknownData() const {
+  {{- range $index, $item := .FrameItems }}
+    {{- if not $item }}
+      if (!reserved_{{ $index }}_.IsZeroEnvelope()) {
+        return true;
+      }
+    {{- end }}
+  {{- end }}
+  return false;
+}
+
+bool {{ . }}::HasUnknownData() const {
+  if (max_ordinal_ > {{ .BiggestOrdinal }}) {
+    return true;
+  }
+  if (frame_ptr_ == nullptr) {
+    return false;
+  }
+  return frame_ptr_->HasUnknownData();
+}
+
+{{ if .IsResourceType }}
 void {{ . }}::_CloseHandles() {
   {{- range .Members }}
     {{- if .Type.IsResource }}
@@ -159,6 +188,9 @@ void {{ . }}::_CloseHandles() {
     {{- end }}
   {{- end }}
 }
+{{- end }}
+
+{{ if .IsResourceType }}
 {{- EndifFuchsia -}}
 {{- end }}
 {{- end }}

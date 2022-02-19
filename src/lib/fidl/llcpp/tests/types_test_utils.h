@@ -48,23 +48,20 @@ class HandleChecker {
 //   - |bytes| and |handles| decodes successfully as |FidlType|
 //   - all handles in |handles| are closed
 //   - the resulting object fails to encode
-// Assuming that:
-//   - FidlType is a transactional message, with a single result field that is
-//     either a union or a table.
+//
+// Requires that:
+//   - If FidlType is a transactional message wrapper, it must have a single
+//     `result` field that is either a union or a table.
+//   - Otherwise, FidlType should be a wire domain object.
 //
 // Also runs a checker function on the decoded object, to test any properties.
+//
 // This is the intended behavior for all flexible types (unions and tables) in
 // LLCPP, regardless of resourceness (since no unknown handles are stored, even on
 // resource types).
 template <typename FidlType, typename CheckerFunc>
 void CannotProxyUnknownEnvelope(std::vector<uint8_t> bytes, std::vector<zx_handle_t> handles,
                                 CheckerFunc check) {
-  // These flexible tests require the type be a message so that traits like
-  // HasFlexibleEnvelope exist.
-  // It also assumes the type under test exists under field .result within the
-  // wrapper struct
-  static_assert(fidl::IsFidlTransactionalMessage<FidlType>::value, "FIDL message type required");
-
   HandleChecker handle_checker;
   for (const auto& handle : handles) {
     handle_checker.AddEvent(handle);
@@ -93,16 +90,20 @@ void CannotProxyUnknownEnvelope(std::vector<uint8_t> bytes, std::vector<zx_handl
       static_cast<uint32_t>(handle_infos.size()), &decode_error);
   ASSERT_EQ(status, ZX_OK) << decode_error;
 
-  auto result = reinterpret_cast<FidlType*>(bytes.data());
-  check(result->body.result);
+  auto result = reinterpret_cast<FidlType*>(&bytes[0]);
+  if constexpr (fidl::IsFidlTransactionalMessage<FidlType>::value) {
+    check(result->body.result);
+  } else {
+    check(*result);
+  }
   handle_checker.CheckEvents();
 
   // Here we want to encode a message with unknown data. To be able to encoded all the unknown data,
   // we always use a full size buffer.
   FIDL_ALIGNDECL
   uint8_t encoded_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  fidl::unstable::UnownedEncodedMessage<FidlType> encoded(encoded_bytes, ZX_CHANNEL_MAX_MSG_BYTES,
-                                                          result);
+  fidl::unstable::UnownedEncodedMessage<FidlType> encoded(
+      fidl::internal::kLLCPPWireFormatVersion, encoded_bytes, ZX_CHANNEL_MAX_MSG_BYTES, result);
   ASSERT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS) << encoded.status_string();
 
   // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.

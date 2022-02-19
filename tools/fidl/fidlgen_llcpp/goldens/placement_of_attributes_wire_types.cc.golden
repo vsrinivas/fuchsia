@@ -31,3 +31,18 @@ void ::test_placementofattributes::wire::ExampleUnion::
   static_assert(offsetof(ExampleUnion, envelope_) ==
                 offsetof(fidl_xunion_v2_t, envelope));
 }
+
+bool ::fidl::WireTableFrame<
+    ::test_placementofattributes::wire::ExampleTable>::HasUnknownData() const {
+  return false;
+}
+
+bool ::test_placementofattributes::wire::ExampleTable::HasUnknownData() const {
+  if (max_ordinal_ > 1) {
+    return true;
+  }
+  if (frame_ptr_ == nullptr) {
+    return false;
+  }
+  return frame_ptr_->HasUnknownData();
+}

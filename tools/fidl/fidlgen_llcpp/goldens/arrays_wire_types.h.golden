@@ -51,6 +51,8 @@ struct ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray> final {
  private:
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
   ::fidl::Envelope<::fidl::Array<uint32_t, 2>> a_;
 
   friend class ::test_arrays::wire::TableSmallArray;
@@ -64,6 +66,9 @@ class TableSmallArray final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   const ::fidl::Array<uint32_t, 2>& a() const {
     ZX_ASSERT(has_a());
@@ -155,6 +160,8 @@ struct ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray> final {
  private:
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
   ::fidl::Envelope<::fidl::Array<uint32_t, 100>> a_;
 
   friend class ::test_arrays::wire::TableLargeArray;
@@ -168,6 +175,9 @@ class TableLargeArray final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   const ::fidl::Array<uint32_t, 100>& a() const {
     ZX_ASSERT(has_a());

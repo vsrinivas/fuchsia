@@ -19,3 +19,18 @@ void ::test_versions::wire::Union::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(Union, envelope_) ==
                 offsetof(fidl_xunion_v2_t, envelope));
 }
+
+bool ::fidl::WireTableFrame<::test_versions::wire::Table>::HasUnknownData()
+    const {
+  return false;
+}
+
+bool ::test_versions::wire::Table::HasUnknownData() const {
+  if (max_ordinal_ > 1) {
+    return true;
+  }
+  if (frame_ptr_ == nullptr) {
+    return false;
+  }
+  return frame_ptr_->HasUnknownData();
+}

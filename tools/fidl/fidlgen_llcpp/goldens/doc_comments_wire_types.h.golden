@@ -66,6 +66,8 @@ struct ::fidl::WireTableFrame<::test_doccomments::wire::Table> final {
  private:
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
   ::fidl::Envelope<int32_t> field_;
 
   friend class ::test_doccomments::wire::Table;
@@ -82,6 +84,9 @@ class Table final {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   /// table field comment #1
   ///

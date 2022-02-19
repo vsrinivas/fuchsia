@@ -19,6 +19,7 @@ TEST(Table, TablePrimitive) {
   ASSERT_FALSE(table.has_vector_of_struct());
   ASSERT_EQ(table.x(), 3);
   ASSERT_EQ(table.y(), 100);
+  EXPECT_FALSE(table.HasUnknownData());
 }
 
 TEST(Table, InlineSetClear) {
@@ -29,9 +30,11 @@ TEST(Table, InlineSetClear) {
 
   ASSERT_TRUE(table.has_x());
   ASSERT_EQ(table.x(), 3u);
+  EXPECT_FALSE(table.HasUnknownData());
 
   table.clear_x();
   ASSERT_FALSE(table.has_x());
+  EXPECT_FALSE(table.HasUnknownData());
 }
 
 TEST(Table, OutOfLineSetClear) {
@@ -42,9 +45,11 @@ TEST(Table, OutOfLineSetClear) {
 
   ASSERT_TRUE(table.has_x());
   ASSERT_EQ(table.x(), 3u);
+  EXPECT_FALSE(table.HasUnknownData());
 
   table.clear_x();
   ASSERT_FALSE(table.has_x());
+  EXPECT_FALSE(table.HasUnknownData());
 }
 
 TEST(Table, TableVectorOfStruct) {
@@ -63,12 +68,14 @@ TEST(Table, TableVectorOfStruct) {
   ASSERT_EQ(table.vector_of_struct().count(), 2UL);
   ASSERT_EQ(table.vector_of_struct()[0].x, 30);
   ASSERT_EQ(table.vector_of_struct()[1].x, 42);
+  EXPECT_FALSE(table.HasUnknownData());
 }
 
 TEST(Table, EmptyTableWithoutFrame) {
   namespace test = test_types;
   test::wire::SampleEmptyTable table;
   ASSERT_TRUE(table.IsEmpty());
+  EXPECT_FALSE(table.HasUnknownData());
 }
 
 TEST(Table, EmptyTableWithFrame) {
@@ -76,6 +83,7 @@ TEST(Table, EmptyTableWithFrame) {
   fidl::Arena allocator;
   test::wire::SampleEmptyTable table(allocator);
   ASSERT_TRUE(table.IsEmpty());
+  EXPECT_FALSE(table.HasUnknownData());
 }
 
 TEST(Table, NotEmptyTable) {
@@ -85,6 +93,7 @@ TEST(Table, NotEmptyTable) {
   ASSERT_TRUE(table.IsEmpty());
   table.set_x(3).set_y(100);
   ASSERT_FALSE(table.IsEmpty());
+  EXPECT_FALSE(table.HasUnknownData());
 }
 
 TEST(Table, ManualFrame) {
@@ -96,6 +105,7 @@ TEST(Table, ManualFrame) {
   table.set_y(100);
   EXPECT_EQ(table.x(), 42);
   EXPECT_EQ(table.y(), 100);
+  EXPECT_FALSE(table.HasUnknownData());
 }
 
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
@@ -218,6 +228,7 @@ TEST(Table, UnknownHandlesResource) {
   std::vector<zx_handle_t> handles = {h1, h2, h3};
 
   auto check = [](const test::wire::TestResourceTable& table) {
+    EXPECT_TRUE(table.HasUnknownData());
     ASSERT_TRUE(table.has_x());
     EXPECT_EQ(table.x(), 0xab);
   };
@@ -245,10 +256,51 @@ TEST(Table, UnknownHandlesNonResource) {
   std::vector<zx_handle_t> handles = {h1, h2, h3};
 
   auto check = [](const test::wire::TestTable& table) {
+    EXPECT_TRUE(table.HasUnknownData());
     ASSERT_TRUE(table.has_x());
     EXPECT_EQ(table.x(), 0xab);
   };
   llcpp_types_test_utils::CannotProxyUnknownEnvelope<
       fidl::internal::TransactionalResponse<test::MsgWrapper::TestTable>>(bytes, handles,
                                                                           std::move(check));
+}
+
+TEST(Table, UnknownDataAtReservedOrdinal) {
+  namespace test = test_types;
+
+  auto bytes = std::vector<uint8_t>{
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // max ordinal of 2
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // vector present
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // absent envelope 1
+      0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x01, 0x00,  // unknown inline envelope
+  };
+  std::vector<zx_handle_t> handles = {};
+
+  auto check = [](const test::wire::TableMaxOrdinal3WithReserved2& table) {
+    EXPECT_TRUE(table.HasUnknownData());
+    EXPECT_FALSE(table.IsEmpty());
+  };
+  llcpp_types_test_utils::CannotProxyUnknownEnvelope<test::wire::TableMaxOrdinal3WithReserved2>(
+      bytes, handles, std::move(check));
+}
+
+TEST(Table, UnknownDataAboveMaxOrdinal) {
+  namespace test = test_types;
+
+  auto bytes = std::vector<uint8_t>{
+      0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // max ordinal of 4
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // vector present
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // absent envelope 1
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // absent envelope 2
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // absent envelope 3
+      0xde, 0xad, 0xbe, 0xef, 0x00, 0x00, 0x01, 0x00,  // unknown inline envelope
+  };
+  std::vector<zx_handle_t> handles = {};
+
+  auto check = [](const test::wire::TableMaxOrdinal3WithReserved2& table) {
+    EXPECT_TRUE(table.HasUnknownData());
+    EXPECT_FALSE(table.IsEmpty());
+  };
+  llcpp_types_test_utils::CannotProxyUnknownEnvelope<test::wire::TableMaxOrdinal3WithReserved2>(
+      bytes, handles, std::move(check));
 }

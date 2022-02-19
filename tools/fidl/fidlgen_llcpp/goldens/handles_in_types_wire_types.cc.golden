@@ -96,9 +96,26 @@ void ::test_handlesintypes::wire::UnionWithHandle::_CloseHandles() {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+bool ::fidl::WireTableFrame<
+    ::test_handlesintypes::wire::TableWithHandle>::HasUnknownData() const {
+  return false;
+}
+
+bool ::test_handlesintypes::wire::TableWithHandle::HasUnknownData() const {
+  if (max_ordinal_ > 1) {
+    return true;
+  }
+  if (frame_ptr_ == nullptr) {
+    return false;
+  }
+  return frame_ptr_->HasUnknownData();
+}
+
 void ::test_handlesintypes::wire::TableWithHandle::_CloseHandles() {
   if (has_h()) {
     h().reset();
   }
 }
+
 #endif  // __Fuchsia__

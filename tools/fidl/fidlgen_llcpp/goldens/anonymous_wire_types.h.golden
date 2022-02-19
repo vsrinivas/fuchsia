@@ -78,6 +78,8 @@ struct ::fidl::WireTableFrame<::test_anonymous::wire::TableMember> final {
  private:
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_0_;
   ::fidl::Envelope<::fidl::VectorView<::test_anonymous::wire::TableData>>
       table_data_;
@@ -95,6 +97,9 @@ class TableMember final {
 
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   const ::fidl::VectorView<::test_anonymous::wire::TableData>& table_data()
       const {
@@ -192,6 +197,8 @@ struct ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>
  private:
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
   ::fidl::Envelope<::fidl::StringView> func_;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
   ::fidl::Envelope<::fidl::VectorView<::test_anonymous::wire::Expression>>
@@ -211,6 +218,9 @@ class FunctionApplication final {
 
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
 
   const ::fidl::StringView& func() const {
     ZX_ASSERT(has_func());

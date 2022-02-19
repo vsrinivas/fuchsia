@@ -141,6 +141,12 @@ type TestHandleTable = resource table {
     1: hs HandleStruct;
 };
 
+type TableMaxOrdinal3WithReserved2 = table {
+    1: field_1 uint8;
+    2: reserved;
+    3: field_3 uint8;
+};
+
 /// Certain traits are only implemented for top level (i.e. request/response struct)
 /// types, since LLCPP only calls encode/decode on those top level types.
 /// Types used in tests that exercise these codepaths (e.g. involving HasFlexibleEnvelope)
