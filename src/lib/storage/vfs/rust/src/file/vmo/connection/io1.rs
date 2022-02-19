@@ -528,13 +528,12 @@ impl VmoFileConnection {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             FileRequest::GetBuffer { flags, responder } => {
-                self.handle_get_buffer(
-                    VmoFlags::from_bits_truncate(flags as u64),
-                    |status, buffer| match buffer {
+                self.handle_get_buffer(VmoFlags::from_bits_truncate(flags), |status, buffer| {
+                    match buffer {
                         None => responder.send(status.into_raw(), None),
                         Some(mut buffer) => responder.send(status.into_raw(), Some(&mut buffer)),
-                    },
-                )
+                    }
+                })
                 .await?;
             }
             FileRequest::GetBackingMemory { flags, responder } => {

@@ -1015,7 +1015,7 @@ void Blob::SetTargetCompressionSize(uint64_t size) {
 zx::status<std::string> Blob::GetDevicePath() const { return blobfs_->Device()->GetDevicePath(); }
 
 zx_status_t Blob::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) {
-  TRACE_DURATION("blobfs", "Blob::GetVmo", "flags", static_cast<uint64_t>(flags));
+  TRACE_DURATION("blobfs", "Blob::GetVmo", "flags", static_cast<uint32_t>(flags));
 
   std::lock_guard lock(mutex_);
 

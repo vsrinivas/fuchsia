@@ -400,13 +400,11 @@ impl<T: 'static + File> FileConnection<T> {
             }
             FileRequest::GetBuffer { flags, responder } => {
                 fuchsia_trace::duration!("storage", "File::GetBuffer");
-                let (status, mut buffer) = match self
-                    .handle_get_buffer(VmoFlags::from_bits_truncate(flags as u64))
-                    .await
-                {
-                    Ok(buffer) => (zx::Status::OK, Some(buffer)),
-                    Err(status) => (status, None),
-                };
+                let (status, mut buffer) =
+                    match self.handle_get_buffer(VmoFlags::from_bits_truncate(flags)).await {
+                        Ok(buffer) => (zx::Status::OK, Some(buffer)),
+                        Err(status) => (status, None),
+                    };
                 responder.send(status.into_raw(), buffer.as_mut())?;
             }
             FileRequest::GetBackingMemory { flags, responder } => {

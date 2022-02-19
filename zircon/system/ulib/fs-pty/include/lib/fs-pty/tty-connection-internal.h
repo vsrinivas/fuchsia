@@ -52,6 +52,8 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
   void SetFlagsDeprecatedUseNode(SetFlagsDeprecatedUseNodeRequestView request,
                                  SetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;
   void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) final;
+  void GetBackingMemory(GetBackingMemoryRequestView request,
+                        GetBackingMemoryCompleter::Sync& completer) final;
 
   void AdvisoryLock(AdvisoryLockRequestView request, AdvisoryLockCompleter::Sync& completer) final;
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;

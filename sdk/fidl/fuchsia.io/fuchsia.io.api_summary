@@ -553,7 +553,7 @@ bits/member fuchsia.io/VmoFlags.PRIVATE_CLONE 65536
 bits/member fuchsia.io/VmoFlags.READ 1
 bits/member fuchsia.io/VmoFlags.SHARED_BUFFER 131072
 bits/member fuchsia.io/VmoFlags.WRITE 2
-strict bits fuchsia.io/VmoFlags uint64
+strict bits fuchsia.io/VmoFlags uint32
 struct/member fuchsia.io/Vmofile.length uint64
 struct/member fuchsia.io/Vmofile.offset uint64
 struct/member fuchsia.io/Vmofile.vmo zx/handle:VMO

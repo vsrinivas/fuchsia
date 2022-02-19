@@ -167,6 +167,11 @@ void NullPtyDeviceImpl::GetBuffer(GetBufferRequestView request,
   ZX_ASSERT(false);
 }
 
+void NullPtyDeviceImpl::GetBackingMemory(GetBackingMemoryRequestView request,
+                                         GetBackingMemoryCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
+
 void NullPtyDeviceImpl::SyncDeprecated(SyncDeprecatedRequestView request,
                                        SyncDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);

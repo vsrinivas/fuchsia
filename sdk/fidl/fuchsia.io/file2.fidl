@@ -167,10 +167,29 @@ protocol File2 {
     /// * [`Rights.READ_BYTES`] if `flags` includes [`VmoFlags.READ`].
     /// * [`Rights.WRITE_BYTES`] if `flags` includes [`VmoFlags.WRITE`].
     /// * [`Rights.EXECUTE`] if `flags` includes [`VmoFlags.EXECUTE`].
-    @transitional
     @selector("fuchsia.io/File.GetBackingMemory")
     GetBackingMemory(struct {
-        flags VmoFlags;
+        flags @generated_name("VmoFlags") strict bits : uint32 {
+            /// Requests that the VMO be readable.
+            READ = 0x00000001;
+
+            /// Requests that the VMO be writable.
+            WRITE = 0x00000002;
+
+            /// Request that the VMO be executable.
+            EXECUTE = 0x00000004;
+
+            /// Require a copy-on-write clone of the underlying VMO.
+            /// The request should fail if the VMO cannot be cloned.
+            /// May not be supplied with `SHARED_BUFFER`.
+            PRIVATE_CLONE = 0x00010000;
+
+            /// Require an exact (non-cloned) handle to the underlying VMO.
+            /// All clients using this flag would get a VMO with the same koid.
+            /// The request should fail if a handle to the exact VMO cannot be returned.
+            /// May not be supplied with `PRIVATE_CLONE`.
+            SHARED_BUFFER = 0x00020000;
+        };
     }) -> (resource struct {
         vmo zx.handle:VMO;
     }) error zx.status;
@@ -192,28 +211,6 @@ type SeekOrigin = strict enum : uint32 {
     /// Seek from the end of the file.
     /// The seek offset will be the file size plus `offset` bytes.
     END = 2;
-};
-
-type VmoFlags = strict bits : uint64 {
-    /// Requests that the VMO be readable.
-    READ = 0x00000001;
-
-    /// Requests that the VMO be writable.
-    WRITE = 0x00000002;
-
-    /// Request that the VMO be executable.
-    EXECUTE = 0x00000004;
-
-    /// Require a copy-on-write clone of the underlying VMO.
-    /// The request should fail if the VMO cannot be cloned.
-    /// May not be supplied with `SHARED_BUFFER`.
-    PRIVATE_CLONE = 0x00010000;
-
-    /// Require an exact (non-cloned) handle to the underlying VMO.
-    /// All clients using this flag would get a VMO with the same koid.
-    /// The request should fail if a handle to the exact VMO cannot be returned.
-    /// May not be supplied with `PRIVATE_CLONE`.
-    SHARED_BUFFER = 0x00020000;
 };
 
 type FileSignal = strict bits : uint32 {
