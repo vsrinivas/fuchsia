@@ -377,11 +377,6 @@
             dependency: "weak_for_migration",
         },
         {
-            protocol: [ "fuchsia.fshost.BlockWatcher" ],
-            from: "parent",
-            to: "#fshost",
-        },
-        {
             protocol: [ "fuchsia.virtualconsole.SessionManager" ],
             from: "#virtual_console",
             to: [
