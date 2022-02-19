@@ -258,7 +258,6 @@ mod tests {
             vht_caps: None,
             rates: vec![2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108],
             supported_channels: fidl_wlan_dev::ChannelList {
-                base_freq: 2407,
                 channels: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
             },
         }

@@ -22,9 +22,7 @@ type Capability = strict enum : uint32 {
     SIMULTANEOUS_CLIENT_AP = 0x10000;
 };
 
-
 type ChannelList = struct {
-    base_freq uint16;
     channels vector<uint8>:200;
 };
 

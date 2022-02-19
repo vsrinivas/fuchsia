@@ -136,7 +136,6 @@ fn convert_ddk_band_cap(
         _ => return Err(format_err!("Unexpected banjo_comon::WlanBand value {}", band_cap.band.0)),
     };
     let basic_rates = band_cap.basic_rate_list[..band_cap.basic_rate_count as usize].to_vec();
-    let base_frequency = band_cap.supported_channels.base_freq;
     let channels = band_cap
         .supported_channels
         .channels
@@ -164,7 +163,6 @@ fn convert_ddk_band_cap(
     Ok(fidl_mlme::BandCapabilities {
         band,
         basic_rates,
-        base_frequency,
         channels,
         capability_info,
         ht_cap,
@@ -358,7 +356,6 @@ mod tests {
             band0.basic_rates,
             vec![0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c]
         );
-        assert_eq!(band0.base_frequency, 2407);
         assert_eq!(band0.channels, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
         assert_eq!(band0.capability_info, 10);
         assert!(band0.ht_cap.is_some());

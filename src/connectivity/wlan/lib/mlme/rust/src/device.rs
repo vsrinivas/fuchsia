@@ -1028,7 +1028,6 @@ pub(crate) mod test_utils {
             basic_rate_list,
             basic_rate_count,
             supported_channels: WlanInfoChannelList {
-                base_freq: 2407,
                 channels: arr!(
                     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
                     WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize
@@ -1050,7 +1049,6 @@ pub(crate) mod test_utils {
             ),
             basic_rate_count: 2,
             supported_channels: WlanInfoChannelList {
-                base_freq: 5000,
                 channels: arr!(
                     [36, 40, 44, 48, 149, 153, 157, 161],
                     WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize
@@ -1179,7 +1177,6 @@ pub(crate) mod test_utils {
             basic_rate_list: [0; banjo_wlan_internal::MAX_SUPPORTED_BASIC_RATES as usize],
             basic_rate_count: 0,
             supported_channels: WlanInfoChannelList {
-                base_freq: 0,
                 channels: [0; WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize],
             },
         }

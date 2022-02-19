@@ -150,7 +150,6 @@ void ConvertBandInfoToCapability(const wlan_device::BandInfo& in,
       std::min<size_t>(in.rates.size(), wlan_internal::MAX_SUPPORTED_BASIC_RATES);
   std::copy_n(in.rates.data(), out->basic_rate_count, out->basic_rate_list);
 
-  out->supported_channels.base_freq = in.supported_channels.base_freq;
   std::copy_n(
       in.supported_channels.channels.data(),
       std::min<size_t>(in.supported_channels.channels.size(), WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS),

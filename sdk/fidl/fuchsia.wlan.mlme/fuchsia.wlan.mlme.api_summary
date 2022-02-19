@@ -67,7 +67,6 @@ enum/member fuchsia.wlan.mlme/AuthenticationTypes.SAE 4
 enum/member fuchsia.wlan.mlme/AuthenticationTypes.SHARED_KEY 2
 strict enum fuchsia.wlan.mlme/AuthenticationTypes uint32
 struct/member fuchsia.wlan.mlme/BandCapabilities.band fuchsia.wlan.common/WlanBand
-struct/member fuchsia.wlan.mlme/BandCapabilities.base_frequency uint16
 struct/member fuchsia.wlan.mlme/BandCapabilities.basic_rates vector<uint8>:12
 struct/member fuchsia.wlan.mlme/BandCapabilities.capability_info uint16
 struct/member fuchsia.wlan.mlme/BandCapabilities.channels vector<uint8>

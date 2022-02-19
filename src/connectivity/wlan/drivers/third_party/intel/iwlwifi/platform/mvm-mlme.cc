@@ -134,10 +134,7 @@ void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_band_t* 
     wlan_info_channel_list_t* ch_list = &band_cap->supported_channels;
     switch (band_cap->band) {
       case WLAN_BAND_TWO_GHZ:
-        ch_list->base_freq = 2407;
-        break;
       case WLAN_BAND_FIVE_GHZ:
-        ch_list->base_freq = 5000;
         break;
       default:
         ZX_ASSERT(0);  // Unknown band ID.

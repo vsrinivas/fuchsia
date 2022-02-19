@@ -68,21 +68,8 @@ type WlanInfoHardwareCapability = strict enum : uint32 {
 /// The maximum number of supported channels in a WlanInfoChannelList.
 const WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS uint32 = 64;
 
-/// A list of channels in a band. Channels are numbered as in IEEE Std 802.11-2016,
-/// 17.3.8.4.2, where each channel is defined as:
-///
-///   (base_freq + 5 * n) MHz
-///
-/// where n is between 1 and 200 (inclusive). Here n represents the channel number.
-///
-/// Example:
-///   Standard 2.4GHz channels:
-///     base_freq = 2407 MHz
-///     n = 1-14
+/// A list of channels in a band.
 type WlanInfoChannelList = struct {
-    /// The base frequency in this band.
-    base_freq uint16;
-
     /// A list of channel center frequencies, as multiples of 5 MHz above base_freq.
     channels array<uint8, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
 };

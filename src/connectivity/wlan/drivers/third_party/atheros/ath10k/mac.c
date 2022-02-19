@@ -155,7 +155,6 @@ static const struct ath10k_band ath10k_supported_bands[] = {
         // See IEEE Std 802.11-2016, 9.4.2.3 for encoding
         .basic_rate_list = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c},
         .basic_rate_count = 12,
-        .base_freq = 2407,
         .n_channels = countof(ath10k_2ghz_channels),
         .channels = ath10k_2ghz_channels,
     },
@@ -173,7 +172,6 @@ static const struct ath10k_band ath10k_supported_bands[] = {
         //     18 Mbps, 24 Mbps, 36 Mbps, 48 Mbps, 54 Mbps
         .basic_rate_list = {0x8c, 0x92, 0x98, 0x24, 0x30, 0x48, 0x60, 0x6c},
         .basic_rate_count = 8,
-        .base_freq = 5000,
         .n_channels = countof(ath10k_5ghz_channels),
         .channels = ath10k_5ghz_channels,
     },
@@ -3288,7 +3286,7 @@ static zx_status_t ath10k_update_channel_list(struct ath10k* ar) {
        * HT/VHT modes? Would that even make any
        * difference?
        */
-      ch->mode = (ath10k_supported_bands[band].base_freq == 5000) ? MODE_11A : MODE_11G;
+      ch->mode = (ath10k_supported_bands[band].band_id == WLAN_BAND_FIVE_GHZ) ? MODE_11A : MODE_11G;
 
       if (COND_WARN_ONCE(ch->mode == MODE_UNKNOWN)) {
         continue;

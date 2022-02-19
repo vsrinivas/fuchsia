@@ -637,7 +637,6 @@ std::string Describe(const VhtOperation& vht_op) {
 std::string Describe(const wlan_info_channel_list& wl) {
   char buf[512];
   size_t offset = 0;
-  BUFFER("base_freq:%u", wl.base_freq);
   BUFFER("channels:[%s]", DescribeChannel(wl.channels, 64).c_str());
   return std::string(buf);
 }

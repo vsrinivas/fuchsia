@@ -3108,9 +3108,6 @@ static void ath10k_band_query_capability(struct ath10k* ar, const struct ath10k_
   memcpy(&wlan_band->basic_rate_list, &dev_band->basic_rate_list, dev_band->basic_rate_count);
   wlan_band->basic_rate_count = dev_band->basic_rate_count;
 
-  // base_freq
-  wlan_band->supported_channels.base_freq = dev_band->base_freq;
-
   uint8_t* next_ch = wlan_band->supported_channels.channels;
   ath10k_foreach_channel(dev_band, ath10k_chan_query_info, &next_ch);
 }

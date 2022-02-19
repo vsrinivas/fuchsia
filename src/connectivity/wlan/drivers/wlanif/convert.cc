@@ -534,9 +534,6 @@ void ConvertBandCapability(wlan_mlme::BandCapabilities* fidl_band,
   // basic_rates
   fidl_band->basic_rates.assign(band.basic_rate_list, band.basic_rate_list + band.basic_rate_count);
 
-  // base_frequency
-  fidl_band->base_frequency = band.base_frequency;
-
   // channels
   fidl_band->channels.assign(band.channels, band.channels + band.num_channels);
 

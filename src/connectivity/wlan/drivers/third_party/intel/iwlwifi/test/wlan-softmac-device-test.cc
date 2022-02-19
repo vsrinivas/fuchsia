@@ -138,7 +138,6 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
   EXPECT_EQ(12, band_cap->basic_rate_count);
   EXPECT_EQ(expected_rate(0), band_cap->basic_rate_list[0]);    // 1Mbps
   EXPECT_EQ(expected_rate(11), band_cap->basic_rate_list[11]);  // 54Mbps
-  EXPECT_EQ(2407, band_cap->supported_channels.base_freq);
   EXPECT_EQ(1, band_cap->supported_channels.channels[0]);
   EXPECT_EQ(13, band_cap->supported_channels.channels[12]);
   // 5GHz
@@ -148,7 +147,6 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
   EXPECT_EQ(8, band_cap->basic_rate_count);
   EXPECT_EQ(expected_rate(4), band_cap->basic_rate_list[0]);   // 6Mbps
   EXPECT_EQ(expected_rate(11), band_cap->basic_rate_list[7]);  // 54Mbps
-  EXPECT_EQ(5000, band_cap->supported_channels.base_freq);
   EXPECT_EQ(36, band_cap->supported_channels.channels[0]);
   EXPECT_EQ(165, band_cap->supported_channels.channels[24]);
 }
@@ -170,7 +168,6 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityListOnly5GHz) {
   EXPECT_EQ(8, band_cap->basic_rate_count);
   EXPECT_EQ(expected_rate(4), band_cap->basic_rate_list[0]);   // 6Mbps
   EXPECT_EQ(expected_rate(11), band_cap->basic_rate_list[7]);  // 54Mbps
-  EXPECT_EQ(5000, band_cap->supported_channels.base_freq);
   EXPECT_EQ(36, band_cap->supported_channels.channels[0]);
   EXPECT_EQ(165, band_cap->supported_channels.channels[24]);
   // index 1 should be empty.

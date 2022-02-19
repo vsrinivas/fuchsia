@@ -27,7 +27,6 @@ type EapolIndication = struct {
 type BandCapabilities = struct {
     band fuchsia.wlan.common.WlanBand;
     basic_rates vector<uint8>:internal.MAX_SUPPORTED_BASIC_RATES;
-    base_frequency uint16;
     channels bytes;
 
     capability_info internal.CapabilityInfo;

@@ -422,35 +422,33 @@ zx_status_t ValidateWlanSoftmacInfo(const wlan_softmac_info& wlan_softmac_info) 
 
     // Validate channels
     auto& supported_channels = band_cap.supported_channels;
-    switch (supported_channels.base_freq) {
-      case common::kBaseFreq5Ghz:
+    switch (band_cap.band) {
+      case WLAN_BAND_FIVE_GHZ:
         for (auto c : supported_channels.channels) {
           if (c == 0) {  // End of the valid channel
             break;
           }
           auto channel = wlan_channel_t{.primary = c, .cbw = CHANNEL_BANDWIDTH_CBW20};
           if (!common::IsValidChan5Ghz(channel)) {
-            errorf("band capability for %u MHz has invalid channel %u\n",
-                   supported_channels.base_freq, c);
+            errorf("2.4 GHz band has invalid channel %u\n", c);
             return ZX_ERR_NOT_SUPPORTED;
           }
         }
         break;
-      case common::kBaseFreq2Ghz:
+      case WLAN_BAND_TWO_GHZ:
         for (auto c : supported_channels.channels) {
           if (c == 0) {  // End of the valid channel
             break;
           }
           auto channel = wlan_channel_t{.primary = c, .cbw = CHANNEL_BANDWIDTH_CBW20};
           if (!common::IsValidChan2Ghz(channel)) {
-            errorf("band capability for %u MHz has invalid cahnnel %u\n",
-                   supported_channels.base_freq, c);
+            errorf("5 GHz has invalid cahnnel %u\n", c);
             return ZX_ERR_NOT_SUPPORTED;
           }
         }
         break;
       default:
-        errorf("band capability for %u MHz not supported\n", supported_channels.base_freq);
+        errorf("band not supported: %u\n", band_cap.band);
         return ZX_ERR_NOT_SUPPORTED;
     }
   }

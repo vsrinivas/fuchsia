@@ -4104,8 +4104,6 @@ static void brcmf_dump_if_band_cap(wlan_fullmac_band_capability_t* band_cap) {
   }
   BRCMF_DBG_UNFILTERED("     basic_rates: %s", rates_str);
 
-  BRCMF_DBG_UNFILTERED("     base_frequency: %d", band_cap->base_frequency);
-
   if (band_cap->num_channels > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
     BRCMF_DBG_UNFILTERED("Number of channels reported (%zu) exceeds limit (%du), truncating",
                          band_cap->num_channels, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
@@ -4209,7 +4207,6 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
           std::min<size_t>(fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES, wl_g_rates_size);
       memcpy(band_cap->basic_rate_list, wl_g_rates,
              band_cap->basic_rate_count * sizeof(*band_cap->basic_rate_list));
-      band_cap->base_frequency = 2407;
       band_cap_2ghz = band_cap;
     } else if (bandlist[i] == WLC_BAND_5G) {
       band_cap->band = WLAN_BAND_FIVE_GHZ;
@@ -4217,7 +4214,6 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
           std::min<size_t>(fuchsia_wlan_internal_MAX_SUPPORTED_BASIC_RATES, wl_a_rates_size);
       memcpy(band_cap->basic_rate_list, wl_a_rates,
              band_cap->basic_rate_count * sizeof(*band_cap->basic_rate_list));
-      band_cap->base_frequency = 5000;
       band_cap_5ghz = band_cap;
     }
   }
