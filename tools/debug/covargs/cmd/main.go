@@ -157,7 +157,23 @@ const instrProfRawMagic = uint64(255)<<56 | uint64('l')<<48 |
 	uint64('p')<<40 | uint64('r')<<32 | uint64('o')<<24 |
 	uint64('f')<<16 | uint64('r')<<8 | uint64(129)
 
-func getVersion(filepath string) (uint64, error) {
+type versionFetcher struct {
+	mu    sync.RWMutex
+	cache map[string]uint64
+}
+
+func newVersionFetcher() *versionFetcher {
+	return &versionFetcher{cache: make(map[string]uint64)}
+}
+
+func (f *versionFetcher) getVersion(filepath string) (uint64, error) {
+	f.mu.RLock()
+	v, ok := f.cache[filepath]
+	f.mu.RUnlock()
+	if ok {
+		return v, nil
+	}
+
 	file, err := os.Open(filepath)
 	if err != nil {
 		return 0, err
@@ -176,6 +192,11 @@ func getVersion(filepath string) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to read version: %w", err)
 	}
+
+	f.mu.Lock()
+	f.cache[filepath] = version
+	f.mu.Unlock()
+
 	return version, nil
 }
 
@@ -257,7 +278,7 @@ type profileEntry struct {
 // mergeEntries combines data from runtests and build ids embedded in profiles
 // returning a sequence of entries, where each entry contains
 // a raw profile and module specified by build ID present in that profile.
-func mergeEntries(ctx context.Context, summary runtests.DataSinkMap, partitions map[uint64]*partition) ([]profileEntry, error) {
+func mergeEntries(ctx context.Context, vf *versionFetcher, summary runtests.DataSinkMap, partitions map[uint64]*partition) ([]profileEntry, error) {
 	sinkToModules := make(map[string]string)
 	// TODO(gulfem): Parallelize this loop as reading all the profiles via llvm-profdata is costly.
 	for _, sink := range summary[llvmProfileSinkType] {
@@ -266,7 +287,7 @@ func mergeEntries(ctx context.Context, summary runtests.DataSinkMap, partitions 
 			continue
 		}
 
-		version, err := getVersion(sink.File)
+		version, err := vf.getVersion(sink.File)
 		if err != nil {
 			// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
 			// Once resolved, return an error.
@@ -332,8 +353,10 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		return fmt.Errorf("parsing info: %w", err)
 	}
 
+	vf := newVersionFetcher()
+
 	// Merge all the information
-	entries, err := mergeEntries(ctx, summary, partitions)
+	entries, err := mergeEntries(ctx, vf, summary, partitions)
 
 	if err != nil {
 		return fmt.Errorf("merging info: %w", err)
@@ -360,7 +383,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	}
 
 	for _, entry := range entries {
-		version, err := getVersion(entry.Profile)
+		version, err := vf.getVersion(entry.Profile)
 		if err != nil {
 			// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
 			// Once resolved, return error below.
