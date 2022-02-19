@@ -35,7 +35,7 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
     // Test using a different arena in the response.
     auto response_arena = fdf::Arena::Create(0, "");
     fdf_response_arena = response_arena->get();
-    completer.Reply(kResponsePayload, std::move(*response_arena));
+    completer.buffer(*response_arena).Reply(kResponsePayload);
   }
 
   fdf_arena_t* fdf_request_arena;

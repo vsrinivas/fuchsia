@@ -372,7 +372,7 @@ using ServerBuffer = internal::InlineMessageBuffer<ServerReplyBufferSizeInChanne
 //     void Foo(Args args, FooCompleter::Sync& completer) {
 //       // All space used for the |Foo| reply is allocated from |buffer|.
 //       fidl::EventBuffer<MyProtocol::Foo> buffer;
-//       client.buffer(buffer.view())->OnEvent(args);
+//       fidl::WireSendEvent(binding).buffer(buffer.view())->OnEvent(args);
 //     }
 //
 template <typename FidlMethod>

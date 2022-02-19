@@ -418,7 +418,7 @@ void fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
         LibfuzzerNeedsNonemptyProtocol>::Reply() {
   ::fidl::internal::TransactionalResponse<
@@ -432,11 +432,35 @@ void fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
               LibfuzzerNeedsNonemptyProtocol>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return ::fidl::internal::WireCompleterBase<
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
+}
+
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+        LibfuzzerNeedsNonemptyProtocol>::Reply() {
+  ::fidl::internal::TransactionalResponse<
       ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-          LibfuzzerNeedsNonemptyProtocol>::
-      SendReply(&_response_message.GetOutgoingMessage(),
-                ::fidl::internal::OutgoingTransportContext());
+          LibfuzzerNeedsNonemptyProtocol>
+      _response{};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocol>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure,
+                              ::fidl::internal::OutgoingTransportContext());
+  }
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
 #endif  // __Fuchsia__
 
@@ -2183,7 +2207,7 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::
     Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult
               result) {
@@ -2196,12 +2220,10 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return ::fidl::internal::WireCompleterBase<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::
-      SendReply(&_response_message.GetOutgoingMessage(),
-                ::fidl::internal::OutgoingTransportContext());
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::
     ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse _response;
@@ -2211,7 +2233,7 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           WithResponse(std::move(_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -2219,35 +2241,51 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::
-    Reply(::fidl::BufferSpan _buffer,
-          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult
+    Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult
               result) {
   ::fidl::internal::TransactionalResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
       _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure,
+                              ::fidl::internal::OutgoingTransportContext());
+  }
   ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::internal::TransactionalResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>
-      _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
-                                  ::fidl::internal::OutgoingTransportContext());
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::
-    ReplySuccess(::fidl::BufferSpan _buffer, int32_t b) {
+    ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse response;
   response.b = std::move(b);
   return Reply(
-      std::move(_buffer),
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::
           WithResponse(std::move(response)));
+}
+
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::
+    ReplyError(uint32_t error) {
+  return Reply(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::WithErr(
+          std::move(error)));
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::
     Reply(
         ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result) {
@@ -2260,12 +2298,10 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return ::fidl::internal::WireCompleterBase<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::
-      SendReply(&_response_message.GetOutgoingMessage(),
-                ::fidl::internal::OutgoingTransportContext());
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::ReplySuccess(int32_t
                                                                             b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse _response;
@@ -2274,7 +2310,7 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
                    WithResponse(std::move(_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -2282,34 +2318,50 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::
     Reply(
-        ::fidl::BufferSpan _buffer,
         ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result) {
   ::fidl::internal::TransactionalResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
       _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure,
+                              ::fidl::internal::OutgoingTransportContext());
+  }
   ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::internal::TransactionalResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>
-      _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
-                                  ::fidl::internal::OutgoingTransportContext());
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
-    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::
-    ReplySuccess(::fidl::BufferSpan _buffer, int32_t b) {
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::ReplySuccess(int32_t
+                                                                            b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse response;
   response.b = std::move(b);
-  return Reply(std::move(_buffer),
-               ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::
+  return Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::
                    WithResponse(std::move(response)));
+}
+
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::
+    ReplyError(uint32_t error) {
+  return Reply(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::WithErr(
+          std::move(error)));
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::
     Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult
               result) {
@@ -2322,12 +2374,10 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return ::fidl::internal::WireCompleterBase<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::
-      SendReply(&_response_message.GetOutgoingMessage(),
-                ::fidl::internal::OutgoingTransportContext());
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::
     ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse
@@ -2338,7 +2388,7 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           WithResponse(std::move(_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -2346,36 +2396,52 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           WithErr(std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::
-    Reply(::fidl::BufferSpan _buffer,
-          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult
+    Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult
               result) {
   ::fidl::internal::TransactionalResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
       _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure,
+                              ::fidl::internal::OutgoingTransportContext());
+  }
   ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::internal::TransactionalResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>
-      _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
-                                  ::fidl::internal::OutgoingTransportContext());
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::
-    ReplySuccess(::fidl::BufferSpan _buffer, int32_t b) {
+    ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse
       response;
   response.b = std::move(b);
   return Reply(
-      std::move(_buffer),
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::
           WithResponse(std::move(response)));
+}
+
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::
+    ReplyError(uint32_t error) {
+  return Reply(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::
+          WithErr(std::move(error)));
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::
     Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult
               result) {
@@ -2388,12 +2454,10 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return ::fidl::internal::WireCompleterBase<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::
-      SendReply(&_response_message.GetOutgoingMessage(),
-                ::fidl::internal::OutgoingTransportContext());
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::
     ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse _response;
@@ -2403,7 +2467,7 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           WithResponse(std::move(_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -2411,35 +2475,51 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::
-    Reply(::fidl::BufferSpan _buffer,
-          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult
+    Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult
               result) {
   ::fidl::internal::TransactionalResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
       _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure,
+                              ::fidl::internal::OutgoingTransportContext());
+  }
   ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::internal::TransactionalResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>
-      _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
-                                  ::fidl::internal::OutgoingTransportContext());
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::
-    ReplySuccess(::fidl::BufferSpan _buffer, int32_t b) {
+    ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse response;
   response.b = std::move(b);
   return Reply(
-      std::move(_buffer),
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::
           WithResponse(std::move(response)));
+}
+
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::
+    ReplyError(uint32_t error) {
+  return Reply(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::WithErr(
+          std::move(error)));
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::
     Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult
               result) {
@@ -2452,12 +2532,10 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return ::fidl::internal::WireCompleterBase<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::
-      SendReply(&_response_message.GetOutgoingMessage(),
-                ::fidl::internal::OutgoingTransportContext());
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::
     ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse
@@ -2468,7 +2546,7 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           WithResponse(std::move(_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -2476,31 +2554,47 @@ void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::
           WithErr(std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::
-    Reply(::fidl::BufferSpan _buffer,
-          ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult
+    Reply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult
               result) {
   ::fidl::internal::TransactionalResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
       _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure,
+                              ::fidl::internal::OutgoingTransportContext());
+  }
   ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::internal::TransactionalResponse<
-          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>
-      _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
-                                  ::fidl::internal::OutgoingTransportContext());
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::
-    ReplySuccess(::fidl::BufferSpan _buffer, int32_t b) {
+    ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse
       response;
   response.b = std::move(b);
   return Reply(
-      std::move(_buffer),
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::
           WithResponse(std::move(response)));
+}
+
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::
+    ReplyError(uint32_t error) {
+  return Reply(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::
+          WithErr(std::move(error)));
 }
 #endif  // __Fuchsia__
 

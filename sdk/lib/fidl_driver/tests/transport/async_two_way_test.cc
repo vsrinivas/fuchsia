@@ -28,7 +28,7 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
     // Test using a different arena in the response.
     auto response_arena = fdf::Arena::Create(0, "");
     fdf_response_arena = response_arena->get();
-    completer.Reply(kResponsePayload, std::move(*response_arena));
+    completer.buffer(*response_arena).Reply(kResponsePayload);
   }
 
   fdf_arena_t* fdf_request_arena;
@@ -60,8 +60,6 @@ TEST(DriverTransport, DISABLED_TwoWayAsync) {
   ASSERT_OK(arena.status_value());
   server->fdf_request_arena = arena->get();
   sync_completion_t done;
-  // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
-  // The arena is consumed after a single call.
   client.buffer(*arena)->TwoWay(
       kRequestPayload,
       [&done, &server](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {

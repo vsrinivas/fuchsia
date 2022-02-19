@@ -285,7 +285,7 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
       FIDL_ALIGNDECL uint8_t small_buffer[kSmallSize];
       static_assert(sizeof(fidl::WireResponse<Example::TwoWay>) > kSmallSize);
       fidl::BufferSpan too_small(small_buffer, std::size(small_buffer));
-      EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, completer.Reply(too_small, request->in).status());
+      EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, completer.buffer(too_small).Reply(request->in).status());
       completer.Close(ZX_OK);  // This should not panic.
     }
 

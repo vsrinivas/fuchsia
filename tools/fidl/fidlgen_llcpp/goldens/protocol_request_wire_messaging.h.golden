@@ -1233,9 +1233,13 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Parent>
 };
 
 template <>
-class ::fidl::internal::WireCompleterBase<
-    ::test_protocolrequest::Parent::GetChild> : public ::fidl::CompleterBase {
+class ::fidl::internal::WireCompleterImpl<
+    ::test_protocolrequest::Parent::GetChild>
+    : public ::fidl::internal::CompleterImplBase<
+          ::test_protocolrequest::Parent::GetChild> {
  public:
+  using CompleterImplBase::CompleterImplBase;
+
   // In the following methods, the return value indicates internal errors during
   // the reply, such as encoding or writing to the transport.
   // Note that any error will automatically lead to the destruction of the
@@ -1246,12 +1250,49 @@ class ::fidl::internal::WireCompleterBase<
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
-  ::fidl::Result Reply(::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
-  ::fidl::Result Reply(::fidl::BufferSpan _buffer,
-                       ::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
 
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
+  ::fidl::Result Reply(::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<
+    ::test_protocolrequest::Parent::GetChild>
+    : public ::fidl::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+
+  ::fidl::Result Reply(::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_protocolrequest::Parent::GetChild>
+    : public ::fidl::CompleterBase,
+      public ::fidl::internal::WireCompleterImpl<
+          ::test_protocolrequest::Parent::GetChild> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned,
+                    bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
 };
 
 template <>
@@ -1262,10 +1303,13 @@ struct ::fidl::internal::WireMethodTypes<
 };
 
 template <>
-class ::fidl::internal::WireCompleterBase<
+class ::fidl::internal::WireCompleterImpl<
     ::test_protocolrequest::Parent::GetChildRequest>
-    : public ::fidl::CompleterBase {
+    : public ::fidl::internal::CompleterImplBase<
+          ::test_protocolrequest::Parent::GetChildRequest> {
  public:
+  using CompleterImplBase::CompleterImplBase;
+
   // In the following methods, the return value indicates internal errors during
   // the reply, such as encoding or writing to the transport.
   // Note that any error will automatically lead to the destruction of the
@@ -1276,12 +1320,49 @@ class ::fidl::internal::WireCompleterBase<
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
-  ::fidl::Result Reply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
-  ::fidl::Result Reply(::fidl::BufferSpan _buffer,
-                       ::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
 
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
+  ::fidl::Result Reply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<
+    ::test_protocolrequest::Parent::GetChildRequest>
+    : public ::fidl::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+
+  ::fidl::Result Reply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_protocolrequest::Parent::GetChildRequest>
+    : public ::fidl::CompleterBase,
+      public ::fidl::internal::WireCompleterImpl<
+          ::test_protocolrequest::Parent::GetChildRequest> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned,
+                    bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
 };
 
 template <>

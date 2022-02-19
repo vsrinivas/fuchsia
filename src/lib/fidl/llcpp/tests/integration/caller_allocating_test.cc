@@ -19,31 +19,22 @@ namespace test = ::llcpptest_protocol_test;
 // This file tests the behavior of caller-allocating flavors (i.e. the
 // `.buffer()` syntax) of clients and server APIs end-to-end.
 //
+namespace {
 
 class CallerAllocatingFixture : public ::zxtest::Test {
  public:
   class Frobinator : public fidl::WireServer<test::Frobinator> {
    public:
-    void Frob(FrobRequestView request, FrobCompleter::Sync& completer) override {
-      EXPECT_EQ(request->value.get(), "test");
-      frob_count_++;
-    }
-
-    void Grob(GrobRequestView request, GrobCompleter::Sync& completer) override {
-      completer.Reply(request->value);
-    }
-
-    size_t frob_count() const { return frob_count_; }
-
-   private:
-    size_t frob_count_ = 0;
+    virtual size_t frob_count() const = 0;
   };
+
+  virtual std::shared_ptr<Frobinator> GetServer() = 0;
 
   void SetUp() override {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
     zx::status server_end = fidl::CreateEndpoints(&client_end_);
     ASSERT_OK(server_end.status_value());
-    server_ = std::make_shared<Frobinator>();
+    server_ = GetServer();
     binding_ref_ = fidl::BindServer(loop_->dispatcher(), std::move(*server_end), server_);
   }
 
@@ -61,6 +52,28 @@ class CallerAllocatingFixture : public ::zxtest::Test {
   std::optional<fidl::ServerBindingRef<test::Frobinator>> binding_ref_;
 };
 
+class CallerAllocatingFixtureWithDefaultServer : public CallerAllocatingFixture {
+ public:
+  class DefaultFrobinator : public Frobinator {
+   public:
+    void Frob(FrobRequestView request, FrobCompleter::Sync& completer) override {
+      EXPECT_EQ(request->value.get(), "test");
+      frob_count_++;
+    }
+
+    void Grob(GrobRequestView request, GrobCompleter::Sync& completer) override {
+      completer.Reply(request->value);
+    }
+
+    size_t frob_count() const override { return frob_count_; }
+
+   private:
+    size_t frob_count_ = 0;
+  };
+
+  std::shared_ptr<Frobinator> GetServer() override { return std::make_shared<DefaultFrobinator>(); }
+};
+
 bool IsPointerInBufferSpan(void* pointer, fidl::BufferSpan buffer_span) {
   auto* data = static_cast<uint8_t*>(pointer);
   if (data > buffer_span.data) {
@@ -71,9 +84,9 @@ bool IsPointerInBufferSpan(void* pointer, fidl::BufferSpan buffer_span) {
   return false;
 }
 
-class WireCallTest : public CallerAllocatingFixture {
+class WireCallTest : public CallerAllocatingFixtureWithDefaultServer {
   void SetUp() override {
-    CallerAllocatingFixture::SetUp();
+    CallerAllocatingFixtureWithDefaultServer::SetUp();
     ASSERT_OK(loop()->StartThread());
   }
 };
@@ -133,10 +146,8 @@ TEST_F(WireCallTest, CallerAllocateInsufficientBufferSize) {
   EXPECT_EQ(fidl::Reason::kEncodeError, result.reason());
 }
 
-namespace {
-
-class WireClientTest : public CallerAllocatingFixture {};
-class WireSharedClientTest : public CallerAllocatingFixture {};
+class WireClientTest : public CallerAllocatingFixtureWithDefaultServer {};
+class WireSharedClientTest : public CallerAllocatingFixtureWithDefaultServer {};
 
 class GrobResponseContext : public fidl::WireResponseContext<test::Frobinator::Grob> {
  public:
@@ -147,8 +158,6 @@ class GrobResponseContext : public fidl::WireResponseContext<test::Frobinator::G
   }
   bool got_result = false;
 };
-
-}  // namespace
 
 TEST_F(WireClientTest, TwoWayCallerAllocateBufferSpan) {
   fidl::AsyncClientBuffer<test::Frobinator::Grob> buffer;
@@ -238,9 +247,7 @@ TEST_F(WireSharedClientTest, OneWayCallerAllocate) {
   EXPECT_EQ(4, frob_count());
 }
 
-namespace {
-
-class WireSendEventTest : public CallerAllocatingFixture {};
+class WireSendEventTest : public CallerAllocatingFixtureWithDefaultServer {};
 
 class ExpectHrobEventHandler : public fidl::WireAsyncEventHandler<test::Frobinator> {
  public:
@@ -280,8 +287,6 @@ class ExpectPeerClosedEventHandler : public fidl::WireAsyncEventHandler<test::Fr
  private:
   bool peer_closed_ = false;
 };
-
-}  // namespace
 
 TEST_F(WireSendEventTest, ServerBindingRefCallerAllocate) {
   fidl::Arena arena;
@@ -347,3 +352,89 @@ TEST(WireSendEventTest, ServerEndCallerAllocateInsufficientBufferSize) {
   loop.RunUntilIdle();
   EXPECT_EQ(0, event_handler.hrob_count());
 }
+
+class CallerAllocatingFixtureWithCallerAllocatingServer : public CallerAllocatingFixture {
+ public:
+  using GrobHandler =
+      fit::callback<void(Frobinator::GrobRequestView, Frobinator::GrobCompleter::Sync&)>;
+
+  class CallerAllocatingFrobinator : public Frobinator {
+   public:
+    void Frob(FrobRequestView request, FrobCompleter::Sync& completer) override {
+      ZX_PANIC("Unused");
+    }
+
+    void Grob(GrobRequestView request, GrobCompleter::Sync& completer) override {
+      grob_handler(request, completer);
+    }
+
+    size_t frob_count() const override { return 0; }
+
+    GrobHandler grob_handler;
+  };
+
+  std::shared_ptr<Frobinator> GetServer() override { return impl_; }
+
+  void set_grob_handler(GrobHandler handler) { impl_->grob_handler = std::move(handler); }
+
+ private:
+  std::shared_ptr<CallerAllocatingFrobinator> impl_ =
+      std::make_shared<CallerAllocatingFrobinator>();
+};
+
+class WireCompleterTest : public CallerAllocatingFixtureWithCallerAllocatingServer {};
+
+TEST_F(WireCompleterTest, CallerAllocateBufferSpan) {
+  set_grob_handler(
+      [](Frobinator::GrobRequestView request, Frobinator::GrobCompleter::Sync& completer) {
+        fidl::ServerBuffer<test::Frobinator::Grob> buffer;
+        completer.buffer(buffer.view()).Reply(request->value);
+      });
+  fidl::WireClient client(std::move(client_end()), loop()->dispatcher());
+  bool called = false;
+  client->Grob("test", [&](fidl::WireUnownedResult<test::Frobinator::Grob>& result) {
+    called = true;
+    ASSERT_OK(result.status());
+    EXPECT_EQ("test", result->value.get());
+  });
+  EXPECT_OK(loop()->RunUntilIdle());
+  EXPECT_TRUE(called);
+}
+
+TEST_F(WireCompleterTest, CallerAllocateArena) {
+  set_grob_handler(
+      [](Frobinator::GrobRequestView request, Frobinator::GrobCompleter::Sync& completer) {
+        fidl::Arena arena;
+        completer.buffer(arena).Reply(request->value);
+      });
+  fidl::WireClient client(std::move(client_end()), loop()->dispatcher());
+  bool called = false;
+  client->Grob("test", [&](fidl::WireUnownedResult<test::Frobinator::Grob>& result) {
+    called = true;
+    ASSERT_OK(result.status());
+    EXPECT_EQ("test", result->value.get());
+  });
+  EXPECT_OK(loop()->RunUntilIdle());
+  EXPECT_TRUE(called);
+}
+
+TEST_F(WireCompleterTest, CallerAllocateInsufficientBufferSize) {
+  set_grob_handler(
+      [](Frobinator::GrobRequestView request, Frobinator::GrobCompleter::Sync& completer) {
+        FIDL_ALIGNDECL uint8_t small[8];
+        fidl::BufferSpan small_buf(small, sizeof(small));
+        fidl::Result result = completer.buffer(small_buf).Reply(request->value);
+        EXPECT_STATUS(ZX_ERR_BUFFER_TOO_SMALL, result.status());
+        EXPECT_EQ(fidl::Reason::kEncodeError, result.reason());
+      });
+  fidl::WireClient client(std::move(client_end()), loop()->dispatcher());
+  bool called = false;
+  client->Grob("test", [&](fidl::WireUnownedResult<test::Frobinator::Grob>& result) {
+    called = true;
+    ASSERT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
+  });
+  EXPECT_OK(loop()->RunUntilIdle());
+  EXPECT_TRUE(called);
+}
+
+}  // namespace

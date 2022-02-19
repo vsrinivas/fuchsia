@@ -616,7 +616,7 @@ void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::
     Reply(::test_union::wire::StrictBoundedXUnion xu) {
   ::fidl::internal::TransactionalResponse<
@@ -629,32 +629,39 @@ void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
               StrictXUnionHenceResponseMayBeStackAllocated>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return ::fidl::internal::WireCompleterBase<
-      ::test_union::TestProtocol::
-          StrictXUnionHenceResponseMayBeStackAllocated>::
-      SendReply(&_response_message.GetOutgoingMessage(),
-                ::fidl::internal::OutgoingTransportContext());
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::
-    Reply(::fidl::BufferSpan _buffer,
-          ::test_union::wire::StrictBoundedXUnion xu) {
+    Reply(::test_union::wire::StrictBoundedXUnion xu) {
   ::fidl::internal::TransactionalResponse<
       ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
       _response{xu};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_union::TestProtocol::
+          StrictXUnionHenceResponseMayBeStackAllocated>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure,
+                              ::fidl::internal::OutgoingTransportContext());
+  }
   ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::internal::TransactionalResponse<
           ::test_union::TestProtocol::
-              StrictXUnionHenceResponseMayBeStackAllocated>>
-      _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
-                                  ::fidl::internal::OutgoingTransportContext());
+              StrictXUnionHenceResponseMayBeStackAllocated>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_union::TestProtocol::
         FlexibleXUnionHenceResponseMustBeHeapAllocated>::
     Reply(::test_union::wire::OlderSimpleUnion xu) {
@@ -669,28 +676,36 @@ void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
               FlexibleXUnionHenceResponseMustBeHeapAllocated>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return ::fidl::internal::WireCompleterBase<
-      ::test_union::TestProtocol::
-          FlexibleXUnionHenceResponseMustBeHeapAllocated>::
-      SendReply(&_response_message.GetOutgoingMessage(),
-                ::fidl::internal::OutgoingTransportContext());
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_union::TestProtocol::
         FlexibleXUnionHenceResponseMustBeHeapAllocated>::
-    Reply(::fidl::BufferSpan _buffer, ::test_union::wire::OlderSimpleUnion xu) {
+    Reply(::test_union::wire::OlderSimpleUnion xu) {
   ::fidl::internal::TransactionalResponse<
       ::test_union::TestProtocol::
           FlexibleXUnionHenceResponseMustBeHeapAllocated>
       _response{xu};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure,
+                              ::fidl::internal::OutgoingTransportContext());
+  }
   ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::internal::TransactionalResponse<
           ::test_union::TestProtocol::
-              FlexibleXUnionHenceResponseMustBeHeapAllocated>>
-      _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
-                                  ::fidl::internal::OutgoingTransportContext());
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
 #endif  // __Fuchsia__
 

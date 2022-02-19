@@ -764,7 +764,7 @@ void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
-    WireCompleterBase<::test_protocolrequest::Parent::GetChild>::Reply(
+    WireCompleterImpl<::test_protocolrequest::Parent::GetChild>::Reply(
         ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocolrequest::Parent::GetChild>
@@ -775,31 +775,38 @@ void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(
           ::test_protocolrequest::Parent::GetChild>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return ::fidl::internal::
-      WireCompleterBase<::test_protocolrequest::Parent::GetChild>::SendReply(
-          &_response_message.GetOutgoingMessage(),
-          ::fidl::internal::OutgoingTransportContext());
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
 
 ::fidl::Result fidl::internal::
-    WireCompleterBase<::test_protocolrequest::Parent::GetChild>::Reply(
-        ::fidl::BufferSpan _buffer,
+    WireBufferCompleterImpl<::test_protocolrequest::Parent::GetChild>::Reply(
         ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocolrequest::Parent::GetChild>
       _response{std::move(c)};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_protocolrequest::Parent::GetChild>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure,
+                              ::fidl::internal::OutgoingTransportContext());
+  }
   ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::internal::TransactionalResponse<
-          ::test_protocolrequest::Parent::GetChild>>
-      _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
-                                  ::fidl::internal::OutgoingTransportContext());
+          ::test_protocolrequest::Parent::GetChild>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::
-    WireCompleterBase<::test_protocolrequest::Parent::GetChildRequest>::Reply(
+    WireCompleterImpl<::test_protocolrequest::Parent::GetChildRequest>::Reply(
         ::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocolrequest::Parent::GetChildRequest>
@@ -810,25 +817,32 @@ void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(
           ::test_protocolrequest::Parent::GetChildRequest>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return ::fidl::internal::WireCompleterBase<
-      ::test_protocolrequest::Parent::GetChildRequest>::
-      SendReply(&_response_message.GetOutgoingMessage(),
-                ::fidl::internal::OutgoingTransportContext());
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::
-    WireCompleterBase<::test_protocolrequest::Parent::GetChildRequest>::Reply(
-        ::fidl::BufferSpan _buffer,
-        ::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
+    ::test_protocolrequest::Parent::GetChildRequest>::
+    Reply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocolrequest::Parent::GetChildRequest>
       _response{std::move(r)};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_protocolrequest::Parent::GetChildRequest>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure,
+                              ::fidl::internal::OutgoingTransportContext());
+  }
   ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::internal::TransactionalResponse<
-          ::test_protocolrequest::Parent::GetChildRequest>>
-      _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
-                                  ::fidl::internal::OutgoingTransportContext());
+          ::test_protocolrequest::Parent::GetChildRequest>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
 #endif  // __Fuchsia__
 

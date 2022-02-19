@@ -40,6 +40,7 @@ class WireRequestView {
   fidl::WireRequest<FidlMethod>* request_;
 };
 
+// Default specialization for one-way completers.
 template <typename FidlMethod>
 struct WireMethodTypes {
   using Completer = fidl::Completer<>;

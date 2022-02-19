@@ -5,7 +5,7 @@
 */}}
 
 {{- define "Protocol:Interface:WireMessagingHeader" }}
-{{- range .ClientMethods }}
+{{- range .TwoWayMethods }}
   {{- if eq .Transport.Name "Driver" }}
   {{- template "Method:CompleterBase:driver/MessagingHeader" . }}
   {{- else }}

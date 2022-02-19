@@ -322,7 +322,7 @@ void fidl::WireServer<::test_nullable::SimpleProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_nullable::SimpleProtocol::Add>::Reply(int32_t sum) {
   ::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>
       _response{sum};
@@ -332,23 +332,30 @@ void fidl::WireServer<::test_nullable::SimpleProtocol>::dispatch_message(
           ::test_nullable::SimpleProtocol::Add>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return ::fidl::internal::
-      WireCompleterBase<::test_nullable::SimpleProtocol::Add>::SendReply(
-          &_response_message.GetOutgoingMessage(),
-          ::fidl::internal::OutgoingTransportContext());
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result
-fidl::internal::WireCompleterBase<::test_nullable::SimpleProtocol::Add>::Reply(
-    ::fidl::BufferSpan _buffer, int32_t sum) {
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
+    ::test_nullable::SimpleProtocol::Add>::Reply(int32_t sum) {
   ::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>
       _response{sum};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_nullable::SimpleProtocol::Add>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure,
+                              ::fidl::internal::OutgoingTransportContext());
+  }
   ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::internal::TransactionalResponse<
-          ::test_nullable::SimpleProtocol::Add>>
-      _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
-                                  ::fidl::internal::OutgoingTransportContext());
+          ::test_nullable::SimpleProtocol::Add>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
 #endif  // __Fuchsia__
 

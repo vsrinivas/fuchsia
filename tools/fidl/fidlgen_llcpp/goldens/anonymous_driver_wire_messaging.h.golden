@@ -13,6 +13,7 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl_driver/cpp/client.h>
+#include <lib/fidl_driver/cpp/server.h>
 
 #endif  // __Fuchsia__
 

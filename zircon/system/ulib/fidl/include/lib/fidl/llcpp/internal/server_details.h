@@ -12,6 +12,8 @@
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/result.h>
+#include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/llcpp/wire_messaging_declarations.h>
 
 namespace fidl {
 
@@ -134,6 +136,58 @@ struct WeakBufferEventSenderBase {
  private:
   WeakEventSenderInner inner_;
   AnyBufferAllocator allocator_;
+};
+
+// A base class that adds the ability to set and get a contained |AnyBufferAllocator|.
+class BufferCompleterImplBase {
+ public:
+  explicit BufferCompleterImplBase(fidl::CompleterBase* core, AnyBufferAllocator&& allocator)
+      : core_(core), allocator_(std::move(allocator)) {}
+
+  // This object isn't meant to be passed around.
+  BufferCompleterImplBase(BufferCompleterImplBase&&) noexcept = delete;
+  BufferCompleterImplBase& operator=(BufferCompleterImplBase&&) noexcept = delete;
+
+ protected:
+  fidl::CompleterBase* _core() const { return core_; }
+
+  AnyBufferAllocator& _allocator() { return allocator_; }
+
+ private:
+  fidl::CompleterBase* core_;
+  AnyBufferAllocator allocator_;
+};
+
+// A base class that adds a `.buffer(...)` call to return a caller-allocating completer interface.
+template <typename Method>
+class CompleterImplBase {
+ private:
+  using Derived = fidl::internal::WireCompleterImpl<Method>;
+  using BufferCompleterImpl = fidl::internal::WireBufferCompleterImpl<Method>;
+
+  // This object isn't meant to be passed around.
+  CompleterImplBase(CompleterImplBase&&) noexcept = delete;
+  CompleterImplBase& operator=(CompleterImplBase&&) noexcept = delete;
+
+ public:
+  // Returns a veneer object which exposes the caller-allocating API, using the
+  // provided |resource| to allocate buffers necessary for the reply. Responses
+  // will live on those buffers.
+  template <typename MemoryResource>
+  BufferCompleterImpl buffer(MemoryResource&& resource) {
+    return BufferCompleterImpl(
+        core_, internal::MakeAnyBufferAllocator(std::forward<MemoryResource>(resource)));
+  }
+
+ protected:
+  explicit CompleterImplBase(fidl::CompleterBase* core) : core_(core) {}
+
+  fidl::CompleterBase* _core() const { return core_; }
+
+  void _set_core(fidl::CompleterBase* core) { core_ = core; }
+
+ private:
+  fidl::CompleterBase* core_;
 };
 
 //

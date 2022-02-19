@@ -13,6 +13,7 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl_driver/cpp/client.h>
+#include <lib/fidl_driver/cpp/server.h>
 
 #endif  // __Fuchsia__
 
@@ -406,9 +407,20 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_drivertwoway::TwoWay>
 };
 
 template <>
-class ::fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>
-    : public ::fidl::CompleterBase {
+class ::fidl::internal::WireCompleterImpl<::test_drivertwoway::TwoWay::Add>
+    : public ::fdf::internal::CompleterImplBase<
+          ::test_drivertwoway::TwoWay::Add> {
  public:
+  using CompleterImplBase::CompleterImplBase;
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<
+    ::test_drivertwoway::TwoWay::Add>
+    : public ::fdf::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
   // In the following methods, the return value indicates internal errors during
   // the reply, such as encoding or writing to the transport.
   // Note that any error will automatically lead to the destruction of the
@@ -419,12 +431,27 @@ class ::fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
-  ::fidl::Result Reply(uint16_t sum, const fdf::Arena& _arena);
-  ::fidl::Result Reply(::fidl::BufferSpan _buffer, uint16_t sum,
-                       const fdf::Arena& _arena);
 
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
+  ::fidl::Result Reply(uint16_t sum);
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>
+    : public ::fidl::CompleterBase,
+      public ::fidl::internal::WireCompleterImpl<
+          ::test_drivertwoway::TwoWay::Add> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned,
+                    bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
 };
 
 template <>

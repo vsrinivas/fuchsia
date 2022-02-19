@@ -167,20 +167,22 @@ var (
 	WireServerDispatcher           = internalNs.member("WireServerDispatcher")
 
 	// Method related
-	TransactionalRequest  = internalNs.member("TransactionalRequest")
-	TransactionalResponse = internalNs.member("TransactionalResponse")
-	TransactionalEvent    = internalNs.member("TransactionalEvent")
-	WireRequest           = fidlNs.member("WireRequest")
-	WireRequestView       = internalNs.member("WireRequestView")
-	WireResponse          = fidlNs.member("WireResponse")
-	WireEvent             = fidlNs.member("WireEvent")
-	WireResult            = fidlNs.member("WireResult")
-	WireUnownedResult     = transportNs.member("WireUnownedResult")
-	WireResponseContext   = fidlNs.member("WireResponseContext")
-	WireCompleter         = internalNs.member("WireCompleter")
-	WireCompleterBase     = internalNs.member("WireCompleterBase")
-	WireMethodTypes       = internalNs.member("WireMethodTypes")
-	WireOrdinal           = internalNs.member("WireOrdinal")
+	TransactionalRequest    = internalNs.member("TransactionalRequest")
+	TransactionalResponse   = internalNs.member("TransactionalResponse")
+	TransactionalEvent      = internalNs.member("TransactionalEvent")
+	WireRequest             = fidlNs.member("WireRequest")
+	WireRequestView         = internalNs.member("WireRequestView")
+	WireResponse            = fidlNs.member("WireResponse")
+	WireEvent               = fidlNs.member("WireEvent")
+	WireResult              = fidlNs.member("WireResult")
+	WireUnownedResult       = transportNs.member("WireUnownedResult")
+	WireResponseContext     = fidlNs.member("WireResponseContext")
+	WireCompleter           = internalNs.member("WireCompleter")
+	WireBufferCompleterImpl = internalNs.member("WireBufferCompleterImpl")
+	WireCompleterImpl       = internalNs.member("WireCompleterImpl")
+	WireCompleterBase       = internalNs.member("WireCompleterBase")
+	WireMethodTypes         = internalNs.member("WireMethodTypes")
+	WireOrdinal             = internalNs.member("WireOrdinal")
 )
 
 type wireTypeNames struct {
@@ -435,6 +437,8 @@ func newMessage(inner messageInner, args []Parameter, wire wireTypeNames,
 type wireMethod struct {
 	WireCompleterAlias        name
 	WireCompleter             name
+	WireBufferCompleterImpl   name
+	WireCompleterImpl         name
 	WireCompleterBase         name
 	WireMethodTypes           name
 	WireOrdinal               name
@@ -456,6 +460,8 @@ func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, me
 	return wireMethod{
 		WireCompleterAlias:        s.appendName("Completer"),
 		WireCompleter:             WireCompleter.template(methodMarker),
+		WireBufferCompleterImpl:   WireBufferCompleterImpl.template(methodMarker),
+		WireCompleterImpl:         WireCompleterImpl.template(methodMarker),
 		WireCompleterBase:         WireCompleterBase.template(methodMarker),
 		WireMethodTypes:           WireMethodTypes.template(methodMarker),
 		WireOrdinal:               WireOrdinal.template(methodMarker),

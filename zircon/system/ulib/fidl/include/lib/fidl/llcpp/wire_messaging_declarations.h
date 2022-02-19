@@ -157,8 +157,25 @@ class WireEventDispatcher;
 template <typename FidlProtocol>
 struct WireServerDispatcher;
 
+// |WireBufferCompleterImpl| implements FIDL replies with wire types using
+// caller-provided buffers.
+template <typename FidlMethod>
+class WireBufferCompleterImpl;
+
+// |WireCompleterImpl| implements FIDL replies with wire types using managed
+// buffers.
+template <typename FidlMethod>
+class WireCompleterImpl;
+
+// |WireCompleterBase| composes |WireBufferCompleterImpl| and |WireCompleterImpl|
+// to provide the overall completer API.
 template <typename FidlMethod>
 class WireCompleterBase;
+
+// |WireMethodTypes| gives access to the completer type associated with a
+// particular method.
+template <typename FidlMethod>
+struct WireMethodTypes;
 
 #endif  // __Fuchsia__
 

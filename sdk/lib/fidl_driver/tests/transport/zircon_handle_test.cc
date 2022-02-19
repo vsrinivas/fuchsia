@@ -19,7 +19,7 @@ namespace {
 class TestServer : public fdf::WireServer<test_transport::SendZirconHandleTest> {
   void SendZirconHandle(SendZirconHandleRequestView request, fdf::Arena& arena,
                         SendZirconHandleCompleter::Sync& completer) override {
-    completer.Reply(std::move(request->h), std::move(arena));
+    completer.buffer(arena).Reply(std::move(request->h));
   }
 };
 
@@ -53,8 +53,6 @@ TEST(DriverTransport, DISABLED_SendZirconHandle) {
   zx_handle_t handle = ev.get();
 
   sync_completion_t done;
-  // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
-  // The arena is consumed after a single call.
   client.buffer(*arena)->SendZirconHandle(
       std::move(ev),
       [&done,

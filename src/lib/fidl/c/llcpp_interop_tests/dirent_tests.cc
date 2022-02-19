@@ -303,13 +303,13 @@ class CallerAllocateServer : public ServerBase {
       }
     }
     fidl::ServerBuffer<gen::DirEntTestInterface::CountNumDirectories> buffer;
-    txn.Reply(buffer.view(), count);
+    txn.buffer(buffer.view()).Reply(count);
   }
 
   void ReadDir(ReadDirRequestView request, ReadDirCompleter::Sync& txn) override {
     read_dir_num_calls_.fetch_add(1);
     fidl::ServerBuffer<gen::DirEntTestInterface::ReadDir> buffer;
-    txn.Reply(buffer.view(), golden_dirents());
+    txn.buffer(buffer.view()).Reply(golden_dirents());
   }
 
   // |ConsumeDirectories| has zero number of arguments in its return value, hence only the

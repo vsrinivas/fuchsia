@@ -11,7 +11,7 @@ void PtyClientDevice::SetWindowSize(SetWindowSizeRequestView request,
   fidl::ServerBuffer<fuchsia_hardware_pty::Device::SetWindowSize> buf;
   client_->server()->set_window_size(
       {.width = request->size.width, .height = request->size.height});
-  completer.Reply(buf.view(), ZX_OK);
+  completer.buffer(buf.view()).Reply(ZX_OK);
 }
 
 void PtyClientDevice::OpenClient(OpenClientRequestView request,
@@ -20,18 +20,18 @@ void PtyClientDevice::OpenClient(OpenClientRequestView request,
 
   // Only controlling clients (and the server itself) may create new clients
   if (!client_->is_control()) {
-    completer.Reply(buf.view(), ZX_ERR_ACCESS_DENIED);
+    completer.buffer(buf.view()).Reply(ZX_ERR_ACCESS_DENIED);
     return;
   }
 
   // Clients may not create controlling clients
   if (request->id == 0) {
-    completer.Reply(buf.view(), ZX_ERR_INVALID_ARGS);
+    completer.buffer(buf.view()).Reply(ZX_ERR_INVALID_ARGS);
     return;
   }
 
   zx_status_t status = client_->server()->CreateClient(request->id, std::move(request->client));
-  completer.Reply(buf.view(), status);
+  completer.buffer(buf.view()).Reply(status);
 }
 
 void PtyClientDevice::ClrSetFeature(ClrSetFeatureRequestView request,
@@ -46,7 +46,7 @@ void PtyClientDevice::ClrSetFeature(ClrSetFeatureRequestView request,
   } else {
     client_->ClearSetFlags(request->clr, request->set);
   }
-  completer.Reply(buf.view(), status, client_->flags());
+  completer.buffer(buf.view()).Reply(status, client_->flags());
 }
 
 void PtyClientDevice::GetWindowSize(GetWindowSizeRequestView request,
@@ -54,7 +54,7 @@ void PtyClientDevice::GetWindowSize(GetWindowSizeRequestView request,
   fidl::ServerBuffer<fuchsia_hardware_pty::Device::GetWindowSize> buf;
   auto size = client_->server()->window_size();
   fuchsia_hardware_pty::wire::WindowSize wsz = {.width = size.width, .height = size.height};
-  completer.Reply(buf.view(), ZX_OK, wsz);
+  completer.buffer(buf.view()).Reply(ZX_OK, wsz);
 }
 
 void PtyClientDevice::MakeActive(MakeActiveRequestView request,
@@ -62,12 +62,12 @@ void PtyClientDevice::MakeActive(MakeActiveRequestView request,
   fidl::ServerBuffer<fuchsia_hardware_pty::Device::MakeActive> buf;
 
   if (!client_->is_control()) {
-    completer.Reply(buf.view(), ZX_ERR_ACCESS_DENIED);
+    completer.buffer(buf.view()).Reply(ZX_ERR_ACCESS_DENIED);
     return;
   }
 
   zx_status_t status = client_->server()->MakeActive(request->client_pty_id);
-  completer.Reply(buf.view(), status);
+  completer.buffer(buf.view()).Reply(status);
 }
 
 void PtyClientDevice::ReadEvents(ReadEventsRequestView request,
@@ -75,12 +75,12 @@ void PtyClientDevice::ReadEvents(ReadEventsRequestView request,
   fidl::ServerBuffer<fuchsia_hardware_pty::Device::ReadEvents> buf;
 
   if (!client_->is_control()) {
-    completer.Reply(buf.view(), ZX_ERR_ACCESS_DENIED, 0);
+    completer.buffer(buf.view()).Reply(ZX_ERR_ACCESS_DENIED, 0);
     return;
   }
 
   uint32_t events = client_->server()->DrainEvents();
-  completer.Reply(buf.view(), ZX_OK, events);
+  completer.buffer(buf.view()).Reply(ZX_OK, events);
 }
 
 // Assert in all of these, since these should be handled by fs::Connection before our

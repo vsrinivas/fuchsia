@@ -784,10 +784,13 @@ class ::fidl::internal::WireSyncBufferClientImpl<
 };
 
 template <>
-class ::fidl::internal::WireCompleterBase<
+class ::fidl::internal::WireCompleterImpl<
     ::test_emptystruct::EmptyProtocol::SendAndReceive>
-    : public ::fidl::CompleterBase {
+    : public ::fidl::internal::CompleterImplBase<
+          ::test_emptystruct::EmptyProtocol::SendAndReceive> {
  public:
+  using CompleterImplBase::CompleterImplBase;
+
   // In the following methods, the return value indicates internal errors during
   // the reply, such as encoding or writing to the transport.
   // Note that any error will automatically lead to the destruction of the
@@ -798,12 +801,49 @@ class ::fidl::internal::WireCompleterBase<
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
-  ::fidl::Result Reply(const ::test_emptystruct::wire::Empty& e);
-  ::fidl::Result Reply(::fidl::BufferSpan _buffer,
-                       const ::test_emptystruct::wire::Empty& e);
 
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
+  ::fidl::Result Reply(const ::test_emptystruct::wire::Empty& e);
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<
+    ::test_emptystruct::EmptyProtocol::SendAndReceive>
+    : public ::fidl::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+
+  ::fidl::Result Reply(const ::test_emptystruct::wire::Empty& e);
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_emptystruct::EmptyProtocol::SendAndReceive>
+    : public ::fidl::CompleterBase,
+      public ::fidl::internal::WireCompleterImpl<
+          ::test_emptystruct::EmptyProtocol::SendAndReceive> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned,
+                    bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
 };
 
 template <>

@@ -19,7 +19,7 @@ namespace {
 class TestServer : public fdf::WireServer<test_transport::SendDriverClientEndTest> {
   void SendDriverClientEnd(SendDriverClientEndRequestView request, fdf::Arena& arena,
                            SendDriverClientEndCompleter::Sync& completer) override {
-    completer.Reply(std::move(request->h), std::move(arena));
+    completer.buffer(arena).Reply(std::move(request->h));
   }
 };
 
@@ -54,8 +54,6 @@ TEST(DriverTransport, DISABLED_SendDriverClientEnd) {
   fidl_handle_t handle = client_end_to_send.handle()->get();
 
   sync_completion_t done;
-  // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
-  // The arena is consumed after a single call.
   client.buffer(*arena)->SendDriverClientEnd(
       std::move(client_end_to_send),
       [&done, handle](

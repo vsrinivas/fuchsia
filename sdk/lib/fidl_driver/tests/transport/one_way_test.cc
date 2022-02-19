@@ -56,8 +56,6 @@ TEST(DriverTransport, DISABLED_OneWayVector) {
   auto arena = fdf::Arena::Create(0, "");
   ASSERT_OK(arena.status_value());
   server->fdf_request_arena = arena->get();
-  // TODO(fxbug.dev/91107): Consider taking |const fdf::Arena&| or similar.
-  // The arena is consumed after a single call.
   client.buffer(*arena)->OneWay(fidl::VectorView<uint8_t>::FromExternal(kRequestPayload));
 
   ASSERT_OK(sync_completion_wait(&server->done, ZX_TIME_INFINITE));

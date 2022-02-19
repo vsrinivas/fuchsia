@@ -628,7 +628,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
     Reply(::test_errorsyntax_parent::wire::
               ParentUsesErrorSyntaxComposedCallWhichMayFailResult result) {
@@ -642,12 +642,10 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
               ComposedCallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return ::fidl::internal::WireCompleterBase<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
-      SendReply(&_response_message.GetOutgoingMessage(),
-                ::fidl::internal::OutgoingTransportContext());
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
     ReplySuccess(int64_t value) {
   ::test_errorsyntax_parent::wire::
@@ -662,7 +660,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
                   FromExternal(&_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
     ReplyError(uint32_t error) {
   return Reply(::test_errorsyntax_parent::wire::
@@ -670,30 +668,38 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
                        std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
-    Reply(::fidl::BufferSpan _buffer,
-          ::test_errorsyntax_parent::wire::
+    Reply(::test_errorsyntax_parent::wire::
               ParentUsesErrorSyntaxComposedCallWhichMayFailResult result) {
   ::fidl::internal::TransactionalResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
       _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure,
+                              ::fidl::internal::OutgoingTransportContext());
+  }
   ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::internal::TransactionalResponse<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::
-              ComposedCallWhichMayFail>>
-      _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
-                                  ::fidl::internal::OutgoingTransportContext());
+              ComposedCallWhichMayFail>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
-    ReplySuccess(::fidl::BufferSpan _buffer, int64_t value) {
+    ReplySuccess(int64_t value) {
   ::test_errorsyntax_parent::wire::
       ParentUsesErrorSyntaxComposedCallWhichMayFailResponse response;
   response.value = std::move(value);
   return Reply(
-      std::move(_buffer),
       ::test_errorsyntax_parent::wire::
           ParentUsesErrorSyntaxComposedCallWhichMayFailResult::WithResponse(
               ::fidl::ObjectView<
@@ -701,10 +707,18 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
                       ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::
                   FromExternal(&response)));
 }
+
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
+    ReplyError(uint32_t error) {
+  return Reply(::test_errorsyntax_parent::wire::
+                   ParentUsesErrorSyntaxComposedCallWhichMayFailResult::WithErr(
+                       std::move(error)));
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
     Reply(
         ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult
@@ -718,12 +732,10 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
-  return ::fidl::internal::WireCompleterBase<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
-      SendReply(&_response_message.GetOutgoingMessage(),
-                ::fidl::internal::OutgoingTransportContext());
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
     ReplySuccess(int64_t value) {
   ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse
@@ -737,7 +749,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
                            FromExternal(&_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -745,35 +757,51 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
           WithErr(std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
     Reply(
-        ::fidl::BufferSpan _buffer,
         ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult
             result) {
   ::fidl::internal::TransactionalResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
       _response{result};
+  constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<
+      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    return _core()->SendReply(&_failure,
+                              ::fidl::internal::OutgoingTransportContext());
+  }
   ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::internal::TransactionalResponse<
-          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
-      _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
-                                  ::fidl::internal::OutgoingTransportContext());
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
+      ::fidl::internal::ChannelTransport>
+      _response_message(_allocation->data, _buffer_size, &_response);
+  return _core()->SendReply(&_response_message.GetOutgoingMessage(),
+                            ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterBase<
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
-    ReplySuccess(::fidl::BufferSpan _buffer, int64_t value) {
+    ReplySuccess(int64_t value) {
   ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse
       response;
   response.value = std::move(value);
   return Reply(
-      std::move(_buffer),
       ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::
           WithResponse(::fidl::ObjectView<
                        ::test_errorsyntax::wire::
                            ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::
                            FromExternal(&response)));
+}
+
+::fidl::Result fidl::internal::WireBufferCompleterImpl<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
+    ReplyError(uint32_t error) {
+  return Reply(
+      ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::
+          WithErr(std::move(error)));
 }
 #endif  // __Fuchsia__
 

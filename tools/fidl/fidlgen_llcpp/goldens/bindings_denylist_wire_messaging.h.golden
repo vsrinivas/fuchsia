@@ -575,10 +575,15 @@ class ::fidl::internal::WireSyncBufferClientImpl<
 };
 
 template <>
-class ::fidl::internal::WireCompleterBase<
+class ::fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-        LibfuzzerNeedsNonemptyProtocol> : public ::fidl::CompleterBase {
+        LibfuzzerNeedsNonemptyProtocol>
+    : public ::fidl::internal::CompleterImplBase<
+          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol> {
  public:
+  using CompleterImplBase::CompleterImplBase;
+
   // In the following methods, the return value indicates internal errors during
   // the reply, such as encoding or writing to the transport.
   // Note that any error will automatically lead to the destruction of the
@@ -589,10 +594,52 @@ class ::fidl::internal::WireCompleterBase<
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
-  ::fidl::Result Reply();
 
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
+  ::fidl::Result Reply();
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+        LibfuzzerNeedsNonemptyProtocol>
+    : public ::fidl::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+
+  ::fidl::Result Reply();
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+        LibfuzzerNeedsNonemptyProtocol>
+    : public ::fidl::CompleterBase,
+      public ::fidl::internal::WireCompleterImpl<
+          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned,
+                    bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
 };
 
 template <>
@@ -3496,10 +3543,13 @@ class ::fidl::internal::WireSyncBufferClientImpl<
 };
 
 template <>
-class ::fidl::internal::WireCompleterBase<
+class ::fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
-    : public ::fidl::CompleterBase {
+    : public ::fidl::internal::CompleterImplBase<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> {
  public:
+  using CompleterImplBase::CompleterImplBase;
+
   // In the following methods, the return value indicates internal errors during
   // the reply, such as encoding or writing to the transport.
   // Note that any error will automatically lead to the destruction of the
@@ -3510,17 +3560,55 @@ class ::fidl::internal::WireCompleterBase<
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
+
   ::fidl::Result Reply(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result);
   ::fidl::Result ReplySuccess(int32_t b);
   ::fidl::Result ReplyError(uint32_t error);
-  ::fidl::Result Reply(
-      ::fidl::BufferSpan _buffer,
-      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result);
-  ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int32_t b);
+};
 
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+    : public ::fidl::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+
+  ::fidl::Result Reply(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result);
+  ::fidl::Result ReplySuccess(int32_t b);
+  ::fidl::Result ReplyError(uint32_t error);
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+    : public ::fidl::CompleterBase,
+      public ::fidl::internal::WireCompleterImpl<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned,
+                    bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
 };
 
 template <>
@@ -3531,10 +3619,13 @@ struct ::fidl::internal::WireMethodTypes<
 };
 
 template <>
-class ::fidl::internal::WireCompleterBase<
+class ::fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
-    : public ::fidl::CompleterBase {
+    : public ::fidl::internal::CompleterImplBase<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> {
  public:
+  using CompleterImplBase::CompleterImplBase;
+
   // In the following methods, the return value indicates internal errors during
   // the reply, such as encoding or writing to the transport.
   // Note that any error will automatically lead to the destruction of the
@@ -3545,17 +3636,55 @@ class ::fidl::internal::WireCompleterBase<
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
+
   ::fidl::Result Reply(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result);
   ::fidl::Result ReplySuccess(int32_t b);
   ::fidl::Result ReplyError(uint32_t error);
-  ::fidl::Result Reply(
-      ::fidl::BufferSpan _buffer,
-      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result);
-  ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int32_t b);
+};
 
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+    : public ::fidl::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+
+  ::fidl::Result Reply(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result);
+  ::fidl::Result ReplySuccess(int32_t b);
+  ::fidl::Result ReplyError(uint32_t error);
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+    : public ::fidl::CompleterBase,
+      public ::fidl::internal::WireCompleterImpl<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned,
+                    bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
 };
 
 template <>
@@ -3566,10 +3695,13 @@ struct ::fidl::internal::WireMethodTypes<
 };
 
 template <>
-class ::fidl::internal::WireCompleterBase<
+class ::fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
-    : public ::fidl::CompleterBase {
+    : public ::fidl::internal::CompleterImplBase<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> {
  public:
+  using CompleterImplBase::CompleterImplBase;
+
   // In the following methods, the return value indicates internal errors during
   // the reply, such as encoding or writing to the transport.
   // Note that any error will automatically lead to the destruction of the
@@ -3580,19 +3712,57 @@ class ::fidl::internal::WireCompleterBase<
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
+
   ::fidl::Result Reply(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult
           result);
   ::fidl::Result ReplySuccess(int32_t b);
   ::fidl::Result ReplyError(uint32_t error);
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+    : public ::fidl::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+
   ::fidl::Result Reply(
-      ::fidl::BufferSpan _buffer,
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult
           result);
-  ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int32_t b);
+  ::fidl::Result ReplySuccess(int32_t b);
+  ::fidl::Result ReplyError(uint32_t error);
+};
 
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+    : public ::fidl::CompleterBase,
+      public ::fidl::internal::WireCompleterImpl<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned,
+                    bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
 };
 
 template <>
@@ -3603,10 +3773,13 @@ struct ::fidl::internal::WireMethodTypes<
 };
 
 template <>
-class ::fidl::internal::WireCompleterBase<
+class ::fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
-    : public ::fidl::CompleterBase {
+    : public ::fidl::internal::CompleterImplBase<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> {
  public:
+  using CompleterImplBase::CompleterImplBase;
+
   // In the following methods, the return value indicates internal errors during
   // the reply, such as encoding or writing to the transport.
   // Note that any error will automatically lead to the destruction of the
@@ -3617,17 +3790,55 @@ class ::fidl::internal::WireCompleterBase<
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
+
   ::fidl::Result Reply(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result);
   ::fidl::Result ReplySuccess(int32_t b);
   ::fidl::Result ReplyError(uint32_t error);
-  ::fidl::Result Reply(
-      ::fidl::BufferSpan _buffer,
-      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result);
-  ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int32_t b);
+};
 
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+    : public ::fidl::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+
+  ::fidl::Result Reply(
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result);
+  ::fidl::Result ReplySuccess(int32_t b);
+  ::fidl::Result ReplyError(uint32_t error);
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+    : public ::fidl::CompleterBase,
+      public ::fidl::internal::WireCompleterImpl<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned,
+                    bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
 };
 
 template <>
@@ -3638,10 +3849,13 @@ struct ::fidl::internal::WireMethodTypes<
 };
 
 template <>
-class ::fidl::internal::WireCompleterBase<
+class ::fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
-    : public ::fidl::CompleterBase {
+    : public ::fidl::internal::CompleterImplBase<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> {
  public:
+  using CompleterImplBase::CompleterImplBase;
+
   // In the following methods, the return value indicates internal errors during
   // the reply, such as encoding or writing to the transport.
   // Note that any error will automatically lead to the destruction of the
@@ -3652,19 +3866,57 @@ class ::fidl::internal::WireCompleterBase<
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
+
   ::fidl::Result Reply(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult
           result);
   ::fidl::Result ReplySuccess(int32_t b);
   ::fidl::Result ReplyError(uint32_t error);
+};
+
+template <>
+class ::fidl::internal::WireBufferCompleterImpl<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+    : public ::fidl::internal::BufferCompleterImplBase {
+ public:
+  using BufferCompleterImplBase::BufferCompleterImplBase;
+
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+
   ::fidl::Result Reply(
-      ::fidl::BufferSpan _buffer,
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult
           result);
-  ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int32_t b);
+  ::fidl::Result ReplySuccess(int32_t b);
+  ::fidl::Result ReplyError(uint32_t error);
+};
 
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+    : public ::fidl::CompleterBase,
+      public ::fidl::internal::WireCompleterImpl<
+          ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> {
+ public:
+  WireCompleterBase(::fidl::Transaction* transaction, bool owned,
+                    bool expects_reply)
+      : CompleterBase(transaction, owned, expects_reply),
+        WireCompleterImpl(this) {}
+  WireCompleterBase(WireCompleterBase&& other) noexcept
+      : CompleterBase(std::move(other)), WireCompleterImpl(this) {}
+  WireCompleterBase& operator=(WireCompleterBase&& other) noexcept {
+    CompleterBase::operator=(std::move(other));
+    WireCompleterImpl::_set_core(this);
+    return *this;
+  }
 };
 
 template <>
