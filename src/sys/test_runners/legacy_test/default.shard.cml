@@ -1,5 +1,8 @@
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         runner: "legacy_test_runner",
     },
